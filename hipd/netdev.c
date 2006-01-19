@@ -30,7 +30,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
 		    IN6_IS_ADDR_LINKLOCAL(a) ||
+#if 0 /* For Juha-Matti's experiments  */
 		    IN6_IS_ADDR_SITELOCAL(a) ||
+#endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
 		    ipv6_addr_is_hit(&a->sin6_addr))
@@ -328,7 +330,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
 		 "if_index NOT determined\n");
 
-	add_address_to_list(addr, acq->sel.ifindex);
+	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
 	if (entry->state != HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("I1 was already sent, ignoring\n");

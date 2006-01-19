@@ -56,6 +56,24 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	return -1;
 }
 
+
+
+/**
+ * hip_read_control_msg - prepares the hip_common struct,
+ * allocates memory for buffers and nested structs. Receives
+ * a message from socket and fills the hip_common struct with the
+ * values from this message.
+ * @socket: socket to read from
+ * @hip_common: is returned as filled struct
+ * @read addr:  flag whether the adresses should be read from the received packet
+ *              1:read addresses, 0:don't read addresses
+ * @saddr:      is used as return value for the sender address of the received message
+ *              (if read_addr is set to 1)
+ * @daddr:      is used as return value for the destination address of the received message
+ *              (if read_addr is set to 1)
+ *
+ * Returns -1 in case of an error, >0 otherwise.
+ */
 int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 			 int read_addr, struct in6_addr *saddr,
 			 struct in6_addr *daddr)

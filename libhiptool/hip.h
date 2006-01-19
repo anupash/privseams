@@ -9,6 +9,7 @@
  *  - Miika Komu <miika@iki.fi>
  *  - Mika Kousa <mkousa@cc.hut.fi>
  *  - Kristian Slavov <kslavov@hiit.fi>
+ *  - Tobias Heer <tobi@tobibox.de>
  *
  *  TODO:
  *  - split this file into net/hip.h (packet structs etc) and linux/hip.h
@@ -33,7 +34,6 @@ typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef struct { volatile int counter; } atomic_t;
-
 typedef struct {
 	/* XX FIXME */
 } spinlock_t;
@@ -380,6 +380,17 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_AH_SHA_LEN                 20
 
+/* HIP_IFCS takes a pointer and an command to execute.
+   it executes the command exec if cond != NULL */ 
+#define HIP_IFCS(condition, consequence)\
+	 if( condition ) {	\
+	 	consequence ; 						\
+	 } else {							\
+	 	HIP_ERROR("No state information found.\n");		\
+	 }
+	 								
+								\
+
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
@@ -392,6 +403,10 @@ typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef struct hip_hadb_state hip_ha_t;
+typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
+typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
+typedef struct hip_hadb_update_func_set hip_update_func_set_t;
+typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -993,7 +1008,167 @@ struct hip_hadb_state
 	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
 
 	int skbtest; /* just for testing */
+	
+	/* function pointer sets for modifying hip behaviour based on state information */
+	
+	/* receive func set. Do not modify these values directly.
+	   Use hip_hadb_set_rcv_function_set instead */
+	hip_rcv_func_set_t *hadb_rcv_func;
+	
+	/* handle func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_handle_func_set_t *hadb_handle_func;
+
+	/* handle func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_misc_func_set_t *hadb_misc_func;	
+
+	/* handle func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_update_func_set_t *hadb_update_func;	
 };
+
+struct hip_hadb_rcv_func_set{
+	int (*hip_fp_receive_r1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	/* as there is possibly no state established when i2
+	messages are received, the hip_handle_i2 function pointer
+	is not executed during the establishment of a new connection*/
+	int (*hip_fp_receive_i2)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	int (*hip_fp_receive_r2)(struct hip_common *,
+				 struct in6_addr *,
+				 struct in6_addr *,
+				 hip_ha_t*);
+				 
+	int (*hip_fp_receive_update)(struct hip_common *,
+				     struct in6_addr *,
+				     struct in6_addr *,
+				     hip_ha_t*);
+				     
+	int (*hip_fp_receive_notify)(struct hip_common *,
+				     struct in6_addr *,
+				     struct in6_addr *,
+				     hip_ha_t*);
+				     
+	int (*hip_fp_receive_bos)(struct hip_common *,
+				  struct in6_addr *,
+				  struct in6_addr *,
+				  hip_ha_t*);
+				     
+	int (*hip_fp_receive_close)(struct hip_common *,
+				    hip_ha_t*);
+				       
+	int (*hip_fp_receive_close_ack)(struct hip_common *,
+					hip_ha_t*);	 
+	
+};
+/* default set of receive function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_rcv_func_set_t default_rcv_func_set;
+hip_rcv_func_set_t ahip_rcv_func_set;
+
+
+
+struct hip_hadb_handle_func_set{   
+	int (*hip_handle_r1)(struct hip_common *r1,
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+			     
+	/* as there is possibly no state established when i2
+	   messages are received, the hip_handle_i2 function pointer
+	   is not executed during the establishment of a new connection*/
+	int (*hip_handle_i2)(struct hip_common *i2,
+			     struct in6_addr *i2_saddr,
+			     struct in6_addr *i2_daddr,
+			     hip_ha_t *ha);
+			     
+	int (*hip_handle_r2)(struct hip_common *r2,
+			     struct in6_addr *r2_saddr,
+			     struct in6_addr *r2_daddr,
+			     hip_ha_t *ha);
+	int (*hip_handle_bos)(struct hip_common *bos,
+			      struct in6_addr *r2_saddr,
+			      struct in6_addr *r2_daddr,
+			      hip_ha_t *ha);
+	int (*hip_handle_close)(struct hip_common *close,
+				hip_ha_t *entry);
+	int (*hip_handle_close_ack)(struct hip_common *close_ack,
+				    hip_ha_t *entry);
+	/* TODO: add BOS here*/
+			     
+};
+
+/* default set of handle function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_handle_func_set_t default_handle_func_set;
+hip_handle_func_set_t ahip_handle_func_set;
+
+
+struct hip_hadb_update_func_set{   
+	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
+					struct hip_common *msg,
+					struct in6_addr *src_ip,
+					struct in6_addr *dst_ip);
+	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
+					  struct hip_common *msg,
+				  	  struct in6_addr *src_ip,
+					  struct in6_addr *dst_ip);
+	void (*hip_update_handle_ack)(hip_ha_t *entry,
+				   struct hip_ack *ack,
+				   int have_nes,
+				   struct hip_echo_response *echo_esp);
+	int (*hip_handle_update_established)(hip_ha_t *entry,
+					  struct hip_common *msg,
+					  struct in6_addr *src_ip,
+					  struct in6_addr *dst_ip);
+	int (*hip_handle_update_rekeying)(hip_ha_t *entry,
+				       struct hip_common *msg,
+				       struct in6_addr *src_ip);
+	int (*hip_update_send_addr_verify)(hip_ha_t *entry,
+					struct hip_common *msg,
+					struct in6_addr *src_ip,
+					uint32_t spi);
+	
+};
+
+/* default set of update function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_update_func_set_t default_update_func_set;
+hip_update_func_set_t ahip_update_func_set;
+
+
+struct hip_hadb_misc_func_set{ 
+	uint64_t (*hip_solve_puzzle)(void *puzzle,
+				  struct hip_common *hdr,
+				  int mode);  
+	int (*hip_produce_keying_material)(struct hip_common *msg,
+				 	struct hip_context *ctx,
+				 	uint64_t I,
+				 	uint64_t J);
+	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
+		  struct in6_addr *r1_saddr,
+		  struct in6_addr *r1_daddr,
+		  hip_ha_t *entry);
+	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
+			  uint16_t control, struct in6_addr *hit_sender,
+			  struct in6_addr *hit_receiver);
+			     
+};
+
+/* default set of miscellaneous function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_misc_func_set_t default_misc_func_set;
+hip_misc_func_set_t ahip_misc_func_set;
+
+
 
 struct hip_cookie_entry {
 	int used;

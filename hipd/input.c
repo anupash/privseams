@@ -11,8 +11,7 @@
  */
 #include "input.h"
 
-int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
-int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
+
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr, HIP_RVA *rva);
 
@@ -327,11 +326,11 @@ int hip_produce_keying_material(struct hip_common *msg,
  *                           PACKET/PROTOCOL HANDLING                        *
  *****************************************************************************/
 
-int hip_receive_close(struct hip_common *close) 
+int hip_receive_close(struct hip_common *close,
+		      hip_ha_t 		*entry) 
 {
 	int state = 0;
 	int err = 0;
-	hip_ha_t *entry;
 	uint16_t mask;
 
 	/* XX FIX: CHECK THE SIGNATURE */
@@ -352,7 +351,6 @@ int hip_receive_close(struct hip_common *close)
 		goto out_err;
 	}
 
-	entry = hip_hadb_find_byhits(&close->hits, &close->hitr);
 	if (!entry) {
 		HIP_DEBUG("No HA for the received close\n");
 		goto out_err;
@@ -366,7 +364,7 @@ int hip_receive_close(struct hip_common *close)
  	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
  	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSING:
-		err = hip_handle_close(close, entry);
+		err = entry->hadb_handle_func->hip_handle_close(close, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -382,11 +380,11 @@ int hip_receive_close(struct hip_common *close)
 	return err;
 }
 
-int hip_receive_close_ack(struct hip_common *close_ack) 
+int hip_receive_close_ack(struct hip_common *close_ack,
+			  hip_ha_t *entry) 
 {
 	int state = 0;
 	int err = 0;
-	hip_ha_t *entry;
 	uint16_t mask;
 
 	/* XX FIX:  */
@@ -407,8 +405,7 @@ int hip_receive_close_ack(struct hip_common *close_ack)
 			  ntohs(close_ack->control));
 		goto out_err;
 	}
-
-	entry = hip_hadb_find_byhits(&close_ack->hits, &close_ack->hitr);
+	
 	if (!entry) {
 		HIP_DEBUG("No HA for the received close ack\n");
 		goto out_err;
@@ -421,7 +418,7 @@ int hip_receive_close_ack(struct hip_common *close_ack)
  	switch(state) {
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
-		err = hip_handle_close_ack(close_ack, entry);
+		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -460,41 +457,106 @@ int hip_receive_control_packet(struct hip_common *msg,
 	} else if (err) {
 		HIP_ERROR("Agent reject packet\n");
 	}
+	
+	/* fetch the state from the hadb database to be able to choose the
+	   appropriate message handling functions */
+	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
 	switch(type) {
 	case HIP_I1:
-		err = hip_receive_i1(msg, src_addr, dst_addr);
+		// no state
+		err = hip_receive_i1(msg, 
+				     src_addr, 
+				     dst_addr, 
+				     entry);
 		break;
-	case HIP_R1:
-		err = hip_receive_r1(msg, src_addr, dst_addr);
-		break;
+		
 	case HIP_I2:
-		err = hip_receive_i2(msg, src_addr, dst_addr);
+		// possibly state
+		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
+		if(entry){
+			err = entry->hadb_rcv_func->hip_fp_receive_i2(msg,
+							src_addr,
+							dst_addr,
+							entry);
+		}else{
+			hip_receive_i2(msg, src_addr, dst_addr, entry);
+		}
+		//hip_receive_i2(msg, src_addr, dst_addr, entry);
 		break;
+		
+	case HIP_R1:
+		// state
+		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_r1(msg,
+			 				src_addr,
+							dst_addr,
+							entry))
+		//err = hip_receive_r1(msg, src_addr, dst_addr);
+		break;
+		
 	case HIP_R2:
-		err = hip_receive_r2(msg, src_addr, dst_addr);
+		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_r2(msg,
+			 				src_addr,
+							dst_addr,
+							entry))
+		//err = hip_receive_r2(msg, src_addr, dst_addr);
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
+		
 	case HIP_UPDATE:
-		err = hip_receive_update(msg, src_addr, dst_addr);
+		HIP_DEBUG("\n-- RECEIVED Update message. State: %d--\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_update(msg,
+			 				src_addr,
+							dst_addr,
+							entry))
 		break;
+		
 	case HIP_NOTIFY:
-		err = hip_receive_notify(msg, src_addr, dst_addr);
+		HIP_DEBUG("\n-- RECEIVED Notify message --\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_notify(
+							msg,
+							src_addr,
+							dst_addr,
+							entry))
 		break;
+		
 	case HIP_BOS:
-		err = hip_receive_bos(msg, src_addr, dst_addr);
-		/*In case of BOS the msg->hitr is null, therefore it is replaced with
-		  our own HIT, so that the beet state can also be synchronized */
+		HIP_DEBUG("\n-- RECEIVED BOS message --\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_bos(msg,
+							src_addr,
+							dst_addr,
+							entry))
+		/*In case of BOS the msg->hitr is null, therefore it is replaced
+		  with our own HIT, so that the beet state can also be
+		  synchronized */
 		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
 		hip_init_us(&tmp, NULL);
 		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
 		skip_sync = 0;
 		break;
+		
 	case HIP_CLOSE:
-		err = hip_receive_close(msg);
+		HIP_DEBUG("\n-- RECEIVED CLOSE message --\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_close(msg,
+							entry))
 		break;
+		
 	case HIP_CLOSE_ACK:
-		err = hip_receive_close_ack(msg);
+		HIP_DEBUG("\n-- RECEIVED CLOSE_ACK message --\n");
+		HIP_IFCS(entry,
+			 err = entry->hadb_rcv_func->hip_fp_receive_close_ack(
+							msg,
+							entry))
 		break;
+		
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
@@ -563,7 +625,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(i2, HIP_I2, mask,
+	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
 
@@ -875,7 +937,7 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle =
-			  hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
+			  entry->hadb_misc_func->hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
 		I = pz->I;
 		entry->puzzle_solution = solved_puzzle;
@@ -889,7 +951,7 @@ int hip_handle_r1(struct hip_common *r1,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	HIP_IFEL(hip_produce_keying_material(r1, ctx, I, solved_puzzle),
+	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I, solved_puzzle),
 			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
@@ -902,7 +964,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
- 	HIP_IFEL(hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
+ 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
 		 "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT) {
@@ -931,9 +993,9 @@ int hip_handle_r1(struct hip_common *r1,
  */
 int hip_receive_r1(struct hip_common *hip_common,
 		   struct in6_addr *r1_saddr,
-		   struct in6_addr *r1_daddr)
+		   struct in6_addr *r1_daddr,
+		   hip_ha_t *entry)
 {
-	hip_ha_t *entry;
 	int state, mask, err = 0;
 
 	if (ipv6_addr_any(&hip_common->hitr)) {
@@ -945,10 +1007,8 @@ int hip_receive_r1(struct hip_common *hip_common,
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), 0, 
 		 "Received illegal controls in R1: 0x%x Dropping\n",
 		 ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
-						&hip_common->hitr)), -EFAULT, 
+	HIP_IFEL(!entry, -EFAULT, 
 		 "Received R1 with no local state. Dropping\n");
-
 	/* An implicit and insecure REA. If sender's address is different than
 	 * the one that was mapped, then we will overwrite the mapping with
 	 * the newer address.
@@ -986,7 +1046,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1039,7 +1099,7 @@ int hip_create_r2(struct hip_context *ctx,
 	 * the R2's source HIT */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(r2, HIP_R2, mask,
+	entry->hadb_misc_func->hip_build_network_hdr(r2, HIP_R2, mask,
 			      &entry->hit_our, &entry->hit_peer);
 
  	/********** ESP_INFO **********/
@@ -1179,7 +1239,10 @@ int hip_handle_i2(struct hip_common *i2,
 	/* Check HIP and ESP transforms, and produce keying material  */
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
-	   of a retransmission but then we'd had to fill ctx->hmac etc */
+	   of a retransmission but then we'd had to fill ctx->hmac etc 
+	   
+	   TH: I'm not sure if this could be replaced with a function pointer
+	   which is set from hadb. Usually you shouldn'y have state here, right?*/
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
@@ -1291,7 +1354,7 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 
-		//HIP_DEBUG("HA entry created.");
+		_HIP_DEBUG("HA entry created.");
 	}
 	
 	/* FIXME: the above should not be done if signature fails...
@@ -1417,6 +1480,16 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
+	/* choose the set of processing function for the hadb_entry*/
+	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
+		 -1, "Can't set new function pointer set for receive functions\n");
+	HIP_IFEL(hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
+		 -1, "Can't set new function pointer set for receive functions\n");
+	HIP_IFEL(hip_hadb_set_update_function_set(entry, &default_update_func_set),
+		 -1, "Can't set new function pointer set for update functions\n");
+	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
+		 -1, "Can't set new function pointer set for misc functions\n");
+		 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
@@ -1489,10 +1562,11 @@ int hip_handle_i2(struct hip_common *i2,
  */
 int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
-		   struct in6_addr *i2_daddr)
+		   struct in6_addr *i2_daddr,
+		   hip_ha_t *entry)
 {
+	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
-	hip_ha_t *entry;
 	uint16_t mask;
 	HIP_DEBUG("hip_receive_i2\n");
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
@@ -1504,7 +1578,6 @@ int hip_receive_i2(struct hip_common *i2,
 		 "Received illegal controls in I2: 0x%x. Dropping\n",
 		 ntohs(i2->control));
 
-	entry = hip_hadb_find_byhits(&i2->hits, &i2->hitr);
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
@@ -1518,7 +1591,7 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
@@ -1530,18 +1603,19 @@ int hip_receive_i2(struct hip_common *i2,
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		break;
  	case HIP_STATE_REKEYING:
- 		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1733,10 +1807,10 @@ int hip_handle_i1(struct hip_common *i1,
  */
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
-		   struct in6_addr *i1_daddr)
+		   struct in6_addr *i1_daddr,
+		   hip_ha_t *entry)
 {
 	int err = 0, state, mask;
-	hip_ha_t *entry;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 #endif
@@ -1748,7 +1822,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
 	
-	entry = hip_hadb_find_byhits(&hip_i1->hits, &hip_i1->hitr);
+	
 	if (entry) {
 		wmb();
 		state = entry->state;
@@ -1826,9 +1900,10 @@ int hip_receive_i1(struct hip_common *hip_i1,
  */
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
-		   struct in6_addr *r2_daddr)
+		   struct in6_addr *r2_daddr,
+		   hip_ha_t *entry)
 {
-	hip_ha_t *entry = NULL;
+	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
 	uint16_t mask;
 
@@ -1839,10 +1914,13 @@ int hip_receive_r2(struct hip_common *hip_common,
 					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1,
 		 "Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
-						&hip_common->hitr)), -EFAULT,
-		 "Received R2 by unknown sender\n");
+	//HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
+	//					&hip_common->hitr)), -EFAULT,
+	//	 "Received R2 by unknown sender\n");
 
+	HIP_IFEL(!entry, -EFAULT,
+		 "Received R2 by unknown sender\n");
+		 
 	HIP_LOCK_HA(entry);
 	state = entry->state;
 
@@ -1850,7 +1928,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
@@ -1886,9 +1964,10 @@ int hip_receive_r2(struct hip_common *hip_common,
  */
 int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notify_saddr,
-		       struct in6_addr *notity_daddr)
+		       struct in6_addr *notity_daddr,
+		       hip_ha_t* entry)
 {
-	hip_ha_t *entry = NULL;
+	
 	int err = 0;
 	struct hip_notify *notify_param;
 	uint16_t mask;
@@ -1901,9 +1980,7 @@ int hip_receive_notify(struct hip_common *hip_common,
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1, 
 		 "Received illegal controls in NOTIFY: 0x%x. Dropping\n",
 		 ntohs(hip_common->control));
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
-						&hip_common->hitr)), -EFAULT,
-		 "Received NOTIFY by unknown sender\n");
+	HIP_IFEL( !entry , -EFAULT, "Received NOTIFY by unknown sender\n");
 
 	/* lock here */
 	/* todo: check state */
@@ -1936,15 +2013,16 @@ int hip_receive_notify(struct hip_common *hip_common,
  */
 int hip_receive_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
-		   struct in6_addr *bos_daddr)
+		   struct in6_addr *bos_daddr,
+		   hip_ha_t *entry)
 {
 	int err = 0, state = 0;
-	hip_ha_t *entry;
 
-	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, "Received NULL sender HIT in BOS.\n");
-	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, "Received non-NULL receiver HIT in BOS.\n");
+	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, 
+		 "Received NULL sender HIT in BOS.\n");
+	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, 
+		 "Received non-NULL receiver HIT in BOS.\n");
 	HIP_DEBUG("Entered in hip_receive_bos...\n");
-	entry = hip_hadb_find_byhits(&bos->hits, &bos->hitr);
 	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
 
 	/* TODO: If received BOS packet from already known sender
@@ -1955,7 +2033,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
@@ -1996,7 +2074,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
+	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);
 
@@ -2085,4 +2163,5 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	return err;
 }
+
 
