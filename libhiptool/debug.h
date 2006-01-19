@@ -22,7 +22,7 @@
 #define SYSLOG_OPT        (LOG_PID)
 #define SYSLOG_FACILITY   LOG_DAEMON
 
-#define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+//#define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_INFO(...) hip_info(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_ERROR(...) hip_error(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
@@ -33,6 +33,42 @@
 #define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
+
+#define HIP_DEBUG(...) \
+	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+# define HIP_DEBUG_GL(debug_group, debug_level, ...)\
+	hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
+
+
+/* Debug groups define groups of debug messages which belong to the
+   same logical part of hip. Debug messages can be enabled or disabled more
+   finegrained by only printing messages which belong to a debug group */	
+# define HIP_DEBUG_GROUP_ALL		770
+# define HIP_DEBUG_GROUP_DEFAULT	771
+# define HIP_DEBUG_GROUP_ADAPT		772
+# define HIP_DEBUG_GROUP_INIT		773
+# define HIP_DEBUG_GROUP_MSG		774
+
+/* Current debug group */
+# define HIP_DEBUG_GROUP HIP_DEBUG_GROUP_INIT
+
+/* Debug messages are divided into several levels. Severe errors 
+   or abnormal conditions are the lowest level. Higher levels are
+   considered as less severe or less important. The highes level means
+   every debug message which matches the current switch is printed. 
+   The hignes debug level number must be assigned to HIP_DEBUG_ALL*/
+# define HIP_DEBUG_LEVEL_ERRORS		0
+# define HIP_DEBUG_LEVEL_IMPORTANT	10
+# define HIP_DEBUG_LEVEL_INFORMATIVE	20
+# define HIP_DEBUG_LEVEL_DEFAULT	30
+# define HIP_DEBUG_LEVEL_ALL		40
+
+# define HIP_DEBUG_LEVEL HIP_DEBUG_LEVEL_ALL
+
+
+
+
 
 /* XX FIXME: implement! */
 //#define HIP_DEBUG_HIT(str, hit) do {} while(0)
