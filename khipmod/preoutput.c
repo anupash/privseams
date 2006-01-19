@@ -61,8 +61,10 @@ int hip_handle_output(struct ipv6hdr *hdr, struct sk_buff *skb)
 			do_gettimeofday(&gtv_start);
 		}
 #endif
+
 		barrier();
 		HIP_IFEL(!(hwo = hip_init_job(GFP_ATOMIC)), -ENOMEM, "Out of memory\n");
+
 		HIP_INIT_WORK_ORDER_HDR(hwo->hdr,
 					HIP_WO_TYPE_OUTGOING, 
 					HIP_WO_SUBTYPE_SEND_I1,
