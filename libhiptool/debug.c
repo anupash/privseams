@@ -213,12 +213,41 @@ void hip_info(const char *file, int line, const char *function,
  */
 void hip_debug(const char *file, int line, const char *function,
 	       const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
-  va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
+	va_end(args);
 }
 
+/**
+ * hip_debug_gl - output development (low level) debugging messages
+ *                a debug group and a debug level can be given. Debug
+ *                messages are only displayed if the debug group matches
+ *                the current debug group and the debug leven is smaller
+ *                than the current debug level.
+ * @debug_group:  the debug group which has to be matched
+ * @debug_level:  the debug level of the debug output
+ * @file:         the file from where the debug call was made        
+ * @line:         the line of the debug call in the source file
+ * @function:     the name of function where the debug call is located
+ * @fmt:          the output format of the debug message as in printf(3)
+ *
+ * The variable size argument list (...) is used as in printf(3).
+ * Do not call this function from the outside of the debug module,
+ * use the HIP_DEBUG_GL macro instead.
+ */
+hip_debug_gl(int debug_group, int debug_level,
+	     const char *file, int line,
+	     const char *function, const char *fmt, ...) {
+	if(debug_level <= HIP_DEBUG_LEVEL && 
+	(HIP_DEBUG_GROUP == HIP_DEBUG_GROUP_ALL ||
+	 debug_group == HIP_DEBUG_GROUP)) {
+		va_list args;
+		va_start(args, fmt);
+		hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
+		va_end(args);
+	}
+}
 /**
  * hip_die - output a fatal error and exit
  * @file:        the file from where the debug call was made        
@@ -252,10 +281,10 @@ void hip_die(const char *file, int line, const char *function,
  */
 void hip_error(const char *file, int line, const char *function,
 	       const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  hip_vlog(DEBUG_LEVEL_ERROR, file, line, function, fmt, args);
-  va_end(args);
+	va_list args;
+	va_start(args, fmt);
+	hip_vlog(DEBUG_LEVEL_ERROR, file, line, function, fmt, args);
+	va_end(args);
 }
 
 /**
@@ -271,7 +300,7 @@ void hip_error(const char *file, int line, const char *function,
  */
 void hip_perror_wrapper(const char *file, int line, const char *function,
 			const char *s) {
-  hip_error(file, line, function, "%s %s\n", s, strerror(errno));
+	hip_error(file, line, function, "%s %s\n", s, strerror(errno));
 }
 
 /**
