@@ -273,7 +273,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		    hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
 		    -1, "Can't set new function pointer set\n");
 		HIP_IFEL(
-		    hip_hadb_set_rcv_function_set(entry, &default_handle_func_set),
+		    hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
 		    -1, "Can't set new function pointer set\n");
 		HIP_IFEL(
 		    hip_hadb_set_update_function_set(entry, &default_update_func_set),
