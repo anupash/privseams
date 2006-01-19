@@ -2015,6 +2015,8 @@ int hip_receive_bos(struct hip_common *bos,
 {
 	int err = 0, state = 0;
 
+	HIP_DEBUG("\n");
+
 	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, 
 		 "Received NULL sender HIT in BOS.\n");
 	HIP_IFEL(!ipv6_addr_any(&bos->hitr), 0, 
