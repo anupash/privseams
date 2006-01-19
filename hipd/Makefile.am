@@ -1,30 +1,26 @@
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = -DHIP_LOGFMT_LONG -g -DCONFIG_HIP_DEBUG -DCONFIG_HIP_USERSPACE 
+CFLAGS = $(hipl_common_cflags)
 
-include_HEADERS = hipd.h crypto.h netlink.h
-INCLUDES = -I$(HIPL_LINUX_INCLUDE) -I$(PWD) -I$(HIPL_LIBINET6_INCLUDE)
-INCLUDES += -I$(HIPL_LIBINET6) -I$(HIPL_LINUX_MODULE) -I$(HIPL)
+# Note: libinet6 cannot be included here because it has a bad dependency
+# with netlink headers.
+include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
+                  workqueue.h bos.h input.h output.h preoutput.h preinput.h \
+                  xfrm.h beet.h netdev.h update.h rvs.h
+INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = pk.c rvs.c preinput.c update.c netdev.c beet.c hipd.c hashtable.c keymat.c 
-hipd_SOURCES += workqueue.c builder.c preoutput.c hadb.c crypto.c
-hipd_SOURCES += input.c output.c xfrm.c hidb.c cookie.c misc.c dh.c netlink.c bos.c
+hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
+hipd_SOURCES += workqueue.c preoutput.c hadb.c
+hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = ../libinet6/.libs/libinet6.a
+hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
-SUBDIRS =
+#SUBDIRS =
 
 # Hi3
 #CFLAGS += -DCONFIG_HIP_HI3
@@ -42,86 +38,21 @@ SUBDIRS =
 # the best way to access it because the object must be built on this
 # directory and we don't want to make reduntant copies.
 #
-builder.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.h .
-builder.c: builder.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/builder.c .
-cookie.c: cookie.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.c .
-cookie.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/cookie.h .
-crypto.c: crypto.h
-crypto.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/crypto.h .
-hidb.c: hidb.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.c .
-hidb.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hidb.h .
-dh.c: dh.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.c .
-dh.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/dh.h .
-hadb.c: hadb.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.c .
-hadb.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hadb.h .
-netlink.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/netlink.h .
-hashtable.c: hashtable.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.c .
-hashtable.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/hashtable.h .
-keymat.c: keymat.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.c .
-keymat.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/keymat.h .
-misc.c: misc.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.c .
-misc.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/misc.h .
-workqueue.c: workqueue.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.c .
-workqueue.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/workqueue.h .
-bos.c: 
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.c .
-bos.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/bos.h .
-input.c: input.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.c .
-output.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.h .
-output.c: output.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/output.c .
-input.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/input.h .
-timer.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/timer.h .
-preoutput.c: preoutput.h
-preoutput.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/preoutput.h .
-preinput.c: preinput.h
-preinput.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/preinput.h .
-xfrm.c: xfrm.h
-xfrm.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/xfrm.h .
-beet.c: beet.h
-beet.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/beet.h .
-update.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.h .
-update.c: update.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/update.c .
-rvs.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.h .
-rvs.c: rvs.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/rvs.c .
-pk.h:
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.h .
-pk.c: pk.h
-	$(LN_S) -f $(HIPL_LINUX_MODULE)/pk.c .
 
-tags:
-	etags $(hipd_SOURCES) $(include_HEADERS)
+cookie.c: cookie.h
+hidb.c: hidb.h
+hadb.c: hadb.h
+hashtable.c: hashtable.h
+keymat.c: keymat.h
+workqueue.c: workqueue.h
+bos.c: bos.h
+input.c: input.h
+output.c: output.h
+preoutput.c: preoutput.h
+preinput.c: preinput.h
+xfrm.c: xfrm.h
+beet.c: beet.h
+netdev.c: netdev.h
+update.c: update.h
+rvs.c: rvs.h
 

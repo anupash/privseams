@@ -3,7 +3,7 @@
 
 #ifdef CONFIG_HIP_HI3
 #include "workqueue.h"
-#include "debug.h"
+//#include "debug.h"
 #include "i3_client_api.h"
 #endif
 

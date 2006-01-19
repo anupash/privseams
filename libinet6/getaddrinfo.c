@@ -644,6 +644,20 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	  _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
 
 	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6) {
+	    
+#if 0
+#ifdef CONFIG_HIP_AGENT
+	  if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
+	      hip_agent_is_alive()) {
+		  /* Communicate the name and port output to the agent
+		     synchronously with netlink. First send the name + port
+		     and then wait for answer (select). The agent filters
+		     or modifies the list. The agent implements gethosts_hit
+		     with some filtering. */
+	  }
+#endif
+#endif
+
 	    if (hip_transparent_mode) {
 	      _HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
 	      gethosts_hit(name);
@@ -661,6 +675,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	      }
 	    }
 	  }
+
 	  /* If we are looking for both IPv4 and IPv6 address we don't
 	     want the lookup functions to automatically promote IPv4
 	     addresses to IPv6 addresses.  Currently this is decided
@@ -704,7 +719,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 		hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
 		hip_build_param_contents(msg, (void *) at_ipv6->addr, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
 		hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		hip_set_global_option(msg);
+		hip_send_daemon_info(msg);
 	      }
 	    }
 
@@ -987,7 +1002,7 @@ getaddrinfo (const char *name, const char *service,
   int hip_transparent_mode;
 
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  _HIP_DEBUG("name='%s' service='%s'\n", name, service);
+  HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
     _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
@@ -1047,13 +1062,8 @@ getaddrinfo (const char *name, const char *service,
     pservice = NULL;
 
   if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    int msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-    int hipfd = open_hip(); // sets also errno
+    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
     int err = 0, port, i;
-    if (hipfd < 0) {
-      HIP_ERROR("Failed to open HIP configuration channel\n");
-      return(-errno);
-    }
     
     *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
     if (*pai == NULL) {
@@ -1070,7 +1080,8 @@ getaddrinfo (const char *name, const char *service,
      * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
      * the struct sockaddr_in6 list
      */
-    err = getsockopt(hipfd, port, SO_HIP_GET_HIT_LIST, pai, &msg_len);
+    err = hip_recv_daemon_info(NULL, 0);
+    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
     if (err < 0) {
       HIP_ERROR("getsockopt failed (%d)\n", err);
     }

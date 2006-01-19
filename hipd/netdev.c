@@ -4,9 +4,6 @@
  */
 #include "netdev.h"
 
-int address_count;
-struct list_head addresses;
-
 static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *n, *t;
@@ -34,9 +31,12 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
 		    IN6_IS_ADDR_LINKLOCAL(a) ||
+#if 0 /* For Juha-Matti's experiments  */
 		    IN6_IS_ADDR_SITELOCAL(a) ||
+#endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
-		    IN6_IS_ADDR_V4COMPAT(a))
+		    IN6_IS_ADDR_V4COMPAT(a) ||
+		    ipv6_addr_is_hit(&a->sin6_addr))
 			return 0;
 		return 1;
 	}
@@ -44,7 +44,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	return 0;
 }
 
-static void add_address_to_list(struct sockaddr *addr, int ifindex)
+void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 
@@ -110,14 +110,15 @@ void delete_all_addresses(void)
         struct netdev_address *n, *t;
 
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
-	list_for_each_entry_safe(n, t, &addresses, next) {
-		list_del(&n->next);
-		HIP_FREE(n);
-		address_count--;
-        }
-
-	if (address_count != 0)
-		HIP_ERROR("BUG: address_count != 0\n", address_count);
+	if (address_count){
+		list_for_each_entry_safe(n, t, &addresses, next) {
+			list_del(&n->next);
+			HIP_FREE(n);
+			address_count--;
+		}
+		if (address_count != 0)
+			HIP_ERROR("BUG: address_count != 0\n", address_count);
+	}
 }
 
 int hip_netdev_find_if(struct sockaddr *addr)
@@ -141,7 +142,7 @@ int hip_netdev_find_if(struct sockaddr *addr)
  */
 /* FIXME: The caller of this shoul be generalized to both IPv4 and
    IPv6 so that this function can be removed (tkoponen) */
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr)
+int hip_devaddr2ifindex(struct in6_addr *addr)
 {
 	struct sockaddr_in6 a;
 	a.sin6_family = AF_INET6;
@@ -207,73 +208,94 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg) {
 }
 
 /* 
- * function get_my_addresses()
- *
- * Use the netlink interface to retrieve a list of addresses for this
- * host's interfaces, and stores them into global addresses list.
+ * Note: this creates a new NETLINK socket (via getifaddrs), so this has to be
+ * run before the global NETLINK socket is opened. I did not have the time
+ * and energy to import all of the necessary functionality from iproute2.
+ * -miika
  */
-int hip_netdev_init_addresses(struct hip_nl_handle *nl)
+int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
-        struct sockaddr_nl nladdr;
-        char buf[8192];
-        struct nlmsghdr *h;
-        int status, done = 0;
-
-        /* netlink packet */
-        struct {
-                struct nlmsghdr n;
-                struct rtgenmsg g;
-        } req;
-
-        struct iovec iov = { buf, sizeof(buf) };
-        /* message response */
-        struct msghdr msg = {
-                (void*)&nladdr, sizeof(nladdr),
-                &iov, 1,
-                NULL, 0,
-                0
-        };
+	struct ifaddrs *g_ifaces = NULL, *g_iface;
+	int err = 0, if_index;
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");
 	INIT_LIST_HEAD(&addresses);
-	address_count = 0;
 
-        /* setup request */
-        memset(&req, 0, sizeof(req));
-        req.n.nlmsg_len = sizeof(req);
-        req.n.nlmsg_type = RTM_GETADDR;
-        req.n.nlmsg_flags = NLM_F_ROOT | NLM_F_MATCH | NLM_F_REQUEST;
-        req.n.nlmsg_pid = 0;
-        req.n.nlmsg_seq = ++nl->seq;
-        req.g.rtgen_family = 0;
+	HIP_IFEL(getifaddrs(&g_ifaces), -1,
+		 "getifaddrs failed\n");
 
-	HIP_DEBUG("Sending an address request.\n");
+	for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
+		if (!g_iface->ifa_addr)
+			continue;
+		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
+			 -1, "if_nametoindex failed\n");
+		add_address_to_list(g_iface->ifa_addr, if_index);
+	}
 
-        /* send request */
-	if (hip_netlink_send_buf(nl, (const char *)&req, sizeof(req)) < 0) {
-		HIP_ERROR("Netlink: sendto() error: %s\n", strerror(errno));
-                return(-1);
-        }
+ out_err:
+	if (g_ifaces)
+		freeifaddrs(g_ifaces);
+	return err;
+}
 
-        HIP_DEBUG("Local addresses:\n");
+int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+	int err = 0, if_index = 0;
+	hip_ha_t *entry;
+	hip_hit_t *dst_hit;
+	struct xfrm_user_acquire *acq;
+	struct in6_addr *dst_addr;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr;
+	addr = (struct sockaddr*) &ss_addr;
 
-        /* receiving loop 1
-         * call recvmsg() repeatedly until we get a message
-         * with the NLMSG_DONE flag set
-         */
-        while(!done) {
-                /* get response */
-		if (hip_netlink_receive(nl, add_address, &done)) {
-                        HIP_ERROR("Netlink: recvmsg() error!\nerror: %s\n",
-				  strerror(errno));
-                        return(-1);
-                }
-        } /* end while(!done) - loop 1 */ 
+	HIP_DEBUG("Acquire: sending I1\n");
 
-	HIP_DEBUG("found %d usable addresses\n", address_count);
-	HIP_DEBUG("addrs=0x%p\n", &addresses);
-        return(0);
+	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	dst_hit = (struct in6_addr *) &acq->sel.daddr;
+	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+
+	if (!entry) {
+#if 0
+		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
+		   then resolve the hostname to an IP. The natural place to
+		   handle this is either in the getaddrinfo or
+		   getendpointinfo function with AI_NUMERICHOST flag set.
+		   We can fallback to e.g. DHT search if the mapping is not
+		   found from local files.*/
+		err = getendpointinfo(); /* TBD */
+		err = hip_hadb_add_peer_info(dst_hit, dst_addr);
+#endif
+		HIP_ERROR("Failed to find entry\n");
+		err = -1;
+		goto out_err;
+	}
+
+	/* XX TODO: we should try resolving here to create an
+	   entry if an entry was not found */
+
+	/* Let's fill in the local_address in here */
+	ipv6_addr_copy(&entry->local_address, ((struct in6_addr*)&acq->id.daddr));
+	/* The address and the corresponding ifindex should be added in here */
+	memset(addr, 0, sizeof(struct sockaddr_storage));
+	
+	//FIXME: acq->sel.family doesn't seem to contain the right value
+	addr->sa_family = AF_INET6;
+	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
+		 "if_index NOT determined\n");
+
+	add_address_to_list(addr, acq->sel.ifindex);
+
+	if (entry->state != HIP_STATE_UNASSOCIATED) {
+		HIP_DEBUG("I1 was already sent, ignoring\n");
+		goto out_err;
+	}
+
+	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
+		 "Sending of I1 failed\n");
+ out_err:
+	return err;
 }
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
@@ -288,7 +310,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct netdev_address *n, *t;
 	int pre_if_address_count;
 
-	HIP_DEBUG("\n");
 	addr = (struct sockaddr*) &ss_addr;
 	
 	for (; NLMSG_OK(msg, (u32)len);
@@ -387,7 +408,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 					memcpy(&reas[i].address, SA2IP(&n->addr),
 					       SAIPLEN(&n->addr));
-					/* FIXME: Is this ok? (tkoponen), for boeing it is*/					reas[i].lifetime = 0;
+					/* FIXME: Is this ok? (tkoponen), for boeing it is*/
+					reas[i].lifetime = 0;
 					/* For testing preferred address */
 					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
 					i++;
@@ -398,6 +420,54 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				free(reas);
 				break;
 			}
+		case XFRMGRP_ACQUIRE:
+			/* XX TODO  does this ever happen? */
+			HIP_DEBUG("\n");
+			return -1;
+			break;
+		case XFRMGRP_EXPIRE:
+			/* XX TODO  does this ever happen? */
+			return -1;
+			break;
+#if 0
+		case XFRMGRP_SA:
+			/* XX TODO  does this ever happen? */
+			return -1;
+			break;
+		case XFRMGRP_POLICY:
+			/* XX TODO  does this ever happen? */
+			return -1;
+			break;
+#endif
+		case XFRM_MSG_GETSA:
+			return -1;
+			break;			
+		case XFRM_MSG_ALLOCSPI:
+			return -1;
+			break;			
+		case XFRM_MSG_ACQUIRE:
+			return hip_netdev_handle_acquire(msg);
+			break;		
+		case XFRM_MSG_EXPIRE:
+			return -1;
+			break;			
+		case XFRM_MSG_UPDPOLICY:
+			return -1;
+			break;			
+		case XFRM_MSG_UPDSA:
+			return -1;
+			break;			
+		case XFRM_MSG_POLEXPIRE:
+			return -1;
+			break;			
+#if 0
+		case XFRM_MSG_FLUSHSA:
+			return -1;
+			break;			
+		case XFRM_MSG_FLUSHPOLICY:
+			return -1;
+			break;
+#endif
 		skip_readdr:
 			break;
 		default:
@@ -407,4 +477,72 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	}
 
 	return 0;
+}
+
+int hip_add_iface_local_hit(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
+	struct idxmap *idxmap[16] = {0};
+
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_PREFIX_STR))), -1);
+	HIP_DEBUG("Adding HIT: %s\n", hit_str);
+
+	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET6,
+				  hit_str, HIP_HIT_DEV, idxmap), -1);
+
+ out_err:
+
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	return err;
+}
+
+int hip_add_iface_local_route(const hip_hit_t *local_hit)
+{
+	int err = 0;
+	char *hit_str = NULL;
+	struct idxmap *idxmap[16] = {0};
+
+	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
+
+	HIP_DEBUG("Adding local route: %s\n", hit_str);
+	
+	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+		-1);
+
+ out_err:
+
+	if (hit_str)
+		HIP_FREE(hit_str);
+	
+	
+	return err;
+}
+
+int hip_select_source_address(struct in6_addr *src,
+			      struct in6_addr *dst)
+{
+	int err = 0;
+	int family = AF_INET6;
+	int rtnl_rtdsfield_init;
+	char *rtnl_rtdsfield_tab[256] = { "0",};
+	struct idxmap *idxmap[16] = { 0 };
+	
+	/* rtnl_rtdsfield_initialize() */
+        rtnl_rtdsfield_init = 1;
+        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",
+                            rtnl_rtdsfield_tab, 256);
+
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,
+				 family, idxmap), -1,
+		 "Finding ip route failed\n");
+
+	HIP_DEBUG_IN6ADDR("src", src);
+ out_err:
+
+	return err;
 }

@@ -34,19 +34,20 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
  * contain substring, the return value is NULL.  
  */
 char *findsubstring(const char *string, const char *substring) {
+  char *str = (char *) string, *sub = (char *) substring;
   char *a, *b;
   
-  for (b = substring; *string != 0; string += 1) {
-    if (*string != *b)
+  for (b = sub; *str != 0; str += 1) {
+    if (*str != *b)
       continue;
-    a = string;
+    a = str;
     for (;;) {
       if (*b == 0)
-	return(string);
+	return(str);
       if (*a++ != *b++)
 	break;
     }
-    b = substring;
+    b = sub;
   }
   return((char *) NULL);
 }
@@ -58,16 +59,19 @@ char *findsubstring(const char *string, const char *substring) {
 void extractsubstrings(char *string, List *list) {
 
   char *sub_string;
+  char *separator;
+  /* Note: fails if the string includes BOTH spaces and tabs */
   _HIP_DEBUG("extractsubstrings\n");
-  sub_string = strtok(string, " ");
-  //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-  if(sub_string) 
+  separator = (strrchr(string, ' ') ? " " : "\t");
+  sub_string = strtok(string, separator);
+  _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+  if(sub_string)
     insert(list, sub_string);
   else 
     return;
   sub_string = NULL;
-  while( (sub_string=strtok(NULL, " ")) != NULL) {
-    //HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+  while ((sub_string=strtok(NULL, separator)) != NULL) {
+    _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
     insert(list, sub_string);
     sub_string = NULL;
   }

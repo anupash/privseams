@@ -18,7 +18,7 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
-#include <net/hip.h>
+#include <hip.h>
 #include <sysexits.h>
 
 #include <assert.h>
@@ -28,8 +28,8 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 
-#include "libinet6/debug.h"
-#include "libinet6/crypto.h"
+#include "debug.h"
+#include "crypto.h"
 #include "builder.h"
 
 /* 0 is reserved */
