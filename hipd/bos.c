@@ -95,6 +95,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
  	/* Ready to begin building the BOS packet */
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
  	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
