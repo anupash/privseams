@@ -381,6 +381,10 @@ int main(int argc, char *argv[]) {
 	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
+	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT, 
+		     HIP_DEBUG_LEVEL_INFORMATIVE,
+		     "Hipd daemon running.\n"
+		     "Starting select loop.\n");
 	for (;;) {
 		struct hip_work_order *hwo;
 		
