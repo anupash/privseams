@@ -95,6 +95,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
  	/* Ready to begin building the BOS packet */
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
  	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
@@ -192,8 +193,6 @@ int hip_handle_bos(struct hip_common *bos,
 	char *str;
 	struct in6_addr *dstip;
 	char src[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("\n");
 
 	/* according to the section 8.6 of the base draft,
 	 * we must first check signature
