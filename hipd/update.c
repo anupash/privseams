@@ -37,6 +37,11 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	auth_transf_length = hip_auth_key_length_esp(esp_transform);
 	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
 
+	bzero(espkey_gl, sizeof(struct hip_crypto_key));
+	bzero(espkey_lg, sizeof(struct hip_crypto_key));
+	bzero(authkey_gl, sizeof(struct hip_crypto_key));
+	bzero(authkey_lg, sizeof(struct hip_crypto_key));
+
 	HIP_IFEL(*keymat_offset_new + 2*(esp_transf_length+auth_transf_length) > 0xffff, -EINVAL,
 		 "Can not draw requested amount of new KEYMAT, keymat index=%u, requested amount=%d\n",
 		 *keymat_offset_new, 2*(esp_transf_length+auth_transf_length));
@@ -482,8 +487,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
 			 hits, hitr, 
 			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
-			 we_are_HITg ? &espkey_gl : &espkey_lg,
-			 we_are_HITg ? &authkey_gl : &authkey_lg,
+			 (we_are_HITg ? &espkey_gl : &espkey_lg),
+			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);

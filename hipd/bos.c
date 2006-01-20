@@ -194,8 +194,6 @@ int hip_handle_bos(struct hip_common *bos,
 	struct in6_addr *dstip;
 	char src[INET6_ADDRSTRLEN];
 
-	HIP_DEBUG("\n");
-
 	/* according to the section 8.6 of the base draft,
 	 * we must first check signature
 	 */
