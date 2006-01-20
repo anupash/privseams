@@ -755,7 +755,15 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    _res.options &= ~RES_USE_INET6;
 	 
 	HIP_DEBUG("family: %d\n", req->ai_family ); 
-	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
+
+	/*
+		We dont need to check req->ai_family to add outer address.
+		We add adress as we get. The gethosts add the address of the specified
+		family if it get is.
+		FIXME: If both ipv4 and ipv6 address of a host is present in /etc/hosts
+		connetest-cleint-gai crashes --Abi
+	*/
+	  //if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
 	    gethosts (AF_INET6, struct in6_addr);
 	  no_inet6_data = no_data;
 
@@ -764,9 +772,9 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    _res.options = old_res_options;
 
 	HIP_DEBUG("family: %d\n", req->ai_family ); 
-	  if (req->ai_family == AF_INET ||
-	      (!v4mapped && req->ai_family == AF_UNSPEC) ||
-	      (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL))))
+	  //if (req->ai_family == AF_INET ||
+	    //  (!v4mapped && req->ai_family == AF_UNSPEC) ||
+	     // (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL))))
 	    gethosts (AF_INET, struct in_addr);
 	HIP_DEBUG("Dumping the structure\n");
 	  dump_pai(orig_at);
