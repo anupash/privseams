@@ -262,6 +262,15 @@ int hip_produce_keying_material(struct hip_common *msg,
 	   memcpy(dst, p, len);					\
         }
 
+	bzero(&ctx->hip_enc_in.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->hip_enc_out.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->hip_hmac_in.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->hip_hmac_out.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->esp_in.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->esp_out.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->auth_in.key, sizeof(struct hip_crypto_key));
+	bzero(&ctx->auth_out.key, sizeof(struct hip_crypto_key));
+
 	/* Draw keys: */
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
