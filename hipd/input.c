@@ -1697,7 +1697,8 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
-	err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr, &ctx->input->hits,
+	err = hip_add_sa(r2_daddr, r2_saddr,
+			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
 			 HIP_SPI_DIRECTION_OUT, 0);
