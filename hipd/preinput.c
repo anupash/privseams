@@ -11,10 +11,10 @@
  */
 u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 {
-	u16 checksum;
+	u16 checksum = 0;
 	unsigned long sum = 0;
-	int count, length;
-	unsigned short *p; /* 16-bit */
+	int count = 0, length = 0;
+	unsigned short *p = NULL; /* 16-bit */
 	struct pseudo_header pseudoh;
 	struct pseudo_header6 pseudoh6;
 	u32 src_network, dst_network;

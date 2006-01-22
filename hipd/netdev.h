@@ -23,7 +23,7 @@ extern int address_count;
 extern struct list_head addresses;
 struct rtnl_handle;
 
-int hip_ipv6_devaddr2ifindex(struct in6_addr *addr);
+int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
