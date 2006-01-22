@@ -824,6 +824,11 @@
 		5. Package: libpango1.0-dev - Development files for the Pango
 		6. wxGTK version 2.6.2 (was compiled manually from sources after installing previous)
       </para>
+      <para>
+      	HIT database is saved and loaded on agent startup as default from
+      	/etc/hip/agentdb-file. Notice!: The database is currently saved only if user quits the
+      	GUI/agent from File->Quit -menu. Otherwise the database is not saved.
+      </para>
   </chapter>
 </book>    
 
