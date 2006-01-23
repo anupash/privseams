@@ -161,7 +161,8 @@ int connhipd_thread(void *data)
 			HIP_DEBUG("Message accepted, sending back to daemon.\n");
 
 			alen = sizeof(agent_addr);
-			n = sendto(hip_agent_sock, msg, sizeof(struct hip_common), 0,
+			n = sendto(hip_agent_sock, msg,
+				   hip_get_msg_total_len(msg), 0,
 			           (struct sockaddr *)&agent_addr, alen);
 			if (n < 0)
 			{
