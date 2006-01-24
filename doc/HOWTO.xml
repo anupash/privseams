@@ -718,10 +718,10 @@
 
         <para>Filtering options:</para>
 
-        <para>-src_hit [!] &lt;hit value&gt; --src_hi &lt;file name&gt;</para>
+        <para>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</para>
 
         <para>Matches source HIT of packet. HI can be given with
-              --src_hi option and by defining path to a public key
+              --hi option and by defining path to a public key
               file as an argument. This causes sender signatures to be
               verified. The file name must contain either "_rsa_" or
               "_dsa_" to define whether RSA or DSA is used as
@@ -823,6 +823,11 @@
 		4. Package: libxxf86vm-dev - X Video Mode selection library development files
 		5. Package: libpango1.0-dev - Development files for the Pango
 		6. wxGTK version 2.6.2 (was compiled manually from sources after installing previous)
+      </para>
+      <para>
+      	HIT database is saved and loaded on agent startup as default from
+      	/etc/hip/agentdb-file. Notice!: The database is currently saved only if user quits the
+      	GUI/agent from File->Quit -menu. Otherwise the database is not saved.
       </para>
   </chapter>
 </book>    
