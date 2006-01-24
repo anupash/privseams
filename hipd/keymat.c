@@ -16,7 +16,7 @@ u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
 			     uint64_t I, uint64_t J)
 
 {
-	u8 *buffer, *cur;
+	u8 *buffer = NULL, *cur = NULL;
 	size_t requiredmem;
 
 	HIP_DEBUG("\n");

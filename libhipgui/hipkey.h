@@ -1,3 +1,11 @@
+/*
+    HIP GUI
+    
+    License: GNU/GPL
+    Authors: Antti Partanen <aehparta@cc.hut.fi>
+             Matti Saarinen
+*/
+
 #ifndef __HIPKEY_H__
 #define __HIPKEY_H__
 
@@ -21,4 +29,5 @@ public: // no getters yet for these
 	int m_id;
 };
 
-#endif 
+#endif /* END OF HEADER FILE */
+/******************************************************************************/
