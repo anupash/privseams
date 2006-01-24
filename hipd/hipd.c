@@ -54,8 +54,11 @@ void usage() {
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
-       return hip_agent_status;
+	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
+	else HIP_DEBUG("Agent is not alive.\n");
+	return hip_agent_status;
 #else
+	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
@@ -68,7 +71,6 @@ int hip_agent_filter(struct hip_common *msg)
        
 	if (!hip_agent_is_alive())
 	{
-		HIP_DEBUG("Agent is not alive\n");
 		return (-ENOENT);
 	}
 	
