@@ -718,10 +718,10 @@
 
         <para>Filtering options:</para>
 
-        <para>-src_hit [!] &lt;hit value&gt; --src_hi &lt;file name&gt;</para>
+        <para>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</para>
 
         <para>Matches source HIT of packet. HI can be given with
-              --src_hi option and by defining path to a public key
+              --hi option and by defining path to a public key
               file as an argument. This causes sender signatures to be
               verified. The file name must contain either "_rsa_" or
               "_dsa_" to define whether RSA or DSA is used as
