@@ -95,7 +95,7 @@
     
     <para>
       If you haven't configured linux kernel before, please consult
-      hipl/linux/README before doing that. We have some example
+      linux/README before doing that. We have some example
       configurations files in hipl/test/configs for "typical" systems. You
       can use one of those as a template, and modify it to suite the needs
       of your system. Read hipl/test/configs/README before doing so.
@@ -105,7 +105,7 @@
       series. We recommend the latter.
     </para>
     <para>
-      HIPL kernel is in hipl/linux folder. Compile the kernel with
+      Download linux kernel 2.6.13.1. Compile the kernel with
       at least the following options:
     </para>
     <para>
