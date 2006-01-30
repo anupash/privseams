@@ -982,8 +982,8 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated DSA HIT: ", &dsa_lhi.hit,
-		sizeof(struct in6_addr));
+
+    HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
     err = dsa_to_hit(dsa_pub_key, dsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
 		     &dsa_pub_lhi.hit);
@@ -991,16 +991,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated DSA HIT (pub): ", &dsa_pub_lhi.hit,
-		sizeof(struct in6_addr));
+    HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
     
     err = rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120, &rsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated RSA HIT: ", &rsa_lhi.hit,
-		sizeof(struct in6_addr));
+    HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
     err = rsa_to_hit(rsa_pub_key, rsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
 		     &rsa_pub_lhi.hit);
@@ -1008,8 +1006,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
     }
-    HIP_HEXDUMP("Calculated RSA HIT (pub): ", &rsa_pub_lhi.hit,
-		sizeof(struct in6_addr));
+    HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
     break;
   }
 
