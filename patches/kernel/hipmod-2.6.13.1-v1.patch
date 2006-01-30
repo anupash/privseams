@@ -1,0 +1,31 @@
+diff -urN linux-2.6.13.1/include/linux/socket.h linux-2.6.13.1-hipmod/include/linux/socket.h
+--- linux-2.6.13.1/include/linux/socket.h	2005-09-10 05:42:58.000000000 +0300
++++ linux-2.6.13.1-hipmod/include/linux/socket.h	2006-01-30 16:10:16.000000000 +0200
+@@ -181,7 +181,8 @@
+ #define AF_WANPIPE	25	/* Wanpipe API Sockets */
+ #define AF_LLC		26	/* Linux LLC			*/
+ #define AF_BLUETOOTH	31	/* Bluetooth sockets 		*/
+-#define AF_MAX		32	/* For now.. */
++#define AF_HIP          32      /* Native HIP sockets           */
++#define AF_MAX		33	/* For now.. */
+ 
+ /* Protocol families, same as address families. */
+ #define PF_UNSPEC	AF_UNSPEC
+@@ -213,6 +214,7 @@
+ #define PF_WANPIPE	AF_WANPIPE
+ #define PF_LLC		AF_LLC
+ #define PF_BLUETOOTH	AF_BLUETOOTH
++#define PF_HIP          AF_HIP
+ #define PF_MAX		AF_MAX
+ 
+ /* Maximum queue length specifiable by listen.  */
+diff -urN linux-2.6.13.1/net/ipv6/af_inet6.c linux-2.6.13.1-hipmod/net/ipv6/af_inet6.c
+--- linux-2.6.13.1/net/ipv6/af_inet6.c	2005-09-10 05:42:58.000000000 +0300
++++ linux-2.6.13.1-hipmod/net/ipv6/af_inet6.c	2006-01-30 16:08:26.000000000 +0200
+@@ -864,4 +864,6 @@
+ }
+ module_exit(inet6_exit);
+ 
++EXPORT_SYMBOL(inet6_create);
++
+ MODULE_ALIAS_NETPROTO(PF_INET6);
