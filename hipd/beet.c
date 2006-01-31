@@ -253,7 +253,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
+			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
 			   AF_INET6), -1);
 			   //preferred_family), -1);
 	
