@@ -187,14 +187,7 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-#if 1
-	hip_delete_all_sp();
-#else   /* This works even when the hipd crashes */
-	/* XX FIX: flushing sa does not work */
-	hip_send_close(NULL);
-	hip_flush_all_sa();
-	hip_flush_all_policy();
-#endif
+	//hip_delete_all_sp();
 
 	delete_all_addresses();
 
@@ -238,6 +231,11 @@ int main(int argc, char *argv[]) {
 	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
 	struct sockaddr_un daemon_addr;
+        /* The flushing is enabled by default. The reason for this is that
+	   people are doing some very experimental features on some branches
+	   that may crash the daemon and leave the SAs floating around to
+	   disturb further base exchanges. Use -N flag to disable this. */
+	int flush_ipsec = 1;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -250,6 +248,9 @@ int main(int argc, char *argv[]) {
 			i3_config = strdup(optarg);
 			break;
 #endif
+		case 'N':
+			flush_ipsec = 0;
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -264,14 +265,6 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(!i3_config, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
-
-	/**********/
-	/* ONLY FOR TESTING ... REMOVE AFTER THE HIPD WORKS PROPERLY */
-	/** This is to delete the general security policies in case they exist
-	 * due to for example a crash of the application
-	 */
-	hip_delete_default_prefix_sp_pair();
-	/**********/
 
 	hip_set_logfmt(LOGFMT_LONG);
 
@@ -341,9 +334,16 @@ int main(int argc, char *argv[]) {
 	_HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		   hip_raw_sock, highest_descriptor);
 
+	if (flush_ipsec) {
+		hip_flush_all_sa();
+		hip_flush_all_policy();
+	}
+
 	HIP_DEBUG("Setting SP\n");
+	/*
 	hip_delete_default_prefix_sp_pair();
 	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
+	*/
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
