@@ -57,8 +57,6 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 		tmpl->family = preferred_family;
 	}
 		
-	HIP_DEBUG_IN6ADDR("tmpl_saddr in policy", tmpl_saddr);
-	HIP_DEBUG_IN6ADDR("tmpl_daddr in policy", tmpl_daddr);
 
 	/* The mode has to be BEET */
 	if (proto) {
@@ -253,6 +251,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
+			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
 			   AF_INET6), -1);
 			   //preferred_family), -1);
@@ -331,9 +330,21 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsid));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = XFRM_MSG_DELSA;
-	req.xsid.family = preferred_family;
+	//req.xsid.family = preferred_family;
 
-	memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
+	if(IN6_IS_ADDR_V4MAPPED(peer_addr))
+        {
+		HIP_DEBUG("IPV4 SA deletion\n");
+                req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
+                req.xsid.family = AF_INET;
+        } else {
+		HIP_DEBUG("IPV6 SA deletion\n");
+		memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
+                req.xsid.family = preferred_family;
+        }
+
+
+
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
