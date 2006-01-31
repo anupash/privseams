@@ -273,7 +273,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		    hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
 		    -1, "Can't set new function pointer set\n");
 		HIP_IFEL(
-		    hip_hadb_set_rcv_function_set(entry, &default_handle_func_set),
+		    hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
 		    -1, "Can't set new function pointer set\n");
 		HIP_IFEL(
 		    hip_hadb_set_update_function_set(entry, &default_update_func_set),
@@ -998,8 +998,9 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->seq_update_id == peer_update_id) {
-			return item->new_spi;
-			
+			if (item->new_spi)
+				return item->new_spi;
+			return item->spi;
 		}
         }
 	HIP_DEBUG("New SPI not found\n");

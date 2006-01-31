@@ -53,8 +53,11 @@ void usage() {
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
-       return hip_agent_status;
+	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
+	else HIP_DEBUG("Agent is not alive.\n");
+	return hip_agent_status;
 #else
+	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }
@@ -67,7 +70,6 @@ int hip_agent_filter(struct hip_common *msg)
        
 	if (!hip_agent_is_alive())
 	{
-		HIP_DEBUG("Agent is not alive\n");
 		return (-ENOENT);
 	}
 	
@@ -381,6 +383,10 @@ int main(int argc, char *argv[]) {
 	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
+	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT, 
+		     HIP_DEBUG_LEVEL_INFORMATIVE,
+		     "Hipd daemon running.\n"
+		     "Starting select loop.\n");
 	for (;;) {
 		struct hip_work_order *hwo;
 		
