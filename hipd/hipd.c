@@ -187,7 +187,7 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-	//hip_delete_all_sp();
+	hip_delete_all_sp();
 
 	delete_all_addresses();
 
