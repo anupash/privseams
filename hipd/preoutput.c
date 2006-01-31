@@ -1,6 +1,23 @@
 #include "preoutput.h"
 
-/* Called by userspace daemon to send a packet to wire */
+int hip_queue_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		   struct hip_common* msg, hip_ha_t *entry)
+{
+	int err = 0;
+	int len = hip_get_msg_total_len(msg);
+
+	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -1);
+	memcpy(entry->hip_msg_retrans.buf, msg, len);
+	memcpy(&entry->hip_msg_retrans.saddr, src_addr,
+	       sizeof(struct in6_addr));
+	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
+	       sizeof(struct in6_addr));
+	entry->hip_msg_retrans.count = HIP_RETRANSMISSION_MAX;
+
+ out_err:
+	return err;
+}
+
 #ifndef CONFIG_HIP_HI3
 // FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
@@ -104,6 +121,8 @@ int hip_csum_send(struct in6_addr *src_addr,
 	struct sockaddr_in6 src, dst;
 	struct hi3_ipv6_addr hdr_src, hdr_dst;
 	char *buf;
+
+	/* This code is outdated. Synchronize to the non-hi3 version */
 
 	if (!src_addr) {
 		// FIXME: Obtain the preferred address

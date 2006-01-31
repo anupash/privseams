@@ -50,6 +50,40 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
+int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if (!entry->hip_msg_retrans.buf)
+		goto out_err;
+
+	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
+
+	if (entry->hip_msg_retrans.count > 0 &&
+	    entry->state != HIP_STATE_ESTABLISHED) {
+		err = hip_csum_send(&entry->hip_msg_retrans.saddr,
+				     &entry->hip_msg_retrans.daddr,
+				     entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.count--;
+	} else {
+		HIP_FREE(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
+	}
+
+ out_err:
+	return err;
+}
+
+int hip_scan_retransmissions()
+{
+	int err = 0;
+	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, NULL), 0, 
+		 "for_each_ha err.\n");
+ out_err:
+	return err;
+}
+
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
@@ -397,7 +431,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
-		timeout.tv_sec = 1;
+		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
 		_HIP_DEBUG("select loop\n");
@@ -482,12 +516,9 @@ int main(int argc, char *argv[]) {
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-#if 0
-		while (hwo = hip_get_work_order()) {
-			HIP_DEBUG("Processing work order\n");
-			hip_do_work(hwo);
-		}
-#endif
+
+		err = hip_scan_retransmissions();
+
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
 				  ((errno) ? strerror(errno) : ""));

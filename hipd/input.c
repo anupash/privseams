@@ -858,11 +858,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
-	/* state E1: Receive R1, process. If successful,
-	   send I2 and go to E2. */
+	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
+	   No retransmission here, the packet is sent directly because this
+	   is the last packet of the base exchange. */
 
 	HIP_IFE(hip_csum_send(r1_daddr, &daddr, i2), -1);
-
 
  out_err:
 	if (i2)
@@ -1156,7 +1156,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(i2_daddr, i2_saddr, r2); // HANDLER
+	err = hip_queue_send(i2_daddr, i2_saddr, r2, entry); // HANDLER
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)

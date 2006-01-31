@@ -773,6 +773,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			  continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
+		/* XX FIX: retransmission handling */
 		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
 		if (err) {
 			HIP_DEBUG("hip_csum_send err=%d\n", err);
@@ -1438,6 +1439,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
+	/* XX FIX: retransmissions */
 	err = hip_csum_send(&entry->local_address, &daddr, update_packet); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
