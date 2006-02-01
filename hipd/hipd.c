@@ -193,6 +193,9 @@ int hip_init_raw_sock_v4() {
 		 "Raw socket v4 creation failed. Not root?\n");
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
+	HIP_IFEL(setsockopt(hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
+		   sizeof(on)), -1, "setsockopt v4 failed to set broadcast \n");
+
 
 	HIP_IFEL(setsockopt(hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
