@@ -43,9 +43,17 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
 
 	/* AG FIXME more IPv4 address checking */
+	/* DO we need any more checks here ? -- Abi*/
 	if (addr->sa_family == AF_INET) 
+	{
+		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+		if (a == INADDR_ANY || 
+		    a == INADDR_BROADCAST || 
+			IN_MULTICAST(a)||
+			IS_LSI32(a))
+				return 0;
 		return 1;
-
+	}
 	/* add more filtering tests here */
 	return 0;
 }

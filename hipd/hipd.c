@@ -350,7 +350,8 @@ int main(int argc, char *argv[]) {
 		goto out_err;
 	}
 	if (rtnl_open_byproto(&hip_nl_route,
-			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
+			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
+				| RTMGRP_IPV4_IFADDR | IPPROTO_IP,
 			      NETLINK_ROUTE) < 0) {
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
