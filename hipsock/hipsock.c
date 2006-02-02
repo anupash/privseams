@@ -15,8 +15,8 @@
 
 #include "hipsock.h"
 
-#define MODULE_AUTHOR "Tobias Heer <heer@tobibox.de>"
-#define MODULE_DESC   "HIP kernelspace socket handler for HIP native-API"
+//#define MODULE_AUTHOR "HIPL <hipl-users@freelists.org>"
+//#define MODULE_DESC   "HIP kernelspace socket handler for HIP native-API"
 MODULE_LICENSE("GPL");
 
 # define HIP_IFEK(func,message) if( func < 0 ){ printk(message); goto out_err; }
