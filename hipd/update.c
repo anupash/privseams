@@ -1397,7 +1397,7 @@ int hip_send_update(struct hip_hadb_state *entry,
  		HIP_DEBUG("Address set has changed, continue\n");
 
 	/* spi_in->spi is equal to nes_old_spi */
-	if (memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
+	if (addr_list && memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
 		ipv6_addr_copy(&entry->local_address, &addr_list->address);
 	}
