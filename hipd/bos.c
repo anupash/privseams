@@ -130,7 +130,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos);
+		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}

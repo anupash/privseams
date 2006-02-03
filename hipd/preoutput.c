@@ -1,7 +1,7 @@
 #include "preoutput.h"
 
-int hip_queue_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		   struct hip_common* msg, hip_ha_t *entry)
+int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		     struct hip_common* msg, hip_ha_t *entry)
 {
 	int err = 0;
 	int len = hip_get_msg_total_len(msg);
@@ -20,8 +20,11 @@ int hip_queue_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 #ifndef CONFIG_HIP_HI3
 // FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
-int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		  struct hip_common* msg)
+int hip_csum_send(struct in6_addr *src_addr,
+		  struct in6_addr *peer_addr,
+		  struct hip_common* msg,
+		  hip_ha_t *entry,
+		  int retransmit)
 {
 	int err = 0, ret, len = hip_get_msg_total_len(msg);
 	struct sockaddr_in6 src, dst;
@@ -89,6 +92,9 @@ int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("Packet sent ok\n");
 
+	if (retransmit)
+		err = hip_queue_packet(src_addr, peer_addr, msg, entry,
+				       retransmit);
  out_err:
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));

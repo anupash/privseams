@@ -63,7 +63,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 	    entry->state != HIP_STATE_ESTABLISHED) {
 		err = hip_csum_send(&entry->hip_msg_retrans.saddr,
 				     &entry->hip_msg_retrans.daddr,
-				     entry->hip_msg_retrans.buf);
+				     entry->hip_msg_retrans.buf, 0);
 		entry->hip_msg_retrans.count--;
 	} else {
 		HIP_FREE(entry->hip_msg_retrans.buf);
