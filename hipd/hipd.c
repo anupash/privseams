@@ -270,6 +270,7 @@ int main(int argc, char *argv[]) {
 	   that may crash the daemon and leave the SAs floating around to
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
+	float retrans_counter = -1;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -517,7 +518,13 @@ int main(int argc, char *argv[]) {
 			HIP_INFO("Unknown socket activity.");
 		}
 
-		err = hip_scan_retransmissions();
+		if (retrans_counter < 0) {
+			err = hip_scan_retransmissions();
+			retrans_counter = HIP_RETRANSMISSION_INTERVAL /
+				HIP_SELECT_TIMEOUT;
+		} else {
+			retrans_counter--;
+		}
 
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
