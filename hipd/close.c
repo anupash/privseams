@@ -131,7 +131,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 }
 
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
-{
+p{
 	int err = 0;
 	struct hip_echo_request *echo_resp;
 
