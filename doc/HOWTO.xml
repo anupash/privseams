@@ -184,7 +184,8 @@
       HIPL developers test HIP using two machines called crash (3ffe::1) and
       oops (3ffe::2). They are used through this whole document as examples
       even though you probably have your own naming and addressing
-      conventions.
+      conventions. It is possible to use IPv4 addresses on-wire as well
+      but the applications being used need to support IPv6 currently.
       </para>
     <para>
       We expect that you have two hosts for testing HIP which will be
@@ -208,7 +209,7 @@
     </para>
     <para>
       Crash will act as the connection initiator, so we need to configure
-      the hosts files of crash:
+      the hosts files of crash (note: use of IPv4 addresses is also possible):
     </para>
     <para>
       crash:
@@ -293,6 +294,7 @@
       A naive handover test example is below. It assumes that you have
       already established the base exchange between the hosts. You also need
       to have the nc6 tool which can be found from e.g. "www.freshmeat.net".
+      The example is based on IPv6 addresses but you can also use IPv4.
     </para>
     <para>
       &nbsp;&lt;first, establish a HIP connection as intructed in the previous
