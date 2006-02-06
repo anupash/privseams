@@ -287,7 +287,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-	if (entry->state != HIP_STATE_UNASSOCIATED) {
+	if (entry->state == HIP_STATE_NONE ||
+	    entry->state == HIP_STATE_UNASSOCIATED ||
+	    entry->state == HIP_STATE_I1_SENT) {
+		HIP_DEBUG("State is %d, sending i1\n", entry->state);
+	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
 		goto out_err;
 	}

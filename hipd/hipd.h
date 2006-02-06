@@ -6,6 +6,8 @@
 #include <errno.h>      /* errno */
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "hip.h"
 #include "crypto.h"

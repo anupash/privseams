@@ -251,6 +251,18 @@ void hip_exit(int signal) {
 	exit(signal);
 }
 
+int init_random_seed()
+{
+	struct timeval tv;
+	struct timezone tz;
+	int err = 0;
+
+	err = gettimeofday(&tv, &tz);
+	srandom(tv.tv_usec);
+
+	return err;
+}
+
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -321,6 +333,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, hip_exit);
 
         HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+
+	HIP_IFE(init_random_seed(), -1);
 
         hip_init_hadb();
 

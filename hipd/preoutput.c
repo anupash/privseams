@@ -84,6 +84,14 @@ int hip_csum_send(struct in6_addr *src_addr,
 		 -1, "Connecting of raw sock failed\n");
 #endif
 
+	if (retransmit)
+		err = hip_queue_packet(src_addr, peer_addr, msg, entry);
+
+	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
+		HIP_DEBUG("Packet was lost (simulation)\n");
+		goto out_err;
+	}
+
 	/* For some reason, neither sendmsg or send (with bind+connect)
 	   do not seem to work. */
 	HIP_IFEL((sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
@@ -92,8 +100,6 @@ int hip_csum_send(struct in6_addr *src_addr,
 
 	HIP_DEBUG("Packet sent ok\n");
 
-	if (retransmit)
-		err = hip_queue_packet(src_addr, peer_addr, msg, entry);
  out_err:
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
