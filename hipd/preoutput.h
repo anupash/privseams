@@ -10,6 +10,7 @@
 #include "string.h"
 
 extern int hip_raw_sock;
+extern int hip_raw_sock_v4;
 
 /* Called by userspace daemon or kernel packet processing to send a
    packet to wire */

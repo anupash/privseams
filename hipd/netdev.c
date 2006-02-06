@@ -16,7 +16,6 @@ static int count_if_addresses(int ifindex)
 	return i;
 }
 
-
 /* Returns 1 if the given address @addr is allowed to be one of the
    addresses of this host, 0 otherwise */
 int filter_address(struct sockaddr *addr, int ifindex)
@@ -40,6 +39,21 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			return 0;
 		return 1;
 	}
+
+	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
+
+	/* AG FIXME more IPv4 address checking */
+	/* DO we need any more checks here ? -- Abi*/
+	if (addr->sa_family == AF_INET) 
+	{
+		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+		if (a == INADDR_ANY || 
+		    a == INADDR_BROADCAST || 
+			IN_MULTICAST(a)||
+			IS_LSI32(a))
+				return 0;
+		return 1;
+	}
 	/* add more filtering tests here */
 	return 0;
 }
@@ -59,8 +73,17 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		HIP_ERROR("Could not allocate memory\n");
 		return;
 	}
+	/* AG convert IPv4 address to IPv6 */
+	if (addr->sa_family == AF_INET) {
+		struct sockaddr_in6 temp;
+		memset(&temp, 0, sizeof(temp));
+		temp.sin6_family = AF_INET6;
+		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)addr)->sin_addr),
+				 &temp.sin6_addr);
+	        memcpy(&n->addr, &temp, SALEN(&temp));
+	} else
+	        memcpy(&n->addr, addr, SALEN(addr));
 
-        memcpy(&n->addr, addr, SALEN(addr));
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
 	list_add(&n->next, &addresses);
@@ -87,8 +110,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 } else {
 			/* remove from list if address matches */
                         if ((n->addr.ss_family == addr->sa_family) &&
-                            (memcmp(SA2IP(&n->addr), SA2IP(addr),
-                                    SAIPLEN(addr))==0)) {
+                            ((memcmp(SA2IP(&n->addr), SA2IP(addr),
+				     SAIPLEN(addr))==0)) || 
+			    IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr) ) {
                                 /* address match */
 				list_del(&n->next);
 				deleted = 1;
@@ -124,12 +148,22 @@ void delete_all_addresses(void)
 int hip_netdev_find_if(struct sockaddr *addr)
 {
         struct netdev_address *n;
+
+	HIP_DEBUG_IN6ADDR("Trying to find addr",
+			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
+
 	list_for_each_entry(n, &addresses, next) {
+		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
+		HIP_DEBUG_IN6ADDR("n addr ",  &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
+		HIP_DEBUG("index %d\n", n->if_index);	
 		if ((n->addr.ss_family == addr->sa_family) &&
-		    (memcmp(SA2IP(&n->addr), SA2IP(addr),
-			    SAIPLEN(addr))==0)) {
-			return n->if_index;
+		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
+			     SAIPLEN(addr))==0)) ||
+			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr)){ 
+		HIP_DEBUG("index %d\n", n->if_index);	
+		return n->if_index;
 		}
+
 	}
 	
 	/* No matching address found */
@@ -149,6 +183,18 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
+#if 0
+int hip_ipv4_devaddr2ifindex(struct in6_addr *addr)
+{
+	struct sockaddr_in6 a;
+	a.sin6_family = AF_INET6;
+	//a.sin_addr.s_addr = addr->s6_addr32[3];
+	ipv6_addr_copy(&a.sin6_addr, addr);
+	HIP_DEBUG("IPV4\n");
+	return hip_netdev_find_if((struct sockaddr *)&a);
+}
+
+#endif
 
 int static add_address(const struct nlmsghdr *h, int len, void *arg) {
         struct sockaddr_storage ss_addr;
@@ -271,17 +317,24 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto out_err;
 	}
 
-	/* XX TODO: we should try resolving here to create an
-	   entry if an entry was not found */
-
-	/* Let's fill in the local_address in here */
-	ipv6_addr_copy(&entry->local_address, ((struct in6_addr*)&acq->id.daddr));
 	/* The address and the corresponding ifindex should be added in here */
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	
-	//FIXME: acq->sel.family doesn't seem to contain the right value
-	addr->sa_family = AF_INET6;
+	/* XX FIX: the family should be fetched from acq */
+	if (IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
+		IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
+				 &entry->local_address);
+		addr->sa_family = AF_INET;
+	} else {
+		ipv6_addr_copy(&entry->local_address,
+			       ((struct in6_addr*)&acq->id.daddr));
+		addr->sa_family = AF_INET6;
+	}
+
 	memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+
+	HIP_DEBUG_IN6ADDR("local addr", &entry->local_address);
+
 	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
 		 "if_index NOT determined\n");
 
@@ -499,6 +552,22 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 	return err;
 }
 
+int hip_add_iface_local_lsi(const hip_lsi_t lsi)
+{
+	int err = 0;
+	char lsi_str[INET_ADDRSTRLEN+5];
+	struct idxmap *idxmap[16] = {0};
+
+	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))), 
+		-1);
+	HIP_DEBUG("Adding LSI: %s\n", lsi_str);
+	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
+                                  lsi_str, HIP_HIT_DEV, idxmap), -1);
+ out_err:
+
+	return err;
+}
+
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
@@ -506,19 +575,35 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
-
-	HIP_DEBUG("Adding local route: %s\n", hit_str);
-	
+	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);	
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
 				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
 		-1);
 
  out_err:
-
-	if (hit_str)
-		HIP_FREE(hit_str);
 	
+	if (hit_str)
+	  HIP_FREE(hit_str);
+		
+	return err;
+}
+
+int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
+{
+	int err = 0;
+	struct idxmap *idxmap[16] = {0};
+	char lsi_str[INET_ADDRSTRLEN+5];
+
+	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))), 
+		-1);
+	HIP_DEBUG("Adding local LSI route: %s\n", lsi_str);
+	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
+		-1);
+	
+ out_err:
 	
 	return err;
 }

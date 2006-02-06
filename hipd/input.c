@@ -453,7 +453,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	HIP_DEBUG("Received packet type %d\n", type);
-
+	_HIP_DUMP_MSG(msg);
+	_HIP_HEXDUMP("dumping packet", msg,  40);
 	// XX FIXME: CHECK PACKET CSUM
 
 	err = hip_agent_filter(msg);
@@ -1209,7 +1210,7 @@ int hip_handle_i2(struct hip_common *i2,
  	HIP_DEBUG("\n");
 
 	/* Assume already locked ha, if ha is not NULL */
-	HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM);
+	HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)), -ENOMEM);
 	memset(ctx, 0, sizeof(struct hip_context));
 
 	/* Check packet validity */
@@ -1733,8 +1734,10 @@ int hip_handle_r2(struct hip_common *r2,
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
 	_HIP_DEBUG("add spi err ret=%d\n", err);
-
-	err = hip_devaddr2ifindex(r2_daddr);
+	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
+	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
+	//else
+		err = hip_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
 		HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);

@@ -55,7 +55,6 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
-
 /**
  * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
  * @db: Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
@@ -274,9 +273,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
+	  hip_add_iface_local_route_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit)));
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+	  HIP_IFEL(hip_add_iface_local_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit))), -1,
+		   "Failed to add LSI to the device\n");
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
