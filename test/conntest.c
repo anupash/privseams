@@ -165,15 +165,15 @@ int main_server(int proto, int port)
  *
  * Returns: 0 on error, the sockid on success
  */
-int hip_connect_func(int proto, struct addrinfo *res, int save_to_file)
+int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 {
 	struct addrinfo *ai, hints;
 	int sock = 0;
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
 	FILE *fp = NULL;
-	if (save_to_file)
-		if ((fp = fopen("/tmp/results.txt", "a")) == NULL) {
+	if (filename)
+		if ((fp = fopen(filename, "a")) == NULL) {
 			HIP_ERROR("Error opening file\n");
 			goto out_err;
 		}
@@ -184,7 +184,7 @@ int hip_connect_func(int proto, struct addrinfo *res, int save_to_file)
 		char addr_str[INET6_ADDRSTRLEN];
 		int e;
 		
-		printf("Calling HIP_ASSERT \n");
+		/* Currently only IPv6 socket structures are supported */
 		HIP_ASSERT(ai->ai_family == AF_INET6);
 		sock = create_socket(proto);
 		if (sock < 0) {
@@ -199,27 +199,35 @@ int hip_connect_func(int proto, struct addrinfo *res, int save_to_file)
 			goto out_err;
 		}
 
-		printf("Trying to connect to %s\n", addr_str);
-		
-		gettimeofday(&stats_before, NULL);
-		
-		e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-		
-		gettimeofday(&stats_after, NULL);
-		stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-		stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-		
-		//printf("connect ret=%d errno=%d\n", e, errno);
-		if (e < 0) {
-			close(sock);
-			sock = 0;
-			printf("trying next\n");
-			continue; /* Try next address */
-		} else {
-			if (save_to_file)
-				fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
+		if ((sin6->sin6_addr.s6_addr32[0] | sin6->sin6_addr.s6_addr32[1] | 
+		     sin6->sin6_addr.s6_addr32[2] | sin6->sin6_addr.s6_addr32[3] ) != 0) {
+			
+			printf("Trying to connect to %s\n", addr_str);
+			gettimeofday(&stats_before, NULL);
+			e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
+			
+			gettimeofday(&stats_after, NULL);
+			stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
+			stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
+			
+			//printf("connect ret=%d errno=%d\n", e, errno);
+			if (e < 0) {
+				close(sock);
+				sock = 0;
+				printf("trying next\n");
+				continue; /* Try next address */
+			} else {
+				printf("connect took %.3f sec\n",
+					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
+				if (filename)
+					fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
+				else
+					printf("connect took %.3f sec\n",
+					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
+				break; /* Connect succeeded and data can be sent/received. */
+			}
+			//break; /* Connect succeeded and data can be sent/received. */
 		}
-		break; /* Connect succeeded and data can be sent/received. */
 	}
 
 	if (sock == 0) {
@@ -229,7 +237,7 @@ int hip_connect_func(int proto, struct addrinfo *res, int save_to_file)
 
 	
 out_err:
-	if (save_to_file && fp)
+	if (filename && fp)
 		fclose(fp);
 	return sock;
 }
@@ -283,17 +291,17 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
-	sock = hip_connect_func(proto, res, 1);
+	sock = hip_connect_func(proto, res, NULL);
 	if (!sock)
 		goto out_err;
 
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-
+#if 0
 	printf("connect took %.3f sec\n",
 	       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-	
+#endif
 
 	/* send and receive data */
 

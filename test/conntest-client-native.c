@@ -32,7 +32,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libinet6/debug.h"
+#include "debug.h"
 
 #include "conntest.h"
 

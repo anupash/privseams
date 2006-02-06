@@ -3,6 +3,24 @@
 
 #include <glib.h>
 #include <glib/glist.h>
+#include <netinet/in.h>
+#include <linux/netfilter.h>
+#include <libipq.h>
+#include <glib.h>
+#include <glib/glist.h>
+#include <glib/gthread.h>
+#include <stdio.h>
+#include <openssl/dsa.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <linux/netfilter_ipv6.h>
+
+#include "builder.h"
+#include "crypto.h"
+#include "debug.h"
+#include "firewall.h"
+#include "conntrack.h"
+#include "helpers.h"
 #include "debug.h"
 #include "firewall.h"
 
