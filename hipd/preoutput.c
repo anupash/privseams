@@ -61,7 +61,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 	   raw socket). This can screw up things. */
 #if 0
 	HIP_DEBUG_IN6ADDR("src", src);
-	HIP_IFEL((bind(hip_raw_sock, (struct sockaddr *) &src,
+	HIP_IFEL((bind(hip_raw_sock_v6, (struct sockaddr *) &src,
 		       sizeof(src)) < 0), -1,
 		 "Binding to raw sock failed\n");
 
@@ -95,7 +95,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 
 
 #if 0
-        HIP_IFEL((connect(ipv4 ? hip_raw_sock_v4 : hip_raw_sock, 
+        HIP_IFEL((connect(ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6, 
 			&dst,
 			  sizeof(dst)) < 0),
 		 -1, "Connecting of raw sock failed\n");
@@ -114,13 +114,13 @@ int hip_csum_send(struct in6_addr *src_addr,
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	temp = sendto((ipv4 ? hip_raw_sock_v4 : hip_raw_sock),
+	temp = sendto((ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6),
                         msg, len, 0, (ipv4 ? &dst :(struct sockaddr *)&dst6),
                          (ipv4 ? sizeof(dst) : sizeof(dst6)));
 	HIP_DEBUG("send to %d, len %d ipv4 %d\n", temp, len, ipv4);
 	
 #if 0
-	HIP_IFEL((sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock, 
+	HIP_IFEL((sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6, 
 			msg, len, 0, &dst,
 			 sizeof(dst)) != len), -1,
 		 "Sending of HIP msg failed\n");
