@@ -1,18 +1,15 @@
 #include "close.h"
 
-int hip_send_close(const struct hip_common *input)
+int hip_send_close_to_all_peers()
 {
 	int err = 0;
 
 	HIP_DEBUG("Reset\n");
 
-	// XX FIX: CHECK FOR SRC+DST HIT in the input (all are not
-	// necessarily reset)
-
 	// XX FIXME: the kernel code crashes on rmmod (spi in and spi out
 	// removal) ?
 
-	HIP_IFEL(hip_for_each_ha(&hip_send_close_all_peers, NULL), -1,
+	HIP_IFEL(hip_for_each_ha(&hip_send_close, NULL), -1,
 		 "Failed to reset all HAs\n");
 
  out_err:
@@ -20,7 +17,7 @@ int hip_send_close(const struct hip_common *input)
 	return err;
 }
 
-int hip_send_close_all_peers(hip_ha_t *entry, void *ignore)
+int hip_send_close(hip_ha_t *entry, void *ignore)
 {
 	int err = 0, mask = 0;
 	struct hip_common *close = NULL;

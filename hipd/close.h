@@ -17,8 +17,8 @@
 #include "misc.h"
 #include "pk.h"
 
-int hip_send_close(const struct hip_common *input);
-int hip_send_close_all_peers(hip_ha_t *entry, void *ignore);
+int hip_send_close_to_all_peers();
+int hip_send_close(hip_ha_t *entry, void *ignore);
 int hip_handle_close(struct hip_common *close, hip_ha_t *entry);
 int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry);
 

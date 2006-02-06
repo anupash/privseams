@@ -247,6 +247,8 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
+	hip_send_close_to_all_peers();
+
 	hip_delete_all_sp();
 
 	delete_all_addresses();
