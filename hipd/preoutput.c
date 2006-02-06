@@ -93,8 +93,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 	HIP_DEBUG("Packet sent ok\n");
 
 	if (retransmit)
-		err = hip_queue_packet(src_addr, peer_addr, msg, entry,
-				       retransmit);
+		err = hip_queue_packet(src_addr, peer_addr, msg, entry);
  out_err:
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
