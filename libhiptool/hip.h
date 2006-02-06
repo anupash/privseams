@@ -122,6 +122,16 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
 
+#define HIP_SELECT_TIMEOUT          1
+#define HIP_RETRANSMISSION_MAX      10
+#define HIP_RETRANSMISSION_INTERVAL 5
+/* Set to 1 if you want to simulate lost output packet */
+#define HIP_SIMULATE_PACKET_LOSS    0
+ /* Packet loss probability in percents */
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
+ /* XX FIX: use srandom and floats */
+#define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
@@ -1006,6 +1016,12 @@ struct hip_hadb_state
 	uint64_t puzzle_i;        /* For retransmission */
 
 	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
+
+	struct {
+		int count;
+		struct in6_addr saddr, daddr;
+		struct hip_common *buf;
+	} hip_msg_retrans;
 
 	int skbtest; /* just for testing */
 	

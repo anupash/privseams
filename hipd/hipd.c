@@ -51,6 +51,40 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
+int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if (!entry->hip_msg_retrans.buf)
+		goto out_err;
+
+	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
+
+	if (entry->hip_msg_retrans.count > 0 &&
+	    entry->state != HIP_STATE_ESTABLISHED) {
+		err = hip_csum_send(&entry->hip_msg_retrans.saddr,
+				     &entry->hip_msg_retrans.daddr,
+				     entry->hip_msg_retrans.buf, entry, 0);
+		entry->hip_msg_retrans.count--;
+	} else {
+		HIP_FREE(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
+	}
+
+ out_err:
+	return err;
+}
+
+int hip_scan_retransmissions()
+{
+	int err = 0;
+	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, NULL), 0, 
+		 "for_each_ha err.\n");
+ out_err:
+	return err;
+}
+
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
@@ -213,14 +247,7 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-#if 1
 	hip_delete_all_sp();
-#else   /* This works even when the hipd crashes */
-	/* XX FIX: flushing sa does not work */
-	hip_send_close(NULL);
-	hip_flush_all_sa();
-	hip_flush_all_policy();
-#endif
 
 	delete_all_addresses();
 
@@ -252,6 +279,18 @@ void hip_exit(int signal) {
 	exit(signal);
 }
 
+int init_random_seed()
+{
+	struct timeval tv;
+	struct timezone tz;
+	int err = 0;
+
+	err = gettimeofday(&tv, &tz);
+	srandom(tv.tv_usec);
+
+	return err;
+}
+
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -266,6 +305,12 @@ int main(int argc, char *argv[]) {
 	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
 	struct sockaddr_un daemon_addr;
+        /* The flushing is enabled by default. The reason for this is that
+	   people are doing some very experimental features on some branches
+	   that may crash the daemon and leave the SAs floating around to
+	   disturb further base exchanges. Use -N flag to disable this. */
+	int flush_ipsec = 1;
+	float retrans_counter = -1;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -278,6 +323,9 @@ int main(int argc, char *argv[]) {
 			i3_config = strdup(optarg);
 			break;
 #endif
+		case 'N':
+			flush_ipsec = 0;
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -292,14 +340,6 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(!i3_config, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
-
-	/**********/
-	/* ONLY FOR TESTING ... REMOVE AFTER THE HIPD WORKS PROPERLY */
-	/** This is to delete the general security policies in case they exist
-	 * due to for example a crash of the application
-	 */
-	hip_delete_default_prefix_sp_pair();
-	/**********/
 
 	hip_set_logfmt(LOGFMT_LONG);
 
@@ -321,6 +361,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, hip_exit);
 
         HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+
+	HIP_IFE(init_random_seed(), -1);
 
         hip_init_hadb();
 
@@ -373,9 +415,16 @@ int main(int argc, char *argv[]) {
 	HIP_DEBUG("hip_raw_sock_v4 = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v4, highest_descriptor);
 
+	if (flush_ipsec) {
+		hip_flush_all_sa();
+		hip_flush_all_policy();
+	}
+
 	HIP_DEBUG("Setting SP\n");
+	/*
 	hip_delete_default_prefix_sp_pair();
 	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
+	*/
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
@@ -430,7 +479,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
-		timeout.tv_sec = 1;
+		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
 		_HIP_DEBUG("select loop\n");
@@ -529,12 +578,15 @@ int main(int argc, char *argv[]) {
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-#if 0
-		while (hwo = hip_get_work_order()) {
-			HIP_DEBUG("Processing work order\n");
-			hip_do_work(hwo);
+
+		if (retrans_counter < 0) {
+			err = hip_scan_retransmissions();
+			retrans_counter = HIP_RETRANSMISSION_INTERVAL /
+				HIP_SELECT_TIMEOUT;
+		} else {
+			retrans_counter--;
 		}
-#endif
+
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
 				  ((errno) ? strerror(errno) : ""));

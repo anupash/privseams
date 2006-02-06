@@ -50,7 +50,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	err = hip_csum_send(&entry->local_address, &daddr, (struct hip_common*) &i1);// HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, (struct hip_common*) &i1, entry, 1);// HANDLER
 	HIP_DEBUG("err = %d\n", err);
 	if (!err) {
 		HIP_LOCK_HA(entry);
@@ -236,7 +236,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(i1_saddr, dst_addr, r1pkt), -1, 
+	HIP_IFEL(hip_csum_send(i1_saddr, dst_addr, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
  out_err:
 	if (r1pkt)
@@ -258,7 +258,7 @@ void hip_send_notify(hip_ha_t *entry)
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	hip_csum_send(NULL, &daddr, notify_packet);
+	hip_csum_send(NULL, &daddr, notify_packet, entry, 0);
 
  out_err:
 	if (notify_packet)
@@ -342,7 +342,7 @@ int hip_send_close_all_peers(hip_ha_t *entry, void *ignore)
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
 		 "Could not create signature\n");
 	
-	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close), -1);
+	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
 

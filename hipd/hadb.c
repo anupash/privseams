@@ -1888,6 +1888,7 @@ void hip_delete_all_sp()
 	}
 }
 
+
 /**
 * hip_list_peers_add - private function to add an entry to the peer list
 * @addr: IPv6 address

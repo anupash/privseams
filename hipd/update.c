@@ -364,7 +364,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(&entry->local_address, src_ip, update_packet);
+	err = hip_csum_send(&entry->local_address, src_ip, update_packet, entry, 0);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -677,7 +677,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet); // HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 0); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -773,7 +773,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			  continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
-		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
+		/* XX FIX: retransmission handling */
+		err = hip_csum_send(src_ip, &addr->address, update_packet, entry, 0); // HANDLER
 		if (err) {
 			HIP_DEBUG("hip_csum_send err=%d\n", err);
 			HIP_DEBUG("NOT ignored, or should we..\n");
@@ -828,7 +829,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
+	err = hip_csum_send(dst_ip, src_ip, update_packet, entry, 0); // HANDLER
 	if (err)
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 
@@ -899,7 +900,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
+	err = hip_csum_send(dst_ip, src_ip, update_packet, entry, 0); // HANDLER
 	if (err)
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 
@@ -1438,7 +1439,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet); // HANDLER
+	/* XX FIX: retransmissions */
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 0); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		_HIP_DEBUG("NOT ignored, or should we..\n");
