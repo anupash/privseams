@@ -18,6 +18,7 @@
 
 /* moved this here from getaddrinfo.c because it's used now in 
    getendpointinfo.c too */
+
 struct gaih_addrtuple
   {
     struct gaih_addrtuple *next;
