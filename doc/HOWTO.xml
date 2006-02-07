@@ -184,7 +184,8 @@
       HIPL developers test HIP using two machines called crash (3ffe::1) and
       oops (3ffe::2). They are used through this whole document as examples
       even though you probably have your own naming and addressing
-      conventions.
+      conventions. It is possible to use IPv4 addresses on-wire as well
+      but the applications being used need to support IPv6 currently.
       </para>
     <para>
       We expect that you have two hosts for testing HIP which will be
@@ -208,7 +209,7 @@
     </para>
     <para>
       Crash will act as the connection initiator, so we need to configure
-      the hosts files of crash:
+      the hosts files of crash (note: use of IPv4 addresses is also possible):
     </para>
     <para>
       crash:
@@ -250,12 +251,12 @@
       "ip addr show dummy0".
     </para>
     <para>
-      Mappings between HITs and IPv6 addresses are usually set up
+      Mappings between HITs and IP addresses are usually set up
       automatically with the hosts files. Manual configuration is also
       possible but not necessary:
     </para>
     <para>
-	&nbsp;tools/hipconf add map PEER_HIT PEER_IP
+      &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -293,6 +294,7 @@
       A naive handover test example is below. It assumes that you have
       already established the base exchange between the hosts. You also need
       to have the nc6 tool which can be found from e.g. "www.freshmeat.net".
+      The example is based on IPv6 addresses but you can also use IPv4.
     </para>
     <para>
       &nbsp;&lt;first, establish a HIP connection as intructed in the previous
@@ -484,7 +486,7 @@
       a) Set the AI_HIP flag in the getaddrinfo call. This will make the
       getaddrinfo function to return only HITs in the place of IP addresses
       (no IP addresses are returned). Also, the getaddrinfo function sends
-      the HIT-to-IPv6-address mapping to the kernel.
+      the HIT-to-IP-address mapping to the kernel.
       </para>
     <para>
       b) You are using the transparent mode in the resolver (see the
@@ -497,10 +499,10 @@
     </para>
     <para>
       Note! Methods two and three assume two prequisites! First, the
-      application must be IPv6 enabled because the implementation currently
-      supports only IPv6. Second, the application must really use the
-      getaddrinfo interface because otherwise the getaddrinfo hack
-      (i.e. sending HIT-to-IPv6 mapping to the HIP module) does not work.
+      application must be IPv6 in order to support HITs. Second, the 
+      application must really use the getaddrinfo interface because 
+      otherwise the getaddrinfo hack (i.e. sending HIT-to-IPv6 mapping 
+      to the HIP module) does not work.
     </para>
     <para>
     4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
@@ -571,8 +573,8 @@
     </para>
     <para>
       2. At the initiator, you must modify the "/etc/hosts" file. In the file,
-      responder's hostname must be mapped to the IPv6 address of the rendezvous
-      server. It must not be mapped to the responder's IPv6 address, or
+      responder's hostname must be mapped to the IP address of the rendezvous
+      server. It must not be mapped to the responder's IP address, or
       otherwise the rendezvous server is not used at all!
     </para>
     <para>
@@ -608,7 +610,7 @@
     </para>
     <para>
       &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 
-      source and  destination IPv6 addresses rewritten.
+      source and  destination IP addresses rewritten.
     </para>
     <para>
       &nbsp;* No changes were  made to the REA / mm-code,  which means that, for 
