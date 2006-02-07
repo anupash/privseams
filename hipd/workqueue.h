@@ -4,12 +4,14 @@
 #include "hip.h"
 
 #include <stdio.h>
-#include <asm/byteorder.h>
+//#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
 #include "timer.h"
 #include "bos.h"
+#include "close.h"
 
+#if 0	//AG generates a warning, not used currently
 /* Remove when not necessary, taken from linux/ipv6.h */
 struct ipv6hdr {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
@@ -30,6 +32,7 @@ struct ipv6hdr {
         struct  in6_addr        saddr;
         struct  in6_addr        daddr;
 };
+#endif
 
 #define HIP_INIT_WORK_ORDER_HDR(work_order_hdr, hwo_type, hwo_subtype, hwo_id1, hwo_id2, hwo_id3, hwo_arg1, hwo_arg2, hwo_arg3) \
 	do { \

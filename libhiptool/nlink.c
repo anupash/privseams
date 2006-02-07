@@ -523,23 +523,22 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
         struct rtattr *tb[RTA_MAX+1];
-	int err = 0;
+	union {
+		struct in_addr *in;
+		struct in6_addr *in6;
+	} addr;
+	int err = 0, entry;
 
 	/* see print_route() in ip/iproute.c */
 
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
+	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
 
-	if (tb[RTA_SRC]) {
-		HIP_ASSERT(r->rtm_family == AF_INET6 &&
-			   (r->rtm_src_len+7)/8 == sizeof(struct in6_addr));
-		memcpy(src_addr, RTA_DATA(tb[RTA_SRC]), (r->rtm_src_len+7)/8);
-	} else if (tb[RTA_PREFSRC]) {
-		HIP_ASSERT(r->rtm_family == AF_INET6);
-		memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
-		       sizeof(struct in6_addr));
-	} else {
-		HIP_ERROR("Could not find a source route\n");
-	}
+	if(r->rtm_family == AF_INET) {
+		IPV4_TO_IPV6_MAP(addr.in, src_addr);
+	} else
+		memcpy(src_addr, addr.in6, sizeof(struct in6_addr));
 
  out_err:
 
@@ -551,7 +550,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		    struct in6_addr *dst_addr,
 		    char *idev,
 		    char *odev,
-		    int preferred_family,
+		    int family,
 		    struct idxmap **idxmap)
 {
 	struct {
@@ -559,16 +558,24 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
-	int err = 0, idx;
+	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
-
+	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
-	HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
-			     INET6_ADDRSTRLEN)), -1,
-		 "inet_pton\n");
-
+	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
+	
+	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
+		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
+		preferred_family = AF_INET;
+		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
+                             INET6_ADDRSTRLEN)), -1,"inet_pton\n");
+	} else {	
+		HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
+				     INET6_ADDRSTRLEN)), -1,
+			 "inet_pton\n");
+	}
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
