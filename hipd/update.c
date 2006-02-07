@@ -364,7 +364,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(&entry->local_address, src_ip, update_packet, entry, 0);
+	err = hip_csum_send(&entry->local_address, src_ip, update_packet, entry, 1);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -677,7 +677,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 0); // HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -1439,13 +1439,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	/* XX FIX: retransmissions */
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 0); // HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		_HIP_DEBUG("NOT ignored, or should we..\n");
-		entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
+		HIP_DEBUG("Ignoring and relying on retransmission\n");
+		/* XX FIX: we should fall back to established when all
+		   retransmissions have failed ? */
 		goto out_err;
 	}
 
