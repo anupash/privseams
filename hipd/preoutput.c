@@ -18,69 +18,80 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
-#ifndef CONFIG_HIP_HI3
-// FIXME: This ifdef will be removed once the handler support is a bit more generic in hidb.
-int hip_csum_send(struct in6_addr *src_addr,
+int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
 		  struct hip_common* msg,
 		  hip_ha_t *entry,
 		  int retransmit)
 {
-	int err = 0, ret, len = hip_get_msg_total_len(msg);
-	struct sockaddr src, dst;
+	int err = 0, sa_size, sent, len;
+	struct sockaddr_storage src, dst;
 	int ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
-	int temp = 0;
-	struct sockaddr_in6 src6, dst6;
+	struct sockaddr_in6 *src6, *dst6;
+	struct sockaddr_in *src4, *dst4;
+	struct in6_addr my_addr;
+	int hip_raw_sock = 0; /* Points either to v4 or v6 raw sock */
+
+	if (local_addr)
+		HIP_DEBUG_IN6ADDR("local_addr", local_addr);
+	if (peer_addr)
+		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
+
+	len = hip_get_msg_total_len(msg);
+
+	/* Some convinient short-hands to avoid too much casting */
+	src6 = (struct sockaddr_in6 *) &src;
+	dst6 = (struct sockaddr_in6 *) &dst;
+	src4 = (struct sockaddr_in *)  &src;
+	dst4 = (struct sockaddr_in *)  &dst;
 
 	memset(&src, 0, sizeof(src));
-	memset(&src6, 0, sizeof(src6));
-	memset(&dst6, 0, sizeof(dst6));
 	memset(&dst, 0, sizeof(dst));
+
+	if (ipv4) {
+		hip_raw_sock = hip_raw_sock_v4;
+		sa_size = sizeof(struct sockaddr_in);
+	} else {
+		HIP_DEBUG("Using IPv6 raw socket\n");
+		hip_raw_sock = hip_raw_sock_v6;
+		sa_size = sizeof(struct sockaddr_in6);
+	}
 
 	HIP_ASSERT(peer_addr);
 
-	if (!src_addr) {
-	  if (!ipv4){
-	    HIP_IFEL(hip_select_source_address(&((struct sockaddr_in6 *) &src)->sin6_addr,
-					       peer_addr), -1,
-			   "Cannot find source address\n");
-	 } else{}//FIXME
+	if (local_addr) {
+		HIP_DEBUG("local address given\n");
+		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
-		HIP_DEBUG("src_addr present\n");
-		if (!ipv4)
-		 memcpy(&src6.sin6_addr, src_addr, sizeof(struct in6_addr));
-		//  memcpy(&((struct sockaddr_in6 *) &src)->sin6_addr, src_addr, 
-		//	 sizeof(struct in6_addr));
-		else
-		  IPV6_TO_IPV4_MAP(src_addr, &((((struct sockaddr_in *) &src)->sin_addr)));
+		HIP_DEBUG("no local address, selecting one\n");
+		HIP_IFEL(hip_select_source_address(&my_addr,
+						   peer_addr), -1,
+				 "Cannot find source address\n");
 	}
 
-	/* The source address is needed for m&m stuff. However, I am not sure
-	   if the binding is a good thing; the source address is then fixed
-	   instead of the host default (remember that we are using a global
-	   raw socket). This can screw up things. */
-#if 0
-	HIP_DEBUG_IN6ADDR("src", src);
-	HIP_IFEL((bind(hip_raw_sock_v6, (struct sockaddr *) &src,
-		       sizeof(src)) < 0), -1,
-		 "Binding to raw sock failed\n");
+	if (ipv4) {
+		IPV6_TO_IPV4_MAP(&my_addr, &src4->sin_addr);
+		src4->sin_family = AF_INET;
 
-	_HIP_DEBUG_IN6ADDR("dst", peer_addr);
-#endif
+		IPV6_TO_IPV4_MAP(peer_addr, &dst4->sin_addr);
+		dst4->sin_family = AF_INET;
 
-	if (!ipv4) {
-		memcpy(&dst6.sin6_addr, peer_addr, sizeof(struct in6_addr));
-		//memcpy(&((struct sockaddr_in6 *) &dst)->sin6_addr, peer_addr, sizeof(struct in6_addr));
-		HIP_DEBUG_IN6ADDR("src", &((struct sockaddr_in6 *) &src)->sin6_addr);
-		HIP_DEBUG_IN6ADDR("dst", &((struct sockaddr_in6 *) &dst)->sin6_addr);
-	} else
-		IPV6_TO_IPV4_MAP(peer_addr,&((((struct sockaddr_in *) &dst)->sin_addr)));
+		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
+		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
+	} else {
+		memcpy(&src6->sin6_addr, &my_addr,
+		       sizeof(struct in6_addr));
+		src6->sin6_family = AF_INET6;
+
+		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
+		dst6->sin6_family = AF_INET6;
+
+		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
+		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
+	}
 
 	hip_zero_msg_checksum(msg);
-	if(!ipv4) 
-		msg->checksum = checksum_packet((char *)msg, &src6, &dst6);
-	else 
-		msg->checksum = checksum_packet((char*)msg, &src, &dst);
+	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
 	err = hip_agent_filter(msg);
 	if (err == -ENOENT) {
@@ -93,16 +104,18 @@ int hip_csum_send(struct in6_addr *src_addr,
 		err = -1;
 	}	
 
-
-#if 0
-        HIP_IFEL((connect(ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6, 
-			&dst,
-			  sizeof(dst)) < 0),
-		 -1, "Connecting of raw sock failed\n");
-#endif
-
+	/* Note! that we need the original (possibly mapped addresses here.
+	   Also, we need to do queuing before the bind because the bind
+	   can fail the first time during mobility events (duplicate address
+	   detection). */
 	if (retransmit)
-		err = hip_queue_packet(src_addr, peer_addr, msg, entry);
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
+				       msg, entry), -1, "queue failed\n");
+
+	/* Required for mobility; ensures that we are sending packets from
+	   the correct source address */
+	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &src, sa_size), -1,
+		 "Binding to raw sock failed\n");
 
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet was lost (simulation)\n");
@@ -114,17 +127,14 @@ int hip_csum_send(struct in6_addr *src_addr,
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	temp = sendto((ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6),
-                        msg, len, 0, (ipv4 ? &dst :(struct sockaddr *)&dst6),
-                         (ipv4 ? sizeof(dst) : sizeof(dst6)));
-	HIP_DEBUG("send to %d, len %d ipv4 %d\n", temp, len, ipv4);
-	
-#if 0
-	HIP_IFEL((sendto(ipv4 ? hip_raw_sock_v4 : hip_raw_sock_v6, 
-			msg, len, 0, &dst,
-			 sizeof(dst)) != len), -1,
-		 "Sending of HIP msg failed\n");
-#endif
+	/* For some reason, connect() was not working with a raw socket */
+	sent = sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
+		      sa_size);
+
+	HIP_IFEL((sent != len), -1,
+		 "Could not send the all requested data (%d/%d)\n", sent, len);
+
+	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 
  out_err:
@@ -134,7 +144,7 @@ int hip_csum_send(struct in6_addr *src_addr,
 	return err;
 }
 
-#else
+#if 0
 /*
  * The callback for i3 "no matching id" callback.
  * FIXME: tkoponen, Should this somehow trigger the timeout for waiting outbound traffic (state machine)?
@@ -147,8 +157,10 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
 }
 
 /* Hi3 outbound traffic processing */
-/* FIXME: For now this supports only serialiazation of IPv6 addresses to Hi3 header */
-int hip_csum_send(struct in6_addr *src_addr, 
+/* XX FIXME: For now this supports only serialiazation of IPv6 addresses to Hi3 header */
+/* XX FIXME: this function is outdated. Does not support in6 mapped addresses
+   and retransmission queues -mk */
+int hip_csum_send_i3(struct in6_addr *src_addr, 
 		  struct in6_addr *peer_addr,
 		  struct hip_common *msg)
 {

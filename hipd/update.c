@@ -1439,13 +1439,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	/* XX FIX: retransmissions */
 	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		_HIP_DEBUG("NOT ignored, or should we..\n");
-		entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
+		HIP_DEBUG("Ignoring and relying on retransmission\n");
+		/* XX FIX: we should fall back to established when all
+		   retransmissions have failed ? */
 		goto out_err;
 	}
 

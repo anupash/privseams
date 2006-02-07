@@ -222,7 +222,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 
 	HIP_DEBUG("\n");
 	own_addr = i1_daddr;
-	dst_addr = !dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip;
+	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit)), -ENOENT, 
@@ -236,7 +236,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(i1_saddr, dst_addr, r1pkt, NULL, 0), -1, 
+	HIP_IFEL(hip_csum_send(own_addr, dst_addr, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
  out_err:
 	if (r1pkt)
