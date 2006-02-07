@@ -1,8 +1,5 @@
 #include "bos.h"
 
-int address_count;
-struct list_head addresses;
-
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
  * @buffer_start: Pointer to start of the buffer over which the hash is
@@ -98,6 +95,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
  	/* Ready to begin building the BOS packet */
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
  	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
@@ -123,6 +121,8 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
  	/************** BOS packet ready ***************/
+
+	/**************SENDING ON IPv6*****************/
 	/* Use All Nodes Addresses (link-local) from RFC2373 */
 	daddr.s6_addr32[0] = htonl(0xFF020000);
 	daddr.s6_addr32[1] = 0;
@@ -132,11 +132,31 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos);
+		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
+
+	//FIXME: Miika .. please test this. I doubt there are some extra packets sent --Abi
+
+	/**************SENDING ON IPv4*****************/
+	/* Use All Nodes Addresses (link-local) from RFC2373 */
+	daddr.s6_addr32[0] = 0;
+	daddr.s6_addr32[1] = 0;
+	daddr.s6_addr32[2] = htonl(0xffff);
+	daddr.s6_addr32[3] = htonl(0xffffffff);
+	HIP_HEXDUMP("dst addr:", &daddr, 16);
+
+	list_for_each_entry(n, &addresses, next) {
+		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
+		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos, NULL, 0);
+		if (err)
+		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
+	}
+	err = 0;
+
+
 
 out_err:
 	if (host_id_private)
@@ -195,8 +215,6 @@ int hip_handle_bos(struct hip_common *bos,
 	char *str;
 	struct in6_addr *dstip;
 	char src[INET6_ADDRSTRLEN];
-
-	HIP_DEBUG("\n");
 
 	/* according to the section 8.6 of the base draft,
 	 * we must first check signature

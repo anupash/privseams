@@ -2,6 +2,7 @@
  * Licence: GNU/GPL
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Tobias Heer <tobi@tobibox.de>
  */
 
 #include "update.h"
@@ -35,6 +36,11 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 	esp_transf_length = hip_enc_key_length(esp_transform);
 	auth_transf_length = hip_auth_key_length_esp(esp_transform);
 	_HIP_DEBUG("enckeylen=%d authkeylen=%d\n", esp_transf_length, auth_transf_length);
+
+	bzero(espkey_gl, sizeof(struct hip_crypto_key));
+	bzero(espkey_lg, sizeof(struct hip_crypto_key));
+	bzero(authkey_gl, sizeof(struct hip_crypto_key));
+	bzero(authkey_lg, sizeof(struct hip_crypto_key));
 
 	HIP_IFEL(*keymat_offset_new + 2*(esp_transf_length+auth_transf_length) > 0xffff, -EINVAL,
 		 "Can not draw requested amount of new KEYMAT, keymat index=%u, requested amount=%d\n",
@@ -245,7 +251,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   SEQ parameter. */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Update_packet alloc failed\n");
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1, HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
@@ -288,8 +294,10 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 	/* Set up new incoming IPsec SA, (Old SPI value to put in NES tlv) */
 	HIP_IFE(!(prev_spi_in = hip_get_spi_to_update_in_established(entry, dst_ip)), -1);
+	
 	HIP_IFEL(!(new_spi_in = hip_acquire_spi(hits, hitr)), -1, 
 		 "Error while acquiring a SPI\n");
+	
 
 	HIP_DEBUG("Acquired inbound SPI 0x%x\n", new_spi_in);
 	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(nes->old_spi));
@@ -356,7 +364,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(NULL, src_ip, update_packet);
+	err = hip_csum_send(&entry->local_address, src_ip, update_packet, entry, 1);
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -376,8 +384,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
-int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
-				struct in6_addr *src_ip, uint32_t spi);
+
 
 
 /** hip_update_finish_rekeying - finish handling of REKEYING state
@@ -422,7 +429,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_DEBUG("handled NES: Keymat Index: %u\n", nes->keymat_index);
 
 	prev_spi_out = nes->old_spi;
-	new_spi_out = nes->new_spi;
+	new_spi_out = nes->new_spi ? nes->new_spi : prev_spi_out;
 	
 	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
@@ -461,37 +468,38 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 				       &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg), -1);
 	/* todo: update entry keymat later */
 	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
+	
+	/* XFRM API doesn't support multiple SA for one SP */
+	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
+	
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6);
+
+	/* SP and SA are always added, not updated, due to the xfrm api limitation */
+	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
+				       &entry->preferred_address, &entry->local_address,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
 
 	/* set up new outbound IPsec SA */
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 
-	/* FIXME: hip_add_sa MUST be fixed: the first two args are the Ip addrs, 
-	   the 3rd and the 4th correspond to HITS!!!*/
-	HIP_IFEL(hip_add_sa(hitr, hits, 
-			    hitr, hits, 
-			    &new_spi_out, esp_transform,
-			    we_are_HITg ? &espkey_gl : &espkey_lg,
-			    we_are_HITg ? &authkey_gl : &authkey_lg,
-			    0, HIP_SPI_DIRECTION_OUT), -1,
-		 "Setting up new outbound IPsec SA failed\n");
+	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
+			 hits, hitr, 
+			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
+			 (we_are_HITg ? &espkey_gl : &espkey_lg),
+			 (we_are_HITg ? &authkey_gl : &authkey_lg),
+			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
+	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
-/*
-	HIP_IFEL(new_spi_in != hip_add_sa(hits, hitr, new_spi_in, esp_transform,
-					  we_are_HITg ? &espkey_lg  : &espkey_gl,
-					  we_are_HITg ? &authkey_lg : &authkey_gl,
-					  1, HIP_SPI_DIRECTION_IN), -1,
-		 "Setting up new inbound IPsec SA failed\n");
-*/
 
-	/* FIXME: hip_add_sa MUST be fixed: the first two args are the Ip addrs, 
-	   the 3rd and the 4th correspond to HITS!!!*/
-	err = hip_add_sa(hits, hitr, 
-			 hits, hitr, 
-			 &new_spi_in, esp_transform,
+	err = hip_add_sa(&entry->local_address, &entry->preferred_address,
+			 hitr, hits,
+			 &new_spi_out, esp_transform,
 			 we_are_HITg ? &espkey_lg  : &espkey_gl,
 			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN);
+			 1, HIP_SPI_DIRECTION_IN, 0 /*prev_spi_out == new_spi_out*/ );
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
@@ -532,7 +540,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_out != new_spi_out) {
 		HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
 		/* SA is bounded to IP addresses! */
-		hip_delete_sa(prev_spi_out, hits, AF_INET6);
+		//hip_delete_sa(prev_spi_out, hits, AF_INET6);
 		HIP_DEBUG("TODO: set new spi to 0\n");
 		_HIP_DEBUG("delete_sa out retval=%d\n", err);
 		err = 0;
@@ -542,7 +550,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 		/* SA is bounded to IP addresses! */
-		hip_delete_sa(prev_spi_in, hitr, AF_INET6);
+		/////hip_delete_sa(prev_spi_in, hitr, AF_INET6);
 		/* remove old HIT-SPI mapping and add a new mapping */
 
 		/* actually should change hip_hadb_delete_inbound_spi
@@ -564,7 +572,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	/* start verifying addresses */
 	HIP_DEBUG("start verifying addresses for new spi 0x%x\n", new_spi_out);
-	err = hip_update_send_addr_verify(entry, msg, NULL, new_spi_out);
+	err = entry->hadb_update_func->hip_update_send_addr_verify(entry, msg, NULL, new_spi_out);
 	if (err)
 		HIP_DEBUG("address verification had errors, err=%d\n", err);
 	err = 0;
@@ -615,7 +623,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		HIP_IFE(!(update_packet = hip_msg_alloc()), -ENOMEM);
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
-		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+		entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 		HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 			 "Building of ACK param failed\n");
 	}
@@ -669,7 +677,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
-	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("NOT ignored, or should we..\n");
@@ -718,7 +726,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
 		HIP_DEBUG_HIT("new addr to check", &addr->address);
@@ -741,7 +749,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		hip_msg_init(update_packet);
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
-		hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+		entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 		HIP_IFEBL2(hip_build_param_spi(update_packet, 0x11223344), -1,
 			   continue, "Building of SPI failed\n");
 		entry->update_id_out++;
@@ -765,7 +773,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			  continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
-		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
+		/* XX FIX: retransmission handling */
+		err = hip_csum_send(src_ip, &addr->address, update_packet, entry, 0); // HANDLER
 		if (err) {
 			HIP_DEBUG("hip_csum_send err=%d\n", err);
 			HIP_DEBUG("NOT ignored, or should we..\n");
@@ -808,7 +817,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/* ACK the received UPDATE SEQ */
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
@@ -820,13 +829,13 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
+	err = hip_csum_send(dst_ip, src_ip, update_packet, entry, 0); // HANDLER
 	if (err)
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 
 	rea = hip_get_param(msg, HIP_PARAM_REA);
 	hip_update_handle_rea_parameter(entry, rea);
-	err = hip_update_send_addr_verify(entry, msg, dst_ip, ntohl(rea->spi));
+	err = entry->hadb_update_func->hip_update_send_addr_verify(entry, msg, dst_ip, ntohl(rea->spi));
 
  out_err:
 	if (update_packet)
@@ -868,7 +877,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
@@ -891,7 +900,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
+	err = hip_csum_send(dst_ip, src_ip, update_packet, entry, 0); // HANDLER
 	if (err)
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 
@@ -917,7 +926,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  */
 int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
-		       struct in6_addr *update_daddr)
+		       struct in6_addr *update_daddr,
+		       hip_ha_t *entry)
 {
 	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
 	struct in6_addr *hits;
@@ -934,7 +944,6 @@ int hip_receive_update(struct hip_common *msg,
 	uint16_t keymat_index = 0;
 	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
-	hip_ha_t *entry = NULL;
 
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
@@ -944,8 +953,7 @@ int hip_receive_update(struct hip_common *msg,
 	dst_ip = update_daddr;
 	hits = &msg->hits;
 
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(hits, &msg->hitr)), -1,
-		 "Entry not found\n");
+	HIP_IFEL(!entry, -1, "Entry not found\n");
 	HIP_LOCK_HA(entry);
 	state = entry->state; /* todo: remove variable state */
 
@@ -1003,7 +1011,7 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("in REKEYING state and ACK and not ECHO_REQUEST, MUST process this UPDATE\n");
 		handle_upd = 1;
 	}
-
+	
 	/* mm-02 UPDATE tests */
 	if (!handle_upd && rea && seq && !nes) {
 		HIP_DEBUG("have REA and SEQ but no NES, process this UPDATE\n");
@@ -1029,6 +1037,9 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_ERROR("NOT processing UPDATE packet\n");
 		goto out_err;
 	}
+
+	//hip_delete_sa(spi_in->spi, &entry->_address, AF_INET6);
+	//ipv6_addr_copy(&entry->local_address, &addr_list->address);
 
 	update_id_in = entry->update_id_in;
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
@@ -1099,28 +1110,66 @@ int hip_receive_update(struct hip_common *msg,
 		 "Old SPI value 0x%x in NES parameter does not belong to the current list of outbound SPIs in HA\n",
 		 ntohl(nes->old_spi));
 
+	/**********************/
+	if (rea) {
+		struct hip_rea_info_addr_item *rea_address_item;
+		int i, n_addrs;
+		uint32_t spi;
+		n_addrs = (hip_get_param_total_len(rea) - sizeof(struct hip_rea)) /
+			sizeof(struct hip_rea_info_addr_item);
+		spi = ntohl(rea->spi);
+		rea_address_item = (void *)rea + sizeof(struct hip_rea);
+		for(i = 0; i < n_addrs; i++, rea_address_item++) {
+			struct in6_addr *rea_address = &rea_address_item->address;
+			uint32_t lifetime = ntohl(rea_address_item->lifetime);
+			int is_preferred = ntohl(rea_address_item->reserved) == 1 << 31;
+			
+			HIP_DEBUG_HIT("REA address", rea_address);
+			HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+				  is_preferred ? "yes" : "no", ntohl(rea_address_item->reserved),
+				  lifetime);
+			/* 2. check that the address is a legal unicast or anycast address */
+			if (!hip_update_test_rea_addr(rea_address))
+				continue;
+
+			if (i > 0) {
+				/* preferred address allowed only for the first address */
+				if (is_preferred)
+					HIP_ERROR("bug, preferred flag set to other than the first address\n");
+				is_preferred = 0;
+			}
+
+			if (is_preferred && 
+			    memcmp(src_ip, &entry->preferred_address, sizeof(struct in6_addr))) {
+				hip_delete_sa(spi, &entry->preferred_address, AF_INET6);
+				ipv6_addr_copy(&entry->preferred_address, rea_address);
+			} 
+		}
+	}
+	/**********************/
+
 	if (handle_upd == 2) {
 		/* REA, SEQ */
-		err = hip_handle_update_plain_rea(entry, msg, src_ip, dst_ip);
+		err = entry->hadb_update_func->hip_handle_update_plain_rea(entry, msg, src_ip, dst_ip);
 	} else if (handle_upd == 3) {
 		/* SPI, SEQ, ACK, ECHO_REQUEST */
-		err = hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
+		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
 	} else if (handle_upd == 5) {
 		/* ACK, ECHO_RESPONSE */
-		hip_update_handle_ack(entry, ack, 0, echo_response);
+		entry->hadb_update_func->hip_update_handle_ack(entry, ack, 0, echo_response);
 	} else {
 		/* base draft cases 7-8: */
 		if (state == HIP_STATE_ESTABLISHED) {
 			if (nes && seq) {
 				HIP_DEBUG("case 7: in ESTABLISHED and has NES and SEQ\n");
-				err = hip_handle_update_established(entry, msg, src_ip, dst_ip);
+				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip);
 			} else {
 				HIP_ERROR("in ESTABLISHED but no both NES and SEQ\n");
 				err = -EINVAL;
 			}
 		} else {
 			HIP_DEBUG("case 8: in REKEYING\n");
-			err = hip_handle_update_rekeying(entry, msg, src_ip);
+			err = entry->hadb_update_func->hip_handle_update_rekeying(entry, msg, src_ip);
 		}
 	}
 
@@ -1220,7 +1269,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(update_packet, HIP_UPDATE, mask,
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask,
 			      &entry->hit_our, &entry->hit_peer);
 	if (add_rea) {
 		/* mm stuff, per-ifindex SA */
@@ -1229,7 +1278,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			/* NES not needed */
-			add_nes = 0;
+			/* NES shouldn't be sent, but at the moment we send it anyway, due to the structure
+			   of the old program */
+			add_nes = 1;
 			make_new_sa = 0;
 			_HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
 			HIP_DEBUG("Reusing old SA\n");
@@ -1281,18 +1332,17 @@ int hip_send_update(struct hip_hadb_state *entry,
 			_HIP_DEBUG("is previously mapped ifindex\n");
 		}
 	} else
-		_HIP_DEBUG("not creating a new SA\n");
+		HIP_DEBUG("not creating a new SA\n");
 
 	_HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
 
 	if (add_rea) {
 		/* REA is the first parameter of the UPDATE */
-		if (mapped_spi)
-			err = hip_build_param_rea(update_packet, mapped_spi,
-							    addr_list, addr_count);
-		else
-			err = hip_build_param_rea(update_packet, new_spi_in,
-							    addr_list, addr_count);
+		uint32_t spi_in = mapped_spi ? mapped_spi : new_spi_in;
+		
+		err = hip_build_param_rea(update_packet, spi_in,
+					  addr_list, addr_count);
+
 		HIP_IFEL(err, err, "Building of REA param failed\n");
 	} else
 		HIP_DEBUG("not adding REA\n");
@@ -1309,7 +1359,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			} else {
 				HIP_DEBUG("mm-02, !makenewsa\n");
 				nes_old_spi = mapped_spi;
-				nes_new_spi = new_spi_in;
+				nes_new_spi = mapped_spi; //new_spi_in;
 			}
 		} else {
 			HIP_DEBUG("adding NES, Old SPI <> New SPI\n");
@@ -1347,6 +1397,12 @@ int hip_send_update(struct hip_hadb_state *entry,
  	} else
  		HIP_DEBUG("Address set has changed, continue\n");
 
+	/* spi_in->spi is equal to nes_old_spi */
+	if (addr_list && memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
+		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
+		ipv6_addr_copy(&entry->local_address, &addr_list->address);
+	}
+
 	hip_update_set_new_spi_in(entry, nes_old_spi, nes_new_spi, 0);
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
@@ -1383,12 +1439,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	err = hip_csum_send(NULL, &daddr, update_packet); // HANDLER
+	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		_HIP_DEBUG("NOT ignored, or should we..\n");
-		entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
+		HIP_DEBUG("Ignoring and relying on retransmission\n");
+		/* XX FIX: we should fall back to established when all
+		   retransmissions have failed ? */
 		goto out_err;
 	}
 
@@ -1462,6 +1518,8 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
+
+	/* XX TODO: check UPDATE also with radvd (i.e. same address is added twice). */
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {

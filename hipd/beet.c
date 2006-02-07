@@ -49,7 +49,15 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
 
-	tmpl->family = preferred_family;
+	if(IN6_IS_ADDR_V4MAPPED(tmpl_saddr) || IN6_IS_ADDR_V4MAPPED(tmpl_daddr))
+	{
+		HIP_DEBUG("IPv4 address found in tmpl policy\n");
+		tmpl->family = AF_INET;
+	} else {
+		tmpl->family = preferred_family;
+	}
+		
+
 	/* The mode has to be BEET */
 	if (proto) {
 		tmpl->mode = XFRM_MODE_BEET;
@@ -62,10 +70,13 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	tmpl->optional = 0; /* required */
 	tmpls_len += sizeof(*tmpl);
 	if (tmpl_saddr && tmpl_daddr) {
-		HIP_DEBUG_IN6ADDR("tmpl_saddr", tmpl_saddr);
-		HIP_DEBUG_IN6ADDR("tmpl_daddr", tmpl_daddr);
-		memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
-		memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+		if(tmpl->family == AF_INET){
+			tmpl->saddr.a4 = tmpl_saddr->s6_addr32[3];
+			tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
+		} else {
+			memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
+			memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+		}
 	}
 
 	addattr_l(&req.n, sizeof(req), XFRMA_TMPL,
@@ -80,6 +91,58 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
  out_err:
 
 	return err;
+}
+
+int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
+
+	struct {
+		struct nlmsghdr		  n;
+		struct xfrm_usersa_flush  xfs;
+	} req;
+	int err = 0;
+
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xfs));
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = XFRM_MSG_FLUSHSA;
+	req.xfs.proto = IPPROTO_ESP;
+
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "SA flush failed\n");
+
+ out_err:
+
+	return err;
+}
+
+int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
+
+	struct {
+		struct nlmsghdr			n;
+	} req;
+	int err = 0;
+
+	memset(&req, 0, sizeof(req));
+
+	req.n.nlmsg_len = NLMSG_LENGTH(0);
+	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req.n.nlmsg_type = XFRM_MSG_FLUSHPOLICY;
+
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "Policy flush failed\n");
+
+ out_err:
+
+	return err;
+}
+
+int hip_flush_all_policy() {
+	return hip_xfrm_policy_flush(&hip_nl_ipsec);
+}
+
+int hip_flush_all_sa() {
+	return hip_xfrm_sa_flush(&hip_nl_ipsec);
 }
 
 /**
@@ -162,24 +225,36 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	memset(&req, 0, sizeof(req));
 
+	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
+	{	
+		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];
+		req.xsinfo.id.daddr.a4 = daddr->s6_addr32[3];
+		req.xsinfo.family = AF_INET;
+	} else {
+		memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	        memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+		req.xsinfo.family = preferred_family;
+ 	}
+	
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsinfo));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = cmd;
-	req.xsinfo.family = preferred_family;
 
 	xfrm_init_lft(&req.xsinfo.lft);
 
 	req.xsinfo.mode = XFRM_MODE_BEET;
 	req.xsinfo.id.proto = IPPROTO_ESP;
 
-	memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
-	memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+	//memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	//memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
 	req.xsinfo.id.spi = htonl(spi);
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
-			   preferred_family), -1);
+			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
+			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
+			   AF_INET6), -1);
+			   //preferred_family), -1);
 	
 	{
 		struct {
@@ -200,10 +275,13 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		HIP_ASSERT(ealg < sizeof(e_algo_names));
 		HIP_ASSERT(aalg < sizeof(a_algo_names));
 
+		memset(alg.buf, 0, sizeof(alg.buf));
+
 		/* XFRMA_ALG_AUTH */
 		memset(&alg, 0, sizeof(alg));
 		HIP_IFE(xfrm_algo_parse((void *)&alg, XFRMA_ALG_AUTH, a_name,
-					 authkey->key, sizeof(alg.buf)), -1);
+					 authkey->key, enckey_len,
+					sizeof(alg.buf)), -1);
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
 		HIP_IFE((addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_AUTH,
@@ -212,7 +290,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		/* XFRMA_ALG_CRYPT */
 		memset(&alg, 0, sizeof(alg));
 		HIP_IFE(xfrm_algo_parse((void *)&alg, XFRMA_ALG_CRYPT, e_name,
-					enckey->key, sizeof(alg.buf)), -1);
+					enckey->key, enckey_len,
+					sizeof(alg.buf)), -1);
 	
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
@@ -251,9 +330,21 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsid));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = XFRM_MSG_DELSA;
-	req.xsid.family = preferred_family;
+	//req.xsid.family = preferred_family;
 
-	memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
+	if(IN6_IS_ADDR_V4MAPPED(peer_addr))
+        {
+		HIP_DEBUG("IPV4 SA deletion\n");
+                req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
+                req.xsid.family = AF_INET;
+        } else {
+		HIP_DEBUG("IPV6 SA deletion\n");
+		memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
+                req.xsid.family = preferred_family;
+        }
+
+
+
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
@@ -273,7 +364,10 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family) {
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
-	return -1; /* XX FIXME: REWRITE USING XFRM */
+
+	uint32_t spi;
+	get_random_bytes(&spi, sizeof(uint32_t));
+	return spi; /* XX FIXME: REWRITE USING XFRM */
 }
 
 /* Security associations in the kernel with BEET are bounded to the outer
@@ -282,17 +376,20 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		     uint32_t *spi, int ealg,
-		     struct hip_crypto_key *enckey,
-		     struct hip_crypto_key *authkey,
-		     int already_acquired,
-		     int direction) {
+		    uint32_t *spi, int ealg,
+		    struct hip_crypto_key *enckey,
+		    struct hip_crypto_key *authkey,
+		    int already_acquired,
+		    int direction, int update) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
+	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
 	HIP_ASSERT(spi);
+
+	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 
 	enckey_len = hip_enc_key_length(ealg);
 	authkey_len = hip_auth_key_length_esp(aalg);
@@ -303,7 +400,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 
-	HIP_IFE(hip_xfrm_state_modify(&hip_nl_ipsec, XFRM_MSG_NEWSA,
+	HIP_IFE(hip_xfrm_state_modify(&hip_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,

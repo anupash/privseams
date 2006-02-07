@@ -32,13 +32,6 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-# Specify HIPL topdir manually. top_srcdir may not work otherwise if configure
-# is invoked manually directly in this dir. The global include file uses the
-# HIPL variable to setup some HIPL_* variables.
-# 
-HIPL = $(PWD)/..
-include $(HIPL)/Makefile.am.global
-
 # XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
 
 lib_LTLIBRARIES = libinet6.la
@@ -57,8 +50,9 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-CFLAGS += -g -I$(HIPL_TOOLS) -I$(HIPL) -I$(HIPL_LIBHIPTOOL)
-CFLAGS += -DCONFIG_HIP_DEBUG -I$(HIPL_HIPD) -Iinclude_glibc
+INCLUDES =
+INCLUDES += $(hipl_common_include_paths) -Iinclude_glibc
+CFLAGS += $(hipl_common_cflags)
 
 # HIP library added
 LDADD  = ../libhiptool/.libs/libhiptool.a

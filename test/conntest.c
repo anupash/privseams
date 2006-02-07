@@ -184,7 +184,7 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 		char addr_str[INET6_ADDRSTRLEN];
 		int e;
 		
-		printf("Calling HIP_ASSERT \n");
+		/* Currently only IPv6 socket structures are supported */
 		HIP_ASSERT(ai->ai_family == AF_INET6);
 		sock = create_socket(proto);
 		if (sock < 0) {

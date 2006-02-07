@@ -8,7 +8,7 @@
 
 #include <time.h>
 #include <netdb.h>
-#include <net/if.h>
+//#include <net/if.h> /* Excluded for RH/Fedora compilation */
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
@@ -105,7 +105,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
-		    int already_acquired, int direction);
+		    int already_acquired, int direction, int update);
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family);
 

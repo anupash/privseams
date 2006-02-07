@@ -2,11 +2,15 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
+
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
+
+ 
+ 
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
@@ -61,7 +65,7 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 static inline void hip_hadb_rem_state_hit(void *entry)
 {
 	hip_ha_t *ha = (hip_ha_t *)entry;
-	HIP_DEBUG("*****************GOT into hip_hadb_rem_state_hit*****************\n");
+	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
 	hip_ht_delete(&hadb_hit, entry);
 }
@@ -252,7 +256,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	 * unsigned long flags = 0;
 	 * spin_lock_irqsave(&hip_sdb_lock, flags);
 	 */
-
+	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
 	HIP_DEBUG_HIT("HIT", peer_hit);
 	HIP_DEBUG_IN6ADDR("addr", peer_addr);
 
@@ -264,6 +268,22 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 			HIP_ERROR("Unable to create a new entry\n");
 			return -1;
 		}
+		/* choose the set of processing function for the hadb_entry*/
+		HIP_IFEL(
+		    hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
+		    -1, "Can't set new function pointer set\n");
+		HIP_IFEL(
+		    hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
+		    -1, "Can't set new function pointer set\n");
+		HIP_IFEL(
+		    hip_hadb_set_update_function_set(entry, &default_update_func_set),
+		    -1, "Can't set new function pointer set\n");
+		    
+		HIP_IFEL(
+		    hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
+		    -1, "Can't set new function pointer set\n");
+		     
+		    
 		_HIP_DEBUG("created a new sdb entry\n");
 		ipv6_addr_copy(&entry->hit_peer, peer_hit);
 
@@ -292,6 +312,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		HIP_IFEL(hip_select_source_address(&entry->local_address,
 							peer_addr), -1,
 			 "Cannot find source address\n");
+
+		HIP_DEBUG("Source address found\n");
 
 		/*
 		 * Create a security policy for triggering base exchange.
@@ -425,7 +447,10 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
         // SYNCH: does it really need to be syncronized to beet-xfrm? -miika
 	// No dst hit.
-
+	
+	/* Function pointer sets which define HIP behavior in respect to the hadb_entry */
+	entry->hadb_rcv_func = &default_rcv_func_set;
+	
 	return entry;
 }
 
@@ -677,7 +702,7 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 		return -ENOENT;
 	}
 
-	if (ipv6_addr_any(addr)) {
+	if (!ipv6_addr_any(addr)) {
 		hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
@@ -867,7 +892,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 	int ifindex;
 
 	HIP_DEBUG_HIT("dst dev_addr", dev_addr);
-	ifindex = hip_ipv6_devaddr2ifindex(dev_addr);
+	ifindex = hip_devaddr2ifindex(dev_addr);
 	HIP_DEBUG("ifindex of dst dev=%d\n", ifindex);
 	if (!ifindex)
 		return 0;
@@ -973,8 +998,9 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t peer_update_id)
 		_HIP_DEBUG("test item: spi=0x%x new_spi=0x%x\n",
 			  item->spi, item->new_spi);
 		if (item->seq_update_id == peer_update_id) {
-			return item->new_spi;
-			
+			if (item->new_spi)
+				return item->new_spi;
+			return item->spi;
 		}
         }
 	HIP_DEBUG("New SPI not found\n");
@@ -1672,6 +1698,128 @@ void hip_init_hadb(void)
 
 	hip_ht_init(&hadb_hit);
 	hip_ht_init(&hadb_spi_list);
+	
+	/* initialize default function pointer sets for receiving messages*/
+	default_rcv_func_set.hip_fp_receive_r1        = hip_receive_r1;
+	default_rcv_func_set.hip_fp_receive_i2        = hip_receive_i2;
+	default_rcv_func_set.hip_fp_receive_r2        = hip_receive_r2;
+	default_rcv_func_set.hip_fp_receive_update    = hip_receive_update;
+	default_rcv_func_set.hip_fp_receive_notify    = hip_receive_notify;
+	default_rcv_func_set.hip_fp_receive_bos       = hip_receive_bos;
+	default_rcv_func_set.hip_fp_receive_close     = hip_receive_close;
+	default_rcv_func_set.hip_fp_receive_close_ack = hip_receive_close_ack;
+	
+	/* initialize alternative function pointer sets for receiving messages*/
+	/* insert your alternative function sets here!*/ 
+
+	/* initialize default function pointer sets for handling messages*/
+	default_handle_func_set.hip_handle_r1  = hip_handle_r1;
+	default_handle_func_set.hip_handle_i2  = hip_handle_i2;
+	default_handle_func_set.hip_handle_r2  = hip_handle_r2;
+	default_handle_func_set.hip_handle_bos = hip_handle_bos;
+	default_handle_func_set.hip_handle_close     = hip_handle_close;
+	default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
+	
+	/* initialize alternative function pointer sets for handling messages*/
+	/* insert your alternative function sets here!*/ 
+	
+	/* initialize default function pointer sets for misc functions*/
+	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
+	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
+	default_misc_func_set.hip_create_i2		   = hip_create_i2;
+	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
+
+	/* initialize alternative function pointer sets for misc functions*/
+	/* insert your alternative function sets here!*/ 
+	
+	/* initialize default function pointer sets for update functions*/
+	default_update_func_set.hip_handle_update_plain_rea   = hip_handle_update_plain_rea;
+	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
+	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
+	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
+	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
+	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
+	
+	/* initialize alternative function pointer sets for update functions*/
+	/* insert your alternative function sets here!*/ 
+
+}
+
+
+/**
+ * hip_hadb_set_rcv_function_set - set function pointer set for an hadb record.
+ *				   Pointer values will not be copied!
+ * @entry:          e pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
+				   hip_rcv_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_rcv_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
+}
+
+/**
+ * hip_hadb_set_handle_function_set - set function pointer set for an
+ * hadb record. Pointer values will not be copied!
+ * @entry:           pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_handle_function_set(hip_ha_t * entry,
+				     hip_handle_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_handle_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
+}
+
+/**
+ * hip_hadb_set_misc_function_set - set function pointer set for an hadb record.
+ * Pointer values will not be copied!
+ * @entry:           pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_misc_function_set(hip_ha_t * entry,
+				   hip_misc_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_misc_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
+}
+
+/**
+ * hip_hadb_set_update_function_set - set function pointer set for an hadb record.
+ * Pointer values will not be copied!
+ * @entry:           pointer to the hadb record
+ * @new_func_set:    pointer to the new function set
+ *
+ * Returns: 0 if everything was stored successfully, otherwise < 0.
+ */
+int hip_hadb_set_update_function_set(hip_ha_t * entry,
+				     hip_update_func_set_t * new_func_set){
+	/* TODO: add check whether all function pointers are set */
+	if( entry ){
+		entry->hadb_update_func = new_func_set;
+		return 0;
+	}
+	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
+	return -1;
 }
 
 void hip_uninit_hadb()
@@ -1723,6 +1871,7 @@ void hip_delete_all_sp()
 	 * The list traversing is not safe in smp way :(
 	 */
 	HIP_DEBUG("DELETING HA HT\n");
+
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
@@ -1738,6 +1887,7 @@ void hip_delete_all_sp()
 		}
 	}
 }
+
 
 /**
 * hip_list_peers_add - private function to add an entry to the peer list
@@ -1909,7 +2059,13 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
-			hip_delete_sa(item->spi, &entry->hit_our, AF_INET6);
+			HIP_DEBUG_IN6ADDR("cheng", &entry->local_address);
+			hip_delete_sa(item->spi, &entry->local_address,
+				      AF_INET6);
+			// XX FIX: should be deleted like this?
+			//for(i = 0; i < item->addresses_n; i++)
+			//  hip_delete_sa(item->spi,
+			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
  				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6);
  			if (item->addresses) {
@@ -1937,8 +2093,10 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
-			hip_delete_sa(item->spi, &entry->hit_peer, AF_INET6);
-			hip_delete_sa(item->new_spi, &entry->hit_peer, AF_INET6);
+			hip_delete_sa(item->spi, &entry->preferred_address,
+				      AF_INET6);
+			hip_delete_sa(item->new_spi, &entry->preferred_address,
+				      AF_INET6);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);

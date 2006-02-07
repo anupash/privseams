@@ -55,7 +55,6 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 	HIP_WRITE_UNLOCK_DB(db);
 }
 
-
 /**
  * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
  * @db: Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
@@ -182,7 +181,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 	
 	pubkey = hip_get_public_key(pubkey);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
-				   hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign,
+				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 
 	/* Called while the database is locked, perhaps not the best
@@ -274,9 +273,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
+	  hip_add_iface_local_route_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit)));
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+	  HIP_IFEL(hip_add_iface_local_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit))), -1,
+		   "Failed to add LSI to the device\n");
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
