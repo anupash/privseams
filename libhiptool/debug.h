@@ -11,6 +11,7 @@
 //#include <sys/socket.h>
 #include <netinet/in.h>
 //#include <arpa/inet.h>
+#include "hip.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64
@@ -74,6 +75,8 @@
 //#define HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define HIP_DEBUG_HIT(str, hit)  hip_print_hit(str, hit)
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
+#define HIP_DEBUG_LSI(str, hit)  hip_print_lsi(str, lsi)
+#define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(str, in)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
@@ -87,6 +90,8 @@
 #define _HIP_ASSERT(s) do {} while(0)
 #define _HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define _HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
+#define _HIP_DEBUG_LSI(str, lsi) do {} while(0)
+#define _HIP_DEBUG_INADDR(str, in) do {} while(0)
 
 enum logtype { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt { LOGFMT_SHORT, LOGFMT_LONG };

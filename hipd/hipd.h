@@ -6,6 +6,8 @@
 #include <errno.h>      /* errno */
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "hip.h"
 #include "crypto.h"
@@ -40,5 +42,8 @@ extern time_t load_time;
 int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
+#define IPV4_HDR_SIZE 20
+
+#define HIT_SIZE 16
 
 #endif /* HIPD_H */

@@ -111,9 +111,11 @@ AC_SUBST(usagi_libc)
 hipl_opt_build=
 
 AC_ARG_ENABLE(firewall,
-              [  --enable-firewall compile HIP enabled firewall daemon],
-	      [echo "checking for firewall... yes"],
-              [echo "checking for firewall... no"])
+             AC_HELP_STRING([--enable-firewall],
+                            [HIP enabled firewall daemon (default is NO)]),
+             [ac_cv_use_firewall=$withval], [ac_cv_use_firewall=no])
+AC_CACHE_CHECK([whether to use firewall],
+               [ac_cv_use_firewall], [ac_cv_use_firewall=no])
 if test x"$enable_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
         AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
@@ -127,9 +129,11 @@ if test x"$enable_firewall" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(agent,
-              [  --enable-agent compile HIP user agent],
-             [echo "checking for agent... yes"],
-              [echo "checking for agent... no"])
+             AC_HELP_STRING([--enable-agent],
+                            [HIP user agent (default is NO)]),
+             [ac_cv_use_agent=$withval], [ac_cv_use_agent=no])
+AC_CACHE_CHECK([whether to use agent],
+               [ac_cv_use_agent], [ac_cv_use_agent=no])
 if test x"$enable_agent" = x"yes"; then
 # XX TODO: invoke "wx-config --cflags" and check that e.g. wx/menu.h exists
 # XX TODO: when wxgtk 2.6.2 ends in normal distros, replace with LIB_CHECK etc
@@ -145,17 +149,21 @@ if test x"$enable_agent" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(rvs,
-              [  --enable-rvs compile HIP rendezvous extensions],
-             [echo "checking for rvs... yes"],
-              [echo "checking for rvs... no"])
+             AC_HELP_STRING([--enable-rvs],
+                            [HIP rendezvous extensions (default is NO)]),
+             [ac_cv_use_rvs=$withval], [ac_cv_use_rvs=no])
+AC_CACHE_CHECK([whether to use rvs],
+               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$enable_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS)
 fi
 
 AC_ARG_ENABLE(hi3,
-              [  --enable-hi3 compile HIP Hi3 support],
-             [echo "checking for Hi3... yes"],
-              [echo "checking for Hi3... no"])
+             AC_HELP_STRING([--enable-hi3],
+                            [Hi3 support (default is NO)]),
+             [ac_cv_use_hi3=$withval], [ac_cv_use_hi3=no])
+AC_CACHE_CHECK([whether to use hi3],
+               [ac_cv_use_hi3], [ac_cv_use_hi3=no])
 if test x"$enable_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3)
 fi
