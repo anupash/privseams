@@ -8,12 +8,19 @@ HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
-/* default set of miscellaneous function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_xmit_func_set_t default_xmit_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
-hip_misc_func_set_t default_misc_func_set;
- 
+/* default set of miscellaneous function pointers. This has to be in the global scope */
+static hip_xmit_func_set_t default_xmit_func_set;
+static hip_misc_func_set_t ahip_misc_func_set;
+static hip_misc_func_set_t default_misc_func_set;
+static hip_input_filter_func_set_t default_input_filter_func_set;
+static hip_output_filter_func_set_t default_output_filter_func_set;
+static hip_rcv_func_set_t default_rcv_func_set;
+static hip_rcv_func_set_t ahip_rcv_func_set;
+static hip_handle_func_set_t default_handle_func_set;
+static hip_handle_func_set_t ahip_handle_func_set;
+static hip_update_func_set_t default_update_func_set;
+static hip_update_func_set_t ahip_update_func_set;
+
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
 	HIP_DEBUG("hs=0x%p SPI=0x%x\n", hs, hs->spi);
@@ -453,6 +460,12 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 		 -1, "Can't set new function pointer set\n");
 
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
+		 -1, "Can't set new function pointer set\n");
+
+	HIP_IFEL(hip_hadb_set_input_filter_function_set(entry, &default_input_filter_func_set),
+		 -1, "Can't set new function pointer set\n");
+
+	HIP_IFEL(hip_hadb_set_output_filter_function_set(entry, &default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
  out_err:
@@ -1749,12 +1762,38 @@ void hip_init_hadb(void)
 	/* xmit function set */
 	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
 
-
-	/* initialize alternative function pointer sets for update functions*/
-	/* insert your alternative function sets here!*/ 
-
+	/* filter function sets */
+	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
+	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 }
 
+hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
+	return &default_xmit_func_set;
+}
+
+hip_misc_func_set_t *hip_get_misc_default_func_set() {
+	return &default_misc_func_set;
+}
+
+hip_input_filter_func_set_t *hip_get_input_filter_default_func_set() {
+	return &default_input_filter_func_set;
+}
+
+hip_output_filter_func_set_t *hip_get_output_filter_default_func_set() {
+	return &default_output_filter_func_set;
+}
+
+hip_rcv_func_set_t *hip_get_rcv_default_func_set() {
+	return &default_rcv_func_set;
+}
+
+hip_handle_func_set_t *hip_get_handle_default_func_set() {
+	return &default_handle_func_set;
+}
+
+hip_update_func_set_t *hip_get_update_default_func_set() {
+	return &default_update_func_set;
+}
 
 /**
  * hip_hadb_set_rcv_function_set - set function pointer set for an hadb record.
@@ -1817,6 +1856,24 @@ int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
 				   hip_xmit_func_set_t * new_func_set){
 	if( entry ){
 		entry->hadb_xmit_func = new_func_set;
+		return 0;
+	}
+}
+
+int hip_hadb_set_input_filter_function_set(hip_ha_t * entry,
+					   hip_input_filter_func_set_t * new_func_set)
+{
+	if( entry ){
+		entry->hadb_input_filter_func = new_func_set;
+		return 0;
+	}
+}
+
+int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
+					   hip_output_filter_func_set_t * new_func_set)
+{
+	if( entry ){
+		entry->hadb_output_filter_func = new_func_set;
 		return 0;
 	}
 }
