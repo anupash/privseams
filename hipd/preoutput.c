@@ -37,6 +37,13 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
+	{
+		return hip_send_udp(local_addr, peer_addr,
+				    msg, entry, retransmit);
+
+	} 
+	
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be

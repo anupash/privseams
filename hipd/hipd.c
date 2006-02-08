@@ -556,10 +556,22 @@ int main(int argc, char *argv[]) {
 			}
 		} else if(FD_ISSET(hip_raw_sock_udp, &read_fdset)){
 			/* do NAT recieving here !! --Abi */
-			HIP_DEBUG("getting a msg on udp\n");	
-
+			
+			struct in6_addr saddr, daddr;
 
 			hip_msg_init(hip_msg);
+			HIP_DEBUG("Getting a msg on udp\n");	
+
+			if (hip_read_control_msg_udp(hip_raw_sock_udp, hip_msg, 1,
+                                                 &saddr, &daddr))
+                                HIP_ERROR("Reading network msg failed\n");
+                        else
+                        {
+                                err = hip_receive_control_packet(hip_msg,
+                                                                 &saddr,
+                                                                 &daddr);
+                        }
+
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			HIP_DEBUG("Receiving user message.\n");
