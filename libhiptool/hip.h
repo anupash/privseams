@@ -10,6 +10,7 @@
  *  - Mika Kousa <mkousa@cc.hut.fi>
  *  - Kristian Slavov <kslavov@hiit.fi>
  *  - Tobias Heer <tobi@tobibox.de>
+ *  - Abhinav Pathak <abhinav.pathak@hiit.fi>
  *
  *  TODO:
  *  - split this file into net/hip.h (packet structs etc) and linux/hip.h
@@ -50,6 +51,9 @@ struct list_head {
 #define HIP_HIT_PREFIX_LEN      8     /* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/8"
+
+#define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
+
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP
@@ -990,6 +994,8 @@ struct hip_hadb_state
 	uint64_t             birthday;
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
+
+	uint16_t	     nat;	/* Does this HIP association is behind NAT? --Abi */
 
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them

@@ -15,6 +15,7 @@
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
+int hip_raw_sock_udp = 0;	/* For NAT traversal of IPv4 packets */
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
@@ -229,6 +230,43 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4) {
 	return err;
 }
 
+int hip_init_raw_sock_udp(int *hip_raw_sock_udp)
+{
+	int on = 1, err = 0;
+	int off = 0;
+	
+	HIP_DEBUG("----------Opening udp socket !--------------\n");
+	if((*hip_raw_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
+        {
+                HIP_ERROR("Can not open socket for UDP\n");
+                return -1;
+        }
+        struct sockaddr_in myaddr;
+
+
+        myaddr.sin_family=AF_INET;
+        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+        myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
+
+        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
+
+        if( bind(*hip_raw_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+        {
+                HIP_ERROR("Unable to bind udp socket to port\n");
+                err = -1;
+		goto out_err;
+        }
+	HIP_DEBUG("socket done\n");
+        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+        return 0;
+
+
+ out_err:
+	return err;
+
+}
+
+
 /*
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -260,6 +298,8 @@ void hip_exit(int signal) {
 		close(hip_raw_sock_v6);
 	if (hip_raw_sock_v4)
 		close(hip_raw_sock_v4);
+	if(hip_raw_sock_udp)
+		close(hip_raw_sock_udp);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -402,11 +442,14 @@ int main(int argc, char *argv[]) {
 
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
+	HIP_IFEL(hip_init_raw_sock_udp(&hip_raw_sock_udp), -1, "raw sock udp\n");
 
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v6, highest_descriptor);
 	HIP_DEBUG("hip_raw_sock_v4 = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v4, highest_descriptor);
+	HIP_DEBUG("hip_raw_sock_udp = %d highest_descriptor = %d\n",
+		  hip_raw_sock_udp, highest_descriptor);
 
 	if (flush_ipsec) {
 		hip_flush_all_sa();
@@ -451,9 +494,10 @@ int main(int argc, char *argv[]) {
                       sizeof(hip_agent_addr)),
                  -1, "Bind on agent addr failed.");
 	
-	highest_descriptor = maxof(6, hip_nl_route.fd, hip_raw_sock_v6,
+	highest_descriptor = maxof(7, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_agent_sock, hip_raw_sock_v4);
+				   hip_agent_sock, hip_raw_sock_v4,
+				   hip_raw_sock_udp);
 	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
@@ -469,6 +513,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock_v6, &read_fdset);
 		FD_SET(hip_raw_sock_v4, &read_fdset);
+		FD_SET(hip_raw_sock_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
@@ -509,6 +554,13 @@ int main(int argc, char *argv[]) {
 								 &saddr,
 								 &daddr);
 			}
+		} else if(FD_ISSET(hip_raw_sock_udp, &read_fdset)){
+			/* do NAT recieving here !! --Abi */
+			HIP_DEBUG("getting a msg on udp\n");	
+
+
+			hip_msg_init(hip_msg);
+			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
