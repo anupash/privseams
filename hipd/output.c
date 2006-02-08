@@ -50,7 +50,10 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	err = hip_csum_send(&entry->local_address, &daddr, (struct hip_common*) &i1, entry, 1);// HANDLER
+	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						   &daddr,
+						   (struct hip_common*) &i1,
+						   entry, 1);
 	HIP_DEBUG("err = %d\n", err);
 	if (!err) {
 		HIP_LOCK_HA(entry);
@@ -258,7 +261,8 @@ void hip_send_notify(hip_ha_t *entry)
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	hip_csum_send(NULL, &daddr, notify_packet, entry, 0);
+	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, notify_packet,
+					     entry, 0);
 
  out_err:
 	if (notify_packet)
