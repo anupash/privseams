@@ -418,6 +418,9 @@ typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
 typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
+typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
+typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
+
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -1046,9 +1049,12 @@ struct hip_hadb_state
 	Use hip_hadb_set_handle_function_set instead */
 	hip_xmit_func_set_t *hadb_xmit_func;
 
+	/* For e.g. GUI agent */
+	hip_input_filter_func_set_t *hadb_input_filter_func;
+	hip_output_filter_func_set_t *hadb_output_filter_func;
 };
 
-struct hip_hadb_rcv_func_set{
+struct hip_hadb_rcv_func_set {
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
@@ -1089,12 +1095,6 @@ struct hip_hadb_rcv_func_set{
 					hip_ha_t*);	 
 	
 };
-/* default set of receive function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_rcv_func_set_t default_rcv_func_set;
-hip_rcv_func_set_t ahip_rcv_func_set;
-
-
 
 struct hip_hadb_handle_func_set{   
 	int (*hip_handle_r1)(struct hip_common *r1,
@@ -1126,12 +1126,6 @@ struct hip_hadb_handle_func_set{
 			     
 };
 
-/* default set of handle function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_handle_func_set_t default_handle_func_set;
-hip_handle_func_set_t ahip_handle_func_set;
-
-
 struct hip_hadb_update_func_set{   
 	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
 					struct hip_common *msg,
@@ -1159,12 +1153,6 @@ struct hip_hadb_update_func_set{
 	
 };
 
-/* default set of update function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_update_func_set_t default_update_func_set;
-hip_update_func_set_t ahip_update_func_set;
-
-
 struct hip_hadb_misc_func_set{ 
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
 				  struct hip_common *hdr,
@@ -1179,8 +1167,8 @@ struct hip_hadb_misc_func_set{
 			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
-				      struct in6_addr *hit_sender,
-				      struct in6_addr *hit_receiver);
+				      const struct in6_addr *hit_sender,
+				      const struct in6_addr *hit_receiver);
 };
 
 struct hip_hadb_xmit_func_set{ 
@@ -1190,6 +1178,15 @@ struct hip_hadb_xmit_func_set{
 			      hip_ha_t *entry,
 			      int retransmit);
 };
+
+struct hip_hadb_input_filter_func_set { 
+	int (*hip_input_filter)(struct hip_common *msg);
+};
+
+struct hip_hadb_output_filter_func_set { 
+	int (*hip_output_filter)(struct hip_common *msg);
+};
+
 
 struct hip_cookie_entry {
 	int used;

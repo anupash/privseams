@@ -448,6 +448,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr)
 {
 	hip_ha_t tmp;
+	
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
@@ -457,7 +458,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	_HIP_HEXDUMP("dumping packet", msg,  40);
 	// XX FIXME: CHECK PACKET CSUM
 
-	err = hip_agent_filter(msg);
+	/* fetch the state from the hadb database to be able to choose the
+	   appropriate message handling functions */
+	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
+	if (entry)
+		err = entry->hadb_input_filter_func->hip_input_filter(msg);
+	else
+		err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
 	if (err == -ENOENT) {
 		HIP_DEBUG("No agent running, continuing\n");
 		err = 0;
@@ -466,10 +474,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	} else if (err) {
 		HIP_ERROR("Agent reject packet\n");
 	}
-	
-	/* fetch the state from the hadb database to be able to choose the
-	   appropriate message handling functions */
-	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	
 	switch(type) {
 	case HIP_I1:
