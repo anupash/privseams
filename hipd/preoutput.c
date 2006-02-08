@@ -103,7 +103,11 @@ int hip_csum_send(struct in6_addr *local_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	err = hip_agent_filter(msg);
+	if (entry)
+		err = entry->hadb_output_filter_func->hip_output_filter(msg);
+	else
+		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
+
 	if (err == -ENOENT) {
 		HIP_DEBUG("No agent running, continuing\n");
 		err = 0;

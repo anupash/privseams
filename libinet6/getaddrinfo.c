@@ -1,4 +1,4 @@
-/* $USAGI: getaddrinfo.c,v 1.9 2002/05/15 05:45:20 yoshfuji Exp $ */
+/* $USAGI: getaddrinfo.c,v 1.10 2003/01/07 10:22:52 yoshfuji Exp $ */
 
 /* The Inner Net License, Version 2.00
 
@@ -48,7 +48,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "libc-compat.h"
 #endif
 
-#include <assert.h>
 #include <errno.h>
 #include <netdb.h>
 #include <resolv.h>
