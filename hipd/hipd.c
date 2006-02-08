@@ -203,7 +203,8 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6) {
 
 	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_PKTINFO, &on,
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
+			    IPV6_2292PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
 
  out_err:

@@ -56,6 +56,10 @@ struct list_head {
 #define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
 #endif
 
+/* Workaround for kernels before 2.6.15.3. */
+#ifndef IPV6_2292PKTINFO
+#  define IPV6_2292PKTINFO 2
+#endif
 
 //#include "builder.h"
 #if 0
