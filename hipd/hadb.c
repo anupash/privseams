@@ -8,8 +8,11 @@ HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
-
- 
+/* default set of miscellaneous function pointers. This has to be in the global scope
+   TODO: move the default function sets to hadb.c */
+hip_xmit_func_set_t default_xmit_func_set;
+hip_misc_func_set_t ahip_misc_func_set;
+hip_misc_func_set_t default_misc_func_set;
  
 void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 {
@@ -268,21 +271,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 			HIP_ERROR("Unable to create a new entry\n");
 			return -1;
 		}
-		/* choose the set of processing function for the hadb_entry*/
-		HIP_IFEL(
-		    hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		    -1, "Can't set new function pointer set\n");
-		HIP_IFEL(
-		    hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
-		    -1, "Can't set new function pointer set\n");
-		HIP_IFEL(
-		    hip_hadb_set_update_function_set(entry, &default_update_func_set),
-		    -1, "Can't set new function pointer set\n");
-		    
-		HIP_IFEL(
-		    hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-		    -1, "Can't set new function pointer set\n");
-		     
 		    
 		_HIP_DEBUG("created a new sdb entry\n");
 		ipv6_addr_copy(&entry->hit_peer, peer_hit);
@@ -428,6 +416,7 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
+	int err = 0;
 
 	entry = (hip_ha_t *)HIP_MALLOC(sizeof(struct hip_hadb_state), gfpmask);
 	if (!entry)
@@ -449,7 +438,24 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	// No dst hit.
 	
 	/* Function pointer sets which define HIP behavior in respect to the hadb_entry */
-	entry->hadb_rcv_func = &default_rcv_func_set;
+
+	/* choose the set of processing function for the hadb_entry*/
+	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
+		 -1, "Can't set new function pointer set\n");
+	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
+						  &default_handle_func_set),
+		 -1, "Can't set new function pointer set\n");
+	HIP_IFEL(hip_hadb_set_update_function_set(entry,
+						  &default_update_func_set),
+		 -1, "Can't set new function pointer set\n");
+		    
+	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
+		 -1, "Can't set new function pointer set\n");
+
+	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
+		 -1, "Can't set new function pointer set\n");
+
+ out_err:
 	
 	return entry;
 }
@@ -1259,7 +1265,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
 					}
 				}
 			}
-			entry->skbtest = 1;
+			//entry->skbtest = 1;
 			_HIP_DEBUG("set skbtest to 1\n");
 		} else {
 			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
@@ -1700,14 +1706,14 @@ void hip_init_hadb(void)
 	hip_ht_init(&hadb_spi_list);
 	
 	/* initialize default function pointer sets for receiving messages*/
-	default_rcv_func_set.hip_fp_receive_r1        = hip_receive_r1;
-	default_rcv_func_set.hip_fp_receive_i2        = hip_receive_i2;
-	default_rcv_func_set.hip_fp_receive_r2        = hip_receive_r2;
-	default_rcv_func_set.hip_fp_receive_update    = hip_receive_update;
-	default_rcv_func_set.hip_fp_receive_notify    = hip_receive_notify;
-	default_rcv_func_set.hip_fp_receive_bos       = hip_receive_bos;
-	default_rcv_func_set.hip_fp_receive_close     = hip_receive_close;
-	default_rcv_func_set.hip_fp_receive_close_ack = hip_receive_close_ack;
+	default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
+	default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
+	default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
+	default_rcv_func_set.hip_receive_update    = hip_receive_update;
+	default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
+	default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
+	default_rcv_func_set.hip_receive_close     = hip_receive_close;
+	default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
 	
 	/* initialize alternative function pointer sets for receiving messages*/
 	/* insert your alternative function sets here!*/ 
@@ -1740,6 +1746,10 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
 	
+	/* xmit function set */
+	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
+
+
 	/* initialize alternative function pointer sets for update functions*/
 	/* insert your alternative function sets here!*/ 
 
@@ -1801,6 +1811,14 @@ int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 	}
 	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
 	return -1;
+}
+
+int hip_hadb_set_xmit_function_set(hip_ha_t * entry,
+				   hip_xmit_func_set_t * new_func_set){
+	if( entry ){
+		entry->hadb_xmit_func = new_func_set;
+		return 0;
+	}
 }
 
 /**
