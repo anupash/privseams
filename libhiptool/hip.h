@@ -1055,6 +1055,11 @@ struct hip_hadb_state
 };
 
 struct hip_hadb_rcv_func_set {
+	int (*hip_receive_i1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
@@ -1097,6 +1102,11 @@ struct hip_hadb_rcv_func_set {
 };
 
 struct hip_hadb_handle_func_set{   
+	int (*hip_handle_i1)(struct hip_common *r1,
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
