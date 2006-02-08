@@ -1,4 +1,4 @@
-/* $USAGI: ip6opt.c,v 1.3 2002/05/15 05:45:20 yoshfuji Exp $ */
+/* $USAGI: ip6opt.c,v 1.5 2005/07/04 08:50:45 yoshfuji Exp $ */
 
 /*
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
@@ -114,8 +114,10 @@ inet6_option_append(cmsg, typep, multx, plusy)
 		return(-1);
 	if (plusy < 0 || plusy > 7)
 		return(-1);
-	//if (typep[0] > 255)
-	//	return(-1);
+#if UINT8_MAX > 255
+	if (typep[0] > 255)
+		return(-1);
+#endif
 
 	/*
 	 * If this is the first option, allocate space for the
@@ -406,7 +408,7 @@ inet6_insert_padopt(uint8_t *p, int len)
  * [rfc2292bis-01, 10.1]
  */
 int
-inet6_opt_init(void *extbuf, size_t extlen)
+inet6_opt_init(void *extbuf, socklen_t extlen)
 {
 	struct ip6_ext *ext = (struct ip6_ext *)extbuf;
 
@@ -433,8 +435,8 @@ inet6_opt_init(void *extbuf, size_t extlen)
  * [rfc2292bis-01, 10.2]
  */
 int
-inet6_opt_append(void *extbuf, size_t extlen, int prevlen, uint8_t type,
-		 size_t len, uint8_t align, void **databufp)
+inet6_opt_append(void *extbuf, socklen_t extlen, int prevlen, uint8_t type,
+		 socklen_t len, uint8_t align, void **databufp)
 {
 	int currentlen = prevlen, padlen = 0;
 
@@ -442,8 +444,12 @@ inet6_opt_append(void *extbuf, size_t extlen, int prevlen, uint8_t type,
 	 * The option type must have a value from 2 to 255, inclusive.
 	 * (0 and 1 are reserved for the Pad1 and PadN options, respectively.)
 	 */
-	//if (type < 2 || type > 255)
-	//	return(-1);
+	if (type < 2
+#if UINT8_MAX > 255
+	    || type > 255
+#endif
+	    )
+		return(-1);
 
 	/*
 	 * The option data length must have a value between 0 and 255,
@@ -511,7 +517,7 @@ inet6_opt_append(void *extbuf, size_t extlen, int prevlen, uint8_t type,
  * [rfc2292bis-01, 10.3]
  */
 int
-inet6_opt_finish(void *extbuf, size_t extlen, int prevlen)
+inet6_opt_finish(void *extbuf, socklen_t extlen, int prevlen)
 {
 	int updatelen = prevlen > 0 ? (1 + ((prevlen - 1) | 7)) : 0;;
 
@@ -550,7 +556,7 @@ inet6_opt_finish(void *extbuf, size_t extlen, int prevlen)
  * [rfc2292bis-01, 10.4]
  */
 int
-inet6_opt_set_val(void *databuf, size_t offset, void *val, int vallen)
+inet6_opt_set_val(void *databuf, socklen_t offset, void *val, int vallen)
 {
 
 	memcpy((uint8_t *)databuf + offset, val, vallen);
@@ -575,8 +581,8 @@ inet6_opt_set_val(void *databuf, size_t offset, void *val, int vallen)
  * [rfc2292bis-01, 10.5]
  */
 int
-inet6_opt_next(void *extbuf, size_t extlen, int prevlen, uint8_t *typep,
-	       size_t *lenp, void **databufp)
+inet6_opt_next(void *extbuf, socklen_t extlen, int prevlen, uint8_t *typep,
+	       socklen_t *lenp, void **databufp)
 {
 	uint8_t *optp, *lim;
 	int optlen;
@@ -645,8 +651,8 @@ inet6_opt_next(void *extbuf, size_t extlen, int prevlen, uint8_t *typep,
  * [rfc2292bis-01, 10.6]
  */
 int
-inet6_opt_find(void *extbuf, size_t extlen, int prevlen, uint8_t type,
-	       size_t *lenp, void **databufp)
+inet6_opt_find(void *extbuf, socklen_t extlen, int prevlen, uint8_t type,
+	       socklen_t *lenp, void **databufp)
 {
 	uint8_t *optp, *lim;
 	int optlen;
@@ -706,7 +712,7 @@ inet6_opt_find(void *extbuf, size_t extlen, int prevlen, uint8_t type,
  * [rfc2292bis-01, 10.7]
  */
 int
-inet6_opt_get_val(void *databuf, size_t offset, void *val, int vallen)
+inet6_opt_get_val(void *databuf, socklen_t offset, void *val, int vallen)
 {
 
 	/* we can't assume alignment here */

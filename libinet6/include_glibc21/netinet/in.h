@@ -1,4 +1,4 @@
-/* $USAGI: in.h,v 1.4 2001/12/25 17:49:12 yoshfuji Exp $ */
+/* $USAGI: in.h,v 1.7 2005/12/18 10:26:48 yoshfuji Exp $ */
 
 /* Copyright (C) 1991,92,93,94,95,96,97,98,99 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
@@ -370,7 +370,7 @@ extern int inet6_option_next __P((const struct cmsghdr *__cmsg, uint8_t **__tptr
 extern int inet6_option_find __P((const struct cmsghdr *__cmsg, uint8_t **__tptrp, 
 				  int __type));
 
-extern size_t inet6_rthdr_space __P((int __type, int __segments));
+extern socklen_t inet6_rthdr_space __P((int __type, int __segments));
 extern struct cmsghdr *inet6_rthdr_init __P((void *__bp, int __type));
 extern int inet6_rthdr_add __P((struct cmsghdr *__cmsg, const struct in6_addr *__addr,
 			        unsigned int __flags));
@@ -380,21 +380,21 @@ extern int inet6_rthdr_segments __P((const struct cmsghdr *__cmsg));
 extern struct in6_addr *inet6_rthdr_getaddr __P((struct cmsghdr *__cmsg, int __index));
 extern int inet6_rthdr_getflags __P((const struct cmsghdr *__cmsg, int __index));
 
-#if 0
-extern int inet6_opt_init __P((void *__extbuf, size_t __extlen));
-extern int inet6_opt_append __P((void *__extbuf, size_t __extlen, int __prevlen,
-				 uint8_t __type, size_t __len, uint8_t __align,
+#ifdef __USE_RFC3542
+extern int inet6_opt_init __P((void *__extbuf, socklen_t __extlen));
+extern int inet6_opt_append __P((void *__extbuf, socklen_t __extlen, int __prevlen,
+				 uint8_t __type, socklen_t __len, uint8_t __align,
 				 void **__databufp));
-extern int inet6_opt_finish __P((void *__extbuf, size_t __extlen, int __prevlen));
-extern int inet6_opt_set_val __P((void *__extbuf, size_t __extlen, void *__val, int __vallen));
+extern int inet6_opt_finish __P((void *__extbuf, socklen_t __extlen, int __prevlen));
+extern int inet6_opt_set_val __P((void *__extbuf, socklen_t __extlen, void *__val, int __vallen));
 
-extern int inet6_opt_next __P((void *__extbuf, size_t __extlen, int __prevlen, 
-			       uint8_t *__typep, size_t *__lenp, void **__databufp));
-extern int inet6_opt_find __P((void *__extbuf, size_t __extlen, int __prevlen, 
-			       uint8_t __type, size_t *__lenp, void **__databufp));
-extern int inet6_opt_get_val __P((void *__databuf, size_t __offset, void *__val, 
+extern int inet6_opt_next __P((void *__extbuf, socklen_t __extlen, int __prevlen, 
+			       uint8_t *__typep, socklen_t *__lenp, void **__databufp));
+extern int inet6_opt_find __P((void *__extbuf, socklen_t __extlen, int __prevlen, 
+			       uint8_t __type, socklen_t *__lenp, void **__databufp));
+extern int inet6_opt_get_val __P((void *__databuf, socklen_t __offset, void *__val, 
 				  int __vallen));
-extern size_t inet6_rth_space __P((int __type, int __segments));
+extern socklen_t inet6_rth_space __P((int __type, int __segments));
 extern void *inet6_rth_init __P((void *__bp, int __bp_len, int __type, int __segments));
 extern int inet6_rth_add __P((void *__bp, const struct in6_addr *__addr));
 extern int inet6_rth_reverse __P((const void *__in, void *__out));
