@@ -154,7 +154,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	return err;
 }
 
-#if 0
+#ifdef CONFIG_HIP_HI3
 /*
  * The callback for i3 "no matching id" callback.
  * FIXME: tkoponen, Should this somehow trigger the timeout for waiting outbound traffic (state machine)?
