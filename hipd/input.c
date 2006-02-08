@@ -484,7 +484,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		// possibly state
 		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
 		if(entry){
-			err = entry->hadb_rcv_func->hip_fp_receive_i2(msg,
+			err = entry->hadb_rcv_func->hip_receive_i2(msg,
 							src_addr,
 							dst_addr,
 							entry);
@@ -498,7 +498,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		// state
 		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_r1(msg,
+			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -508,7 +508,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_R2:
 		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_r2(msg,
+			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -519,7 +519,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_UPDATE:
 		HIP_DEBUG("\n-- RECEIVED Update message. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_update(msg,
+			 err = entry->hadb_rcv_func->hip_receive_update(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -528,7 +528,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_NOTIFY:
 		HIP_DEBUG("\n-- RECEIVED Notify message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_notify(
+			 err = entry->hadb_rcv_func->hip_receive_notify(
 							msg,
 							src_addr,
 							dst_addr,
@@ -538,7 +538,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_BOS:
 		HIP_DEBUG("\n-- RECEIVED BOS message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_bos(msg,
+			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
 							src_addr,
 							dst_addr,
 							entry))
@@ -554,14 +554,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_CLOSE:
 		HIP_DEBUG("\n-- RECEIVED CLOSE message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_close(msg,
+			 err = entry->hadb_rcv_func->hip_receive_close(msg,
 							entry))
 		break;
 		
 	case HIP_CLOSE_ACK:
 		HIP_DEBUG("\n-- RECEIVED CLOSE_ACK message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_close_ack(
+			 err = entry->hadb_rcv_func->hip_receive_close_ack(
 							msg,
 							entry))
 		break;
@@ -863,7 +863,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
-	HIP_IFE(hip_csum_send(r1_daddr, &daddr, i2, entry, 0), -1);
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, i2,
+						     entry, 0), -1);
 
  out_err:
 	if (i2)
@@ -1157,7 +1158,9 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	err = hip_csum_send(i2_daddr, i2_saddr, r2, entry, 1); // HANDLER
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr,
+						      r2, entry, 1), -1,
+		 "Failed to send r2\n")
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1489,16 +1492,6 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
-	/* choose the set of processing function for the hadb_entry*/
-	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		 -1, "Can't set new function pointer set for receive functions\n");
-	HIP_IFEL(hip_hadb_set_handle_function_set(entry, &default_handle_func_set),
-		 -1, "Can't set new function pointer set for receive functions\n");
-	HIP_IFEL(hip_hadb_set_update_function_set(entry, &default_update_func_set),
-		 -1, "Can't set new function pointer set for update functions\n");
-	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-		 -1, "Can't set new function pointer set for misc functions\n");
-		 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
