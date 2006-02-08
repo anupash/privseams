@@ -1247,7 +1247,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
-	struct in6_addr daddr;
+	struct in6_addr saddr = { 0 }, daddr = { 0 };
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
 	struct hip_spi_in_item *spi_in = NULL;
@@ -1437,9 +1437,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else
 		HIP_DEBUG("experimental: staying in ESTABLISHED (NES not added)\n");
 
-
+	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet, entry, 1); // HANDLER
+	err = hip_csum_send(&saddr, &daddr, update_packet, entry, 1); // HANDLER
 	if (err) {
 		HIP_DEBUG("hip_csum_send err=%d\n", err);
 		HIP_DEBUG("Ignoring and relying on retransmission\n");

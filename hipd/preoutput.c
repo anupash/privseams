@@ -26,7 +26,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 {
 	int err = 0, sa_size, sent, len;
 	struct sockaddr_storage src, dst;
-	int ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
+	int src_is_ipv4, dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	struct sockaddr_in6 *src6, *dst6;
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
@@ -39,7 +39,8 @@ int hip_csum_send(struct in6_addr *local_addr,
 
 	len = hip_get_msg_total_len(msg);
 
-	/* Some convinient short-hands to avoid too much casting */
+	/* Some convinient short-hands to avoid too much casting (could be
+	   an union as well) */
 	src6 = (struct sockaddr_in6 *) &src;
 	dst6 = (struct sockaddr_in6 *) &dst;
 	src4 = (struct sockaddr_in *)  &src;
@@ -48,7 +49,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
 
-	if (ipv4) {
+	if (dst_is_ipv4) {
 		hip_raw_sock = hip_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
@@ -69,25 +70,34 @@ int hip_csum_send(struct in6_addr *local_addr,
 				 "Cannot find source address\n");
 	}
 
-	if (ipv4) {
+	src_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&my_addr);
+
+	if (src_is_ipv4) {
 		IPV6_TO_IPV4_MAP(&my_addr, &src4->sin_addr);
 		src4->sin_family = AF_INET;
-
-		IPV6_TO_IPV4_MAP(peer_addr, &dst4->sin_addr);
-		dst4->sin_family = AF_INET;
-
 		HIP_DEBUG_INADDR("src4", &src4->sin_addr);
-		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
 	} else {
 		memcpy(&src6->sin6_addr, &my_addr,
 		       sizeof(struct in6_addr));
 		src6->sin6_family = AF_INET6;
+		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
+	}
 
+	if (dst_is_ipv4) {
+		IPV6_TO_IPV4_MAP(peer_addr, &dst4->sin_addr);
+		dst4->sin_family = AF_INET;
+
+		HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
+	} else {
 		memcpy(&dst6->sin6_addr, peer_addr, sizeof(struct in6_addr));
 		dst6->sin6_family = AF_INET6;
-
-		HIP_DEBUG_IN6ADDR("src6", &src6->sin6_addr);
 		HIP_DEBUG_IN6ADDR("dst6", &dst6->sin6_addr);
+	}
+
+	if (src6->sin6_family != dst6->sin6_family) {
+		err = -1;
+		HIP_ERROR("Source and destination address families differ\n");
+		goto out_err;
 	}
 
 	hip_zero_msg_checksum(msg);
@@ -134,7 +144,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	HIP_IFEL((sent != len), -1,
 		 "Could not send the all requested data (%d/%d)\n", sent, len);
 
-	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, ipv4);
+	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 
  out_err:
