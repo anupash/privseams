@@ -1706,14 +1706,14 @@ void hip_init_hadb(void)
 	hip_ht_init(&hadb_spi_list);
 	
 	/* initialize default function pointer sets for receiving messages*/
-	default_rcv_func_set.hip_fp_receive_r1        = hip_receive_r1;
-	default_rcv_func_set.hip_fp_receive_i2        = hip_receive_i2;
-	default_rcv_func_set.hip_fp_receive_r2        = hip_receive_r2;
-	default_rcv_func_set.hip_fp_receive_update    = hip_receive_update;
-	default_rcv_func_set.hip_fp_receive_notify    = hip_receive_notify;
-	default_rcv_func_set.hip_fp_receive_bos       = hip_receive_bos;
-	default_rcv_func_set.hip_fp_receive_close     = hip_receive_close;
-	default_rcv_func_set.hip_fp_receive_close_ack = hip_receive_close_ack;
+	default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
+	default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
+	default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
+	default_rcv_func_set.hip_receive_update    = hip_receive_update;
+	default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
+	default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
+	default_rcv_func_set.hip_receive_close     = hip_receive_close;
+	default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
 	
 	/* initialize alternative function pointer sets for receiving messages*/
 	/* insert your alternative function sets here!*/ 

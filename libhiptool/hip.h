@@ -1049,7 +1049,7 @@ struct hip_hadb_state
 };
 
 struct hip_hadb_rcv_func_set{
-	int (*hip_fp_receive_r1)(struct hip_common *,
+	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
@@ -1057,35 +1057,35 @@ struct hip_hadb_rcv_func_set{
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
 	is not executed during the establishment of a new connection*/
-	int (*hip_fp_receive_i2)(struct hip_common *,
+	int (*hip_receive_i2)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_r2)(struct hip_common *,
+	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_update)(struct hip_common *,
+	int (*hip_receive_update)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_notify)(struct hip_common *,
+	int (*hip_receive_notify)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_bos)(struct hip_common *,
+	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*);
 				     
-	int (*hip_fp_receive_close)(struct hip_common *,
+	int (*hip_receive_close)(struct hip_common *,
 				    hip_ha_t*);
 				       
-	int (*hip_fp_receive_close_ack)(struct hip_common *,
+	int (*hip_receive_close_ack)(struct hip_common *,
 					hip_ha_t*);	 
 	
 };
@@ -1181,11 +1181,6 @@ struct hip_hadb_misc_func_set{
 				      uint16_t control,
 				      struct in6_addr *hit_sender,
 				      struct in6_addr *hit_receiver);
-	int  (*hip_csum_send)(struct in6_addr *local_addr,
-			      struct in6_addr *peer_addr,
-			      struct hip_common* msg,
-			      hip_ha_t *entry,
-			      int retransmit);
 };
 
 struct hip_hadb_xmit_func_set{ 

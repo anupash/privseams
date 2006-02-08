@@ -484,7 +484,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		// possibly state
 		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
 		if(entry){
-			err = entry->hadb_rcv_func->hip_fp_receive_i2(msg,
+			err = entry->hadb_rcv_func->hip_receive_i2(msg,
 							src_addr,
 							dst_addr,
 							entry);
@@ -498,7 +498,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		// state
 		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_r1(msg,
+			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -508,7 +508,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_R2:
 		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_r2(msg,
+			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -519,7 +519,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_UPDATE:
 		HIP_DEBUG("\n-- RECEIVED Update message. State: %d--\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_update(msg,
+			 err = entry->hadb_rcv_func->hip_receive_update(msg,
 			 				src_addr,
 							dst_addr,
 							entry))
@@ -528,7 +528,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_NOTIFY:
 		HIP_DEBUG("\n-- RECEIVED Notify message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_notify(
+			 err = entry->hadb_rcv_func->hip_receive_notify(
 							msg,
 							src_addr,
 							dst_addr,
@@ -538,7 +538,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_BOS:
 		HIP_DEBUG("\n-- RECEIVED BOS message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_bos(msg,
+			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
 							src_addr,
 							dst_addr,
 							entry))
@@ -554,14 +554,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_CLOSE:
 		HIP_DEBUG("\n-- RECEIVED CLOSE message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_close(msg,
+			 err = entry->hadb_rcv_func->hip_receive_close(msg,
 							entry))
 		break;
 		
 	case HIP_CLOSE_ACK:
 		HIP_DEBUG("\n-- RECEIVED CLOSE_ACK message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_fp_receive_close_ack(
+			 err = entry->hadb_rcv_func->hip_receive_close_ack(
 							msg,
 							entry))
 		break;
