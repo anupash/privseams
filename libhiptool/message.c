@@ -110,16 +110,16 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 	 * with msg due to IPV6_PKTINFO socket option */
 	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
 		if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
-		    (cmsg->cmsg_type == IPV6_PKTINFO)) {
+		    (cmsg->cmsg_type == IPV6_2292PKTINFO)) {
 			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
 			break;
 		}
 	}
 
-#if 0
+	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
+	   hip_init_raw_sock_v6 */
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv6 dst, dropping\n");
-#endif
 
 	if (read_addr) {
 		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
@@ -178,10 +178,8 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 		}
 	}
 
-#if 0
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv4 dst, dropping\n");
-#endif
 
 	if (read_addr) {
 		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
