@@ -11,3 +11,4 @@ autoreconf --install --force && \
   echo "NOTE: You cannot use HIP without applying the interfamily and beet from the patches directory to your kernel!"
   echo "NOTE: Some features (e.g. firewall ) require './configure --enable-FEATURE'"
   echo "NOTE: Run './configure --help' for more information"
+  echo "NOTE: libjip and hipsock need to be compiled separately with make"

@@ -168,24 +168,6 @@ if test x"$enable_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3)
 fi
 
-AC_ARG_ENABLE(hipsock,
-	AC_HELP_STRING([--enable-hipsock],
-                       [compile HIP kernel sockets (--enable-hipsock=yes|NO|/path/to/linux/source/tree)]),
-	[ac_cv_use_hipsock=$withval], [ac_cv_use_hipsock=no])
-AC_CACHE_CHECK([whether to use hipsock],
-               [ac_cv_use_hipsock], [ac_cv_use_hipsock=no])
-if test x"$enable_hipsock" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_SOCK)
-        hipl_opt_build="$hipl_opt_build hipsock"
-        AC_SUBST(HIPL_KERNEL_SRC, "/usr/src/linux")
-elif test x"$enable_hipsock" = x"no"; then
-        AC_SUBST(HIPL_KERNEL_SRC, "/dev/null")
-else
-        AC_DEFINE(CONFIG_HIP_SOCK)
-        hipl_opt_build="$hipl_opt_build hipsock"
-        AC_SUBST(HIPL_KERNEL_SRC, "$enable_hipsock")
-fi
-
 AC_SUBST(hipl_opt_build)
 
 # Some default settings (could be detected also with AC_ARG_ENABLE)
@@ -221,6 +203,5 @@ AC_CONFIG_FILES([ Makefile
                   test/Makefile
                   firewall/Makefile
                   libhipgui/Makefile
-                  agent/Makefile
-                  hipsock/Makefile])
+                  agent/Makefile])
 AC_OUTPUT

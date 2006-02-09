@@ -9,25 +9,17 @@
 
 #include "debug.h"
 
-inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
+char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
-  	struct ipv6hdr *ip6hdr;
-	char src[INET6_ADDRSTRLEN];
-	char dst[INET6_ADDRSTRLEN];
-	_HIP_DEBUG("hdr=%p skb=%p\n", hdr, skb);
-	if (hdr && skb) {
-		ip6hdr = skb->nh.ipv6h;
-		_HIP_DEBUG("ip6hdr=%p src %p dst %p skbdev %p\n",
-			   ip6hdr, &ip6hdr->saddr, &ip6hdr->daddr,
-			   skb->dev);
-		hip_in6_ntop(&ip6hdr->saddr, src);
-		hip_in6_ntop(&ip6hdr->daddr, dst);
-		HIP_DEBUG("pkt out: saddr %s daddr %s\n", src, dst);
-		if (skb->dev) {
-			HIP_DEBUG("pkt out: dev %s (ifindex %d)\n",
-				  skb->dev->name, skb->dev->ifindex);
-		}
-	}
+        if (!buf)
+                return NULL;
+        sprintf(buf,
+                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
+                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
+                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
+                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
+                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
+        return buf;
 }
 
 /**
@@ -67,7 +59,7 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 
 	/* every hexdump line contains offset+": "+32 bytes of data (space every 4 bytes) */
 	buflen = 4+2+2*32+((32-1)/4)+1;
-	buf = HIP_MALLOC(buflen, GFP_ATOMIC);
+	buf = kmalloc(buflen, GFP_ATOMIC);
 	if (!buf)
 		return;
 
@@ -95,28 +87,6 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	}
 
 	HIP_DEBUG("end of dump (0x%p)\n", data+len);
-	HIP_FREE(buf);
+	kfree(buf);
 	return;
-}
-
-
-/**
- * hip_state_str - get name for a state
- * @state: state value
- *
- * Returns: state name as a string.
- */
-inline const char *hip_state_str(unsigned int state)
-{
-	const char *str = "UNKNOWN";
-	static const char *states[] =
-		{ "NONE", "UNASSOCIATED", "I1_SENT",
-		  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
-		  "FAILED" };
-	if (state <= ARRAY_SIZE(states))
-		str = states[state];
-        else
-		HIP_ERROR("invalid state %u\n", state);
-
-	return str;
 }

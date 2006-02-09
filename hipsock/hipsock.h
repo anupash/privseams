@@ -20,6 +20,7 @@
 #include <linux/net.h>
 #include <linux/socket.h>
 
+#include "debug.h"
 
 #define PF_HIP 32
 
