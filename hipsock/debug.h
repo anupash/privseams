@@ -3,6 +3,7 @@
 
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
+#include "misc.h"
 
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46

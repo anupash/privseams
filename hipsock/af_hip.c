@@ -15,9 +15,14 @@
 
 #include "af_hip.h"
 
+const struct in6_addr in6addr_any;
+
 int hsock_init_module(void)
 {
 	int err = 0;
+
+	memset((struct in6_addr *) &in6addr_any, 0, sizeof(in6addr_any));
+
 	HIP_DEBUG("Loading HIP socket module\n");
 	HIP_IFEL(hip_init_socket_handler(), -1, "HIP socket init failed\n");
 	HIP_DEBUG("HIP socket module loaded successfully\n");
