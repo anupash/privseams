@@ -21,29 +21,8 @@ typedef uint16_t in_port_t;
 
 #define PF_HIP 32
 
-inline int is_big_endian(void)
-{
-	int i = 1;
-	char *p = (char *) &i;
-
-	if (p[0] == 1)
-		return 0;
-	else
-		return 1;
-}
-
-inline uint64_t hton64(uint64_t i) {
-	if (is_big_endian())
-		return i;
-	else
-		return ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff) );
-}
-
-inline uint64_t ntoh64(uint64_t i) {
-	if (is_big_endian())
-		return i;
-	else
-		return hton64(i);
-}
+extern uint64_t hton64(uint64_t i);
+extern uint64_t ntoh64(uint64_t i);
+extern int is_big_endian(void);
 
 #endif /* HIP_USER_COMPAT_H  */

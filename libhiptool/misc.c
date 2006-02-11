@@ -640,10 +640,6 @@ int check_and_create_dir(char *dirname, mode_t mode) {
 }
 
 
-/*
- * Returns 1 if the host_id contains also the "hidden" private key, else
- * returns 0.
- */
 int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 {
 	uint16_t len = hip_get_param_contents_len(host_id);

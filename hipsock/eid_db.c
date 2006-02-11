@@ -37,16 +37,6 @@ sa_eid_t hip_create_unique_peer_eid(void)
         return hip_peer_eid_count++;
 }
 
-int hip_wrap_handle_add_local_hi(const struct hip_common *input)
-{
-	int err = -1;
-
-	/* XX TODO: Laura */
-	//out_err:
-
-	return err;
-}
-
 struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_struct *db,
                                                      const struct hip_lhi *lhi)
 {
@@ -200,32 +190,11 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
 
-        if (hip_host_id_contains_private_key(host_id)) {
-                err = hip_private_host_id_to_hit(host_id, &lhi.hit,
-                                                 HIP_HIT_TYPE_HASH120);
-                if (err) {
-                        HIP_ERROR("Failed to calculate HIT from HI.");
-                        goto out_err;
-                }
-
-
-                /* XX FIXME: figure out socket handler - user daemon 
-                   interaction */
-                /* XX TODO: check UID/GID permissions before adding */
-                err = hip_wrap_handle_add_local_hi(msg); 
-                if (err == -EEXIST) {
-                        HIP_INFO("Host id exists already, ignoring\n");
-                        err = 0;
-                } else if (err) {
-                        HIP_ERROR("Adding of localhost id failed");
-                        goto out_err;
-                }
-                
-        } else {
-                /* Only public key */
-                err = hip_host_id_to_hit(host_id,
-                                         &lhi.hit, HIP_HIT_TYPE_HASH120);
-        }
+	/* XX FIX: Laura: the message should contain at least a HIT.
+	   Store it to &lhi.hit. Also, if there is public key, send to
+	   the hipd. */
+	err = -1;
+	goto out_err;
         
         HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
         
@@ -316,14 +285,9 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
                        sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
         } else {
-                HIP_DEBUG("host_id len %d\n",
-                         ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
-                err = hip_host_id_to_hit(&eid_endpoint->endpoint.id.host_id,
-                                         &lhi.hit, HIP_HIT_TYPE_HASH120);
-                if (err) {
-                        HIP_ERROR("Failed to calculate HIT from HI.");
-                        goto out_err;
-                }
+		err = -1;
+		HIP_ERROR("Public keys are not supported\n");
+		goto out_err;
         }
         lhi.anonymous =
                (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ? 1 : 0;

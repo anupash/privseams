@@ -9,19 +9,6 @@
 
 #include "debug.h"
 
-char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
-{
-        if (!buf)
-                return NULL;
-        sprintf(buf,
-                "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
-                ntohs(in6->s6_addr16[0]), ntohs(in6->s6_addr16[1]),
-                ntohs(in6->s6_addr16[2]), ntohs(in6->s6_addr16[3]),
-                ntohs(in6->s6_addr16[4]), ntohs(in6->s6_addr16[5]),
-                ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
-        return buf;
-}
-
 /**
  * hip_print_hit - print a HIT
  * @str: string to be printed before the HIT
@@ -91,3 +78,28 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	return;
 }
 
+
+inline int is_big_endian(void)
+{
+	int i = 1;
+	char *p = (char *) &i;
+
+	if (p[0] == 1)
+		return 0;
+	else
+		return 1;
+}
+
+inline uint64_t hton64(uint64_t i) {
+	if (is_big_endian())
+		return i;
+	else
+		return ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff) );
+}
+
+inline uint64_t ntoh64(uint64_t i) {
+	if (is_big_endian())
+		return i;
+	else
+		return hton64(i);
+}
