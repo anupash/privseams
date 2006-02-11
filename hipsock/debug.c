@@ -90,3 +90,4 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	kfree(buf);
 	return;
 }
+

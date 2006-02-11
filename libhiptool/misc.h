@@ -1,20 +1,11 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
-#include "list.h" /* userspace list implementation */
-#include "hipd.h"
-#include "debug.h"
-#include "hip.h"
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-//#include <net/if.h>  /* Excluded for RH/Fedora compilation */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

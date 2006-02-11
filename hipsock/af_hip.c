@@ -13,10 +13,7 @@
 *
 */
 
-#include "hipsock.h"
-
-HIP_INIT_DB(hip_local_eid_db, "local_eid");
-HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+#include "af_hip.h"
 
 int hsock_init_module(void)
 {
@@ -42,11 +39,104 @@ module_init(hsock_init_module);
 module_exit(hsock_cleanup_module);
  
  
- /***************************************************************
- *               Socket handler functions                       *
+/***************************************************************
+ *               Socket handler functions                      *
  ***************************************************************/
 
- 
+int hip_select_socket_handler(struct socket *sock,
+                              struct proto_ops **handler)
+{
+        int err = 0;
+
+        HIP_ASSERT(sock && sock->sk);
+
+        HIP_DEBUG("sock_type=%d sk_proto=%d\n",
+                  sock->sk->sk_type, sock->sk->sk_protocol);
+
+        /* XX FIXME: How to handle IPPROTO_RAW? */
+        /* XX FIXME: How to react on IPPROTO_HIP */
+
+        switch (sock->sk->sk_protocol) {
+        case IPPROTO_TCP:
+          *handler = &inet6_stream_ops;
+          break;
+        case IPPROTO_UDP:
+          *handler = &inet6_dgram_ops;
+          break;
+        default:
+          *handler = NULL;
+          err = -EPROTONOSUPPORT;
+          HIP_ERROR("Cannot select protocol handler for proto %d.",
+                    sock->sk->sk_protocol);
+          break;
+        }
+
+        return err;
+}
+
+int hip_socket_get_eid_info(struct socket *sock,
+                            struct proto_ops **socket_handler,
+                            const struct sockaddr_eid *eid,
+                            int eid_is_local,
+                            struct hip_lhi *lhi)
+{
+        struct hip_eid_owner_info owner_info;
+        int err = 0;
+
+        err = hip_select_socket_handler(sock, socket_handler);
+        if (err) {
+                HIP_ERROR("Failed to select a socket handler\n");
+                goto out_err;
+        }
+
+        HIP_DEBUG("Querying for eid value %d\n", ntohs(eid->eid_val));
+
+        err = hip_db_get_lhi_by_eid(eid, lhi, &owner_info, eid_is_local);
+        if (err) {
+                HIP_ERROR("Failed to map %s EID to HIT\n",
+                          (eid_is_local ? "local" : "peer"));
+                goto out_err;
+        }
+
+        /* XX FIXME: CHECK ACCESS RIGHTS FROM OWNER_INFO */
+
+        /* Access control for EDs */
+        if(eid_is_local) {
+                HIP_DEBUG("current->uid:%d, current->gid:%d,current->pid:%d\n",
+                          current->uid, current->gid, current->pid);
+                HIP_DEBUG("ED->uid:%d, ED->gid:%d, ED->pid:%d\n",
+                          owner_info.uid, owner_info.gid, owner_info.pid);
+                HIP_DEBUG("flags:%d\n",owner_info.flags);
+                if(owner_info.flags & HIP_HI_REUSE_ANY) {
+                        HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
+                        goto out_err;   
+                        
+                } else if((owner_info.flags & HIP_HI_REUSE_GID) && 
+                          (current->gid == owner_info.gid)) {
+                        HIP_DEBUG("Access control check to ED, REUSE_GID\n");
+                        goto out_err;   
+                        
+                } else if((owner_info.flags & HIP_HI_REUSE_UID) && 
+                          (current->uid == owner_info.uid)) {
+                        HIP_DEBUG("Access control check to ED, REUSE_UID\n");
+                        goto out_err;
+                        
+                } else if(current->pid == owner_info.pid) {
+                        HIP_DEBUG("Access control check to ED, PID ok\n");
+                        goto out_err;
+                        
+                } else {
+                        err = -EACCES;
+                        HIP_INFO("Access denied to ED\n");
+                        goto out_err;
+                }
+        }
+        
+ out_err:
+
+        return err;
+}
+
 
 /** hip_init_socket_handler - initialize socket handler
  *  @return 	returns -1 in case of an error, 0 otherwise

@@ -4,55 +4,6 @@
 #include <linux/ipv6.h>
 #include <linux/skbuff.h>
 
-#define HIP_IFE(func, eval) \
-{ \
-        if (func) { \
-                err = eval; \
-                goto out_err; \
-        } \
-}
-
-#define HIP_IFEL(func, eval, args...) \
-{ \
-        if (func) { \
-                HIP_ERROR(args); \
-                err = eval; \
-                goto out_err; \
-        } \
-}
-
-#define HIP_IFEB(func, eval, finally) \
-{ \
-        if (func) { \
-                err = eval; \
-                finally;\
-                goto out_err; \
-        } else {\
-                finally;\
-        }\
-}
-
-#define HIP_IFEBL(func, eval, finally, args...) \
-{ \
-        if (func) { \
-                HIP_ERROR(args); \
-                err = eval; \
-                finally;\
-                goto out_err; \
-        } else {\
-                finally;\
-        }\
-}
-
-#define HIP_IFEBL2(func, eval, finally, args...) \
-{ \
-        if (func) { \
-                HIP_ERROR(args); \
-                err = eval; \
-                finally;\
-        }\
-}
-
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
@@ -102,8 +53,12 @@
 
 /* Forward declarations */
 
-extern void hip_khexdump(const char *tag, const void *data, const int len);
+extern void hip_khexdump(const char *tag,
+ const void *data, const int len);
 extern void hip_print_hit(const char *str, const struct in6_addr *hit);
+
+uint64_t hton64(uint64_t i);
+uint64_t ntoh64(uint64_t i);
 
 #endif /* HIP_KERNEL_DEBUG_H */
 

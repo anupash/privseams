@@ -8,13 +8,14 @@
  *
  */
 
-#include <asm/types.h>
-#include <sys/errno.h>
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
 
-#include "misc.h"
 #include "hip.h"
-#include "debug.h"
-#include "crypto.h"
+
 //#include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */

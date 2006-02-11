@@ -12,9 +12,9 @@
 * Licence: GNU/GPL
 *
 */
-#include <linux/module.h>	// a must for kernel modules
-#include <linux/kernel.h>	// a must for kernel modules
-#include <linux/init.h>		// initialize functions
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
 
 #include <linux/types.h>
 #include <linux/net.h>
@@ -22,8 +22,6 @@
 
 #include "debug.h"
 #include "eid_db.h"
-
-#define PF_HIP 32
 
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;

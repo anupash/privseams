@@ -24,25 +24,11 @@
  *
  */
 
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <stdint.h>
-
-
-typedef uint8_t   u8;
-typedef uint16_t  u16;
-typedef uint32_t  u32;
-typedef struct { volatile int counter; } atomic_t;
-typedef struct {
-	/* XX FIXME */
-} spinlock_t;
-
-#define spin_lock_init 
-
-struct list_head {
-	struct list_head *next, *prev;
-};
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
 
 #define HIP_HIT_TYPE_MASK_HAA   0x80
 #define HIP_HIT_TYPE_MASK_120   0x40
@@ -55,25 +41,6 @@ struct list_head {
 #ifndef IPPROTO_HIP
 #define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
 #endif
-
-
-//#include "builder.h"
-#if 0
-#include "input.h"
-#include "builder.h"
-#include "hidb.h"
-#include "cookie.h"
-#include "misc.h"
-#include "output.h"
-#include "workqueue.h"
-#include "socket.h"
-#include "update.h"
-#include "hadb.h"
-#ifdef CONFIG_HIP_RVS
-#include "rvs.h"
-#endif
-#include "crypto.h"
-#endif //#if 0
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
@@ -375,19 +342,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-  #define hton64(i) (i)
-  #define ntoh64(i) (i)
-#else
-  #define hton64(i) ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ) )
-  #define ntoh64 hton64
-#endif
-
-#  define HIP_MALLOC(size, flags)  malloc(size)
-#  define HIP_FREE(obj)            free(obj)
-#  define GFP_ATOMIC               0
-#  define GFP_KERNEL               0
-
 #define HIP_AH_SHA_LEN                 20
 
 /* HIP_IFCS takes a pointer and an command to execute.
@@ -399,8 +353,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 	 	HIP_ERROR("No state information found.\n");		\
 	 }
 	 								
-								\
-
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
@@ -800,7 +752,7 @@ struct endpoint_hip {
 
 struct sockaddr_eid {
 	unsigned short int eid_family;
-	in_port_t eid_port;
+	uint16_t eid_port;
 	sa_eid_t eid_val;
 } __attribute__ ((packed));
 
@@ -1305,29 +1257,6 @@ struct hip_eid_db_entry {
                 finally;\
         }\
 }
-
-#define jiffies random()
-#include "list.h"
-
-#define atomic_inc(x) \
-         (++(*x).counter)
-
-#define atomic_read(x) \
-         ((*x).counter)
-
-#define atomic_dec_and_test(x) \
-         (--((*x).counter) == 0)
-
-#define atomic_set(x, v) \
-         ((*x).counter = v)
-
-/* XX FIX: implement the locking for userspace properly */
-#define read_lock_irqsave(a,b) do {} while(0)
-#define spin_unlock_irqrestore(a,b) do {} while(0)
-#define write_lock_irqsave(a,b) do {} while(0)
-#define write_unlock_irqrestore(a,b) do {} while(0)
-#define read_unlock_irqrestore(a,b) do {} while(0)
-
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
 #endif
@@ -1335,10 +1264,6 @@ struct hip_eid_db_entry {
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
-
-/* XX FIXME: implement with a userspace semaphore etc? */
-#define wmb() do {} while(0)
-#define barrier() do {} while(0)
 
 /* used by hip worker to announce completion of work order */
 #define KHIPD_OK                   0

@@ -1,18 +1,14 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
+
 #include "hip.h"
 #include "debug.h"
-
-#include <sys/socket.h>
-#include "list.h"
-#include "timer.h"
-#include "cookie.h"
-#include "pk.h"
-
-typedef struct { } rwlock_t;
-#define RW_LOCK_UNLOCKED (rwlock_t) { }
-
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
@@ -46,7 +42,6 @@ struct hip_db_struct {
 	char *            db_name;
         int               db_cnt;
 };
-
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */

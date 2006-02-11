@@ -4,15 +4,15 @@
 #include <linux/list.h>
 #include <linux/spinlock.h>
 
-struct hip_db_struct {
-	struct list_head  db_head;
-        rwlock_t          db_lock;
-	char *            db_name;
-        int               db_cnt;
-};
+#include "builder.h"
+#include "hidb.h"
+#include "misc.h"
+#include "timer.h"
 
-#define HIP_INIT_DB(name,id) \
-        struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
-        RW_LOCK_UNLOCKED, id, 0}
+int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
+                          struct hip_lhi *lhi,
+                          struct hip_eid_owner_info *owner_info,
+                          int is_local);
+
 
 #endif /* EID_DB_H */
