@@ -21,6 +21,7 @@
 #include <linux/socket.h>
 
 #include "debug.h"
+#include "eid_db.h"
 
 #define PF_HIP 32
 

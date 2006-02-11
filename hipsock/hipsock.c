@@ -15,8 +15,8 @@
 
 #include "hipsock.h"
 
-//HIP_INIT_DB(hip_local_eid_db, "local_eid");
-//HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+HIP_INIT_DB(hip_local_eid_db, "local_eid");
+HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
 
 int hsock_init_module(void)
 {
@@ -45,6 +45,7 @@ module_exit(hsock_cleanup_module);
  /***************************************************************
  *               Socket handler functions                       *
  ***************************************************************/
+
  
 
 /** hip_init_socket_handler - initialize socket handler

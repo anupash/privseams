@@ -1,4 +1,4 @@
-obj-m += hipsock.o debug.o
+obj-m += hipsock.o debug.o eid_db.o
 
 # Default assumption of the linux sources. Do not change! Use the
 # command line option.
