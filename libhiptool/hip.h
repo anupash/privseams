@@ -56,6 +56,10 @@ struct list_head {
 #define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
 #endif
 
+/* Workaround for kernels before 2.6.15.3. */
+#ifndef IPV6_2292PKTINFO
+#  define IPV6_2292PKTINFO 2
+#endif
 
 //#include "builder.h"
 #if 0
@@ -417,6 +421,10 @@ typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
 typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
 typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
+typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
+typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
+typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
+
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -1023,8 +1031,6 @@ struct hip_hadb_state
 		struct hip_common *buf;
 	} hip_msg_retrans;
 
-	int skbtest; /* just for testing */
-	
 	/* function pointer sets for modifying hip behaviour based on state information */
 	
 	/* receive func set. Do not modify these values directly.
@@ -1042,10 +1048,23 @@ struct hip_hadb_state
 	/* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
 	hip_update_func_set_t *hadb_update_func;	
+
+	/* transmission func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_xmit_func_set_t *hadb_xmit_func;
+
+	/* For e.g. GUI agent */
+	hip_input_filter_func_set_t *hadb_input_filter_func;
+	hip_output_filter_func_set_t *hadb_output_filter_func;
 };
 
-struct hip_hadb_rcv_func_set{
-	int (*hip_fp_receive_r1)(struct hip_common *,
+struct hip_hadb_rcv_func_set {
+	int (*hip_receive_i1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+
+	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
@@ -1053,46 +1072,45 @@ struct hip_hadb_rcv_func_set{
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
 	is not executed during the establishment of a new connection*/
-	int (*hip_fp_receive_i2)(struct hip_common *,
+	int (*hip_receive_i2)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_r2)(struct hip_common *,
+	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_update)(struct hip_common *,
+	int (*hip_receive_update)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_notify)(struct hip_common *,
+	int (*hip_receive_notify)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_bos)(struct hip_common *,
+	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*);
 				     
-	int (*hip_fp_receive_close)(struct hip_common *,
+	int (*hip_receive_close)(struct hip_common *,
 				    hip_ha_t*);
 				       
-	int (*hip_fp_receive_close_ack)(struct hip_common *,
+	int (*hip_receive_close_ack)(struct hip_common *,
 					hip_ha_t*);	 
 	
 };
-/* default set of receive function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_rcv_func_set_t default_rcv_func_set;
-hip_rcv_func_set_t ahip_rcv_func_set;
-
-
 
 struct hip_hadb_handle_func_set{   
+	int (*hip_handle_i1)(struct hip_common *r1,
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
@@ -1122,12 +1140,6 @@ struct hip_hadb_handle_func_set{
 			     
 };
 
-/* default set of handle function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_handle_func_set_t default_handle_func_set;
-hip_handle_func_set_t ahip_handle_func_set;
-
-
 struct hip_hadb_update_func_set{   
 	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
 					struct hip_common *msg,
@@ -1155,35 +1167,39 @@ struct hip_hadb_update_func_set{
 	
 };
 
-/* default set of update function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_update_func_set_t default_update_func_set;
-hip_update_func_set_t ahip_update_func_set;
-
-
 struct hip_hadb_misc_func_set{ 
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
 				  struct hip_common *hdr,
 				  int mode);  
 	int (*hip_produce_keying_material)(struct hip_common *msg,
-				 	struct hip_context *ctx,
-				 	uint64_t I,
-				 	uint64_t J);
+					   struct hip_context *ctx,
+					   uint64_t I,
+					   uint64_t J);
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry);
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
-			  uint16_t control, struct in6_addr *hit_sender,
-			  struct in6_addr *hit_receiver);
-			     
+				      uint16_t control,
+				      const struct in6_addr *hit_sender,
+				      const struct in6_addr *hit_receiver);
 };
 
-/* default set of miscellaneous function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_misc_func_set_t default_misc_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
+struct hip_hadb_xmit_func_set{ 
+	int  (*hip_csum_send)(struct in6_addr *local_addr,
+			      struct in6_addr *peer_addr,
+			      struct hip_common* msg,
+			      hip_ha_t *entry,
+			      int retransmit);
+};
 
+struct hip_hadb_input_filter_func_set { 
+	int (*hip_input_filter)(struct hip_common *msg);
+};
+
+struct hip_hadb_output_filter_func_set { 
+	int (*hip_output_filter)(struct hip_common *msg);
+};
 
 
 struct hip_cookie_entry {

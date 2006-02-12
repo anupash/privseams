@@ -56,6 +56,12 @@
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
 
+#if 0
+hip_xmit_func_set_t default_xmit_func_set;
+hip_misc_func_set_t ahip_misc_func_set;
+hip_misc_func_set_t default_misc_func_set;
+#endif
+
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 
