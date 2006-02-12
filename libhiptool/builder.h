@@ -12,11 +12,11 @@
 #  include "usercompat.h"
 #else
 #  include "kerncompat.h"
+#  include "debug.h"
+#  include "misc.h"
 #endif
 
 #include "hip.h"
-
-//#include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
