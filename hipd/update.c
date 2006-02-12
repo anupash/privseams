@@ -364,14 +364,11 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   REKEYING. */
 	entry->state = HIP_STATE_REKEYING;
 
-	err = hip_csum_send(&entry->local_address, src_ip, update_packet);
-	if (err) {
-		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		HIP_DEBUG("NOT ignored, or should we..\n");
-		/* fallback to established ? */
-                /* goto out_err; ? */
-	}
-
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						      src_ip,
+						      update_packet,
+						      entry, 1), -1,
+		 "csum send failed\n");
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
@@ -677,13 +674,10 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet); // HANDLER
-	if (err) {
-		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		HIP_DEBUG("NOT ignored, or should we..\n");
-		/* fallback to established ? */
-                /* goto out_err; ? */
-	}
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						      &daddr, update_packet,
+						      entry, 1), -1,
+		 "csum_send failed\n");
 
  out_err:
 	/* if (err)
@@ -773,11 +767,11 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			  continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
-		err = hip_csum_send(src_ip, &addr->address, update_packet); // HANDLER
-		if (err) {
-			HIP_DEBUG("hip_csum_send err=%d\n", err);
-			HIP_DEBUG("NOT ignored, or should we..\n");
-		}
+		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
+							      &addr->address,
+							      update_packet,
+							      entry, 0), -1,
+			 "csum_send failed\n");
 	}
 
  out_err:
@@ -828,9 +822,9 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
-	if (err)
-		HIP_DEBUG("hip_csum_send err=%d\n", err);
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+						      update_packet, entry, 0),
+		 -1, "csum_send_failed\n");
 
 	rea = hip_get_param(msg, HIP_PARAM_REA);
 	hip_update_handle_rea_parameter(entry, rea);
@@ -899,9 +893,9 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	err = hip_csum_send(dst_ip, src_ip, update_packet); // HANDLER
-	if (err)
-		HIP_DEBUG("hip_csum_send err=%d\n", err);
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+						      update_packet, entry, 0),
+		 -1, "csum_send failed\n");
 
  out_err:
 	if (update_packet)
@@ -1246,7 +1240,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
 	uint32_t new_spi_in = 0;
 	struct hip_common *update_packet = NULL;
-	struct in6_addr daddr;
+	struct in6_addr saddr = { 0 }, daddr = { 0 };
 	uint32_t nes_old_spi = 0, nes_new_spi = 0;
 	uint16_t mask;
 	struct hip_spi_in_item *spi_in = NULL;
@@ -1397,7 +1391,7 @@ int hip_send_update(struct hip_hadb_state *entry,
  		HIP_DEBUG("Address set has changed, continue\n");
 
 	/* spi_in->spi is equal to nes_old_spi */
-	if (memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
+	if (addr_list && memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
 		ipv6_addr_copy(&entry->local_address, &addr_list->address);
 	}
@@ -1436,16 +1430,11 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else
 		HIP_DEBUG("experimental: staying in ESTABLISHED (NES not added)\n");
 
-
+	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	err = hip_csum_send(&entry->local_address, &daddr, update_packet); // HANDLER
-	if (err) {
-		HIP_DEBUG("hip_csum_send err=%d\n", err);
-		_HIP_DEBUG("NOT ignored, or should we..\n");
-		entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("fallbacked to state ESTABLISHED due to error (ok ?)\n");
-		goto out_err;
-	}
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,
+						      update_packet, entry, 1),
+		 -1, "csum_send failed\n");
 
 	/* remember the address set we have advertised to the peer */
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
@@ -1517,9 +1506,6 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
-
-	/* Disable due to radvd */
-	return 0;
 
 	/* XX TODO: check UPDATE also with radvd (i.e. same address is added twice). */
 

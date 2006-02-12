@@ -10,10 +10,11 @@
  * GNU General Public License for more details.
  */
 
-#include "hipd.h"
+#include "hipd.h" 
 
-/* For receiving/sending HIP control messages */
-int hip_raw_sock = 0;
+/* For receiving of HIP control messages */
+int hip_raw_sock_v6 = 0;
+int hip_raw_sock_v4 = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
@@ -48,6 +49,41 @@ void usage() {
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
 	fprintf(stderr, "\n");
+}
+
+int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if (!entry->hip_msg_retrans.buf)
+		goto out_err;
+
+	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
+
+	if (entry->hip_msg_retrans.count > 0 &&
+	    entry->state != HIP_STATE_ESTABLISHED) {
+		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
+							   &entry->hip_msg_retrans.daddr,
+							   entry->hip_msg_retrans.buf,
+							   entry, 0);
+		entry->hip_msg_retrans.count--;
+	} else {
+		HIP_FREE(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+		entry->hip_msg_retrans.count = 0;
+	}
+
+ out_err:
+	return err;
+}
+
+int hip_scan_retransmissions()
+{
+	int err = 0;
+	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, NULL), 0, 
+		 "for_each_ha err.\n");
+ out_err:
+	return err;
 }
 
 int hip_agent_is_alive()
@@ -158,21 +194,36 @@ int hip_init_host_ids() {
 	return err;
 }
 
-int hip_init_raw_sock() {
+int hip_init_raw_sock_v6(int *hip_raw_sock_v6) {
 	int on = 1, err = 0;
-	struct sockaddr_in6 any6_addr;
 
-	memset(&any6_addr, 0, sizeof(any6_addr));
-	any6_addr.sin6_addr = in6addr_any;
-
-	HIP_IFEL(((hip_raw_sock = socket(AF_INET6, SOCK_RAW,
+	HIP_IFEL(((*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
 
-	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_RECVERR, &on,
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
-	HIP_IFEL(setsockopt(hip_raw_sock, IPPROTO_IPV6, IPV6_PKTINFO, &on,
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
+			    IPV6_2292PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
+
+ out_err:
+	return err;
+}
+
+int hip_init_raw_sock_v4(int *hip_raw_sock_v4) {
+	int on = 1, err = 0;
+	int off = 0;
+
+	HIP_IFEL(((*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
+					 IPPROTO_HIP)) <= 0), 1,
+		 "Raw socket v4 creation failed. Not root?\n");
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
+		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
+		   sizeof(on)), -1, "setsockopt v4 failed to set broadcast \n");
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
+		   sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
 
  out_err:
 	return err;
@@ -187,14 +238,9 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-#if 1
+	hip_send_close_to_all_peers();
+
 	hip_delete_all_sp();
-#else   /* This works even when the hipd crashes */
-	/* XX FIX: flushing sa does not work */
-	hip_send_close(NULL);
-	hip_flush_all_sa();
-	hip_flush_all_policy();
-#endif
 
 	delete_all_addresses();
 
@@ -210,8 +256,10 @@ void hip_exit(int signal) {
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
-	if (hip_raw_sock)
-		close(hip_raw_sock);
+	if (hip_raw_sock_v6)
+		close(hip_raw_sock_v6);
+	if (hip_raw_sock_v4)
+		close(hip_raw_sock_v4);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -222,6 +270,18 @@ void hip_exit(int signal) {
 		close(hip_agent_sock);
 
 	exit(signal);
+}
+
+int init_random_seed()
+{
+	struct timeval tv;
+	struct timezone tz;
+	int err = 0;
+
+	err = gettimeofday(&tv, &tz);
+	srandom(tv.tv_usec);
+
+	return err;
 }
 
 int main(int argc, char *argv[]) {
@@ -238,6 +298,12 @@ int main(int argc, char *argv[]) {
 	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
 	struct sockaddr_un daemon_addr;
+        /* The flushing is enabled by default. The reason for this is that
+	   people are doing some very experimental features on some branches
+	   that may crash the daemon and leave the SAs floating around to
+	   disturb further base exchanges. Use -N flag to disable this. */
+	int flush_ipsec = 1;
+	float retrans_counter = -1;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -250,6 +316,9 @@ int main(int argc, char *argv[]) {
 			i3_config = strdup(optarg);
 			break;
 #endif
+		case 'N':
+			flush_ipsec = 0;
+			break;
 		case '?':
 		case 'h':
 		default:
@@ -264,14 +333,6 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(!i3_config, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
-
-	/**********/
-	/* ONLY FOR TESTING ... REMOVE AFTER THE HIPD WORKS PROPERLY */
-	/** This is to delete the general security policies in case they exist
-	 * due to for example a crash of the application
-	 */
-	hip_delete_default_prefix_sp_pair();
-	/**********/
 
 	hip_set_logfmt(LOGFMT_LONG);
 
@@ -293,6 +354,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, hip_exit);
 
         HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
+
+	HIP_IFE(init_random_seed(), -1);
 
         hip_init_hadb();
 
@@ -322,7 +385,8 @@ int main(int argc, char *argv[]) {
 		goto out_err;
 	}
 	if (rtnl_open_byproto(&hip_nl_route,
-			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6,
+			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
+				| RTMGRP_IPV4_IFADDR | IPPROTO_IP,
 			      NETLINK_ROUTE) < 0) {
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
@@ -336,14 +400,24 @@ int main(int argc, char *argv[]) {
 		goto out_err;
 	}
 
-	HIP_IFE(hip_init_raw_sock(), -1);
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 
-	_HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
-		   hip_raw_sock, highest_descriptor);
+	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
+		  hip_raw_sock_v6, highest_descriptor);
+	HIP_DEBUG("hip_raw_sock_v4 = %d highest_descriptor = %d\n",
+		  hip_raw_sock_v4, highest_descriptor);
+
+	if (flush_ipsec) {
+		hip_flush_all_sa();
+		hip_flush_all_policy();
+	}
 
 	HIP_DEBUG("Setting SP\n");
+	/*
 	hip_delete_default_prefix_sp_pair();
 	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
+	*/
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
@@ -377,9 +451,9 @@ int main(int argc, char *argv[]) {
                       sizeof(hip_agent_addr)),
                  -1, "Bind on agent addr failed.");
 	
-	highest_descriptor = maxof(5, hip_nl_route.fd, hip_raw_sock,
+	highest_descriptor = maxof(6, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_agent_sock);
+				   hip_agent_sock, hip_raw_sock_v4);
 	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
@@ -393,11 +467,12 @@ int main(int argc, char *argv[]) {
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
-		FD_SET(hip_raw_sock, &read_fdset);
+		FD_SET(hip_raw_sock_v6, &read_fdset);
+		FD_SET(hip_raw_sock_v4, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
-		timeout.tv_sec = 1;
+		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
 		_HIP_DEBUG("select loop\n");
@@ -408,18 +483,32 @@ int main(int argc, char *argv[]) {
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
-		} else if (FD_ISSET(hip_raw_sock, &read_fdset)) {
+		} else if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
 			struct in6_addr saddr, daddr;
 
 			hip_msg_init(hip_msg);
 		
-			if (hip_read_control_msg(hip_raw_sock, hip_msg, 1,
+			if (hip_read_control_msg(hip_raw_sock_v6, hip_msg, 1,
 						 &saddr, &daddr))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
+		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
+			struct in6_addr saddr, daddr;
+
+			hip_msg_init(hip_msg);
+			HIP_DEBUG("Getting a msg on v4\n");	
+			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
+						 &saddr, &daddr))
+				HIP_ERROR("Reading network msg failed\n");
+			else
+			{
+				err = hip_receive_control_packet(hip_msg,
+								 &saddr,
+								 &daddr);
+			}
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
@@ -482,12 +571,15 @@ int main(int argc, char *argv[]) {
 		} else {
 			HIP_INFO("Unknown socket activity.");
 		}
-#if 0
-		while (hwo = hip_get_work_order()) {
-			HIP_DEBUG("Processing work order\n");
-			hip_do_work(hwo);
+
+		if (retrans_counter < 0) {
+			err = hip_scan_retransmissions();
+			retrans_counter = HIP_RETRANSMISSION_INTERVAL /
+				HIP_SELECT_TIMEOUT;
+		} else {
+			retrans_counter--;
 		}
-#endif
+
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
 				  ((errno) ? strerror(errno) : ""));

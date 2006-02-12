@@ -1,4 +1,4 @@
-/* $USAGI: getnameinfo.c,v 1.8 2002/05/15 05:45:20 yoshfuji Exp $ */
+/* $USAGI: getnameinfo.c,v 1.9 2005/12/18 10:32:44 yoshfuji Exp $ */
 
 /* The Inner Net License, Version 2.00
 
@@ -62,7 +62,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <sys/un.h>
 #include <sys/utsname.h>
+#ifdef _USAGI_LIBINET6
+#include <pthread.h>
+#else
 #include <bits/libc-lock.h>
+#endif
 
 #ifndef min
 # define min(x,y) (((x) > (y)) ? (y) : (x))

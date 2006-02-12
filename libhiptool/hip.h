@@ -56,6 +56,10 @@ struct list_head {
 #define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
 #endif
 
+/* Workaround for kernels before 2.6.15.3. */
+#ifndef IPV6_2292PKTINFO
+#  define IPV6_2292PKTINFO 2
+#endif
 
 //#include "builder.h"
 #if 0
@@ -92,10 +96,45 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 }
 
+#define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
+         {(in6_addr_to)->s6_addr32[0] = 0;                                \
+          (in6_addr_to)->s6_addr32[1] = 0;                                \
+          (in6_addr_to)->s6_addr32[2] = htonl(0xffff);                    \
+         (in6_addr_to)->s6_addr32[3] = (uint32_t) ((in_addr_from)->s_addr);}
+
+#define IPV6_TO_IPV4_MAP(in6_addr_from,in_addr_to)    \
+       { ((in_addr_to)->s_addr) =                       \
+          ((in6_addr_from)->s6_addr32[3]); }
+
+#define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
+       ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
+	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr)) 
+
+#define HIT2LSI(a) ( 0x01000000L | \
+                     (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
+
+#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+
+#define HIT_IS_LSI(a) \
+        ((((__const uint32_t *) (a))[0] == 0)                                 \
+         && (((__const uint32_t *) (a))[1] == 0)                              \
+         && (((__const uint32_t *) (a))[2] == 0)                              \
+         && (((__const uint32_t *) (a))[3] != 0))                              
+
 #define HIPL_VERSION 0.2
 
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
+
+#define HIP_SELECT_TIMEOUT          1
+#define HIP_RETRANSMISSION_MAX      10
+#define HIP_RETRANSMISSION_INTERVAL 5
+/* Set to 1 if you want to simulate lost output packet */
+#define HIP_SIMULATE_PACKET_LOSS    0
+ /* Packet loss probability in percents */
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
+ /* XX FIX: use srandom and floats */
+#define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -367,6 +406,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 								\
 
 typedef struct in6_addr hip_hit_t;
+typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
 typedef uint16_t se_hip_flags_t;
@@ -381,6 +421,10 @@ typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
 typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
 typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
+typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
+typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
+typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
+
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
@@ -940,8 +984,8 @@ struct hip_hadb_state
 						 * sending data to peer */
         struct in6_addr      local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
-	uint32_t             lsi_peer;
-	uint32_t             lsi_our;
+	hip_lsi_t            lsi_peer;
+	hip_lsi_t            lsi_our;
 	int                  esp_transform;
 	uint64_t             birthday;
 	char                 *dh_shared_key;
@@ -981,8 +1025,12 @@ struct hip_hadb_state
 
 	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
 
-	int skbtest; /* just for testing */
-	
+	struct {
+		int count;
+		struct in6_addr saddr, daddr;
+		struct hip_common *buf;
+	} hip_msg_retrans;
+
 	/* function pointer sets for modifying hip behaviour based on state information */
 	
 	/* receive func set. Do not modify these values directly.
@@ -1000,10 +1048,23 @@ struct hip_hadb_state
 	/* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
 	hip_update_func_set_t *hadb_update_func;	
+
+	/* transmission func set. Do not modify these values directly. 
+	Use hip_hadb_set_handle_function_set instead */
+	hip_xmit_func_set_t *hadb_xmit_func;
+
+	/* For e.g. GUI agent */
+	hip_input_filter_func_set_t *hadb_input_filter_func;
+	hip_output_filter_func_set_t *hadb_output_filter_func;
 };
 
-struct hip_hadb_rcv_func_set{
-	int (*hip_fp_receive_r1)(struct hip_common *,
+struct hip_hadb_rcv_func_set {
+	int (*hip_receive_i1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+
+	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
@@ -1011,46 +1072,45 @@ struct hip_hadb_rcv_func_set{
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
 	is not executed during the establishment of a new connection*/
-	int (*hip_fp_receive_i2)(struct hip_common *,
+	int (*hip_receive_i2)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_r2)(struct hip_common *,
+	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*);
 				 
-	int (*hip_fp_receive_update)(struct hip_common *,
+	int (*hip_receive_update)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_notify)(struct hip_common *,
+	int (*hip_receive_notify)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
 				     hip_ha_t*);
 				     
-	int (*hip_fp_receive_bos)(struct hip_common *,
+	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*);
 				     
-	int (*hip_fp_receive_close)(struct hip_common *,
+	int (*hip_receive_close)(struct hip_common *,
 				    hip_ha_t*);
 				       
-	int (*hip_fp_receive_close_ack)(struct hip_common *,
+	int (*hip_receive_close_ack)(struct hip_common *,
 					hip_ha_t*);	 
 	
 };
-/* default set of receive function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_rcv_func_set_t default_rcv_func_set;
-hip_rcv_func_set_t ahip_rcv_func_set;
-
-
 
 struct hip_hadb_handle_func_set{   
+	int (*hip_handle_i1)(struct hip_common *r1,
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
@@ -1080,12 +1140,6 @@ struct hip_hadb_handle_func_set{
 			     
 };
 
-/* default set of handle function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_handle_func_set_t default_handle_func_set;
-hip_handle_func_set_t ahip_handle_func_set;
-
-
 struct hip_hadb_update_func_set{   
 	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
 					struct hip_common *msg,
@@ -1113,35 +1167,39 @@ struct hip_hadb_update_func_set{
 	
 };
 
-/* default set of update function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_update_func_set_t default_update_func_set;
-hip_update_func_set_t ahip_update_func_set;
-
-
 struct hip_hadb_misc_func_set{ 
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
 				  struct hip_common *hdr,
 				  int mode);  
 	int (*hip_produce_keying_material)(struct hip_common *msg,
-				 	struct hip_context *ctx,
-				 	uint64_t I,
-				 	uint64_t J);
+					   struct hip_context *ctx,
+					   uint64_t I,
+					   uint64_t J);
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry);
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
-			  uint16_t control, struct in6_addr *hit_sender,
-			  struct in6_addr *hit_receiver);
-			     
+				      uint16_t control,
+				      const struct in6_addr *hit_sender,
+				      const struct in6_addr *hit_receiver);
 };
 
-/* default set of miscellaneous function pointers. This has to be in the global scope
-   TODO: move the default function sets to hadb.c */
-hip_misc_func_set_t default_misc_func_set;
-hip_misc_func_set_t ahip_misc_func_set;
+struct hip_hadb_xmit_func_set{ 
+	int  (*hip_csum_send)(struct in6_addr *local_addr,
+			      struct in6_addr *peer_addr,
+			      struct hip_common* msg,
+			      hip_ha_t *entry,
+			      int retransmit);
+};
 
+struct hip_hadb_input_filter_func_set { 
+	int (*hip_input_filter)(struct hip_common *msg);
+};
+
+struct hip_hadb_output_filter_func_set { 
+	int (*hip_output_filter)(struct hip_common *msg);
+};
 
 
 struct hip_cookie_entry {
@@ -1183,7 +1241,7 @@ struct hip_host_id_entry {
 	struct list_head next; 
 
 	struct hip_lhi lhi;
-	/* struct in_addr lsi; */
+	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 	struct hip_r1entry *r1; /* precreated R1s */
