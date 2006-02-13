@@ -496,19 +496,23 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
       continue;
     }
 
-    HIP_DEBUG_IN6ADDR("HIT:", (struct in6_addr *)at_hit->addr);
-    
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
-      if ((at_ip == at_hit) ||
+      if (at_ip->family == AF_INET && 
+	  IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
+	continue;
+      if (at_ip->family == AF_INET6 &&
 	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 	continue;
       }
       if (at_ip->family == AF_INET) {
 	IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
-     }else{ 
-	addr6 = *(struct in6_addr *) at_ip->addr;
       }
-	hip_msg_init(msg);	
+      else 
+	addr6 = *(struct in6_addr *) at_ip->addr;
+
+      hip_msg_init(msg);	
+      HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *)at_hit->addr);
+      HIP_DEBUG_IN6ADDR("IP", &addr6);
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
