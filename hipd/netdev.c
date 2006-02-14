@@ -73,6 +73,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		HIP_ERROR("Could not allocate memory\n");
 		return;
 	}
+
 	/* AG convert IPv4 address to IPv6 */
 	if (addr->sa_family == AF_INET) {
 		struct sockaddr_in6 temp;
@@ -83,6 +84,15 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	        memcpy(&n->addr, &temp, SALEN(&temp));
 	} else
 	        memcpy(&n->addr, addr, SALEN(addr));
+
+#ifdef CONFIG_HIP_OPENDHT
+	{
+	//AG this should be replaced with a loop with hip_for_each_hi
+	  struct in6_addr tmp_hit;
+	  hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DSA);
+	  updateHIT(&tmp_hit,&n->addr);
+	}
+#endif
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);

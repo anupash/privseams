@@ -409,7 +409,7 @@ gethosts(const char *name, int _family,
  }
 
 int 
-gethosts_hit(const char * _name, struct gaih_addrtuple ***pat)
+gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
  {									
   struct in6_addr hit;							
   FILE *fp = NULL;							
@@ -419,6 +419,30 @@ gethosts_hit(const char * _name, struct gaih_addrtuple ***pat)
   char line[500];							
   List list;
   int found_hits = 0;
+
+#ifdef CONFIG_HIP_OPENDHT
+  struct in6_addr tmp_hit, tmp_ip;
+
+  if (gethiphostbyname(name,&tmp_hit) 
+      && gethiphostbyhit(&tmp_hit,&tmp_ip)) 
+    { 
+      if (**pat == NULL) {						
+	**pat = malloc(sizeof(struct gaih_addrtuple));
+	(**pat)->scopeid = 0;				
+      }
+      (**pat)->family = AF_INET6;					
+      memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+      *pat = &((**pat)->next);				     	
+ 
+      **pat = malloc(sizeof(struct gaih_addrtuple));
+      (**pat)->scopeid = 0;				
+      (**pat)->next = NULL;						
+      (**pat)->family = AF_INET6;					
+      memcpy((**pat)->addr, &tmp_ip, sizeof(struct in6_addr));	
+      *pat = &((**pat)->next);
+      return 1;
+    }
+#endif
 									
   /* TODO: check return values */					
   fp = fopen(_PATH_HIP_HOSTS, "r");					
@@ -435,8 +459,8 @@ gethosts_hit(const char * _name, struct gaih_addrtuple ***pat)
 	fqdn_str = getitem(&list,i);	               		        
       }                                                                 
     }									
-    if ((strlen(_name) == strlen(fqdn_str)) &&		         	
-      strcmp(_name, fqdn_str) == 0) {				        
+    if ((strlen(name) == strlen(fqdn_str)) &&		         	
+      strcmp(name, fqdn_str) == 0) {				        
       _HIP_DEBUG("** match on line %d **\n", lineno);			
       found_hits = 1;                                                   
                                                                         
@@ -936,9 +960,9 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  p = a;
 	  a = a->next;	
 	}
-	/* no HITs or LSIs were found */
-	if (p == NULL)
+	if (p == NULL)  /* no HITs or LSIs were found */
 	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+	
 	*at = p;
       }
 
@@ -947,6 +971,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
     } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
   return 0;
 }
+
 
 static int
 gaih_inet (const char *name, const struct gaih_service *service,
