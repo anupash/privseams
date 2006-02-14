@@ -20,17 +20,18 @@ use English;
 use strict;
 use Statistics::Distributions qw(udistr);
 
-
-### GLOBAL VARIABLES #########################################################
+### CUSTOMIZABLE VARIABLES ###################################################
 
 # The $regexp matches type and the corresponding value according to the
 # %regexp_order. The parentheses in the $regexp are used to pick up the type
 # and value from the data input lines. If value occurs before type in the
 # line, change the type to $2 and value to $1 in %regexp_order.
 #
-#my $regexp       = 'hipd call type=(\S+):\s(\S+) secs';
-my $regexp       = '(\S+)\s+(\S+)';
+my $regexp       = '\s*(\S+)\s+(\S+)\s*';
 my %regexp_order = ( 'type' => '$1', 'value' => '$2' );
+
+
+### GLOBAL VARIABLES - DO NOT TOUCH ##########################################
 
 my $confidence   = 0;  # confidence interval in procents
 
@@ -139,9 +140,12 @@ print($outputfd "Sums:\n\t"  .
 # Returns: The formatted string of usage string
 #
 sub gethelp {
-    return "Usage: stats <confidence_interval_in_procents>\n" .
-	"The data to be analyzed is read from stdin.\n" .
-        "Edit the regexp and regexp_order parameters to suite your needs.\n";
+    return "Usage: stats <conf_interval> <regexp> <order>\n" .
+	"The data to be analyzed is read from stdin.\n\n" .
+	"conf_interval: confindence interval in procents.\n" .
+	"regexp:        regular experession containing (type and (val).\n" .
+	"order:         type|value, denoting which is read first\n" .
+	"The data to be analyzed is read from stdin.\n";
 }
 
 # Purpose: Get, check and parse the arguments given for the program
@@ -152,7 +156,7 @@ sub gethelp {
 sub getargs {
     my $ret = 1;
 
-    if ($#ARGV != 0 || $ARGV[0] eq "-h") {
+    if ($#ARGV != 2 || $ARGV[0] eq "-h") {
 	$ret = 0;
     } else {
 	if ($ARGV[0] >= 0 || $ARGV[0] <= 100) {
