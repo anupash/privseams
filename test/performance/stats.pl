@@ -13,7 +13,7 @@
 #            cpan> install Scalar::Util::Numeric 
 #
 # todo:
-# - replace map_confidence with the corresponding perl module
+# - xx
 #
 ### MODULES ##################################################################
 
