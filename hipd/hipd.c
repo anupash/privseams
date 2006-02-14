@@ -238,7 +238,8 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-	hip_send_close_to_all_peers();
+	/* Close SAs with all peers */
+	hip_send_close(NULL);
 
 	hip_delete_all_sp();
 

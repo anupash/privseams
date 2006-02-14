@@ -295,7 +295,7 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 		case HIP_WO_SUBTYPE_SEND_CLOSE:
 			HIP_DEBUG("Sending CLOSE\n");
-			res = hip_send_close_to_all_peers();
+			res = hip_send_close(NULL);
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
@@ -335,7 +335,7 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 		err = hip_del_peer_map(msg);
 		break;
 	case SO_HIP_RST:
-		err = hip_send_close_to_all_peers();
+		err = hip_send_close(msg);
 		break;
 	case SO_HIP_ADD_RVS:
 #if 0 /* XX FIXME */
