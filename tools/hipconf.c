@@ -25,7 +25,7 @@ const char *usage = "new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
 	"del <hit>\n"
         "add|del map hit ipv6\n"
-        "rst all|hit\n"
+        "rst all|peer_hit\n"
         "rvs hit ipv6\n"
         "bos\n"
 	;
