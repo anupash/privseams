@@ -198,7 +198,6 @@ sub read_values {
 	my ($type, $val) = (eval($regexp_order{'type'}), 
 			      eval($regexp_order{'value'}));
 	if (isnum($val)) {
-	    print("val=$val type=$type\n");
 	    push (@{ $values{$type} }, $val);
 	} else {
 	    print("Non-numeric value ($val) at line $lineno, aborting\n");
