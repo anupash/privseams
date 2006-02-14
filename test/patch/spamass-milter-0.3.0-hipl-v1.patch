@@ -1,0 +1,32 @@
+diff -urN spamass-milter-0.3.0-orig/spamass-milter.cpp spamass-milter-0.3.0-1-debian-patched-with-hipl/spamass-milter.cpp
+--- spamass-milter-0.3.0-orig/spamass-milter.cpp	2006-02-14 18:29:15.000000000 +0200
++++ spamass-milter-0.3.0-1-debian-patched-with-hipl/spamass-milter.cpp	2006-02-14 18:28:33.000000000 +0200
+@@ -448,6 +448,16 @@
+ 				do_reject = true;
+ 		}
+ 	}
++#ifdef PUNISH_WITH_HIP_COOKIE
++	if (do_reject) {
++	  if (system("/home/mkomu/projects/hipl--spam--2.6/tools/hipconf rst all") != 0) {
++	    syslog(LOG_DEBUG, "hip sysctl failed\n");
++	  } else {
++	    syslog(LOG_DEBUG, "hip sysctl succeeded\n");
++	    do_reject = false;
++	  }
++	}
++#endif
+ 	if (do_reject)
+ 	{
+ 		debug(D_MISC, "Rejecting");
+diff -urN spamass-milter-0.3.0-orig/spamass-milter.h spamass-milter-0.3.0-1-debian-patched-with-hipl/spamass-milter.h
+--- spamass-milter-0.3.0-orig/spamass-milter.h	2006-02-14 18:29:15.000000000 +0200
++++ spamass-milter-0.3.0-1-debian-patched-with-hipl/spamass-milter.h	2006-02-14 18:28:33.000000000 +0200
+@@ -37,6 +37,8 @@
+ 
+ #include <list>
+ 
++#define PUNISH_WITH_HIP_COOKIE 1
++
+ using namespace std;
+ 
+ string retrieve_field(const string&, const string&);

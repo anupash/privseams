@@ -1,0 +1,113 @@
+diff -urN mail.orig/access mail.hipl/access
+--- mail.orig/access	2006-02-15 17:35:14.000000000 +0200
++++ mail.hipl/access	2006-02-16 09:24:56.000000000 +0200
+@@ -97,10 +97,14 @@
+ #Connect:172.29			RELAY
+ #Connect:172.30			RELAY
+ #Connect:172.31			RELAY
+-#Connect:192.168			RELAY
+-#GreetPause:192.168		0
+-#ClientRate:192.168		0
+-#ClientConn:192.168		0
++Connect:192.168			RELAY
++GreetPause:192.168		0
++ClientRate:192.168		0
++ClientConn:192.168		0
++Connect:10.0                    RELAY
++GreetPause:10.0                 0
++ClientRate:10.0                 0
++ClientConn:10.0          	0
+ # Defaults
+ GreetPause:				5000
+ ClientRate:				10
+diff -urN mail.orig/databases mail.hipl/databases
+--- mail.orig/databases	2006-02-15 17:35:12.000000000 +0200
++++ mail.hipl/databases	2006-02-16 11:33:38.000000000 +0200
+@@ -8,8 +8,8 @@
+ #####		/usr/share/sendmail/parse_mc 8.13.5 2005-10-10 23:59:04 cowboy
+ #####		Parse_mc.pm 8.13.5 2005-10-10 23:59:04 cowboy
+ ##### by: root@panu
+-##### on: Wed Feb 15 17:35:12 2006
+-##### in: /
++##### on: Thu Feb 16 11:33:38 2006
++##### in: /etc/mail
+ ##### input files:
+ #####	/usr/share/sendmail/cf/debian/autoconf.m4
+ #####
+@@ -72,3 +72,4 @@
+ sendmail.cf:m4:-:/etc/mail/sendmail.mc:-:
+ submit.cf:m4:-:/etc/mail/submit.mc:-:
+ tls:update_tls:-:/etc/mail/tls/starttls.m4:-:
++use_cw_file:-:-:/etc/mail/local-host-names:%[^\#]:
+diff -urN mail.orig/local-host-names mail.hipl/local-host-names
+--- mail.orig/local-host-names	2006-02-15 17:35:14.000000000 +0200
++++ mail.hipl/local-host-names	2006-02-16 07:41:47.000000000 +0200
+@@ -1,2 +1,3 @@
+ localhost
+ panu
++panu.localnet
+diff -urN mail.orig/sendmail.cf.errors mail.hipl/sendmail.cf.errors
+--- mail.orig/sendmail.cf.errors	2006-02-15 17:35:13.000000000 +0200
++++ mail.hipl/sendmail.cf.errors	1970-01-01 02:00:00.000000000 +0200
+@@ -1,3 +0,0 @@
+-*** ERROR: FEATURE() should be before MAILER()
+-*** MAILER(`local') must appear after FEATURE(`always_add_domain')*** ERROR: FEATURE() should be before MAILER()
+-*** MAILER(`local') must appear after FEATURE(`allmasquerade')*** ERROR: FEATURE() should be before MAILER()
+diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
+--- mail.orig/sendmail.mc	2006-02-15 17:35:09.000000000 +0200
++++ mail.hipl/sendmail.mc	2006-02-17 12:11:08.000000000 +0200
+@@ -51,19 +51,20 @@
+ dnl # Daemon options - restrict to servicing LOCALHOST ONLY !!!
+ dnl # Remove `, Addr=' clauses to receive from any interface
+ dnl # If you want to support IPv6, switch the commented/uncommentd lines
+-FEATURE(`no_default_msa')dnl
++dnl FEATURE(`no_default_msa')dnl
+ dnl DAEMON_OPTIONS(`Family=inet6, Name=MTA-v6, Port=smtp, Addr=::1')dnl
+-DAEMON_OPTIONS(`Family=inet,  Name=MTA-v4, Port=smtp, Addr=127.0.0.1')dnl
++dnl DAEMON_OPTIONS(`Family=inet,  Name=MTA-v4, Port=smtp, Addr=127.0.0.1')dnl
+ dnl DAEMON_OPTIONS(`Family=inet6, Name=MSP-v6, Port=submission, Addr=::1')dnl
+-DAEMON_OPTIONS(`Family=inet,  Name=MSP-v4, Port=submission, Addr=127.0.0.1')dnl
++dnl DAEMON_OPTIONS(`Family=inet,  Name=MSP-v4, Port=submission, Addr=127.0.0.1')dnl
++DAEMON_OPTIONS(`Family=inet6, Name=MTA-v6')dnl
+ dnl #
+ dnl # Be somewhat anal in what we allow
+ define(`confPRIVACY_FLAGS',dnl
+ `needmailhelo,needexpnhelo,needvrfyhelo,restrictqrun,restrictexpand,nobodyreturn,authwarnings')dnl
+ dnl #
+ dnl # Define connection throttling and window length
+-define(`confCONNECTION_RATE_THROTTLE', `15')dnl
+-define(`confCONNECTION_RATE_WINDOW_SIZE',`10m')dnl
++dnl define(`confCONNECTION_RATE_THROTTLE', `15')dnl
++dnl define(`confCONNECTION_RATE_WINDOW_SIZE',`10m')dnl
+ dnl #
+ dnl # Features
+ dnl #
+@@ -88,13 +89,23 @@
+ dnl # will not bring up the link (it will queue mail for later)
+ dnl define(`confCON_EXPENSIVE',`True')dnl
+ dnl #
+-dnl # Default Mailer setup
+-MAILER_DEFINITIONS
+-MAILER(`local')dnl
+-MAILER(`smtp')dnl
++FEATURE(`use_cw_file')
+ 
+ dnl # Masquerading options
+ FEATURE(`always_add_domain')dnl
+-MASQUERADE_AS(`panu.localnet')dnl
++MASQUERADE_AS(`panu')dnl
+ FEATURE(`allmasquerade')dnl
+ FEATURE(`masquerade_envelope')dnl
++FEATURE(`accept_unqualified_senders')dnl
++FEATURE(`accept_unresolvable_domains')dnl
++FEATURE(`bestmx_is_local')dnl
++
++dnl # Default Mailer setup
++MAILER_DEFINITIONS
++MAILER(`local')dnl
++MAILER(`smtp')dnl
++
++# filters
++INPUT_MAIL_FILTER(`spamassassin',
++            `S=local:/var/run/sendmail/spamass.sock, F=, T=S:4m;R:4m;E:10m')dnl
++
