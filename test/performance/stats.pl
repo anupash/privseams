@@ -10,27 +10,19 @@
 #            adamo# perl -MCPAN -e shell
 #            # Are you ready for manual configuration? [yes] no
 #            cpan> install Statistics::Distributions
+#            cpan> install Scalar::Util::Numeric 
 #
 # todo:
-# - replace map_confidence with the corresponding perl module
+# - xx
 #
 ### MODULES ##################################################################
 
 use English;
 use strict;
 use Statistics::Distributions qw(udistr);
+use Scalar::Util::Numeric qw(:all);
 
-
-### GLOBAL VARIABLES #########################################################
-
-# The $regexp matches type and the corresponding value according to the
-# %regexp_order. The parentheses in the $regexp are used to pick up the type
-# and value from the data input lines. If value occurs before type in the
-# line, change the type to $2 and value to $1 in %regexp_order.
-#
-#my $regexp       = 'hipd call type=(\S+):\s(\S+) secs';
-my $regexp       = '(\S+)\s+(\S+)';
-my %regexp_order = ( 'type' => '$1', 'value' => '$2' );
+### GLOBAL VARIABLES - DO NOT TOUCH ##########################################
 
 my $confidence   = 0;  # confidence interval in procents
 
@@ -38,6 +30,8 @@ my %val          = (); # $value{type} contains a list of the values of "type"
 my %avg          = (); # $avg{type} is the average of the values of "type"
 my %std_dev      = (); # $std_dev{type} is the standard deviation of "type"
 my %conf         = (); # the confidence interval pair calculated of the values
+my $regexp       = '\s*(\S+)\s+(\S+)\s*';               # default regexp
+my %regexp_order = ( 'type' => '$1', 'value' => '$2' ); # default order
 
 # filtered values, averages, standard deviations
 #
@@ -62,6 +56,7 @@ die gethelp() unless getargs();
 # the corresponding values.
 #
 %val = read_values($inputfd, $regexp, \%regexp_order);
+die("No data to read\n") if (scalar(keys(%val)) < 1);
 
 # Count averages and standard deviations of each type of value list.
 #
@@ -139,9 +134,16 @@ print($outputfd "Sums:\n\t"  .
 # Returns: The formatted string of usage string
 #
 sub gethelp {
-    return "Usage: stats <confidence_interval_in_procents>\n" .
-	"The data to be analyzed is read from stdin.\n" .
-        "Edit the regexp and regexp_order parameters to suite your needs.\n";
+    return "Usage: stats <conf_interval> [order regexp]\n\n" .
+	"conf_interval: confindence interval in procents.\n" .
+	"order:         type|value, denoting which is read first\n" .
+	"regexp:        regular experession containing (type and (val).\n" .
+	"The data to be analyzed is read from stdin.\n\n" .
+	"EXAMPLE:       stats 95 type '\\s*(\\S+)\\s+(\\S+)\\s*'\n" .
+        "               Reads a input with 'type value' lines separated\n" .
+	"               by whitespaces, assuming that type field is first.\n" .
+	"               Outputs the values that are within the confidece\n" .
+	"               interval of 95 procent. This is the default.\n";
 }
 
 # Purpose: Get, check and parse the arguments given for the program
@@ -152,18 +154,30 @@ sub gethelp {
 sub getargs {
     my $ret = 1;
 
-    if ($#ARGV != 0 || $ARGV[0] eq "-h") {
-	$ret = 0;
-    } else {
-	if ($ARGV[0] >= 0 || $ARGV[0] <= 100) {
-	    $confidence = $ARGV[0];
-	} else {
-	    print("Confidence value must be between [0..100]\n");
-	    $ret = 0;
-	}
+    if (!($#ARGV == 0 || $#ARGV == 2) || $ARGV[0] eq "-h") {
+	return 0;
     }
 
-    return $ret;
+    if ($ARGV[0] >= 0 || $ARGV[0] <= 100) {
+	$confidence = $ARGV[0];
+    } else {
+	print("Confidence value must be between [0..100]\n");
+	return 0;
+    }
+
+    if ($#ARGV == 0) {
+	return 1;
+    }
+
+    if ($ARGV[1] =~ /type/) {
+	%regexp_order = ( 'type' => '$1', 'value' => '$2' );
+    } elsif ($ARGV[1] =~ /value/) {
+	%regexp_order = ( 'type' => '$2', 'value' => '$1' );
+    } else {
+	return 0;
+    }
+
+    return 1;
 }
 
 # Purpose: Read the values for types from the filehandle 
@@ -174,16 +188,25 @@ sub getargs {
 # Returns: Returns the hash of arrays of values (hash key = type of value)
 #
 sub read_values {
-    my %value = ();
+    my %values = ();
     my ($inputfd, $regexp) = (shift(@ARG), shift(@ARG));
     my %regexp_order = %{ shift(@ARG) };
+    my $lineno = 1;
 
     while (defined(my $line = <$inputfd>)) {
 	$line =~ /$regexp/;
-	push (@{ $value{eval($regexp_order{'type'})} },
-	      eval($regexp_order{'value'}));
+	my ($type, $val) = (eval($regexp_order{'type'}), 
+			      eval($regexp_order{'value'}));
+	if (isnum($val)) {
+	    push (@{ $values{$type} }, $val);
+	} else {
+	    print("Non-numeric value ($val) at line $lineno, aborting\n");
+	    return ();
+	}
+	$lineno++;
     }
-    return %value;
+
+    return %values;
 }
 
 # Purpose: Count the average of values.
@@ -212,19 +235,6 @@ sub standard_deviation {
 
     return sqrt($sum / ( $#val + 1));
 }
-
-# Purpose: map procents to the values into standard distribution table values.
-# Params:  $procent a number between zero and 1
-# Returns: a value from the standard distribution table
-# Notes:   REPLACE WITH THE PERL MODULE
-#
-#sub map_confidence {
-#    my $procent = $ARG[0];
-#    # confidence values map procents to the standard distribution
-#    my %conf_val  = ( .90 => 1.65, .95 => 1.96, .99 => 2.58,
-#		      .999 => 3.29);
-#    return $conf_val{$procent};
-#}
 
 # Purpose: Calculate confidence interval
 # Params:  $avg      the average
@@ -258,7 +268,11 @@ sub filter {
     my ($lower, $upper, @val) = @ARG;
     my @filtered_val = ();
     foreach my $val (@val) {
-	push(@filtered_val, $val) if ($val >= $lower && $val <= $upper);
+	if ($val >= $lower && $val <= $upper) {
+	    push(@filtered_val, $val);
+	} else {
+	    print("$val was filtered\n");
+	}
     }
     
     return @filtered_val;

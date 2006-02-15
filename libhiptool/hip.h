@@ -1132,6 +1132,10 @@ struct hip_hadb_misc_func_set{
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry);
+	int (*hip_create_r2)(struct hip_context *ctx,
+			     struct in6_addr *i2_saddr,
+			     struct in6_addr *i2_daddr,
+			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,
