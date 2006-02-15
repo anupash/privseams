@@ -897,7 +897,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (req->ai_family == AF_UNSPEC)
 	_res.options &= ~RES_USE_INET6;
       
-      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
+      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6 
+	|| hip_transparent_mode || req->ai_flags & AI_HIP)
 	 no_inet6_data = gethosts (name, AF_INET6, &pat);
 
       if (req->ai_family == AF_UNSPEC)
@@ -905,7 +906,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       
       if (req->ai_family == AF_INET ||
 	  (!v4mapped && req->ai_family == AF_UNSPEC) ||
-	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL))))
+	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
+  	  || hip_transparent_mode || req->ai_flags & AI_HIP)
 	no_data = gethosts (name, AF_INET, &pat);
       HIP_DEBUG("Dumping the structure\n");
       dump_pai(*at);
