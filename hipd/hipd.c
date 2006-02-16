@@ -62,9 +62,10 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 
 	if (entry->hip_msg_retrans.count > 0 &&
 	    entry->state != HIP_STATE_ESTABLISHED) {
-		err = hip_csum_send(&entry->hip_msg_retrans.saddr,
-				     &entry->hip_msg_retrans.daddr,
-				     entry->hip_msg_retrans.buf, entry, 0);
+		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
+							   &entry->hip_msg_retrans.daddr,
+							   entry->hip_msg_retrans.buf,
+							   entry, 0);
 		entry->hip_msg_retrans.count--;
 	} else {
 		HIP_FREE(entry->hip_msg_retrans.buf);
@@ -202,7 +203,8 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6) {
 
 	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_PKTINFO, &on,
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
+			    IPV6_2292PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
 
  out_err:
@@ -236,7 +238,8 @@ void hip_exit(int signal) {
 
 	//hip_delete_default_prefix_sp_pair();
 
-	hip_send_close_to_all_peers();
+	/* Close SAs with all peers */
+	hip_send_close(NULL);
 
 	hip_delete_all_sp();
 

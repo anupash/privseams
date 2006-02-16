@@ -1,15 +1,17 @@
 #include "close.h"
 
-int hip_send_close_to_all_peers()
+int hip_send_close(struct hip_common *msg)
 {
 	int err = 0;
+	hip_hit_t *hit = NULL;
+	hip_ha_t *entry;
 
-	HIP_DEBUG("Reset\n");
+	HIP_DEBUG("msg=%p\n", msg);
 
-	// XX FIXME: the kernel code crashes on rmmod (spi in and spi out
-	// removal) ?
+	if (msg)
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	HIP_IFEL(hip_for_each_ha(&hip_send_close, NULL), -1,
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit), -1,
 		 "Failed to reset all HAs\n");
 
  out_err:
@@ -17,10 +19,20 @@ int hip_send_close_to_all_peers()
 	return err;
 }
 
-int hip_send_close(hip_ha_t *entry, void *ignore)
+int hip_xmit_close(hip_ha_t *entry, void *opaque)
 {
 	int err = 0, mask = 0;
+	hip_hit_t *peer = (hip_hit_t *) opaque;
 	struct hip_common *close = NULL;
+
+	if (peer)
+		HIP_DEBUG_HIT("peer HIT to be closed", peer);
+
+	if (peer && !ipv6_addr_any(peer) &&
+	    memcmp(&entry->hit_peer, peer, sizeof(hip_hit_t))) {
+		HIP_DEBUG("Peer HIT did not match, ignoring\n");
+		goto out_err;
+	}
 
 	HIP_DEBUG("Sending close to peer\n");
 
@@ -47,7 +59,9 @@ int hip_send_close(hip_ha_t *entry, void *ignore)
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
 		 "Could not create signature\n");
 	
-	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close, entry, 0), -1);
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
+						     &entry->preferred_address,
+						     close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
 
@@ -99,7 +113,9 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	HIP_IFEL(entry->sign(entry->our_priv, close_ack), -EINVAL,
 		 "Could not create signature\n");
 
-	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close_ack, entry, 0), -1);
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
+						     &entry->preferred_address,
+						     close_ack, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSED;
 
