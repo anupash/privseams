@@ -21,13 +21,15 @@
 
 #include "hipconf.h"
 
+// del hi
+
 const char *usage = "new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
-	"del <hit>\n"
+	"del hi <hit>\n"
         "add|del map hit ipv6\n"
-        "rst all|hit\n"
-        "rvs hit ipv6\n"
-        "bos\n"
+        "hip rst all|peer_hit\n"
+        "add rvs hit ipv6\n"
+        "hip bos\n"
 	;
 
 
@@ -59,14 +61,10 @@ int get_action(char *text) {
 		ret = ACTION_ADD;
 	else if (!strcmp("del", text))
 		ret = ACTION_DEL;
-	else if (!strcmp("rst", text))
-		ret = ACTION_RST;
 	else if (!strcmp("new", text))
 		ret = ACTION_NEW;
-	else if (!strcmp("rvs", text))
-		ret = ACTION_RVS;
-	else if (!strcmp("bos", text))
-		ret = ACTION_BOS;
+	else if (!strcmp("hip", text))
+		ret = ACTION_HIP;
 	return ret;
 }
 
@@ -82,14 +80,8 @@ int check_action_argc(int action) {
 	switch (action) {
 	case ACTION_ADD:
 	case ACTION_NEW:
-		count = 2;
-		break;
-	case ACTION_RST:
 	case ACTION_DEL:
-		count = 1;
-		break;
-	case ACTION_BOS:
-		count = 0;
+		count = 2;
 		break;
 	}
 
@@ -115,10 +107,24 @@ int get_type(char *text) {
 		ret = TYPE_RVS;
 	else if (!strcmp("bos", text))
 		ret = TYPE_BOS;
-	else if (!strcmp("del", text))
-		ret = TYPE_DEL;
 	return ret;
 }
+
+int get_type_arg(int action) {
+	int type_arg = -1;
+
+	switch (action) {
+	case ACTION_ADD:
+	case ACTION_DEL:
+	case ACTION_NEW:
+	case ACTION_HIP:
+		type_arg = 2;
+		break;
+	}
+
+	return type_arg;
+}
+
 
 /**
  * handle_rvs - ...
@@ -196,6 +202,9 @@ int handle_hi(struct hip_common *msg,
   int err = 0, anon = 0, use_default = 0;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
+
+  if (action == ACTION_DEL)
+    return handle_del(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -494,16 +503,10 @@ int main(int argc, char *argv[]) {
 		goto out;
 	}
 	
-	/* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
-	
-	if (action != ACTION_RST &&
-	    action != ACTION_RVS &&
-	    action != ACTION_DEL &&
-	    action != ACTION_BOS) 
-	{
-		type_arg = 2;
-	} else {
-		type_arg = 1;
+	type_arg = get_type_arg(action);
+	if (type_arg < 0) {
+		HIP_ERROR("Could parse type\n");
+		goto out;
 	}
 
 	type = get_type(argv[type_arg]);
@@ -521,48 +524,28 @@ int main(int argc, char *argv[]) {
 	}
 	hip_msg_init(msg);
 
-	switch (action) {
-	case ACTION_RVS:
-		err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_DEL:
-		err = (*action_handler[TYPE_DEL])(msg, ACTION_DEL,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_ADD:
-	case ACTION_NEW:
-		err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+	err = (*action_handler[type])(msg, action, (const char **) &argv[3],
 					      argc - 3);
-		break;
-	case ACTION_RST:
-		err = (*action_handler[TYPE_RST])(msg, ACTION_RST,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_BOS:
-		err = (*action_handler[type])(msg, action, (const char **) NULL, 0);
-		break;
-	}
 
-	if (err) {
-		HIP_ERROR("failed to handle msg\n");
-		goto out_malloc;
-	}
-
-	/* hipconf new hi does not involve any messages to kernel */
-	if (hip_get_msg_type(msg) == 0)
-		goto skip_msg;
+        if (err) {
+                HIP_ERROR("failed to handle msg\n");
+                goto out_malloc;
+        }
 	
-	/* send msg to hipd */
-	err = hip_send_daemon_info(msg);
-	if (err) {
-		HIP_ERROR("sending msg failed\n");
-		goto out_malloc;
-	}
+        /* hipconf new hi does not involve any messages to kernel */
+        if (hip_get_msg_type(msg) == 0)
+                goto skip_msg;
+	
+        /* send msg to hipd */
+        err = hip_send_daemon_info(msg);
+        if (err) {
+                HIP_ERROR("sending msg failed\n");
+                goto out_malloc;
+        }
+	
+ skip_msg:
 
-skip_msg:
-
-out_malloc:
+ out_malloc:
 	free(msg);
 out:
 	

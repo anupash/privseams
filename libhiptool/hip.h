@@ -56,6 +56,10 @@ struct list_head {
 #define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
 #endif
 
+/* Workaround for kernels before 2.6.15.3. */
+#ifndef IPV6_2292PKTINFO
+#  define IPV6_2292PKTINFO 2
+#endif
 
 //#include "builder.h"
 #if 0
@@ -1055,6 +1059,11 @@ struct hip_hadb_state
 };
 
 struct hip_hadb_rcv_func_set {
+	int (*hip_receive_i1)(struct hip_common *,
+				 struct in6_addr *, 
+				 struct in6_addr *,
+				 hip_ha_t*);
+
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
@@ -1097,6 +1106,11 @@ struct hip_hadb_rcv_func_set {
 };
 
 struct hip_hadb_handle_func_set{   
+	int (*hip_handle_i1)(struct hip_common *r1,
+			     struct in6_addr *r1_saddr,
+			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
@@ -1164,6 +1178,10 @@ struct hip_hadb_misc_func_set{
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+	int (*hip_create_r2)(struct hip_context *ctx,
+			     struct in6_addr *i2_saddr,
+			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,

@@ -1719,6 +1719,7 @@ void hip_init_hadb(void)
 	hip_ht_init(&hadb_spi_list);
 	
 	/* initialize default function pointer sets for receiving messages*/
+	default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
 	default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
 	default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
 	default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
@@ -1732,6 +1733,7 @@ void hip_init_hadb(void)
 	/* insert your alternative function sets here!*/ 
 
 	/* initialize default function pointer sets for handling messages*/
+	default_handle_func_set.hip_handle_i1  = hip_handle_i1;
 	default_handle_func_set.hip_handle_r1  = hip_handle_r1;
 	default_handle_func_set.hip_handle_i2  = hip_handle_i2;
 	default_handle_func_set.hip_handle_r2  = hip_handle_r2;
@@ -1746,6 +1748,7 @@ void hip_init_hadb(void)
 	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
 	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
 	default_misc_func_set.hip_create_i2		   = hip_create_i2;
+	default_misc_func_set.hip_create_r2		   = hip_create_r2;
 	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
 
 	/* initialize alternative function pointer sets for misc functions*/
