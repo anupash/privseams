@@ -280,7 +280,7 @@
     <title>Closing HIP Security Associations Manually</title>
      <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf rst all" to close all SAs. 
+      "hipconf hip rst all" to close all SAs. 
      </para>
   </chapter>
   <chapter>
@@ -535,7 +535,7 @@
       The hipconf tool must support rvs option:
     </para>
     <para>
-      hipconf rvs &lt;hit&gt; &lt;ip&gt;
+      hipconf add rvs &lt;hit&gt; &lt;ip&gt;
     </para>
     <para>
       For now it is best if all the hosts involved in communications have
@@ -644,7 +644,7 @@
       on all interfaces), use the following command:
     </para>
     <para>
-      &nbsp;&nbsp;hipconf BOS
+      &nbsp;&nbsp;hipconf hip bos
     </para>
     <para>
       &nbsp;BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
