@@ -185,6 +185,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_NETLINK_DUMMY                    17
 #define SO_HIP_AGENT_PING                       18
 #define SO_HIP_AGENT_PING_REPLY                 19
+#define SO_HIP_CONF_PUZZLE_NEW                  20
+#define SO_HIP_CONF_PUZZLE_GET                  21
+#define SO_HIP_CONF_PUZZLE_SET                  22
+#define SO_HIP_CONF_PUZZLE_INC                  23
+#define SO_HIP_CONF_PUZZLE_DEC                  24
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

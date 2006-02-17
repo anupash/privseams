@@ -21,8 +21,6 @@
 
 #include "hipconf.h"
 
-// del hi
-
 const char *usage = "new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
 	"del hi <hit>\n"
@@ -30,6 +28,7 @@ const char *usage = "new|add hi default\n"
         "hip rst all|peer_hit\n"
         "add rvs hit ipv6\n"
         "hip bos\n"
+        "get|set|inc|dec|new puzzle hit|all"
 	;
 
 
@@ -44,7 +43,8 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_rst,
 	handle_rvs,
 	handle_bos,
-	handle_del
+	handle_del,
+	handle_puzzle
 };
 
 /**
@@ -63,8 +63,14 @@ int get_action(char *text) {
 		ret = ACTION_DEL;
 	else if (!strcmp("new", text))
 		ret = ACTION_NEW;
-	else if (!strcmp("hip", text))
-		ret = ACTION_HIP;
+	else if (!strcmp("get", text))
+		ret = ACTION_GET;
+	else if (!strcmp("set", text))
+		ret = ACTION_SET;
+	else if (!strcmp("inc", text))
+		ret = ACTION_INC;
+	else if (!strcmp("dec", text))
+		ret = ACTION_DEC;
 	return ret;
 }
 
@@ -81,6 +87,15 @@ int check_action_argc(int action) {
 	case ACTION_ADD:
 	case ACTION_NEW:
 	case ACTION_DEL:
+		count = 2;
+		break;
+	case ACTION_GET:
+		count = 2;
+		break;
+	case ACTION_SET:
+		count = 2;
+		break;
+	case ACTION_INC:
 		count = 2;
 		break;
 	}
@@ -107,24 +122,26 @@ int get_type(char *text) {
 		ret = TYPE_RVS;
 	else if (!strcmp("bos", text))
 		ret = TYPE_BOS;
+	else if (!strcmp("puzzle", text))
+		ret = TYPE_PUZZLE;
+
 	return ret;
 }
 
 int get_type_arg(int action) {
-	int type_arg = -1;
+        int type_arg = -1;
 
-	switch (action) {
-	case ACTION_ADD:
-	case ACTION_DEL:
-	case ACTION_NEW:
-	case ACTION_HIP:
-		type_arg = 2;
-		break;
-	}
+        switch (action) {
+        case ACTION_ADD:
+        case ACTION_DEL:
+        case ACTION_NEW:
+        case ACTION_HIP:
+                type_arg = 2;
+                break;
+        }
 
-	return type_arg;
+        return type_arg;
 }
-
 
 /**
  * handle_rvs - ...
@@ -471,6 +488,78 @@ int handle_bos(struct hip_common *msg, int action,
 	return err;
 }
 
+int handle_puzzle(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
+{
+	int err = 0, ret, msg_type;
+
+	struct in6_addr hit;
+
+	if (optc != 2) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	switch (action) {
+	case ACTION_NEW:
+		msg_type = SO_HIP_CONF_PUZZLE_NEW;
+		break;
+	case ACTION_INC:
+		msg_type = SO_HIP_CONF_PUZZLE_INC;
+		break;
+	case ACTION_DEC:
+		msg_type = SO_HIP_CONF_PUZZLE_DEC;
+		break;
+	case ACTION_SET:
+		msg_type = SO_HIP_CONF_PUZZLE_SET;
+		err = -1; /* Not supported yet */
+		break;
+	case ACTION_GET:
+		msg_type = SO_HIP_CONF_PUZZLE_GET;
+		err = -1; /* Not supported yet */
+		break;
+	default:
+		err = -1;
+	}
+
+	if (err) {
+		HIP_ERROR("Action (%d) not supported yet\n", action);
+		goto out;
+	}
+
+	if (!strcmp("all", opt[0])) {
+		memset(&hit,0,sizeof(struct in6_addr));
+	} else {
+		ret = inet_pton(AF_INET6, opt[0], &hit);
+		if (ret < 0 && errno == EAFNOSUPPORT) {
+			HIP_PERROR("inet_pton: not a valid address family\n");
+			err = -EAFNOSUPPORT;
+			goto out;
+		} else if (ret == 0) {
+			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+			err = -EINVAL;
+			goto out;
+		}
+	}
+
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, msg_type, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+}
+
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
  */
@@ -524,28 +613,27 @@ int main(int argc, char *argv[]) {
 	}
 	hip_msg_init(msg);
 
-	err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-					      argc - 3);
+        err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+                                              argc - 3);
+	if (err) {
+		HIP_ERROR("failed to handle msg\n");
+		goto out_malloc;
+	}
 
-        if (err) {
-                HIP_ERROR("failed to handle msg\n");
-                goto out_malloc;
-        }
+	/* hipconf new hi does not involve any messages to kernel */
+	if (hip_get_msg_type(msg) == 0)
+		goto skip_msg;
 	
-        /* hipconf new hi does not involve any messages to kernel */
-        if (hip_get_msg_type(msg) == 0)
-                goto skip_msg;
-	
-        /* send msg to hipd */
-        err = hip_send_daemon_info(msg);
-        if (err) {
-                HIP_ERROR("sending msg failed\n");
-                goto out_malloc;
-        }
-	
- skip_msg:
+	/* send msg to hipd */
+	err = hip_send_daemon_info(msg);
+	if (err) {
+		HIP_ERROR("sending msg failed\n");
+		goto out_malloc;
+	}
 
- out_malloc:
+skip_msg:
+
+out_malloc:
 	free(msg);
 out:
 	
