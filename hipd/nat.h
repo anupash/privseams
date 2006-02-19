@@ -26,6 +26,10 @@ int hip_send_udp(struct in6_addr *local_addr,
                   hip_ha_t *entry,
                   int retransmit);
 
+int hip_receive_control_packet_udp(struct hip_common *msg,
+                               struct in6_addr *src_addr,
+                               struct in6_addr *dst_addr,
+                                int src_port);
 
 
 #endif //__NAT_H__

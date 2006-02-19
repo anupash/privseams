@@ -241,6 +241,12 @@ int hip_init_raw_sock_udp(int *hip_raw_sock_udp)
                 HIP_ERROR("Can not open socket for UDP\n");
                 return -1;
         }
+	HIP_IFEL(setsockopt(*hip_raw_sock_udp, IPPROTO_IP, IP_PKTINFO, &on,
+		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
+	HIP_IFEL(setsockopt(*hip_raw_sock_udp, IPPROTO_IP, IP_RECVERR, &on,
+                   sizeof(on)), -1, "setsockopt udp recverr failed\n");
+
+
         struct sockaddr_in myaddr;
 
 
@@ -543,14 +549,20 @@ int main(int argc, char *argv[]) {
 								 &daddr);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
+			int src_port = 0;
 
 			hip_msg_init(hip_msg);
 			HIP_DEBUG("Getting a msg on v4\n");	
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
-						 &saddr, &daddr))
+						 &saddr, &daddr, &src_port))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
+			  /* For some reason, the IPv4 header is always included.
+			           Let's remove it here. */
+			memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+        				      HIP_MAX_PACKET - IPV4_HDR_SIZE);
+	
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
@@ -559,18 +571,26 @@ int main(int argc, char *argv[]) {
 			/* do NAT recieving here !! --Abi */
 			
 			struct in6_addr saddr, daddr;
+			int src_port = 0;
 
 			hip_msg_init(hip_msg);
 			HIP_DEBUG("Getting a msg on udp\n");	
 
-			if (hip_read_control_msg_udp(hip_raw_sock_udp, hip_msg, 1,
-                                                 &saddr, &daddr))
+		//	if (hip_read_control_msg_udp(hip_raw_sock_udp, hip_msg, 1,
+                  //                                 &saddr, &daddr))
+        		if (hip_read_control_msg_v4(hip_raw_sock_udp, hip_msg, 1,
+                                                 &saddr, &daddr, &src_port))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
-                                err = hip_receive_control_packet(hip_msg,
+				err =  hip_receive_control_packet_udp(hip_msg,
                                                                  &saddr,
-                                                                 &daddr);
+                                                                 &daddr,
+								src_port);
+
+                                //err = hip_receive_control_packet(hip_msg,
+                                                                 //&saddr,
+                                                                 //&daddr);
                         }
 
 			
