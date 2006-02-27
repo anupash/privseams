@@ -123,7 +123,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
         ((((__const uint32_t *) (a))[0] == 0)                                 \
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
-         && (((__const uint32_t *) (a))[3] != 0))                              
+         && IS_LSI32(((__const uint32_t *) (a))[3]))        
 
 #define HIPL_VERSION 0.2
 
