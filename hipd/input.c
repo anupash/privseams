@@ -1319,7 +1319,7 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 
 	HIP_DEBUG("Crypto encrypted\n");
-	HIP_HEXDUMP("IV: ", iv, 16);
+	_HIP_HEXDUMP("IV: ", iv, 16); /* Note: iv can be NULL */
 	
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
 				      crypto_len, &ctx->hip_enc_in.key,

@@ -20,14 +20,16 @@ hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
-#SUBDIRS =
+if HIP_HI3
+	hipd_SOURCES += hi3.c
+	INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+	hipd_LDADD += ../i3/i3_client/.libs/libi3client.a ../i3/aeshash/.libs/libaes.a
+endif
 
-# Hi3
-#CFLAGS += -DCONFIG_HIP_HI3
-#hipd_SOURCES += hi3.c
-#INCLUDES += -Ii3/i3_client -Ii3/utils -Ii3/i3
-#hipd_LDADD += i3/i3_client/.libs/libi3client.a i3/aeshash/.libs/libaes.a
-#SUBDIRS += i3
+if HIP_OPENDHT
+	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+	hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+endif
 
 # KeyNotev2
 #INCLUDES += -Ikeynote

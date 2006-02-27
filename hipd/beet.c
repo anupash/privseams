@@ -235,7 +235,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	        memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
 		req.xsinfo.family = preferred_family;
  	}
-	
+
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xsinfo));
 	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_type = cmd;
@@ -267,7 +267,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			 "blowfish", "cipher_null", "cipher_null"};
 		char *a_algo_names[] =
 			{"reserved", "sha1", "sha1", "md5",
-			 "sha1", "sha1", "md5"};
+			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
@@ -391,9 +391,10 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 
-	enckey_len = hip_enc_key_length(ealg);
 	authkey_len = hip_auth_key_length_esp(aalg);
-	HIP_IFEL((enckey <= 0 || authkey_len <= 0), -1,
+	enckey_len = hip_enc_key_length(ealg);
+
+	HIP_IFEL((enckey < 0 || authkey_len < 0), -1,
 		 "Bad enc or auth key len\n");
 
 	/* XX CHECK: is there some kind of range for the SPIs ? */
