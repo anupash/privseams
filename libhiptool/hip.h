@@ -301,7 +301,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIP_AES_SHA1                1
 #define HIP_HIP_3DES_SHA1               2
 #define HIP_HIP_3DES_MD5                3
+#define HIP_HIP_BLOWFISH_SHA1           4
 #define HIP_HIP_NULL_SHA1               5
+#define HIP_HIP_NULL_MD5                6
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
@@ -1178,6 +1180,10 @@ struct hip_hadb_misc_func_set{
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
+			     hip_ha_t *entry);
+	int (*hip_create_r2)(struct hip_context *ctx,
+			     struct in6_addr *i2_saddr,
+			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,

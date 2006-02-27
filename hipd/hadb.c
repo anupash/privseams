@@ -1748,6 +1748,7 @@ void hip_init_hadb(void)
 	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
 	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
 	default_misc_func_set.hip_create_i2		   = hip_create_i2;
+	default_misc_func_set.hip_create_r2		   = hip_create_r2;
 	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
 
 	/* initialize alternative function pointer sets for misc functions*/

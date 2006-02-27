@@ -77,3 +77,7 @@ make -C doc clean
 /usr/local/lib/libinet6.so.0
 %dir /etc/hip
 %doc /usr/share/doc/hipl
+
+%changelog
+* Tue Feb 14 2006 Miika Komu <miika@iki.fi>
+- added changelog

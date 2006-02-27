@@ -35,20 +35,17 @@
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
-#define ACTION_RST 3
-#define ACTION_NEW 4
-#define ACTION_RVS 5
-#define ACTION_BOS 6
-#define ACTION_MAX 7 /* exclusive */
+#define ACTION_NEW 3
+#define ACTION_HIP 4
+#define ACTION_MAX 5 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI 1
+#define TYPE_HI  1
 #define TYPE_MAP 2
 #define TYPE_RST 3
 #define TYPE_RVS 4
 #define TYPE_BOS 5
-#define TYPE_DEL 6
-#define TYPE_MAX 7 /* exclusive */
+#define TYPE_MAX 6 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
