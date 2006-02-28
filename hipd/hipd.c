@@ -65,6 +65,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 	    entry->state != HIP_STATE_ESTABLISHED) {
 		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
 							   &entry->hip_msg_retrans.daddr,
+								0,0, /*need to correct it*/
 							   entry->hip_msg_retrans.buf,
 							   entry, 0);
 		entry->hip_msg_retrans.count--;
@@ -537,6 +538,7 @@ int main(int argc, char *argv[]) {
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
 			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
 
 			hip_msg_init(hip_msg);
 		
@@ -546,9 +548,11 @@ int main(int argc, char *argv[]) {
 			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
-								 &daddr);
+								 &daddr,
+								&pkt_info);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
 			int src_port = 0;
 
 			hip_msg_init(hip_msg);
@@ -565,12 +569,14 @@ int main(int argc, char *argv[]) {
 	
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
-								 &daddr);
+								 &daddr,
+								&pkt_info);
 			}
 		} else if(FD_ISSET(hip_raw_sock_udp, &read_fdset)){
 			/* do NAT recieving here !! --Abi */
 			
 			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
 			int src_port = 0;
 
 			hip_msg_init(hip_msg);
@@ -586,7 +592,7 @@ int main(int argc, char *argv[]) {
 				err =  hip_receive_control_packet_udp(hip_msg,
                                                                  &saddr,
                                                                  &daddr,
-								src_port);
+								 &pkt_info);
 
                                 //err = hip_receive_control_packet(hip_msg,
                                                                  //&saddr,

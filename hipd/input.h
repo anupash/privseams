@@ -27,7 +27,8 @@
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr);
+			       struct in6_addr *dst_addr,
+			       struct hip_stateless_info *msg_info);
 
 			  
 /* functions for receiving hip control messages*/ 
@@ -38,32 +39,38 @@ int hip_verify_packet_hmac(struct hip_common *,
 int hip_receive_i1(struct hip_common *, 
 		   struct in6_addr *, 
 		   struct in6_addr *,
-		   hip_ha_t *);
+		   hip_ha_t *,
+	           struct hip_stateless_info *);
 		   
 int hip_receive_r1(struct hip_common *, 
 		   struct in6_addr *,
 		   struct in6_addr *,
-		   hip_ha_t *);
+		   hip_ha_t *,
+	           struct hip_stateless_info *);
 		   
 int hip_receive_i2(struct hip_common *, 
 		   struct in6_addr *,
 		   struct in6_addr *,
-		   hip_ha_t *);
+		   hip_ha_t *,
+	           struct hip_stateless_info *);
 		   
 int hip_receive_r2(struct hip_common *, 
 		   struct in6_addr *,
 		   struct in6_addr *,
-		   hip_ha_t *);
+		   hip_ha_t *,
+	           struct hip_stateless_info *);
 		   
 int hip_receive_notify(struct hip_common *,
 		       struct in6_addr *, 
 		       struct in6_addr *,
-		       hip_ha_t*);
+		       hip_ha_t*,
+	           struct hip_stateless_info *);
 		       
 int hip_receive_bos(struct hip_common *,
 		    struct in6_addr *,
 		    struct in6_addr *,
-		    hip_ha_t*);
+		    hip_ha_t*,
+	           struct hip_stateless_info *);
 		    
 int hip_receive_close(struct hip_common *, 
 		      hip_ha_t*);
@@ -79,22 +86,26 @@ int hip_receive_close_ack(struct hip_common *,
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
-		  hip_ha_t *entry);
+		  hip_ha_t *entry,
+	           struct hip_stateless_info *);
 		  
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry);  
+		  hip_ha_t *entry,
+	           struct hip_stateless_info *);  
 		  
 int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,		  
-		  hip_ha_t *ha);
+		  hip_ha_t *ha,
+	           struct hip_stateless_info *);
 		  
 int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,		  
-		  hip_ha_t *ha);
+		  hip_ha_t *ha,
+	           struct hip_stateless_info *);
 		  	  
 int hip_handle_close(struct hip_common *close,
 		     hip_ha_t *entry);
@@ -112,11 +123,13 @@ int hip_produce_keying_material(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry);
+		  hip_ha_t *entry,
+	           struct hip_stateless_info *);
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry);
+		  hip_ha_t *entry,
+	           struct hip_stateless_info *);
 
  
 #endif /* HIP_INPUT_H */

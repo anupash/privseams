@@ -214,7 +214,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int aalg,
 			  struct hip_crypto_key *authkey,
 			  int authkey_len,
-			  int preferred_family)
+			  int preferred_family,
+			  struct hip_stateless_info *sa_info)
 {
 	int err = 0;
 	struct {
@@ -380,7 +381,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
-		    int direction, int update) {
+		    int direction, int update,
+		    struct hip_stateless_info *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
@@ -405,7 +407,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
-				      authkey, authkey_len, AF_INET6), -1);
+				      authkey, authkey_len, AF_INET6, sa_info), -1);
  out_err:
 	return err;
 }

@@ -453,6 +453,16 @@ struct hip_common {
 
 
 /*
+ * hip stateless info: Used to send parameters 
+ * across function calls carrying stateless info
+ */
+struct hip_stateless_info 
+{
+	uint32_t src_port;
+	uint32_t dst_port;
+};
+
+/*
  * Localhost Host Identity. Used only internally in the implementation.
  * Used for wrapping anonymous bit with the corresponding HIT.
  */
@@ -1075,12 +1085,14 @@ struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 				 
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
@@ -1088,27 +1100,32 @@ struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i2)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 				 
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 				 
 	int (*hip_receive_update)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
-				     hip_ha_t*);
+				     hip_ha_t*,
+			     struct hip_stateless_info *);
 				     
 	int (*hip_receive_notify)(struct hip_common *,
 				     struct in6_addr *,
 				     struct in6_addr *,
-				     hip_ha_t*);
+				     hip_ha_t*,
+			     struct hip_stateless_info *);
 				     
 	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
-				  hip_ha_t*);
+				  hip_ha_t*,
+			     struct hip_stateless_info *);
 				     
 	int (*hip_receive_close)(struct hip_common *,
 				    hip_ha_t*);
@@ -1122,12 +1139,14 @@ struct hip_hadb_handle_func_set{
 	int (*hip_handle_i1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *r1_info);
 
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *r1_info);
 			     
 	/* as there is possibly no state established when i2
 	   messages are received, the hip_handle_i2 function pointer
@@ -1135,16 +1154,19 @@ struct hip_hadb_handle_func_set{
 	int (*hip_handle_i2)(struct hip_common *i2,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
-			     hip_ha_t *ha);
+			     hip_ha_t *ha,
+			     struct hip_stateless_info *i2_info);
 			     
 	int (*hip_handle_r2)(struct hip_common *r2,
 			     struct in6_addr *r2_saddr,
 			     struct in6_addr *r2_daddr,
-			     hip_ha_t *ha);
+			     hip_ha_t *ha,
+			     struct hip_stateless_info *r2_info);
 	int (*hip_handle_bos)(struct hip_common *bos,
 			      struct in6_addr *r2_saddr,
 			      struct in6_addr *r2_daddr,
-			      hip_ha_t *ha);
+			      hip_ha_t *ha,
+			     struct hip_stateless_info *r2_info);
 	int (*hip_handle_close)(struct hip_common *close,
 				hip_ha_t *entry);
 	int (*hip_handle_close_ack)(struct hip_common *close_ack,
@@ -1191,11 +1213,13 @@ struct hip_hadb_misc_func_set{
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *r1_info);
 	int (*hip_create_r2)(struct hip_context *ctx,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *i2_info);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,
@@ -1205,6 +1229,7 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{ 
 	int  (*hip_csum_send)(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
+			      uint32_t src_port, uint32_t dst_port,
 			      struct hip_common* msg,
 			      hip_ha_t *entry,
 			      int retransmit);

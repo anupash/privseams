@@ -60,7 +60,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature\n");
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
@@ -114,7 +114,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature\n");
 
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close_ack, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSED;

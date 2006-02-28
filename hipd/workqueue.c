@@ -185,7 +185,7 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
 							 &job->hdr.id1,
-							 &job->hdr.id2);
+							 &job->hdr.id2, NULL); /* sending null stateless info currently --Abi*/
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",

@@ -20,7 +20,8 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
-		  struct hip_common* msg,
+		  uint32_t src_port, uint32_t dst_port,
+		  struct hip_common *msg,
 		  hip_ha_t *entry,
 		  int retransmit)
 {

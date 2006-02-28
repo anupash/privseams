@@ -212,7 +212,8 @@ int hip_update_handle_rea_parameter(hip_ha_t *entry, struct hip_rea *rea)
  * Returns: 0 if successful, otherwise < 0.
  */
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
-				  struct in6_addr *src_ip, struct in6_addr *dst_ip)
+				  struct in6_addr *src_ip, struct in6_addr *dst_ip, 
+					struct hip_stateless_info *update_info)
 {
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_nes *nes;
@@ -365,7 +366,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	entry->state = HIP_STATE_REKEYING;
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      src_ip,
+						      src_ip, update_info->src_port,
+							update_info->dst_port,
 						      update_packet,
 						      entry, 1), -1,
 		 "csum send failed\n");
@@ -486,7 +488,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_OUT, 0, NULL); //, -1,
+	/* FIXME: Currently NULLing the stateless info. Send port info through entry parameter --Abi */
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -496,7 +499,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 we_are_HITg ? &espkey_lg  : &espkey_gl,
 			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN, 0 /*prev_spi_out == new_spi_out*/ );
+			 1, HIP_SPI_DIRECTION_IN, 0 /*prev_spi_out == new_spi_out*/, NULL );
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
@@ -675,7 +678,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &daddr, update_packet,
+						      &daddr, 0, 0, update_packet,
 						      entry, 1), -1,
 		 "csum_send failed\n");
 
@@ -769,7 +772,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		/* test: send all addr check from same address */
 		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
 							      &addr->address,
-							      update_packet,
+							      0, 0, update_packet,
 							      entry, 0), -1,
 			 "csum_send failed\n");
 	}
@@ -822,7 +825,7 @@ int hip_handle_update_plain_rea(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for REA)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
 						      update_packet, entry, 0),
 		 -1, "csum_send_failed\n");
 
@@ -893,7 +896,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
 						      update_packet, entry, 0),
 		 -1, "csum_send failed\n");
 
@@ -1432,7 +1435,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
 						      update_packet, entry, 1),
 		 -1, "csum_send failed\n");
 

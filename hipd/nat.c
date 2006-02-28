@@ -4,7 +4,7 @@
 int hip_receive_control_packet_udp(struct hip_common *msg,
                                struct in6_addr *src_addr,
                                struct in6_addr *dst_addr,
-				int src_port)
+				struct hip_stateless_info *info)
 {
         hip_ha_t tmp;
 
@@ -39,14 +39,14 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                 // no state
 		if(entry)
 		{
-			entry->nat_mangled_port = src_port;
+			entry->nat_mangled_port = info->src_port;
 			memcpy(&(entry->nat_address), src_addr, sizeof(struct in6_addr));
 			HIP_DEBUG("entry found src port %d\n", entry->nat_mangled_port);
 			HIP_DEBUG_IN6ADDR("NAT mangled address:", &(entry->nat_address));
 		}
 			
 		else HIP_ERROR("No entry found\n");
-                err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
+                err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry, info);
                 break;
 
         case HIP_I2:
@@ -54,13 +54,13 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                 HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
                 if(entry){
 			memcpy(&(entry->nat_address), src_addr, sizeof(struct in6_addr));
-			entry->nat_mangled_port = src_port;
+			entry->nat_mangled_port = info->src_port;
                         err = entry->hadb_rcv_func->hip_receive_i2(msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry);
+                                                        entry, info);
                 } else {
-                        err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry);
+                        err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, info);
                 }
                 break;
 
@@ -71,7 +71,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                          err = entry->hadb_rcv_func->hip_receive_r1(msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry))
+                                                        entry, info))
                 //err = hip_receive_r1(msg, src_addr, dst_addr);
                 break;
 
@@ -81,7 +81,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                          err = entry->hadb_rcv_func->hip_receive_r2(msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry))
+                                                        entry, info))
                 //err = hip_receive_r2(msg, src_addr, dst_addr);
                 HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
                 break;
@@ -92,7 +92,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                          err = entry->hadb_rcv_func->hip_receive_update(msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry))
+                                                        entry, info))
                 break;
 
         case HIP_NOTIFY:
@@ -102,7 +102,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                                                         msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry))
+                                                        entry, info))
                 break;
 
 
@@ -112,7 +112,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                          err = entry->hadb_rcv_func->hip_receive_bos(msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry))
+                                                        entry, info))
                 /*In case of BOS the msg->hitr is null, therefore it is replaced
                   with our own HIT, so that the beet state can also be
                   synchronized */

@@ -445,7 +445,8 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr)
+			       struct in6_addr *dst_addr,
+	                       struct hip_stateless_info *msg_info)
 {
 	hip_ha_t tmp;
 	
@@ -478,7 +479,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		// no state
-		err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
+		err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
 		break;
 		
 	case HIP_I2:
@@ -488,9 +489,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 			err = entry->hadb_rcv_func->hip_receive_i2(msg,
 							src_addr,
 							dst_addr,
-							entry);
+							entry,
+							msg_info);
 		} else {
-			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry);
+			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
 		}
 		break;
 		
@@ -501,7 +503,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		//err = hip_receive_r1(msg, src_addr, dst_addr);
 		break;
 		
@@ -511,7 +514,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		//err = hip_receive_r2(msg, src_addr, dst_addr);
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
@@ -522,7 +526,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_update(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		break;
 		
 	case HIP_NOTIFY:
@@ -532,7 +537,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 							msg,
 							src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		break;
 		
 	case HIP_BOS:
@@ -541,7 +547,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
 							src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		/*In case of BOS the msg->hitr is null, therefore it is replaced
 		  with our own HIT, so that the beet state can also be
 		  synchronized */
@@ -595,7 +602,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+	          struct hip_stateless_info *r1_info)
 {
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
@@ -779,7 +787,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr, &ctx->input->hits, &ctx->input->hitr,
 			    &spi_in, transform_esp_suite, 
 			    &ctx->esp_in, &ctx->auth_in, 0,
-			    HIP_SPI_DIRECTION_IN, 0), -1, 
+			    HIP_SPI_DIRECTION_IN, 0, r1_info), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -863,7 +871,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, i2,
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
+								r1_info->dst_port, i2,
 						     entry, 0), -1);
 
  out_err:
@@ -889,7 +898,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r1_info)
 {
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
@@ -974,7 +984,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
- 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
+ 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
 		 "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT) {
@@ -1004,7 +1014,8 @@ int hip_handle_r1(struct hip_common *r1,
 int hip_receive_r1(struct hip_common *hip_common,
 		   struct in6_addr *r1_saddr,
 		   struct in6_addr *r1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *r1_info)
 {
 	int state, mask, err = 0;
 
@@ -1056,7 +1067,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry, r1_info);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1090,7 +1101,8 @@ int hip_receive_r1(struct hip_common *hip_common,
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
@@ -1161,7 +1173,8 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->src_port,
+							i2_info->dst_port,
 						      r2, entry, 0), -1,
 		 "Failed to send r2\n")
 
@@ -1197,7 +1210,8 @@ int hip_create_r2(struct hip_context *ctx,
 int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,		  
-		  hip_ha_t *ha)
+		  hip_ha_t *ha,
+		  struct hip_stateless_info *i2_info)
 {
 	int err = 0, retransmission = 0;
 	struct hip_context *ctx = NULL;
@@ -1429,7 +1443,7 @@ int hip_handle_i2(struct hip_common *i2,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0);
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info);
 	if (err) {
 		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
 //		if (err == -EEXIST)
@@ -1451,7 +1465,7 @@ int hip_handle_i2(struct hip_common *i2,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
-			 1, HIP_SPI_DIRECTION_OUT, 0);
+			 1, HIP_SPI_DIRECTION_OUT, 0, i2_info);
 	if (err) {
 		HIP_DEBUG("Adding of outbound SA failed\n");
 
@@ -1499,7 +1513,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
-	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
+	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
 		 "Creation of R2 failed\n");
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
@@ -1570,7 +1584,8 @@ int hip_handle_i2(struct hip_common *i2,
 int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
 		   struct in6_addr *i2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
@@ -1598,35 +1613,35 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry); //as there is no state established function pointers can't be used here
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 		} else {
 			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
 		}
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 		break;
  	case HIP_STATE_REKEYING:
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1660,7 +1675,8 @@ int hip_receive_i2(struct hip_common *i2,
 int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r2_info)
 {
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
@@ -1717,7 +1733,7 @@ int hip_handle_r2(struct hip_common *r2,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
-			 HIP_SPI_DIRECTION_OUT, 0);
+			 HIP_SPI_DIRECTION_OUT, 0, r2_info);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1774,7 +1790,8 @@ int hip_handle_r2(struct hip_common *r2,
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i1_info)
 {
 	//int err;
 #ifdef CONFIG_HIP_RVS
@@ -1806,7 +1823,7 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
 #endif
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst);
+	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
 }
 
 
@@ -1824,7 +1841,8 @@ int hip_handle_i1(struct hip_common *i1,
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *i1_info)
 {
 	int err = 0, state, mask;
 #ifdef CONFIG_HIP_RVS
@@ -1873,12 +1891,12 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	switch(state) {
 	case HIP_STATE_NONE:
 		/* entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
                 if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		} else {
 			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -1888,11 +1906,11 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_REKEYING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	default:
 		/* should not happen */
@@ -1917,7 +1935,8 @@ int hip_receive_i1(struct hip_common *hip_i1,
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *r2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
@@ -1944,7 +1963,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry, r2_info);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
@@ -1981,7 +2000,8 @@ int hip_receive_r2(struct hip_common *hip_common,
 int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notify_saddr,
 		       struct in6_addr *notity_daddr,
-		       hip_ha_t* entry)
+		       hip_ha_t* entry,
+		  struct hip_stateless_info *notify_info)
 {
 	
 	int err = 0;
@@ -2030,7 +2050,8 @@ int hip_receive_notify(struct hip_common *hip_common,
 int hip_receive_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *bos_info)
 {
 	int err = 0, state = 0;
 
@@ -2051,7 +2072,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:

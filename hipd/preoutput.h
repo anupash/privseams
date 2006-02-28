@@ -15,6 +15,7 @@ extern int hip_raw_sock_v4;
 /* Called by userspace daemon or kernel packet processing to send a
    packet to wire */
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		  uint32_t src_port, uint32_t dst_port,
 		  struct hip_common* buf, hip_ha_t *entry, int retransmit);
 
 #endif /* HIP_PREOUTPUT_H */
