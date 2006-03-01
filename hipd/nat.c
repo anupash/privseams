@@ -233,6 +233,7 @@ int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
 
 int hip_send_udp(struct in6_addr *local_addr, 
                   struct in6_addr *peer_addr,
+		  uint32_t src_port, uint32_t dst_port,
                   struct hip_common* msg,
                   hip_ha_t *entry,
                   int retransmit)
@@ -265,47 +266,66 @@ int hip_send_udp(struct in6_addr *local_addr,
 
 	switch(type) {
 	case HIP_I1:
-        	src.sin_port = htons(0);	/* Choose a random source port --Abi*/
-        	//src.sin_port = htons(HIP_NAT_UDP_PORT);	
-		entry->I_udp_src_port = ntohs(src.sin_port);
-		dst.sin_addr.s_addr = peer_addr->s6_addr32[3];
-        	dst.sin_port = htons(HIP_NAT_UDP_PORT);
-		break;
 	case HIP_I2:
-		src.sin_port = htons(entry->I_udp_src_port);
+        	//src.sin_port = htons(0);	/* Choose a random source port --Abi*/
+        	src.sin_port = htons(HIP_NAT_UDP_PORT);	
+		/* Note: If we change this src.sin_port we need to put a listener to that port*/
 		dst.sin_addr.s_addr = peer_addr->s6_addr32[3];
         	dst.sin_port = htons(HIP_NAT_UDP_PORT);
+		
+		if(entry) 
+			entry->I_udp_src_port = ntohs(src.sin_port);
 		break;
+#if 0
+	case HIP_I2:
+		if(entry) {
+			src.sin_port = htons(entry->I_udp_src_port);
+			dst.sin_addr.s_addr = (&(entry->nat_address))->s6_addr32[3];
+		} else {
+			src.sin_port = htons(src_port);
+                        dst.sin_addr.s_addr = peer_addr->s6_addr32[3];	
+		}
+		//dst.sin_addr.s_addr = peer_addr->s6_addr32[3];
+        	dst.sin_port = htons(HIP_NAT_UDP_PORT);
+		break;
+#endif
 	case HIP_R1:
-	       	src.sin_port = htons(HIP_NAT_UDP_PORT);
-		//entry->R_udp_src_port = ntohs(src.sin_port);
-		dst.sin_addr.s_addr = (&(entry->nat_address))->s6_addr32[3]; //peer_addr->s6_addr32[3];
-		dst.sin_port = htons(entry->nat_mangled_port);
+	case HIP_R2:
+		src.sin_port = htons(HIP_NAT_UDP_PORT);
+		if(entry) {
+			entry->I_udp_src_port = dst_port;
+			memcpy(&(entry->nat_address), peer_addr, sizeof(struct in6_addr));
+		}
+       		dst.sin_port = htons(dst_port);
+                dst.sin_addr.s_addr = peer_addr->s6_addr32[3];	
 		break;
+#if 0
 	case HIP_R2:
 		src.sin_port = htons(HIP_NAT_UDP_PORT);
 		dst.sin_addr.s_addr = (&(entry->nat_address))->s6_addr32[3]; //peer_addr->s6_addr32[3];
 		dst.sin_port = htons(entry->nat_mangled_port);
 		break;
+#endif
 	case HIP_UPDATE:
 	case HIP_NOTIFY:
 	case HIP_BOS:
 	case HIP_CLOSE:
 	case HIP_CLOSE_ACK:
-		src.sin_port = htons(entry->I_udp_src_port);        /* Choose a random source port --Abi*/
+		src.sin_port = htons(entry->I_udp_src_port);
 		break;
-	/* Deal with update, notify, bos, close, and close_ack later... They seem to be a bit tricky*/
+	/* Deal with update, notify, bos, close, and close_ack later
+		... They seem to be a bit tricky*/
 	 default:
                 HIP_ERROR("Unknown packet %d\n", type);
                 err = -ENOSYS;
 	}			
-	
+#if 0	
 	if(bind(sockfd, (struct sockaddr *)&src, sizeof(src))< 0)
         {
                 HIP_ERROR("Error binding socket to port %d\n", src.sin_port);
                 return -1;
         }
-
+#endif
 
         hip_zero_msg_checksum(msg);
         msg->checksum = checksum_packet((char*)msg, &src, &dst);

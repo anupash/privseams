@@ -53,7 +53,7 @@ struct list_head {
 #define HIP_HIT_PREFIX_STR      "/8"
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
-
+#define HIP_NAT_UDP_SRC_PORT 54321 /*Need to put this number as const --Abi*/
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP

@@ -41,7 +41,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
 	{
 		return hip_send_udp(local_addr, peer_addr,
-				    msg, entry, retransmit);
+				    src_port, dst_port, msg, entry, retransmit);
 
 	} 
 	

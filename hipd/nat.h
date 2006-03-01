@@ -22,6 +22,7 @@ int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
 
 int hip_send_udp(struct in6_addr *local_addr,
                   struct in6_addr *peer_addr,
+		  uint32_t src_port, uint32_t dst_port,
                   struct hip_common* msg,
                   hip_ha_t *entry,
                   int retransmit);

@@ -134,7 +134,7 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr, int *src_port)
+			 struct in6_addr *daddr, struct hip_stateless_info *msg_info)
 {
         struct sockaddr_in addr_from;
         struct cmsghdr *cmsg;
@@ -183,7 +183,7 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 		 "Could not determine IPv4 dst, dropping\n");
 
 	HIP_DEBUG("port number : %d, ntohs %d\n", addr_from.sin_port, ntohs(addr_from.sin_port));
-	*src_port = ntohs(addr_from.sin_port);
+	msg_info->src_port = ntohs(addr_from.sin_port);
 	if (read_addr) {
 		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
 		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);

@@ -553,12 +553,12 @@ int main(int argc, char *argv[]) {
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
-			int src_port = 0;
+			//int src_port = 0;
 
 			hip_msg_init(hip_msg);
 			HIP_DEBUG("Getting a msg on v4\n");	
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
-						 &saddr, &daddr, &src_port))
+						 &saddr, &daddr, &pkt_info))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
@@ -577,7 +577,7 @@ int main(int argc, char *argv[]) {
 			
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
-			int src_port = 0;
+			//int src_port = 0;
 
 			hip_msg_init(hip_msg);
 			HIP_DEBUG("Getting a msg on udp\n");	
@@ -585,11 +585,11 @@ int main(int argc, char *argv[]) {
 		//	if (hip_read_control_msg_udp(hip_raw_sock_udp, hip_msg, 1,
                   //                                 &saddr, &daddr))
         		if (hip_read_control_msg_v4(hip_raw_sock_udp, hip_msg, 1,
-                                                 &saddr, &daddr, &src_port))
+                                                 &saddr, &daddr, &pkt_info))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
-				err =  hip_receive_control_packet_udp(hip_msg,
+				err =  hip_receive_control_packet(hip_msg,
                                                                  &saddr,
                                                                  &daddr,
 								 &pkt_info);
