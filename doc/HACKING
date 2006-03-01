@@ -58,10 +58,85 @@ CODING CONVENTIONS
   userspace code. This rule may be relaxed in the kernel code because
   the space is very limited due to the 8 character indentation.
 
-ARCH POLICY
-==========
+QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
+================================================
 
-*** Important: see that your umask is 0022 before you make any commits ***
+These instructions assume that you want to access the HIPL source code
+using ssh. Note: tla and bazaar provide the same functionality but
+bazaar was faster and more user friendly when this was written.
+
+# Register an account:
+#
+baz register-archive hipl-dev@freelists.org--hipl \
+       sftp://mkomu@hipl.hiit.fi/var/archive/hipl
+baz my-default-archive hipl-dev@freelists.org--hipl
+
+# Get a working copy from the main branch:
+#
+baz get hipl--main--2.6 hipl--main--2.6
+
+# Copy the tla hook if you want to get your commit logs to the mailing list:
+#
+cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
+
+# Different ways to commit code:
+#
+a) baz commit # Open's your default editor and commits.
+b) emacs `tla make-log`; tla commit
+c) baz commit -s "Explanation jaada jaada"
+
+# How to check what your have modified in the tree
+#
+baz changes
+
+# How to make a branch from the current version of the main branch
+#
+baz my-default archive # Make sure that you are accessing the HIPL archive
+baz archive-setup hipl--mybranch--2.6
+baz tag hipl--main--2.6 hipl--mybranch--2.6
+
+# Get the new branch
+#
+baz get hipl--mybranch--2.6 hipl--mybranch--2.6
+
+# How to synchronize branches... remember to make clean commits, i.e. do
+# NOT commit a merge and local modifications in the same commit!
+#
+cd hipl--mybranch--2.6
+baz changes # Check that the tree is unmodified
+baz star-merge hipl--main--2.6
+
+--- Optional ---
+
+Below are some instructions on using revision libraries. They speed-up
+tla/baz operations.
+
+# Make a revision library (otherwise e.g. commit and changes take up to
+# 15 mins!)
+#
+mkdir ~/.tla-rev-lib
+baz my-revision-library ~/.tla-rev-lib/
+baz library-config --greedy --sparse ~/.tla-rev-lib/
+
+# Get a working copy from the main branch using revision libraries:
+#
+baz get --link hipl--main--2.6 hipl--main--2.6
+
+Also, the tla usage is optimized using hard-linked revision
+libraries.
+
+# Run the command below in your working copy (e.g. monthly) if you
+# experience a serious slow-down in the commit speed or you want to enable
+# revision libraries in your local copy:
+#
+cd hipl--main--2.6
+baz changes --link
+
+
+ARCH POLICY
+===========
+
+*** Important: see that your umask is 0002 before you make any commits ***
 
 hipl--main--2.6 is the "stable" branch for HIPL code. Do not put any
 experimental code in there because other people are relying on that
@@ -70,15 +145,40 @@ branch, and use/create other branches to develop experimental
 code. When you have tested and are sure that code works, you can merge
 it into the stable branch.
 
-* Some points in the branch quality assurance
+Some points in the branch quality assurance:
 
-- the code should compile as it is without errors
+- the code must compile as it is without errors
 - compiler warning messages must be taken seriously and must not be ignored
   unless you really know what the message means. And we REALLY mean really.
 - the base exchange should be manually tested between two hosts
-- update protocol should work too
-- the code should leak memory or do bad locking
+- UPDATE packet exchange should work
+- the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
+
+UPGRADING THE KERNEL
+====================
+
+# note: there is a perl script called "hashline" diff which is more
+# convinient to use in upgrading the kernel (to check for added/deleted
+# files)
+
+% <get the patch to ~/down>
+% cd hipl--fix--2.6/linux
+% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
+% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
+% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_LOG`
+% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+  (/error finding file id \(2: No such file or directory\)/)' \
+    </tmp/TLA_LOG|cut -d' ' -f3`
+% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
+% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
+    >/tmp/TLA_DIR_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
+
+Check HUNK messages from PATCH_LOG manually.
 
 DEBUGGING
 =========
@@ -196,3 +296,35 @@ new functionality or repairing old functionality. Still, there are
 some tangled functionality, especially in the kernel, that is
 very difficult to test with unit testing. Manual black box testing
 should be used to cover changes in the code in such cases.
+
+PREBUILT BINARY PACKAGES
+========================
+
+Note well: Currently the status of the packaging scripts is in very initial
+phase. They are not tested throughly.
+
+Two separate packages are planned to be provided by HIPL: one for user
+space software and the other for kernel and kernel modules. Currently only
+scripts for building user space packages exist.
+
+
+There are scripts in directory test/packaging that can be used to create
+binary packages. The aim for these packages is for easier testing of HIPL
+software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
+packages can be created. 
+
+To create the RPM package, go to the directory test/packaging. Then run
+./create-hip-us-pkg. This will create a source package (in tar.gz form in
+the same directory) which will be used when building the RPM file. After
+the script has run successfully, follow the instructions given by the
+script. That is, login as root and copy the source package (e.g.
+hipl-userspace-1.0-1.tgz) to directory /usr/src/rpm/SOURCES. Then issue the
+command "rpmbuild -ba <hiplroot>/test/packaging/hipl-userspace-1.0-1.spec".
+When everyting is finished successfully, there will be a binary RPM package
+"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package can
+then be installed with rpm -i.
+
+DEB package is created similarly. First go to the directory test/packaging
+and then run ./create-hip-us-deb. The resulting package file is placed into
+the same directory. The package can be installed using dpkg, e.g. "dpkg -i
+hipl-userspace_1.0-1_i386.deb".

@@ -1,0 +1,181 @@
+Version numbering
+=================
+
+This file contains the release note for HIPL version 0.1.2
+(hipl--main--2.6--patch-41).
+
+XX FIX:
+
+XX FIX: base-03 was successfully interoperated with Boeing (but not with 
+Ericsson):
+
+Base draft (diff 02,03):
+
+  - all parameter values changed (section 6.2)
+  - parameter type order strictly enforced, except for 2048-4095 (6.2)
+  - HIT computation has changed -- now they are 120 bits (section 3)
+  - state machine 4.4.2 (not done yet):
+    - state machine changed; there are two instances where you need to
+      compare HITs, etc (Aura et al)
+    - CLOSE handling
+  - nonce I and J should hashed into the DH keymaterial
+  - does not affect interops (?): puzzle storing has changed (see 
+    section C) - not done
+  - the HI in I2 can be unencrypted (not done yet)
+  - notify has changed (optional)
+
+ESP-draft:
+
+  - SPI is gone, replaced with ESP_INFO
+
+
+Features
+========
+
+
+draft-ietf-hip-base-01.txt:
+
+  Supported features:
+    * basic base exchange and the state machine (see unsupported features
+      below)
+    * 126 bit HITs
+    * RSA and DSA host identifiers
+    * HIP transforms: ENCR-AES-CBC and ENCR-NULL with HMAC-SHA1
+    * ESP transforms: ESP-AES-CBC with HMAC-SHA1,
+                      ESP-3DES-CBC with HMAC-SHA1 and
+                      ESP-NULL with HMAC-SHA1
+    * receiving of notification messages
+    * receiving of rekeying (NES) messages
+  Unsupported features:
+    * Dynamic selection of RSA/DSA (requires recompilation)
+    * ESP transforms: ESP-3DES-CBC with HMAC-MD5,
+                      ESP-BLOWFISH-CBC with HMAC-SHA1 and
+                      ESP-NULL with HMAC-MD5
+    * CLOSE and CLOSE_ACK packets and states
+    * retransmission of packets
+    * certificates
+    * sending of notication messages
+    * periodic rekeying (NES) of SAs
+
+draft-ietf-hip-mm-00.txt:
+
+  Supported features:
+    * Section 5.1: Mobility with a single SA pair
+    * Section 5.2: Host Multihoming
+
+  Unsupported features:
+    * 128 bit HITs
+    * periodic recomputation of precreated R1s
+    * the opaque field is currently just constant
+    * Diffie-Hellman parameter in sections 5.1 and 5.2
+
+
+See also http://infrahip.hiit.fi/bugzilla
+
+Changes to hipconf
+==================
+
+* 'hipconf new hi default' creates 4 HIs: 2 anonymous and 2 public ones.
+  (Anonymous HI key files contain the string "_anon" and public HI key files
+   contain the string "_pub" accordingly.)   
+* 'hipconf add hi default' adds all 4 keys into the kernel database.
+* 'hipconf del <local hit>' deletes a local HI from the kernel database.
+
+Interoperability Status
+=======================
+
+We interoperated during IETF62 with Boeing and Ericsson. The base
+exchange was successfully interoperated with RSA and AES. We tried
+also RSA-to-DSA base exchange, and it worked too.
+
+Interoperating of the mobility and multihoming extensions was only
+partially successful. This release does not interoperate with Ericsson
+and Boeing.
+
+Test Platform and Environment
+=============================
+
+The release was validated using the following configuration:
+
+Initiator:
+* Intel Pentium M 1.60 GHz laptop (IBM R51) with 2048 KB cache
+* 1 GB of memory
+* Debian Sarge
+* 1 network interface
+  - eth0: 3ffe::1
+
+Responder:
+* Intel Pentium III 700 Mhz laptop (HP Omnibook 500), L2 cache 256 KB
+* 512  MB of memory
+* Fedora Core 3
+* 2 network interfaces
+  - eth0: 3ffe::2, connected with a cable to the switch
+  - eth1: initially down, no cable
+
+The hosts were connected a LAN through a switch. The responder had two
+network interfaces but only one of them was connected at time using a
+single network cable.
+
+Test Scenarios
+==============
+
+Compilation of HIPL was successful on both Debian and FC3. See the
+doc/HOWTO for instructions for compilation instructions and how to
+set-up the environment for HIP. Below you find the commands we used
+for testing this release (against itself):
+
+Base Exchange:
+  responder % tools/hipsetup -r
+  initiator % tools/hipsetup -i responder-hit
+
+The mobility and handover tests were run so that the network setup on
+the responder was reset after each test case.
+
+Mobility with Soft Handover:
+  responder % nc6 -l -p 12345
+  initiator % hipconf add map responder-hit 3ffe::2
+  initiator % nc6 responder-hit 12345
+  initiator % <type some text on the nc6>
+  responder % ifconfig eth1 up
+  responder % ip addr add 3ffe::3/64 dev eth0
+  responder % ip addr del 3ffe::2/64 dev eth0
+  responder % <type some text on the nc6>
+
+Mobility with Hard Handover:
+  responder % nc6 -l -p 12345
+  initiator % hipconf add map responder-hit 3ffe::2
+  initiator % nc6 responder-hit 12345
+  initiator % <type some text on the nc6>
+  responder % ifconfig eth1 up
+  responder % ip addr del 3ffe::2/64 dev eth0
+  responder % ip addr add 3ffe::3/64 dev eth0
+  responder % <type some text on the nc6>
+
+Multihoming with Soft Handover:
+  responder % nc6 -l -p 12345
+  initiator % hipconf add map responder-hit 3ffe::2
+  initiator % nc6 responder-hit 12345
+  initiator % <type some text on the nc6>
+  responder % ifconfig eth1 up
+  responder % ip addr add 3ffe::3/64 dev eth1
+  responder % ifconfig eth0 down
+  responder % <type some text on the nc6>
+
+Multihoming with Hard Handover:
+  responder % nc6 -l -p 12345
+  initiator % hipconf add map responder-hit 3ffe::2
+  initiator % nc6 responder-hit 12345
+  initiator % <type some text on the nc6>
+  responder % ifconfig eth0 down
+  responder % ifconfig eth1 up
+  responder % ip addr add 3ffe::3/64 dev eth1
+  responder % <type some text on the nc6>
+
+Initially the base exchange did not succeed because the responder got
+"destination unreachable" ICMPv6. I guess this was related on how the
+routing was set-up. Mobility and multihoming tests failed couple of
+times because the tester forgot to change the cable in incorrect
+sequence (and we don't have retransmissions implemented).
+
+As summary, both the base exchange and m&m extensions tests for this
+release were passed.

@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   }
 
   hints.ai_flags = AI_CANONNAME | AI_HIP;
-  hints.ai_family = AF_INET6;
+  hints.ai_family = AF_UNSPEC; 	//AF_UNSPEC;	//AG: for testing LSIs
   hints.ai_socktype = 0;
   hints.ai_protocol = 0;
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     printf("*** ERROR: %s ***\n", gai_strerror(a));
     return(1);
   }
-
+  printf("*** Test SUCCESS\n");
   for(ai = res; ai != NULL; ai = ai->ai_next) {
     printf("ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d ai_addrlen=%d ai_canonname=%s\n", ai->ai_flags, ai->ai_family, ai->ai_socktype, ai->ai_protocol, ai->ai_addrlen, ai->ai_canonname);
 

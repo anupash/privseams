@@ -18,30 +18,29 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
-#include <net/hip.h>
+#include <hip.h>
 #include <sysexits.h>
 
 #include <assert.h>
 
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
+#include <openssl/rsa.h>
 #include <openssl/pem.h>
 
-#include "libinet6/debug.h"
-#include "libinet6/crypto.h"
+#include "debug.h"
+#include "crypto.h"
 #include "builder.h"
 
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
-#define ACTION_RST 3
-#define ACTION_NEW 4
-#define ACTION_RVS 5
-#define ACTION_BOS 6
-#define ACTION_MAX 7 /* exclusive */
+#define ACTION_NEW 3
+#define ACTION_HIP 4
+#define ACTION_MAX 5 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI 1
+#define TYPE_HI  1
 #define TYPE_MAP 2
 #define TYPE_RST 3
 #define TYPE_RVS 4
@@ -58,6 +57,7 @@ int handle_map(struct hip_common *, int type, const char **opt, int optc);
 int handle_rst(struct hip_common *, int type, const char **opt, int optc);
 int handle_bos(struct hip_common *, int type, const char **opt, int optc);
 int handle_rvs(struct hip_common *, int type, const char **opt, int optc);
+int handle_del(struct hip_common *, int type, const char **opt, int optc);
 int get_action(char *action);
 int get_type(char *type);
 

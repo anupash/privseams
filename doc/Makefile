@@ -11,6 +11,7 @@ FIG2DEV  = fig2dev
 BIBTEX   = bibtex
 DVIPDF   = dvipdf
 PDFLATEX = pdflatex
+XMLTO    = xmlto
 PERL     = perl
 
 LINUX      = ../linux
@@ -23,6 +24,11 @@ FIGS = fig/collaboration.fig fig/hooks.fig fig/kernel_model.fig \
 BIBS                   = design_choices.bib
 DESIGN_CHOICES_SOURCES = catalogue.tex design_choices_macros.tex hipl.tex
 DESIGN_CHOICES         = design_choices
+HOWTO                  = HOWTO
+HOWTO_HTML_DIR         = howto-html
+
+DOCDIR_PREFIX = /usr/share/doc
+DOCDIR = $(DOCDIR_PREFIX)/hipl
 
 ### COMPILATION RULESETS ######################################################
 
@@ -47,9 +53,16 @@ DESIGN_CHOICES         = design_choices
 %.ps:   %.dvi
 	$(DVIPS) -o $*.ps $*.dvi
 
+%.txt:   %.xml
+	$(XMLTO) txt $<
+
+%.html:  %.xml
+	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
+
 ### TARGETS ##################################################################
 
-all:	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
+all:	$(HOWTO).txt $(HOWTO).html \
+	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
 
 $(DESIGN_CHOICES).dvi:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
 			$(FIGS:.fig=.eps)
@@ -59,8 +72,22 @@ $(DESIGN_CHOICES).pdf:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
 
 $(DESIGN_CHOICES).ps:	$(DESIGN_CHOICES).dvi
 
+$(HOWTO).txt:	$(HOWTO).xml
+$(HOWTO).html:	$(HOWTO).xml
+
 clean:
 	rm -f *~ *.aux *.log *.toc *.bbl *.blg *.ps *.dvi *.pdf *.out
+	rm -f HOWTO.txt
 	rm -f $(patsubst %.fig, %.eps, $(FIGS))
+	rm -rf $(HOWTO_HTML_DIR)
+
+install: all
+	@echo
+	@echo "** Copying documentation files to $(DOCDIR) **"
+	@echo
+	mkdir -p $(DOCDIR)
+	cp $(HOWTO).txt $(DOCDIR)
+	cp -a $(HOWTO_HTML_DIR) $(DOCDIR)
+	cp $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf $(DESIGN_CHOICES).dvi $(DOCDIR)
 
 .phony: clean
