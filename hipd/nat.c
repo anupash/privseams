@@ -246,6 +246,10 @@ int hip_send_udp(struct in6_addr *local_addr,
 	len = hip_get_msg_total_len(msg);
 
 	HIP_DEBUG("--------------Sending peer using UDP-----------\n");
+	if(local_addr) HIP_DEBUG_IN6ADDR("localAddr:", local_addr);
+	if(peer_addr)  HIP_DEBUG_IN6ADDR("peerAddr:", peer_addr);
+	HIP_DEBUG("src port=%d, dst port=%d\n", src_port, dst_port);	
+
 	src.sin_family=AF_INET;
 
         if (local_addr)
@@ -266,9 +270,11 @@ int hip_send_udp(struct in6_addr *local_addr,
 
 	switch(type) {
 	case HIP_I1:
+		HIP_DEBUG("***************Sending I1**********\n");
 	case HIP_I2:
+		HIP_DEBUG("***************Sending I2**********\n");
         	//src.sin_port = htons(0);	/* Choose a random source port --Abi*/
-        	src.sin_port = htons(HIP_NAT_UDP_PORT);	
+        	src.sin_port = htons(HIP_NAT_UDP_SRC_PORT);	
 		/* Note: If we change this src.sin_port we need to put a listener to that port*/
 		dst.sin_addr.s_addr = peer_addr->s6_addr32[3];
         	dst.sin_port = htons(HIP_NAT_UDP_PORT);
@@ -331,7 +337,7 @@ int hip_send_udp(struct in6_addr *local_addr,
         msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
 
-        n = sendto(sockfd, msg, len, 0, (struct sockaddr *)&dst, sizeof(dst));
+        n = sendto( hip_raw_sock_udp, msg, len, 0, (struct sockaddr *)&dst, sizeof(dst));
 
         if(n<0)
         {

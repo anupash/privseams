@@ -1173,10 +1173,11 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->src_port,
-							i2_info->dst_port,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
+							i2_info->src_port,
 						      r2, entry, 0), -1,
 		 "Failed to send r2\n")
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
