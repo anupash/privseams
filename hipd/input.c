@@ -1199,7 +1199,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_daddr,		  
 		  hip_ha_t *ha)
 {
-	int err = 0, retransmission = 0, initiator_reset = 0;
+	int err = 0, retransmission = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1242,15 +1242,11 @@ int hip_handle_i2(struct hip_common *i2,
  	HIP_DEBUG("Cookie accepted\n");
 
 	if (entry) {
-		/* required for SP set-up */
-		initiator_reset =
-			(entry->state == HIP_STATE_ESTABLISHED ? 1 : 0);
-
-			/* If the I2 packet is a retransmission, we need reuse
-			   the the SPI/keymat that was setup already when the
-			   first I2 was received. However it is a
-			   retransmission only if the responder is in R2-SENT
-			   STATE */
+		/* If the I2 packet is a retransmission, we need reuse
+		   the the SPI/keymat that was setup already when the
+		   first I2 was received. However it is a
+		   retransmission only if the responder is in R2-SENT
+		   STATE */
 		retransmission = 
 			(entry->state == HIP_STATE_R2_SENT ? 1 : 0);
 	}
@@ -1323,7 +1319,7 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 
 	HIP_DEBUG("Crypto encrypted\n");
-	HIP_HEXDUMP("IV: ", iv, 16);
+	_HIP_HEXDUMP("IV: ", iv, 16); /* Note: iv can be NULL */
 	
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
 				      crypto_len, &ctx->hip_enc_in.key,
@@ -1473,9 +1469,8 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
-				       i2_saddr, i2_daddr, IPPROTO_ESP, 1,
-				       initiator_reset), -1,
-		 "Setting up SP pair failed\n");
+				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+		 -1, "Setting up SP pair failed\n");
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */

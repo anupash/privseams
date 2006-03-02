@@ -266,7 +266,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	/* If peer_name is not specified the destination is looked in the hadb */
 	if (!peer_name)
 		hints.ai_flags |= AI_KERNEL_LIST;
-	hints.ai_family = AF_INET6; /* Legacy API supports only HIT-in-IPv6 */
+	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = socktype;
 	hints.ai_protocol = proto;
 	

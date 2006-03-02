@@ -25,6 +25,11 @@
 #include "i3_client_api.h"
 #endif
 
+#ifdef CONFIG_HIP_OPENDHT
+#include "tracker.h"
+#include "dhtresolver.h"
+#endif
+
 #define HIP_HIT_DEV "dummy0"
 
 #ifdef CONFIG_HIP_HI3

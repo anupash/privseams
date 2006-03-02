@@ -86,8 +86,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	};
  	hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
-		HIP_ESP_NULL_SHA1,
-		HIP_ESP_3DES_SHA1
+		HIP_ESP_3DES_SHA1,
+		HIP_ESP_NULL_SHA1
 	};
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
