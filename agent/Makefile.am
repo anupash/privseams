@@ -12,7 +12,7 @@ include_HEADERS =
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI)
 
 sbin_PROGRAMS = agent
-agent_SOURCES = agent.c agent_tools.c connhipd.c hit_db.c gui_interface.c
+agent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 agent_LDADD = ../libinet6/.libs/libinet6.a ../libhipgui/.libs/libhipgui.a

@@ -102,6 +102,89 @@ out_err:
 
 /******************************************************************************/
 /**
+*/
+int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
+{
+	/* Variables. */
+	struct hip_tlv_common *param = NULL;
+	hip_hdr_type_t type;
+	HIT_Item hit;
+	socklen_t alen;
+	struct in6_addr *lhit;
+	int err = 0, ret, n;
+	char chit[128];
+
+	type = hip_get_msg_type(msg);
+	HIP_DEBUG("Message received successfully from daemon with type %d.\n", type);
+
+	if (type == SO_HIP_ADD_LOCAL_HI)
+	{
+		n = 0;
+
+		while((param = hip_get_next_param(msg, param)))
+		{
+			if (hip_get_param_type(param) == HIP_PARAM_HIT)
+			{
+				lhit = hip_get_param_contents_direct(param);
+				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
+				print_hit_to_buffer(chit, lhit);
+				gui_add_hit(chit);
+				n++;
+			}
+		}
+	}
+	else
+	{
+		strcpy(hit.name, "NewHIT");
+		strcpy(hit.url, "<notset>");
+		hit.port = 0;
+		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
+		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));
+		ret = check_hit(&hit);
+		
+		if (ret == 0)
+		{
+			HIP_DEBUG("Message accepted, sending back to daemon.\n");
+
+			alen = sizeof(addr);
+			n = sendto(hip_agent_sock, msg,
+			           hip_get_msg_total_len(msg), 0,
+			           (struct sockaddr *)&addr, alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Could not send message back to daemon.\n");
+				err = -1;
+				goto out_err;
+			}		
+	
+			HIP_DEBUG("Reply sent successfully\n");
+		}
+		else
+		{
+			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
+
+			alen = sizeof(addr);
+			n = sendto(hip_agent_sock, "no", 2, 0,
+			           (struct sockaddr *)&addr, alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Could not send reply to daemon.\n");
+				err = -1;
+				goto out_err;
+			}		
+	
+			HIP_DEBUG("Rejection sent successfully\n");
+		}
+	}
+	
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	This thread keeps the HIP daemon connection alive.
 */
 int connhipd_thread(void *data)
@@ -111,7 +194,6 @@ int connhipd_thread(void *data)
 	struct sockaddr_un agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
-	HIT_Item hit;
 
 	/* Start handling. */
 	hip_agent_thread_started = 1;
@@ -136,7 +218,7 @@ int connhipd_thread(void *data)
 
 		HIP_DEBUG("Receiving message (%d bytes)\n", len);
 		n = recvfrom(hip_agent_sock, msg, len, 0,
-			     (struct sockaddr *)&agent_addr, &alen);
+		             (struct sockaddr *)&agent_addr, &alen);
 
 		if (n < 0)
 		{
@@ -146,59 +228,42 @@ int connhipd_thread(void *data)
 		}
 
 		HIP_ASSERT(n == len);
-		HIP_DEBUG("Whole message received successfully, asking for accept...\n");
-
-		/* TODO XX: Modify message and check message type. */
-		strcpy(hit.name, "NewHIT");
-		strcpy(hit.url, "<notset>");
-		hit.port = 0;
-		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
-		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));
-		ret = gui_check_hit(&hit);
 		
-		if (ret == 0)
-		{
-			HIP_DEBUG("Message accepted, sending back to daemon.\n");
-
-			alen = sizeof(agent_addr);
-			n = sendto(hip_agent_sock, msg,
-				   hip_get_msg_total_len(msg), 0,
-			           (struct sockaddr *)&agent_addr, alen);
-			if (n < 0)
-			{
-				HIP_ERROR("Could not send message back to daemon.\n");
-				err = -1;
-				goto out_err;
-			}		
-	
-			HIP_DEBUG("Reply sent successfully\n");
-		}
-		else
-		{
-			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
-
-			alen = sizeof(agent_addr);
-			n = sendto(hip_agent_sock, "no", 2, 0,
-			           (struct sockaddr *)&agent_addr, alen);
-			if (n < 0)
-			{
-				HIP_ERROR("Could not send reply to daemon.\n");
-				err = -1;
-				goto out_err;
-			}		
-	
-			HIP_DEBUG("Rejection sent successfully\n");
-		}
+		connhipd_handle_msg(msg, &agent_addr);
 	}
 
 
- out_err:
+out_err:
+	/* Send quit message to daemon. */
+	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
+	bzero(&agent_addr, sizeof(agent_addr));
+	agent_addr.sun_family = AF_LOCAL;
+	strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH);
+	alen = sizeof(agent_addr);
+	n = sendto(hip_agent_sock, msg, sizeof(struct hip_common), 0,
+	           (struct sockaddr *)&agent_addr, alen);
+	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
+	
 	if (hip_agent_sock) close(hip_agent_sock);
 	if (msg != NULL) HIP_FREE(msg);
-	
+
+	hip_agent_thread_started = 0;
 	agent_exit();
 	
-	return err;
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Quits connection thread. Function agent_exit() should be called before
+	calling this.
+*/
+void connhipd_quit(void)
+{
+	/* Wait connection thread to exit. */
+	//while (hip_agent_thread_started);
 }
 /* END OF FUNCTION */
 
