@@ -15,7 +15,10 @@
 #include <string.h>
 
 extern int hip_raw_sock_udp;
+extern int hip_nat_status;
 
+int hip_nat_on(struct hip_common *msg);
+int hip_nat_off(struct hip_common *msg);
 int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
                          int read_addr, struct in6_addr *saddr,
                          struct in6_addr *daddr);

@@ -17,6 +17,8 @@ int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
 int hip_raw_sock_udp = 0;	/* For NAT traversal of IPv4 packets */
 
+int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
@@ -589,7 +591,7 @@ int main(int argc, char *argv[]) {
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
-				err =  hip_receive_control_packet(hip_msg,
+				err =  hip_receive_control_packet_udp(hip_msg,
                                                                  &saddr,
                                                                  &daddr,
 								 &pkt_info);

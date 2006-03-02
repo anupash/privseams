@@ -1380,7 +1380,13 @@ int hip_handle_i2(struct hip_common *i2,
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
 		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		
+		/*FIXME : This is a temporary fix. Need to think on this a bit ! --Abi*/
+		//Add other info here
+		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
+		{
+			entry->nat = 1;
+			entry->I_udp_src_port = i2_info->src_port;
+		}
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);

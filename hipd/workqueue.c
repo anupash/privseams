@@ -351,6 +351,14 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
+	case SO_HIP_SET_NAT_ON:
+		HIP_DEBUG("Nat on!!\n");
+		err = hip_nat_on(msg);
+		break;
+	case SO_HIP_SET_NAT_OFF:
+		HIP_DEBUG("Nat off!!\n");
+		err = hip_nat_off(msg);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

@@ -289,11 +289,18 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 			HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
 		else
 			HIP_INFO("Could not assign local hit, continuing\n");
-
+		
+		/* Set the nat status here */
+		if(hip_nat_status)
+			entry->nat = 1;
+		
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry); /* released at the end */
 	}
-
+	/* Set the nat status here */
+	if(hip_nat_status)
+		entry->nat = 1;
+	
 	/* add initial HIT-IP mapping */
 	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
 		err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
