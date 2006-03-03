@@ -292,6 +292,15 @@ void gui_set_entry_fill_flag(int fill)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/** Terminate GUI. */
+void gui_terminate(void)
+{
+	gtk_main_quit();
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

@@ -190,17 +190,38 @@ out_err:
 int connhipd_thread(void *data)
 {
 	/* Variables. */
-	int err = 0, n, len, ret;
+	int err = 0, n, len, ret, max_fd;
 	struct sockaddr_un agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
+	fd_set read_fdset;
+	struct timeval tv;
+
+	HIP_DEBUG("Waiting messages...\n");
 
 	/* Start handling. */
 	hip_agent_thread_started = 1;
 	while (agent_exec())
 	{
-		HIP_DEBUG("Waiting msg...\n");
+		FD_ZERO(&read_fdset);
+		FD_SET(hip_agent_sock, &read_fdset);
+		max_fd = hip_agent_sock;
+		tv.tv_sec = HIP_SELECT_TIMEOUT;
+		tv.tv_usec = 0;
 
+		/* Wait for incoming packets. */
+		if (select(max_fd + 1, &read_fdset, NULL,NULL, &tv) == -1)
+		{
+			HIP_ERROR("select() error: %s.\n", strerror(errno));
+			err = -1;
+			goto out_err;
+		}
+		
+		if (!FD_ISSET(hip_agent_sock, &read_fdset))
+		{
+			continue;
+		}
+		
 		bzero(&agent_addr, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
@@ -250,6 +271,8 @@ out_err:
 	hip_agent_thread_started = 0;
 	agent_exit();
 	
+	HIP_DEBUG("Connection thread exit.\n");
+
 	return (err);
 }
 /* END OF FUNCTION */
@@ -263,7 +286,7 @@ out_err:
 void connhipd_quit(void)
 {
 	/* Wait connection thread to exit. */
-	//while (hip_agent_thread_started);
+	while (hip_agent_thread_started);
 }
 /* END OF FUNCTION */
 

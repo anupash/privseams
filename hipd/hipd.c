@@ -628,7 +628,7 @@ int main(int argc, char *argv[]) {
 			}
 			else if (msg_type == SO_HIP_AGENT_QUIT)
 			{
-				HIP_DEBUG("Agent exits.\n");
+				HIP_DEBUG("Agent quit.\n");
 				hip_agent_status = 0;
 			}
 		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {

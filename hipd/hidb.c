@@ -697,13 +697,6 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
 		err = func(tmp, opaque);
 		if (err) break;
-
-/*		hits = (struct endpoint_hip *)realloc(hits, n + 1);
-		hits[n].family = 0;
-		hits[n].length = sizeof(endpoint_hip);
-		hits[n].flags = HIP_HIT_KNOWN;
-		memcpy(&hits[n].hit, &tmp->lhi.hit, sizeof(hits[n].hit));
-		n++;*/
 	}
 
 	HIP_READ_UNLOCK_DB(db);

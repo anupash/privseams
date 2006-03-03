@@ -28,6 +28,8 @@ void gui_new_button(char *, char *, GtkWidget *, int, int, int, int, int,
                     void (*)(GtkWidget *, gpointer), int);
 void gui_set_entry_fill_flag(int fill);
 
+void gui_terminate(void);
+
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/
