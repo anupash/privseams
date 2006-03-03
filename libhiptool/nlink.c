@@ -523,23 +523,22 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 {
 	struct rtmsg *r = NLMSG_DATA(n);
         struct rtattr *tb[RTA_MAX+1];
-	int err = 0;
+	union {
+		struct in_addr *in;
+		struct in6_addr *in6;
+	} addr;
+	int err = 0, entry;
 
 	/* see print_route() in ip/iproute.c */
 
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
+	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
 
-	if (tb[RTA_SRC]) {
-		HIP_ASSERT(r->rtm_family == AF_INET6 &&
-			   (r->rtm_src_len+7)/8 == sizeof(struct in6_addr));
-		memcpy(src_addr, RTA_DATA(tb[RTA_SRC]), (r->rtm_src_len+7)/8);
-	} else if (tb[RTA_PREFSRC]) {
-		HIP_ASSERT(r->rtm_family == AF_INET6);
-		memcpy(src_addr, RTA_DATA(tb[RTA_PREFSRC]),
-		       sizeof(struct in6_addr));
-	} else {
-		HIP_ERROR("Could not find a source route\n");
-	}
+	if(r->rtm_family == AF_INET) {
+		IPV4_TO_IPV6_MAP(addr.in, src_addr);
+	} else
+		memcpy(src_addr, addr.in6, sizeof(struct in6_addr));
 
  out_err:
 
@@ -551,7 +550,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		    struct in6_addr *dst_addr,
 		    char *idev,
 		    char *odev,
-		    int preferred_family,
+		    int family,
 		    struct idxmap **idxmap)
 {
 	struct {
@@ -559,16 +558,24 @@ int hip_iproute_get(struct rtnl_handle *rth,
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
-	int err = 0, idx;
+	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
-
+	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
-	HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
-			     INET6_ADDRSTRLEN)), -1,
-		 "inet_pton\n");
-
+	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
+	
+	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
+		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
+		preferred_family = AF_INET;
+		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
+                             INET6_ADDRSTRLEN)), -1,"inet_pton\n");
+	} else {	
+		HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
+				     INET6_ADDRSTRLEN)), -1,
+			 "inet_pton\n");
+	}
 	memset(&req, 0, sizeof(req));
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
@@ -783,58 +790,23 @@ int get_u8(__u8 *val, const char *arg, int base)
 }
 
 int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
-		    char *name, char *key, int max)
+		    char *name, char *key, int key_len, int max)
 {
 	int len = 0;
-	int slen = strlen(key);
+	int slen = key_len;
 
 	strncpy(alg->alg_name, name, sizeof(alg->alg_name));
 
-	if (slen > 2 && strncmp(key, "0x", 2) == 0) {
-		/* split two chars "0x" from the top */
-		char *p = key + 2;
-		int plen = slen - 2;
-		int i;
-		int j;
-
-		/* Converting hexadecimal numbered string into real key;
-		 * Convert each two chars into one char(value). If number
-		 * of the length is odd, add zero on the top for rounding.
-		 */
-
-		/* calculate length of the converted values(real key) */
-		len = (plen + 1) / 2;
-
+	len = slen;
+	if (len > 0) {
 		if (len > max) {
-			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 			return -1;
+			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 		}
-
-		for (i = - (plen % 2), j = 0; j < len; i += 2, j++) {
-			char vbuf[3];
-			__u8 val;
-
-			vbuf[0] = i >= 0 ? p[i] : '0';
-			vbuf[1] = p[i + 1];
-			vbuf[2] = '\0';
-
-			if (get_u8(&val, vbuf, 16))
-				HIP_ERROR("\"ALGOKEY\" is invalid\n", key);
-
-			alg->alg_key[j] = val;
-		}
-	} else {
-		len = slen;
-		if (len > 0) {
-			if (len > max) {
-				return -1;
-				HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
-			}
-
-			strncpy(alg->alg_key, key, len);
-		}
+		
+		strncpy(alg->alg_key, key, len);
 	}
-
+	
 	alg->alg_key_len = len * 8;
 
 	return 0;

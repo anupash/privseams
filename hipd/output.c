@@ -38,7 +38,7 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
 
-	hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
+	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
 			      mask, &entry->hit_our,
 			      dsthit);
 	/* Eight octet units, not including first */
@@ -50,7 +50,10 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	err = hip_csum_send(&entry->local_address, &daddr, (struct hip_common*) &i1);// HANDLER
+	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						   &daddr,
+						   (struct hip_common*) &i1,
+						   entry, 1);
 	HIP_DEBUG("err = %d\n", err);
 	if (!err) {
 		HIP_LOCK_HA(entry);
@@ -83,8 +86,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	};
  	hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
-		HIP_ESP_NULL_SHA1,
-		HIP_ESP_3DES_SHA1
+		HIP_ESP_3DES_SHA1,
+		HIP_ESP_NULL_SHA1
 	};
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -109,6 +112,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
 	HIP_DEBUG("mask=0x%x\n", mask);
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -221,7 +225,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 
 	HIP_DEBUG("\n");
 	own_addr = i1_daddr;
-	dst_addr = !dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip;
+	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit)), -ENOENT, 
@@ -235,7 +239,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(i1_saddr, dst_addr, r1pkt), -1, 
+	HIP_IFEL(hip_csum_send(own_addr, dst_addr, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
  out_err:
 	if (r1pkt)
@@ -251,13 +255,14 @@ void hip_send_notify(hip_ha_t *entry)
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
-	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
+	entry->hadb_misc_func->hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
 			      &entry->hit_our, &entry->hit_peer);
 	HIP_IFEL(hip_build_param_notify(notify_packet, 1234, "ABCDEFGHIJ", 10), 0, 
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	hip_csum_send(NULL, &daddr, notify_packet);
+	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, notify_packet,
+					     entry, 0);
 
  out_err:
 	if (notify_packet)
@@ -309,66 +314,5 @@ void hip_send_notify_all(void)
 
  out_err:
         return;
-}
-
-int hip_send_close_all_peers(hip_ha_t *entry, void *ignore)
-{
-	int err = 0, mask = 0;
-	struct hip_common *close = NULL;
-
-	HIP_DEBUG("Sending close to peer\n");
-
-	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
-
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
-	hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
-			      &entry->hit_peer);
-
-	/********ECHO (SIGNED) **********/
-
-	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
-	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
-				      sizeof(entry->echo_data), 1, 1), -1,
-		 "Failed to build echo param\n");
-
-	/************* HMAC ************/
-	HIP_IFEL(hip_build_param_hmac_contents(close,
-					       &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed\n");
-
-	/********** Signature **********/
-	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
-		 "Could not create signature\n");
-	
-	HIP_IFE(hip_csum_send(NULL, &entry->preferred_address, close), -1);
-
-	entry->state = HIP_STATE_CLOSING;
-
- out_err:
-	if (close)
-		HIP_FREE(close);
-
-	return err;
-}
-
-int hip_send_close(const struct hip_common *input)
-{
-	int err = 0;
-
-	HIP_DEBUG("Reset\n");
-
-	// XX FIX: CHECK FOR SRC+DST HIT in the input (all are not
-	// necessarily reset)
-
-	// XX FIXME: the kernel code crashes on rmmod (spi in and spi out
-	// removal) ?
-
-	HIP_IFEL(hip_for_each_ha(&hip_send_close_all_peers, NULL), -1,
-		 "Failed to reset all HAs\n");
-
- out_err:
-
-	return err;
 }
 

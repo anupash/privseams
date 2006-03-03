@@ -9,6 +9,9 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconf.h
 
+# OpenDHT
+INCLUDES += -I../hip-dht/tracker -I../hip-dht/dnsd -I../hip-dht/clientlib
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 

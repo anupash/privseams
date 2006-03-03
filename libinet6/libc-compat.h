@@ -1,4 +1,4 @@
-/* $USAGI: libc-compat.h,v 1.14 2003/01/11 15:02:45 yoshfuji Exp $ */
+/* $USAGI: libc-compat.h,v 1.15 2005/12/18 10:32:44 yoshfuji Exp $ */
 
 /*
  * Copyright (C) 2000 USAGI/WIDE Project.
@@ -63,6 +63,13 @@ extern int __gen_tempname (char *, int);
 #define __GT_BIGFILE	1
 #define __GT_DIR	2
 #define __GT_NOCREATE	3
+
+#define __libc_lock_define_initialized(CLASS,NAME)			\
+	CLASS pthread_mutex_t NAME = PTHREAD_MUTEX_INITIALIZER
+#define __libc_lock_lock(NAME)						\
+	pthread_mutex_lock(&(NAME))
+#define __libc_lock_unlock(NAME)					\
+	pthread_mutex_unlcok(&(NAME))
 
 #if _USAGI_LIBINET6 == 21
 # define _LIBC

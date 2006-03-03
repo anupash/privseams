@@ -9,6 +9,8 @@
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
+#include "input.h" 	// required for declaration of receive functions
+#include "update.h"	// required for declaration of update function
 
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
@@ -27,7 +29,7 @@
 	if (!entry)                                           \
 		return;                                       \
 	atomic_inc(&ha->refcnt);                              \
-	HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha, \
+	HIP_DEBUG("HA: %p, refcnt incremented to: %d\n", ha,  \
 		   atomic_read(&ha->refcnt));                 \
     } while(0)
 
@@ -41,7 +43,7 @@
 		destructor(ha);                                              \
                 HIP_DEBUG("HA: %p deleted\n", ha);                           \
 	} else {                                                             \
-                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha,        \
 			   atomic_read(&ha->refcnt));                        \
         }                                                                    \
     } while(0);
@@ -53,6 +55,12 @@
 	atomic_inc(&ha->refcnt); \
 	_HIP_DEBUG("HA: %p, refcnt incremented to: %d\n",ha, atomic_read(&ha->refcnt)); \
 } while(0)
+
+#if 0
+hip_xmit_func_set_t default_xmit_func_set;
+hip_misc_func_set_t ahip_misc_func_set;
+hip_misc_func_set_t default_misc_func_set;
+#endif
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
@@ -238,5 +246,9 @@ int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque);
 
 int hip_hadb_update_xfrm(hip_ha_t *entry);
 
+int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
+				   hip_rcv_func_set_t *new_func_set);
+int hip_hadb_set_handle_function_set(hip_ha_t *entry,
+				   hip_handle_func_set_t *new_func_set);
 
 #endif /* HIP_HADB_H */

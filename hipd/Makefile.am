@@ -8,26 +8,28 @@ CFLAGS = $(hipl_common_cflags)
 # with netlink headers.
 include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
                   workqueue.h bos.h input.h output.h preoutput.h preinput.h \
-                  xfrm.h beet.h netdev.h update.h rvs.h
+                  xfrm.h beet.h netdev.h update.h rvs.h close.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
-hipd_SOURCES += workqueue.c preoutput.c hadb.c
+hipd_SOURCES += workqueue.c preoutput.c hadb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
-#SUBDIRS =
+if HIP_HI3
+	hipd_SOURCES += hi3.c
+	INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+	hipd_LDADD += ../i3/i3_client/.libs/libi3client.a ../i3/aeshash/.libs/libaes.a
+endif
 
-# Hi3
-#CFLAGS += -DCONFIG_HIP_HI3
-#hipd_SOURCES += hi3.c
-#INCLUDES += -Ii3/i3_client -Ii3/utils -Ii3/i3
-#hipd_LDADD += i3/i3_client/.libs/libi3client.a i3/aeshash/.libs/libaes.a
-#SUBDIRS += i3
+if HIP_OPENDHT
+	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+	hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+endif
 
 # KeyNotev2
 #INCLUDES += -Ikeynote
