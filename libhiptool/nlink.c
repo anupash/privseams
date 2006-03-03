@@ -731,11 +731,37 @@ int set_up_device(char *dev, int up)
 }
 
 /**
+ * xfrm_selector_ipspec - fill port info in the selector.
+ * Selector is bound to HITs
+ * @sel: pointer to xfrm_selector to be filled in
+ * @src_port: Source port
+ * @dst_port: Destination port
+ *
+ * Returns: 0
+ */
+
+int xfrm_selector_upspec(struct xfrm_selector *sel,
+				uint32_t src_port, uint32_t dst_port)
+{
+	sel->sport = htons(src_port);
+        if (sel->sport)
+		sel->sport_mask = ~((__u16)0);
+
+	sel->dport = htons(dst_port);
+        if (sel->dport)
+        	sel->dport_mask = ~((__u16)0);
+	
+	return 0;
+
+	
+}
+
+/**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
  * @sel: pointer to xfrm_selector to be filled in
  * @hit_our: Source HIT
- * @hit_peer : Peer HIT
+ * @hit_peer: Peer HIT
  *
  * Returns: 0
  */
@@ -743,6 +769,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 		       struct in6_addr *hit_our,
 		       struct in6_addr *hit_peer,
 		       __u8 proto, u8 hit_prefix,
+		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family)
 {
 
@@ -757,6 +784,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	sel->prefixlen_d = hit_prefix;
 	sel->prefixlen_s = hit_prefix;
 
+	xfrm_selector_upspec(sel, src_port, dst_port);
+	
 	return 0;
 }
 

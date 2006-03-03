@@ -44,7 +44,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
-				   hit_prefix, preferred_family), -1);
+				   hit_prefix, 0, 0, preferred_family), -1);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -179,7 +179,7 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
-				   hit_prefix, preferred_family), -1);
+				   hit_prefix, 0, 0, preferred_family), -1);
 /*
 	if (req.xpid.sel.family == AF_UNSPEC)
 		req.xpid.sel.family = AF_INET6;
@@ -254,7 +254,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
 			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
-			   AF_INET6), -1);
+			   0,0, AF_INET6), -1);
 			   //preferred_family), -1);
 	
 	{
