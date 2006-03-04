@@ -331,25 +331,28 @@ void hip_hexdump(const char *file, int line, const char *function,
   if (hexdump == NULL) {
     HIP_DIE("hexdump memory allocation failed\n");
   }
-
-  do {
-    /* note: if you change the printing format, adjust also hexdump_count! */
-    hexdump_written = snprintf((char *) (hexdump + hexdump_index),
-			       hexdump_count, "%02x",
-		      (unsigned char)(*(((unsigned char *)str) + char_index)));
-    if (hexdump_written < 0 || hexdump_written > hexdump_max_size - 1) {
-      free(hexdump);
-      HIP_DIE("hexdump msg too long(%d)", hexdump_written);
-    } else {
-      hexdump_count -= hexdump_written;
-      assert(hexdump_count >=0);
-      hexdump_index += hexdump_written;
-      assert(hexdump_index + hexdump_count == hexdump_max_size);
-    }
-    char_index++;
-  } while(char_index < len);
-
-  hip_info(file, line, function, "%s0x%s\n", prefix, hexdump);
+  if(len == 0){
+  	HIP_ERROR("hexdump length was 0\n");  
+	}else{
+	do {
+	/* note: if you change the printing format, adjust also hexdump_count! */
+	hexdump_written = snprintf((char *) (hexdump + hexdump_index),
+				hexdump_count, "%02x",
+			(unsigned char)(*(((unsigned char *)str) + char_index)));
+	if (hexdump_written < 0 || hexdump_written > hexdump_max_size - 1) {
+	free(hexdump);
+	HIP_DIE("hexdump msg too long(%d)", hexdump_written);
+	} else {
+	hexdump_count -= hexdump_written;
+	assert(hexdump_count >=0);
+	hexdump_index += hexdump_written;
+	assert(hexdump_index + hexdump_count == hexdump_max_size);
+	}
+	char_index++;
+	} while(char_index < len);
+	
+	hip_info(file, line, function, "%s0x%s\n", prefix, hexdump);
+  }
 
   free(hexdump);
 
