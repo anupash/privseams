@@ -41,6 +41,7 @@ extern "C" {
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
 int connhipd_thread(void *);
+void connhipd_quit(void);
 
 
 /******************************************************************************/

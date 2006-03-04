@@ -86,6 +86,71 @@ int hip_scan_retransmissions()
 	return err;
 }
 
+int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
+{
+	int err = 0;
+
+	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+	if (err)
+	{
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+out_err:
+	return (err);
+}
+
+int hip_agent_add_lhits(void)
+{
+	struct hip_common *msg;
+	int err = 0, n;
+	socklen_t alen;
+
+#ifdef CONFIG_HIP_AGENT
+/*	if (!hip_agent_is_alive())
+	{
+		return (-ENOENT);
+	}*/
+
+	msg = malloc(HIP_MAX_PACKET);
+	if (!msg)
+	{
+		HIP_ERROR("malloc failed\n");
+		goto out_err;
+	}
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
+	         "for_each_hi err.\n");
+
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_LOCAL_HI, 0);
+	if (err)
+	{
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+	HIP_DEBUG("Sending local HITs to agent,"
+	          " message body size is %d bytes.\n",
+	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
+
+	alen = sizeof(hip_agent_addr);                      
+	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
+	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+#endif
+
+out_err:
+	return (err);
+}
+
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
@@ -110,12 +175,12 @@ int hip_agent_filter(struct hip_common *msg)
 	}
 	
 	HIP_DEBUG("Filtering hip control message trough agent,"
-		  " message body size is %d bytes.\n",
-		  hip_get_msg_total_len(msg) - sizeof(struct hip_common));
+	          " message body size is %d bytes.\n",
+	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 	
 	alen = sizeof(hip_agent_addr);                      
 	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&hip_agent_addr, alen);
+	           0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -128,7 +193,7 @@ int hip_agent_filter(struct hip_common *msg)
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
 	n = recvfrom(hip_agent_sock, msg, n, 0,
-		     (struct sockaddr *)&hip_agent_addr, &alen);
+	             (struct sockaddr *)&hip_agent_addr, &alen);
 	if (n < 0) {
 		HIP_ERROR("Recvfrom() failed.\n");
 		err = -1;
@@ -442,16 +507,14 @@ int main(int argc, char *argv[]) {
 		1, "Changing permissions of daemon addr failed.")
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_agent_sock < 0), 1,
-		 "Could not create socket for agent communication.\n");
-        unlink(HIP_AGENTADDR_PATH);
-        bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-        hip_agent_addr.sun_family = AF_LOCAL;
-        strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
-        HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
-                      sizeof(hip_agent_addr)),
-                 -1, "Bind on agent addr failed.");
-	
+	HIP_IFEL((hip_agent_sock < 0), 1, "Could not create socket for agent communication.\n");
+	unlink(HIP_AGENTADDR_PATH);
+	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
+	hip_agent_addr.sun_family = AF_LOCAL;
+	strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
+	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
+	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
+	chmod(HIP_AGENTADDR_PATH, 0777);
 	highest_descriptor = maxof(6, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock, hip_raw_sock_v4);
@@ -519,42 +582,55 @@ int main(int argc, char *argv[]) {
 			else
 				hip_handle_user_msg(hip_msg);
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
-                        int n;
-                        socklen_t alen;
-                        err = 0;
-                        HIP_DEBUG("Receiving user message(?).\n");
-                        bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-                        alen = sizeof(hip_agent_addr);
-                        n = recvfrom(hip_agent_sock, hip_msg,
-                                     sizeof(struct hip_common), 0,
-                                     (struct sockaddr *) &hip_agent_addr,
-				     &alen);
-                        if (n < 0)
-                        {
-                                HIP_ERROR("Recvfrom() failed.\n");
-                                err = -1;
+			int n;
+			socklen_t alen;
+			err = 0;
+			hip_hdr_type_t msg_type;
+			
+			HIP_DEBUG("Receiving user message(?).\n");
+			
+			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
+			alen = sizeof(hip_agent_addr);
+			n = recvfrom(hip_agent_sock, hip_msg, sizeof(struct hip_common), 0,
+			             (struct sockaddr *) &hip_agent_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
 				continue;
-                        }
-                        memset(hip_msg, 0, sizeof(struct hip_common));
-                        hip_build_user_hdr(hip_msg, SO_HIP_AGENT_PING_REPLY,
-					   0);
-                        alen = sizeof(hip_agent_addr);                      
-                        n = sendto(hip_agent_sock, hip_msg,
-				   sizeof(struct hip_common),
-                                   0,
-				   (struct sockaddr *) &hip_agent_addr, alen);
-                        if (n < 0)
-                        {
-                                HIP_ERROR("Sendto() failed.\n");
-                                err = -1;
-				continue;
-                        }
+			}
+			
+			msg_type = hip_get_msg_type(hip_msg);
+			
+			if (msg_type == SO_HIP_AGENT_PING)
+			{
+				memset(hip_msg, 0, sizeof(struct hip_common));
+				hip_build_user_hdr(hip_msg, SO_HIP_AGENT_PING_REPLY, 0);
+				alen = sizeof(hip_agent_addr);                    
+				n = sendto(hip_agent_sock, hip_msg, sizeof(struct hip_common),
+				           0, (struct sockaddr *) &hip_agent_addr, alen);
+				if (n < 0)
+				{
+					HIP_ERROR("Sendto() failed.\n");
+					err = -1;
+					continue;
+				}
 
-                        if (err == 0)
-                        {
-                                HIP_DEBUG("HIP agent ok.\n");
-                                hip_agent_status = 1;
-                        }
+				if (err == 0)
+				{
+					HIP_DEBUG("HIP agent ok.\n");
+					if (hip_agent_status == 0)
+					{
+						hip_agent_add_lhits();
+					}
+					hip_agent_status = 1;
+				}
+			}
+			else if (msg_type == SO_HIP_AGENT_QUIT)
+			{
+				HIP_DEBUG("Agent quit.\n");
+				hip_agent_status = 0;
+			}
 		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
