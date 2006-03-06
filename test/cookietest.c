@@ -1,6 +1,8 @@
 #include "hip.h"
 #include "debug.h"
 #include "misc.h"
+#include <sys/time.h>
+#include <time.h>
 
 /**
  * hip_solve_puzzle - Solve puzzle.
@@ -39,15 +41,17 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 
 	HIP_DEBUG("\n");
 
+#if 0
 	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
 	HIP_IFEL(u->pz.K > max_k, 0, 
 		 "Cookie K %u is higher than we are willing to calculate"
 		 " (current max K=%d)\n", u->pz.K, max_k);
+#endif
 
 	mask = hton64((1ULL << u->pz.K) - 1);
 	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
 
-	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
+	HIP_DEBUG("u->pz.I: 0x%llx\n", u->pz.I);
 
 	if (mode == HIP_VERIFY_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
@@ -125,7 +129,7 @@ void hip_create_puzzle(struct hip_puzzle *puzzle, uint8_t val_K,
 
 int hip_verify_puzzle(struct hip_common *hdr, struct hip_puzzle *puzzle,
 		      struct hip_solution *solution) {
-	int err = 0;
+	int err = 1; /* Not really an error: 1=success, 0=failure */
 
 	if (solution->K != puzzle->K) {
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
@@ -159,6 +163,8 @@ int main(int argc, char *argv[]) {
 	struct hip_puzzle pz;
 	struct hip_solution sol;
 	struct hip_common hdr = { 0 };
+        struct timeval stats_before, stats_after, stats_res;
+        unsigned long stats_diff_sec, stats_diff_usec;
 	uint64_t solved_puzzle;
 	uint8_t k;
 
@@ -171,15 +177,26 @@ int main(int argc, char *argv[]) {
 	printf("k=%d\n", k);
 
 	hip_create_puzzle(&pz, k, 0, 0);
+
+	gettimeofday(&stats_before, NULL);
+
 	if ((solved_puzzle =
 	     hip_solve_puzzle(&pz, &hdr, HIP_SOLVE_PUZZLE)) == 0) {
 		HIP_ERROR("Puzzle not solved\n");
 	}
-	
+
+	gettimeofday(&stats_after, NULL);
+
+	hip_timeval_diff(&stats_after, &stats_before, &stats_res);
+	HIP_INFO("puzzle solved in %ld.%06ld\n",
+		 stats_res.tv_sec, stats_res.tv_usec);
+
 	memcpy(&sol, &pz, sizeof(pz));
-	sol.J = solved_puzzle; // XX HTON64 or NOT?!?!
+	sol.J = solved_puzzle;
 
 	if (!hip_verify_puzzle(&hdr, &pz, &sol)) {
-	  HIP_ERROR("Verifying of puzzle failed\n");
+		HIP_ERROR("Verifying of puzzle failed\n");
 	}
+
+	HIP_DEBUG("Puzzle solved correctly\n");
 }
