@@ -351,6 +351,21 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
+	case SO_HIP_CONF_PUZZLE_NEW:
+		err = -ESOCKTNOSUPPORT; /* TBD: hip_reinit_precreated_r1_packets() in the end of cookie.c */
+		break;
+	case SO_HIP_CONF_PUZZLE_GET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_SET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_INC:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_DEC:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

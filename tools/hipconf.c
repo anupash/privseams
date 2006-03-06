@@ -28,7 +28,7 @@ const char *usage = "new|add hi default\n"
         "hip rst all|peer_hit\n"
         "add rvs hit ipv6\n"
         "hip bos\n"
-        "get|set|inc|dec|new puzzle hit|all"
+        "get|set|inc|dec|new puzzle all\n"
 	;
 
 
@@ -531,6 +531,7 @@ int handle_puzzle(struct hip_common *msg, int action,
 	if (!strcmp("all", opt[0])) {
 		memset(&hit,0,sizeof(struct in6_addr));
 	} else {
+#if 0 /* Supporting dst matching unimplemented */
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
@@ -541,14 +542,17 @@ int handle_puzzle(struct hip_common *msg, int action,
 			err = -EINVAL;
 			goto out;
 		}
+#endif
 	}
 
+#if 0 /* Supporting dst matching unimplemented */
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out;
 	}
+#endif
 
 	err = hip_build_user_hdr(msg, msg_type, 0);
 	if (err) {

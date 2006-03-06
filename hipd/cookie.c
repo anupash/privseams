@@ -119,7 +119,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
  * odds are 1/2^64 to try 0, I don't see the point in improving this now.
  */
-uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr, 
+uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 			  int mode)
 {
 	uint64_t mask = 0;
@@ -357,3 +357,12 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
+#if 0
+int hip_reinit_precreated_r1_packets()
+{
+       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
+				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
+
+}
+#endif
