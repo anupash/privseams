@@ -113,6 +113,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry);
+int hip_create_r2(struct hip_context *ctx,
+		  struct in6_addr *i2_saddr,
+		  struct in6_addr *i2_daddr,
+		  hip_ha_t *entry);
 
  
 #endif /* HIP_INPUT_H */

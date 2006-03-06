@@ -135,17 +135,9 @@ AC_ARG_ENABLE(agent,
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=no])
 if test x"$enable_agent" = x"yes"; then
-# XX TODO: invoke "wx-config --cflags" and check that e.g. wx/menu.h exists
-# XX TODO: when wxgtk 2.6.2 ends in normal distros, replace with LIB_CHECK etc
         AC_DEFINE(CONFIG_HIP_AGENT)
         hipl_opt_build="$hipl_opt_build libhipgui agent"
-        
-	if ! type wx-config >/dev/null; then
-	   AC_MSG_ERROR([wx-config not found (install wxgtk > 2.6.2)])
-        fi
-	if test `wx-config --version|tr . 0` -lt 20602; then
-	   AC_MSG_ERROR([wx library is too old (< 2.6.2)])
-	fi
+		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -167,6 +159,18 @@ AC_CACHE_CHECK([whether to use hi3],
 if test x"$enable_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3)
 fi
+AM_CONDITIONAL(HIP_HI3, test x"$enable_hi3" = x"yes")
+
+AC_ARG_ENABLE(opendht,
+             AC_HELP_STRING([--enable-opendht],
+                            [OpenDHT support (default is NO)]),
+             [ac_cv_use_opendht=$withval], [ac_cv_use_opendht=no])
+AC_CACHE_CHECK([whether to use opendht],
+               [ac_cv_use_opendht], [ac_cv_use_opendht=no])
+if test x"$enable_opendht" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPENDHT)
+fi
+AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
 
 AC_SUBST(hipl_opt_build)
 

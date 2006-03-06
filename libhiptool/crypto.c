@@ -395,7 +395,6 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	des_key_schedule ks1, ks2, ks3;
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
 	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
-
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
 	//HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         switch(alg) {
@@ -415,7 +414,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			//HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
- 
+ 		memcpy(data, result, len);
                 break;
 
         case HIP_HIP_3DES_SHA1:
@@ -438,17 +437,19 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 des_ede3_cbc_encrypt(data, result, len,
 				     ks1, ks2, ks3, (des_cblock*)iv, 
 				     direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
+		memcpy(data, result, len);
                 break;
 
         case HIP_HIP_NULL_SHA1:
+		HIP_DEBUG("Null encryption used.\n");
                 break;
 
         default:
                 HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
 
-	memcpy(data, result, len);
-	//HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
+	
+	HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
 	err = 0;
 
  out_err:

@@ -280,7 +280,7 @@
     <title>Closing HIP Security Associations Manually</title>
      <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf rst all" to close all SAs. 
+      "hipconf hip rst all" to close all SAs. 
      </para>
   </chapter>
   <chapter>
@@ -535,7 +535,7 @@
       The hipconf tool must support rvs option:
     </para>
     <para>
-      hipconf rvs &lt;hit&gt; &lt;ip&gt;
+      hipconf add rvs &lt;hit&gt; &lt;ip&gt;
     </para>
     <para>
       For now it is best if all the hosts involved in communications have
@@ -644,7 +644,7 @@
       on all interfaces), use the following command:
     </para>
     <para>
-      &nbsp;&nbsp;hipconf BOS
+      &nbsp;&nbsp;hipconf hip bos
     </para>
     <para>
       &nbsp;BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
@@ -818,18 +818,14 @@
             user interface. The interface is very unfinished, and nothing
             very usefull cannot actually be done yet.</para>
       <para>
-      	To compile agent and GUI atleast following packages are needed (asuming you have debian):
+		To compile agent and GUI atleast following packages are needed (asuming you have debian):
 		1. gcc and g++ compilers, both should be at least version 4.0.
 		2. Package: xbase-clients - miscellaneous X clients
-		3. GTK 2.0 and development files for it (Package called libgtk2.0-dev).
-		4. Package: libxxf86vm-dev - X Video Mode selection library development files
-		5. Package: libpango1.0-dev - Development files for the Pango
-		6. wxGTK version 2.6.2 (was compiled manually from sources after installing previous)
+		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
       </para>
       <para>
-      	HIT database is saved and loaded on agent startup as default from
-      	/etc/hip/agentdb-file. Notice!: The database is currently saved only if user quits the
-      	GUI/agent from File->Quit -menu. Otherwise the database is not saved.
+		HIT database is saved and loaded on agent startup as default from
+		'/etc/hip/agentdb'-file.
       </para>
   </chapter>
 </book>    

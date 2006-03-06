@@ -194,6 +194,16 @@ int hip_add_host_id(struct hip_db_struct *db,
 	if (pubkey) 
 		HIP_FREE(pubkey);
 
+#ifdef CONFIG_HIP_AGENT
+	/* XX TODO:
+		Send HIT to agent here.
+	*/
+/*	if (hip_agent_is_alive())
+	{
+		HIP_DEBUG("Sending new local HIT to agent.\n");
+	}*/
+#endif /* CONFIG_HIP_AGENT */
+
 	return err;
 
  out_err:
@@ -662,6 +672,40 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	return hi;
 }
 //#endif
+
+
+/**
+ * hip_for_each_hi - List every hit in database.
+ * @func: Mapper function
+ * @opaque: Opaque data for the mapper function.
+ *
+ * Works like hip_for_each_ha().
+ */
+int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque)
+{
+	struct list_head *curr, *iter;
+	struct hip_host_id_entry *tmp;
+	struct endpoint_hip *hits = NULL;
+	int err = 0;
+
+	HIP_READ_LOCK_DB(db);
+
+	list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
+	{
+		tmp = list_entry(curr,struct hip_host_id_entry,next);
+		HIP_HEXDUMP("Found HIT:", &tmp->lhi.hit, 16);
+
+		err = func(tmp, opaque);
+		if (err) break;
+	}
+
+	HIP_READ_UNLOCK_DB(db);
+
+	return (err);
+
+out_err:
+	return (err);
+}
 
 
 #undef HIP_READ_LOCK_DB

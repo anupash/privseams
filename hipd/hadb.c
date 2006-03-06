@@ -260,72 +260,66 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	int err = 0;
 	hip_ha_t *entry;
 
-	/* old comment ? note: can't lock here or else
-	 * hip_sdb_add_peer_address will block
-	 *
-	 * unsigned long flags = 0;
-	 * spin_lock_irqsave(&hip_sdb_lock, flags);
-	 */
+	/* XX FIXME: allow multiple mappings; base exchange should be
+	   initiated to allow of them in order to prevent local DoS */
+
 	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
 	HIP_DEBUG_HIT("HIT", peer_hit);
 	HIP_DEBUG_IN6ADDR("addr", peer_addr);
 
 	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
 	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
+	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
+
+	entry = hip_hadb_create_state(GFP_KERNEL);
+	HIP_IFEL(!entry, -1, "");
 	if (!entry) {
-		entry = hip_hadb_create_state(GFP_KERNEL);
-		if (!entry) {
-			HIP_ERROR("Unable to create a new entry\n");
-			return -1;
-		}
-		    
-		_HIP_DEBUG("created a new sdb entry\n");
-		ipv6_addr_copy(&entry->hit_peer, peer_hit);
-
-		/* XXX: This is wrong. As soon as we have native socket API, we
-		 * should enter here the correct sender... (currently unknown).
-		 */
-		if (!hip_init_us(entry, NULL))
-			HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-		else
-			HIP_INFO("Could not assign local hit, continuing\n");
-
-		hip_hadb_insert_state(entry);
-		hip_hold_ha(entry); /* released at the end */
+		HIP_ERROR("Unable to create a new entry\n");
+		return -1;
 	}
+		    
+	_HIP_DEBUG("created a new sdb entry\n");
+	ipv6_addr_copy(&entry->hit_peer, peer_hit);
+
+	/* XXX: This is wrong. As soon as we have native socket API, we
+	 * should enter here the correct sender... (currently unknown).
+	 */
+	if (!hip_init_us(entry, NULL))
+		HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
+	else
+		HIP_INFO("Could not assign local hit, continuing\n");
+	
+	hip_hadb_insert_state(entry);
+	hip_hold_ha(entry); /* released at the end */
 
 	/* add initial HIT-IP mapping */
-	if (entry && entry->state == HIP_STATE_UNASSOCIATED) {
-		err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
-					     PEER_ADDR_STATE_ACTIVE);
-		if (err) {
-			HIP_ERROR("error while adding a new peer address\n");
-			err = -2;
-			goto out_err;
-		}
+	err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
+				     PEER_ADDR_STATE_ACTIVE);
+	if (err) {
+		HIP_ERROR("error while adding a new peer address\n");
+		err = -2;
+		goto out_err;
+	}
 
-		HIP_IFEL(hip_select_source_address(&entry->local_address,
-							peer_addr), -1,
-			 "Cannot find source address\n");
-
-		HIP_DEBUG("Source address found\n");
-
-		/*
-		 * Create a security policy for triggering base exchange.
-		 *
-		 * XX FIX: multiple identities support
-		 * alternative a) make generic HIT prefix based policy to work
-		 * alternative b) add SP pair for all local HITs
-		 *
-		 */
-		HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
-					       &entry->local_address,
-					       peer_addr, 0, 1, 0), -1,
-			 "Error in setting the SPs\n");
-	} else
-		HIP_DEBUG("Not adding HIT-IP mapping in state %s\n",
-			  hip_state_str(entry->state));
+	HIP_IFEL(hip_select_source_address(&entry->local_address,
+					   peer_addr), -1,
+		 "Cannot find source address\n");
 	
+	HIP_DEBUG("Source address found\n");
+	
+	/*
+	 * Create a security policy for triggering base exchange.
+	 *
+	 * XX FIX: multiple identities support
+	 * alternative a) make generic HIT prefix based policy to work
+	 * alternative b) add SP pair for all local HITs
+	 *
+	 */
+	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
+				       &entry->local_address,
+				       peer_addr, 0, 1, 0), -1,
+		 "Error in setting the SPs\n");
+
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
@@ -1748,6 +1742,7 @@ void hip_init_hadb(void)
 	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
 	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
 	default_misc_func_set.hip_create_i2		   = hip_create_i2;
+	default_misc_func_set.hip_create_r2		   = hip_create_r2;
 	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
 
 	/* initialize alternative function pointer sets for misc functions*/

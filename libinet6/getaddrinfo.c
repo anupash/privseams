@@ -164,24 +164,38 @@ static int addrconfig (sa_family_t af)
   return ret;
 }
 
-void dump_pai (struct gaih_addrtuple *ai)
+void free_gaih_servtuple(struct gaih_servtuple *tuple) {
+  struct gaih_servtuple *tmp;
+
+  while(tuple) {
+    tmp = tuple;
+    tuple = tmp->next;
+    free(tmp);
+  }
+}
+
+void dump_pai (struct gaih_addrtuple *at)
 {
-  if (ai == NULL)
+  struct gaih_addrtuple *a;
+
+  if (at == NULL)
     printf("dump_pai: input NULL!\n");
   
-  for(; ai != NULL; ai = ai->next) {        
-    printf("scope_id=%lu\n", (long unsigned int)ai->scopeid);
-    if (ai->family == AF_INET6) {
-      struct in6_addr *s = (struct in6_addr *)ai->addr;
+  for(a = at; a != NULL; a = a->next) {        
+    //printf("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+    if (a->family == AF_INET6) {
+      struct in6_addr *s = (struct in6_addr *)a->addr;
       int i = 0;
       printf("AF_INET6\tin6_addr=0x");
       for (i = 0; i < 16; i++)
 	printf("%02x ", (unsigned char) (s->in6_u.u6_addr8[i]));
       printf("\n");
-    } else if (ai->family == AF_INET) {
-      struct in_addr *s = (struct in_addr *)ai->addr;
-      printf("AF_INET\tin_addr=0x%lx (%s)\n", (long unsigned int) ntohl(s->s_addr), inet_ntoa(*s));
-    }
+    } else if (a->family == AF_INET) {
+      struct in_addr *s = (struct in_addr *)a->addr;
+      long unsigned int ad = ntohl(s->s_addr);
+      printf("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+    } else 
+      printf("Unknown family\n");
  }
 }
 
@@ -250,14 +264,10 @@ gaih_local (const char *name, const struct gaih_service *service,
   (*pai)->ai_protocol = req->ai_protocol;
   (*pai)->ai_addrlen = sizeof (struct sockaddr_un);
   (*pai)->ai_addr = (void *) (*pai) + sizeof (struct addrinfo);
-
-#if 0 /* does not compile */
-#if SALEN
+#ifdef _HAVE_SA_LEN
   ((struct sockaddr_un *) (*pai)->ai_addr)->sun_len =
     sizeof (struct sockaddr_un);
-#endif /* SALEN */
-#endif
-
+#endif /* _HAVE_SA_LEN */
   ((struct sockaddr_un *)(*pai)->ai_addr)->sun_family = AF_LOCAL;
   memset(((struct sockaddr_un *)(*pai)->ai_addr)->sun_path, 0, UNIX_PATH_MAX);
 
@@ -348,54 +358,58 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
   return 0;
 }
 
-#define gethosts(_family, _type)				\
- {								\
-  int i, herrno;						\
-  size_t tmpbuflen;						\
-  struct hostent th;						\
-  char *tmpbuf;							\
-  tmpbuflen = 512;						\
-  no_data = 0;							\
-	HIP_DEBUG("Is this called\n");				\
-  do {								\
-    tmpbuflen *= 2;						\
-    tmpbuf = __alloca (tmpbuflen);				\
-    rc = __gethostbyname2_r (name, _family, &th, tmpbuf,	\
-         tmpbuflen, &h, &herrno);				\
-  } while (rc == ERANGE && herrno == NETDB_INTERNAL);		\
-  if (rc != 0)							\
-    {								\
-      if (herrno == NETDB_INTERNAL)				\
-	{							\
-	  __set_h_errno (herrno);				\
-	  return -EAI_SYSTEM;					\
-	}							\
-      if (herrno == TRY_AGAIN)					\
-	no_data = EAI_AGAIN;					\
-      else							\
-	no_data = herrno == NO_DATA;				\
-    }								\
-  else if (h != NULL)						\
-    {								\
-	if(*pat != NULL);					\
-	pat = &((*pat)->next);					\
-      for (i = 0; h->h_addr_list[i]; i++)			\
-	{							\
-	  if (*pat == NULL) {					\
-	    *pat = __alloca (sizeof(struct gaih_addrtuple));	\
-	    (*pat)->scopeid = 0;				\
-	  }							\
-	  (*pat)->next = NULL;					\
-	  (*pat)->family = _family;				\
-	  memcpy ((*pat)->addr, h->h_addr_list[i],		\
-		 sizeof(_type));				\
-	HIP_DEBUG("Printing addr in gethosts:%s\n", (*pat)->addr);\
-	  pat = &((*pat)->next);				\
-	}							\
-    }								\
+int 
+gethosts(const char *name, int _family, 
+		 struct gaih_addrtuple ***pat) 
+ {								
+  int i, herrno;						
+  size_t tmpbuflen = 512;					       
+  struct hostent th;						
+  char *tmpbuf;							
+  int no_data = 0;							
+  int rc = 0;
+  struct hostent *h = NULL;
+
+  do {								
+    tmpbuflen *= 2;						
+    tmpbuf = __alloca (tmpbuflen);				
+    rc = __gethostbyname2_r (name, _family, &th, tmpbuf,	
+         tmpbuflen, &h, &herrno);				
+  } while (rc == ERANGE && herrno == NETDB_INTERNAL);		
+  if (rc != 0)							
+    {								
+      if (herrno == NETDB_INTERNAL)				
+	{							
+	  __set_h_errno (herrno);				
+	  return -EAI_SYSTEM;					
+	}							
+      if (herrno == TRY_AGAIN)					
+	no_data = EAI_AGAIN;					
+      else							
+	no_data = herrno == NO_DATA;				
+    }								
+  else if (h != NULL)						
+    {			      					
+      for (i = 0; h->h_addr_list[i]; i++)			
+	{							
+	  if (**pat == NULL) {					
+	    **pat = malloc (sizeof(struct gaih_addrtuple));	
+	    (**pat)->scopeid = 0;				
+	  }							
+	  (**pat)->next = NULL;					
+	  (**pat)->family = _family;				
+	  memcpy ((**pat)->addr, h->h_addr_list[i],		
+		 (_family == AF_INET6)
+		  ? sizeof(struct in6_addr)
+		  : sizeof(struct in_addr));	           
+	  *pat = &((**pat)->next);					
+	}								
+    }								
+  return no_data;
  }
 
-int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
+int 
+gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
  {									
   struct in6_addr hit;							
   FILE *fp = NULL;							
@@ -405,6 +419,30 @@ int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
   char line[500];							
   List list;
   int found_hits = 0;
+
+#ifdef CONFIG_HIP_OPENDHT
+  struct in6_addr tmp_hit, tmp_ip;
+
+  if (gethiphostbyname(name,&tmp_hit) 
+      && gethiphostbyhit(&tmp_hit,&tmp_ip)) 
+    { 
+      if (**pat == NULL) {						
+	**pat = malloc(sizeof(struct gaih_addrtuple));
+	(**pat)->scopeid = 0;				
+      }
+      (**pat)->family = AF_INET6;					
+      memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+      *pat = &((**pat)->next);				     	
+ 
+      **pat = malloc(sizeof(struct gaih_addrtuple));
+      (**pat)->scopeid = 0;				
+      (**pat)->next = NULL;						
+      (**pat)->family = AF_INET6;					
+      memcpy((**pat)->addr, &tmp_ip, sizeof(struct in6_addr));	
+      *pat = &((**pat)->next);
+      return 1;
+    }
+#endif
 									
   /* TODO: check return values */					
   fp = fopen(_PATH_HIP_HOSTS, "r");					
@@ -421,8 +459,8 @@ int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
 	fqdn_str = getitem(&list,i);	               		        
       }                                                                 
     }									
-    if ((strlen(_name) == strlen(fqdn_str)) &&		         	
-      strcmp(_name, fqdn_str) == 0) {				        
+    if ((strlen(name) == strlen(fqdn_str)) &&		         	
+      strcmp(name, fqdn_str) == 0) {				        
       _HIP_DEBUG("** match on line %d **\n", lineno);			
       found_hits = 1;                                                   
                                                                         
@@ -432,26 +470,23 @@ int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
 	struct gaih_addrtuple *prev_pat = NULL;	
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);              
         if (ret < 1) continue;                                          
-        if (*pat == NULL) {						
-	  *pat = malloc(sizeof(struct gaih_addrtuple));		        
-          (*pat)->scopeid = 0;						
+        if (**pat == NULL) {						
+	  **pat = malloc(sizeof(struct gaih_addrtuple));		      
+          (**pat)->scopeid = 0;						
         }								
-        (*pat)->next = NULL;						
-        (*pat)->family = AF_INET6;					
-        memcpy((*pat)->addr, &hit, sizeof(struct in6_addr));		
-	prev_pat = *pat;
-        pat = &((*pat)->next);						
-	
+        (**pat)->next = NULL;						
+        (**pat)->family = AF_INET6;					
+        memcpy((**pat)->addr, &hit, sizeof(struct in6_addr));		
+        *pat = &((**pat)->next);				     	
 	/* AG: add LSI as well */					
-        if (*pat == NULL) {						
-	  *pat = malloc(sizeof(struct gaih_addrtuple));		        
-          (*pat)->scopeid = 0;						
+        if (**pat == NULL) {						
+	  **pat = malloc(sizeof(struct gaih_addrtuple));
+	  (**pat)->scopeid = 0;				
         }								
-        prev_pat->next = *pat;						
-        (*pat)->next = NULL;						
-        (*pat)->family = AF_INET;					
-        memcpy((*pat)->addr, &lsi, sizeof(hip_lsi_t));			
-        pat = &((*pat)->next);						
+        (**pat)->next = NULL;						
+        (**pat)->family = AF_INET;					
+        memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
+        *pat = &((**pat)->next);					      
       }									
      }	                                                                
     destroy(&list);                                                     
@@ -464,12 +499,13 @@ int gethosts_hit(const char * _name, struct gaih_addrtuple ** pat)
 
 /* perform HIT-IPv6 mapping if both are found 
 	     AG: now the loop also takes in IPv4 addresses */
-void send_hipd_addr(struct gaih_addrtuple * orig_at)
+void 
+send_hipd_addr(struct gaih_addrtuple * orig_at)
 {
   struct gaih_addrtuple *at_ip, *at_hit;
   struct hip_common *msg;
   msg = malloc(HIP_MAX_PACKET);
- if(orig_at == NULL ) HIP_DEBUG("NULL orig_at sent\n"); 
+  if(orig_at == NULL ) HIP_DEBUG("NULL orig_at sent\n"); 
   for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
     int i;
     struct sockaddr_in6 *s;
@@ -479,22 +515,28 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
       continue;
     
     s	= (struct sockaddr_in6 *)at_hit->addr;
-    HIP_DEBUG_IN6ADDR("HIT:", (struct in6_addr *)at_hit->addr);
+    
     if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
       continue;
     }
-    
+
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
-      if ((at_ip == at_hit) ||
+      if (at_ip->family == AF_INET && 
+	  IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
+	continue;
+      if (at_ip->family == AF_INET6 &&
 	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 	continue;
       }
       if (at_ip->family == AF_INET) {
 	IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
-     }else{ 
-	addr6 = *(struct in6_addr *) at_ip->addr;
       }
-	hip_msg_init(msg);	
+      else 
+	addr6 = *(struct in6_addr *) at_ip->addr;
+
+      hip_msg_init(msg);	
+      HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *)at_hit->addr);
+      HIP_DEBUG_IN6ADDR("IP", &addr6);
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
@@ -503,6 +545,435 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
   }  
   free(msg);
 }
+
+int 
+gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st, 
+    const struct addrinfo *req, struct addrinfo **pai)
+ {
+   int rc;
+   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
+		 (req->ai_flags & AI_V4MAPPED);
+   const char *c = NULL;
+   struct gaih_servtuple *st2;
+   struct gaih_addrtuple *at2 = at;
+   size_t socklen, namelen;
+   sa_family_t family;
+
+   /*
+     buffer is the size of an unformatted IPv6 address in printable format.
+   */
+   char buffer[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
+  
+   _HIP_DEBUG("Generating answer\n");
+   //dump_pai(at);
+   while (at2 != NULL)
+     {
+       if (req->ai_flags & AI_CANONNAME)
+	 {
+	   struct hostent *h = NULL;
+	   
+	   int herrno = 0;
+	   struct hostent th;
+	   size_t tmpbuflen = 512;
+	   char *tmpbuf;
+
+	   do
+	     {
+	       tmpbuflen *= 2;
+	       tmpbuf = __alloca (tmpbuflen);
+	       
+	       if (tmpbuf == NULL)
+		 return -EAI_MEMORY;
+
+	       /* skip if at2->addr is HIT ? */
+	       rc = __gethostbyaddr_r (at2->addr,
+				       ((at2->family == AF_INET6)
+					? sizeof(struct in6_addr)
+					: sizeof(struct in_addr)),
+				       at2->family, &th, tmpbuf, tmpbuflen,
+				       &h, &herrno);
+
+	     }
+	   while (rc == errno && herrno == NETDB_INTERNAL);
+
+	   if (rc != 0 && herrno == NETDB_INTERNAL)
+	     {
+	       __set_h_errno (herrno);
+	       return -EAI_SYSTEM;
+	     }
+	   
+	   if (h == NULL)
+	     c = inet_ntop (at2->family, at2->addr, buffer, sizeof(buffer));
+	   else
+	     c = h->h_name;
+	   
+	   if (c == NULL)
+	     return GAIH_OKIFUNSPEC | -EAI_NONAME;
+	   
+	   namelen = strlen (c) + 1;
+	 }
+       else
+	 namelen = 0;
+       
+       if (at2->family == AF_INET6 || v4mapped)
+	 {
+	   family = AF_INET6;
+	   socklen = sizeof (struct sockaddr_in6);
+	  }
+	else
+	  {
+	    family = AF_INET;
+	    socklen = sizeof (struct sockaddr_in);
+	  }
+
+       for (st2 = st; st2 != NULL; st2 = st2->next)
+	  {
+	    *pai = malloc (sizeof (struct addrinfo) + socklen + namelen);
+	    if (*pai == NULL)
+	      return -EAI_MEMORY;
+	    
+	    (*pai)->ai_flags = req->ai_flags;
+	    (*pai)->ai_family = family;
+	    (*pai)->ai_socktype = st2->socktype;
+	    (*pai)->ai_protocol = st2->protocol;
+	    (*pai)->ai_addrlen = socklen;
+	    (*pai)->ai_addr = (void *) (*pai) + sizeof(struct addrinfo);
+#ifdef _HAVE_SA_LEN
+	    ((struct sockaddr_un *) (*pai)->ai_addr)->sa_len =
+	      socklen;
+#endif /* _HAVE_SA_LEN */
+	    (*pai)->ai_addr->sa_family = family;
+	    
+	    if (family == AF_INET6)
+	      {
+		struct sockaddr_in6 *sin6p =
+		  (struct sockaddr_in6 *) (*pai)->ai_addr;
+
+		sin6p->sin6_flowinfo = 0;
+		if (at2->family == AF_INET6)
+		  {
+		    memcpy (&sin6p->sin6_addr,
+			    at2->addr, sizeof (struct in6_addr));
+		  }
+		else
+		  {
+		    sin6p->sin6_addr.s6_addr32[0] = 0;
+		    sin6p->sin6_addr.s6_addr32[1] = 0;
+		    sin6p->sin6_addr.s6_addr32[2] = htonl(0x0000ffff);
+		    memcpy(&sin6p->sin6_addr.s6_addr32[3], 
+			   at2->addr, sizeof (sin6p->sin6_addr.s6_addr32[3]));
+		  }
+		sin6p->sin6_port = st2->port;
+		sin6p->sin6_scope_id = at2->scopeid;
+	      }
+	    else
+	      {
+		struct sockaddr_in *sinp =
+		  (struct sockaddr_in *) (*pai)->ai_addr;
+
+		memcpy (&sinp->sin_addr,
+			at2->addr, sizeof (struct in_addr));
+		sinp->sin_port = st2->port;
+		memset (sinp->sin_zero, '\0', sizeof (sinp->sin_zero));
+	      }
+
+	    if (c)
+	      {
+		(*pai)->ai_canonname = ((void *) (*pai) +
+					sizeof (struct addrinfo) + socklen);
+		strcpy ((*pai)->ai_canonname, c);
+	      }
+	    else
+	      (*pai)->ai_canonname = NULL;
+
+	    (*pai)->ai_next = NULL;
+	    pai = &((*pai)->ai_next);
+	  } /* for (st2 = st; st2 != NULL; st2 = st2->next) */
+	
+	at2 = at2->next;
+      }
+    /* changed __alloca:s for the linked list 'at' to mallocs, 
+       free malloced memory from at */
+    if (at) {
+      free_gaih_addrtuple(at);
+      /* In case the caller of tries to free at again */
+      at = NULL;
+    }
+    if (st) {
+      free_gaih_servtuple(st);
+      /* In case the caller of tries to free at again */
+      st = NULL;
+    }
+    return 0;
+ }
+
+int 
+gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *service,
+		       const struct gaih_typeproto *tp, struct gaih_servtuple **st) 
+{
+  int rc;  
+
+  if ((tp->protoflag & GAI_PROTO_NOSERVICE) != 0)
+    return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
+  
+  if (service->num < 0)
+    {
+      if (tp->name[0])
+	{
+	  *st = (struct gaih_servtuple *)
+	    malloc (sizeof (struct gaih_servtuple));
+	  
+	  if ((rc = gaih_inet_serv (service->name, tp, req, *st)))
+	    return rc;
+	}
+      else
+	{
+	  struct gaih_servtuple **pst = st;
+	  for (tp++; tp->name[0]; tp++)
+	    {
+	      struct gaih_servtuple *newp;
+	      
+	      if ((tp->protoflag & GAI_PROTO_NOSERVICE) != 0)
+		continue;
+	      
+	      if (req->ai_socktype != 0
+		  && req->ai_socktype != tp->socktype)
+		continue;
+	      if (req->ai_protocol != 0
+		  && !(tp->protoflag & GAI_PROTO_PROTOANY)
+		  && req->ai_protocol != tp->protocol)
+		continue;
+	      
+	      newp = (struct gaih_servtuple *)
+		malloc (sizeof (struct gaih_servtuple));
+	      
+	      if ((rc = gaih_inet_serv (service->name, tp, req, newp)))
+		{
+		  if (rc & GAIH_OKIFUNSPEC)
+		    continue;
+		  return rc;
+		}
+	      
+	      *pst = newp;
+	      pst = &(newp->next);
+	    }
+	  if (*st == (struct gaih_servtuple *) &nullserv)
+	    return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
+	}
+    }
+  else
+    {
+      *st = malloc(sizeof (struct gaih_servtuple));
+      (*st)->next = NULL;
+      (*st)->socktype = tp->socktype;
+      (*st)->protocol = ((tp->protoflag & GAI_PROTO_PROTOANY)
+		      ? req->ai_protocol : tp->protocol);
+      (*st)->port = htons (service->num);
+    }
+  return 0;
+}
+
+int 
+gaih_inet_get_name(const char *name, const struct addrinfo *req, 
+		       const struct gaih_typeproto *tp, 
+		       struct gaih_servtuple *st, struct gaih_addrtuple **at, 
+		       int hip_transparent_mode) 
+{
+  int rc;
+  int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
+		 (req->ai_flags & AI_V4MAPPED);
+  _HIP_DEBUG(">> name != NULL\n");
+
+  *at = malloc (sizeof (struct gaih_addrtuple));
+  
+  (*at)->family = AF_UNSPEC;
+  (*at)->scopeid = 0;
+  (*at)->next = NULL;
+  
+  // is ipv4 address?
+  if (inet_pton (AF_INET, name, (*at)->addr) > 0)
+    {
+      HIP_DEBUG("is IPv4\n");
+      
+      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET || v4mapped)
+	(*at)->family = AF_INET;
+      else
+	return -EAI_FAMILY;
+    }
+  
+  // not ipv4
+  if ((*at)->family == AF_UNSPEC)
+    {
+      char *namebuf = strdupa (name);
+      char *scope_delim;
+      
+      _HIP_DEBUG("not IPv4\n");
+      
+      scope_delim = strchr (namebuf, SCOPE_DELIMITER);
+      if (scope_delim != NULL)
+	*scope_delim = '\0';
+      
+      // is ipv6 address?
+      if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
+	{
+	  _HIP_DEBUG("is IPv6\n");
+	  
+	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
+	    (*at)->family = AF_INET6;
+	  else
+	    return -EAI_FAMILY;
+	  
+	  if (scope_delim != NULL)
+	    {
+	      int try_numericscope = 0;
+	      if (IN6_IS_ADDR_LINKLOCAL ((*at)->addr)
+		  || IN6_IS_ADDR_MC_LINKLOCAL ((*at)->addr))
+		{
+		  (*at)->scopeid = if_nametoindex (scope_delim + 1);
+		  if ((*at)->scopeid == 0)
+		    try_numericscope = 1;
+		} 
+	      else
+		try_numericscope = 1;
+	      
+	      if (try_numericscope != 0)
+		{
+		  char *end;
+		  unsigned long scopeid = strtoul (scope_delim + 1, &end,
+						   10);
+		  if (*end != '\0' || 
+		      (sizeof((*at)->scopeid) < sizeof(scopeid) &&
+		       scopeid > 0xffffffff)) 
+		    return GAIH_OKIFUNSPEC | -EAI_NONAME;
+		  (*at)->scopeid = (uint32_t) scopeid;
+		}
+	    }
+	}
+    }
+  
+  // host name is not an IP address
+  if ((*at)->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0)
+    {     
+      struct gaih_addrtuple **pat = at;
+      int no_data = 0;
+      int no_inet6_data;
+      int old_res_options = _res.options;
+      int found_hits = 0;
+      
+      HIP_DEBUG("not IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST)\n");
+      _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
+      
+#ifdef UNDEF_CONFIG_HIP_AGENT
+      if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
+	  hip_agent_is_alive()) {
+	/* Communicate the name and port output to the agent
+	   synchronously with netlink. First send the name + port
+	   and then wait for answer (select). The agent filters
+	   or modifies the list. The agent implements gethosts_hit
+	   with some filtering. */
+      }
+#endif
+      if (hip_transparent_mode) {
+	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
+	found_hits |= gethosts_hit(name, &pat);
+	if (req->ai_flags & AI_HIP) {
+	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
+	} else {
+	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
+	}
+      } else /* not hip_transparent_mode */ {
+	if (req->ai_flags & AI_HIP) {
+	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
+	  found_hits |= gethosts_hit(name, &pat);
+	} else {
+	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
+	}
+      }
+      
+      /* If we are looking for both IPv4 and IPv6 address we don't
+	 want the lookup functions to automatically promote IPv4
+	 addresses to IPv6 addresses.  Currently this is decided
+	 by setting the RES_USE_INET6 bit in _res.options.  */
+      if (req->ai_family == AF_UNSPEC)
+	_res.options &= ~RES_USE_INET6;
+      
+      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6 
+	|| hip_transparent_mode || req->ai_flags & AI_HIP)
+	 no_inet6_data = gethosts (name, AF_INET6, &pat);
+
+      if (req->ai_family == AF_UNSPEC)
+	_res.options = old_res_options;
+      
+      if (req->ai_family == AF_INET ||
+	  (!v4mapped && req->ai_family == AF_UNSPEC) ||
+	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
+  	  || hip_transparent_mode || req->ai_flags & AI_HIP)
+	no_data = gethosts (name, AF_INET, &pat);
+      HIP_DEBUG("Dumping the structure\n");
+      dump_pai(*at);
+      
+      /* perform HIT-IPv6 mapping if both are found 
+	 AG: now the loop also takes in IPv4 addresses */
+      if (found_hits) 
+	send_hipd_addr(*at);
+      
+      if (no_data != 0 && no_inet6_data != 0)
+	{
+	  _HIP_DEBUG("nodata\n");
+	  /* If both requests timed out report this.  */
+	  if (no_data == EAI_AGAIN && no_inet6_data == EAI_AGAIN)
+	    return -EAI_AGAIN;
+	  
+	  /* We made requests but they turned out no data.  The name
+	     is known, though.  */
+	  return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
+	}
+  
+      if ((*at)->family == AF_UNSPEC)
+	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+    
+      /* HIP: Finally remove IP addresses from the list to be
+	 returned depending on the AI_HIP flag */
+      if (req->ai_flags & AI_HIP) {
+	struct gaih_addrtuple *a = *at, *p = NULL;
+	HIP_DEBUG("HIP: AI_HIP set: remove IP addresses\n");
+	while (a != NULL) {
+	  struct gaih_addrtuple *nxt = a->next;
+	  
+	  /* do not remove HIT if request is not IPv4 */
+	  if (req->ai_family != AF_INET && 
+	      a->family == AF_INET6 && 
+	      ipv6_addr_is_hit((struct in6_addr *)a->addr))
+	    goto leave;
+	  
+	  /* do not remove LSI if request is IPv4 */
+	  if (req->ai_family == AF_INET && 
+	      a->family == AF_INET && 
+	      IS_LSI32( ((struct in_addr *)a->addr)->s_addr))
+	    goto leave;
+	  
+	  if ( p != NULL ) 
+	    p->next = nxt;
+	  free(a);
+	  a = nxt;
+	  continue;
+	  
+	leave:
+	  p = a;
+	  a = a->next;	
+	}
+	if (p == NULL)  /* no HITs or LSIs were found */
+	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+	
+	*at = p;
+      }
+
+      HIP_DEBUG("Dumping the structure after removing IP addreses\n");
+      dump_pai(*at);
+    } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
+  return 0;
+}
+
 
 static int
 gaih_inet (const char *name, const struct gaih_service *service,
@@ -513,17 +984,8 @@ gaih_inet (const char *name, const struct gaih_service *service,
   struct gaih_servtuple *st = (struct gaih_servtuple *) &nullserv;
   struct gaih_addrtuple *at = NULL;
   int rc;
-  int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
-		 (req->ai_flags & AI_V4MAPPED);
 
-	HIP_DEBUG("Family %d and Flags %d\n", req->ai_family, req->ai_flags);
-#if 0	//AG: not anymore needed
-  if ((req->ai_flags & AI_HIP) &&
-      (req->ai_family == PF_INET || (v4mapped & (req->ai_flags & AI_HIP)))) {
-    HIP_DEBUG("IPv4 and AI_HIP supported*****************\n");
-   // return -EAI_BADFLAGS; /* or EAI_FAMILY ?*/
-  }
-#endif
+  _HIP_DEBUG("Family %d and Flags %d\n", req->ai_family, req->ai_flags);
 
   if (req->ai_protocol || req->ai_socktype)
     {
@@ -545,69 +1007,14 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	}
     }
 
-  if (service != NULL)
-    {
-      if ((tp->protoflag & GAI_PROTO_NOSERVICE) != 0)
-	return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
-
-      if (service->num < 0)
-	{
-	  if (tp->name[0])
-	    {
-	      st = (struct gaih_servtuple *)
-		__alloca (sizeof (struct gaih_servtuple));
-
-	      if ((rc = gaih_inet_serv (service->name, tp, req, st)))
-		return rc;
-	    }
-	  else
-	    {
-	      struct gaih_servtuple **pst = &st;
-	      for (tp++; tp->name[0]; tp++)
-		{
-		  struct gaih_servtuple *newp;
-
-		  if ((tp->protoflag & GAI_PROTO_NOSERVICE) != 0)
-		    continue;
-
-		  if (req->ai_socktype != 0
-		      && req->ai_socktype != tp->socktype)
-		    continue;
-		  if (req->ai_protocol != 0
-		      && !(tp->protoflag & GAI_PROTO_PROTOANY)
-		      && req->ai_protocol != tp->protocol)
-		    continue;
-
-		  newp = (struct gaih_servtuple *)
-		    __alloca (sizeof (struct gaih_servtuple));
-
-		  if ((rc = gaih_inet_serv (service->name, tp, req, newp)))
-		    {
-		      if (rc & GAIH_OKIFUNSPEC)
-			continue;
-		      return rc;
-		    }
-
-		  *pst = newp;
-		  pst = &(newp->next);
-		}
-	      if (st == (struct gaih_servtuple *) &nullserv)
-		return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
-	    }
-	}
-      else
-	{
-	  st = __alloca (sizeof (struct gaih_servtuple));
-	  st->next = NULL;
-	  st->socktype = tp->socktype;
-	  st->protocol = ((tp->protoflag & GAI_PROTO_PROTOANY)
-			  ? req->ai_protocol : tp->protocol);
-	  st->port = htons (service->num);
-	}
-    }
+  if (service != NULL) {
+    rc = gaih_inet_get_serv(req, service, tp, &st);
+    if (rc) 
+      return rc;
+  } 
   else if (req->ai_socktype || req->ai_protocol)
     {
-      st = __alloca (sizeof (struct gaih_servtuple));
+      st = malloc (sizeof (struct gaih_servtuple));
       st->next = NULL;
       st->socktype = tp->socktype;
       st->protocol = ((tp->protoflag & GAI_PROTO_PROTOANY)
@@ -623,7 +1030,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	{
 	  struct gaih_servtuple *newp;
 
-	  newp = __alloca (sizeof (struct gaih_servtuple));
+	  newp = malloc (sizeof (struct gaih_servtuple));
 	  newp->next = NULL;
 	  newp->socktype = tp->socktype;
 	  newp->protocol = tp->protocol;
@@ -634,197 +1041,11 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	}
     }
 
-  if (name != NULL)
-    {
-      _HIP_DEBUG(">> name != NULL\n");
-
-      at = malloc (sizeof (struct gaih_addrtuple));
-
-      at->family = AF_UNSPEC;
-      at->scopeid = 0;
-      at->next = NULL;
-
-      // is ipv4 address?
-      if (inet_pton (AF_INET, name, at->addr) > 0)
-	{
-	  HIP_DEBUG("is IPv4\n");
-
-	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET || v4mapped)
-	    at->family = AF_INET;
-	  else
-	    return -EAI_FAMILY;
-	}
-
-      // not ipv4
-      if (at->family == AF_UNSPEC)
-	{
-	  char *namebuf = strdupa (name);
-	  char *scope_delim;
-
-	  _HIP_DEBUG("not IPv4\n");
-
-	  scope_delim = strchr (namebuf, SCOPE_DELIMITER);
-	  if (scope_delim != NULL)
-	    *scope_delim = '\0';
-
-	  // is ipv6 address?
-	  if (inet_pton (AF_INET6, namebuf, at->addr) > 0)
-	    {
-	      _HIP_DEBUG("is IPv6\n");
-
-	      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
-		at->family = AF_INET6;
-	      else
-		return -EAI_FAMILY;
-
-	      if (scope_delim != NULL)
-		{
-		  int try_numericscope = 0;
-		  if (IN6_IS_ADDR_LINKLOCAL (at->addr)
-		      || IN6_IS_ADDR_MC_LINKLOCAL (at->addr))
-		    {
-		      at->scopeid = if_nametoindex (scope_delim + 1);
-		      if (at->scopeid == 0)
-			try_numericscope = 1;
-		    } 
-		  else
-		    try_numericscope = 1;
-
-		  if (try_numericscope != 0)
-		    {
-		      char *end;
-		      unsigned long scopeid = strtoul (scope_delim + 1, &end,
-						       10);
-		      if (*end != '\0' || 
-			  (sizeof(at->scopeid) < sizeof(scopeid) &&
-			   scopeid > 0xffffffff)) 
-			return GAIH_OKIFUNSPEC | -EAI_NONAME;
-		      at->scopeid = (uint32_t) scopeid;
-		    }
-		}
-	    }
-	}
-
-      if (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0)
-	{
-	  struct hostent *h;
-	  struct gaih_addrtuple *orig_at = at;
-	  struct gaih_addrtuple **pat = &at;
-	  int no_data = 0;
-	  int no_inet6_data;
-	  int old_res_options = _res.options;
-	  int found_hits = 0;
-
-	  HIP_DEBUG("not IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST)\n");
-	  HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
-
-#ifdef UNDEF_CONFIG_HIP_AGENT
-	  if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
-	      hip_agent_is_alive()) {
-		  /* Communicate the name and port output to the agent
-		     synchronously with netlink. First send the name + port
-		     and then wait for answer (select). The agent filters
-		     or modifies the list. The agent implements gethosts_hit
-		     with some filtering. */
-	  }
-#endif
-	  if (hip_transparent_mode) {
-	    HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-	    found_hits |= gethosts_hit(name, pat);
-	    if (req->ai_flags & AI_HIP) {
-	      HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
-	    } else {
-	      HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
-	    }
-	  } else /* not hip_transparent_mode */ {
-	    if (req->ai_flags & AI_HIP) {
-	      HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
-	      found_hits |= gethosts_hit(name, pat);
-	    } else {
-	      HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
-	    }
-	  }
-	  dump_pai(orig_at);
-
-	  /* If we are looking for both IPv4 and IPv6 address we don't
-	     want the lookup functions to automatically promote IPv4
-	     addresses to IPv6 addresses.  Currently this is decided
-	     by setting the RES_USE_INET6 bit in _res.options.  */
-	  if (req->ai_family == AF_UNSPEC)
-	    _res.options &= ~RES_USE_INET6;
-	 
-	HIP_DEBUG("family: %d\n", req->ai_family ); 
-
-	/*
-		We dont need to check req->ai_family to add outer address.
-		We add adress as we get. The gethosts add the address of the specified
-		family if it get is.
-		FIXME: If both ipv4 and ipv6 address of a host is present in /etc/hosts
-		connetest-cleint-gai crashes --Abi
-	*/
-	  //if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
-	    gethosts (AF_INET6, struct in6_addr);
-	  no_inet6_data = no_data;
-
-
-	  if (req->ai_family == AF_UNSPEC)
-	    _res.options = old_res_options;
-
-	HIP_DEBUG("family: %d\n", req->ai_family ); 
-	  //if (req->ai_family == AF_INET ||
-	    //  (!v4mapped && req->ai_family == AF_UNSPEC) ||
-	     // (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL))))
-	    gethosts (AF_INET, struct in_addr);
-	HIP_DEBUG("Dumping the structure\n");
-	  dump_pai(orig_at);
-	  
-	  /* perform HIT-IPv6 mapping if both are found 
-	     AG: now the loop also takes in IPv4 addresses */
-	  if (found_hits) 
-	    send_hipd_addr(orig_at);
-
-	  if (no_data != 0 && no_inet6_data != 0)
-	    {
-	      _HIP_DEBUG("nodata\n");
-	      /* If both requests timed out report this.  */
-	      if (no_data == EAI_AGAIN && no_inet6_data == EAI_AGAIN)
-	        return -EAI_AGAIN;
-
-	      /* We made requests but they turned out no data.  The name
-	         is known, though.  */
-	      return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
-	    }
-
-	  /* HIP: Finally remove IPv6 addresses from the list to be
-	     returned depending on the AI_HIP flag */
-	  if (req->ai_flags & AI_HIP) {
-	    struct gaih_addrtuple *hit_at;
-	    HIP_DEBUG("HIP: AI_HIP set: remove IPv6 addresses\n");
-	    for(hit_at = at; hit_at != NULL; hit_at = hit_at->next) {
-	      /* At this point address list contains, nothing, only
-		 HITs, HITs and IPv6(+IPv4) addresses, or only
-		 IPv6(+IPv4) addresses */
-
-	      if (ipv6_addr_is_hit((struct in6_addr *)hit_at->addr) &&
-		  (hit_at->next != NULL && !ipv6_addr_is_hit((struct in6_addr *)hit_at->next->addr))
-		  ) {
-		/* Here we assume that IPv6 addresses are before IPv4
-		   addresses (if there are any IPv6 addresses) */
-		struct gaih_addrtuple *nonhit_at = hit_at->next;
-		for(; nonhit_at != NULL && nonhit_at->family == AF_INET6; nonhit_at = nonhit_at->next) {
-		  free(nonhit_at);
-		}
-		hit_at->next = nonhit_at;
-	      }
-	    }
-	  }
-	  dump_pai(orig_at);
-	} /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */
-
-      if (at->family == AF_UNSPEC)
-	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
-
-    }
+  if (name != NULL) {
+    rc = gaih_inet_get_name(name, req, tp, st, &at, hip_transparent_mode);
+    if (rc)
+      return rc;
+  }
   else /* name == NULL */
     {
       struct gaih_addrtuple **pat = &at;
@@ -873,162 +1094,15 @@ gaih_inet (const char *name, const struct gaih_service *service,
 	    *(uint32_t *) atr->addr = htonl (INADDR_LOOPBACK);
 	}
     }
-  
+
   if (pai == NULL) {
     _HIP_DEBUG("pai == NULL\n");
     return 0;
   }
-
-  {
-    const char *c = NULL;
-    struct gaih_servtuple *st2;
-    struct gaih_addrtuple *at2 = at;
-    size_t socklen, namelen;
-    sa_family_t family;
-
-    /*
-      buffer is the size of an unformatted IPv6 address in printable format.
-     */
-    char buffer[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"];
-
-    while (at2 != NULL)
-      {
-	if (req->ai_flags & AI_CANONNAME)
-	  {
-	    struct hostent *h = NULL;
-
-	    int herrno;
-	    struct hostent th;
-	    size_t tmpbuflen = 512;
-	    char *tmpbuf;
-
-	    do
-	      {
-		tmpbuflen *= 2;
-		tmpbuf = __alloca (tmpbuflen);
-
-		if (tmpbuf == NULL)
-		  return -EAI_MEMORY;
-
-		/* skip if at2->addr is HIT ? */
-		rc = __gethostbyaddr_r (at2->addr,
-					((at2->family == AF_INET6)
-					 ? sizeof(struct in6_addr)
-					 : sizeof(struct in_addr)),
-					at2->family, &th, tmpbuf, tmpbuflen,
-					&h, &herrno);
-
-	      }
-	    while (rc == errno && herrno == NETDB_INTERNAL);
-
-	    if (rc != 0 && herrno == NETDB_INTERNAL)
-	      {
-		__set_h_errno (herrno);
-		return -EAI_SYSTEM;
-	      }
-
-	    if (h == NULL)
-	      c = inet_ntop (at2->family, at2->addr, buffer, sizeof(buffer));
-	    else
-	      c = h->h_name;
-
-	    if (c == NULL)
-	      return GAIH_OKIFUNSPEC | -EAI_NONAME;
-
-	    namelen = strlen (c) + 1;
-	  }
-	else
-	  namelen = 0;
-
-	if (at2->family == AF_INET6 || v4mapped)
-	  {
-	    family = AF_INET6;
-	    socklen = sizeof (struct sockaddr_in6);
-	  }
-	else
-	  {
-	    family = AF_INET;
-	    socklen = sizeof (struct sockaddr_in);
-	  }
-
-	for (st2 = st; st2 != NULL; st2 = st2->next)
-	  {
-	    *pai = malloc (sizeof (struct addrinfo) + socklen + namelen);
-	    if (*pai == NULL)
-	      return -EAI_MEMORY;
-
-	    (*pai)->ai_flags = req->ai_flags;
-	    (*pai)->ai_family = family;
-	    (*pai)->ai_socktype = st2->socktype;
-	    (*pai)->ai_protocol = st2->protocol;
-	    (*pai)->ai_addrlen = socklen;
-	    (*pai)->ai_addr = (void *) (*pai) + sizeof(struct addrinfo);
-#if 0 /* does not compile */
-#if SALEN
-	    (*pai)->ai_addr->sa_len = socklen;
-#endif /* SALEN */
-#endif
-	    (*pai)->ai_addr->sa_family = family;
-
-	    if (family == AF_INET6)
-	      {
-		struct sockaddr_in6 *sin6p =
-		  (struct sockaddr_in6 *) (*pai)->ai_addr;
-
-		sin6p->sin6_flowinfo = 0;
-		if (at2->family == AF_INET6)
-		  {
-		    memcpy (&sin6p->sin6_addr,
-			    at2->addr, sizeof (struct in6_addr));
-		  }
-		else
-		  {
-		    sin6p->sin6_addr.s6_addr32[0] = 0;
-		    sin6p->sin6_addr.s6_addr32[1] = 0;
-		    sin6p->sin6_addr.s6_addr32[2] = htonl(0x0000ffff);
-		    memcpy(&sin6p->sin6_addr.s6_addr32[3], 
-			   at2->addr, sizeof (sin6p->sin6_addr.s6_addr32[3]));
-		  }
-		sin6p->sin6_port = st2->port;
-		sin6p->sin6_scope_id = at2->scopeid;
-	      }
-	    else
-	      {
-		struct sockaddr_in *sinp =
-		  (struct sockaddr_in *) (*pai)->ai_addr;
-
-		memcpy (&sinp->sin_addr,
-			at2->addr, sizeof (struct in_addr));
-		sinp->sin_port = st2->port;
-		memset (sinp->sin_zero, '\0', sizeof (sinp->sin_zero));
-	      }
-
-	    if (c)
-	      {
-		(*pai)->ai_canonname = ((void *) (*pai) +
-					sizeof (struct addrinfo) + socklen);
-		strcpy ((*pai)->ai_canonname, c);
-	      }
-	    else
-	      (*pai)->ai_canonname = NULL;
-
-	    (*pai)->ai_next = NULL;
-	    pai = &((*pai)->ai_next);
-	  }
-	
-	at2 = at2->next;
-      }
-    /* changed __alloca:s for the linked list 'at' to mallocs, 
-       free malloced memory from at */
-    if (at) {
-      free_gaih_addrtuple(at);
-      /* In case the caller of tries to free at again */
-      at = NULL;
-    }
-  }
-  return 0;
+  _HIP_DEBUG("Dumping the structure before returning results\n");
+  //dump_pai(at);
+  return gaih_inet_result(at, st, req, pai);  
 }
-
 
 static struct gaih gaih[] =
   {
@@ -1212,3 +1286,4 @@ freeaddrinfo (struct addrinfo *ai)
       free (p);
     }
 }
+
