@@ -10,6 +10,11 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
+if HIP_OPENDHT
+	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+endif
+
 bin_PROGRAMS = conntest-client
 bin_PROGRAMS += conntest-server
 bin_PROGRAMS += conntest-client-gai

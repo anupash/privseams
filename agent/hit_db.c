@@ -167,6 +167,7 @@ int hit_db_add(char *name,
 {
 	/* Variables. */
 	int n, err = 0;
+	char hitb[128];
 
 	if (!nolock) HIT_DB_LOCK();
 
@@ -193,7 +194,8 @@ int hit_db_add(char *name,
 
 /* XX TODO: Copy url too someday: hi_db[n].url */
 	HIP_DEBUG("Calling GUI to show new HIT...");
-	gui_add_new_hit(&hit_db[n]);
+	print_hit_to_buffer(hitb, &hit_db[n].rhit);
+	gui_add_remote_hit(hitb, "<none>", 80);
 	HIP_DEBUG(" Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */

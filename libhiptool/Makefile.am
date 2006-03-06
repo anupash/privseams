@@ -42,3 +42,7 @@ CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 #include_HEADERS =
+
+if HIP_OPENDHT
+	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+endif

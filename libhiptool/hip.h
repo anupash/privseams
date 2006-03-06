@@ -119,7 +119,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
         ((((__const uint32_t *) (a))[0] == 0)                                 \
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
-         && (((__const uint32_t *) (a))[3] != 0))                              
+         && IS_LSI32(((__const uint32_t *) (a))[3]))        
 
 #define HIPL_VERSION 0.2
 
@@ -185,11 +185,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_NETLINK_DUMMY                    17
 #define SO_HIP_AGENT_PING                       18
 #define SO_HIP_AGENT_PING_REPLY                 19
-#define SO_HIP_CONF_PUZZLE_NEW                  20
-#define SO_HIP_CONF_PUZZLE_GET                  21
-#define SO_HIP_CONF_PUZZLE_SET                  22
-#define SO_HIP_CONF_PUZZLE_INC                  23
-#define SO_HIP_CONF_PUZZLE_DEC                  24
+#define SO_HIP_AGENT_QUIT                       20
+#define SO_HIP_CONF_PUZZLE_NEW                  21
+#define SO_HIP_CONF_PUZZLE_GET                  22
+#define SO_HIP_CONF_PUZZLE_SET                  23
+#define SO_HIP_CONF_PUZZLE_INC                  24
+#define SO_HIP_CONF_PUZZLE_DEC                  25
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -306,7 +307,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIP_AES_SHA1                1
 #define HIP_HIP_3DES_SHA1               2
 #define HIP_HIP_3DES_MD5                3
+#define HIP_HIP_BLOWFISH_SHA1           4
 #define HIP_HIP_NULL_SHA1               5
+#define HIP_HIP_NULL_MD5                6
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
