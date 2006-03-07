@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	k = atoi(argv[1]);
-	printf("k=%d\n", k);
+	HIP_DEBUG("k=%d\n", k);
 
 	hip_create_puzzle(&pz, k, 0, 0);
 
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 	gettimeofday(&stats_after, NULL);
 
 	hip_timeval_diff(&stats_after, &stats_before, &stats_res);
-	HIP_INFO("puzzle solved in %ld.%06ld\n",
+	HIP_INFO("puzzle solved in %ld.%06ld secs\n",
 		 stats_res.tv_sec, stats_res.tv_usec);
 
 	memcpy(&sol, &pz, sizeof(pz));
