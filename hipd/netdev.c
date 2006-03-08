@@ -58,6 +58,20 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	return 0;
 }
 
+int exists_address_in_list(struct sockaddr *addr, int ifindex)
+{
+	struct netdev_address *n, *t;
+	
+	list_for_each_entry_safe(n, t, &addresses, next) {
+		if (n->addr.ss_family == addr->sa_family &&
+		    n->if_index == ifindex &&
+		    !memcmp(SA2IP(&n->addr), SA2IP(addr), SAIPLEN(&n->addr)))
+			return 1;
+	}
+
+	return 0;
+}
+
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
@@ -381,7 +395,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len)) {
-		int ifindex;
+		int ifindex, addr_exists;
 
 		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 		ifindex = ifinfo->ifi_index;
@@ -393,8 +407,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* wait for RTM_NEWADDR to add addresses */
 			break;
 		case RTM_DELLINK:
-			/* Disabled due to radvd and firewall tests */
-			return 0;
 			HIP_DEBUG("RTM_DELLINK\n");
 			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			//delete_address_from_list(NULL, ifinfo->ifi_index);
@@ -407,9 +419,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* Add or delete address from addresses */
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
-			/* Disabled due to radvd and firewall tests */
-			return 0;
-
 			HIP_DEBUG("RTM_NEWADDR/DELADDR\n");
 			ifa = (struct ifaddrmsg*)NLMSG_DATA(msg);
 			rta = IFA_RTA(ifa);
@@ -447,10 +456,24 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			pre_if_address_count = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
 				  pre_if_address_count, ifa->ifa_index);
+
+			addr_exists = exists_address_in_list(addr,
+							     ifa->ifa_index);
+			HIP_DEBUG("is_add=%d, exists=%d\n", is_add, addr_exists);
+			if ((is_add && addr_exists) ||
+			    (!is_add && !addr_exists)) {
+				/* radvd can try to add duplicate addresses.
+				   This can confused our address cache. */
+				HIP_DEBUG("Address %s discarded.\n",
+					  (is_add ? "add" : "del"));
+				return 0;
+			}
+
 			if (is_add)
 				add_address_to_list(addr, ifa->ifa_index);
 			else
 				delete_address_from_list(addr, ifa->ifa_index);
+
 			i = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
