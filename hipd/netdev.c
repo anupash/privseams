@@ -393,6 +393,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* wait for RTM_NEWADDR to add addresses */
 			break;
 		case RTM_DELLINK:
+			/* Disabled due to radvd and firewall tests */
+			return 0;
 			HIP_DEBUG("RTM_DELLINK\n");
 			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			//delete_address_from_list(NULL, ifinfo->ifi_index);
@@ -405,6 +407,9 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* Add or delete address from addresses */
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
+			/* Disabled due to radvd and firewall tests */
+			return 0;
+
 			HIP_DEBUG("RTM_NEWADDR/DELADDR\n");
 			ifa = (struct ifaddrmsg*)NLMSG_DATA(msg);
 			rta = IFA_RTA(ifa);
