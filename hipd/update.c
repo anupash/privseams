@@ -1507,6 +1507,9 @@ void hip_send_update_all(struct hip_rea_info_addr_item *addr_list, int addr_coun
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
+	/* Disable due to radvd */
+	return 0;
+
 	/* XX TODO: check UPDATE also with radvd (i.e. same address is added twice). */
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
