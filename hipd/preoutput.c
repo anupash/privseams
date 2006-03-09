@@ -24,7 +24,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		  hip_ha_t *entry,
 		  int retransmit)
 {
-	int err = 0, sa_size, sent, len;
+	int err = 0, sa_size, sent, len, dupl;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	struct sockaddr_in6 *src6, *dst6;
@@ -137,16 +137,18 @@ int hip_csum_send(struct in6_addr *local_addr,
 	}
 
 	/* For some reason, neither sendmsg or send (with bind+connect)
-	   do not seem to work. */
+	   do not seem to work properly. Thus, we use just sendto() */
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	/* For some reason, connect() was not working with a raw socket */
-	sent = sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
-		      sa_size);
 
-	HIP_IFEL((sent != len), -1,
-		 "Could not send the all requested data (%d/%d)\n", sent, len);
+	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
+		sent = sendto(hip_raw_sock, msg, len, 0,
+			      (struct sockaddr *) &dst, sa_size);
+		HIP_IFEL((sent != len), -1,
+			 "Could not send the all requested data (%d/%d)\n",
+			 sent, len);
+	}
 
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
