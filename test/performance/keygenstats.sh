@@ -2,7 +2,16 @@
 
 export PATH=$PATH:.
 
-for K in `seq 1 30`
+LOG=logs/keygentest-final-${ALGO}
+
+for ALGO in dsa rsa
 do
-  stats.pl 95 type '.*(puzzle)\s+solved\s+in\s+(\S+)\s*' <logs/cookieperf-${K} | tail -1 >logs/cookieperf-final-${K}
+  rm -f $LOG
+  echo "--- $ALGO ---"
+  for BITS in `seq 256 256 4096`
+  do
+    echo -n "$BITS" >> logs/keygentest-final-${ALGO}
+    stats.pl 95 type '.*(\S+) key created in (\S+) secs' <logs/keygentest-${ALGO}-${BITS} | tail -1 | tee -a $LOG
+  done
 done
+

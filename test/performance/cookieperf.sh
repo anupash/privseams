@@ -2,6 +2,8 @@
 
 export PATH=$PATH:..
 
+mkdir logs
+
 for K in `seq 1 30`
 do
   LOGFILE="logs/cookieperf-${K}"

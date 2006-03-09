@@ -2,6 +2,8 @@
 
 export PATH=$PATH:..
 
+mkdir logs
+
 for ALGO in dsa rsa
 do
   for BITS in `seq 256 256 4096`
