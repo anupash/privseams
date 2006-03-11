@@ -359,3 +359,38 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
+int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
+{
+	struct hip_host_id *private = NULL;
+	struct hip_lhi lhi;
+	int err = 0, len;
+
+	/* Store private key and lhi, delete the host id entry and readd.
+	   Addition recreates also R1s as a side effect. */
+
+	len = hip_get_param_total_len(entry->host_id);
+	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
+		 -ENOMEM, "pubkey mem alloc failed\n");
+	memcpy(private, entry->host_id, len);
+
+	memcpy(&lhi, &entry->lhi, sizeof(lhi));
+
+	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
+		 "Failed to delete host id\n");
+
+	HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, private, 
+				 NULL, NULL, NULL),
+		 -EFAULT, "adding of local host identity failed\n");
+
+ out_err:
+	if (private)
+		free(private);
+	return err;
+
+}
+
+int hip_recreate_all_precreated_r1_packets()
+{
+	return hip_for_each_hi(hip_recreate_r1s_for_entry, NULL);
+}
+

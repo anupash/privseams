@@ -39,6 +39,9 @@ struct sockaddr_un hip_agent_addr;
 int address_count;
 struct list_head addresses;
 
+float retrans_counter = HIP_RETRANSMIT_INIT;
+float precreate_counter = HIP_R1_PRECREATE_INIT;
+
 time_t load_time;
 
 void usage() {
@@ -350,6 +353,30 @@ int init_random_seed()
 	return err;
 }
 
+int periodic_maintenance() {
+	int err = 0;
+
+	if (retrans_counter < 0) {
+		HIP_IFEL(hip_scan_retransmissions(), -1,
+			 "retransmission scan failed\n");
+		retrans_counter = HIP_RETRANSMIT_INIT;
+	} else {
+		retrans_counter--;
+	}
+
+	if (precreate_counter < 0) {
+		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
+			 "Failed to recreate puzzles\n");
+		precreate_counter = HIP_R1_PRECREATE_INIT;
+	} else {
+		precreate_counter--;
+	}
+	
+ out_err:
+	
+	return err;
+}
+
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -369,7 +396,6 @@ int main(int argc, char *argv[]) {
 	   that may crash the daemon and leave the SAs floating around to
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
-	float retrans_counter = -1;
 
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, "b")) != -1) {		
@@ -649,15 +675,7 @@ int main(int argc, char *argv[]) {
 			HIP_INFO("Unknown socket activity.");
 		}
 
-		if (retrans_counter < 0) {
-			err = hip_scan_retransmissions();
-			retrans_counter = HIP_RETRANSMISSION_INTERVAL /
-				HIP_SELECT_TIMEOUT;
-		} else {
-			retrans_counter--;
-		}
-
-		/* XX TODO: recreate cookies at interval N */
+		err = periodic_maintenance();
 
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,

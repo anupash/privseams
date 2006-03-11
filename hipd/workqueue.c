@@ -4,12 +4,10 @@
  * Licence: GNU/GPL
  * Authors:
  * - Kristian Slavov <ksl@iki.fi>
+ * - Miika Komu <miika@iki.fi>
  *
- * Common comments: __get_cpu_var() is used instead of the get_cpu_var() since
- * each workqueue "listener" is bound to a certain cpu. Workorder is always
- * inserted into the workqueue of the sender. This is actually the only place
- * where we would like the adder to be in the same cpu as the workqueue he is
- * adding to. This is ensured by local_irq_save().
+ * We don't currently have a workqueue. The functionality in this file mostly
+ * covers catching userspace messages only.
  *
  */
 #include "workqueue.h"

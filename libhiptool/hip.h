@@ -127,8 +127,14 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_MAX_NETLINK_PACKET 3072
 
 #define HIP_SELECT_TIMEOUT          1
-#define HIP_RETRANSMISSION_MAX      10
-#define HIP_RETRANSMISSION_INTERVAL 5
+#define HIP_RETRANSMIT_MAX      10
+#define HIP_RETRANSMIT_INTERVAL 5 /* seconds */
+#define HIP_RETRANSMIT_INIT \
+           (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+#define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
+#define HIP_R1_PRECREATE_INIT \
+           (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
