@@ -12,7 +12,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	       sizeof(struct in6_addr));
 	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
 	       sizeof(struct in6_addr));
-	entry->hip_msg_retrans.count = HIP_RETRANSMISSION_MAX;
+	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
 
  out_err:
 	return err;

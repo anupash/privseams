@@ -721,6 +721,10 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
 		   should be 1 */
+		HIP_DEBUG_HIT("our HIT", &ha->hit_our);
+		HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
+		hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
+				       IPPROTO_ESP, 1);
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
