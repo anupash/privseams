@@ -140,16 +140,6 @@ if test x"$enable_agent" = x"yes"; then
 		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
 fi
 
-AC_ARG_ENABLE(rvs,
-             AC_HELP_STRING([--enable-rvs],
-                            [HIP rendezvous extensions (default is NO)]),
-             [ac_cv_use_rvs=$withval], [ac_cv_use_rvs=no])
-AC_CACHE_CHECK([whether to use rvs],
-               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
-if test x"$enable_rvs" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_RVS)
-fi
-
 AC_ARG_ENABLE(hi3,
              AC_HELP_STRING([--enable-hi3],
                             [Hi3 support (default is NO)]),
@@ -160,6 +150,16 @@ if test x"$enable_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3)
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$enable_hi3" = x"yes")
+
+AC_ARG_ENABLE(spam,
+             AC_HELP_STRING([--enable-spam],
+                            [HIP spamassassing extensions (default is NO)]),
+             [ac_cv_use_spam=$withval], [ac_cv_use_spam=no])
+AC_CACHE_CHECK([whether to use spam],
+               [ac_cv_use_spam], [ac_cv_use_spam=no])
+if test x"$enable_spam" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_SPAM)
+fi
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],

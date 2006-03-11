@@ -14,10 +14,13 @@ Requires
 
   I noticed that 64 MB is not enough mem. Using 256 MB is fine.
 
+./configure --enable-spam # required for proper SPAM cookie indexing
+
 Configuration
 =============
 
 /etc/default/spamass-milter: OPTIONS=-r 15
+
 
 
 

@@ -13,6 +13,7 @@
  * hip_calc_cookie_idx - get an index
  * @ip_i: Initiator's IPv6 address
  * @ip_r: Responder's IPv6 address
+ * @hit_i: Initiators HIT
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
@@ -22,10 +23,20 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	register u32 base=0;
 	int i;
 
+#ifdef CONFIG_HIP_SPAM
+	/* The HIP spam assassin extensions require indexing based on the
+	   initiator HIT only. However, this may happen on the expense of
+	   DoS protection against zombies. */
+	for(i = 0; i < 4; i++) {
+		base ^= hit_i->s6_addr32[i];
+		base ^= hit_i->s6_addr32[i];
+	}
+#else /* The normal case */
 	for(i = 0; i < 4; i++) {
 		base ^= ip_i->s6_addr32[i];
 		base ^= ip_r->s6_addr32[i];
 	}
+#endif
 
 	for(i = 0; i < 3; i++) {
 		base ^= ((base >> (24 - i * 8)) & 0xFF);
@@ -358,13 +369,3 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;
 }
-
-#if 0
-int hip_reinit_precreated_r1_packets()
-{
-       	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
-				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
-
-}
-#endif
