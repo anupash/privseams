@@ -657,6 +657,8 @@ int main(int argc, char *argv[]) {
 			retrans_counter--;
 		}
 
+		/* XX TODO: recreate cookies at interval N */
+
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
 				  ((errno) ? strerror(errno) : ""));
