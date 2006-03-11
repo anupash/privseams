@@ -216,8 +216,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * Returns: zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit, 
-		struct in6_addr *dst_ip, struct in6_addr *dst_hit)
+		struct in6_addr *src_hit,  struct in6_addr *dst_ip,
+		struct in6_addr *dst_hit)
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
@@ -228,8 +228,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
-	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit)), -ENOENT, 
-		 "No precreated R1\n");
+	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)),
+		 -ENOENT, "No precreated R1\n");
 
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);

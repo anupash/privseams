@@ -1199,7 +1199,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_daddr,		  
 		  hip_ha_t *ha)
 {
-	int err = 0, retransmission = 0;
+	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1244,11 +1244,19 @@ int hip_handle_i2(struct hip_common *i2,
 	if (entry) {
 		/* If the I2 packet is a retransmission, we need reuse
 		   the the SPI/keymat that was setup already when the
-		   first I2 was received. However it is a
-		   retransmission only if the responder is in R2-SENT
-		   STATE */
+		   first I2 was received. */
 		retransmission = 
-			(entry->state == HIP_STATE_R2_SENT ? 1 : 0);
+			((entry->state == HIP_STATE_R2_SENT ||
+			  entry->state == HIP_STATE_ESTABLISHED) ? 1 : 0);
+		/* If the initiator is in established state (it has possibly
+		   sent duplicate I2 packets), we must make sure that we are
+		   reusing the old SPI as the initiator will just drop the
+		   R2, thus discarding any new SPIs we create. Notice that
+		   this works also in the case when initiator is not in
+		   established state, as the initiator just picks up the SPI
+		   from the R2. */
+		if (entry->state == HIP_STATE_ESTABLISHED)
+			spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
@@ -1423,6 +1431,7 @@ int hip_handle_i2(struct hip_common *i2,
 		 "Error while adding the preferred peer address\n");
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
+	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
@@ -1431,7 +1440,7 @@ int hip_handle_i2(struct hip_common *i2,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			 retransmission, HIP_SPI_DIRECTION_IN, 0);
 	if (err) {
-		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
+		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 //		if (err == -EEXIST)
 //			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
 //				  spi_in);
@@ -1453,7 +1462,8 @@ int hip_handle_i2(struct hip_common *i2,
 			 &ctx->esp_out, &ctx->auth_out,
 			 1, HIP_SPI_DIRECTION_OUT, 0);
 	if (err) {
-		HIP_DEBUG("Adding of outbound SA failed\n");
+		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
+			  spi_out);
 
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");

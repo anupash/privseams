@@ -5,33 +5,22 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef AGENT_H
-#define AGENT_H
+#ifndef GUI_MAIN_H
+#define GUI_MAIN_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <fcntl.h>
-//#include <socket.h>
-#include <sys/un.h>
-#include <sys/types.h>
-#include <signal.h>
+#include <gtk/gtk.h>
 
-#include "hip.h"
-#ifndef __u32
-/* Fedore Core 3/4 and Enterprise linux 4 is broken. */
-#  include <linux/types.h>
-#endif
-#include "linux/netlink.h"
-#include "linux/rtnetlink.h"
-//#include "workqueue.h"
-#include "agent_tools.h"
-#include "gui_interface.h"
+#include "gui_event.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-
-
+int gui_init(void);
+int gui_main(void);
+void gui_quit(void);
+void *gui_get_window(void);
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

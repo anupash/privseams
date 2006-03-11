@@ -15,7 +15,6 @@
 #include <string.h>
 
 #include "hit_db.h"
-#include "agent_interface.h"
 
 
 /******************************************************************************/
@@ -28,7 +27,6 @@ extern "C" {
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int gui_init(void);
 int gui_check_hit(HIT_Item *);
 
 
