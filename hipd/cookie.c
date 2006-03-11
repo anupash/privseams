@@ -16,7 +16,8 @@
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
-static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
+static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			       struct in6_addr *hit_i)
 {
 	register u32 base=0;
 	int i;
@@ -44,7 +45,9 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
  * 
  * Returns NULL if error.
  */
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *our_hit)
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			      struct in6_addr *our_hit,
+			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
 	struct hip_r1entry * hip_r1table;
@@ -57,7 +60,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 		 NULL, "Requested source HIT no more available.\n");
 	hip_r1table = hid->r1;
 
-	idx = hip_calc_cookie_idx(ip_i, ip_r);
+	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
 	/* the code under if 0 periodically changes the puzzle. It is not included
@@ -291,8 +294,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  * Returns 1 if puzzle ok, 0 if !ok.
  */ 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
-		      struct hip_common *hdr,
-		      struct hip_solution *solution)
+		      struct hip_common *hdr, struct hip_solution *solution)
 {
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
@@ -303,7 +305,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
 		 0, "Requested source HIT not (any more) available.\n");
-	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
+	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
