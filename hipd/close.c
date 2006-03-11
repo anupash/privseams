@@ -121,10 +121,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED\n");
 
-	/* Note: I had some problems with deletion of peer info. Try to close
-	   a SA and then to re-establish without killing
-	   the hipd when you test the CLOSE. -miika */
-
 	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed\n");
