@@ -28,7 +28,11 @@ const char *usage = "new|add hi default\n"
         "hip rst all|peer_hit\n"
         "add rvs hit ipv6\n"
         "hip bos\n"
+#ifdef CONFIG_HIP_SPAM
+        "get|set|inc|dec|new puzzle all|hit\n"
+#else
         "get|set|inc|dec|new puzzle all\n"
+#endif
 	;
 
 
@@ -43,7 +47,6 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_rst,
 	handle_rvs,
 	handle_bos,
-	handle_del,
 	handle_puzzle
 };
 
@@ -71,6 +74,8 @@ int get_action(char *text) {
 		ret = ACTION_INC;
 	else if (!strcmp("dec", text))
 		ret = ACTION_DEC;
+	else if (!strcmp("hip", text))
+		ret = ACTION_HIP;
 	return ret;
 }
 
@@ -136,6 +141,9 @@ int get_type_arg(int action) {
         case ACTION_DEL:
         case ACTION_NEW:
         case ACTION_HIP:
+        case ACTION_INC:
+        case ACTION_SET:
+        case ACTION_GET:
                 type_arg = 2;
                 break;
         }
@@ -491,11 +499,11 @@ int handle_bos(struct hip_common *msg, int action,
 int handle_puzzle(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
-	int err = 0, ret, msg_type;
+	int err = 0, ret, msg_type, all;
 
-	struct in6_addr hit = {0};
+	hip_hit_t hit = {0};
 
-	if (optc != 2) {
+	if (optc != 1) {
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
 		goto out;
@@ -528,9 +536,10 @@ int handle_puzzle(struct hip_common *msg, int action,
 		goto out;
 	}
 
-	if (!strcmp("all", opt[0])) {
-	} else {
+	all = !strcmp("all", opt[0]);
+
 #ifdef CONFIG_HIP_SPAM
+	if (!all) {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
@@ -541,11 +550,14 @@ int handle_puzzle(struct hip_common *msg, int action,
 			err = -EINVAL;
 			goto out;
 		}
-#else
-		err = -1;
-		goto out_err;
-#endif
 	}
+#else
+	if (!all) {
+		err = -1;
+		HIP_ERROR("Only 'all' is supported\n");
+		goto out;
+	}
+#endif /* CONFIG_HIP_SPAM */
 
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
@@ -560,8 +572,12 @@ int handle_puzzle(struct hip_common *msg, int action,
 		goto out;
 	}
 
-	HIP_INFO("New cookie difficulty is effective in %s seconds\n",
-		 HIP_R1_PRECREATE_INTERVAL);
+	if (all) {
+		printf("New puzzle difficulty effective immediately\n");
+	} else {
+		printf("New puzzle difficulty is effective in %d seconds\n",
+			 HIP_R1_PRECREATE_INTERVAL);
+	}
 
  out:
 	return err;
@@ -595,13 +611,14 @@ int main(int argc, char *argv[]) {
 	
 	if (argc-2 < check_action_argc(action)) {
 		err = -EINVAL;
-		HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
+		HIP_ERROR("Not enough arguments given for the action '%s'\n",
+			  argv[1]);
 		goto out;
 	}
 	
 	type_arg = get_type_arg(action);
 	if (type_arg < 0) {
-		HIP_ERROR("Could parse type\n");
+		HIP_ERROR("Could not parse type\n");
 		goto out;
 	}
 

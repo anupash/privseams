@@ -11,26 +11,30 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-int hip_get_default_cookie_difficulty() {
+#ifndef CONFIG_HIP_SPAM /* see also spam.c for overriding functions */
+int hip_get_cookie_difficulty(hip_hit_t *not_used) {
 	/* Note: we could return a higher value if we detect DoS */
 	return hip_cookie_difficulty;
 }
 
-int hip_set_cookie_difficulty(int k) {
-	if (k >= HIP_PUZZLE_MAX_K)
+int hip_set_difficulty(hip_hit_t *not_used, int k) {
+	if (k >= HIP_PUZZLE_MAX_K || k < 1) {
+		HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
+			  k, 1, HIP_PUZZLE_MAX_K);
 		return -1;
+	}
 	hip_cookie_difficulty = k;
 	HIP_DEBUG("HIP cookie value set to %d\n", k);
 	return k;
 }
 
-int hip_inc_default_cookie_difficult() {
-	int k = hip_get_default_cookie_difficulty() + 1;
+int hip_inc_cookie_difficulty(hip_hit_t *not_used) {
+	int k = hip_get_cookie_difficulty() + 1;
 	return hip_set_cookie_difficulty(k);
 }
 
-int hip_dec_default_cookie_difficult() {
-	int k = hip_get_default_cookie_difficulty() - 1;
+int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
+	int k = hip_get_cookie_difficulty() - 1;
 	return hip_set_cookie_difficulty(k);
 }
 
@@ -42,7 +46,6 @@ int hip_dec_default_cookie_difficult() {
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
-#ifndef CONFIG_HIP_SPAM
 int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			       struct in6_addr *hit_i)
 {
@@ -270,7 +273,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
 		int cookie_k;
 
-		cookie_k = hip_get_default_cookie_difficulty();
+		cookie_k = hip_get_cookie_difficulty(NULL);
 
 		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
 					      cookie_k);

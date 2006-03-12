@@ -1,6 +1,8 @@
 #ifdef CONFIG_HIP_SPAM
 #include "spam.h"
 
+ /* see also cookie.c for overriding functions */
+
 /* We need maintain a separate table for the K values of cookies because
    otherwise they are just overwritten when R1s are recreated periodically. */
 int hip_puzzle_k[HIP_R1TABLESIZE] = { HIP_DEFAULT_COOKIE_K };
@@ -28,17 +30,20 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return (base) % HIP_R1TABLESIZE;
 }
 
-int hip_get_spam_cookie_difficulty(hip_hit_t *hit_i) {
+int hip_get_cookie_difficulty(hip_hit_t *hit_i) {
 	return hip_puzzle_k[hip_calc_cookie_idx(NULL, NULL, hit_i)];
 }
 
-int hip_get_spam_cookie_difficulty_by_index(int r1_index) {
+int hip_get_cookie_difficulty_by_index(int r1_index) {
 	return hip_puzzle_k[r1_index];
 }
 
-int hip_set_spam_cookie_difficulty(hip_hit_t *hit_i, int k) {
-	if (k >= HIP_PUZZLE_MAX_K)
+int hip_set_cookie_difficulty(hip_hit_t *hit_i, int k) {
+	if (k >= HIP_PUZZLE_MAX_K || k < 1) {
+		HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
+			  k, 1, HIP_PUZZLE_MAX_K);
 		return -1;
+	}
 
 	hip_puzzle_k[hip_calc_cookie_idx(NULL, NULL, hit_i)] = k;
 
@@ -46,14 +51,14 @@ int hip_set_spam_cookie_difficulty(hip_hit_t *hit_i, int k) {
 	return k;
 }
 
-int hip_inc_spam_cookie_difficulty(hip_hit_t *hit_i) {
-	int k = hip_get_spam_cookie_difficulty(hit_i) + 1;
-	return hip_set_spam_cookie_difficulty(hit_i, k);
+int hip_inc_cookie_difficulty(hip_hit_t *hit_i) {
+	int k = hip_get_cookie_difficulty(hit_i) + 1;
+	return hip_set_cookie_difficulty(hit_i, k);
 }
 
-int hip_dec_spam_cookie_difficulty(hip_hit_t *hit_i) {
-	int k = hip_get_spam_cookie_difficulty(hit_i) - 1;
-	return hip_set_spam_cookie_difficulty(hit_i, k);
+int hip_dec_cookie_difficulty(hip_hit_t *hit_i) {
+	int k = hip_get_cookie_difficulty(hit_i) - 1;
+	return hip_set_cookie_difficulty(hit_i, k);
 }
 
 int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
@@ -65,7 +70,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
 		int cookie_k;
 
-		cookie_k = hip_get_spam_cookie_difficulty_by_index(i);
+		cookie_k = hip_get_cookie_difficulty_by_index(i);
 
 		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
 					      cookie_k);

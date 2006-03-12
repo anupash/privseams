@@ -353,7 +353,6 @@ int hip_handle_user_msg(struct hip_common *msg) {
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#ifdef HIP_CONFIG_SPAM
 	case SO_HIP_CONF_PUZZLE_GET:
 		err = -ESOCKTNOSUPPORT; /* TBD */
 		break;
@@ -362,28 +361,12 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		break;
 	case SO_HIP_CONF_PUZZLE_INC:
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		if (!hit)
-			hip_inc_spam_cookie_difficulty(hit);
+		hip_inc_cookie_difficulty(hit);
 		break;
 	case SO_HIP_CONF_PUZZLE_DEC:
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		if (!hit)
-			hip_dec_spam_cookie_difficulty(hit);
+		hip_dec_cookie_difficulty(hit);
 		break;
-#else
-	case SO_HIP_CONF_PUZZLE_GET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
-		break;
-	case SO_HIP_CONF_PUZZLE_SET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
-		break;
-	case SO_HIP_CONF_PUZZLE_INC:
-		hip_inc_default_cookie_difficult();
-		break;
-	case SO_HIP_CONF_PUZZLE_DEC:
-		hip_dec_default_cookie_difficult();
-		break;
-#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
