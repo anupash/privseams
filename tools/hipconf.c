@@ -142,6 +142,7 @@ int get_type_arg(int action) {
         case ACTION_NEW:
         case ACTION_HIP:
         case ACTION_INC:
+        case ACTION_DEC:
         case ACTION_SET:
         case ACTION_GET:
                 type_arg = 2;
