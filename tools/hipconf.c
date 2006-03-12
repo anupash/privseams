@@ -493,7 +493,7 @@ int handle_puzzle(struct hip_common *msg, int action,
 {
 	int err = 0, ret, msg_type;
 
-	struct in6_addr hit;
+	struct in6_addr hit = {0};
 
 	if (optc != 2) {
 		HIP_ERROR("Missing arguments\n");
@@ -529,9 +529,8 @@ int handle_puzzle(struct hip_common *msg, int action,
 	}
 
 	if (!strcmp("all", opt[0])) {
-		memset(&hit,0,sizeof(struct in6_addr));
 	} else {
-#if 0 /* Supporting dst matching unimplemented */
+#ifdef CONFIG_HIP_SPAM
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
@@ -542,23 +541,27 @@ int handle_puzzle(struct hip_common *msg, int action,
 			err = -EINVAL;
 			goto out;
 		}
+#else
+		err = -1;
+		goto out_err;
 #endif
 	}
 
-#if 0 /* Supporting dst matching unimplemented */
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out;
 	}
-#endif
 
 	err = hip_build_user_hdr(msg, msg_type, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out;
 	}
+
+	HIP_INFO("New cookie difficulty is effective in %s seconds\n",
+		 HIP_R1_PRECREATE_INTERVAL);
 
  out:
 	return err;

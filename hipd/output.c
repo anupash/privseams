@@ -73,7 +73,8 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
-				 const struct hip_host_id *host_id_pub)
+				 const struct hip_host_id *host_id_pub,
+				 int cookie_k)
 {
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
@@ -118,7 +119,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/********** R1_COUNTER (OPTIONAL) *********/
 
  	/********** PUZZLE ************/
-	HIP_IFEL(hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
+	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
 					0, 0),  -1, 
 		 "Cookies were burned. Bummer!\n");
