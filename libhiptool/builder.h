@@ -50,12 +50,13 @@ void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common)
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh);
 
 
-void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi);
-void hip_set_param_lsi_value(struct hip_spi *hspi, uint32_t lsi);
+void hip_set_param_spi_value(struct hip_esp_info *hspi, uint32_t spi);
+void hip_set_param_lsi_value(struct hip_esp_info *hspi, uint32_t lsi);
 
-uint32_t hip_get_param_spi_value(const struct hip_spi *hspi);
-uint32_t hip_get_param_lsi_value(const struct hip_spi *hspi);
-
+#if 0
+uint32_t hip_get_param_spi_value(const struct hip_esp_info *hspi);
+uint32_t hip_get_param_lsi_value(const struct hip_esp_info *hspi);
+#endif
 
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test);
@@ -110,17 +111,15 @@ int hip_build_param_transform(struct hip_common *msg,
 			      const hip_transform_suite_t transform_suite[],
 			      const uint16_t transform_count);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index);
-int hip_build_param_rea(struct hip_common *msg,
-			uint32_t spi,
-			struct hip_rea_info_addr_item *addresses,
-			int address_count);
-int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
-			uint32_t old_spi, uint32_t new_spi);
+int hip_build_param_locator(struct hip_common *msg,
+			    struct hip_locator_info_addr_item *addresses,
+			    int address_count);
+int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
+			     uint32_t old_spi, uint32_t new_spi);
 int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
 int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
-int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 				      struct hip_host_id *host_id);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,

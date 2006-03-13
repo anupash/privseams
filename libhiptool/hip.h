@@ -255,18 +255,18 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
 #define HIP_PARAM_ESP_INFO             65
-#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
+//#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
 #define HIP_PARAM_R1_COUNTER           128
-#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
+//#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
 #define HIP_PARAM_LOCATOR              193
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
-#define HIP_PARAM_NES                  9
+//#define HIP_PARAM_NES                  9
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
-#define HIP_PARAM_ESP_TRANSFORM        2048
+#define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
@@ -380,11 +380,18 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
 
+#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
+#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
+#define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
+
+#define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+
 #define HIP_SPI_DIRECTION_OUT 1
 #define HIP_SPI_DIRECTION_IN 2
 
-#define SEND_UPDATE_NES (1 << 0)
-#define SEND_UPDATE_REA (1 << 1)
+#define SEND_UPDATE_ESP_INFO (1 << 0)
+#define SEND_UPDATE_LOCATOR (1 << 1)
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
@@ -510,6 +517,7 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIXME: obsoleted by esp_info in draft-ietf-esp-00 */
 struct hip_spi {
 	hip_tlv_type_t      type;
@@ -517,6 +525,7 @@ struct hip_spi {
 
 	uint32_t      spi;
 } __attribute__ ((packed));
+#endif
 
 struct hip_esp_info {
 	hip_tlv_type_t      type;
@@ -662,6 +671,7 @@ struct hip_sig2 {
 	/* fixed part end */
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIXME: obsoloted by esp_info in draft-esp-00 */
 struct hip_nes {
 	hip_tlv_type_t type;
@@ -671,7 +681,7 @@ struct hip_nes {
 	uint32_t old_spi;
 	uint32_t new_spi;
 } __attribute__ ((packed));
-
+#endif
 
 struct hip_seq {
 	hip_tlv_type_t type;
@@ -696,12 +706,14 @@ struct hip_notify {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIX: depracated in mm-02, use the locator addr item structure */
 struct hip_rea_info_addr_item {
 	uint32_t lifetime;
 	uint32_t reserved;
 	struct in6_addr address;
 }  __attribute__ ((packed));
+#endif
 
 struct hip_locator_info_addr_item {
 	uint8_t traffic_type;
@@ -709,9 +721,12 @@ struct hip_locator_info_addr_item {
 	uint8_t locator_length;
 	uint8_t reserved;
 	uint32_t lifetime;
-	/* end of fixed part - locator of arbitrary length follows */
+	/* end of fixed part - locator of arbitrary length follows but 
+	   currently support only IPv6 */
+	struct in6_addr address;
 }  __attribute__ ((packed));
 
+#if 0
 /* XX FIX: depracated in mm-02, use the locator structure */
 struct hip_rea {
 	hip_tlv_type_t type;
@@ -719,6 +734,7 @@ struct hip_rea {
 	uint32_t spi;
 	/* fixed part ends */
 } __attribute__ ((packed));
+#endif
 
 struct hip_locator {
 	hip_tlv_type_t type;
@@ -919,7 +935,7 @@ struct hip_peer_addr_list_item
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	int              is_preferred;  /* 1 if this address was set as
-					   preferred address in the REA */
+					   preferred address in the LOCATOR */
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
@@ -943,23 +959,25 @@ struct hip_spi_in_item
 	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
-	int              ifindex; /* ifindex if the netdev to which this is related to */
+        /* ifindex if the netdev to which this is related to */
+	int              ifindex;
 	unsigned long    timestamp; /* when SA was created */
 	int              updating; /* UPDATE is in progress */
-	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
-				       * SPI related to the inbound
-				       * SPI we sent in reply (useless ?) */
+	uint32_t         esp_info_spi_out; /* UPDATE, the stored outbound
+					    * SPI related to the inbound
+					    * SPI we sent in reply (useless?)*/
 	uint16_t         keymat_index; /* advertized keymat index */
 	int              update_state_flags; /* 0x1=received ack for
 						sent SEQ, 0x2=received
-						peer's NES,
+						peer's ESP_INFO,
 						both=0x3=can move back
 						to established */
-	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
-	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
-	struct hip_rea_info_addr_item *addresses; /* our addresses this SPI is
-						     related to, reuse struct to
-						     ease coding */
+        /* the Update ID in SEQ parameter these SPI are related to */
+	uint32_t seq_update_id;
+        /* the corresponding esp_info of peer */
+	struct hip_esp_info stored_received_esp_info;
+        /* our addresses this SPI is related to, reuse struct to ease coding */
+	struct hip_locator_info_addr_item *addresses;
 	int addresses_n; /* number of addresses */
 };
 
@@ -1152,10 +1170,11 @@ struct hip_hadb_handle_func_set{
 };
 
 struct hip_hadb_update_func_set{   
-	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
+	int (*hip_handle_update_plain_locator)(hip_ha_t *entry, 
 					struct hip_common *msg,
 					struct in6_addr *src_ip,
-					struct in6_addr *dst_ip);
+					struct in6_addr *dst_ip,
+					struct hip_esp_info *esp_info);
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
 					  struct hip_common *msg,
 				  	  struct in6_addr *src_ip,
