@@ -5,6 +5,8 @@
 #include <linux/skbuff.h>
 #include "misc.h"
 
+#define CONFIG_HIP_DEBUG 1 /* Set 0 if you want to disable debug  */
+
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
