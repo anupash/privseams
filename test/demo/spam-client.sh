@@ -6,6 +6,7 @@ PEER_NAME=panu
 PEER_HIT=4014:ecbc:a9a:e3eb:32e7:51c1:c323:9ab5
 PEER_IP=3ffe::3
 SPAM_FILE=/usr/share/doc/spamassassin/examples/sample-spam.txt
+SLEEP=70 # should be R1 regen period + 10
 
 die() {
     echo $1
@@ -14,8 +15,19 @@ die() {
 
 grep $PEER_HIT /etc/hosts || die "Peer HIT ($PEER_HIT) must be in /etc/hosts"
 
-for i in `seq 1 1` # `seq 10 30`
-do
-  hipconf add map $PEER_HIT $PEER_IP
-  mailx root@${PEER_NAME} < ${SPAM_FILE}
+
+for REPEAT in `seq 1 1`
+  do
+  echo "-- Round $REPEAT --"
+  for K in `seq 10 28`
+    do
+    echo "-- Cookie should be now $K --"
+    hipconf add map $PEER_HIT $PEER_IP
+    mailx -s "Round $REPEAT started" root@${PEER_NAME} <<EOF
+Now.
+EOF
+    mailx  -s "BUY VIAGRA" root@${PEER_NAME} < ${SPAM_FILE}
+    sleep $SLEEP
+  done
+  # XX TODO: PROMPT TO KILL THE RESPONDER HIPD
 done
