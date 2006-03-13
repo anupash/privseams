@@ -25,14 +25,12 @@ grep $PEER_HIT /etc/hosts || die "Peer HIT ($PEER_HIT) must be in /etc/hosts"
 #  for K in `seq 10 28`
 #    do
 #    echo "-- Cookie should be now $K --"
+#    Note: upon R1 recreation, the mapping persists (a bug)
     hipconf del map $PEER_HIT $PEER_IP
-    hipconf del map $PEER_HIT $PEER_IP
-    sleep 2
-    ip xfrm policy flush
-    sleep 2
+#    ip xfrm policy flush
     hipconf add map $PEER_HIT $PEER_IP
-    sleep 2
-    ping6 -c 1 ${PEER_HIT}
+#    sleep 2
+#    ping6 -c 1 ${PEER_HIT}
     mailx  -s "BUY VIAGRA" root@${PEER_NAME} < ${SPAM_FILE}
 #    sleep $SLEEP
 #  done

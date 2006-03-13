@@ -30,7 +30,7 @@ diff -urN mail.orig/local-host-names mail.hipl/local-host-names
 +ritsa.localnet
 diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
 --- mail.orig/sendmail.mc	2006-02-13 00:47:14.000000000 +0200
-+++ mail.hipl/sendmail.mc	2006-03-13 11:27:29.000000000 +0200
++++ mail.hipl/sendmail.mc	2006-03-13 21:04:14.000000000 +0200
 @@ -51,19 +51,20 @@
  dnl # Daemon options - restrict to servicing LOCALHOST ONLY !!!
  dnl # Remove `, Addr=' clauses to receive from any interface
@@ -57,7 +57,27 @@ diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
  dnl #
  dnl # Features
  dnl #
-@@ -88,13 +89,22 @@
+@@ -72,29 +73,38 @@
+ dnl #
+ dnl # The greet_pause feature stops some automail bots - but check the
+ dnl # provided access db for details on excluding localhosts...
+-FEATURE(`greet_pause', `1000')dnl 1 seconds
++dnl FEATURE(`greet_pause', `1000')dnl 1 seconds
+ dnl #
+ dnl # Delay_checks allows sender<->recipient checking
+-FEATURE(`delay_checks', `friend', `n')dnl
++dnl FEATURE(`delay_checks', `friend', `n')dnl
+ dnl #
+ dnl # If we get too many bad recipients, slow things down...
+ define(`confBAD_RCPT_THROTTLE',`3')dnl
+ dnl #
+ dnl # Stop connections that overflow our concurrent and time connection rates
+-FEATURE(`conncontrol', `nodelay', `terminate')dnl
+-FEATURE(`ratecontrol', `nodelay', `terminate')dnl
++dnl FEATURE(`conncontrol', `nodelay', `terminate')dnl
++dnl FEATURE(`ratecontrol', `nodelay', `terminate')dnl
+ dnl #
+ dnl # If you're on a dialup link, you should enable this - so sendmail
  dnl # will not bring up the link (it will queue mail for later)
  dnl define(`confCON_EXPENSIVE',`True')dnl
  dnl #
