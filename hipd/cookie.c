@@ -16,7 +16,8 @@
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
-static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
+static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			       struct in6_addr *hit_i)
 {
 	register u32 base=0;
 	int i;
@@ -44,7 +45,9 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
  * 
  * Returns NULL if error.
  */
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *our_hit)
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			      struct in6_addr *our_hit,
+			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
 	struct hip_r1entry * hip_r1table;
@@ -57,7 +60,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 		 NULL, "Requested source HIT no more available.\n");
 	hip_r1table = hid->r1;
 
-	idx = hip_calc_cookie_idx(ip_i, ip_r);
+	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
 	/* the code under if 0 periodically changes the puzzle. It is not included
@@ -291,8 +294,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  * Returns 1 if puzzle ok, 0 if !ok.
  */ 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
-		      struct hip_common *hdr,
-		      struct hip_solution *solution)
+		      struct hip_common *hdr, struct hip_solution *solution)
 {
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
@@ -303,7 +305,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
 		 0, "Requested source HIT not (any more) available.\n");
-	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
+	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
@@ -355,5 +357,40 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;
+}
+
+int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
+{
+	struct hip_host_id *private = NULL;
+	struct hip_lhi lhi;
+	int err = 0, len;
+
+	/* Store private key and lhi, delete the host id entry and readd.
+	   Addition recreates also R1s as a side effect. */
+
+	len = hip_get_param_total_len(entry->host_id);
+	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
+		 -ENOMEM, "pubkey mem alloc failed\n");
+	memcpy(private, entry->host_id, len);
+
+	memcpy(&lhi, &entry->lhi, sizeof(lhi));
+
+	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
+		 "Failed to delete host id\n");
+
+	HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, private, 
+				 NULL, NULL, NULL),
+		 -EFAULT, "adding of local host identity failed\n");
+
+ out_err:
+	if (private)
+		free(private);
+	return err;
+
+}
+
+int hip_recreate_all_precreated_r1_packets()
+{
+	return hip_for_each_hi(hip_recreate_r1s_for_entry, NULL);
 }
 
