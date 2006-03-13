@@ -1,7 +1,7 @@
 diff -urN mail.orig/access mail.hipl/access
---- mail.orig/access	2006-02-15 17:35:14.000000000 +0200
-+++ mail.hipl/access	2006-02-16 09:24:56.000000000 +0200
-@@ -97,10 +97,14 @@
+--- mail.orig/access	2006-02-13 00:47:20.000000000 +0200
++++ mail.hipl/access	2006-03-13 14:44:18.000000000 +0200
+@@ -97,10 +97,15 @@
  #Connect:172.29			RELAY
  #Connect:172.30			RELAY
  #Connect:172.31			RELAY
@@ -16,46 +16,21 @@ diff -urN mail.orig/access mail.hipl/access
 +Connect:10.0                    RELAY
 +GreetPause:10.0                 0
 +ClientRate:10.0                 0
-+ClientConn:10.0          	0
++ClientConn:10.0                 0
++
  # Defaults
  GreetPause:				5000
  ClientRate:				10
-diff -urN mail.orig/databases mail.hipl/databases
---- mail.orig/databases	2006-02-15 17:35:12.000000000 +0200
-+++ mail.hipl/databases	2006-02-16 11:33:38.000000000 +0200
-@@ -8,8 +8,8 @@
- #####		/usr/share/sendmail/parse_mc 8.13.5 2005-10-10 23:59:04 cowboy
- #####		Parse_mc.pm 8.13.5 2005-10-10 23:59:04 cowboy
- ##### by: root@panu
--##### on: Wed Feb 15 17:35:12 2006
--##### in: /
-+##### on: Thu Feb 16 11:33:38 2006
-+##### in: /etc/mail
- ##### input files:
- #####	/usr/share/sendmail/cf/debian/autoconf.m4
- #####
-@@ -72,3 +72,4 @@
- sendmail.cf:m4:-:/etc/mail/sendmail.mc:-:
- submit.cf:m4:-:/etc/mail/submit.mc:-:
- tls:update_tls:-:/etc/mail/tls/starttls.m4:-:
-+use_cw_file:-:-:/etc/mail/local-host-names:%[^\#]:
 diff -urN mail.orig/local-host-names mail.hipl/local-host-names
---- mail.orig/local-host-names	2006-02-15 17:35:14.000000000 +0200
-+++ mail.hipl/local-host-names	2006-02-16 07:41:47.000000000 +0200
+--- mail.orig/local-host-names	2006-02-13 00:47:20.000000000 +0200
++++ mail.hipl/local-host-names	2006-02-13 14:57:04.000000000 +0200
 @@ -1,2 +1,3 @@
  localhost
- panu
-+panu.localnet
-diff -urN mail.orig/sendmail.cf.errors mail.hipl/sendmail.cf.errors
---- mail.orig/sendmail.cf.errors	2006-02-15 17:35:13.000000000 +0200
-+++ mail.hipl/sendmail.cf.errors	1970-01-01 02:00:00.000000000 +0200
-@@ -1,3 +0,0 @@
--*** ERROR: FEATURE() should be before MAILER()
--*** MAILER(`local') must appear after FEATURE(`always_add_domain')*** ERROR: FEATURE() should be before MAILER()
--*** MAILER(`local') must appear after FEATURE(`allmasquerade')*** ERROR: FEATURE() should be before MAILER()
+ ritsa
++ritsa.localnet
 diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
---- mail.orig/sendmail.mc	2006-02-15 17:35:09.000000000 +0200
-+++ mail.hipl/sendmail.mc	2006-02-17 12:11:08.000000000 +0200
+--- mail.orig/sendmail.mc	2006-02-13 00:47:14.000000000 +0200
++++ mail.hipl/sendmail.mc	2006-03-13 11:27:29.000000000 +0200
 @@ -51,19 +51,20 @@
  dnl # Daemon options - restrict to servicing LOCALHOST ONLY !!!
  dnl # Remove `, Addr=' clauses to receive from any interface
@@ -82,7 +57,7 @@ diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
  dnl #
  dnl # Features
  dnl #
-@@ -88,13 +89,23 @@
+@@ -88,13 +89,22 @@
  dnl # will not bring up the link (it will queue mail for later)
  dnl define(`confCON_EXPENSIVE',`True')dnl
  dnl #
@@ -94,8 +69,8 @@ diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
  
  dnl # Masquerading options
  FEATURE(`always_add_domain')dnl
--MASQUERADE_AS(`panu.localnet')dnl
-+MASQUERADE_AS(`panu')dnl
+-MASQUERADE_AS(`ritsa.localnet')dnl
++MASQUERADE_AS(`ritsa')dnl
  FEATURE(`allmasquerade')dnl
  FEATURE(`masquerade_envelope')dnl
 +FEATURE(`accept_unqualified_senders')dnl
@@ -109,5 +84,15 @@ diff -urN mail.orig/sendmail.mc mail.hipl/sendmail.mc
 +
 +# filters
 +INPUT_MAIL_FILTER(`spamassassin',
-+            `S=local:/var/run/sendmail/spamass.sock, F=, T=S:4m;R:4m;E:10m')dnl
-+
++           `S=local:/var/run/sendmail/spamass.sock, F=, T=S:4m;R:4m;E:10m')dnl
+diff -urN mail.orig/submit.mc mail.hipl/submit.mc
+--- mail.orig/submit.mc	2006-02-13 00:47:14.000000000 +0200
++++ mail.hipl/submit.mc	2006-02-13 15:06:42.000000000 +0200
+@@ -48,6 +48,7 @@
+ dnl # The real reason we're here: the FEATURE(msp)
+ dnl #---------------------------------------------------------------------
+ FEATURE(`msp', `[127.0.0.1]', `MSA')dnl
++dnl FEATURE(`msp', `[IPv6:::1]', `MSA')dnl
+ dnl #
+ dnl #---------------------------------------------------------------------
+ dnl # Some minor cleanup from FEATURE(msp)

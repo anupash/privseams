@@ -16,18 +16,25 @@ die() {
 grep $PEER_HIT /etc/hosts || die "Peer HIT ($PEER_HIT) must be in /etc/hosts"
 
 
-for REPEAT in `seq 1 1`
-  do
-  echo "-- Round $REPEAT --"
-  for K in `seq 10 28`
-    do
-    echo "-- Cookie should be now $K --"
+#for REPEAT in `seq 1 1`
+#  do
+#  echo "-- Round $REPEAT --"
+#    mailx -s "Round $REPEAT started" root@${PEER_NAME} <<EOF
+#Now.
+#EOF
+#  for K in `seq 10 28`
+#    do
+#    echo "-- Cookie should be now $K --"
+    hipconf del map $PEER_HIT $PEER_IP
+    hipconf del map $PEER_HIT $PEER_IP
+    sleep 2
+    ip xfrm policy flush
+    sleep 2
     hipconf add map $PEER_HIT $PEER_IP
-    mailx -s "Round $REPEAT started" root@${PEER_NAME} <<EOF
-Now.
-EOF
+    sleep 2
+    ping6 -c 1 ${PEER_HIT}
     mailx  -s "BUY VIAGRA" root@${PEER_NAME} < ${SPAM_FILE}
-    sleep $SLEEP
-  done
-  # XX TODO: PROMPT TO KILL THE RESPONDER HIPD
-done
+#    sleep $SLEEP
+#  done
+#  # XX TODO: PROMPT TO KILL THE RESPONDER HIPD
+#done
