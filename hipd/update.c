@@ -111,8 +111,6 @@ int hip_update_test_locator_addr(struct in6_addr *addr)
  * @entry: corresponding hadb entry of the peer
  * @locator: the locator parameter in the packet
  *
- * ietf-mm-02 7.2 Handling received locators
- *
  * @entry must be is locked when this function is called.
  *
  * Returns: 0 if the locator parameter was processed successfully,
@@ -241,8 +239,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0, mask;
 	struct hip_common *update_packet = NULL;
- 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
-	int err = 0, esp_info_i = 1, need_to_generate_key = 0, dh_key_generated = 0;
+	int err = 0, esp_info_i = 1, need_to_generate_key = 0,
+		dh_key_generated = 0;
 	
 	HIP_DEBUG("\n");
 	
@@ -255,8 +253,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		_HIP_DEBUG("would generate new D-H keys\n");
 		/* generate_dh_key(); */
 		dh_key_generated = 1;
-		/* todo: The system records any newly generated or
-		   received Diffie-Hellman keys, for use in KEYMAT generation upon
+		/* todo: The system records any newly generated or received
+		   Diffie-Hellman keys, for use in KEYMAT generation upon
 		   leaving the REKEYING state. */
 	} else {
 		dh_key_generated = 0;
@@ -267,9 +265,12 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   and the optional DIFFIE_HELLMAN parameter. The UPDATE packet also
 	   includes the ACK of the Update ID found in the received UPDATE
 	   SEQ parameter. */
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Update_packet alloc failed\n");
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1, HIP_CONTROL_DHT_TYPE1);
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
+	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
+					HIP_CONTROL_DHT_TYPE1);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+						     mask, hitr, hits);
 
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
@@ -298,9 +299,11 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		/* Otherwise, the ESP_INFO Keymat Index MUST be larger or
 		   equal to the index of the next byte to be drawn from the
 		   current KEYMAT. */
-		HIP_IFEL(ntohs(esp_info->keymat_index) < entry->current_keymat_index, -1,
+		HIP_IFEL(ntohs(esp_info->keymat_index) <
+			 entry->current_keymat_index, -1,
 			 "ESP_INFO Keymat Index (%u) < current KEYMAT %u\n",
-			 ntohs(esp_info->keymat_index), entry->current_keymat_index);
+			 ntohs(esp_info->keymat_index),
+			 entry->current_keymat_index);
 
 		/* In this case, it is RECOMMENDED that the host use the
 		   Keymat Index requested by the peer in the received
@@ -319,7 +322,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	
 
 	HIP_DEBUG("Acquired inbound SPI 0x%x\n", new_spi_in);
-	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in, ntohl(esp_info->old_spi));
+	hip_update_set_new_spi_in(entry, prev_spi_in, new_spi_in,
+				  ntohl(esp_info->old_spi));
 
 	if (esp_info->old_spi == esp_info->new_spi) {
 		struct hip_spi_out_item spi_out_data;
@@ -328,7 +332,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 		spi_out_data.spi = ntohl(esp_info->new_spi);
 		spi_out_data.seq_update_id = ntohl(seq->update_id);
-		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1); 
+		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+					 &spi_out_data), -1); 
 		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
 			  ntohl(esp_info->new_spi));
 	}
@@ -371,12 +376,13 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 		 "Building of SEQ failed\n");
 
 	/* ACK the received UPDATE SEQ */
-	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+					       &entry->hip_hmac_out),
 		 -1, "Building of HMAC failed\n");
 	
 	/* Add SIGNATURE */
@@ -1037,7 +1043,7 @@ int hip_receive_update(struct hip_common *msg,
 		handle_upd = 1;
 	}
 	
-	/* mm-02 UPDATE tests */
+	/* UPDATE tests */
 	if (!handle_upd && locator && seq && esp_info) {
 		HIP_DEBUG("have LOCATOR and SEQ but no ESP_INFO, process this UPDATE\n");
 		handle_upd = 2;
@@ -1089,7 +1095,7 @@ int hip_receive_update(struct hip_common *msg,
 
 	HIP_DEBUG("handle_upd=%d\n", handle_upd);
 	if (handle_upd > 1) {
-		_HIP_DEBUG("MM-02 UPDATE\n");
+		_HIP_DEBUG("UPDATE\n");
 	}
 
 	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
@@ -1303,22 +1309,21 @@ int hip_send_update(struct hip_hadb_state *entry,
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask,
-			      &entry->hit_our, &entry->hit_peer);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+						     mask, &entry->hit_our,
+						     &entry->hit_peer);
 	if (add_locator) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
 		mapped_spi = hip_hadb_get_spi(entry, ifindex);
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
-			/* ESP_INFO not needed */
-			//add_esp_info = 0;
 			make_new_sa = 0;
-			_HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
+			_HIP_DEBUG("Mobility with single SA pair, readdress with no rekeying\n");
 			HIP_DEBUG("Reusing old SA\n");
-			/* 5.1 Mobility with single SA pair */
+			/* Mobility with single SA pair */
 		} else {
-			_HIP_DEBUG("5.2 Host multihoming\n");
+			_HIP_DEBUG("Host multihoming\n");
 			make_new_sa = 1;
 			_HIP_DEBUG("TODO\n");
 		}
@@ -1336,17 +1341,11 @@ int hip_send_update(struct hip_hadb_state *entry,
 		goto out;
 	}
 
-#if 0	
-	if (make_new_sa) {
-		HIP_DEBUG("make_new_sa=1 -> add_esp_info=1\n");
-		add_esp_info = 1;
-	}
-#endif
-
 	HIP_DEBUG("make_new_sa=%d\n", make_new_sa);
 
 	if (make_new_sa) {
-		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer, &entry->hit_our)), 
+		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer,
+							&entry->hit_our)), 
 			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
 
@@ -1355,11 +1354,13 @@ int hip_send_update(struct hip_hadb_state *entry,
 			struct hip_spi_in_item spi_in_data;
 
 			_HIP_DEBUG("previously unknown ifindex, creating a new item to inbound spis_in\n");
-			memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
+			memset(&spi_in_data, 0,
+			       sizeof(struct hip_spi_in_item));
 			spi_in_data.spi = new_spi_in;
 			spi_in_data.ifindex = ifindex;
 			spi_in_data.updating = 1;
-			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, 
+			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
+						  &spi_in_data), -1, 
 				 "Add_spi failed\n");
 		}
 		else {
@@ -1368,7 +1369,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else
 		HIP_DEBUG("not creating a new SA\n");
 
-	_HIP_DEBUG("entry->current_keymat_index=%u\n", entry->current_keymat_index);
+	_HIP_DEBUG("entry->current_keymat_index=%u\n",
+		   entry->current_keymat_index);
 
 	if (add_locator) {
 		/* LOCATOR is the first parameter of the UPDATE */
@@ -1384,14 +1386,14 @@ int hip_send_update(struct hip_hadb_state *entry,
 //	if (add_esp_info) {
 	if (addr_list) {
 		if (make_new_sa) {
-			/* mm02 5.2 Host multihoming */
-			HIP_DEBUG("mm-02, adding ESP_INFO, Old SPI == New SPI\n");
+			/* mm02 Host multihoming */
+			HIP_DEBUG("adding ESP_INFO, Old SPI == New SPI\n");
 			/* notify the peer about new interface */
 			esp_info_old_spi = new_spi_in;
 			esp_info_new_spi = new_spi_in;
 			
 		} else {
-			HIP_DEBUG("mm-02, !makenewsa\n");
+			HIP_DEBUG("!makenewsa\n");
 			esp_info_old_spi = mapped_spi;
 			esp_info_new_spi = mapped_spi; //new_spi_in
 		}
@@ -1415,11 +1417,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 					  esp_info_new_spi),
 			 -1, "Building of ESP_INFO param failed\n");
 
-	//} else {
-	//}
-	//HIP_DEBUG("not adding ESP_INFO\n");
-	//esp_info_old_spi = esp_info_new_spi = mapped_spi;
-
  	/* avoid advertising the same address set */
  	/* (currently assumes that lifetime or reserved field do not
  	 * change, later store only addresses) */
@@ -1439,7 +1436,8 @@ int hip_send_update(struct hip_hadb_state *entry,
  		HIP_DEBUG("Address set has changed, continue\n");
 
 	/* spi_in->spi is equal to esp_info_old_spi */
-	if (addr_list && memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
+	if (addr_list && memcmp(&entry->local_address, &addr_list->address,
+				sizeof(struct in6_addr))) {
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
 		ipv6_addr_copy(&entry->local_address, &addr_list->address);
 	}
@@ -1450,7 +1448,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	update_id_out = entry->update_id_out;
 	_HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 	/* todo: handle this case */
-	HIP_IFEL(!update_id_out, -EINVAL, "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+	HIP_IFEL(!update_id_out, -EINVAL,
+		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
 	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
 		 "Building of SEQ param failed\n");
 
@@ -1462,22 +1461,20 @@ int hip_send_update(struct hip_hadb_state *entry,
 	//}
 
 	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1,
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+					       &entry->hip_hmac_out), -1,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL, "Could not sign UPDATE. Failing\n");
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		 "Could not sign UPDATE. Failing\n");
 
 	/* Send UPDATE */
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
-	/* if UPDATE contains only LOCATOR, then do not move state ? */
-	//if (add_esp_info) {
-		entry->state = HIP_STATE_REKEYING;
-		HIP_DEBUG("moved to state REKEYING\n");
-		//} else
-		//	HIP_DEBUG("experimental: staying in ESTABLISHED (ESP_INFO not added)\n");
+	entry->state = HIP_STATE_REKEYING;
+	HIP_DEBUG("moved to state REKEYING\n");
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");
@@ -1492,7 +1489,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		goto out_err;
 	}
 
-	/* todo: 5. The system SHOULD start a timer whose timeout value should be ..*/
+	/* todo: 5. The system SHOULD start a timer whose timeout value
+	   should be ..*/
 	goto out;
 
  out_err:
