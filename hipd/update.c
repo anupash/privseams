@@ -91,11 +91,20 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 */
 int hip_update_test_locator_addr(struct in6_addr *addr)
 {
-	return !(IN6_IS_ADDR_UNSPECIFIED(addr) ||
-		 IN6_IS_ADDR_LOOPBACK(addr) ||
-		 IN6_IS_ADDR_LINKLOCAL(addr) ||
-		 IN6_IS_ADDR_SITELOCAL(addr) ||
-		 IN6_IS_ADDR_MULTICAST(addr));
+	struct sockaddr_storage ss;
+
+	memset(&ss, 0, sizeof(ss));
+	if (IN6_IS_ADDR_V4MAPPED(addr)) {
+		struct sockaddr_in *sin = (struct sockaddr_in *) &ss;
+		IPV6_TO_IPV4_MAP(addr, &sin->sin_addr);
+		sin->sin_family = AF_INET;
+	} else {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) &ss;
+		memcpy(&sin6->sin6_addr, addr, sizeof(struct in6_addr));
+		sin6->sin6_family = AF_INET6;
+	}
+
+	return filter_address((struct sockaddr *) &ss, -1);
 }
 
 /** hip_update_handle_locator_parameter - Process locator parameters in the UPDATE
@@ -114,7 +123,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 					struct hip_esp_info *esp_info)
 {
 	int err = 0; /* set to -Esomething ?*/
-	uint32_t spi;
+	uint32_t spi = 0;
 	struct hip_locator_info_addr_item *locator_address_item;
 	int i, n_addrs;
 	struct hip_spi_out_item *spi_out;
@@ -123,14 +132,11 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
 
-	if ((hip_get_param_total_len(locator) - sizeof(struct hip_locator)) %
-	    sizeof(struct hip_locator_info_addr_item))
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
 		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
 			  ntohs(locator->length));
 
-	n_addrs = (hip_get_param_total_len(locator) -
-		   sizeof(struct hip_locator)) /
-	  sizeof(struct hip_locator_info_addr_item);
 	HIP_ASSERT(n_addrs >= 0);
 
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
@@ -148,7 +154,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 		a->is_preferred = 0;
 	}
 
-	locator_address_item = (void *)locator + sizeof(struct hip_locator);
+	locator_address_item = hip_get_locator_first_addr_item(locator);
 	for(i = 0; i < n_addrs; i++, locator_address_item++) {
 		struct in6_addr *locator_address =
 			&locator_address_item->address;
@@ -183,7 +189,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
 		int spi_addr_is_in_locator = 0;
 
-		locator_address_item = (void *)locator+sizeof(struct hip_locator);
+		locator_address_item =
+			hip_get_locator_first_addr_item(locator);
 		for(i = 0; i < n_addrs; i++, locator_address_item++) {
 			struct in6_addr *locator_address = &locator_address_item->address;
 
@@ -296,10 +303,10 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			 ntohs(esp_info->keymat_index), entry->current_keymat_index);
 
 		/* In this case, it is RECOMMENDED that the host use the
-		   Keymat Index requested by the peer in the received NES. */
-		/* here we could set the keymat index to use, but we
-		 * follow the recommendation */
-		_HIP_DEBUG("Using Keymat Index from NES\n");
+		   Keymat Index requested by the peer in the received
+		   ESP_INFO. Here we could set the keymat index to use, but we
+		   follow the recommendation */
+		_HIP_DEBUG("Using Keymat Index from ESP_INFO\n");
 		keymat_index = ntohs(esp_info->keymat_index);
 	}
 
@@ -328,7 +335,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 	/* testing LOCATOR parameters in UPDATE */
 	locator = hip_get_nth_param(msg, HIP_PARAM_LOCATOR, esp_info_i);
-	if (locator) {
+	if (locator && esp_info) {
 		HIP_DEBUG("Found LOCATOR parameter [%d]\n", esp_info_i);
 		if (esp_info->old_spi != esp_info->new_spi) {
 			HIP_ERROR("SPI 0x%x in LOCATOR is not equal to the New SPI 0x%x in ESP_INFO\n",
@@ -359,7 +366,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   DIFFIE_HELLMAN parameters. */
 	HIP_IFEL(hip_build_param_esp_info(update_packet, keymat_index,
 					  prev_spi_in, new_spi_in), -1, 
-		 "Building of NES failed\n");
+		 "Building of ESP_INFO failed\n");
 	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
 		 "Building of SEQ failed\n");
 
@@ -500,7 +507,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
 			 hits, hitr, 
-			 /*&nes->new_spi*/ &new_spi_in, esp_transform,
+			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
@@ -848,7 +855,9 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	HIP_IFEL(locator == NULL, -1, "No locator!\n");
-	hip_update_handle_locator_parameter(entry, locator, esp_info);
+	HIP_IFEL(esp_info == NULL, -1, "No esp_info!\n");
+	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
+		 -1, "hip_update_handle_locator_parameter failed\n")
 	err = entry->hadb_update_func->hip_update_send_addr_verify(entry, msg,
 								   dst_ip,
 								   ntohl(esp_info->new_spi));
@@ -1010,7 +1019,7 @@ int hip_receive_update(struct hip_common *msg,
 	}
 	if (ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
-	if (locator)
+	if (esp_info)
 		HIP_DEBUG("LOCATOR: SPI new 0x%x\n", ntohl(esp_info->new_spi));
 	if (echo)
 		HIP_DEBUG("ECHO_REQUEST found\n");
@@ -1029,7 +1038,7 @@ int hip_receive_update(struct hip_common *msg,
 	}
 	
 	/* mm-02 UPDATE tests */
-	if (!handle_upd && locator && seq && !esp_info) {
+	if (!handle_upd && locator && seq && esp_info) {
 		HIP_DEBUG("have LOCATOR and SEQ but no ESP_INFO, process this UPDATE\n");
 		handle_upd = 2;
 	}
@@ -1129,15 +1138,14 @@ int hip_receive_update(struct hip_common *msg,
 		 ntohl(esp_info->old_spi));
 
 	/**********************/
-	if (locator) {
+	if (locator && esp_info) {
 		struct hip_locator_info_addr_item *locator_address_item;
 		int i, n_addrs;
-		uint32_t spi;
-		n_addrs = (hip_get_param_total_len(locator) - sizeof(struct hip_locator)) /
-			sizeof(struct hip_locator_info_addr_item);
+		uint32_t spi = 0;
+		n_addrs = hip_get_locator_addr_item_count(locator);
 		spi = ntohl(esp_info->new_spi);
-		locator_address_item = (void *) locator +
-			sizeof(struct hip_locator);
+		locator_address_item =
+			hip_get_locator_first_addr_item(locator);
 		for(i = 0; i < n_addrs; i++, locator_address_item++) {
 			struct in6_addr *locator_address =
 				&locator_address_item->address;
@@ -1164,7 +1172,7 @@ int hip_receive_update(struct hip_common *msg,
 
 			if (is_preferred && 
 			    memcmp(src_ip, &entry->preferred_address,
-				   sizeof(struct in6_addr))) {
+				   sizeof(struct in6_addr)) && spi) {
 				hip_delete_sa(spi, &entry->preferred_address,
 					      AF_INET6);
 				ipv6_addr_copy(&entry->preferred_address,
@@ -1268,7 +1276,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags)
 {
-	int err = 0, make_new_sa = 0, add_esp_info = 0, add_locator;
+	int err = 0, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
 	uint32_t update_id_out = 0;
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
 	uint32_t new_spi_in = 0;
@@ -1304,7 +1312,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			/* ESP_INFO not needed */
-			add_esp_info = 0;
+			//add_esp_info = 0;
 			make_new_sa = 0;
 			_HIP_DEBUG("5.1 Mobility with single SA pair, readdress with no rekeying\n");
 			HIP_DEBUG("Reusing old SA\n");
@@ -1328,12 +1336,14 @@ int hip_send_update(struct hip_hadb_state *entry,
 		goto out;
 	}
 
+#if 0	
 	if (make_new_sa) {
 		HIP_DEBUG("make_new_sa=1 -> add_esp_info=1\n");
 		add_esp_info = 1;
 	}
+#endif
 
-	HIP_DEBUG("add_esp_info=%d make_new_sa=%d\n", add_esp_info, make_new_sa);
+	HIP_DEBUG("make_new_sa=%d\n", make_new_sa);
 
 	if (make_new_sa) {
 		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer, &entry->hit_our)), 
@@ -1367,47 +1377,48 @@ int hip_send_update(struct hip_hadb_state *entry,
 		err = hip_build_param_locator(update_packet, addr_list,
 					      addr_count);
 
-		HIP_IFEL(err, err, "Building of REA param failed\n");
+		HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
 	} else
 		HIP_DEBUG("not adding REA\n");
 
-	if (add_esp_info) {
-		if (addr_list) {
-			if (make_new_sa) {
-				/* mm02 5.2 Host multihoming */
-				HIP_DEBUG("mm-02, adding NES, Old SPI == New SPI\n");
-				/* notify the peer about new interface */
-				esp_info_old_spi = new_spi_in;
-				esp_info_new_spi = new_spi_in;
-
-			} else {
-				HIP_DEBUG("mm-02, !makenewsa\n");
-				esp_info_old_spi = mapped_spi;
-				esp_info_new_spi = mapped_spi; //new_spi_in
-			}
-		} else {
-			HIP_DEBUG("adding ESP_INFO, Old SPI <> New SPI\n");
-			/* plain UPDATE or readdress with rekeying */
-			/* update the SA of the interface which caused the event */
-			HIP_IFEL(!(esp_info_old_spi =
-				   hip_hadb_get_spi(entry, ifindex)), -1,
-				 "Could not find SPI to use in Old SPI\n");
-			/* here or later ? */
-			hip_set_spi_update_status(entry, esp_info_old_spi, 1);
+//	if (add_esp_info) {
+	if (addr_list) {
+		if (make_new_sa) {
+			/* mm02 5.2 Host multihoming */
+			HIP_DEBUG("mm-02, adding ESP_INFO, Old SPI == New SPI\n");
+			/* notify the peer about new interface */
+			esp_info_old_spi = new_spi_in;
 			esp_info_new_spi = new_spi_in;
+			
+		} else {
+			HIP_DEBUG("mm-02, !makenewsa\n");
+			esp_info_old_spi = mapped_spi;
+			esp_info_new_spi = mapped_spi; //new_spi_in
 		}
-
-		HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
-			  esp_info_old_spi, esp_info_new_spi);
-		HIP_IFEL(hip_build_param_esp_info(update_packet,
-						  entry->current_keymat_index,
-						  esp_info_old_spi,
-						  esp_info_new_spi),
-			 -1, "Building of NES param failed\n");
 	} else {
-		HIP_DEBUG("not adding NES\n");
-		esp_info_old_spi = esp_info_new_spi = mapped_spi;
+		HIP_DEBUG("adding ESP_INFO, Old SPI <> New SPI\n");
+		/* plain UPDATE or readdress with rekeying */
+		/* update the SA of the interface which caused the event */
+		HIP_IFEL(!(esp_info_old_spi =
+			   hip_hadb_get_spi(entry, ifindex)), -1,
+			 "Could not find SPI to use in Old SPI\n");
+		/* here or later ? */
+		hip_set_spi_update_status(entry, esp_info_old_spi, 1);
+		esp_info_new_spi = new_spi_in;
 	}
+
+	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
+		  esp_info_old_spi, esp_info_new_spi);
+	HIP_IFEL(hip_build_param_esp_info(update_packet,
+					  entry->current_keymat_index,
+					  esp_info_old_spi,
+					  esp_info_new_spi),
+			 -1, "Building of ESP_INFO param failed\n");
+
+	//} else {
+	//}
+	//HIP_DEBUG("not adding ESP_INFO\n");
+	//esp_info_old_spi = esp_info_new_spi = mapped_spi;
 
  	/* avoid advertising the same address set */
  	/* (currently assumes that lifetime or reserved field do not
@@ -1427,7 +1438,7 @@ int hip_send_update(struct hip_hadb_state *entry,
  	} else
  		HIP_DEBUG("Address set has changed, continue\n");
 
-	/* spi_in->spi is equal to nes_old_spi */
+	/* spi_in->spi is equal to esp_info_old_spi */
 	if (addr_list && memcmp(&entry->local_address, &addr_list->address, sizeof(struct in6_addr))) {
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
 		ipv6_addr_copy(&entry->local_address, &addr_list->address);
@@ -1443,12 +1454,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
 		 "Building of SEQ param failed\n");
 
-	if (add_esp_info) {
-		/* remember the update id of this update */
-		hip_update_set_status(entry, esp_info_old_spi,
-				      0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
-				      entry->current_keymat_index);
-	}
+	//if (add_esp_info) {
+	/* remember the update id of this update */
+	hip_update_set_status(entry, esp_info_old_spi,
+			      0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
+			      entry->current_keymat_index);
+	//}
 
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1,
@@ -1462,11 +1473,11 @@ int hip_send_update(struct hip_hadb_state *entry,
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
 	/* if UPDATE contains only LOCATOR, then do not move state ? */
-	if (add_esp_info) {
+	//if (add_esp_info) {
 		entry->state = HIP_STATE_REKEYING;
 		HIP_DEBUG("moved to state REKEYING\n");
-	} else
-		HIP_DEBUG("experimental: staying in ESTABLISHED (ESP_INFO not added)\n");
+		//} else
+		//	HIP_DEBUG("experimental: staying in ESTABLISHED (ESP_INFO not added)\n");
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");

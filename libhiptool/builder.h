@@ -61,6 +61,8 @@ uint32_t hip_get_param_lsi_value(const struct hip_esp_info *hspi);
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id);
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator);
+int hip_get_locator_addr_item_count(struct hip_locator *locator);
 
 int hip_check_msg_len(const struct hip_common *msg);
 int hip_check_userspace_msg_type(const struct hip_common *msg);

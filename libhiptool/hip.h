@@ -966,7 +966,7 @@ struct hip_spi_in_item
 	uint32_t         esp_info_spi_out; /* UPDATE, the stored outbound
 					    * SPI related to the inbound
 					    * SPI we sent in reply (useless?)*/
-	uint16_t         keymat_index; /* advertized keymat index */
+	uint16_t         keymat_index; /* advertised keymat index */
 	int              update_state_flags; /* 0x1=received ack for
 						sent SEQ, 0x2=received
 						peer's ESP_INFO,

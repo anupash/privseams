@@ -318,6 +318,17 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
 	return host_id->rdata.algorithm; /* 8 bits, no ntons() */
 }
 
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator) {
+	return (struct hip_locator_info_addr_item *) (locator + 1);
+}
+
+int hip_get_locator_addr_item_count(struct hip_locator *locator) {
+	return (hip_get_param_contents_len(locator) -
+		(sizeof(struct hip_locator) -
+		 sizeof(struct hip_tlv_common))) /
+		sizeof(struct hip_locator_info_addr_item);
+}
+
 /**
  * hip_check_msg_len - check validity of message length
  * @msg: pointer to the message
@@ -1839,6 +1850,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	return 0;
 }
 
+#ifndef __KERNEL__
 /**
  * hip_build_param_locator - build HIP locator parameter
  *
@@ -1853,29 +1865,37 @@ int hip_build_param_locator(struct hip_common *msg,
 			int address_count)
 {
 	int err = 0;
-	struct hip_locator locator_info;
+	struct hip_locator *locator_info = NULL;
 	int addrs_len = address_count *
 		(sizeof(struct hip_locator_info_addr_item));
 
-	hip_set_param_type(&locator_info, HIP_PARAM_LOCATOR);
-	hip_calc_generic_param_len(&locator_info,
+	HIP_IFE(!(locator_info =
+		  malloc(sizeof(struct hip_locator) + addrs_len)), -1);
+
+	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len);
 	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len);
 
-	err = hip_build_param(msg, &locator_info);
-	if (err)
-		return err;
+	memcpy(locator_info + 1, addresses, addrs_len);
+	HIP_IFE(hip_build_param(msg, locator_info), -1);
+
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
-	if (addrs_len > 0)
-		memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-		       addresses, addrs_len);
+	//if (addrs_len > 0)
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	       addresses, addrs_len);
+
+ out_err:
+	if (locator_info)
+		free(locator_info);
 
 	return err;
 }
+#endif /* !__KERNEL__ */
 
 /**
  * hip_build_param_keys - build and append crypto keys parameter
