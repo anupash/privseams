@@ -692,19 +692,21 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		err = 0;
 	}
 
-	HIP_IFE(!update_packet, -1);
+	HIP_IFEL(!update_packet, 0, "UPDATE packet NULL\n");
 
 	/* Send ACK */
 
 	/* TODO: hmac/signature to common functions */
 	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1,
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+					       &entry->hip_hmac_out), -1,
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
 	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
 		 "Could not sign UPDATE. Failing\n");
-        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
+        HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
+		 "Failed to get peer address\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						      &daddr, update_packet,
@@ -781,9 +783,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		entry->hadb_misc_func->hip_build_network_hdr(update_packet,
 							     HIP_UPDATE, mask,
 							     hitr, hits);
-		HIP_IFEBL2(hip_build_param_esp_info(update_packet, 0, 0,
-						    0x11223344), -1,
-			   continue, "Building of SPI failed\n");
 		entry->update_id_out++;
 		addr->seq_update_id = entry->update_id_out;
 		_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
