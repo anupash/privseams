@@ -2004,7 +2004,7 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
 	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
 	esp_info.reserved = htonl(0);
-	esp_info.keymat_index = htonl(keymat_index);
+	esp_info.keymat_index = htons(keymat_index);
 	esp_info.old_spi = htonl(old_spi);
 	esp_info.new_spi = htonl(new_spi);
 

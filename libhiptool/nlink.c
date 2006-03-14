@@ -564,6 +564,8 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
+	HIP_DEBUG("\n");
+
 	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
 	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {

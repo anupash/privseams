@@ -228,7 +228,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
  * Returns: 0 if successful, otherwise < 0.
  */
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
-				  struct in6_addr *src_ip, struct in6_addr *dst_ip)
+				  struct in6_addr *src_ip,
+				  struct in6_addr *dst_ip)
 {
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_esp_info *esp_info;
@@ -281,7 +282,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 	/* test: handle multiple ESP_INFO, not tested well yet */
  handle_esp_info:
-	if (!(esp_info = hip_get_nth_param(msg, HIP_PARAM_ESP_INFO, esp_info_i))) {
+	if (!(esp_info = hip_get_nth_param(msg, HIP_PARAM_ESP_INFO,
+					   esp_info_i))) {
 		HIP_DEBUG("no more ESP_INFO params found\n");
 		goto esp_info_params_handled;
 	}
@@ -750,7 +752,9 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet,
+						     HIP_UPDATE, mask,
+						     hitr, hits);
 
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
 		HIP_DEBUG_HIT("new addr to check", &addr->address);
@@ -765,7 +769,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			HIP_DEBUG("not verifying already active address\n"); 
 			if (addr->is_preferred) {
 				HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
-				hip_hadb_set_default_out_addr(entry, spi_out, &addr->address);
+				hip_hadb_set_default_out_addr(entry, spi_out,
+							      &addr->address);
 			}
 			continue;
 		}
@@ -773,7 +778,9 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		hip_msg_init(update_packet);
 		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 						HIP_CONTROL_DHT_TYPE1);
-		entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+		entry->hadb_misc_func->hip_build_network_hdr(update_packet,
+							     HIP_UPDATE, mask,
+							     hitr, hits);
 		HIP_IFEBL2(hip_build_param_esp_info(update_packet, 0, 0,
 						    0x11223344), -1,
 			   continue, "Building of SPI failed\n");
@@ -782,20 +789,22 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
-		HIP_IFEBL2(hip_build_param_seq(update_packet, addr->seq_update_id), -1,
+		HIP_IFEBL2(hip_build_param_seq(update_packet,
+					       addr->seq_update_id), -1,
 			 continue, "Building of SEQ failed\n");
 		/* Add HMAC */
-		HIP_IFEBL2(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out),
+		HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
+							 &entry->hip_hmac_out),
 			  -1, continue, "Building of HMAC failed\n");
 		/* Add SIGNATURE */
-		HIP_IFEBL2(entry->sign(entry->our_priv, update_packet), -EINVAL,
-			   continue, "Could not sign UPDATE\n");
+		HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
+			   -EINVAL, continue, "Could not sign UPDATE\n");
 		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
 		_HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
 			     addr->echo_data, sizeof(addr->echo_data));
-		HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data ,
-					       sizeof(addr->echo_data), 0, 1), -1,
-			  continue, "Building of ECHO_REQUEST failed\n");
+		HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
+						sizeof(addr->echo_data), 0, 1),
+			   -1, continue, "Building of ECHO_REQUEST failed\n");
 		HIP_DEBUG("sending addr verify pkt\n");
 		/* test: send all addr check from same address */
 		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
@@ -843,12 +852,13 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+						     mask, hitr, hits);
 
 	/* ACK the received UPDATE SEQ */
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
-		 "Building of ACK failed\n");
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)),
+		 -1, "Building of ACK failed\n");
 
 	/* Add SIGNATURE */
 	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
@@ -890,7 +900,8 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
  * Returns: 0 if successful, otherwise < 0.
  */
 int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
-				  struct in6_addr *src_ip, struct in6_addr *dst_ip)
+				  struct in6_addr *src_ip,
+				  struct in6_addr *dst_ip)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
@@ -904,18 +915,21 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 "ECHO not found\n");
 	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
 		 "SEQ not found\n");
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Out of memory\n");
 
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+						     mask, hitr, hits);
 
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
-	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1, 
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
 
 	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(update_packet, &entry->hip_hmac_out), -1, 
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+					       &entry->hip_hmac_out), -1, 
 		 "Building of HMAC failed\n");
 
 	/* Add SIGNATURE */
@@ -926,9 +940,10 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_DEBUG("echo opaque data len=%d\n",
 		   hip_get_param_contents_len(echo));
 	HIP_IFEL(hip_build_param_echo(update_packet,
-				      (void *)echo+sizeof(struct hip_tlv_common),
-				      hip_get_param_contents_len(echo), 0, 0), -1,
-		 "Building of ECHO_RESPONSE failed\n");
+				      (void *)echo +
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_len(echo), 0, 0),
+		 -1, "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
@@ -1304,7 +1319,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		_HIP_DEBUG("Plain UPDATE\n");
 
 	/* Start building UPDATE packet */
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory.\n");
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Out of memory.\n");
 
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
@@ -1374,8 +1390,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	if (add_locator) {
 		/* LOCATOR is the first parameter of the UPDATE */
-		//uint32_t spi_in = mapped_spi ? mapped_spi : new_spi_in;
-		
 		err = hip_build_param_locator(update_packet, addr_list,
 					      addr_count);
 
@@ -1383,7 +1397,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else
 		HIP_DEBUG("not adding REA\n");
 
-//	if (add_esp_info) {
 	if (addr_list) {
 		if (make_new_sa) {
 			/* mm02 Host multihoming */
@@ -1547,8 +1560,8 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  * Add LOCATOR parameter if @addr_list is non-null. @ifindex tells which
  * device caused the network device event.
  */
-void hip_send_update_all(struct hip_locator_info_addr_item *addr_list, int addr_count,
-			 int ifindex, int flags)
+void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
+			 int addr_count, int ifindex, int flags)
 {
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
@@ -1570,7 +1583,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list, int addr_
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
-			hip_send_update(rk.array[i], addr_list, addr_count, ifindex, flags);
+			hip_send_update(rk.array[i], addr_list, addr_count,
+					ifindex, flags);
 			hip_hadb_put_entry(rk.array[i]);
 			//hip_put_ha(rk.array[i]);
 		}
