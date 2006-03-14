@@ -51,9 +51,9 @@ struct list_head {
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/8"
 
-#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+//#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP
-#define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
+#define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
 #endif
 
 /* Workaround for kernels before 2.6.15.3. */
@@ -154,15 +154,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIT_TYPE_HASH120    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
-#define HIP_I1  1
-#define HIP_R1  2
-#define HIP_I2  3
-#define HIP_R2  4
-#define HIP_CER 5
-#define HIP_UPDATE 6
-#define HIP_NOTIFY 7
-#define HIP_CLOSE 8
-#define HIP_CLOSE_ACK 9
+#define HIP_I1         1
+#define HIP_R1         2
+#define HIP_I2         3
+#define HIP_R2         4
+#define HIP_CER        5
+#define HIP_UPDATE     16
+#define HIP_NOTIFY     17
+#define HIP_CLOSE      18
+#define HIP_CLOSE_ACK  19
 //#define HIP_REA 10     /* removed from ietf-hip-mm-00   */
 #define HIP_BOS 11     /* removed from ietf-hip-base-01 */
 //#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
@@ -221,10 +221,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 //#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
 #define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
-#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
+//#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
 
+#if 0
 #define HIP_CONTROL_SHT_SHIFT       13
 #define HIP_CONTROL_DHT_SHIFT       10
 #define HIP_CONTROL_SHT_MASK        (0x8000|0x4000|0x2000) /* bits 16-14 */
@@ -235,6 +236,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_CONTROL_DHT_TYPE2       HIP_CONTROL_SHT_TYPE2
 #define HIP_CONTROL_SHT_ALL         (HIP_CONTROL_SHT_MASK >> HIP_CONTROL_SHT_SHIFT)
 #define HIP_CONTROL_DHT_ALL         (HIP_CONTROL_DHT_MASK >> HIP_CONTROL_DHT_SHIFT)
+#endif
 
 #define HIP_VER_RES                 0x10     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
@@ -246,7 +248,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* ex-E4 */
+#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
@@ -456,8 +458,8 @@ struct hip_common {
 	uint8_t      type_hdr;
 	uint8_t      ver_res;
 
-	uint16_t     control;
 	uint16_t     checksum;
+	uint16_t     control;
 
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */

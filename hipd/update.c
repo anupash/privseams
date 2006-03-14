@@ -238,7 +238,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_dh_fixed *dh;
 	uint32_t update_id_out = 0;
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
-	uint16_t keymat_index = 0, mask;
+	uint16_t keymat_index = 0, mask = 0;
 	struct hip_common *update_packet = NULL;
 	int err = 0, esp_info_i = 1, need_to_generate_key = 0,
 		dh_key_generated = 0;
@@ -268,8 +268,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   SEQ parameter. */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, hitr, hits);
 
@@ -635,7 +633,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_ack *ack = NULL;
 	struct in6_addr daddr;
 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
 
@@ -650,8 +648,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		   generates a new UPDATE packet with an ACK of the peer's Update ID
 		   as received in the SEQ parameter. .. */
 		HIP_IFE(!(update_packet = hip_msg_alloc()), -ENOMEM);
-		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-						HIP_CONTROL_DHT_TYPE1);
 		entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE, mask, hitr, hits);
 		HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 			 "Building of ACK param failed\n");
@@ -744,7 +740,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *addr, *tmp;
 	struct hip_common *update_packet = NULL;
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	HIP_IFE(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1);
@@ -752,8 +748,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet,
 						     HIP_UPDATE, mask,
 						     hitr, hits);
@@ -778,8 +772,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		}
 		HIP_DEBUG("building verification packet\n");
 		hip_msg_init(update_packet);
-		mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-						HIP_CONTROL_DHT_TYPE1);
 		entry->hadb_misc_func->hip_build_network_hdr(update_packet,
 							     HIP_UPDATE, mask,
 							     hitr, hits);
@@ -844,13 +836,11 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq;
 	struct hip_locator *locator;
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, 
 		 "Out of memory.\n");
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, hitr, hits);
 
@@ -907,7 +897,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_echo_request *echo = NULL;
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	/* Assume already locked entry */
 	HIP_IFEL(!(echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST)), -1, 
@@ -917,8 +907,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory\n");
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, hitr, hits);
 
@@ -1303,7 +1291,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct hip_common *update_packet = NULL;
 	struct in6_addr saddr = { 0 }, daddr = { 0 };
 	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
-	uint16_t mask;
+	uint16_t mask = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 
 	add_locator = flags & SEND_UPDATE_LOCATOR;
@@ -1322,8 +1310,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 		 "Out of memory.\n");
 
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
 						     &entry->hit_peer);

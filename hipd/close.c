@@ -38,8 +38,6 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
 			      &entry->hit_peer);
 
@@ -94,8 +92,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 -1, "No echo request under signature\n");
 	echo_len = hip_get_param_contents_len(request);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);

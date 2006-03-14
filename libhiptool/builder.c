@@ -1238,8 +1238,9 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 
 	msg->payload_proto = IPPROTO_NONE; /* 1 byte, no htons()    */
 	/* Do not touch the length; it is written by param builders */
-	msg->type_hdr = type_hdr;          /* 1 byte, no htons()    */
-	msg->ver_res = HIP_VER_RES;        /* 1 byte, no htons()    */
+	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */
+	/* version includes the SHIM6 bit */
+	msg->ver_res = HIP_VER_RES << 5 & 1;   /* 1 byte, no htons() */
 
 	msg->control = htons(control);
 	msg->checksum = htons(0); /* this will be written by xmit */
@@ -2364,34 +2365,6 @@ int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 				      sizeof(struct hip_notify),
 				      notification_data);
 	return err;
-}
-
-/**
- * hip_create_control_flags - create control flags to HIP packet header
- * @anon: true if anonymous flag is set
- * @cert: true if certificate flag is set
- * @sht: value to be put into the SHT field
- * @dht: value to be put into the DHT field
- *
- * SHT and DHT are maximum three bits long.
- *
- * Returns: the control flag value.
- */
-uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
-{
-	uint16_t flags = HIP_CONTROL_NONE;
-
-	if (anon)
-		flags |= HIP_CONTROL_HIT_ANON;
-	if (cert)
-		flags |= HIP_CONTROL_CERTIFICATES;
-	if (sht)
-		flags |= (sht << HIP_CONTROL_SHT_SHIFT);
-	if (dht)
-		flags |= (dht << HIP_CONTROL_DHT_SHIFT);
-
-	_HIP_DEBUG("flags=0x%x\n", flags);
-	return flags;
 }
 
 int hip_build_netlink_dummy_header(struct hip_common *msg)
