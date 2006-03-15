@@ -45,11 +45,13 @@ struct list_head {
 };
 
 #define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_120   0x40
-#define HIP_HIT_PREFIX          0x4000
+#define HIP_HIT_TYPE_MASK_120   0x11
+#define HIP_HIT_PREFIX          0x1100
 #define HIP_HIT_PREFIX_LEN      8     /* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/8"
+#define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
+                                  0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
 //#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP

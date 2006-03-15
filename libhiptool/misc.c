@@ -9,10 +9,110 @@
 
 #include "misc.h"
 
+/* draft-laganier-khi-00:
+ *
+ * A KHI is generated using the algorithm below, which takes as input a
+ * bitstring and a context identifier:
+ *   
+ * Input      :=  any bitstring
+ * Hash Input :=  Context ID | Input
+ * Hash       :=  SHA1( Expand( Hash Input ) )
+ * KHI        :=  Prefix | Encode_n( Hash )
+ *
+ * where:
+ *   
+ * | : Denotes concatenation of bitstrings
+ *   
+ * Input :      A bitstring unique or statistically unique within a
+ *              given context intended to be associated with the
+ *              to-be-created KHI in the given context.
+ *   
+ * Context ID : A randomly generated value defining the expected usage
+ *              context the the particular KHI.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose sharing 
+ *              the name space introduced for CGA Type Tags; see
+ *              http://www.iana.org/assignments/cga-message-types
+ *              and RFC 3972.
+ *   
+ * Expand( ) :  An expansion function designed to overcome recent
+ *              attacks on SHA1.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose inserting
+ *              four (4) zero (0) bytes after every twelve (12) bytes
+ *              of the argument bitstring.
+ *   
+ * Encode_n( ): An extraction function which output is obtained by
+ *              extracting an <n>-bits-long bitstring from the 
+ *              argument bitstring.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose taking
+ *              <n> middlemost bits from the SHA1 output.
+ */
+int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+       int err = 0, index;
+       u8 digest[HIP_AH_SHA_LEN];
+       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+ 	 sizeof(struct hip_host_id_key_rdata);
+       u8 *khi_data = NULL, *khi_index;
+       u8 khi_context_id[] = HIP_KHI_CONTEXT_ID_INIT;
+       int khi_data_len = key_rr_len + sizeof(khi_context_id);
+       
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+
+       /* Hash Input :=  Context ID | Input */
+       khi_data = HIP_MALLOC(key_rr_len + sizeof(khi_context_id), 0);
+       khi_index = khi_data;
+       memcpy(khi_index, khi_context_id, sizeof(khi_context_id));
+       khi_index += sizeof(khi_context_id);
+       memcpy(khi_index, key_rr, key_rr_len);
+
+       /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
+	  inserting four (4) zero (0) bytes after every twelve (12) bytes
+	  of the argument bitstring. */
+       for (index = 0; index < khi_data_len; index++) {
+	       if (((index + 1) % 16) > 12)
+		       khi_data[index] = 0;
+       }
+
+       /* Hash :=  SHA1( Expand( Hash Input ) ) */
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
+					khi_data_len, digest)), err,
+		"Building of digest failed\n");
+
+       /* Encode_n( ): An extraction function which output is obtained by
+	  extracting an <n>-bits-long bitstring from the 
+	  argument bitstring. */
+       {
+	       /* XX TODO: what about even numbers? */
+	       int postfix_len = sizeof(hip_hit_t) - HIP_HIT_PREFIX_LEN / 8;
+	       u8 *from = digest + sizeof(digest) / 2 - postfix_len / 2;
+	       u8 *to = ((u8 *) hit) + HIP_HIT_PREFIX_LEN / 8;
+	       HIP_ASSERT((HIP_HIT_PREFIX_LEN % 8) == 0);
+	       memcpy(to, from, postfix_len);
+       }
+
+       hit->in6_u.u6_addr8[0] = 0x00;
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+ out_err:
+       if (khi_data)
+	       free(khi_data);
+
+       return err;
+}
+
 /*
  * XX TODO: HAA
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+int hip_dsa_host_id_to_hit_old(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type)
 {
        int err = 0;
