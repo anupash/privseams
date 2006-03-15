@@ -83,19 +83,7 @@ struct list_head {
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
-	/*
-	 * According to draft-ietf-hip-base-03 the mask 
-	 * has to be HIP_HIT_TYPE_MASK_120
-	 */
-#if 0	
-	int t;
-
-	t = a->s6_addr[0] & 0xC0;
-	return ((t == 0x40) ||
-		(t == 0x80));
-#endif
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
-
 }
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
