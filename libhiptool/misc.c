@@ -9,15 +9,6 @@
 
 #include "misc.h"
 
-/* Input      :=  any bitstring
- * Hash Input :=  Context ID | Input
- * Hash       :=  SHA1-IME( Hash Input  )
- * ORCHID     :=  Prefix | Encode_n( Hash ) 
- * Context_id :=  0xF0EF F02F BFF4 3D0F
- */
-
-
-
 /*
  * XX TODO: HAA
  */

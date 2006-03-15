@@ -35,7 +35,7 @@ AUTOMAKE_OPTIONS = foreign
 lib_LTLIBRARIES = libhiptool.la
 
 libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
-                        nlink.c shalime.c
+                        nlink.c sha1ime.c
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
