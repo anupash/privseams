@@ -9,9 +9,17 @@
 
 #include "misc.h"
 
+/* Input      :=  any bitstring
+ * Hash Input :=  Context ID | Input
+ * Hash       :=  SHA1-IME( Hash Input  )
+ * ORCHID     :=  Prefix | Encode_n( Hash ) 
+ * Context_id :=  0xF0EF F02F BFF4 3D0F
+ */
+
+
+
 /*
  * XX TODO: HAA
- * XX TODO: which one to use: this or the function just below?
  */
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type)
