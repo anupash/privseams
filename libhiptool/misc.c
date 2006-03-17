@@ -9,7 +9,8 @@
 
 #include "misc.h"
 
-void khi_expand(char *dst, int *dst_index, char *src, int src_len) {
+void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
+		int src_len) {
 	int index; 
 
 	for (index = 0; index < src_len; ) {
@@ -25,7 +26,8 @@ void khi_expand(char *dst, int *dst_index, char *src, int src_len) {
 }
 
 /* the lengths are in bits */
-int khi_encode(char *orig, int orig_len, char *encoded, int encoded_len) {
+int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
+	       int encoded_len) {
 	BIGNUM *bn = NULL;
 	int err = 0, shift = (orig_len - encoded_len) / 2, len;
 
@@ -93,7 +95,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 {
        int err = 0, index;
        u8 digest[HIP_AH_SHA_LEN];
-       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
        /* hit excludes rdata but it is included in hi_length;
 	  subtract rdata */
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
@@ -138,7 +140,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	  taking <n> middlemost bits from the SHA1 output. */
        HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
-			   ((char *) hit) + 1,
+			   ((u8 *) hit) + 1,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
 		-1, "encoding failed\n");
 
