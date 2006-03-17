@@ -9,6 +9,45 @@
 
 #include "misc.h"
 
+void khi_expand(char *dst, int *dst_index, char *src, int src_len) {
+	int index; 
+
+	for (index = 0; index < src_len; ) {
+		if ((*dst_index % 16) > 11) {
+			dst[*dst_index] = 0;
+			(*dst_index)++;
+		} else {
+			dst[*dst_index] = src[index];
+			index++;
+			(*dst_index)++;
+		}
+	}
+}
+
+/* the lengths are in bits */
+int khi_encode(char *orig, int orig_len, char *encoded, int encoded_len) {
+	BIGNUM *bn = NULL;
+	int err = 0, shift = (orig_len - encoded_len) / 2, len;
+
+	HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
+	HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
+		 "BN_bin2bn\n");
+	HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
+	HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
+		"BN_mask_bits\n");
+	HIP_IFEL((bn2bin_safe(bn, encoded, encoded_len / 8)
+		  != encoded_len / 8), -1,
+		  "BN_bn2bin_safe\n");
+
+	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
+
+ out_err:
+	if(bn)
+		BN_free(bn);
+	return err;
+}
+
+
 /* draft-laganier-khi-00:
  *
  * A KHI is generated using the algorithm below, which takes as input a
@@ -59,48 +98,54 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	  subtract rdata */
        unsigned int key_rr_len = ntohs(host_id->hi_length) -
  	 sizeof(struct hip_host_id_key_rdata);
-       u8 *khi_data = NULL, *khi_index;
+       u8 *khi_data = NULL;
        u8 khi_context_id[] = HIP_KHI_CONTEXT_ID_INIT;
        int khi_data_len = key_rr_len + sizeof(khi_context_id);
+       int khi_index = 0;
+
+       /* some extra space for the zeroes */
+       khi_data_len += (khi_data_len / 12) * 4;
        
        _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
        HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
        _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        /* Hash Input :=  Context ID | Input */
-       khi_data = HIP_MALLOC(key_rr_len + sizeof(khi_context_id), 0);
-       khi_index = khi_data;
-       memcpy(khi_index, khi_context_id, sizeof(khi_context_id));
-       khi_index += sizeof(khi_context_id);
-       memcpy(khi_index, key_rr, key_rr_len);
+       khi_data = HIP_MALLOC(khi_data_len, 0);
+       khi_index = 0;
 
        /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
 	  inserting four (4) zero (0) bytes after every twelve (12) bytes
 	  of the argument bitstring. */
-       for (index = 0; index < khi_data_len; index++) {
-	       if (((index + 1) % 16) > 12)
-		       khi_data[index] = 0;
-       }
+       khi_expand(khi_data, &khi_index, khi_context_id,
+		  sizeof(khi_context_id));
+       khi_expand(khi_data, &khi_index, key_rr, key_rr_len);
+
+       HIP_ASSERT(khi_index == khi_data_len);
+
+       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
 
        /* Hash :=  SHA1( Expand( Hash Input ) ) */
        HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
 					khi_data_len, digest)), err,
 		"Building of digest failed\n");
 
+       HIP_HEXDUMP("digest", digest, sizeof(digest));
+
        /* Encode_n( ): An extraction function which output is obtained by
 	  extracting an <n>-bits-long bitstring from the 
-	  argument bitstring. */
-       {
-	       /* XX TODO: what about even numbers? */
-	       int postfix_len = sizeof(hip_hit_t) - HIP_HIT_PREFIX_LEN / 8;
-	       u8 *from = digest + sizeof(digest) / 2 - postfix_len / 2;
-	       u8 *to = ((u8 *) hit) + HIP_HIT_PREFIX_LEN / 8;
-	       HIP_ASSERT((HIP_HIT_PREFIX_LEN % 8) == 0);
-	       memcpy(to, from, postfix_len);
-       }
+	  argument bitstring. As a baseline (TO BE DISCUSSED), we propose
+	  taking <n> middlemost bits from the SHA1 output. */
+       HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
+       HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
+			   ((char *) hit) + 1,
+			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
+		-1, "encoding failed\n");
 
        hit->in6_u.u6_addr8[0] = 0x00;
        hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+       HIP_DEBUG_HIT("calculated HIT: ", hit);
 
  out_err:
        if (khi_data)

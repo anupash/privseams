@@ -228,7 +228,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_CONTROL_DHT_ALL         (HIP_CONTROL_DHT_MASK >> HIP_CONTROL_DHT_SHIFT)
 #endif
 
-#define HIP_VER_RES                 0x10     /* Version 1, reserved 0 */
+#define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
@@ -291,7 +291,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_HIP_SIGNATURE2  61633
 #define HIP_PARAM_HIP_SIGNATURE   61697
 #define HIP_PARAM_ECHO_REQUEST    63661
-#define HIP_PARAM_ECHO_RESPONSE   65425
+#define HIP_PARAM_ECHO_RESPONSE   63425
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320

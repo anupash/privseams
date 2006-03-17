@@ -191,11 +191,13 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)), -EINVAL, 
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)),
+		 -EINVAL, 
 		 "Could not find HIP transform\n");
 	HIP_IFEL((hip_tfm = hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not select HIP transform\n");
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_TRANSFORM)), -EINVAL, 
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_TRANSFORM)),
+		 -EINVAL, 
 		 "Could not find ESP transform\n");
 	HIP_IFEL((esp_tfm = hip_select_esp_transform((struct hip_esp_transform *) param)) == 0, 
 		 -EINVAL, "Could not select proper ESP transform\n");
@@ -626,7 +628,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********** ESP_INFO **********/
 	/* SPI is set below */
-	HIP_IFEL(hip_build_param_esp_info(i2, 0, 0, 0), -1, "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(i2, ctx->current_keymat_index, 0, 0),
+		 -1, "building of ESP_INFO failed.\n");
 
 	/********** R1 COUNTER (OPTIONAL) ********/
 	/* we build this, if we have recorded some value (from previous R1s) */
@@ -947,7 +950,8 @@ int hip_handle_r1(struct hip_common *r1,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I, solved_puzzle),
+	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
+								solved_puzzle),
 			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
@@ -1099,7 +1103,9 @@ int hip_create_r2(struct hip_context *ctx,
  	/********** ESP_INFO **********/
 	//barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, 0, 0, spi_in), -1, "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, ctx->current_keymat_index, 0,
+					  spi_in), -1,
+		 "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_RVS
  	/* Do the Rendezvous functionality */

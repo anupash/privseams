@@ -1240,7 +1240,7 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	/* Do not touch the length; it is written by param builders */
 	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */
 	/* version includes the SHIM6 bit */
-	msg->ver_res = HIP_VER_RES << 5 & 1;   /* 1 byte, no htons() */
+	msg->ver_res = (HIP_VER_RES << 4) | 1;   /* 1 byte, no htons() */
 
 	msg->control = htons(control);
 	msg->checksum = htons(0); /* this will be written by xmit */

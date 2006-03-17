@@ -34,6 +34,11 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		goto out_err;
 	}
 
+	if (entry->state != HIP_STATE_ESTABLISHED) {
+		HIP_ERROR("State %d, not sending CLOSE\n");
+		goto out_err;
+	}
+
 	HIP_DEBUG("Sending close to peer\n");
 
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
