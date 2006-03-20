@@ -29,7 +29,6 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 
-
 typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
@@ -79,6 +78,18 @@ struct list_head {
 #include "crypto.h"
 #endif //#if 0
 
+/* Bing added */
+#define SET_NULL_HIT(hit)                      \
+        { memset(hit, 0, sizeof(hip_hit_t));        \
+          (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
+
+static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr32[1] == 0) &&
+	  (hit->s6_addr32[2] == 0) &&
+	  (hit->s6_addr32[3] == 0));
+}
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	/*
@@ -87,14 +98,16 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 	 */
 #if 0	
 	int t;
-
+	
 	t = a->s6_addr[0] & 0xC0;
 	return ((t == 0x40) ||
 		(t == 0x80));
 #endif
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
-
+	
 }
+
+//#define HIP_IS_OPPORTUNISTIC_HIT(hit)
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
          {(in6_addr_to)->s6_addr32[0] = 0;                                \

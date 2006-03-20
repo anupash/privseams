@@ -3,6 +3,7 @@
 #include "hadb.h"
 
 
+// Bing, added
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
@@ -279,7 +280,20 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	}
 		    
 	_HIP_DEBUG("created a new sdb entry\n");
+	//ipv6_addr_copy(&entry->hit_peer, peer_hit);
+#if 1
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
+	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
+	//	HIP_ASSERT(hit_is_opportunistic_hit(peer_hit));
+#else
+	memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
+		
+	entry->hit_peer.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	HIP_DEBUG_HIT("!!!! htons(HIP_HIT_PREFIX), peer hit=", &entry->hit_peer);
+	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
+	HIP_ASSERT(hit_is_opportunistic_hit(&entry->hit_peer));
+#endif
+
 
 	/* XXX: This is wrong. As soon as we have native socket API, we
 	 * should enter here the correct sender... (currently unknown).
@@ -716,7 +730,7 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	}
 
 	if (!ipv6_addr_any(addr)) {
-		hip_hadb_delete_inbound_spi(ha, 0);
+	  hip_hadb_delete_inbound_spi(ha, 0); // Bing, ? if ha->peer_hit==nullhit,do not delete.
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
@@ -2124,12 +2138,36 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes locked entry */
 	HIP_DEBUG("SPI=0x%x\n", spi);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if (!spi || item->spi == spi) {
-			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
- 				  "inbound list, item=0x%p addresses=0x%p\n",
- 				  item->spi, item->new_spi, item, item->addresses);
-			HIP_ERROR("remove SPI from HIT-SPI HT\n");
+	int counter = 0;
+
+
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list){ 
+	  /*
+	    #define list_for_each_entry_safe(pos, n, head, member)			\
+	    for (pos = list_entry((head)->next, typeof(*pos), member),	\
+	    n = list_entry(pos->member.next, typeof(*pos), member);	\
+	    &pos->member != (head); 					\
+	    pos = n, n = list_entry(n->member.next, typeof(*n), member))
+	  */
+	  
+	  // #define container_of(ptr, type, member) ({
+	  // const typeof( ((type *)0)->member ) *__mptr = (ptr);
+	  //(type *)( (char *)__mptr - offsetof(type,member) );
+	  
+	  //const typeof( ((typeof(*item) *)0)->list) *__mptr1 = (&entry->spis_in)->next;
+	  //item = (typeof(*item) *)( (char *)__mptr1 - offsetof( typeof(*item), list ));
+	  //	const typeof( ((typeof(*item) *)0)->list) *__mptr2 = (item)->next;
+	  //tmp = (typeof(*item) *)( (char *)__mptr2 - offsetof( typeof(*item), list ));
+	  
+	  //int bool = 0;
+	  //bool = (&item->list != (&entry->spis_in)  );
+	  //if(bool){
+	  HIP_DEBUG("!!!! loop counter %d\n", ++counter );
+	  if (!spi || item->spi == spi) {
+	    HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
+		      "inbound list, item=0x%p addresses=0x%p\n",
+		      item->spi, item->new_spi, item, item->addresses);
+	    HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
 			HIP_DEBUG_IN6ADDR("cheng", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
@@ -2147,7 +2185,8 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  			}
 			list_del(&item->list);
 			HIP_FREE(item);
-			break;
+			//break; // !!!!! Bing roll back it
+			
 		}
         }
 }
@@ -2231,7 +2270,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 		//HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
 		{
-			_HIP_DEBUG("List_for_each_entry_safe\n");
+			HIP_DEBUG("List_for_each_entry_safe\n");
 			hip_hold_ha(this);
 			fail = func(this, opaque);
 			hip_db_put_ha(this, hip_hadb_delete_state);
