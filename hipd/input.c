@@ -190,12 +190,12 @@ int hip_produce_keying_material(struct hip_common *msg,
 	size_t keymat_len_min; /* how many bytes we need at least for the KEYMAT */
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
-	uint16_t esp_keymat_index;
+	uint16_t esp_keymat_index = 0;
 
-	HIP_IFEL(!(esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO)),
-		 -EINVAL, 
-		 "Could not find esp_info\n");
-	esp_keymat_index = ntohs(esp_info->keymat_index);
+	/* R1 contains no ESP_INFO */
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	if (esp_info)
+		esp_keymat_index = ntohs(esp_info->keymat_index);
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
@@ -228,7 +228,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 		hip_transf_length + hmac_transf_length + esp_transf_length +
 		auth_transf_length + esp_transf_length + auth_transf_length;
 
-	if (esp_keymat_index !=
+	if (esp_keymat_index != 0 && esp_keymat_index !=
 	    hip_transf_length + hmac_transf_length +
 	    hip_transf_length + hmac_transf_length) {
 		/* XX FIXME */
