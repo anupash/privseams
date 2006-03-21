@@ -484,30 +484,43 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	    //HIP_ASSERT(entry);
 	    if (entry){
-	      printf("!!!! HIP_DEBUG entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      printf("!!!! HIP_DEBUG entry_tmp->state=%d\n",entry_tmp->state );
-	      printf("!!!! HIP_DEBUG entry->hastate=%d\n",entry->hastate );
-	      printf("!!!! HIP_DEBUG entry->state=%d\n",entry->state );
-	      
+	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->hastate=%d\n",entry_tmp->hastate );
+	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->state=%d\n",entry_tmp->state );
+	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->hadb_xmit_func=%x\n",entry_tmp->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG &entry_tmp->hadb_xmit_func=%x\n",&entry_tmp->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG *entry_tmp->hadb_xmit_func=%x\n",*entry_tmp->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG entry->hastate=%d\n",entry->hastate );
+	      HIP_DEBUG("!!!! HIP_DEBUG entry->state=%d\n",entry->state );
+	      HIP_DEBUG("!!!! HIP_DEBUG entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
 	      hip_hit_t entry_hit_peer = entry->hit_peer;
 	      hip_hit_t entry_hash_key = entry->hash_key;
 	      struct list_head entry_spis_in = entry->spis_in;
 	      struct list_head entry_spis_out = entry->spis_out;
-  
+	      hip_xmit_func_set_t *entry_hadb_xmit_func = entry->hadb_xmit_func;
 
 	      // copy old HA to new HA
 	      memcpy(entry, entry_tmp, sizeof(hip_ha_t));
-	      
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
 	      // roll back hit_peer, hash_key and ....
 	      entry->hit_peer = entry_hit_peer;
 	      entry->hash_key = entry_hash_key;
 	      entry->spis_in = entry_spis_in;
 	      entry->spis_out = entry_spis_out;
+	      entry->hadb_xmit_func = entry_hadb_xmit_func;
 	      
-	      printf("!!!! HIP_DEBUG after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      printf("!!!! HIP_DEBUG after copy entry_tmp->state=%d\n",entry_tmp->state );
-	      printf("!!!! HIP_DEBUG after copy entry->hastate=%d\n",entry->hastate );
-	      printf("!!!! HIP_DEBUG after copy entry->state=%d\n",entry->state );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->state=%d\n",entry_tmp->state );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copyentry_tmp->hadb_xmit_func=%x\n",entry_tmp->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry_tmp->hadb_xmit_func=%x\n",&entry_tmp->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hastate=%d\n",entry->hastate );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->state=%d\n",entry->state );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! HIP_DEBUG after copy *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
 	    }
 	    else {
 	      HIP_ERROR("Cannot find the added HA entry\n");
@@ -519,12 +532,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    goto out_err;
 	  }
 	  // finally delete nullhit HA // should we delete in a later stage,no such process error
-	  // entry_tmp = NULL;
-	  //err = hip_del_peer_info(&nullhit,src_addr );
-	  //if (err) {
-	  //HIP_ERROR("Failed to delete mapping\n");
-	  //goto out_err;
-	  //}
+	  entry_tmp = NULL;
+	  err = hip_del_peer_info(&nullhit,src_addr );
+	  if (err) {
+	    HIP_ERROR("Failed to delete mapping\n");
+	    goto out_err;
+	  }
 	  
 	  // we should still get entry after delete old nullhit HA
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -735,6 +748,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* create I2 */
 	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
 					HIP_CONTROL_DHT_TYPE1);
+	HIP_DEBUG_HIT("!!!! ctx->input->hitr=",&ctx->input->hitr );
+	HIP_DEBUG_HIT("!!!! ctx->input->hits=",&ctx->input->hits );
+	HIP_DEBUG_HIT("!!!! entry->hit_our=", &entry->hit_our);
+	HIP_DEBUG_HIT("!!!! entry-hit_peer=", &entry->hit_peer);
 	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
@@ -1873,7 +1890,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
-
+	HIP_DEBUG("!!!! Established entry = %x \n", entry);
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
