@@ -2009,6 +2009,8 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 	esp_info.old_spi = htonl(old_spi);
 	esp_info.new_spi = htonl(new_spi);
 
+	HIP_DEBUG("keymat index = %d\n", keymat_index);
+
 	err = hip_build_param(msg, &esp_info);
 	return err;
 }

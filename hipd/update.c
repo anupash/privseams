@@ -494,7 +494,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_IFE(hip_update_get_sa_keys(entry, &keymat_index, &calc_index_new, Kn,
 				       &espkey_gl, &authkey_gl, &espkey_lg, &authkey_lg), -1);
 	/* todo: update entry keymat later */
-	hip_update_entry_keymat(entry, keymat_index, calc_index_new, Kn);
+	hip_update_entry_keymat(entry, keymat_index, calc_index_new,
+	    keymat_index - esp_transf_length * 2 - auth_transf_length * 2, Kn);
 	
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);

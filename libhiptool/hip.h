@@ -118,13 +118,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_SELECT_TIMEOUT          1
 #define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 5 /* seconds */
+#define HIP_RETRANSMIT_INTERVAL 10 /* seconds */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
@@ -903,6 +902,7 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
+	uint16_t esp_keymat_index; /* pointer to the esp keymat index */
 };
 
 struct hip_packet_dh_sig
@@ -1028,6 +1028,7 @@ struct hip_hadb_state
 	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
+	uint16_t esp_keymat_index; /* for esp_info */
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */

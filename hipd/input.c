@@ -172,6 +172,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
  *
  * The initial ESP keys are drawn out of the keying material.
  *
+ *
  * Returns zero on success, or negative on error.
  */
 int hip_produce_keying_material(struct hip_common *msg,
@@ -184,10 +185,17 @@ int hip_produce_keying_material(struct hip_common *msg,
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
 	int hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;
 	struct hip_keymat_keymat km;
+	struct hip_esp_info *esp_info;
 	char *keymat = NULL;
 	size_t keymat_len_min; /* how many bytes we need at least for the KEYMAT */
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
+	uint16_t esp_keymat_index;
+
+	HIP_IFEL(!(esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO)),
+		 -EINVAL, 
+		 "Could not find esp_info\n");
+	esp_keymat_index = ntohs(esp_info->keymat_index);
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
@@ -219,6 +227,15 @@ int hip_produce_keying_material(struct hip_common *msg,
 	keymat_len_min = hip_transf_length + hmac_transf_length +
 		hip_transf_length + hmac_transf_length + esp_transf_length +
 		auth_transf_length + esp_transf_length + auth_transf_length;
+
+	if (esp_keymat_index !=
+	    hip_transf_length + hmac_transf_length +
+	    hip_transf_length + hmac_transf_length) {
+		/* XX FIXME */
+		HIP_ERROR("Varying keymat slices not supported yet\n");
+		err = -1;
+		goto out_err;
+	}
 
 	keymat_len = keymat_len_min;
 	if (keymat_len % HIP_AH_SHA_LEN)
@@ -308,6 +325,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	/* the next byte when creating new keymat */
 	ctx->current_keymat_index = keymat_len_min; /* offset value, so no +1 ? */
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
+	ctx->esp_keymat_index = esp_keymat_index;
 
 	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
@@ -628,7 +646,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********** ESP_INFO **********/
 	/* SPI is set below */
-	HIP_IFEL(hip_build_param_esp_info(i2, ctx->current_keymat_index, 0, 0),
+	HIP_IFEL(hip_build_param_esp_info(i2,
+					  ctx->esp_keymat_index,
+					  0, 0),
 		 -1, "building of ESP_INFO failed.\n");
 
 	/********** R1 COUNTER (OPTIONAL) ********/
@@ -1103,8 +1123,8 @@ int hip_create_r2(struct hip_context *ctx,
  	/********** ESP_INFO **********/
 	//barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, ctx->current_keymat_index, 0,
-					  spi_in), -1,
+	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
+					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_RVS

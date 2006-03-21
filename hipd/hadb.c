@@ -1572,7 +1572,8 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
 
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
-				ctx->keymat_calc_index, ctx->current_keymat_K);
+				ctx->keymat_calc_index, ctx->esp_keymat_index,
+				ctx->current_keymat_K);
 
 	if (entry->dh_shared_key) {
 		HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
