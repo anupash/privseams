@@ -267,7 +267,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			 "blowfish", "cipher_null", "cipher_null"};
 		char *a_algo_names[] =
 			{"reserved", "sha1", "sha1", "md5",
-			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 //			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;

@@ -805,8 +805,7 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 			return -1;
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 		}
-		
-		strncpy(alg->alg_key, key, len);
+		memcpy(alg->alg_key, key, key_len * 8);
 	}
 	
 	alg->alg_key_len = len * 8;
