@@ -11,6 +11,7 @@
 /******************************************************************************/
 /* INCLUDES */
 #include "gui_main.h"
+#include "hit_db.h"
 
 
 /******************************************************************************/
@@ -29,6 +30,8 @@ void gui_new_button(char *, char *, GtkWidget *, int, int, int, int, int,
 void gui_set_entry_fill_flag(int fill);
 
 void gui_terminate(void);
+
+void gui_ask_new_hit(HIT_Item *);
 
 
 #endif /* END OF HEADER FILE */

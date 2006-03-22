@@ -301,6 +301,23 @@ void gui_terminate(void)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/**
+	Ask for new HIT from user.
+*/
+void gui_ask_new_hit(HIT_Item *hit)
+{
+	GtkDialog *dialog;
+	
+	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+	                                GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+	                                "Accept new HIT?");
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 
