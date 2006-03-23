@@ -177,15 +177,17 @@ int hip_netdev_find_if(struct sockaddr *addr)
 			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
 
 	list_for_each_entry(n, &addresses, next) {
-		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
-		HIP_DEBUG_IN6ADDR("n addr ",  &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
+		HIP_DEBUG("n family %d, addr family %d\n",
+			  n->addr.ss_family ,addr->sa_family);
+		HIP_DEBUG_IN6ADDR("n addr ", 
+			   &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
 		HIP_DEBUG("index %d\n", n->if_index);	
 		if ((n->addr.ss_family == addr->sa_family) &&
 		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
 			     SAIPLEN(addr))==0)) ||
 			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr)){ 
-		HIP_DEBUG("index %d\n", n->if_index);	
-		return n->if_index;
+			HIP_DEBUG("index %d\n", n->if_index);	
+			return n->if_index;
 		}
 
 	}
