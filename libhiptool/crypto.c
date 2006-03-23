@@ -821,7 +821,7 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	else
 		ret = dhprime_len[hip_dh_group_type];
 
-	return ret + 1;
+	return ret;
 }
 
 int hip_init_cipher(void)
