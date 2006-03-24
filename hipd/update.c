@@ -515,9 +515,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
 			 hits, hitr, 
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
-			 (we_are_HITg ? &espkey_gl : &espkey_lg),
-			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0); //, -1,
+			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
+			 (we_are_HITg ? &authkey_lg : &authkey_gl),
+			 1, HIP_SPI_DIRECTION_IN, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -525,9 +525,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	err = hip_add_sa(&entry->local_address, &entry->preferred_address,
 			 hitr, hits,
 			 &new_spi_out, esp_transform,
-			 we_are_HITg ? &espkey_lg  : &espkey_gl,
-			 we_are_HITg ? &authkey_lg : &authkey_gl,
-			 1, HIP_SPI_DIRECTION_IN, 0 /*prev_spi_out == new_spi_out*/ );
+			 (we_are_HITg ? &espkey_gl : &espkey_lg),
+			 (we_are_HITg ? &authkey_gl : &authkey_lg),
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/ );
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
