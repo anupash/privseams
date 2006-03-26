@@ -229,30 +229,9 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 
 	/* dst_addr is the IP address of the Initiator... */
 	HIP_DEBUG_HIT("!!!! hip_xmit_r1:: src_hit", src_hit);
-	// Bing, if it is nullhit, should we use responder's real hit?
-	if(hit_is_opportunistic_hit(src_hit)){
-	  // TODO: using get_local_hits() instead of hardcoded hit
-	  // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
-
-	  src_hit->s6_addr[0] = (0x40);
-	  src_hit->s6_addr[1] = (0xcc);
-	  src_hit->s6_addr[2] = (0xb5);
-	  src_hit->s6_addr[3] = (0xe4);
-	  src_hit->s6_addr[4] = (0xce);
-	  src_hit->s6_addr[5] = (0xcf); 
-	  src_hit->s6_addr[6] = (0x2d);
-	  src_hit->s6_addr[7] = (0x1c);
-	  src_hit->s6_addr[8] = (0x5d);
-	  src_hit->s6_addr[9] = (0x50);
-	  src_hit->s6_addr[10] = (0x79);
-	  src_hit->s6_addr[11] = (0x0a);
-	  src_hit->s6_addr[12] = (0x2e);
-	  src_hit->s6_addr[13] = (0x62);
-	  src_hit->s6_addr[14] = (0x88);
-	  src_hit->s6_addr[15] = (0x04);
-
-	  HIP_DEBUG_HIT("!!!! hip_xmit_r1 modified src_hit", src_hit);
-	}
+	// it sould not be null hit, null hit has been replaced by real local hit
+	HIP_ASSERT(!hit_is_opportunistic_hit(src_hit));
+	
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
 		 "No precreated R1\n");
 	HIP_DEBUG_HIT("!!!! hip_xmit_r1:: dst_hit", dst_hit);

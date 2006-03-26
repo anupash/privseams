@@ -1571,6 +1571,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
 
   initlist(&list);
   /* find key files from /etc/hosts */
+  /* or */
+  /* find key files from /etc/hip */
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
   for(i=0; i<length(&list); i++) {

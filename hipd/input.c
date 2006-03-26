@@ -10,7 +10,8 @@
  *
  */
 #include "input.h"
-
+// Bing, added
+#include "util.h"
 
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr, HIP_RVA *rva);
@@ -561,11 +562,17 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		// no state
-	  // Bing, hardcoded &msg->hitr to real responder's hit
-	  // todo: using API to get local hit instead of hardcoded hit
 	  if(hit_is_opportunistic_hit(&msg->hitr)){
-	    // using get_local_hits();
+	   
+	    struct gaih_addrtuple *at = NULL;
+	    struct gaih_addrtuple **pat = &at;
+	    
+	    get_local_hits(NULL, pat);
+	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
+
 	    // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
+	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
+	    /*
 	    msg->hitr.s6_addr[0] = (0x40);
 	    msg->hitr.s6_addr[1] = (0xcc);
 	    msg->hitr.s6_addr[2] = (0xb5);
@@ -582,8 +589,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    msg->hitr.s6_addr[13] = (0x62);
 	    msg->hitr.s6_addr[14] = (0x88);
 	    msg->hitr.s6_addr[15] = (0x04);
-	    
-	    HIP_DEBUG_HIT("!!!! hip_receive_control_packet modified msg->hitr", &msg->hitr);
+	    */
+	    HIP_DEBUG_HIT("!!!! modified msg->hitr", &msg->hitr);
 	  }
 	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
 		break;

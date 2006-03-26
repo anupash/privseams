@@ -284,7 +284,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 #if 1
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
-	//	HIP_ASSERT(hit_is_opportunistic_hit(peer_hit));
 #else
 	memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
 		
@@ -2267,7 +2266,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
 		{
 			HIP_DEBUG("List_for_each_entry_safe\n");
