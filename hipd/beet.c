@@ -267,7 +267,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			 "blowfish", "cipher_null", "cipher_null"};
 		char *a_algo_names[] =
 			{"reserved", "sha1", "sha1", "md5",
-			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 //			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
@@ -280,7 +281,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		/* XFRMA_ALG_AUTH */
 		memset(&alg, 0, sizeof(alg));
 		HIP_IFE(xfrm_algo_parse((void *)&alg, XFRMA_ALG_AUTH, a_name,
-					 authkey->key, enckey_len,
+					 authkey->key, authkey_len,
 					sizeof(alg.buf)), -1);
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
