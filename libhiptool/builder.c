@@ -266,15 +266,16 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
 }
 
 
+#if 0
 /**
  * hip_set_param_spi_value - set the spi value in spi_lsi parameter
  * @spi_lsi: the spi_lsi parameter
  * @spi:     the value of the spi in the spi_lsi value in host byte order
  *
  */
-void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
+void hip_set_param_spi_value(struct hip_esp_info *esp_info, uint32_t spi)
 {
-	hspi->spi = htonl(spi);
+	esp_info->spi = htonl(spi);
 }
 
 /**
@@ -283,11 +284,11 @@ void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi)
  *
  * Returns: the spi value in host byte order
  */
-uint32_t hip_get_param_spi_value(const struct hip_spi *hspi)
+uint32_t hip_get_param_spi_value(const struct hip_esp_info *esp_info)
 {
-	return ntohl(hspi->spi);
+	return ntohl(esp_info->spi);
 }
-
+#endif
 
 /**
  * hip_get_unit_test_suite_param_id - get suite id from unit test parameter
@@ -315,6 +316,17 @@ uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test)
 
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
 	return host_id->rdata.algorithm; /* 8 bits, no ntons() */
+}
+
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator) {
+	return (struct hip_locator_info_addr_item *) (locator + 1);
+}
+
+int hip_get_locator_addr_item_count(struct hip_locator *locator) {
+	return (hip_get_param_contents_len(locator) -
+		(sizeof(struct hip_locator) -
+		 sizeof(struct hip_tlv_common))) /
+		sizeof(struct hip_locator_info_addr_item);
 }
 
 /**
@@ -400,12 +412,11 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t valid[] =
 		{
 			HIP_PARAM_ESP_INFO,
-			HIP_PARAM_SPI, /* XX FIX: REMOVE */
 			HIP_PARAM_R1_COUNTER,
-			HIP_PARAM_REA,
+			HIP_PARAM_LOCATOR,
 			HIP_PARAM_PUZZLE,
 			HIP_PARAM_SOLUTION,
-			HIP_PARAM_NES,
+			HIP_PARAM_ESP_INFO,
 			HIP_PARAM_SEQ,
 			HIP_PARAM_ACK,
 			HIP_PARAM_DIFFIE_HELLMAN,
@@ -1227,8 +1238,9 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 
 	msg->payload_proto = IPPROTO_NONE; /* 1 byte, no htons()    */
 	/* Do not touch the length; it is written by param builders */
-	msg->type_hdr = type_hdr;          /* 1 byte, no htons()    */
-	msg->ver_res = HIP_VER_RES;        /* 1 byte, no htons()    */
+	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */
+	/* version includes the SHIM6 bit */
+	msg->ver_res = (HIP_VER_RES << 4) | 1;   /* 1 byte, no htons() */
 
 	msg->control = htons(control);
 	msg->checksum = htons(0); /* this will be written by xmit */
@@ -1676,6 +1688,8 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 
 	HIP_ASSERT(pubkey_len >= sizeof(struct hip_tlv_common));
 
+	HIP_ASSERT(sizeof(struct hip_diffie_hellman) == 5);
+
 	hip_set_param_type(&diffie_hellman, HIP_PARAM_DIFFIE_HELLMAN);
 	hip_calc_generic_param_len(&diffie_hellman,
 				   sizeof(struct hip_diffie_hellman),
@@ -1839,54 +1853,52 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  	return 0;
 }
 
+#ifndef __KERNEL__
 /**
- * hip_build_param_rea - build HIP REA parameter
- *
- * XX FIX: deprecated, use build_locator
+ * hip_build_param_locator - build HIP locator parameter
  *
  * @msg:             the message where the REA will be appended
- * @spi:             SPI in host byte order
  * @addresses:       list of addresses
  * @address_count:   number of addresses in @addresses
  *
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_rea(struct hip_common *msg,
-			uint32_t spi,
-			struct hip_rea_info_addr_item *addresses,
-			int address_count)
-{
-	int err = 0;
-	struct hip_rea rea_info;
-	int addrs_len = address_count *
-		(sizeof(struct hip_rea_info_addr_item));
-
-	hip_set_param_type(&rea_info, HIP_PARAM_REA);
-	hip_calc_generic_param_len(&rea_info,
-				   sizeof(struct hip_rea),
-				   addrs_len);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_rea) -
-		   sizeof(struct hip_tlv_common) +
-		   addrs_len);
-	rea_info.spi = htonl(spi);
-	err = hip_build_param(msg, &rea_info);
-	if (err)
-		return err;
-	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
-		   addrs_len);
-	if (addrs_len > 0)
-		memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-		       addresses, addrs_len);
-
-	return err;
-}
-
 int hip_build_param_locator(struct hip_common *msg,
 			struct hip_locator_info_addr_item *addresses,
 			int address_count)
 {
-	return -1; /* XX FIX: implement similarly as the function above  */
+	int err = 0;
+	struct hip_locator *locator_info = NULL;
+	int addrs_len = address_count *
+		(sizeof(struct hip_locator_info_addr_item));
+
+	HIP_IFE(!(locator_info =
+		  malloc(sizeof(struct hip_locator) + addrs_len)), -1);
+
+	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(locator_info,
+				   sizeof(struct hip_locator),
+				   addrs_len);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len);
+
+	memcpy(locator_info + 1, addresses, addrs_len);
+	HIP_IFE(hip_build_param(msg, locator_info), -1);
+
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	//if (addrs_len > 0)
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	       addresses, addrs_len);
+
+ out_err:
+	if (locator_info)
+		free(locator_info);
+
+	return err;
 }
+#endif /* !__KERNEL__ */
 
 /**
  * hip_build_param_keys - build and append crypto keys parameter
@@ -1995,16 +2007,19 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
 	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
 	esp_info.reserved = htonl(0);
-	esp_info.keymat_index = htonl(keymat_index);
+	esp_info.keymat_index = htons(keymat_index);
 	esp_info.old_spi = htonl(old_spi);
 	esp_info.new_spi = htonl(new_spi);
+
+	HIP_DEBUG("keymat index = %d\n", keymat_index);
 
 	err = hip_build_param(msg, &esp_info);
 	return err;
 }
 
+#if 0
 /**
- * hip_build_param_spi_lsi - build the SPI_LSI parameter
+ * hip_build_param_spi - build the SPI parameter
  * @msg: the message where the parameter will be appended
  * @lsi: the value of the lsi (in host byte order)
  * @spi: the value of the spi (in host byte order)
@@ -2025,6 +2040,7 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
         err = hip_build_param(msg, &hspi);
         return err;
 }
+#endif
 
 /**
  * hip_build_param_encrypted_3des_sha1 - build the hip_encrypted parameter
@@ -2327,31 +2343,6 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_nes - build and append HIP NES parameter
- * @msg: the message where the parameter will be appended
- * @is_reply: 1 if this packet is a reply to another UPDATE
- * @keymat_index: Keymat Index in host byte order
- * @old_spi: Old SPI value in host byte order
- * @new_spi: New SPI value in host byte order
- * 
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
-                        uint32_t old_spi, uint32_t new_spi)
-{
-        int err = 0;
-        struct hip_nes nes;
-
-        hip_set_param_type(&nes, HIP_PARAM_NES);
-        hip_calc_generic_param_len(&nes, sizeof(struct hip_nes), 0);
-        nes.keymat_index = htons(keymat_index);
-        nes.old_spi = htonl(old_spi);
-        nes.new_spi = htonl(new_spi);
-        err = hip_build_param(msg, &nes);
-        return err;
-}
-
-/**
  * hip_build_param_notify - build the HIP NOTIFY parameter
  * @msg:     the message where the parameter will be appended
  * @msgtype: Notify Message Type
@@ -2378,34 +2369,6 @@ int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 				      sizeof(struct hip_notify),
 				      notification_data);
 	return err;
-}
-
-/**
- * hip_create_control_flags - create control flags to HIP packet header
- * @anon: true if anonymous flag is set
- * @cert: true if certificate flag is set
- * @sht: value to be put into the SHT field
- * @dht: value to be put into the DHT field
- *
- * SHT and DHT are maximum three bits long.
- *
- * Returns: the control flag value.
- */
-uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht)
-{
-	uint16_t flags = HIP_CONTROL_NONE;
-
-	if (anon)
-		flags |= HIP_CONTROL_HIT_ANON;
-	if (cert)
-		flags |= HIP_CONTROL_CERTIFICATES;
-	if (sht)
-		flags |= (sht << HIP_CONTROL_SHT_SHIFT);
-	if (dht)
-		flags |= (dht << HIP_CONTROL_DHT_SHIFT);
-
-	_HIP_DEBUG("flags=0x%x\n", flags);
-	return flags;
 }
 
 int hip_build_netlink_dummy_header(struct hip_common *msg)

@@ -564,6 +564,8 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
+	HIP_DEBUG("\n");
+
 	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
 	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
@@ -803,8 +805,7 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 			return -1;
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 		}
-		
-		strncpy(alg->alg_key, key, len);
+		memcpy(alg->alg_key, key, key_len * 8);
 	}
 	
 	alg->alg_key_len = len * 8;

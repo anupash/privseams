@@ -24,16 +24,13 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	int mask;
+	int mask = 0;
 	int err = 0;
 
-	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
@@ -106,8 +103,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	    hip_get_param_total_len(host_id_pub));
 	
  	/* Ready to begin building of the R1 packet */
-	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
-	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif

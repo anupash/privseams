@@ -45,15 +45,17 @@ struct list_head {
 };
 
 #define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_120   0x40
-#define HIP_HIT_PREFIX          0x4000
+#define HIP_HIT_TYPE_MASK_120   0x11
+#define HIP_HIT_PREFIX          0x1100
 #define HIP_HIT_PREFIX_LEN      8     /* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/8"
+#define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
+                                  0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
-#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+//#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP
-#define IPPROTO_HIP             99 /* Also in libinet6/include/netinet/in.h */
+#define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
 #endif
 
 /* Workaround for kernels before 2.6.15.3. */
@@ -81,19 +83,7 @@ struct list_head {
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
-	/*
-	 * According to draft-ietf-hip-base-03 the mask 
-	 * has to be HIP_HIT_TYPE_MASK_120
-	 */
-#if 0	
-	int t;
-
-	t = a->s6_addr[0] & 0xC0;
-	return ((t == 0x40) ||
-		(t == 0x80));
-#endif
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
-
 }
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
@@ -128,13 +118,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define HIP_SELECT_TIMEOUT          1
 #define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 5 /* seconds */
+#define HIP_RETRANSMIT_INTERVAL 10 /* seconds */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
@@ -154,15 +143,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_HIT_TYPE_HASH120    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
-#define HIP_I1  1
-#define HIP_R1  2
-#define HIP_I2  3
-#define HIP_R2  4
-#define HIP_CER 5
-#define HIP_UPDATE 6
-#define HIP_NOTIFY 7
-#define HIP_CLOSE 8
-#define HIP_CLOSE_ACK 9
+#define HIP_I1         1
+#define HIP_R1         2
+#define HIP_I2         3
+#define HIP_R2         4
+#define HIP_CER        5
+#define HIP_UPDATE     16
+#define HIP_NOTIFY     17
+#define HIP_CLOSE      18
+#define HIP_CLOSE_ACK  19
 //#define HIP_REA 10     /* removed from ietf-hip-mm-00   */
 #define HIP_BOS 11     /* removed from ietf-hip-base-01 */
 //#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
@@ -221,10 +210,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 //#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
 #define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
-#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
+//#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
 
+#if 0
 #define HIP_CONTROL_SHT_SHIFT       13
 #define HIP_CONTROL_DHT_SHIFT       10
 #define HIP_CONTROL_SHT_MASK        (0x8000|0x4000|0x2000) /* bits 16-14 */
@@ -235,8 +225,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_CONTROL_DHT_TYPE2       HIP_CONTROL_SHT_TYPE2
 #define HIP_CONTROL_SHT_ALL         (HIP_CONTROL_SHT_MASK >> HIP_CONTROL_SHT_SHIFT)
 #define HIP_CONTROL_DHT_ALL         (HIP_CONTROL_DHT_MASK >> HIP_CONTROL_DHT_SHIFT)
+#endif
 
-#define HIP_VER_RES                 0x10     /* Version 1, reserved 0 */
+#define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
@@ -246,7 +237,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* ex-E4 */
+#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
@@ -255,18 +246,18 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
 #define HIP_PARAM_ESP_INFO             65
-#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
+//#define HIP_PARAM_SPI                  1 /* XX REMOVE:replaced with ESP_INFO */
 #define HIP_PARAM_R1_COUNTER           128
-#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
+//#define HIP_PARAM_REA                  3 /* XX REMOVE:replaced with LOCATOR */
 #define HIP_PARAM_LOCATOR              193
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
-#define HIP_PARAM_NES                  9
+//#define HIP_PARAM_NES                  9
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
-#define HIP_PARAM_ESP_TRANSFORM        2048
+#define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
@@ -299,7 +290,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_HIP_SIGNATURE2  61633
 #define HIP_PARAM_HIP_SIGNATURE   61697
 #define HIP_PARAM_ECHO_REQUEST    63661
-#define HIP_PARAM_ECHO_RESPONSE   65425
+#define HIP_PARAM_ECHO_RESPONSE   63425
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320
@@ -380,11 +371,18 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
 
+#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
+#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
+#define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
+
+#define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+
 #define HIP_SPI_DIRECTION_OUT 1
 #define HIP_SPI_DIRECTION_IN 2
 
-#define SEND_UPDATE_NES (1 << 0)
-#define SEND_UPDATE_REA (1 << 1)
+#define SEND_UPDATE_ESP_INFO (1 << 0)
+#define SEND_UPDATE_LOCATOR (1 << 1)
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
@@ -449,8 +447,8 @@ struct hip_common {
 	uint8_t      type_hdr;
 	uint8_t      ver_res;
 
-	uint16_t     control;
 	uint16_t     checksum;
+	uint16_t     control;
 
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
@@ -510,6 +508,7 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIXME: obsoleted by esp_info in draft-ietf-esp-00 */
 struct hip_spi {
 	hip_tlv_type_t      type;
@@ -517,6 +516,7 @@ struct hip_spi {
 
 	uint32_t      spi;
 } __attribute__ ((packed));
+#endif
 
 struct hip_esp_info {
 	hip_tlv_type_t      type;
@@ -662,6 +662,7 @@ struct hip_sig2 {
 	/* fixed part end */
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIXME: obsoloted by esp_info in draft-esp-00 */
 struct hip_nes {
 	hip_tlv_type_t type;
@@ -671,7 +672,7 @@ struct hip_nes {
 	uint32_t old_spi;
 	uint32_t new_spi;
 } __attribute__ ((packed));
-
+#endif
 
 struct hip_seq {
 	hip_tlv_type_t type;
@@ -696,12 +697,14 @@ struct hip_notify {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
+#if 0
 /* XX FIX: depracated in mm-02, use the locator addr item structure */
 struct hip_rea_info_addr_item {
 	uint32_t lifetime;
 	uint32_t reserved;
 	struct in6_addr address;
 }  __attribute__ ((packed));
+#endif
 
 struct hip_locator_info_addr_item {
 	uint8_t traffic_type;
@@ -709,9 +712,12 @@ struct hip_locator_info_addr_item {
 	uint8_t locator_length;
 	uint8_t reserved;
 	uint32_t lifetime;
-	/* end of fixed part - locator of arbitrary length follows */
+	/* end of fixed part - locator of arbitrary length follows but 
+	   currently support only IPv6 */
+	struct in6_addr address;
 }  __attribute__ ((packed));
 
+#if 0
 /* XX FIX: depracated in mm-02, use the locator structure */
 struct hip_rea {
 	hip_tlv_type_t type;
@@ -719,6 +725,7 @@ struct hip_rea {
 	uint32_t spi;
 	/* fixed part ends */
 } __attribute__ ((packed));
+#endif
 
 struct hip_locator {
 	hip_tlv_type_t type;
@@ -895,6 +902,7 @@ struct hip_context
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
 	uint16_t keymat_index; /* KEYMAT offset */
+	uint16_t esp_keymat_index; /* pointer to the esp keymat index */
 };
 
 struct hip_packet_dh_sig
@@ -919,7 +927,7 @@ struct hip_peer_addr_list_item
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	int              is_preferred;  /* 1 if this address was set as
-					   preferred address in the REA */
+					   preferred address in the LOCATOR */
 	uint32_t         lifetime;
 	struct timeval   modified_time; /* time when this address was
 					   added or updated */
@@ -943,23 +951,25 @@ struct hip_spi_in_item
 	struct list_head list;
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
-	int              ifindex; /* ifindex if the netdev to which this is related to */
+        /* ifindex if the netdev to which this is related to */
+	int              ifindex;
 	unsigned long    timestamp; /* when SA was created */
 	int              updating; /* UPDATE is in progress */
-	uint32_t         nes_spi_out; /* UPDATE, the stored outbound
-				       * SPI related to the inbound
-				       * SPI we sent in reply (useless ?) */
-	uint16_t         keymat_index; /* advertized keymat index */
+	uint32_t         esp_info_spi_out; /* UPDATE, the stored outbound
+					    * SPI related to the inbound
+					    * SPI we sent in reply (useless?)*/
+	uint16_t         keymat_index; /* advertised keymat index */
 	int              update_state_flags; /* 0x1=received ack for
 						sent SEQ, 0x2=received
-						peer's NES,
+						peer's ESP_INFO,
 						both=0x3=can move back
 						to established */
-	uint32_t seq_update_id; /* the Update ID in SEQ parameter these SPI are related to */
-	struct hip_nes stored_received_nes; /* the corresponding NES of peer */
-	struct hip_rea_info_addr_item *addresses; /* our addresses this SPI is
-						     related to, reuse struct to
-						     ease coding */
+        /* the Update ID in SEQ parameter these SPI are related to */
+	uint32_t seq_update_id;
+        /* the corresponding esp_info of peer */
+	struct hip_esp_info stored_received_esp_info;
+        /* our addresses this SPI is related to, reuse struct to ease coding */
+	struct hip_locator_info_addr_item *addresses;
 	int addresses_n; /* number of addresses */
 };
 
@@ -1018,6 +1028,7 @@ struct hip_hadb_state
 	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
 	uint8_t keymat_calc_index; /* the one byte index number used
 				    * during the keymat calculation */
+	uint16_t esp_keymat_index; /* for esp_info */
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
 	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
 	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
@@ -1152,10 +1163,11 @@ struct hip_hadb_handle_func_set{
 };
 
 struct hip_hadb_update_func_set{   
-	int (*hip_handle_update_plain_rea)(hip_ha_t *entry, 
+	int (*hip_handle_update_plain_locator)(hip_ha_t *entry, 
 					struct hip_common *msg,
 					struct in6_addr *src_ip,
-					struct in6_addr *dst_ip);
+					struct in6_addr *dst_ip,
+					struct hip_esp_info *esp_info);
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
 					  struct hip_common *msg,
 				  	  struct in6_addr *src_ip,
