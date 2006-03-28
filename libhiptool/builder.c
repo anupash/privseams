@@ -18,6 +18,7 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Tobias Heer <heer@tobibox.de>
  *
  * USAGE EXAMPLES:
  * - sender of "add mapping", i.e. the hip module in kernel
@@ -803,22 +804,102 @@ void hip_dump_msg(const struct hip_common *msg)
 {
 	struct hip_tlv_common *current_param = NULL;
 	void *contents = NULL;
-
-	HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
-		 hip_get_msg_type(msg), hip_get_msg_total_len(msg),
-		 hip_get_msg_err(msg));
-
+	HIP_DEBUG("--------------- MSG START-------------------\n");
+	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
+	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
+	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
+	
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		HIP_DEBUG("param: type=%d, len=%d\n",
+		HIP_DEBUG("Param: type:%s (%d), len=%d\n",
+			 hip_param_type_name(hip_get_param_type(current_param)),
 			 hip_get_param_type(current_param),
 			 hip_get_param_contents_len(current_param));
 		contents = hip_get_param_contents_direct(current_param);
-		HIP_HEXDUMP("contents", contents,
+		HIP_HEXDUMP("Contents:", contents,
 			    hip_get_param_contents_len(current_param));
 	}
-
+	HIP_DEBUG("---------------- MSG END --------------------\n");
 }
+
+/**
+ * hip_message_type_name - returns a string for a given parameter type number
+ * @msg_type message type number
+ * @return: name of the message type
+ **/
+char* hip_message_type_name(uint8_t msg_type){
+	switch (msg_type){
+		case HIP_I1: return "HIP_I1";
+		case HIP_R1: return "HIP_R1";
+		case HIP_I2: return "HIP_I2";
+		case HIP_CER: return "HIP_CER";
+		case HIP_UPDATE: return "HIP_UPDATE";
+		case HIP_NOTIFY: return "HIP_NOTIFY";
+		case HIP_CLOSE: return "HIP_CLOSE";
+		case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
+		case HIP_BOS: return "HIP_BOS";
+		case HIP_PSIG: return "HIP_PSIG";
+		case HIP_TRIG: return "HIP_TRIG";
+	}
+	return "UNDEFINED";
+}
+
+/**
+ * hip_message_type_name - returns a string for a given parameter type number
+ * @param_type parameter type number
+ * @return: name of the message type
+ **/
+char* hip_param_type_name(uint16_t param_type){
+	switch (param_type){
+		case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
+		case HIP_PARAM_SPI: return "HIP_PARAM_SPI";
+		case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
+		case HIP_PARAM_REA: return "HIP_PARAM_REA";
+		case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
+		case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
+		case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
+		case HIP_PARAM_NES: return "HIP_PARAM_NES";
+		case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
+		case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+		case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
+		case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
+		case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
+		case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
+		case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
+		case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
+		case HIP_PARAM_RVA_REQUEST: return "HIP_PARAM_RVA_REQUEST";
+		case HIP_PARAM_RVA_REPLY: return "HIP_PARAM_RVA_REPLY";
+		case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
+		case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
+		case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
+		case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
+		case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
+		case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
+		case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
+		case HIP_PARAM_HI: return "HIP_PARAM_HI";
+		case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
+		case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
+		case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
+		case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
+		case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
+		case HIP_PARAM_EID_ADDR: return "HIP_PARAM_EID_ADDR";
+		case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
+		case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
+		case HIP_PARAM_FROM_SIGN: return "HIP_PARAM_FROM_SIGN";
+		case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
+		case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
+		case HIP_PARAM_HIP_SIGNATURE2: return "HIP_PARAM_HIP_SIGNATURE2";
+		case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
+		case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
+		case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
+		case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
+		case HIP_PARAM_TO: return "HIP_PARAM_TO";
+		case HIP_PARAM_RVA_HMAC: return "HIP_PARAM_RVA_HMAC";
+		case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
+	}
+	return "UNDEFINED";
+}
+	
 
 /**
  * hip_check_userspace msg - check userspace message for integrity

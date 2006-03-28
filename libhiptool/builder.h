@@ -5,7 +5,7 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
- *
+ * - Tobias Heer <heer@tobibox.de>
  */
 
 #include <asm/types.h>
@@ -78,6 +78,8 @@ void *hip_get_nth_param(const struct hip_common *msg,
 void *hip_find_free_param(const struct hip_common *msg);
 void hip_calc_hdr_len(struct hip_common *msg);
 void hip_dump_msg(const struct hip_common *msg);
+char* hip_message_type_name(uint8_t msg_type);
+char* hip_param_type_name(uint16_t param_type);
 int hip_check_userspace_msg(const struct hip_common *msg);
 int hip_check_network_msg(const struct hip_common *msg);
 int hip_build_param_contents(struct hip_common *msg, const void *contents,
