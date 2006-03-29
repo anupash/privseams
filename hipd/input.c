@@ -477,6 +477,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	    // Bing, add new HA with real hits
 	    err = hip_hadb_add_peer_info(&msg->hits, src_addr);
+	    //err = hip_hadb_add_peer_info(&msg->hits, &msg->hitr);
 	    if (err) {
 	      HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	      goto out_err;
@@ -500,6 +501,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	      struct list_head entry_spis_in = entry->spis_in;
 	      struct list_head entry_spis_out = entry->spis_out;
 	      hip_xmit_func_set_t *entry_hadb_xmit_func = entry->hadb_xmit_func;
+	      struct list_head entry_next_hit = entry->next_hit;
 
 	      // copy old HA to new HA
 	      memcpy(entry, entry_tmp, sizeof(hip_ha_t));
@@ -512,6 +514,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	      entry->spis_in = entry_spis_in;
 	      entry->spis_out = entry_spis_out;
 	      entry->hadb_xmit_func = entry_hadb_xmit_func;
+	      entry->next_hit = entry_next_hit;
 	      
 	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
 	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->state=%d\n",entry_tmp->state );
@@ -534,7 +537,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  }
 	  // finally delete nullhit HA // should we delete in a later stage,no such process error
 	  entry_tmp = NULL;
-	  err = hip_del_peer_info(&nullhit,src_addr );
+	  err = hip_del_peer_info(&nullhit, src_addr);
 	  if (err) {
 	    HIP_ERROR("Failed to delete mapping\n");
 	    goto out_err;
@@ -613,7 +616,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  // Bing modified R2 => R1
 	  //HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
 	  HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
-		HIP_DEBUG_HIT("!!!! hip_receive_control_packet ?40cc? msg->hits", &msg->hits);
+	  //HIP_DEBUG_HIT("!!!! hip_receive_control_packet ?40cc? msg->hits", &msg->hits);
 		// Bing, should we add new map? using hip_add_peer_map(&msg->hits,src_addr)
 		// or modify the existing map with nullhit and &msg->hitr
 		HIP_IFCS(entry,

@@ -63,17 +63,17 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 	HIP_DEBUG("!!!! entry = %x\n", entry);
 	HIP_DEBUG_HIT("!!!! hit_peer", &entry->hit_peer);
 	HIP_DEBUG_HIT("!!!! hit_our", &entry->hit_our);
-
+	HIP_DEBUG("!!!! entry->hip_msg_retrans.count=%d\n",entry->hip_msg_retrans.count  );
 	if (entry->hip_msg_retrans.count > 0 &&
 	    entry->state != HIP_STATE_ESTABLISHED) {
 	  
 	  HIP_DEBUG("!!!! true entry->hadb_xmit_func->hip_csum_send, %x=%x\n",
 		    entry->hadb_xmit_func->hip_csum_send,&entry->hadb_xmit_func->hip_csum_send );
-		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-							   &entry->hip_msg_retrans.daddr,
-							   entry->hip_msg_retrans.buf,
-							   entry, 0);
-		entry->hip_msg_retrans.count--;
+	  err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
+						     &entry->hip_msg_retrans.daddr,
+						     entry->hip_msg_retrans.buf,
+						     entry, 0);
+	  entry->hip_msg_retrans.count--;
 	} else {
 	  HIP_DEBUG("!!!! false entry->hadb_xmit_func->hip_csum_send, %x=%x\n",
 	  entry->hadb_xmit_func->hip_csum_send,&entry->hadb_xmit_func->hip_csum_send );

@@ -285,11 +285,13 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
 #else
-	memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
+	//memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
 		
-	entry->hit_peer.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	HIP_DEBUG_HIT("!!!! htons(HIP_HIT_PREFIX), peer hit=", &entry->hit_peer);
-	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
+	//entry->hit_peer.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	hip_hit_t nullhit;
+	SET_NULL_HIT(&nullhit);
+	memcpy(&entry->hit_peer, &nullhit, sizeof(hip_hit_t));
+	HIP_DEBUG_HIT("!!!! peer hit=", &entry->hit_peer);
 	HIP_ASSERT(hit_is_opportunistic_hit(&entry->hit_peer));
 #endif
 
