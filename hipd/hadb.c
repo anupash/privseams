@@ -283,7 +283,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	//ipv6_addr_copy(&entry->hit_peer, peer_hit);
 #if 1
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
-	HIP_DEBUG_HIT("!!!! peer's real hit=", peer_hit);
+	HIP_DEBUG_HIT("!!!! hip_hadb_add_peer_info peer hit=", peer_hit);
 #else
 	//memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
 		
@@ -361,8 +361,26 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
+#if 0
+	err = hip_hadb_add_peer_info(hit, ip);
+	HIP_DEBUG_HIT("!!!! hip_add_map_info peer's real hit=", hit);
+#else
+	//memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
+	hip_hit_t nullhit;
+	SET_NULL_HIT(&nullhit);
+	HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+	HIP_DEBUG_HIT("!!!! hip_add_map_info peer's real hit=", hit);
+	HIP_DEBUG_HIT("!!!! hip_add_map_info nullhit=", &nullhit);
+	
+	int result = 0;
+	result = memcmp(&nullhit, hit, sizeof(hip_hit_t));
+	HIP_DEBUG("!!!! result = %d\n", result);
+	memcpy(hit, &nullhit, sizeof(hip_hit_t));
+	HIP_DEBUG_HIT("!!!! hip_add_map_info set null to peer hit=", hit);
+	HIP_ASSERT(hit_is_opportunistic_hit(hit));
 
 	err = hip_hadb_add_peer_info(hit, ip);
+#endif
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;

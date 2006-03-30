@@ -486,45 +486,48 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	    //HIP_ASSERT(entry);
 	    if (entry){
-	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->state=%d\n",entry_tmp->state );
-	      HIP_DEBUG("!!!! HIP_DEBUG entry_tmp->hadb_xmit_func=%x\n",entry_tmp->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG &entry_tmp->hadb_xmit_func=%x\n",&entry_tmp->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG *entry_tmp->hadb_xmit_func=%x\n",*entry_tmp->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG entry->hastate=%d\n",entry->hastate );
-	      HIP_DEBUG("!!!! HIP_DEBUG entry->state=%d\n",entry->state );
-	      HIP_DEBUG("!!!! HIP_DEBUG entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
+	      HIP_DEBUG_HIT("!!!! entry_tmp->hit_peer", &entry_tmp->hit_peer);
+	      HIP_DEBUG("!!!! entry_tmp->hastate=%d\n",entry_tmp->hastate );
+	      HIP_DEBUG("!!!! entry_tmp->state=%d\n",entry_tmp->state );
+	      	      
+	      HIP_DEBUG_HIT("!!!! entry->hit_peer", &entry->hit_peer);
+	      HIP_DEBUG("!!!! entry->hastate=%d\n",entry->hastate );
+	      HIP_DEBUG("!!!! entry->state=%d\n",entry->state );
+	    
+	      // old HA has state 2, new HA has state 1, so copy it
+	      entry->state = entry_tmp->state;
+	      
+	      /*
 	      hip_hit_t entry_hit_peer = entry->hit_peer;
 	      hip_hit_t entry_hash_key = entry->hash_key;
 	      struct list_head entry_spis_in = entry->spis_in;
 	      struct list_head entry_spis_out = entry->spis_out;
 	      hip_xmit_func_set_t *entry_hadb_xmit_func = entry->hadb_xmit_func;
 	      struct list_head entry_next_hit = entry->next_hit;
-
+	      */
 	      // copy old HA to new HA
-	      memcpy(entry, entry_tmp, sizeof(hip_ha_t));
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
+	      //memcpy(entry, entry_tmp, sizeof(hip_ha_t));
+	      
 	      // roll back hit_peer, hash_key and ....
-	      entry->hit_peer = entry_hit_peer;
+	      /*entry->hit_peer = entry_hit_peer;
 	      entry->hash_key = entry_hash_key;
 	      entry->spis_in = entry_spis_in;
 	      entry->spis_out = entry_spis_out;
 	      entry->hadb_xmit_func = entry_hadb_xmit_func;
 	      entry->next_hit = entry_next_hit;
+	      */
 	      
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry_tmp->state=%d\n",entry_tmp->state );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copyentry_tmp->hadb_xmit_func=%x\n",entry_tmp->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry_tmp->hadb_xmit_func=%x\n",&entry_tmp->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hastate=%d\n",entry->hastate );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->state=%d\n",entry->state );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy entry->hadb_xmit_func=%x\n",entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy &entry->hadb_xmit_func=%x\n",&entry->hadb_xmit_func );
-	      HIP_DEBUG("!!!! HIP_DEBUG after copy *entry->hadb_xmit_func=%x\n",*entry->hadb_xmit_func );
+	      HIP_DEBUG("!!!! after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
+	      HIP_DEBUG("!!!! after copy entry_tmp->state=%d\n",entry_tmp->state );
+	      	      
+	      HIP_DEBUG_HIT("!!!! after copy entry->hit_peer", &entry->hit_peer);
+	      HIP_DEBUG("!!!! after copy entry->hastate=%d\n",entry->hastate );
+	      HIP_DEBUG("!!!! after copy entry->state=%d\n",entry->state );
+
+	      hip_ha_t *test_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	      HIP_DEBUG_HIT("!!!! test_entry->hit_peer", &test_entry->hit_peer);
+	      HIP_DEBUG("!!!! test_entry->hastate=%d\n", test_entry->hastate );
+	      HIP_DEBUG("!!!! test_entry->state=%d\n", test_entry->state );
 	    }
 	    else {
 	      HIP_ERROR("Cannot find the added HA entry\n");
