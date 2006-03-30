@@ -852,13 +852,10 @@ char* hip_message_type_name(uint8_t msg_type){
 char* hip_param_type_name(uint16_t param_type){
 	switch (param_type){
 		case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
-		case HIP_PARAM_SPI: return "HIP_PARAM_SPI";
 		case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
-		case HIP_PARAM_REA: return "HIP_PARAM_REA";
 		case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
 		case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
 		case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
-		case HIP_PARAM_NES: return "HIP_PARAM_NES";
 		case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
 		case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
 		case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";

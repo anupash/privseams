@@ -156,6 +156,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_BOS 11     /* removed from ietf-hip-base-01 */
 //#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
 //#define HIP_ACR 13     /* removed from ietf-hip-mm-00   */
+#define HIP_PSIG 20 /* lightweight HIP pre signature */
+#define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
 
 #define SO_HIP_GLOBAL_OPT 1
@@ -268,6 +270,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_RVA_REQUEST          100
 #define HIP_PARAM_RVA_REPLY            102
+#define HIP_PARAM_HASH_CHAIN_VALUE     221 // lhip hash chain. 221 is just temporary
+#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 // lhip hash chain anchors. 222 is just temporary
+#define HIP_PARAM_HASH_CHAIN_PSIG                 223 // lhip hash chain signature. 223 is just temporary
 
 #define HIP_PARAM_NOTIFY               832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
