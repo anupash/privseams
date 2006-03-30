@@ -308,7 +308,8 @@ int hip_do_work(struct hip_work_order *job)
 	return res;
 }
 
-int hip_handle_user_msg(const struct hip_common *msg) {
+int hip_handle_user_msg(struct hip_common *msg) {
+	hip_hit_t *hit;
 	int err = 0;
 	int msg_type;
 
@@ -348,6 +349,23 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
+		break;
+	case SO_HIP_CONF_PUZZLE_NEW:
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
+	case SO_HIP_CONF_PUZZLE_GET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_SET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_INC:
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_inc_cookie_difficulty(hit);
+		break;
+	case SO_HIP_CONF_PUZZLE_DEC:
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_dec_cookie_difficulty(hit);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

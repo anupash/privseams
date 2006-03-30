@@ -177,6 +177,10 @@ sub getargs {
 	return 0;
     }
 
+    if (defined($ARGV[2])) {
+	$regexp = $ARGV[2];
+    }
+
     return 1;
 }
 
@@ -201,6 +205,9 @@ sub read_values {
 	    push (@{ $values{$type} }, $val);
 	} else {
 	    print("Non-numeric value ($val) at line $lineno, aborting\n");
+	    print "Type was $type\n";
+	    print "Regexp was $regexp\n";
+	    print "Line was $regexp\n";
 	    return ();
 	}
 	$lineno++;
@@ -244,14 +251,17 @@ sub standard_deviation {
 #
 sub confidence_interval {
     my ($avg, $std_dev, $conf) = @ARG;
-    my ($udist_val, $upper, $lower, $diff);
+    my ($udist_val, $udist_res, $upper, $lower, $diff);
 
     $udist_val = (100 - (100 - $conf) / 2) / 100;
-    $diff = abs(udistr($udist_val) * $std_dev);
+    if ($udist_val == 1) {
+	$udist_res = 1;
+    } else {
+	$udist_res = udistr($udist_val);
+    }
+    $diff = abs($udist_res * $std_dev);
     $lower = $avg - $diff;
     $upper = $avg + $diff;
-
-    #die ("$lower $upper \n");
 
     return ($lower, $upper);
 }
