@@ -1102,14 +1102,12 @@ int hip_receive_update(struct hip_common *msg,
 	}
 
 	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
-	if (hmac) {
-		/* 3. The system MUST verify the HMAC in the UPDATE packet.
-		   If the verification fails, the packet MUST be dropped. */
-		HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
-			 "HMAC validation on UPDATE failed\n");
-	} else {
-		HIP_DEBUG("HMAC not found, error ?\n");
-	}
+	HIP_IFEL(hmac == NULL, -1, "HMAC not found. Dropping packet\n");
+	
+	/* 3. The system MUST verify the HMAC in the UPDATE packet.
+	   If the verification fails, the packet MUST be dropped. */
+	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
+		 "HMAC validation on UPDATE failed\n");
 
 	/* 4. If the received UPDATE contains a Diffie-Hellman
 	   parameter, the received Keymat Index MUST be zero. If this
