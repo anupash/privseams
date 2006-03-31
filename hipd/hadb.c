@@ -361,23 +361,44 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
-#if 0
+#if 1
 	err = hip_hadb_add_peer_info(hit, ip);
 	HIP_DEBUG_HIT("!!!! hip_add_map_info peer's real hit=", hit);
 #else
-	//memset(&entry->hit_peer, 0, sizeof(hip_hit_t));
 	hip_hit_t nullhit;
-	SET_NULL_HIT(&nullhit);
-	HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+
+	HIP_DEBUG_HIT("!!!! hip_add_map_info ip=", ip);
+	HIP_HEXDUMP("!!!! HEXDUMP ip=", ip, 16);
+	// SET_NULL_HIT(&nullhit);
+	// initialize hashed null hit
+	err = hip_opportunistic_ipv6_to_hit(ip, &nullhit, HIP_HIT_TYPE_HASH120);
+	HIP_DEBUG("!!!! err=%d\n", err);
+
+	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
+	//HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+	
 	HIP_DEBUG_HIT("!!!! hip_add_map_info peer's real hit=", hit);
 	HIP_DEBUG_HIT("!!!! hip_add_map_info nullhit=", &nullhit);
 	
+	HIP_HEXDUMP("!!!! HEXDUMP hit=", hit, 16);
+	HIP_HEXDUMP("!!!! HEXDUMP nullhit=", &nullhit, 16);
+	
 	int result = 0;
 	result = memcmp(&nullhit, hit, sizeof(hip_hit_t));
-	HIP_DEBUG("!!!! result = %d\n", result);
+	HIP_DEBUG("!!!! befor memcpy result = %d\n", result);
+
 	memcpy(hit, &nullhit, sizeof(hip_hit_t));
-	HIP_DEBUG_HIT("!!!! hip_add_map_info set null to peer hit=", hit);
-	HIP_ASSERT(hit_is_opportunistic_hit(hit));
+	
+	result = memcmp(&nullhit, hit, sizeof(hip_hit_t));
+	HIP_DEBUG("!!!! after memcpy result = %d\n", result);
+
+	HIP_HEXDUMP("!!!! HEXDUMP hit=", hit, 16);
+	HIP_HEXDUMP("!!!! HEXDUMP nullhit=", &nullhit, 16);
+	HIP_DEBUG_HIT("!!!! hip_add_map_info set hashed null to peer hit=", hit);
+	HIP_DEBUG_HIT("!!!! hip_add_map_info nullhit=", &nullhit);
+	
+	// HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 
 	err = hip_hadb_add_peer_info(hit, ip);
 #endif

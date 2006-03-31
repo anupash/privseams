@@ -467,17 +467,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
 	else if(type == HIP_R1){ // Bing, check if it uses oppotunistic mode
 	  hip_hit_t nullhit;
-	  SET_NULL_HIT(&nullhit);
-	  HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+	  //SET_NULL_HIT(&nullhit);
+	  //HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
+	  HIP_DEBUG_HIT("!!!! src_addr=", src_addr);
+	  err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
+	  HIP_DEBUG_HIT("!!!! create hashed nullhit=", &nullhit);
+	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
 	  
 	  hip_ha_t *entry_tmp = NULL;
 	  entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
+	  HIP_ASSERT(entry_tmp);
 	  if (entry_tmp){
-	    HIP_ASSERT(hit_is_opportunistic_hit(&entry_tmp->hit_peer));
-
-	    // Bing, add new HA with real hits
+	    // Bing, add new HA with real hit
 	    err = hip_hadb_add_peer_info(&msg->hits, src_addr);
-	    //err = hip_hadb_add_peer_info(&msg->hits, &msg->hitr);
 	    if (err) {
 	      HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	      goto out_err;
@@ -533,18 +535,26 @@ int hip_receive_control_packet(struct hip_common *msg,
 	      HIP_ERROR("Cannot find the added HA entry\n");
 	      goto out_err;
 	    }
+	    // delete nullhit HA
+	    entry_tmp = NULL;
+	    err = hip_del_peer_info(&nullhit, src_addr);
+	    if (err) {
+	      HIP_ERROR("Failed to delete mapping\n");
+	      goto out_err;
+	    }
 	  } //  end if (entry_tmp)
 	  else { // we cannot get HA entry after receive r1, does it make sense to continue? 
 	    HIP_ERROR("Cannot find HA entry after receive r1\n");
 	    goto out_err;
 	  }
 	  // finally delete nullhit HA // should we delete in a later stage,no such process error
-	  entry_tmp = NULL;
-	  err = hip_del_peer_info(&nullhit, src_addr);
-	  if (err) {
-	    HIP_ERROR("Failed to delete mapping\n");
-	    goto out_err;
-	  }
+	  // moved to the end of if(entry_tmp)
+	  // entry_tmp = NULL;
+	  // err = hip_del_peer_info(&nullhit, src_addr);
+	  // if (err) {
+	  // HIP_ERROR("Failed to delete mapping\n");
+	  // goto out_err;
+	  // }
 	  
 	  // we should still get entry after delete old nullhit HA
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -568,13 +578,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		// no state
-	  if(hit_is_opportunistic_hit(&msg->hitr)){
-	   
+	  //if(hit_is_opportunistic_hit(&msg->hitr)){
+	  if(hit_is_opportunistic_hashed_hit(&msg->hitr)){
 	    struct gaih_addrtuple *at = NULL;
 	    struct gaih_addrtuple **pat = &at;
 	    
 	    get_local_hits(NULL, pat);
-	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
+	    HIP_DEBUG_HIT("!!!! The local HIT =", &at->addr);
+	    HIP_DEBUG_HIT("!!!! The hashed null HIT =", &msg->hitr);
 
 	    // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));

@@ -9,6 +9,36 @@
 
 #include "misc.h"
 
+int hip_opportunistic_ipv6_to_hit(struct in6_addr *ip, struct in6_addr *hit, int hit_type)
+{
+  int err = 0;
+  u8 digest[HIP_AH_SHA_LEN];
+  char *key = (char *) (ip);
+
+  unsigned int key_len = sizeof(struct in6_addr);
+
+  HIP_DEBUG("!!!! length of in6_addr=%u\n", key_len);
+ 
+  HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+  HIP_HEXDUMP("key", key, key_len);
+  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err, 
+	   "Building of digest failed\n");
+  
+  memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+	 sizeof(struct in6_addr));
+  
+  hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
+  hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+  // set the first 8 bits after hit prefix to null  
+  hit->in6_u.u6_addr8[1] = 0x00; 
+  
+ out_err:
+  
+       return err;
+
+
+}
 /*
  * XX TODO: HAA
  * XX TODO: which one to use: this or the function just below?
