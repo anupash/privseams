@@ -1,5 +1,5 @@
 ## Makefile.am for HIP GUI
-CFLAGS = $(hipl_common_cflags) -O0
+AM_CFLAGS = $(hipl_common_cflags) -O0
 
 include_HEADERS = 
 

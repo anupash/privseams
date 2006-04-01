@@ -270,10 +270,9 @@
       tools for dumping the network traffic during the base exchange.
     </para>
     <para>
-      There is also a script called "hipsetup" in "hipl/test" directory for
+      There is also a program called "hipsetup" in "hipl/test" directory for
       quick testing of the base exchange. Run it without arguments to see
-      how it is used. The script requires some external applications that
-      will be prompted if they are not found.
+      how it is used.
     </para>
   </chapter>
   <chapter>

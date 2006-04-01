@@ -5,6 +5,7 @@
 #include "hipd.h"
 #include "debug.h"
 #include "hip.h"
+#include "crypto.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -14,7 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <openssl/bn.h>
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

@@ -341,12 +341,15 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
  *
  */
 void hip_update_entry_keymat(struct hip_hadb_state *entry, 
-			     uint16_t new_keymat_index, uint8_t new_calc_index,
+			     uint16_t new_keymat_index,
+			     uint8_t new_calc_index,
+			     uint16_t esp_keymat_index,
 			     unsigned char *new_current_keymat)
 {
 	/* must have the hadb lock when calling this function */
 	entry->current_keymat_index = new_keymat_index;
 	entry->keymat_calc_index = new_calc_index;
+	entry->esp_keymat_index = esp_keymat_index;
 	_HIP_DEBUG("New Entry keymat data: current_keymat_index=%u keymat_calc_index=%u\n",
 		   entry->current_keymat_index, entry->keymat_calc_index);
 	if (new_current_keymat) {

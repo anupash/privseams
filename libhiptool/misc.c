@@ -39,11 +39,158 @@ int hip_opportunistic_ipv6_to_hit(struct in6_addr *ip, struct in6_addr *hit, int
 
 
 }
-/*
- * XX TODO: HAA
- * XX TODO: which one to use: this or the function just below?
+
+void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
+		int src_len) {
+	int index; 
+
+	for (index = 0; index < src_len; ) {
+		if ((*dst_index % 16) > 11) {
+			dst[*dst_index] = 0;
+			(*dst_index)++;
+		} else {
+			dst[*dst_index] = src[index];
+			index++;
+			(*dst_index)++;
+		}
+	}
+}
+
+/* the lengths are in bits */
+int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
+	       int encoded_len) {
+	BIGNUM *bn = NULL;
+	int err = 0, shift = (orig_len - encoded_len) / 2, len;
+
+	HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
+	HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
+		 "BN_bin2bn\n");
+	HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
+	HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
+		"BN_mask_bits\n");
+	HIP_IFEL((bn2bin_safe(bn, encoded, encoded_len / 8)
+		  != encoded_len / 8), -1,
+		  "BN_bn2bin_safe\n");
+
+	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
+
+ out_err:
+	if(bn)
+		BN_free(bn);
+	return err;
+}
+
+
+/* draft-laganier-khi-00:
+ *
+ * A KHI is generated using the algorithm below, which takes as input a
+ * bitstring and a context identifier:
+ *   
+ * Input      :=  any bitstring
+ * Hash Input :=  Context ID | Input
+ * Hash       :=  SHA1( Expand( Hash Input ) )
+ * KHI        :=  Prefix | Encode_n( Hash )
+ *
+ * where:
+ *   
+ * | : Denotes concatenation of bitstrings
+ *   
+ * Input :      A bitstring unique or statistically unique within a
+ *              given context intended to be associated with the
+ *              to-be-created KHI in the given context.
+ *   
+ * Context ID : A randomly generated value defining the expected usage
+ *              context the the particular KHI.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose sharing 
+ *              the name space introduced for CGA Type Tags; see
+ *              http://www.iana.org/assignments/cga-message-types
+ *              and RFC 3972.
+ *   
+ * Expand( ) :  An expansion function designed to overcome recent
+ *              attacks on SHA1.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose inserting
+ *              four (4) zero (0) bytes after every twelve (12) bytes
+ *              of the argument bitstring.
+ *   
+ * Encode_n( ): An extraction function which output is obtained by
+ *              extracting an <n>-bits-long bitstring from the 
+ *              argument bitstring.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose taking
+ *              <n> middlemost bits from the SHA1 output.
  */
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+       int err = 0, index;
+       u8 digest[HIP_AH_SHA_LEN];
+       u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+ 	 sizeof(struct hip_host_id_key_rdata);
+       u8 *khi_data = NULL;
+       u8 khi_context_id[] = HIP_KHI_CONTEXT_ID_INIT;
+       int khi_data_len = key_rr_len + sizeof(khi_context_id);
+       int khi_index = 0;
+
+       /* some extra space for the zeroes */
+       khi_data_len += (khi_data_len / 12) * 4;
+       
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+
+       /* Hash Input :=  Context ID | Input */
+       khi_data = HIP_MALLOC(khi_data_len, 0);
+       khi_index = 0;
+
+       /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
+	  inserting four (4) zero (0) bytes after every twelve (12) bytes
+	  of the argument bitstring. */
+       khi_expand(khi_data, &khi_index, khi_context_id,
+		  sizeof(khi_context_id));
+       khi_expand(khi_data, &khi_index, key_rr, key_rr_len);
+
+       HIP_ASSERT(khi_index == khi_data_len);
+
+       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
+
+       /* Hash :=  SHA1( Expand( Hash Input ) ) */
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
+					khi_data_len, digest)), err,
+		"Building of digest failed\n");
+
+       HIP_HEXDUMP("digest", digest, sizeof(digest));
+
+       /* Encode_n( ): An extraction function which output is obtained by
+	  extracting an <n>-bits-long bitstring from the 
+	  argument bitstring. As a baseline (TO BE DISCUSSED), we propose
+	  taking <n> middlemost bits from the SHA1 output. */
+       HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
+       HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
+			   ((u8 *) hit) + 1,
+			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
+		-1, "encoding failed\n");
+
+       hit->in6_u.u6_addr8[0] = 0x00;
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+       HIP_DEBUG_HIT("calculated HIT: ", hit);
+
+ out_err:
+       if (khi_data)
+	       free(khi_data);
+
+       return err;
+}
+
+/*
+ * XX TODO: HAA
+ */
+int hip_dsa_host_id_to_hit_old(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type)
 {
        int err = 0;

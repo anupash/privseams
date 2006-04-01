@@ -102,4 +102,7 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa);
 int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 
+int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
+
+
 #endif /* HIPD_CRYPTO_H */

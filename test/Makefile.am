@@ -26,6 +26,9 @@ bin_PROGRAMS += hipsetup
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
+bin_PROGRAMS += cookietest
+bin_PROGRAMS += keygentest
+bin_PROGRAMS += sha1ime_test
 
 #sbin_SCRIPTS = hipsetup
 
@@ -39,8 +42,10 @@ conntest_server_SOURCES = conntest-server.c conntest.c
 unittest_SOURCES = unit.c unittest.c hipconf.c suite.c
 hipsetup_SOURCES = hipsetup.c hipconf.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconf.c misc_install.c conntest.c
+cookietest_SOURCES = cookietest.c
+keygentest_SOURCES = keygentest.c
+sha1ime_test_SOURCES = sha1ime_test.c
 #second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
-
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
