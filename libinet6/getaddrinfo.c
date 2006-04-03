@@ -356,7 +356,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
   char *tmpbuf;							\
   tmpbuflen = 512;						\
   no_data = 0;							\
-	HIP_DEBUG("Is this called\n");				\
+  HIP_DEBUG("Is this called\n");				\
   do {								\
     tmpbuflen *= 2;						\
     tmpbuf = __alloca (tmpbuflen);				\
@@ -365,7 +365,7 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
   } while (rc == ERANGE && herrno == NETDB_INTERNAL);		\
   if (rc != 0)							\
     {								\
-      if (herrno == NETDB_INTERNAL)				\
+     if (herrno == NETDB_INTERNAL)				\
 	{							\
 	  __set_h_errno (herrno);				\
 	  return -EAI_SYSTEM;					\
@@ -376,12 +376,12 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 	no_data = herrno == NO_DATA;				\
     }								\
   else if (h != NULL)						\
-    {								\
-	if(*pat != NULL);					\
-	pat = &((*pat)->next);					\
+    {                                                           \	
+      if(*pat != NULL)		                                \
+	pat = &((*pat)->next);                                  \
       for (i = 0; h->h_addr_list[i]; i++)			\
 	{							\
-	  if (*pat == NULL) {					\
+	 if (*pat == NULL) {					\
 	    *pat = __alloca (sizeof(struct gaih_addrtuple));	\
 	    (*pat)->scopeid = 0;				\
 	  }							\
@@ -389,7 +389,8 @@ gaih_inet_serv (const char *servicename, const struct gaih_typeproto *tp,
 	  (*pat)->family = _family;				\
 	  memcpy ((*pat)->addr, h->h_addr_list[i],		\
 		 sizeof(_type));				\
-	HIP_DEBUG("Printing addr in gethosts:%s\n", (*pat)->addr);\
+	 HIP_HEXDUMP("Addr in gethosts: ", (*pat)->addr, sizeof(_type));\
+         HIP_DEBUG("Printing addr in gethosts:%s\n", (*pat)->addr);\
 	  pat = &((*pat)->next);				\
 	}							\
     }								\

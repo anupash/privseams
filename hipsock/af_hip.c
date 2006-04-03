@@ -43,7 +43,7 @@ void hsock_cleanup_module(void)
 module_init(hsock_init_module);
 module_exit(hsock_cleanup_module);
  
- 
+MODULE_LICENSE("GPL"); 
 /***************************************************************
  *               Socket handler functions                      *
  ***************************************************************/
@@ -178,7 +178,7 @@ out_err:
 int hip_create_socket(struct socket *sock, int protocol)
 {
 	int err = 0;
-	HIP_DEBUG("HIP socket handler: create socket!");
+	HIP_DEBUG("HIP socket handler: create socket!\n");
 	
 	// XX TODO: REPLACE WITH A SELECTOR
 	HIP_IFEL(inet6_create(sock, protocol), -1, "inet6_create\n");
@@ -675,25 +675,31 @@ int hip_socket_getsockopt(struct socket *sock,
 			  char *optval,
 			  int  *optlen)
 {
-	int err = 0;
-#if 0
+        int err = 0;
 	struct proto_ops *socket_handler;
 	struct hip_common *msg = (struct hip_common *) optval;
 
+	HIP_DEBUG("hip_socket_getsockopt called\n");
+
+	if(optval == NULL)
+	  HIP_DEBUG("optval == NULL\n");
+#if 0 
 	if (optname == SO_HIP_GET_HIT_LIST) {
 		/* In this case the level corresponds to the port number */
 		struct my_addrinfo **pai = (struct my_addrinfo **)optval;
 		HIP_DEBUG("Got it\n");
 		return (handle_bos_peer_list(AF_INET6, level, pai, *optlen));
 	}
+#endif
 
-
-	HIP_DEBUG("%d\n", level);
+	HIP_DEBUG("Level %d\n", level);
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
 		goto out_err;
 	}
+
+	HIP_DEBUG("Debug1\n");
 
 	/* The message was destined to TCP or IP - forward */
 	if (level != IPPROTO_HIP) {
@@ -702,10 +708,15 @@ int hip_socket_getsockopt(struct socket *sock,
 		goto out_err;
 	}
 
+	HIP_DEBUG("Debug2\n");
+
 	if (!(optname == SO_HIP_GLOBAL_OPT || optname == SO_HIP_SOCKET_OPT)) {
 		err = -ESOCKTNOSUPPORT;
 		goto out_err;
 	}
+
+
+	HIP_DEBUG("Debug3\n");
 
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -713,22 +724,35 @@ int hip_socket_getsockopt(struct socket *sock,
 		goto out_err;
 	}
 
+	HIP_DEBUG("Debug4\n");
+
+	if(msg == NULL)
+	  HIP_DEBUG("msg is NULL\n");
+
+   
+	HIP_DEBUG("optlen = %d\n", *optlen);
+
 	if (hip_get_msg_total_len(msg) != *optlen) {
 		HIP_ERROR("HIP socket option length was incorrect\n");
 		err = -EMSGSIZE;
 		goto out_err;		
 	}
 
+	HIP_DEBUG("Debug5\n");
+
 	/* XX FIX: we make the assumtion here that the socket option return
 	   value has enough space... */
-
+	
 	switch(hip_get_msg_type(msg)) {
-	case SO_HIP_RUN_UNIT_TEST:
-		err = hip_socket_handle_unit_test(msg);
-		break;
+#if 0
+        case SO_HIP_RUN_UNIT_TEST:
+	  err = hip_socket_handle_unit_test(msg);
+	  break;
+#endif
 	case SO_HIP_SET_MY_EID:
-		err = hip_socket_handle_set_my_eid(msg);
-		break;
+	  HIP_DEBUG("SO_HIP_SET_MY_EID option found\n");
+	  err = hip_socket_handle_set_my_eid(msg);
+	  break;
 	case SO_HIP_SET_PEER_EID:
 		err = hip_socket_handle_set_peer_eid(msg);
 		break;
@@ -738,7 +762,6 @@ int hip_socket_getsockopt(struct socket *sock,
 
 
  out_err:
-#endif
 
 	return err;
 }

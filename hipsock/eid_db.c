@@ -133,6 +133,7 @@ int hip_db_set_peer_eid(struct sockaddr_eid *eid,
         return hip_db_set_eid(eid, lhi, owner_info, 0);
 }
 
+
 /*
  * This function is similar to hip_socket_handle_add_local_hi but there are
  * three major differences:
@@ -160,19 +161,13 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 goto out_err;
         }
         
-        eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
+	eid_endpoint = hip_get_param(msg, HIP_PARAM_EID_ENDPOINT);
         if (!eid_endpoint) {
                 err = -ENOENT;
                 HIP_ERROR("Could not find eid endpoint\n");
                 goto out_err;
         }
 
-        if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
-                err = -EAFNOSUPPORT;
-                HIP_ERROR("setmyeid does not support HITs, only HIs\n");
-                goto out_err;
-        }
-        
         HIP_DEBUG("hi len %d\n",
                   ntohs((eid_endpoint->endpoint.id.host_id.hi_length)));
 
@@ -181,7 +176,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 
         host_id = &eid_endpoint->endpoint.id.host_id;
 
-        owner_info.uid = current->uid;
+	owner_info.uid = current->uid;
         owner_info.gid = current->gid;
         owner_info.pid = current->pid;
         owner_info.flags = eid_endpoint->endpoint.flags;
@@ -189,15 +184,27 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         lhi.anonymous =
                 (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
+	
+	/*Laura***************************************************
+	  The message should contain at least a HIT.Store it to &lhi.hit. 
+	  Also, if there is public key, send to the hipd. 
+	*/
+ 
+	hip_hit_t *hit = NULL;
+	hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+	
+	if(hit){
+	  lhi.hit = *hit;
+	}
+	else{
+	  HIP_ERROR("HIT was not found from the message\n");
+	  goto out_err;
+	}
+	
+	 HIP_DEBUG_HIT("Following local HIT was found from the message: HIT=\n", &lhi.hit);
+        /*Laura*******************************************************/
 
-	/* XX FIX: Laura: the message should contain at least a HIT.
-	   Store it to &lhi.hit. Also, if there is public key, send to
-	   the hipd. */
-	err = -1;
-	goto out_err;
-        
-        HIP_DEBUG_HIT("calculated HIT", &lhi.hit);
-        
+               
         /* Iterate through the interfaces */
         while((param = hip_get_next_param(msg, param)) != NULL) {
                 /* Skip other parameters (only the endpoint should
@@ -242,18 +249,17 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         return err;
 }
 
+#if 0 /*Laura************************************************/
 int hip_handle_peer_map_work_order(const struct in6_addr *hit,
                                    const struct in6_addr *ip,
                                    int insert, int rvs)
 {
+
+        /* XX TODO: Laura */
         int err = -1;
-
-	/* XX TODO: Laura */
-
-	//out_err:
-
         return err;
 }
+#endif /*****************************************************/
 
 int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 {
@@ -333,6 +339,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 
                 /* XX FIX: the mapping should be tagged with an uid */
 
+#if 0 /*Laura******************************/
                 err = hip_handle_peer_map_work_order(&lhi.hit,
                                                      &sockaddr->sin6_addr,1,0);
                 if (err) {
@@ -340,6 +347,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
                                   err);
                         goto out_err;
                 }
+#endif /***********************************/
         }
 
         /* Finished. Write a return message with the EID (reuse the msg for

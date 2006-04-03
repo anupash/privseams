@@ -15,4 +15,8 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
                           int is_local);
 
 
+
+int hip_socket_handle_set_my_eid(struct hip_common *msg);
+int hip_socket_handle_set_peer_eid(struct hip_common *msg);
+
 #endif /* EID_DB_H */
