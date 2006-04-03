@@ -762,8 +762,8 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
  * XX TODO: HAA
  * XX TODO: which one to use: this or the function just below?
  */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
+int hip_dsa_host_id_to_hit_old2(const struct hip_host_id *host_id,
+				struct in6_addr *hit, int hit_type)
 {
        int err = 0;
        u8 digest[HIP_AH_SHA_LEN];
