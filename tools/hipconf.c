@@ -23,11 +23,16 @@
 
 const char *usage = "new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
-	"del <hit>\n"
+	"del hi <hit>\n"
         "add|del map hit ipv6\n"
-        "rst all|peer_hit\n"
-        "rvs hit ipv6\n"
-        "bos\n"
+        "hip rst all|peer_hit\n"
+        "add rvs hit ipv6\n"
+        "hip bos\n"
+#ifdef CONFIG_HIP_SPAM
+        "get|set|inc|dec|new puzzle all|hit\n"
+#else
+        "get|set|inc|dec|new puzzle all\n"
+#endif
 	;
 
 
@@ -42,7 +47,7 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_rst,
 	handle_rvs,
 	handle_bos,
-	handle_del
+	handle_puzzle
 };
 
 /**
@@ -59,14 +64,18 @@ int get_action(char *text) {
 		ret = ACTION_ADD;
 	else if (!strcmp("del", text))
 		ret = ACTION_DEL;
-	else if (!strcmp("rst", text))
-		ret = ACTION_RST;
 	else if (!strcmp("new", text))
 		ret = ACTION_NEW;
-	else if (!strcmp("rvs", text))
-		ret = ACTION_RVS;
-	else if (!strcmp("bos", text))
-		ret = ACTION_BOS;
+	else if (!strcmp("get", text))
+		ret = ACTION_GET;
+	else if (!strcmp("set", text))
+		ret = ACTION_SET;
+	else if (!strcmp("inc", text))
+		ret = ACTION_INC;
+	else if (!strcmp("dec", text))
+		ret = ACTION_DEC;
+	else if (!strcmp("hip", text))
+		ret = ACTION_HIP;
 	return ret;
 }
 
@@ -82,14 +91,17 @@ int check_action_argc(int action) {
 	switch (action) {
 	case ACTION_ADD:
 	case ACTION_NEW:
+	case ACTION_DEL:
 		count = 2;
 		break;
-	case ACTION_RST:
-	case ACTION_DEL:
-		count = 1;
+	case ACTION_GET:
+		count = 2;
 		break;
-	case ACTION_BOS:
-		count = 0;
+	case ACTION_SET:
+		count = 2;
+		break;
+	case ACTION_INC:
+		count = 2;
 		break;
 	}
 
@@ -115,9 +127,29 @@ int get_type(char *text) {
 		ret = TYPE_RVS;
 	else if (!strcmp("bos", text))
 		ret = TYPE_BOS;
-	else if (!strcmp("del", text))
-		ret = TYPE_DEL;
+	else if (!strcmp("puzzle", text))
+		ret = TYPE_PUZZLE;
+
 	return ret;
+}
+
+int get_type_arg(int action) {
+        int type_arg = -1;
+
+        switch (action) {
+        case ACTION_ADD:
+        case ACTION_DEL:
+        case ACTION_NEW:
+        case ACTION_HIP:
+        case ACTION_INC:
+        case ACTION_DEC:
+        case ACTION_SET:
+        case ACTION_GET:
+                type_arg = 2;
+                break;
+        }
+
+        return type_arg;
 }
 
 /**
@@ -196,6 +228,9 @@ int handle_hi(struct hip_common *msg,
   int err = 0, anon = 0, use_default = 0;
 
   _HIP_INFO("action=%d optc=%d\n", action, optc);
+
+  if (action == ACTION_DEL)
+    return handle_del(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -462,6 +497,93 @@ int handle_bos(struct hip_common *msg, int action,
 	return err;
 }
 
+int handle_puzzle(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
+{
+	int err = 0, ret, msg_type, all;
+
+	hip_hit_t hit = {0};
+
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	switch (action) {
+	case ACTION_NEW:
+		msg_type = SO_HIP_CONF_PUZZLE_NEW;
+		break;
+	case ACTION_INC:
+		msg_type = SO_HIP_CONF_PUZZLE_INC;
+		break;
+	case ACTION_DEC:
+		msg_type = SO_HIP_CONF_PUZZLE_DEC;
+		break;
+	case ACTION_SET:
+		msg_type = SO_HIP_CONF_PUZZLE_SET;
+		err = -1; /* Not supported yet */
+		break;
+	case ACTION_GET:
+		msg_type = SO_HIP_CONF_PUZZLE_GET;
+		err = -1; /* Not supported yet */
+		break;
+	default:
+		err = -1;
+	}
+
+	if (err) {
+		HIP_ERROR("Action (%d) not supported yet\n", action);
+		goto out;
+	}
+
+	all = !strcmp("all", opt[0]);
+
+#ifdef CONFIG_HIP_SPAM
+	if (!all) {
+		ret = inet_pton(AF_INET6, opt[0], &hit);
+		if (ret < 0 && errno == EAFNOSUPPORT) {
+			HIP_PERROR("inet_pton: not a valid address family\n");
+			err = -EAFNOSUPPORT;
+			goto out;
+		} else if (ret == 0) {
+			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+			err = -EINVAL;
+			goto out;
+		}
+	}
+#else
+	if (!all) {
+		err = -1;
+		HIP_ERROR("Only 'all' is supported\n");
+		goto out;
+	}
+#endif /* CONFIG_HIP_SPAM */
+
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, msg_type, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	if (all) {
+		printf("New puzzle difficulty effective immediately\n");
+	} else {
+		printf("New puzzle difficulty is effective in %d seconds\n",
+			 HIP_R1_PRECREATE_INTERVAL);
+	}
+
+ out:
+	return err;
+}
+
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
  */
@@ -490,20 +612,15 @@ int main(int argc, char *argv[]) {
 	
 	if (argc-2 < check_action_argc(action)) {
 		err = -EINVAL;
-		HIP_ERROR("Not enough arguments given for the action '%s'\n", argv[1]);
+		HIP_ERROR("Not enough arguments given for the action '%s'\n",
+			  argv[1]);
 		goto out;
 	}
 	
-	/* XX FIXME: THE RVS/RST HANDLING IS FUNKY. REWRITE */
-	
-	if (action != ACTION_RST &&
-	    action != ACTION_RVS &&
-	    action != ACTION_DEL &&
-	    action != ACTION_BOS) 
-	{
-		type_arg = 2;
-	} else {
-		type_arg = 1;
+	type_arg = get_type_arg(action);
+	if (type_arg < 0) {
+		HIP_ERROR("Could not parse type\n");
+		goto out;
 	}
 
 	type = get_type(argv[type_arg]);
@@ -521,29 +638,8 @@ int main(int argc, char *argv[]) {
 	}
 	hip_msg_init(msg);
 
-	switch (action) {
-	case ACTION_RVS:
-		err = (*action_handler[TYPE_RVS])(msg, ACTION_RST,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_DEL:
-		err = (*action_handler[TYPE_DEL])(msg, ACTION_DEL,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_ADD:
-	case ACTION_NEW:
-		err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-					      argc - 3);
-		break;
-	case ACTION_RST:
-		err = (*action_handler[TYPE_RST])(msg, ACTION_RST,
-						  (const char **) &argv[2], argc - 2);
-		break;
-	case ACTION_BOS:
-		err = (*action_handler[type])(msg, action, (const char **) NULL, 0);
-		break;
-	}
-
+        err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+                                              argc - 3);
 	if (err) {
 		HIP_ERROR("failed to handle msg\n");
 		goto out_malloc;

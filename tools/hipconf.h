@@ -35,19 +35,21 @@
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
-#define ACTION_RST 3
-#define ACTION_NEW 4
-#define ACTION_RVS 5
-#define ACTION_BOS 6
-#define ACTION_MAX 7 /* exclusive */
+#define ACTION_NEW 3
+#define ACTION_HIP 4
+#define ACTION_SET 5
+#define ACTION_INC 6
+#define ACTION_DEC 7
+#define ACTION_GET 8
+#define ACTION_MAX 9 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI 1
+#define TYPE_HI  1
 #define TYPE_MAP 2
 #define TYPE_RST 3
 #define TYPE_RVS 4
 #define TYPE_BOS 5
-#define TYPE_DEL 6
+#define TYPE_PUZZLE 6
 #define TYPE_MAX 7 /* exclusive */
 
 /* for handle_hi() only */
@@ -61,6 +63,7 @@ int handle_rst(struct hip_common *, int type, const char **opt, int optc);
 int handle_bos(struct hip_common *, int type, const char **opt, int optc);
 int handle_rvs(struct hip_common *, int type, const char **opt, int optc);
 int handle_del(struct hip_common *, int type, const char **opt, int optc);
+int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
 int get_action(char *action);
 int get_type(char *type);
 

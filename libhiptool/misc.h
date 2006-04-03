@@ -7,6 +7,22 @@
 #  include "kerncompat.h"
 #endif
 
+#include "list.h" /* userspace list implementation */
+#include "hipd.h"
+#include "debug.h"
+#include "hip.h"
+#include "crypto.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+//#include <net/if.h>  /* Excluded for RH/Fedora compilation */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <openssl/bn.h>
+
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */

@@ -1,16 +1,17 @@
 ## Makefile.am for HIP GUI
-CFLAGS = $(hipl_common_cflags) -O0
+AM_CFLAGS = $(hipl_common_cflags) -O0
 
-# XX TODO: when wxgtk 2.6.2 ends in normal distros, configure without wx-config
-WX_INCLUDES := $(shell wx-config --cxxflags)
-WX_CFLAGS := $(shell wx-config --libs)
+include_HEADERS = 
 
-lib_LTLIBRARIES = libhipgui.la
+noinst_LIBRARIES = libhipgui.a
 
-libhipgui_la_SOURCES = hipagent.cpp hipcontext.cpp hipinterface.cpp hipkey.cpp hippersonality.cpp hiptab.cpp agent_interface.cpp
+libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c
 
-libhipgui_la_CFLAGS = $(WX_CFLAGS) $(CFLAGS)
-#libhipgui_la_LIBADD =
+libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 
 INCLUDES = $(hipl_common_include_paths)
-INCLUDES += $(WX_INCLUDES) -I$(HIPL_AGENT)
+INCLUDES += -I$(HIPL_AGENT) @GTK_CFLAGS@
+
+tags:
+	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
+

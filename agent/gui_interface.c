@@ -15,37 +15,12 @@
 
 /******************************************************************************/
 /**
-	Initialize HIP GUI.
-	
-	@return 0 on success, -1 on errors.
-*/
-int gui_init(void)
-{
-	int err = 0;
-	
-#ifndef CONFIG_HIPGUI_COMMANDLINE
-//	HIP_DEBUG("Initializing GUI...\n");
-//	if (gui_init_interface()) goto out_err;
-//	HIP_DEBUG("GUI inialized succesfully...\n");
-#endif
-		
-	return (0);
-	
-out_err:
-	
-	return (-1);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
 	Ask GUI, if new hit should be accepted and added.
 
 	@param hit Pointer to hit that should be accepted.
 	@return 0 if accept, -1 on other cases.
 */
-int gui_check_hit(HIT_Item *hit)
+int check_hit(HIT_Item *hit)
 {
 	/* Variables. */
 	HIT_Item *fhit = NULL;
@@ -86,7 +61,7 @@ int gui_check_hit(HIT_Item *hit)
 		
 		free(fhit);
 
-		goto out;
+		goto out_err;
 	}
 	else
 	{
@@ -126,7 +101,8 @@ int gui_check_hit(HIT_Item *hit)
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
 	sprintf(msg, "New HIT received, accept?\n"
 	        " sender hit: %s\n receiver hit: %s", hits, hitr);
-	err = gui_ask_hit_accept("Accept new HIT?", msg);
+//	err = gui_ask_hit_accept("Accept new HIT?", msg);
+	err = 0;
 #endif
 
 	/* Add hit info to database, if answer was yes. */
@@ -144,7 +120,7 @@ int gui_check_hit(HIT_Item *hit)
 	}
 
 
-out:
+out_err:
 	/* Return. */
 	return (err);
 }

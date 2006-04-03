@@ -1,6 +1,7 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
+<<<<<<< TREE
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #else
@@ -9,8 +10,25 @@
 #  include "hipd.h"
 #endif
 
+=======
+#include <asm/types.h>
+#include <sys/errno.h>
+
+#include "misc.h"
 #include "hip.h"
 #include "debug.h"
+#include "crypto.h"
+
+>>>>>>> MERGE-SOURCE
+#include "hip.h"
+#include "debug.h"
+<<<<<<< TREE
+=======
+#include "builder.h"
+
+#include <sys/socket.h>
+#include "list.h"
+>>>>>>> MERGE-SOURCE
 #include "timer.h"
 
 #define HIP_INIT_DB(name,id) \
@@ -41,9 +59,9 @@
  */
 struct hip_db_struct {
 	struct list_head  db_head;
-        rwlock_t          db_lock;
+	rwlock_t          db_lock;
 	char *            db_name;
-        int               db_cnt;
+	int               db_cnt;
 };
 
 #define HIP_MAX_COOKIE_INFO 10
@@ -51,10 +69,10 @@ struct hip_db_struct {
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-        struct list_head list;
-        struct in6_addr peer_hit;
-        /* These two _MUST_ be left untouched. Feel free to add more
-         * to the end */
+	struct list_head list;
+	struct in6_addr peer_hit;
+	/* These two _MUST_ be left untouched. Feel free to add more
+	 * to the end */
 };
 
 struct hip_hadb_multi {
@@ -99,5 +117,8 @@ void hip_uninit_host_id_dbs(void);
 int hip_handle_add_local_hi(const struct hip_common *input);
 
 int hip_handle_del_local_hi(const struct hip_common *input);
+
+int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
+
 
 #endif /* _HIP_DB */

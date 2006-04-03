@@ -395,7 +395,6 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	des_key_schedule ks1, ks2, ks3;
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
 	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
-
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
 	//HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         switch(alg) {
@@ -415,7 +414,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			//HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
- 
+ 		memcpy(data, result, len);
                 break;
 
         case HIP_HIP_3DES_SHA1:
@@ -438,17 +437,19 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 des_ede3_cbc_encrypt(data, result, len,
 				     ks1, ks2, ks3, (des_cblock*)iv, 
 				     direction == HIP_DIRECTION_ENCRYPT ? DES_ENCRYPT : DES_DECRYPT);
+		memcpy(data, result, len);
                 break;
 
         case HIP_HIP_NULL_SHA1:
+		HIP_DEBUG("Null encryption used.\n");
                 break;
 
         default:
                 HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
 
-	memcpy(data, result, len);
-	//HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
+	
+	HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
 	err = 0;
 
  out_err:
@@ -470,7 +471,7 @@ void get_random_bytes(void *buf, int n)
  * so numbers end up being left shifted.
  * This fixes that by enforcing an expected destination length.
  */
-static int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
+int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
 {
         int padlen = len - BN_num_bytes(a);
         /* add leading zeroes when needed */
@@ -478,7 +479,7 @@ static int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
                 memset(to, 0, padlen);
         BN_bn2bin(a, &to[padlen]);
         /* return value from BN_bn2bin() may differ from length */
-        return(len);
+        return len;
 }
 
 /*
@@ -760,7 +761,7 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen)
         HIP_IFEL(outlen < (len = BN_num_bytes(dh->pub_key)), -EINVAL, 
 		 "Output buffer too small. %d bytes required\n", len);
 
-        err = BN_bn2bin(dh->pub_key, out);
+        err = bn2bin_safe(dh->pub_key, out, outlen);
 
  out_err:
 	return err;
@@ -820,7 +821,7 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	else
 		ret = dhprime_len[hip_dh_group_type];
 
-	return ret + 1;
+	return ret;
 }
 
 int hip_init_cipher(void)
@@ -1294,7 +1295,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   }
   
   /* Q */
-  bn2bin_len = BN_bn2bin(dsa->q, bn_buf);
+  bn2bin_len = bn2bin_safe(dsa->q, bn_buf, 20);
   _HIP_DEBUG("q len=%d\n", bn2bin_len);
   if (!bn2bin_len) {
     HIP_ERROR("bn2bin\n");
@@ -1307,33 +1308,33 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param)   \
-  bn2bin_len = BN_bn2bin(dsa_param, bn_buf); \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);         \
-  if (!bn2bin_len) {                         \
-    HIP_ERROR("bn2bin\n");                   \
-    err = -ENOMEM;                           \
-    goto out_err_free_rr;                    \
-  }                                          \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);    \
-  p += bn_buf_len-bn2bin_len; /* skip pad */ \
-  memcpy(p, bn_buf, bn2bin_len);             \
+#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param, t)            \
+  bn2bin_len = bn2bin_safe(dsa_param, bn_buf, 64 + t*8); \
+  _HIP_DEBUG("len=%d\n", bn2bin_len);                    \
+  if (!bn2bin_len) {                                     \
+    HIP_ERROR("bn2bin\n");                               \
+    err = -ENOMEM;                                       \
+    goto out_err_free_rr;                                \
+  }                                                      \
+  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);                \
+  p += bn_buf_len-bn2bin_len; /* skip pad */             \
+  memcpy(p, bn_buf, bn2bin_len);                         \
   p += bn2bin_len;
 
   /* padding + P */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->p);
+  DSA_ADD_PGY_PARAM_TO_RR(dsa->p, t);
   _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + G */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->g);
+  DSA_ADD_PGY_PARAM_TO_RR(dsa->g, t);
   _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + Y */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key);
+  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key, t);
   _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + X */
 
 #undef DSA_ADD_PGY_PARAM_TO_RR
 
-  bn2bin_len = BN_bn2bin(dsa->priv_key, bn_buf);
+  bn2bin_len = bn2bin_safe(dsa->priv_key, bn_buf, 20);
   memcpy(p,bn_buf,bn2bin_len);
 
   p += bn2bin_len;
@@ -1359,11 +1360,11 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   if (bn_buf )
     free(bn_buf);
 
-  if (dsa->priv_key != NULL) {
-      BN_bn2bin(dsa->priv_key,p);
-  } else {
-      HIP_INFO("No Private key?");
-  }
+  //if (dsa->priv_key != NULL) {  // XX TODO: is this reduntant???
+  //    bn2bin_safe(dsa->priv_key, p, 20);
+  //} else {
+  //    HIP_INFO("No Private key?");
+  //}
  out_err:
   return dsa_key_rr_len;
 }
@@ -1422,19 +1423,19 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   *c = (unsigned char) BN_num_bytes(rsa->e);
   c++; // = e_length 
 
-  len = BN_bn2bin(rsa->e, c);
+  len = bn2bin_safe(rsa->e, c, 3);
   c += len;
 
-  len = BN_bn2bin(rsa->n, c);
+  len = bn2bin_safe(rsa->n, c, 128);
   c += len;  
 
-  len = BN_bn2bin(rsa->d, c);
+  len = bn2bin_safe(rsa->d, c, 128);
   c += len;
 
-  len = BN_bn2bin(rsa->p, c);
+  len = bn2bin_safe(rsa->p, c, 64);
   c += len;
 
-  len = BN_bn2bin(rsa->q, c);
+  len = bn2bin_safe(rsa->q, c, 64);
   c += len;
 
   rsa_key_rr_len = c - *rsa_key_rr;
