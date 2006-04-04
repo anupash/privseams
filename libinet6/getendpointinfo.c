@@ -383,9 +383,11 @@ int load_hip_endpoint_pem(const char *filename,
   
   // XX FIX: host_id_hdr->rdata.flags = htons(0x0200); /* key is for a host */
   if(algo == HIP_HI_RSA)
-    err = rsa_to_hip_endpoint(rsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = rsa_to_hip_endpoint(rsa, (struct endpoint_hip **) endpoint,
+			      HIP_ENDPOINT_FLAG_ANON, "");
   else
-    err = dsa_to_hip_endpoint(dsa, endpoint, HIP_ENDPOINT_FLAG_ANON, "");
+    err = dsa_to_hip_endpoint(dsa, (struct endpoint_hip **) endpoint,
+			      HIP_ENDPOINT_FLAG_ANON, "");
   if (err) {
     HIP_ERROR("Failed to convert private key to HIP endpoint (%d)\n", err);
     goto out_err;
@@ -1421,7 +1423,8 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  /* Only private keys are handled. */
+  /* Does this work (or even use) the public keys? The user may not be
+     root -miika */
   if(algo == HIP_HI_RSA)
     err = load_rsa_private_key(basename, &rsa);
   else
@@ -1455,13 +1458,12 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    
-    err = hip_private_host_id_to_hit(&endpoint_hip->id.host_id, &hit.hit, HIP_HIT_TYPE_HASH120);
+    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
     }
-    HIP_HEXDUMP("Calculated RSA HIT: ", &hit.hit,
+    _HIP_HEXDUMP("Calculated RSA HIT: ", &hit.hit,
 		sizeof(struct in6_addr));
   } else {
     key_rr_len = dsa_to_dns_key_rr(dsa, &key_rr);
@@ -1470,13 +1472,12 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    
-    err = hip_private_host_id_to_hit(&endpoint_hip->id.host_id, &hit.hit, HIP_HIT_TYPE_HASH120);
+    err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
     }
-    HIP_HEXDUMP("Calculated DSA HIT: ", &hit.hit,
+    _HIP_HEXDUMP("Calculated DSA HIT: ", &hit.hit,
 		sizeof(struct in6_addr));
   }
 
