@@ -783,8 +783,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/* create I2 */
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	HIP_DEBUG_HIT("!!!! ctx->input->hitr=",&ctx->input->hitr );
 	HIP_DEBUG_HIT("!!!! ctx->input->hits=",&ctx->input->hits );
 	HIP_DEBUG_HIT("!!!! entry->hit_our=", &entry->hit_our);
