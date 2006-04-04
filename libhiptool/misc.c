@@ -1148,7 +1148,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
 
-
     dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
     if (dsa_key_rr_len <= 0) {
       HIP_ERROR("dsa_key_rr_len <= 0\n");
@@ -1209,7 +1208,8 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
 
-    err = dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH120, &dsa_lhi.hit);
+    err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH120,
+				 &dsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
@@ -1217,23 +1217,26 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
     HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
-    err = dsa_to_hit(dsa_pub_key, dsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
-		     &dsa_pub_lhi.hit);
+    err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH120, 
+				 &dsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
     HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
     
-    err = rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120, &rsa_lhi.hit);
+    err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120,
+				 &rsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
     }
     HIP_DEBUG_HIT("RSA HIT", &rsa_lhi.hit);
 
-    err = rsa_to_hit(rsa_pub_key, rsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
-		     &rsa_pub_lhi.hit);
+    err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH120, 
+				 &rsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;

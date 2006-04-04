@@ -918,6 +918,84 @@ RSA *create_rsa_key(int bits) {
   return NULL;
 }
 
+/* Note: public here means that you only have the public key,
+   not the private */
+int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
+		       hip_hit_t *hit, int is_public, int is_dsa) {
+  int err = 0, key_rr_len;
+  unsigned char *key_rr = NULL;
+  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  struct hip_host_id *host_id = NULL;
+  RSA *rsa_key = (RSA *) any_key;
+  DSA *dsa_key = (DSA *) any_key;
+
+  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+  HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+  	   "gethostname failed\n");
+
+  if (is_dsa) {
+    HIP_IFEL(((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0), -1,
+	     "key_rr_len\n");
+    HIP_IFEL(alloc_and_build_param_host_id_only(&host_id, key_rr, key_rr_len,
+						HIP_HI_DSA, hostname), -1,
+	     "alloc\n");
+    if (is_public) {
+      HIP_IFEL(hip_dsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
+	       -1, "conversion from host id to hit failed\n");
+    } else {
+      HIP_IFEL(hip_private_dsa_host_id_to_hit(host_id, hit,
+					      HIP_HIT_TYPE_HASH120),
+	       -1, "conversion from host id to hit failed\n");
+    }
+  } else /* rsa */ {
+    HIP_IFEL(((key_rr_len = rsa_to_dns_key_rr(rsa_key, &key_rr)) <= 0), -1,
+	     "key_rr_len\n");
+    HIP_IFEL(alloc_and_build_param_host_id_only(&host_id, key_rr, key_rr_len,
+						HIP_HI_RSA, hostname), -1,
+	     "alloc\n");
+    if (is_public) {
+      HIP_IFEL(hip_rsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
+	       -1, "conversion from host id to hit failed\n");
+    } else {
+      HIP_IFEL(hip_private_rsa_host_id_to_hit(host_id, hit,
+					      HIP_HIT_TYPE_HASH120),
+	       -1, "conversion from host id to hit failed\n");
+    }
+  }
+
+  HIP_DEBUG("the host id was %s\n", (is_public ? "public" : "private"));
+  
+ out_err:
+
+  if (key_rr)
+    HIP_FREE(key_rr);
+  if (host_id)
+    HIP_FREE(host_id);
+
+  return err;
+}
+
+int hip_public_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+			  struct in6_addr *hit) {
+  return hip_any_key_to_hit(rsa_key, rsa, type, hit, 1, 0);
+}
+
+int hip_private_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+			  struct in6_addr *hit) {
+  return hip_any_key_to_hit(rsa_key, rsa, type, hit, 0, 0);
+}
+
+int hip_public_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+			  struct in6_addr *hit) {
+  return hip_any_key_to_hit(dsa_key, dsa, type, hit, 1, 1);
+}
+
+int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+			   struct in6_addr *hit) {
+  return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
+}
+
+#if 0
 /**
  * dsa_to_hit - create HIT from DSA parameters
  * @dsa:            contains the DSA parameters from where the HIT is
@@ -930,7 +1008,7 @@ RSA *create_rsa_key(int bits) {
  *
  * Returns: 0 if HIT was created successfully, else negative.
  */
-int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
+int dsa_to_hit_old(DSA *dsa_key, unsigned char *dsa, int type,
 	       struct in6_addr *hit) {
   int err = 0, pubkey_len = 0; // pubkey_len should be 405, calculated below
   //unsigned char *pubkey = NULL;
@@ -1065,7 +1143,7 @@ int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
  * XX TODO: similar to the dsa_to_hit except from the pubkey_len,
  *          this is not very elegant...
  */
-int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
+int rsa_to_hit_old(RSA *rsa_key, unsigned char *rsa, int type,
 	       struct in6_addr *hit) {
   int err = 0, pubkey_len = 0; 
   //unsigned char *pubkey = NULL;
@@ -1190,7 +1268,7 @@ int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
   
   return err;
 }
-
+#endif
 
 /**
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
@@ -1761,8 +1839,6 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
 }
 
 #if 0
-/* NOT USED ? */
-
 /**
  * load_dsa_public_key - load host DSA public keys from disk
  * @filenamebase: the file name base of the host DSA key
@@ -1857,6 +1933,93 @@ int load_dsa_public_key(const char *filenamebase, DSA **dsa) {
     DSA_free(*dsa);
   if (dsa_tmp)
     DSA_free(dsa_tmp);
+  if (pubfilename)
+    free(pubfilename);
+  if (fp)
+    err = fclose(fp);
+
+  return err;
+}
+
+/* untested -miika */
+int load_rsa_public_key(const char *filenamebase, RSA **rsa) {
+  RSA *rsa_tmp = NULL;
+  char *pubfilename = NULL;
+  int pubfilename_len;
+  FILE *fp = NULL;
+  int err = 0;
+
+  *rsa = NULL;
+
+  if (!filenamebase) {
+    HIP_ERROR("NULL filename\n");
+    err = -ENOENT;
+    goto out_err;
+  }
+
+  /* optimize as in load_rsa_private_key */
+  *rsa = RSA_new();
+  if (!*rsa) {
+    HIP_ERROR("!rsa\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+  rsa_tmp = RSA_new();
+  if (!rsa_tmp) {
+    HIP_ERROR("!rsa_tmp\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+  pubfilename = malloc(pubfilename_len);
+  if (!pubfilename) {
+    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  if (snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+	       DEFAULT_PUB_FILE_SUFFIX) < 0) {
+    HIP_ERROR("Could not write pubfilename\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+
+  fp = fopen(pubfilename, "rb");
+  if (!fp) {
+    HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
+    err = -ENOENT; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  rsa_tmp = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
+  if (!rsa_tmp) {
+    HIP_ERROR("Read failed for %s\n", filenamebase);
+    err = -EINVAL; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  (*rsa)->n = BN_dup(rsa_tmp->n);
+  (*rsa)->e = BN_dup(rsa_tmp->e);
+  (*rsa)->dmp1 = BN_dup(rsa_tmp->dmp1);
+  (*rsa)->dmq1 = BN_dup(rsa_tmp->dmq1);
+  (*rsa)->iqmp = BN_dup(rsa_tmp->iqmp);
+  if (!(*rsa)->n || !(*rsa)->e) {
+    HIP_ERROR("BN_copy\n");
+    err = -EINVAL; // XX FIX: USE ERRNO
+    goto out_err;
+  }
+
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+
+ out_err:
+  if (err && *rsa)
+    RSA_free(*rsa);
+  if (rsa_tmp)
+    RSA_free(rsa_tmp);
   if (pubfilename)
     free(pubfilename);
   if (fp)
@@ -1965,6 +2128,24 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
   }  
 
   memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
+
+  return err;
+}
+
+int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
+				       unsigned char *key_rr, int key_rr_len,
+				       int algo, char *hostname) {
+  int err = 0;
+
+  HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id, key_rr_len, algo,
+					   hostname), -1, "alloc\n");
+  hip_build_param_host_id_only(*host_id, key_rr, "hostname");
+
+ out_err:
+  if (err && *host_id) {
+    *host_id = NULL;
+    HIP_FREE(host_id);
+  }
 
   return err;
 }
