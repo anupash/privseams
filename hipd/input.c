@@ -603,7 +603,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
 	    HIP_DEBUG_HIT("!!!! by get_local_hits msg->hitr", &msg->hitr);
-	    // Since get_local_hits() returns old hit format, hardcode 1199:3ed6:1b7b:59e9:d908:b4e2:8e91:5f18 
+	    
+	    // Since get_local_hits() returns old hit format, hardcoded
+	    /* 
 	    msg->hitr.s6_addr[0] = (0x11);
 	    msg->hitr.s6_addr[1] = (0x99);
 	    msg->hitr.s6_addr[2] = (0x3e);
@@ -622,6 +624,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    msg->hitr.s6_addr[15] = (0x18);
 	    
 	    HIP_DEBUG_HIT("!!!! hard coded  msg->hitr", &msg->hitr);
+	    */
 	  }
 	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
 		break;

@@ -1442,11 +1442,11 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
 
-  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
@@ -1455,12 +1455,13 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    
+    err = hip_private_host_id_to_hit(&endpoint_hip->id.host_id, &hit.hit, HIP_HIT_TYPE_HASH120);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
     }
-    _HIP_HEXDUMP("Calculated RSA HIT: ", &hit.hit,
+    HIP_HEXDUMP("Calculated RSA HIT: ", &hit.hit,
 		sizeof(struct in6_addr));
   } else {
     key_rr_len = dsa_to_dns_key_rr(dsa, &key_rr);
@@ -1469,12 +1470,13 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    
+    err = hip_private_host_id_to_hit(&endpoint_hip->id.host_id, &hit.hit, HIP_HIT_TYPE_HASH120);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
     }
-    _HIP_HEXDUMP("Calculated DSA HIT: ", &hit.hit,
+    HIP_HEXDUMP("Calculated DSA HIT: ", &hit.hit,
 		sizeof(struct in6_addr));
   }
 

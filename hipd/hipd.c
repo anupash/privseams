@@ -404,7 +404,36 @@ int hip_set_opportunistic_mode(struct hip_common *msg)
  out_err:
 	return err;
 }
+/* Bing, comment it away, no need
+int hip_our_host_id(struct hip_common *msg)
+{
+  struct hip_host_id *pub = NULL;
+  struct hip_host_id *priv = NULL;
+  int len = 0;
+  
+  if (!(priv = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_RSA)))
+    {
+      HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
+      HIP_IFEL(!(priv = hip_get_host_id(HIP_DB_LOCAL_HID,
+					NULL,
+					HIP_HI_DSA)),
+	       -1, "Could not acquire a local host id with DSA\n");
+    }
 
+  len = hip_get_param_total_len(priv);
+  HIP_IFEL(!(pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
+  memcpy(pub, priv, len);
+  pub = hip_get_public_key(pub);
+  
+  if(pub)
+    HIP_FREE(pub);
+  if(priv)
+    HIP_FREE(priv);
+
+ out_err:
+	return err;
+}
+*/
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
