@@ -151,6 +151,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         struct hip_lhi lhi;
         struct hip_eid_owner_info owner_info;
         struct hip_host_id *host_id;
+	hip_hit_t *hit = NULL;
         
         HIP_DEBUG("\n");
         
@@ -190,7 +191,6 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
 	  Also, if there is public key, send to the hipd. 
 	*/
  
-	hip_hit_t *hit = NULL;
 	hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	
 	if(hit){

@@ -366,19 +366,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-  #define hton64(i) (i)
-  #define ntoh64(i) (i)
-#else
-  #define hton64(i) ( ((uint64_t)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ) )
-  #define ntoh64 hton64
-#endif
-
-#  define HIP_MALLOC(size, flags)  malloc(size)
-#  define HIP_FREE(obj)            free(obj)
-#  define GFP_ATOMIC               0
-#  define GFP_KERNEL               0
-
 #define HIP_AH_SHA_LEN                 20
 
 /* HIP_IFCS takes a pointer and an command to execute.

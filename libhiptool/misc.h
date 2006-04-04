@@ -7,6 +7,7 @@
 #  include "kerncompat.h"
 #endif
 
+#if 0
 #include "list.h" /* userspace list implementation */
 #include "hipd.h"
 #include "debug.h"
@@ -22,6 +23,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <openssl/bn.h>
+
+#endif
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

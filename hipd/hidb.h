@@ -1,34 +1,19 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
-<<<<<<< TREE
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #else
+#  include <asm/types.h>
+#  include <sys/errno.h>
+#  include <sys/socket.h>
 #  include "kerncompat.h"
 #  include "list.h"
 #  include "hipd.h"
 #endif
 
-=======
-#include <asm/types.h>
-#include <sys/errno.h>
-
-#include "misc.h"
 #include "hip.h"
 #include "debug.h"
-#include "crypto.h"
-
->>>>>>> MERGE-SOURCE
-#include "hip.h"
-#include "debug.h"
-<<<<<<< TREE
-=======
-#include "builder.h"
-
-#include <sys/socket.h>
-#include "list.h"
->>>>>>> MERGE-SOURCE
 #include "timer.h"
 
 #define HIP_INIT_DB(name,id) \

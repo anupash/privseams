@@ -12,19 +12,6 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#if 0
-#include "hip.h"
-#include "misc.h"
-#include "builder.h"
-#include "crypto.h"
-#include "hipd.h"
-#include "list.h"
-#include "cookie.h"
-#include "pk.h"
-#include "debug.h"
-#include "list.h"
-#endif
-
 typedef struct { } rwlock_t;
 typedef uint8_t   u8;
 typedef uint16_t  u16;
