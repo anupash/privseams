@@ -19,6 +19,7 @@
 GtkListStore *gtk_list_model = NULL;
 GtkTreeView *hit_list = NULL;
 GtkWidget *remote_hits = NULL;
+GtkWidget *statusbar;
 int remote_hits_n = 0;
 int gui_entry_fill_flag = GTK_FILL | GTK_EXPAND;
 
@@ -53,11 +54,21 @@ int gui_create_content(void)
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
 
+	/* Create main pain. */
+	pane = gtk_vbox_new(FALSE, 1);
+	gtk_container_add(GTK_CONTAINER(window), pane);
+	gtk_widget_show(pane);
+
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
-	gtk_container_add(GTK_CONTAINER(window), notebook);
+	gtk_box_pack_start(GTK_BOX(pane), notebook, TRUE, TRUE, 0);
 	gtk_widget_show(notebook);
+
+	/* Create status bar. */
+	statusbar = gtk_statusbar_new();
+	gtk_box_pack_start(GTK_BOX(pane), statusbar, FALSE, FALSE, 0);
+	gtk_widget_show(statusbar);
 
 	/* Create tabs for identities (only default for now). */
 	pane = gtk_hpaned_new();
@@ -309,11 +320,37 @@ void gui_ask_new_hit(HIT_Item *hit)
 {
 	GtkDialog *dialog;
 	
+	gdk_threads_enter();
 	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
 	                                GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
 	                                "Accept new HIT?");
 	gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
+	gdk_threads_leave();
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Set status bar info text. */
+void gui_set_info(const char *string, ...)
+{
+	/* Variables. */
+	static int last = -1;
+	char *str[2048];
+	va_list args;
+	
+	/* Get args. */
+	va_start(args, string);
+
+	/* Set to status bar. */
+	vsprintf(str, string, args);
+	if (last >= 0) gtk_statusbar_pop(GTK_STATUSBAR(statusbar), last);
+	last = gtk_statusbar_get_context_id(GTK_STATUSBAR(statusbar), "info");
+	gtk_statusbar_push(GTK_STATUSBAR(statusbar), last, str);
+
+	/* End args. */
+	va_end(args);
 }
 /* END OF FUNCTION */
 

@@ -86,7 +86,6 @@ void select_list(GtkTreeSelection *selection, gpointer data)
 void button_event(GtkWidget *widget, gpointer value)
 {
 	printf("Received button event (value: %d).\n", (int)value);
-	gui_ask_new_hit(NULL);
 }
 /* END OF FUNCTION */
 

@@ -3,6 +3,8 @@ AM_CFLAGS = $(hipl_common_cflags) -O0
 
 GTKCFLAGS  = `pkg-config gtk+-2.0 --cflags`
 GTKLDADD   = `pkg-config gtk+-2.0 --libs`
+GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
+GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
 include_HEADERS = 
 
@@ -11,7 +13,7 @@ noinst_LIBRARIES = libhipgui.a
 libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
-libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS)
+libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
 
 INCLUDES = $(hipl_common_include_paths)
 #INCLUDES += -I$(HIPL_AGENT) @GTK_CFLAGS@

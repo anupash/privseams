@@ -98,10 +98,10 @@ int check_hit(HIT_Item *hit)
 	}
 #else
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
-	sprintf(msg, "New HIT received, accept?\n"
-	        " sender hit: %s\n receiver hit: %s", hits, hitr);
+/*	sprintf(msg, "New HIT received, accept?\n"
+	        " sender hit: %s\n receiver hit: %s", hits, hitr);*/
 	err = gui_ask_new_hit(hit);
-	err = 0;
+	//err = 0;
 #endif
 
 	/* Add hit info to database, if answer was yes. */

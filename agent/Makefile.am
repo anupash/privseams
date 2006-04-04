@@ -5,6 +5,8 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags)
 
 GTKLDADD   = `pkg-config gtk+-2.0 --libs`
+GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
+GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
 include_HEADERS = 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI)
@@ -18,7 +20,7 @@ agent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 agent_LDADD = ../libinet6/.libs/libinet6.a ../libhipgui/libhipgui.a
 #agent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 agent_LDADD += ../libhiptool/.libs/libhiptool.a
-agent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD)
+agent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 
 tags:
 	etags $(agent_SOURCES) $(include_HEADERS)

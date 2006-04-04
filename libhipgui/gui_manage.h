@@ -33,6 +33,8 @@ void gui_terminate(void);
 
 void gui_ask_new_hit(HIT_Item *);
 
+void gui_set_info(const char *, ...);
+
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

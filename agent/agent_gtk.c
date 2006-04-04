@@ -14,9 +14,19 @@
 /** Catch SIGINT. */
 void sig_catch_int(int signum)
 {
+	static int force_exit = 0;
+	
 	signal(SIGINT, sig_catch_int);
-	HIP_DEBUG("SIGINT (CTRL-C) caught, exiting agent...\n");
 	agent_exit();
+	if (force_exit < 1) HIP_DEBUG("SIGINT (CTRL-C) caught, exiting agent...\n");
+	else if (force_exit < 2) HIP_DEBUG("SIGINT (CTRL-C) caught, still once to terminate brutally.\n");
+	else
+	{
+		HIP_DEBUG("SIGINT (CTRL-C) caught, terminating!\n");
+		exit(1);
+	}
+
+	force_exit++;
 }
 /* END OF FUNCTION */
 

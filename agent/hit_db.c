@@ -193,10 +193,10 @@ int hit_db_add(char *name,
 	strcpy(hit_db[n].url, url);
 
 /* XX TODO: Copy url too someday: hi_db[n].url */
-	HIP_DEBUG("Calling GUI to show new HIT...");
+	HIP_DEBUG("Calling GUI to show new HIT...\n");
 	print_hit_to_buffer(hitb, &hit_db[n].rhit);
 	gui_add_remote_hit(hitb, "<none>", 80);
-	HIP_DEBUG(" Add succesfull.\n");
+	HIP_DEBUG("Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */
 	HIP_DEBUG("%d items in database.\n", hit_db_n);
@@ -485,7 +485,7 @@ int hit_db_save_to_file(char *file)
 	HIP_DEBUG("Saving HIT database to %s.\n", file);
 
 	f = fopen(file, "w");
-	if (!f) goto out_err;
+	HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
 
 	/* Write all HITs to file. */
 	for (i = 0; i < hit_db_n; i++)

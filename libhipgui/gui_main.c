@@ -30,8 +30,10 @@ GtkWidget *gtk_window = NULL;
 */
 int gui_init(void)
 {
+	g_thread_init(NULL);
+	gdk_threads_init();
 	gtk_init(NULL, NULL);
-    
+
 	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_show(gtk_window);
 	gtk_window_set_title(GTK_WINDOW(gtk_window), "HIP Config");
@@ -43,7 +45,8 @@ int gui_init(void)
 	                 G_CALLBACK(destroy), NULL);
 	
 	gui_create_content();
-
+	gui_set_info("HIP GUI started.");
+ 
 	/* Return. */
 	return (0);
 }
@@ -52,7 +55,8 @@ int gui_init(void)
 
 /******************************************************************************/
 /**
-	Run the GUI.
+	Run the GUI. This function is assumed to block the calling thread here
+	as long as GUI is running.
 */
 int gui_main(void)
 {
