@@ -95,7 +95,10 @@ int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
 	       struct in6_addr *hit);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
-
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
+int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
