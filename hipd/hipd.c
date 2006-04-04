@@ -15,7 +15,8 @@
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-int hip_raw_sock_udp = 0;	/* For NAT traversal of IPv4 packets */
+int hip_raw_sock_udp = 0;	/* For NAT traversal of IPv4 packets for base exchange*/
+int hip_raw_sock_udp_data = 0;  /* For NAT traversal of IPv4 packets for Data traffic */
 
 int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
 
@@ -275,6 +276,46 @@ int hip_init_raw_sock_udp(int *hip_raw_sock_udp)
 
 }
 
+int hip_init_raw_sock_udp_data(int *hip_raw_sock_udp_data)
+{
+	int on = UDP_ENCAP_ESPINUDP, err = 0;
+	int off = 0;
+	
+	HIP_DEBUG("----------Opening udp socket !--------------\n");
+	if((*hip_raw_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
+        {
+                HIP_ERROR("Can not open socket for UDP\n");
+                return -1;
+        }
+	HIP_IFEL(setsockopt(*hip_raw_sock_udp_data, SOL_UDP, UDP_ENCAP, &on,
+		   sizeof(on)), -1, "setsockopt udp encap failed\n");
+
+
+        struct sockaddr_in myaddr;
+
+
+        myaddr.sin_family=AF_INET;
+        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+        myaddr.sin_port=htons(HIP_NAT_UDP_DATA_PORT);
+
+        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
+
+        if( bind(*hip_raw_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+        {
+                HIP_ERROR("Unable to bind udp socket to port\n");
+                err = -1;
+		goto out_err;
+        }
+	HIP_DEBUG("socket done\n");
+        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+        return 0;
+
+
+ out_err:
+	return err;
+
+}
+
 
 /*
  * Cleanup and signal handler to free userspace and kernel space
@@ -310,6 +351,8 @@ void hip_exit(int signal) {
 		close(hip_raw_sock_v4);
 	if(hip_raw_sock_udp)
 		close(hip_raw_sock_udp);
+	if(hip_raw_sock_udp_data)
+		close(hip_raw_sock_udp_data);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -453,6 +496,7 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_raw_sock_udp(&hip_raw_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_raw_sock_udp_data(&hip_raw_sock_udp_data), -1, "raw sock udp for data\n");
 
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v6, highest_descriptor);

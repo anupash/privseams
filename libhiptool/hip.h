@@ -30,7 +30,6 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 
-
 typedef uint8_t   u8;
 typedef uint16_t  u16;
 typedef uint32_t  u32;
@@ -54,6 +53,10 @@ struct list_head {
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
 #define HIP_NAT_UDP_SRC_PORT 54321 /*Need to put this number as const --Abi*/
+#define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
+#define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
+#define UDP_ENCAP_ESPINUDP 2 
+
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP
