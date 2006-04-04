@@ -96,6 +96,13 @@ static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
 	  (hit->s6_addr[1] == 0x00));
 
 }
+static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] == 0) &&
+	  (hit->s6_addr32[1] == 0) &&
+	  (hit->s6_addr32[2] == 0) &&
+	  (hit->s6_addr32[3] == 0));
+}
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
@@ -205,6 +212,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_SET                  23
 #define SO_HIP_CONF_PUZZLE_INC                  24
 #define SO_HIP_CONF_PUZZLE_DEC                  25
+#define SO_HIP_SET_OPPORTUNISTIC_MODE           26 /*Bing, trial */
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

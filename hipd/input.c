@@ -591,35 +591,37 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_I1:
 		// no state
 	  //if(hit_is_opportunistic_hit(&msg->hitr)){
-	  if(hit_is_opportunistic_hashed_hit(&msg->hitr)){
+	  //if(hit_is_opportunistic_hashed_hit(&msg->hitr)){
+	  if(hit_is_opportunistic_null(&msg->hitr)){
 	    struct gaih_addrtuple *at = NULL;
 	    struct gaih_addrtuple **pat = &at;
 	    
 	    get_local_hits(NULL, pat);
 	    HIP_DEBUG_HIT("!!!! The local HIT =", &at->addr);
-	    HIP_DEBUG_HIT("!!!! The hashed null HIT =", &msg->hitr);
+	    HIP_DEBUG_HIT("!!!! The null HIT =", &msg->hitr);
 
 	    // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-	    /*
-	    msg->hitr.s6_addr[0] = (0x40);
-	    msg->hitr.s6_addr[1] = (0xcc);
-	    msg->hitr.s6_addr[2] = (0xb5);
-	    msg->hitr.s6_addr[3] = (0xe4);
-	    msg->hitr.s6_addr[4] = (0xce);
-	    msg->hitr.s6_addr[5] = (0xcf);
-	    msg->hitr.s6_addr[6] = (0x2d);
-	    msg->hitr.s6_addr[7] = (0x1c);
-	    msg->hitr.s6_addr[8] = (0x5d);
-	    msg->hitr.s6_addr[9] = (0x50);
-	    msg->hitr.s6_addr[10] = (0x79);
-	    msg->hitr.s6_addr[11] = (0x0a);
-	    msg->hitr.s6_addr[12] = (0x2e);
-	    msg->hitr.s6_addr[13] = (0x62);
-	    msg->hitr.s6_addr[14] = (0x88);
-	    msg->hitr.s6_addr[15] = (0x04);
-	    */
-	    HIP_DEBUG_HIT("!!!! modified msg->hitr", &msg->hitr);
+	    HIP_DEBUG_HIT("!!!! by get_local_hits msg->hitr", &msg->hitr);
+	    // Since get_local_hits() returns old hit format, hardcode 1199:3ed6:1b7b:59e9:d908:b4e2:8e91:5f18 
+	    msg->hitr.s6_addr[0] = (0x11);
+	    msg->hitr.s6_addr[1] = (0x99);
+	    msg->hitr.s6_addr[2] = (0x3e);
+	    msg->hitr.s6_addr[3] = (0xd6);
+	    msg->hitr.s6_addr[4] = (0x1b);
+	    msg->hitr.s6_addr[5] = (0x7b);
+	    msg->hitr.s6_addr[6] = (0x59);
+	    msg->hitr.s6_addr[7] = (0xe9);
+	    msg->hitr.s6_addr[8] = (0xd9);
+	    msg->hitr.s6_addr[9] = (0x08);
+	    msg->hitr.s6_addr[10] = (0xb4);
+	    msg->hitr.s6_addr[11] = (0xe2);
+	    msg->hitr.s6_addr[12] = (0x8e);
+	    msg->hitr.s6_addr[13] = (0x91);
+	    msg->hitr.s6_addr[14] = (0x5f);
+	    msg->hitr.s6_addr[15] = (0x18);
+	    
+	    HIP_DEBUG_HIT("!!!! hard coded  msg->hitr", &msg->hitr);
 	  }
 	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
 		break;
@@ -777,7 +779,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   function. Now, begin to build I2 piece by piece. */
 
 	/* Delete old SPDs and SAs, if present */
-	// Bing, commented temporarily
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
 

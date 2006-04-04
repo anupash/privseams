@@ -1596,8 +1596,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     
     hit = get_localhost_endpoint(filenamebase, servname,
 				 &modified_hints, &new);
-    _HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
-
+    HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
     if (*adr == NULL) {
       *adr = malloc(sizeof(struct gaih_addrtuple));
       (*adr)->scopeid = 0;

@@ -205,7 +205,8 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 			printf("Trying to connect to %s\n", addr_str);
 			gettimeofday(&stats_before, NULL);
 			e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-			
+			printf("After call connect to %s\n", addr_str);
+
 			gettimeofday(&stats_after, NULL);
 			stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 			stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
@@ -291,6 +292,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
+	HIP_INFO("!!!! conntest.c Connecting...\n");
 	sock = hip_connect_func(proto, res, NULL);
 	if (!sock)
 		goto out_err;

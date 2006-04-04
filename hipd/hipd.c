@@ -30,6 +30,8 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+u32 opportunistic_mode = 0;
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -383,6 +385,23 @@ int periodic_maintenance() {
 	
  out_err:
 	
+	return err;
+}
+
+int hip_set_opportunistic_mode(struct hip_common *msg)
+{
+  	int err =  0;
+	u32 mode = 0;
+	mode = *((u32*) hip_get_param_contents(msg, HIP_PARAM_UINT));
+	if(mode == 0 || mode == 1){
+		  opportunistic_mode = mode;
+	} else {
+	  	HIP_ERROR("Incorrect value for opportunistic mode\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+	
+ out_err:
 	return err;
 }
 

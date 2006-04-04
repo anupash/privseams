@@ -367,6 +367,9 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(hit);
 		break;
+	case SO_HIP_SET_OPPORTUNISTIC_MODE: // Bing, added
+	  	err = hip_set_opportunistic_mode(msg);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

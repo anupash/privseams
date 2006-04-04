@@ -392,7 +392,7 @@ gethosts(const char *name, int _family,
     {			      					
       for (i = 0; h->h_addr_list[i]; i++)			
 	{							
-	  if (**pat == NULL) {					
+	  if (**pat == NULL) { 					
 	    **pat = malloc (sizeof(struct gaih_addrtuple));	
 	    (**pat)->scopeid = 0;				
 	  }							
@@ -420,7 +420,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   List list;
   int found_hits = 0;
 
-#ifdef CONFIG_HIP_OPENDHT
+#ifdef CONFIG_HIP_OPENDHT // Bing, here is not called
   struct in6_addr tmp_hit, tmp_ip;
 
   if (gethiphostbyname(name,&tmp_hit) 
@@ -444,7 +444,8 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
     }
 #endif
 									
-  /* TODO: check return values */					
+  /* TODO: check return values */
+  HIP_ERROR("!!!! Opening %s\n", _PATH_HIP_HOSTS);
   fp = fopen(_PATH_HIP_HOSTS, "r");					
 									
   while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
@@ -475,7 +476,8 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
           (**pat)->scopeid = 0;						
         }								
         (**pat)->next = NULL;						
-        (**pat)->family = AF_INET6;					
+        (**pat)->family = AF_INET6;
+	HIP_DEBUG_HIT("!!!! gethostshit:: hit=", &hit);
         memcpy((**pat)->addr, &hit, sizeof(struct in6_addr));		
         *pat = &((**pat)->next);				     	
 	/* AG: add LSI as well */					
@@ -488,9 +490,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
         memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
         *pat = &((**pat)->next);					      
       }									
-     }	                                                                
+    } // end of if !!!! Bing, acure pseudo hit here
     destroy(&list);                                                     
-  }	              							
+  } // end of while	              							
   if (fp)                                                               
     fclose(fp);		
   return found_hits;	        				
@@ -889,7 +891,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
 	}
       }
-      
+      // !!!! Bing  if (!found_hits) add_pseudo_hit(&pat) 
       /* If we are looking for both IPv4 and IPv6 address we don't
 	 want the lookup functions to automatically promote IPv4
 	 addresses to IPv6 addresses.  Currently this is decided
@@ -916,6 +918,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 AG: now the loop also takes in IPv4 addresses */
       if (found_hits) 
 	send_hipd_addr(*at);
+      //else 
+      //request_hipd_pseudo_hit();
       
       if (no_data != 0 && no_inet6_data != 0)
 	{
@@ -1257,7 +1261,7 @@ getaddrinfo (const char *name, const char *service,
   if (j == 0)
     return EAI_FAMILY;
 
-  if (p)
+  if (p) // here should be true
     {
       *pai = p;
       return 0;
@@ -1268,7 +1272,18 @@ getaddrinfo (const char *name, const char *service,
 
   if (p)
     freeaddrinfo (p);
-
+  //int tmp111 = GAIH_EAI;
+  //int tmp222 = EAI_NONAME;
+  int tmp333 = (last_i & GAIH_EAI);
+  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
+  
+  tmp333 = EAI_NONAME;
+  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
+  tmp333 = -(last_i & GAIH_EAI);
+  
+  //int tmp444 = GAIH_OKIFUNSPEC;
+  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
+  return tmp333;
   return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 
