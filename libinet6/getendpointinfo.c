@@ -1361,12 +1361,12 @@ const char *gepi_strerror(int errcode)
   return "HIP native resolver failed"; /* XX FIXME */
 }
 
-struct hip_lhi get_localhost_endpoint(const char *basename,
-				      const char *servname,
-				      struct endpointinfo *hints,
-				      struct endpointinfo **res)
+int get_localhost_endpoint(const char *basename,
+			    const char *servname,
+			    struct endpointinfo *hints,
+			    struct endpointinfo **res,
+			    struct hip_lhi *lhi)
 {
-  struct hip_lhi hit;
   int err = 0, algo = 0;
   DSA *dsa = NULL;
   RSA *rsa = NULL;
@@ -1458,12 +1458,12 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
     }
-    _HIP_HEXDUMP("Calculated RSA HIT: ", &hit.hit,
+    _HIP_HEXDUMP("Calculated RSA HIT: ", &lhi->hit,
 		sizeof(struct in6_addr));
   } else {
     key_rr_len = dsa_to_dns_key_rr(dsa, &key_rr);
@@ -1472,12 +1472,12 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &hit.hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
     }
-    _HIP_HEXDUMP("Calculated DSA HIT: ", &hit.hit,
+    _HIP_HEXDUMP("Calculated DSA HIT: ", &lhi->hit,
 		sizeof(struct in6_addr));
   }
 
@@ -1544,7 +1544,7 @@ struct hip_lhi get_localhost_endpoint(const char *basename,
   if (ifaces)
     if_freenameindex(ifaces);
   
-  return hit;
+  return err;
 }
 
 /**
@@ -1595,8 +1595,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
       goto err_out;
     }
     
-    hit = get_localhost_endpoint(filenamebase, servname,
-				 &modified_hints, &new);
+    get_localhost_endpoint(filenamebase, servname,
+			   &modified_hints, &new, &hit);
     _HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
 
     if (*adr == NULL) {
