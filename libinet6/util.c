@@ -104,7 +104,7 @@ void findkeyfiles(char *path, List *files) {
 	//Is this a directory, or a file?
 	//Go through all public key files
 	if (!S_ISDIR(file_status.st_mode) && 
-	    findsubstring(entry->d_name, ".pub") &&
+	    !findsubstring(entry->d_name, ".pub") &&
 	    findsubstring(entry->d_name, "hip_host_")) {
 	  _HIP_DEBUG("Private key file: %s \n",entry->d_name);
 	  insert(files, entry->d_name);
