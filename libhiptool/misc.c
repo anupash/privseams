@@ -779,6 +779,29 @@ int check_and_create_dir(char *dirname, mode_t mode) {
 	return err;
 }
 
+void change_key_file_perms(char *filenamebase) {
+  char *pubfilename;
+  int pubfilename_len;
+
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+  pubfilename = malloc(pubfilename_len);
+  if (!pubfilename) {
+    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
+    goto out_err;
+  }
+
+  /* check retval */
+  snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+	   DEFAULT_PUB_FILE_SUFFIX);
+
+  chmod(filenamebase, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+  chmod(pubfilename, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
+
+ out_err:
+  return;
+}
+
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
 				 const char *hi_file) {
@@ -1229,7 +1252,12 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
  skip_msg:
 
  out:
-  
+
+  change_key_file_perms(dsa_filenamebase);
+  change_key_file_perms(rsa_filenamebase);
+  change_key_file_perms(dsa_filenamebase_pub);
+  change_key_file_perms(rsa_filenamebase_pub);
+
   if (dsa_host_id)
     free(dsa_host_id);
   if (dsa_pub_host_id)
