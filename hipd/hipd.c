@@ -451,6 +451,8 @@ int main(int argc, char *argv[]) {
 
         hip_init_hadb();
 
+	hip_init_puzzle_defaults();
+
 #ifdef CONFIG_HIP_RVS
         hip_init_rvadb();
 #endif	

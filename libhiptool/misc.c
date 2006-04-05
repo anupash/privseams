@@ -9,329 +9,7 @@
 
 #include "misc.h"
 
-void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
-		int src_len) {
-	int index; 
 
-	for (index = 0; index < src_len; ) {
-		if ((*dst_index % 16) > 11) {
-			dst[*dst_index] = 0;
-			(*dst_index)++;
-		} else {
-			dst[*dst_index] = src[index];
-			index++;
-			(*dst_index)++;
-		}
-	}
-}
-
-/* the lengths are in bits */
-int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
-	       int encoded_len) {
-	BIGNUM *bn = NULL;
-	int err = 0, shift = (orig_len - encoded_len) / 2, len;
-
-	HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
-	HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
-		 "BN_bin2bn\n");
-	HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
-	HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
-		"BN_mask_bits\n");
-	HIP_IFEL((bn2bin_safe(bn, encoded, encoded_len / 8)
-		  != encoded_len / 8), -1,
-		  "BN_bn2bin_safe\n");
-
-	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
-
- out_err:
-	if(bn)
-		BN_free(bn);
-	return err;
-}
-
-
-/* draft-laganier-khi-00:
- *
- * A KHI is generated using the algorithm below, which takes as input a
- * bitstring and a context identifier:
- *   
- * Input      :=  any bitstring
- * Hash Input :=  Context ID | Input
- * Hash       :=  SHA1( Expand( Hash Input ) )
- * KHI        :=  Prefix | Encode_n( Hash )
- *
- * where:
- *   
- * | : Denotes concatenation of bitstrings
- *   
- * Input :      A bitstring unique or statistically unique within a
- *              given context intended to be associated with the
- *              to-be-created KHI in the given context.
- *   
- * Context ID : A randomly generated value defining the expected usage
- *              context the the particular KHI.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose sharing 
- *              the name space introduced for CGA Type Tags; see
- *              http://www.iana.org/assignments/cga-message-types
- *              and RFC 3972.
- *   
- * Expand( ) :  An expansion function designed to overcome recent
- *              attacks on SHA1.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose inserting
- *              four (4) zero (0) bytes after every twelve (12) bytes
- *              of the argument bitstring.
- *   
- * Encode_n( ): An extraction function which output is obtained by
- *              extracting an <n>-bits-long bitstring from the 
- *              argument bitstring.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose taking
- *              <n> middlemost bits from the SHA1 output.
- */
-int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
-{
-       int err = 0, index;
-       u8 digest[HIP_AH_SHA_LEN];
-       u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
-       /* hit excludes rdata but it is included in hi_length;
-	  subtract rdata */
-       unsigned int key_rr_len = ntohs(host_id->hi_length) -
- 	 sizeof(struct hip_host_id_key_rdata);
-       u8 *khi_data = NULL;
-       u8 khi_context_id[] = HIP_KHI_CONTEXT_ID_INIT;
-       int khi_data_len = key_rr_len + sizeof(khi_context_id);
-       int khi_index = 0;
-
-       /* some extra space for the zeroes */
-       khi_data_len += (khi_data_len / 12) * 4;
-       
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-
-       /* Hash Input :=  Context ID | Input */
-       khi_data = HIP_MALLOC(khi_data_len, 0);
-       khi_index = 0;
-
-       /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
-	  inserting four (4) zero (0) bytes after every twelve (12) bytes
-	  of the argument bitstring. */
-       khi_expand(khi_data, &khi_index, khi_context_id,
-		  sizeof(khi_context_id));
-       khi_expand(khi_data, &khi_index, key_rr, key_rr_len);
-
-       HIP_ASSERT(khi_index == khi_data_len);
-
-       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
-
-       /* Hash :=  SHA1( Expand( Hash Input ) ) */
-       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
-					khi_data_len, digest)), err,
-		"Building of digest failed\n");
-
-       HIP_HEXDUMP("digest", digest, sizeof(digest));
-
-       /* Encode_n( ): An extraction function which output is obtained by
-	  extracting an <n>-bits-long bitstring from the 
-	  argument bitstring. As a baseline (TO BE DISCUSSED), we propose
-	  taking <n> middlemost bits from the SHA1 output. */
-       HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
-       HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
-			   ((u8 *) hit) + 1,
-			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
-		-1, "encoding failed\n");
-
-       hit->in6_u.u6_addr8[0] = 0x00;
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
-
-       HIP_DEBUG_HIT("calculated HIT: ", hit);
-
- out_err:
-       if (khi_data)
-	       free(khi_data);
-
-       return err;
-}
-
-/*
- * XX TODO: HAA
- */
-int hip_dsa_host_id_to_hit_old(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
-{
-       int err = 0;
-       u8 digest[HIP_AH_SHA_LEN];
-       char *key_rr = (char *) (host_id + 1); /* skip the header */
-       /* hit excludes rdata but it is included in hi_length;
-	  subtract rdata */
-       unsigned int key_rr_len = ntohs(host_id->hi_length) -
- 	 sizeof(struct hip_host_id_key_rdata);
-
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
-		"Building of digest failed\n");
-
-       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
-
-       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-	      sizeof(struct in6_addr));
-
-       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
-
-       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
-
- out_err:
-
-       return err;
-}
-
-int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type)
-{
-	int err;
-	err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-	return err;
-}
-
-int hip_host_id_to_hit(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
-{
-	int algo = hip_get_host_id_algo(host_id);
-	int err = 0;
-
-	if (algo == HIP_HI_DSA) {
-		err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-	} else if (algo == HIP_HI_RSA) {
-		err = hip_rsa_host_id_to_hit(host_id, hit, hit_type);
-	} else {
-		err = -ENOSYS;
-	}
-
-	return err;
-}
-
-int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-				   struct in6_addr *hit, int hit_type)
-{
-	int err = 0;
-	struct hip_host_id *host_id_pub = NULL;
-	int contents_len;
-	int total_len;
-
-	contents_len = hip_get_param_contents_len(host_id);
-	total_len = hip_get_param_total_len(host_id);
-
-	/* XX TODO: add an extra check for the T val */
-
-	if (contents_len <= 20) {
-		err = -EMSGSIZE;
-		HIP_ERROR("Host id too short\n");
-		goto out_err;
-	}
-
-	/* Allocate enough space for host id; there will be 20 bytes extra
-	   to avoid hassle with padding. */
-	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
-	if (!host_id_pub) {
-		err = -EFAULT;
-		goto out_err;
-	}
-	memset(host_id_pub, 0, total_len);
-
-	memcpy(host_id_pub, host_id,
-	       sizeof(struct hip_tlv_common) + contents_len - 20);
-
-	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 20);
-	hip_set_param_contents_len(host_id_pub, contents_len - 20);
-
-	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
-		     hip_get_param_total_len(host_id_pub));
-
-	err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type);
-	if (err) {
-		HIP_ERROR("Failed to convert HI to HIT.\n");
-		goto out_err;
-	}
-
- out_err:
-
-	if (host_id_pub)
-		HIP_FREE(host_id_pub);
-
-	return err;
-}
-
-int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-				   struct in6_addr *hit, int hit_type)
-{
-	int err = 0;
-	struct hip_host_id *host_id_pub = NULL;
-	int contents_len;
-	int total_len;
-
-	contents_len = hip_get_param_contents_len(host_id);
-	total_len = hip_get_param_total_len(host_id);
-	
-	/* XX FIX: REMOVE PRIVATE KEY? */
-
-	/* Allocate space for public key */
-	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
-	if (!host_id_pub) {
-		err = -EFAULT;
-		goto out_err;
-	}
-	memset(host_id_pub, 0, total_len);
-
-	/* How do we extract the public key from the hip_host_id 
-	   struct? TODO: CHECK THIS */
-	memcpy(host_id_pub, host_id,
-	       sizeof(struct hip_tlv_common) + contents_len - 128 * 2);
-
-	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 128*2);
-	hip_set_param_contents_len(host_id_pub, contents_len - 128*2);	
-
-	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
-				 hip_get_param_total_len(host_id_pub));
-
-	err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type);
-
-	if (err) {
-			HIP_ERROR("Failed to convert HI to HIT.\n");
-			goto out_err;
-	}
-
- out_err:
-	
-	if (host_id_pub)
-			HIP_FREE(host_id_pub);
-	
-	return err;
-}
-
-int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
-			       struct in6_addr *hit, int hit_type)
-{
-	int algo = hip_get_host_id_algo(host_id);
-	int err = 0;
-
-	if (algo == HIP_HI_DSA) {
-		err = hip_private_dsa_host_id_to_hit(host_id, hit,
-						     hit_type);
-	} else if (algo == HIP_HI_RSA) {
-		err = hip_private_rsa_host_id_to_hit(host_id, hit,
-						     hit_type);
-	} else {
-		err = -ENOSYS;
-	}
-
-	return err;
-}
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @t1: timevalue 1
@@ -369,18 +47,54 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 	return _t1.tv_sec >= _t2.tv_sec;
 }
 
-/*
- * Returns 1 if the host_id contains also the "hidden" private key, else
- * returns 0.
- */
-int hip_host_id_contains_private_key(struct hip_host_id *host_id)
+char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
 {
-	uint16_t len = hip_get_param_contents_len(host_id);
-	u8 *buf = (u8 *)(host_id + 1);
-	u8 t = *buf;
+	int err = 0;
+	char *hit_str = NULL;
+	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
+	const int max_str_len = INET6_ADDRSTRLEN + 5;
 
-	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
+	HIP_IFE((!(hit_str = HIP_MALLOC(max_str_len, 0))), -1);
+	memset(hit_str, 0, max_str_len);
+	hip_in6_ntop(local_hit, hit_str);
+
+	if (prefix)
+		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
+
+
+ out_err:
+
+	if (err && hit_str) {
+		HIP_FREE(hit_str);
+		hit_str = NULL;
+	}
+	
+	return hit_str;
 }
+
+/*
+ * function maxof()
+ *
+ * in:          num_args = number of items
+ *              ... = list of integers
+ * out:         Returns the integer with the largest value from the
+ *              list provided.
+ */
+int maxof(int num_args, ...)
+{
+        int max, i, a;
+        va_list ap;
+
+        va_start(ap, num_args);
+        max = va_arg(ap, int);
+        for (i = 2; i <= num_args; i++) {
+                if ((a = va_arg(ap, int)) > max)
+                        max = a;
+        }
+        va_end(ap);
+        return(max);
+}
+
 
 /**
  * hip_hit_is_bigger - compare two HITs
@@ -434,6 +148,7 @@ int hip_is_hit(const hip_hit_t *hit)
 	HIP_DEBUG_IN6ADDR("received hit", (struct in6_addr *)hit);
 	return ipv6_addr_is_hit((struct in6_addr *)hit);
 }
+
 
 /**
  * hip_hash_spi - calculate a hash from SPI value
@@ -719,6 +434,367 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	return tid;
 }
 
+#ifndef __KERNEL__
+
+void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
+		int src_len) {
+	int index; 
+
+	for (index = 0; index < src_len; ) {
+		if ((*dst_index % 16) > 11) {
+			dst[*dst_index] = 0;
+			(*dst_index)++;
+		} else {
+			dst[*dst_index] = src[index];
+			index++;
+			(*dst_index)++;
+		}
+	}
+}
+
+/* the lengths are in bits */
+int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
+	       int encoded_len) {
+	BIGNUM *bn = NULL;
+	int err = 0, shift = (orig_len - encoded_len) / 2, len;
+
+	HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
+	HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
+		 "BN_bin2bn\n");
+	HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
+	HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
+		"BN_mask_bits\n");
+	HIP_IFEL((bn2bin_safe(bn, encoded, encoded_len / 8)
+		  != encoded_len / 8), -1,
+		  "BN_bn2bin_safe\n");
+
+	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
+
+ out_err:
+	if(bn)
+		BN_free(bn);
+	return err;
+}
+
+/* draft-laganier-khi-00:
+ *
+ * A KHI is generated using the algorithm below, which takes as input a
+ * bitstring and a context identifier:
+ *   
+ * Input      :=  any bitstring
+ * Hash Input :=  Context ID | Input
+ * Hash       :=  SHA1( Expand( Hash Input ) )
+ * KHI        :=  Prefix | Encode_n( Hash )
+ *
+ * where:
+ *   
+ * | : Denotes concatenation of bitstrings
+ *   
+ * Input :      A bitstring unique or statistically unique within a
+ *              given context intended to be associated with the
+ *              to-be-created KHI in the given context.
+ *   
+ * Context ID : A randomly generated value defining the expected usage
+ *              context the the particular KHI.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose sharing 
+ *              the name space introduced for CGA Type Tags; see
+ *              http://www.iana.org/assignments/cga-message-types
+ *              and RFC 3972.
+ *   
+ * Expand( ) :  An expansion function designed to overcome recent
+ *              attacks on SHA1.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose inserting
+ *              four (4) zero (0) bytes after every twelve (12) bytes
+ *              of the argument bitstring.
+ *   
+ * Encode_n( ): An extraction function which output is obtained by
+ *              extracting an <n>-bits-long bitstring from the 
+ *              argument bitstring.
+ *   
+ *              As a baseline (TO BE DISCUSSED), we propose taking
+ *              <n> middlemost bits from the SHA1 output.
+ */
+int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+       int err = 0, index;
+       u8 digest[HIP_AH_SHA_LEN];
+       u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+ 	 sizeof(struct hip_host_id_key_rdata);
+       u8 *khi_data = NULL;
+       u8 khi_context_id[] = HIP_KHI_CONTEXT_ID_INIT;
+       int khi_data_len = key_rr_len + sizeof(khi_context_id);
+       int khi_index = 0;
+
+       /* some extra space for the zeroes */
+       khi_data_len += (khi_data_len / 12) * 4;
+       
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+
+       /* Hash Input :=  Context ID | Input */
+       khi_data = HIP_MALLOC(khi_data_len, 0);
+       khi_index = 0;
+
+       /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
+	  inserting four (4) zero (0) bytes after every twelve (12) bytes
+	  of the argument bitstring. */
+       khi_expand(khi_data, &khi_index, khi_context_id,
+		  sizeof(khi_context_id));
+       khi_expand(khi_data, &khi_index, key_rr, key_rr_len);
+
+       HIP_ASSERT(khi_index == khi_data_len);
+
+       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
+
+       /* Hash :=  SHA1( Expand( Hash Input ) ) */
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
+					khi_data_len, digest)), err,
+		"Building of digest failed\n");
+
+       HIP_HEXDUMP("digest", digest, sizeof(digest));
+
+       /* Encode_n( ): An extraction function which output is obtained by
+	  extracting an <n>-bits-long bitstring from the 
+	  argument bitstring. As a baseline (TO BE DISCUSSED), we propose
+	  taking <n> middlemost bits from the SHA1 output. */
+       HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
+       HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
+			   ((u8 *) hit) + 1,
+			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
+		-1, "encoding failed\n");
+
+       hit->in6_u.u6_addr8[0] = 0x00;
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+       HIP_DEBUG_HIT("calculated HIT: ", hit);
+
+ out_err:
+       if (khi_data)
+	       HIP_FREE(khi_data);
+
+       return err;
+}
+
+/*
+ * XX TODO: HAA
+ */
+int hip_dsa_host_id_to_hit_old(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+       int err = 0;
+       u8 digest[HIP_AH_SHA_LEN];
+       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+ 	 sizeof(struct hip_host_id_key_rdata);
+
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
+		"Building of digest failed\n");
+
+       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
+
+       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+	      sizeof(struct in6_addr));
+
+       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
+
+       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+ out_err:
+
+       return err;
+}
+
+/*
+ * XX TODO: HAA
+ * XX TODO: which one to use: this or the function just below?
+ */
+int hip_dsa_host_id_to_hit_old2(const struct hip_host_id *host_id,
+				struct in6_addr *hit, int hit_type)
+{
+       int err = 0;
+       u8 digest[HIP_AH_SHA_LEN];
+       char *key_rr = (char *) (host_id + 1); /* skip the header */
+       /* hit excludes rdata but it is included in hi_length;
+	  subtract rdata */
+       unsigned int key_rr_len = ntohs(host_id->hi_length) -
+ 	 sizeof(struct hip_host_id_key_rdata);
+
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
+		"Building of digest failed\n");
+
+       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
+
+       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+	      sizeof(struct in6_addr));
+
+       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
+
+       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
+       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+ out_err:
+
+       return err;
+}
+
+int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+			   struct in6_addr *hit, int hit_type)
+{
+	int err;
+	err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+	return err;
+}
+
+int hip_host_id_to_hit(const struct hip_host_id *host_id,
+		       struct in6_addr *hit, int hit_type)
+{
+	int algo = hip_get_host_id_algo(host_id);
+	int err = 0;
+
+	if (algo == HIP_HI_DSA) {
+		err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+	} else if (algo == HIP_HI_RSA) {
+		err = hip_rsa_host_id_to_hit(host_id, hit, hit_type);
+	} else {
+		err = -ENOSYS;
+	}
+
+	return err;
+}
+
+int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit, int hit_type)
+{
+	int err = 0;
+	struct hip_host_id *host_id_pub = NULL;
+	int contents_len;
+	int total_len;
+
+	contents_len = hip_get_param_contents_len(host_id);
+	total_len = hip_get_param_total_len(host_id);
+
+	/* XX TODO: add an extra check for the T val */
+
+	if (contents_len <= 20) {
+		err = -EMSGSIZE;
+		HIP_ERROR("Host id too short\n");
+		goto out_err;
+	}
+
+	/* Allocate enough space for host id; there will be 20 bytes extra
+	   to avoid hassle with padding. */
+	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
+	if (!host_id_pub) {
+		err = -EFAULT;
+		goto out_err;
+	}
+	memset(host_id_pub, 0, total_len);
+
+	memcpy(host_id_pub, host_id,
+	       sizeof(struct hip_tlv_common) + contents_len - 20);
+
+	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 20);
+	hip_set_param_contents_len(host_id_pub, contents_len - 20);
+
+	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
+		     hip_get_param_total_len(host_id_pub));
+
+	err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type);
+	if (err) {
+		HIP_ERROR("Failed to convert HI to HIT.\n");
+		goto out_err;
+	}
+
+ out_err:
+
+	if (host_id_pub)
+		HIP_FREE(host_id_pub);
+
+	return err;
+}
+
+int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+				   struct in6_addr *hit, int hit_type)
+{
+	int err = 0;
+	struct hip_host_id *host_id_pub = NULL;
+	int contents_len;
+	int total_len;
+
+	contents_len = hip_get_param_contents_len(host_id);
+	total_len = hip_get_param_total_len(host_id);
+	
+	/* XX FIX: REMOVE PRIVATE KEY? */
+
+	/* Allocate space for public key */
+	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
+	if (!host_id_pub) {
+		err = -EFAULT;
+		goto out_err;
+	}
+	memset(host_id_pub, 0, total_len);
+
+	/* How do we extract the public key from the hip_host_id 
+	   struct? TODO: CHECK THIS */
+	memcpy(host_id_pub, host_id,
+	       sizeof(struct hip_tlv_common) + contents_len - 128 * 2);
+
+	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - 128*2);
+	hip_set_param_contents_len(host_id_pub, contents_len - 128*2);	
+
+	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
+				 hip_get_param_total_len(host_id_pub));
+
+	err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type);
+
+	if (err) {
+			HIP_ERROR("Failed to convert HI to HIT.\n");
+			goto out_err;
+	}
+
+ out_err:
+	
+	if (host_id_pub)
+			HIP_FREE(host_id_pub);
+	
+	return err;
+}
+
+int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
+			       struct in6_addr *hit, int hit_type)
+{
+	int algo = hip_get_host_id_algo(host_id);
+	int err = 0;
+
+	if (algo == HIP_HI_DSA) {
+		err = hip_private_dsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else if (algo == HIP_HI_RSA) {
+		err = hip_private_rsa_host_id_to_hit(host_id, hit,
+						     hit_type);
+	} else {
+		err = -ENOSYS;
+	}
+
+	return err;
+}
+
 /**
  * check_and_create_dir - check and create a directory
  * @dirname: the name of the directory
@@ -744,6 +820,38 @@ int check_and_create_dir(char *dirname, mode_t mode) {
 	}
 
 	return err;
+}
+
+int hip_host_id_contains_private_key(struct hip_host_id *host_id)
+{
+	uint16_t len = hip_get_param_contents_len(host_id);
+	u8 *buf = (u8 *)(host_id + 1);
+	u8 t = *buf;
+
+	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
+}
+
+void change_key_file_perms(char *filenamebase) {
+  char *pubfilename;
+  int pubfilename_len;
+
+  pubfilename_len =
+    strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
+  pubfilename = malloc(pubfilename_len);
+  if (!pubfilename) {
+    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
+    goto out_err;
+  }
+
+  /* check retval */
+  snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+	   DEFAULT_PUB_FILE_SUFFIX);
+
+  chmod(filenamebase, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+  chmod(pubfilename, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
+
+ out_err:
+  return;
 }
 
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
@@ -1062,7 +1170,6 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
 
-
     dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
     if (dsa_key_rr_len <= 0) {
       HIP_ERROR("dsa_key_rr_len <= 0\n");
@@ -1123,7 +1230,8 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
 
-    err = dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH120, &dsa_lhi.hit);
+    err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH120,
+				 &dsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
@@ -1131,23 +1239,26 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
     HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
-    err = dsa_to_hit(dsa_pub_key, dsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
-		     &dsa_pub_lhi.hit);
+    err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH120, 
+				 &dsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out;
     }
     HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
     
-    err = rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120, &rsa_lhi.hit);
+    err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120,
+				 &rsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
     }
     HIP_DEBUG_HIT("RSA HIT", &rsa_lhi.hit);
 
-    err = rsa_to_hit(rsa_pub_key, rsa_pub_key_rr, HIP_HIT_TYPE_HASH120, 
-		     &rsa_pub_lhi.hit);
+    err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH120, 
+				 &rsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out;
@@ -1193,7 +1304,12 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
  skip_msg:
 
  out:
-  
+
+  change_key_file_perms(dsa_filenamebase);
+  change_key_file_perms(rsa_filenamebase);
+  change_key_file_perms(dsa_filenamebase_pub);
+  change_key_file_perms(rsa_filenamebase_pub);
+
   if (dsa_host_id)
     free(dsa_host_id);
   if (dsa_pub_host_id)
@@ -1230,50 +1346,4 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   return err;
 }
 
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
-{
-	int err = 0;
-	char *hit_str = NULL;
-	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
-	const int max_str_len = INET6_ADDRSTRLEN + 5;
-
-	HIP_IFE((!(hit_str = HIP_MALLOC(max_str_len, 0))), -1);
-	memset(hit_str, 0, max_str_len);
-	hip_in6_ntop(local_hit, hit_str);
-
-	if (prefix)
-		memcpy(hit_str + strlen(hit_str), prefix, strlen(prefix));
-
-
- out_err:
-
-	if (err && hit_str) {
-		HIP_FREE(hit_str);
-		hit_str = NULL;
-	}
-	
-	return hit_str;
-}
-
-/*
- * function maxof()
- *
- * in:          num_args = number of items
- *              ... = list of integers
- * out:         Returns the integer with the largest value from the
- *              list provided.
- */
-int maxof(int num_args, ...)
-{
-        int max, i, a;
-        va_list ap;
-
-        va_start(ap, num_args);
-        max = va_arg(ap, int);
-        for (i = 2; i <= num_args; i++) {
-                if ((a = va_arg(ap, int)) > max)
-                        max = a;
-        }
-        va_end(ap);
-        return(max);
-}
+#endif /* ! __KERNEL__ */
