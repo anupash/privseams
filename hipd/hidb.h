@@ -1,27 +1,20 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
-#include <asm/types.h>
-#include <sys/errno.h>
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include <asm/types.h>
+#  include <sys/errno.h>
+#  include <sys/socket.h>
+#  include "kerncompat.h"
+#  include "list.h"
+#  include "hipd.h"
+#endif
 
-#include "misc.h"
 #include "hip.h"
 #include "debug.h"
-#include "crypto.h"
-
-#include "hip.h"
-#include "debug.h"
-#include "builder.h"
-
-#include <sys/socket.h>
-#include "list.h"
 #include "timer.h"
-#include "cookie.h"
-#include "pk.h"
-
-typedef struct { } rwlock_t;
-#define RW_LOCK_UNLOCKED (rwlock_t) { }
-
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
@@ -55,7 +48,6 @@ struct hip_db_struct {
 	char *            db_name;
 	int               db_cnt;
 };
-
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */

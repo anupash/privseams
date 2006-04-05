@@ -827,5 +827,31 @@
 		'/etc/hip/agentdb'-file.
       </para>
   </chapter>
+  <chapter>
+    <title>HIP socket handler kernel module</title>
+    <para>The HIP socket handler is a component of the HIPL HIP
+	  implementation. It is used to intercept HIP socket
+	  API calls. The hipsock kernel module is used to 
+	  register a new protocol family and to handle the
+	  socket system calls for this family.
+    </para>
+    <para>The kernel patch: 
+          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
+	  kernel in order to make the socket handler module run.
+    </para>
+    <para>Recompile the patched kernel. Change directory to hipsock to build
+          the socket handler module. The makefile assumes
+          that the kernel sources are located in /usr/src/linux. Override it
+          with "make LINUX=/path/to/linux/" if necessary.
+    </para>
+    <para>Use "insmod hipsock.ko" to activate the kernel module.
+          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+	  remove the module from the kernel. If you get the error
+          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
+          format", you have to specify the path of the kernel source (using
+          LINUX variable) for the system in which you are going to use the
+          kernel module.
+     </para>
+   </chapter>
 </book>    
 
