@@ -164,6 +164,16 @@ if test x"$enable_spam" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_SPAM)
 fi
 
+AC_ARG_ENABLE(rvs,
+             AC_HELP_STRING([--enable-rvs],
+                            [HIP Rendezvous Extensions (default is NO)]),
+             [ac_cv_use_rvs=$withval], [ac_cv_use_rvs=no])
+AC_CACHE_CHECK([whether to use RVS],
+               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
+if test x"$enable_rvs" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_RVS)
+fi
+
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
                             [OpenDHT support (default is NO)]),

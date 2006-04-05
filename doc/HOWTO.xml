@@ -525,10 +525,7 @@
       Prerequisites:
     </para>
     <para>
-      Kernel must be compiled with the following extra option(s) included.
-    </para>
-    <para>
-      [*]  HIP: Rendezvous Mechanism 
+      ./configure --enable-rvs
     </para>
     <para>
       The hipconf tool must support rvs option:
