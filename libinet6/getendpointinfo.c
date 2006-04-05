@@ -1423,8 +1423,6 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  /* Does this work (or even use) the public keys? The user may not be
-     root -miika */
   if(algo == HIP_HI_RSA)
     err = load_rsa_private_key(basename, &rsa);
   else
@@ -1458,7 +1456,7 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1472,7 +1470,7 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
