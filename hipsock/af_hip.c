@@ -754,7 +754,8 @@ int hip_socket_getsockopt(struct socket *sock,
 	  err = hip_socket_handle_set_my_eid(msg);
 	  break;
 	case SO_HIP_SET_PEER_EID:
-		err = hip_socket_handle_set_peer_eid(msg);
+	  HIP_DEBUG("SO_HIP_PEER_EID option found\n");
+	    err = hip_socket_handle_set_peer_eid(msg);
 		break;
 	default:
 		err = -ESOCKTNOSUPPORT;

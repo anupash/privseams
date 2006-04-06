@@ -195,7 +195,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
   /* Only public key*/
   else {
     
-    /*Generate HIT from the private HI */
+    /*Generate HIT from the public HI */
     err = hip_host_id_to_hit(host_identity, &ep_hip->id.hit, 
 			     HIP_HIT_TYPE_HASH120);
     
@@ -290,10 +290,11 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 	       const struct addrinfo *addrinfo)
 {
   int err = 0;
-  struct hip_common *msg = NULL;
+  struct hip_common *msg = NULL, *msg_mapping;
   struct addrinfo *addr;
   struct sockaddr_eid *sa_eid;
   in_port_t port = 0;
+  struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
 
   HIP_DEBUG("\n");
 
@@ -305,7 +306,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
 #ifdef CONFIG_HIP_DEBUG
   {
-    struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
+    
     if (ep_hip->flags & HIP_ENDPOINT_FLAG_HIT) {
       HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
 		  sizeof(struct in6_addr));
@@ -340,20 +341,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
 
-  for(addr = (struct addrinfo *) addrinfo; addr; addr = addr->ai_next) {
-    HIP_DEBUG("setpeereid addr family=%d len=%d\n",
-	      addrinfo->ai_family,
-	      addrinfo->ai_addrlen);
-    HIP_HEXDUMP("setpeereid addr: ", addrinfo->ai_addr, addrinfo->ai_addrlen);
-    err = hip_build_param_eid_sockaddr(msg, addrinfo->ai_addr,
-				       addrinfo->ai_addrlen);
-    if (err) {
-      err = EEI_MEMORY;
-      goto out_err;
-    }
-  }
-
-
+  
 #if 0 //hip_recv_daemon_info returns currently -1, temporary solution is shown below.
   err = hip_recv_daemon_info(msg, 0);
   if (err) {
@@ -364,9 +352,52 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   /*Revove this part after hip_recv_daemon has beem implemented (2.3.2006 Laura)*/
  
-  /* Send HIT-IP mapping to the daemon. Under construction*/
-  hip_send_daemon_info(msg);
-  
+  /* Send HIT-IP mapping to the daemon.********************************/
+
+  msg_mapping = hip_msg_alloc();
+  if (!msg_mapping) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+  for(addr = (struct addrinfo *) addrinfo; addr; addr = addr->ai_next) {
+    struct sockaddr_in6 *sock_addr_ipv6;
+    struct in6_addr ipv6_addr;
+
+    if(addr->ai_family != AF_INET6)
+      continue;
+    
+    sock_addr_ipv6 = (struct sockaddr_in6 *)addrinfo->ai_addr;
+    ipv6_addr = sock_addr_ipv6->sin6_addr;
+
+    HIP_DEBUG("Adding HIP-IP mapping: ");
+    HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *) &ep_hip->id.hit);
+    HIP_DEBUG_IN6ADDR("IP", &ipv6_addr);
+   
+
+    hip_msg_init(msg_mapping);
+    err = hip_build_param_contents(msg_mapping, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+
+    if (err) {
+      HIP_ERROR("build param hit failed: %s\n", strerror(err));
+      goto out_err;
+    }
+
+    err = hip_build_param_contents(msg_mapping, (void *) &ipv6_addr, HIP_PARAM_IPV6_ADDR, 
+				   sizeof(struct in6_addr));
+
+    if (err) {
+      HIP_ERROR("build param ipv6 failed: %s\n", strerror(err));
+      goto out_err;
+    }
+
+    hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+    hip_send_daemon_info(msg_mapping);
+  }
+  free(msg_mapping);
+
+  /**************************************/
+
   int socket_fd = 0;
 
   /* Type of the socket? */
@@ -377,7 +408,8 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
   
-  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SET_PEER_EID, (void *)msg, sizeof(struct sockaddr_eid));
+  int msg_len = hip_get_msg_total_len(msg);
+  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &msg_len);
  
   if(err) {
     HIP_ERROR("getsockopt failed\n");
@@ -386,7 +418,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   }
   
   close(socket_fd);
-  /******************************************************************************/
+  /***************************************************************************/
   
   /* The HIP module wrote the eid into the msg. Let's use it. */
   

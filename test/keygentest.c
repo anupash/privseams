@@ -14,6 +14,7 @@
 int main(int argc, char *argv[]) {
   struct timeval stats_before, stats_after, stats_res;
   int err = 0, bits, use_rsa;
+  /*
   DSA *dsa;
   RSA *rsa;
   int use_dsa;
@@ -49,6 +50,6 @@ int main(int argc, char *argv[]) {
 	   (use_dsa ? "dsa" : "rsa"), stats_res.tv_sec, stats_res.tv_usec);
 
  out_err:
-
+  */
   return err;
 }
