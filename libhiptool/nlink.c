@@ -755,7 +755,16 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 
 	
 }
-
+int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
+{
+	encap->encap_type = UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
+	encap->encap_sport = htons(sport);
+	encap->encap_dport = htons(dport);
+	encap->encap_oa.a4 = oa->s6_addr32[3];
+	//memcpy(&encap->encap_oa, oa, sizeof(encap->encap_oa));
+	//memcpy(&encap->encap_oa, oa, sizeof(struct in_addr));
+	return 0;
+}
 /**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
@@ -784,7 +793,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	sel->prefixlen_d = hit_prefix;
 	sel->prefixlen_s = hit_prefix;
 
-	xfrm_selector_upspec(sel, src_port, dst_port);
+	//xfrm_selector_upspec(sel, src_port, dst_port);
 	
 	return 0;
 }

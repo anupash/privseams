@@ -56,6 +56,7 @@ struct list_head {
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
 #define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
 #define UDP_ENCAP_ESPINUDP 2 
+#define UDP_ENCAP_ESPINUDP_NONIKE 1 
 
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */

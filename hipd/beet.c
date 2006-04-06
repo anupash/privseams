@@ -218,6 +218,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  struct hip_stateless_info *sa_info)
 {
 	int err = 0;
+	struct xfrm_encap_tmpl encap;
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_info xsinfo;
@@ -225,6 +226,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	} req;
 
 	memset(&req, 0, sizeof(req));
+
+	HIP_DEBUG("***********************************************\n");
+	HIP_DEBUG("natstatus %d, sport %d, dport %d\n",  hip_nat_status, 
+				sa_info->src_port, sa_info->dst_port);
 
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
@@ -256,6 +261,13 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
 			   0,0, AF_INET6), -1);
 			   //preferred_family), -1);
+	if(hip_nat_status || (sa_info && (sa_info->src_port || sa_info->dst_port)))
+	{
+		xfrm_fill_encap(&encap, HIP_NAT_UDP_PORT, 
+			sa_info->src_port, saddr);
+		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
+                                  (void *)&encap, sizeof(encap)), -1);
+	}
 	
 	{
 		struct {

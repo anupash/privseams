@@ -38,6 +38,8 @@
 #  define NETLINK_XFRM            6       /* ipsec */
 #endif
 
+
+extern int  hip_nat_status;
 struct rtnl_handle;
 
 /* BEET database entry struct and access functions to retrieve them. */

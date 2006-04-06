@@ -11,7 +11,7 @@
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
-
+extern int hip_nat_status;
 /* Called by userspace daemon or kernel packet processing to send a
    packet to wire */
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,

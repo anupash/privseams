@@ -238,7 +238,8 @@ int hip_init_raw_sock_udp(int *hip_raw_sock_udp)
 {
 	int on = 1, err = 0;
 	int off = 0;
-	
+	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE ;
+
 	HIP_DEBUG("----------Opening udp socket !--------------\n");
 	if((*hip_raw_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
         {
@@ -249,7 +250,8 @@ int hip_init_raw_sock_udp(int *hip_raw_sock_udp)
 		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_udp, IPPROTO_IP, IP_RECVERR, &on,
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
-
+	HIP_IFEL(setsockopt(*hip_raw_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
+                   sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
 
         struct sockaddr_in myaddr;
 
@@ -496,7 +498,7 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_raw_sock_udp(&hip_raw_sock_udp), -1, "raw sock udp\n");
-	HIP_IFEL(hip_init_raw_sock_udp_data(&hip_raw_sock_udp_data), -1, "raw sock udp for data\n");
+	//HIP_IFEL(hip_init_raw_sock_udp_data(&hip_raw_sock_udp_data), -1, "raw sock udp for data\n");
 
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v6, highest_descriptor);
