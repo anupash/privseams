@@ -127,7 +127,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                                                         msg,
                                                         src_addr,
                                                         dst_addr,
-                                                        entry, info))
+                                                        entry))
                 break;
 
 

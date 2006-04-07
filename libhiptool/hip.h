@@ -1082,7 +1082,7 @@ struct hip_hadb_rcv_func_set {
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*,
-			     struct hip_stateless_info *);
+			      struct hip_stateless_info *);
 				 
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
@@ -1100,28 +1100,27 @@ struct hip_hadb_rcv_func_set {
 			     struct hip_stateless_info *);
 				 
 	int (*hip_receive_update)(struct hip_common *,
-				     struct in6_addr *,
-				     struct in6_addr *,
-				     hip_ha_t*,
-			     struct hip_stateless_info *);
-				     
-	int (*hip_receive_notify)(struct hip_common *,
-				     struct in6_addr *,
-				     struct in6_addr *,
-				     hip_ha_t*,
-			     struct hip_stateless_info *);
-				     
-	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*,
-			     struct hip_stateless_info *);
+				  struct hip_stateless_info *);
+				     
+	int (*hip_receive_notify)(struct hip_common *,
+				  struct in6_addr *,
+				  struct in6_addr *,
+				  hip_ha_t*);
+  
+	int (*hip_receive_bos)(struct hip_common *,
+			       struct in6_addr *,
+			       struct in6_addr *,
+			       hip_ha_t*,
+			       struct hip_stateless_info *);
 				     
 	int (*hip_receive_close)(struct hip_common *,
-				    hip_ha_t*);
+				 hip_ha_t*);
 				       
 	int (*hip_receive_close_ack)(struct hip_common *,
-					hip_ha_t*);	 
+				     hip_ha_t*);	 
 	
 };
 
@@ -1158,11 +1157,9 @@ struct hip_hadb_handle_func_set{
 			      hip_ha_t *ha,
 			      struct hip_stateless_info *);
 	int (*hip_handle_close)(struct hip_common *close,
-				hip_ha_t *entry,
-				struct hip_stateless_info *);
+				hip_ha_t *entry);
 	int (*hip_handle_close_ack)(struct hip_common *close_ack,
-				    hip_ha_t *entry,
-				    struct hip_stateless_info *);
+				    hip_ha_t *entry);
 };
 
 struct hip_hadb_update_func_set{   
@@ -1170,20 +1167,17 @@ struct hip_hadb_update_func_set{
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
-					       struct hip_esp_info *esp_info,
-					       struct hip_stateless_info *);
+					       struct hip_esp_info *esp_info);
 
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
-					  struct hip_common *msg,
-				  	  struct in6_addr *src_ip,
-					  struct in6_addr *dst_ip,
-					  struct hip_stateless_info *);
+					     struct hip_common *msg,
+					     struct in6_addr *src_ip,
+					     struct in6_addr *dst_ip);
 
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
-				   struct hip_ack *ack,
-				   int have_nes,
-				      struct hip_echo_response *echo_esp,
-				      struct hip_stateless_info *);
+				      struct hip_ack *ack,
+				      int have_nes,
+				      struct hip_echo_response *echo_esp);
 
 	int (*hip_handle_update_established)(hip_ha_t *entry,
 					     struct hip_common *msg,
@@ -1192,14 +1186,12 @@ struct hip_hadb_update_func_set{
 					     struct hip_stateless_info *);
 	int (*hip_handle_update_rekeying)(hip_ha_t *entry,
 					  struct hip_common *msg,
-					  struct in6_addr *src_ip,
-					  struct hip_stateless_info *);
+					  struct in6_addr *src_ip);
 
 	int (*hip_update_send_addr_verify)(hip_ha_t *entry,
 					   struct hip_common *msg,
 					   struct in6_addr *src_ip,
-					   uint32_t spi,
-					   struct hip_stateless_info *);
+					   uint32_t spi);
 };
 
 struct hip_hadb_misc_func_set{ 

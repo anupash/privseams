@@ -965,7 +965,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
 		       struct in6_addr *update_daddr,
 		       hip_ha_t *entry,
-		       struct hip_stateless_info *stateless_info)
+		       struct hip_stateless_info *sinfo)
 {
 	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
 	struct in6_addr *hits;
@@ -1207,7 +1207,7 @@ int hip_receive_update(struct hip_common *msg,
 		if (state == HIP_STATE_ESTABLISHED) {
 			if (esp_info && seq) {
 				HIP_DEBUG("case 7: in ESTABLISHED and has ESP_INFO and SEQ\n");
-				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip);
+				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip, sinfo);
 			} else {
 				HIP_ERROR("in ESTABLISHED but no both ESP_INFO and SEQ\n");
 				err = -EINVAL;

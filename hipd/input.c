@@ -549,8 +549,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 							msg,
 							src_addr,
 							dst_addr,
-							entry,
-							msg_info))
+							entry))
 		break;
 		
 	case HIP_BOS:
@@ -1954,7 +1953,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
 		   hip_ha_t *entry,
-		  struct hip_stateless_info *r2_info)
+		   struct hip_stateless_info *r2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
@@ -2015,8 +2014,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notify_saddr,
 		       struct in6_addr *notity_daddr,
-		       hip_ha_t* entry,
-		  struct hip_stateless_info *notify_info)
+		       hip_ha_t* entry)
 {
 	
 	int err = 0;

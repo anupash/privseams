@@ -266,21 +266,21 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
 	HIP_DEBUG_HIT("HIT", peer_hit);
 	HIP_DEBUG_IN6ADDR("addr", peer_addr);
-
+	
 	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
 	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
-
+	
 	entry = hip_hadb_create_state(GFP_KERNEL);
 	HIP_IFEL(!entry, -1, "");
 	if (!entry) {
 		HIP_ERROR("Unable to create a new entry\n");
 		return -1;
 	}
-		    
+	
 	_HIP_DEBUG("created a new sdb entry\n");
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
-
+	
 	/* XXX: This is wrong. As soon as we have native socket API, we
 	 * should enter here the correct sender... (currently unknown).
 	 */
@@ -292,10 +292,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	/* Set the nat status here */
 	if(hip_nat_status)
 		entry->nat = 1;
-		
+	
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */
-
+	
 	/* add initial HIT-IP mapping */
 	err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
 				     PEER_ADDR_STATE_ACTIVE);
@@ -303,7 +303,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		HIP_ERROR("error while adding a new peer address\n");
 		err = -2;
 		goto out_err;
-
+	}
+		
 	HIP_IFEL(hip_select_source_address(&entry->local_address,
 					   peer_addr), -1,
 		 "Cannot find source address\n");
