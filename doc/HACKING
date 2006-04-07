@@ -43,6 +43,10 @@ link to it from userspace (CVS does not accept links). For example,
 CODING CONVENTIONS
 ==================
 
+- Don't invent your own coding style. It will give the the code an
+  ununified look. Especially, if you don't follow the memory deallocation
+  procedure below, you might even cause some memory leaks.
+
 - All kernelspace code should follow the standard linux coding conventions
   listed in <linux_root>/Documentation/CodingStyle
 
@@ -57,6 +61,23 @@ CODING CONVENTIONS
 - The width of one line should be limited to 80 characters in
   userspace code. This rule may be relaxed in the kernel code because
   the space is very limited due to the 8 character indentation.
+
+- All functions should return an error value instead of "ok" value. That, is
+  zero for success and non-zero for failure.
+
+- Use the HIP_IFE, HIP_IFEL macros to reduce the number of lines of code.
+
+- Memory (de)allocation procedure is as follows:
+ 
+	int f() {
+		char *mem = NULL;
+		HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
+
+	  out_err:
+		if (mem)
+			free(mem);
+		return err;
+	}
 
 QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
 ================================================

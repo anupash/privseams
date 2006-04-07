@@ -9,14 +9,50 @@
 
 #include "cookie.h"
 
+int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
+
+#ifndef CONFIG_HIP_SPAM /* see also spam.c for overriding functions */
+
+void hip_init_puzzle_defaults() {
+	return;
+}
+
+int hip_get_cookie_difficulty(hip_hit_t *not_used) {
+	/* Note: we could return a higher value if we detect DoS */
+	return hip_cookie_difficulty;
+}
+
+int hip_set_cookie_difficulty(hip_hit_t *not_used, int k) {
+	if (k > HIP_PUZZLE_MAX_K || k < 1) {
+		HIP_ERROR("Bad cookie value (%d), min=%d, max=%d\n",
+			  k, 1, HIP_PUZZLE_MAX_K);
+		return -1;
+	}
+	hip_cookie_difficulty = k;
+	HIP_DEBUG("HIP cookie value set to %d\n", k);
+	return k;
+}
+
+int hip_inc_cookie_difficulty(hip_hit_t *not_used) {
+	int k = hip_get_cookie_difficulty(NULL) + 1;
+	return hip_set_cookie_difficulty(NULL, k);
+}
+
+int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
+	int k = hip_get_cookie_difficulty(NULL) - 1;
+	return hip_set_cookie_difficulty(NULL, k);
+}
+
 /**
  * hip_calc_cookie_idx - get an index
  * @ip_i: Initiator's IPv6 address
  * @ip_r: Responder's IPv6 address
+ * @hit_i: Initiators HIT
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
-static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
+int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			       struct in6_addr *hit_i)
 {
 	register u32 base=0;
 	int i;
@@ -34,6 +70,7 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
 
 	return (base) % HIP_R1TABLESIZE;
 }
+#endif /* !CONFIG_HIP_SPAM */
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
@@ -44,7 +81,9 @@ static int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r)
  * 
  * Returns NULL if error.
  */
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *our_hit)
+struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
+			      struct in6_addr *our_hit,
+			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
 	struct hip_r1entry * hip_r1table;
@@ -57,7 +96,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
 		 NULL, "Requested source HIT no more available.\n");
 	hip_r1table = hid->r1;
 
-	idx = hip_calc_cookie_idx(ip_i, ip_r);
+	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
 	/* the code under if 0 periodically changes the puzzle. It is not included
@@ -119,7 +158,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, stru
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
  * odds are 1/2^64 to try 0, I don't see the point in improving this now.
  */
-uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr, 
+uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 			  int mode)
 {
 	uint64_t mask = 0;
@@ -127,7 +166,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	uint64_t maxtries = 0;
 	uint64_t digest = 0;
 	u8 cookie[48];
-	u8 max_k = 0;
 	int err = 0;
 	union {
 		struct hip_puzzle pz;
@@ -141,15 +179,10 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	/* pre-create cookie */
 	u = puzzle_or_solution;
 
-#if defined(CONFIG_SYSCTL) || defined(CONFIG_SYSCTL_MODULE)
-	max_k = hip_sysconfig_get_max_k();
-#else
-	max_k = 20;
-#endif
-	HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
-	HIP_IFEL(u->pz.K > max_k, 0, 
+	_HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
+	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0, 
 		 "Cookie K %u is higher than we are willing to calculate"
-		 " (current max K=%d)\n", u->pz.K, max_k);
+		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
 
 	mask = hton64((1ULL << u->pz.K) - 1);
 	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
@@ -232,6 +265,8 @@ struct hip_r1entry * hip_init_r1(void)
 	return err;
 }
 
+
+#ifndef CONFIG_HIP_SPAM
 /*
  * @sign the signing function to use
  */
@@ -240,9 +275,13 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 		     struct hip_host_id *privkey, struct hip_host_id *pubkey)
 {
 	int i=0;
-
 	for(i = 0; i < HIP_R1TABLESIZE; i++) {
-		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey);
+		int cookie_k;
+
+		cookie_k = hip_get_cookie_difficulty(NULL);
+
+		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
+					      cookie_k);
 		if (!r1table[i].r1) {
 			HIP_ERROR("Unable to precreate R1s\n");
 			goto err_out;
@@ -256,6 +295,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
  err_out:
 	return 0;
 }
+#endif /* !CONFIG_HIP_SPAM */
 
 void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {
@@ -291,8 +331,7 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  * Returns 1 if puzzle ok, 0 if !ok.
  */ 
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
-		      struct hip_common *hdr,
-		      struct hip_solution *solution)
+		      struct hip_common *hdr, struct hip_solution *solution)
 {
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
@@ -303,7 +342,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
 		 0, "Requested source HIT not (any more) available.\n");
-	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r)];
+	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
@@ -357,3 +396,37 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
+int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
+{
+	struct hip_host_id *private = NULL;
+	struct hip_lhi lhi;
+	int err = 0, len;
+
+	/* Store private key and lhi, delete the host id entry and readd.
+	   Addition recreates also R1s as a side effect. */
+
+	len = hip_get_param_total_len(entry->host_id);
+	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
+		 -ENOMEM, "pubkey mem alloc failed\n");
+	memcpy(private, entry->host_id, len);
+
+	memcpy(&lhi, &entry->lhi, sizeof(lhi));
+
+	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
+		 "Failed to delete host id\n");
+
+	HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, private, 
+				 NULL, NULL, NULL),
+		 -EFAULT, "adding of local host identity failed\n");
+
+ out_err:
+	if (private)
+		free(private);
+	return err;
+
+}
+
+int hip_recreate_all_precreated_r1_packets()
+{
+	return hip_for_each_hi(hip_recreate_r1s_for_entry, NULL);
+}

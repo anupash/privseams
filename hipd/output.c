@@ -24,16 +24,13 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	int mask;
+	int mask = 0;
 	int err = 0;
 
-	mask = HIP_CONTROL_NONE;
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
@@ -74,7 +71,8 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
-				 const struct hip_host_id *host_id_pub)
+				 const struct hip_host_id *host_id_pub,
+				 int cookie_k)
 {
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
@@ -107,8 +105,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	    hip_get_param_total_len(host_id_pub));
 	
  	/* Ready to begin building of the R1 packet */
-	mask = HIP_CONTROL_SHT_TYPE1 << HIP_CONTROL_SHT_SHIFT;
-	mask |= HIP_CONTROL_DHT_TYPE1 << HIP_CONTROL_DHT_SHIFT;
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
@@ -119,7 +115,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/********** R1_COUNTER (OPTIONAL) *********/
 
  	/********** PUZZLE ************/
-	HIP_IFEL(hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
+	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
 					0, 0),  -1, 
 		 "Cookies were burned. Bummer!\n");
@@ -230,8 +226,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
-	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit)), -ENOENT, 
-		 "No precreated R1\n");
+	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)),
+		 -ENOENT, "No precreated R1\n");
 
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);

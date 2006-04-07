@@ -270,10 +270,9 @@
       tools for dumping the network traffic during the base exchange.
     </para>
     <para>
-      There is also a script called "hipsetup" in "hipl/test" directory for
+      There is also a program called "hipsetup" in "hipl/test" directory for
       quick testing of the base exchange. Run it without arguments to see
-      how it is used. The script requires some external applications that
-      will be prompted if they are not found.
+      how it is used.
     </para>
   </chapter>
   <chapter>
@@ -526,10 +525,7 @@
       Prerequisites:
     </para>
     <para>
-      Kernel must be compiled with the following extra option(s) included.
-    </para>
-    <para>
-      [*]  HIP: Rendezvous Mechanism 
+      ./configure --enable-rvs
     </para>
     <para>
       The hipconf tool must support rvs option:
@@ -818,19 +814,57 @@
             user interface. The interface is very unfinished, and nothing
             very usefull cannot actually be done yet.</para>
       <para>
-      	To compile agent and GUI atleast following packages are needed (asuming you have debian):
+		To compile agent and GUI atleast following packages are needed (asuming you have debian):
 		1. gcc and g++ compilers, both should be at least version 4.0.
 		2. Package: xbase-clients - miscellaneous X clients
-		3. GTK 2.0 and development files for it (Package called libgtk2.0-dev).
-		4. Package: libxxf86vm-dev - X Video Mode selection library development files
-		5. Package: libpango1.0-dev - Development files for the Pango
-		6. wxGTK version 2.6.2 (was compiled manually from sources after installing previous)
+		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
       </para>
       <para>
-      	HIT database is saved and loaded on agent startup as default from
-      	/etc/hip/agentdb-file. Notice!: The database is currently saved only if user quits the
-      	GUI/agent from File->Quit -menu. Otherwise the database is not saved.
+		HIT database is saved and loaded on agent startup as default from
+		'/etc/hip/agentdb'-file.
       </para>
+  </chapter>
+  <chapter>
+    <title>HIP socket handler kernel module</title>
+    <para>The HIP socket handler is a component of the HIPL HIP
+	  implementation. It is used to intercept HIP socket
+	  API calls. The hipsock kernel module is used to 
+	  register a new protocol family and to handle the
+	  socket system calls for this family.
+    </para>
+    <para>The kernel patch: 
+          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
+	  kernel in order to make the socket handler module run.
+    </para>
+    <para>Recompile the patched kernel. Change directory to hipsock to build
+          the socket handler module. The makefile assumes
+          that the kernel sources are located in /usr/src/linux. Override it
+          with "make LINUX=/path/to/linux/" if necessary.
+    </para>
+    <para>Use "insmod hipsock.ko" to activate the kernel module.
+          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+	  remove the module from the kernel. If you get the error
+          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
+          format", you have to specify the path of the kernel source (using
+          LINUX variable) for the system in which you are going to use the
+          kernel module.
+     </para>
+   </chapter>
+  <chapter>
+    <title>OpenDHT Support (Experimental!)</title>
+    <para>
+    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    </para>
+    <para>
+    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
+    the unpacked hip-dht directory
+    </para>
+    <para>
+    &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
+    </para>
+    <para>
+    &nbsp; XX TODO: how to test?
+    </para>
   </chapter>
 </book>    
 

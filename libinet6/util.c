@@ -102,7 +102,7 @@ void findkeyfiles(char *path, List *files) {
       //Get the status info for the current file
       if (stat(entry->d_name, &file_status) == 0) {
 	//Is this a directory, or a file?
-	//Go through all private key files
+	//Go through all public key files
 	if (!S_ISDIR(file_status.st_mode) && 
 	    !findsubstring(entry->d_name, ".pub") &&
 	    findsubstring(entry->d_name, "hip_host_")) {
