@@ -795,11 +795,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
+
+
 	/* let the setup routine give us a SPI. */
 	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr, &ctx->input->hits, &ctx->input->hitr,
 			    &spi_in, transform_esp_suite, 
 			    &ctx->esp_in, &ctx->auth_in, 0,
-			    HIP_SPI_DIRECTION_IN, 0, r1_info), -1, 
+			    HIP_SPI_DIRECTION_IN, 0, r1_info->src_port, r1_info->dst_port), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1464,12 +1468,17 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 
+	
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info);
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
+				i2_info->dst_port);
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 //		if (err == -EEXIST)
@@ -1487,11 +1496,16 @@ int hip_handle_i2(struct hip_common *i2,
 
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
+
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+
+
 	err = hip_add_sa(i2_daddr, i2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
-			 1, HIP_SPI_DIRECTION_OUT, 0, i2_info);
+			 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 			  spi_out);
@@ -1750,11 +1764,15 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
+
+
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
-			 HIP_SPI_DIRECTION_OUT, 0, r2_info);
+			 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");

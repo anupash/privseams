@@ -215,7 +215,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  struct hip_crypto_key *authkey,
 			  int authkey_len,
 			  int preferred_family,
-			  struct hip_stateless_info *sa_info)
+			  int sport, int dport )
+			//struct hip_stateless_info *sa_info)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -229,7 +230,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	HIP_DEBUG("***********************************************\n");
 	HIP_DEBUG("natstatus %d, sport %d, dport %d\n",  hip_nat_status, 
-				sa_info->src_port, sa_info->dst_port);
+				sport, dport);
 
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
@@ -261,10 +262,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
 			   0,0, AF_INET6), -1);
 			   //preferred_family), -1);
-	if(hip_nat_status || (sa_info && (sa_info->src_port || sa_info->dst_port)))
+	if(hip_nat_status || sport || dport)
 	{
-		xfrm_fill_encap(&encap, HIP_NAT_UDP_PORT, 
-			sa_info->src_port, saddr);
+		xfrm_fill_encap(&encap,sport ? sport : HIP_NAT_UDP_PORT, 
+			dport ? dport : HIP_NAT_UDP_PORT, saddr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
@@ -395,7 +396,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
 		    int direction, int update,
-		    struct hip_stateless_info *sa_info) {
+		    int sport, int dport) {
+			// struct hip_stateless_info *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
@@ -420,7 +422,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
-				      authkey, authkey_len, AF_INET6, sa_info), -1);
+				      authkey, authkey_len, AF_INET6, sport, dport), -1);
  out_err:
 	return err;
 }
