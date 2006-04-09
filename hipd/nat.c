@@ -15,13 +15,14 @@ int hip_nat_off(struct hip_common *msg)
 }
 
 int hip_receive_control_packet_udp(struct hip_common *msg,
-				   struct in6_addr *src_addr,
+				   struct in6_addr *src_addr_orig,
 				   struct in6_addr *dst_addr,
 				   struct hip_stateless_info *info)
 {
         hip_ha_t tmp;
 
         int err = 0, type, skip_sync = 0;
+	struct in6_addr *src_addr;
 
         type = hip_get_msg_type(msg);
 
@@ -46,6 +47,18 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
         } else if (err) {
                 HIP_ERROR("Agent reject packet\n");
         }
+
+	if (entry && type == HIP_R1) {
+		/* In the case of initiator behind NAT, the peer_addr
+		   is actually the NAT address at least in the case of
+		   I2. We cannot use that because the I1 was sent to
+		   public address of the responder, and cookie
+		   indexing will fail. Therefore, we need to use the
+		   preferred address. */
+		src_addr = &entry->preferred_address;
+	} else {
+		src_addr = src_addr_orig;
+	}
 
         switch(type) {
         case HIP_I1:
@@ -273,19 +286,12 @@ int hip_send_udp(struct in6_addr *local_addr,
 	       	//src.sin_port = htons(0);	/* Choose a random source port --Abi*/
         	src.sin_port = htons(HIP_NAT_UDP_SRC_PORT);	
 		/* Note: If we change this src.sin_port we need to put a listener to that port*/
+		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
+
         	dst.sin_port = htons(HIP_NAT_UDP_PORT);
 		
 		if(entry) {
 			entry->I_udp_src_port = ntohs(src.sin_port);
-			/* In the case of initiator behind NAT, the peer_addr
-			   is actually the NAT address at least in the case of
-			   I2. We cannot use that because the I1 was sent to
-			   public address of the responder, and cookie
-			   indexing will fail. Therefore, we need to use the
-			   preferred address. */
-			IPV6_TO_IPV4_MAP(&entry->preferred_address,
-					 &dst.sin_addr);
-
 		}
 		break;
 #if 0
