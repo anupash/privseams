@@ -186,8 +186,8 @@ int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
 {
 
 	struct sockaddr_in peer_addr;
-        int peer_addr_len, n, err = 0 ;
-	int type = 0;
+        unsigned int peer_addr_len;
+	int n, err = 0, type = 0;
 	
         HIP_DEBUG("Preparing to listen for UDP Traffic\n");
 
@@ -206,15 +206,10 @@ int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
 	
 	if(read_addr)
 	{
-		saddr->s6_addr32[0] = 0;
-		saddr->s6_addr32[1] = 0;
-		saddr->s6_addr32[2] = htonl(0xffff); 
-		saddr->s6_addr32[3] = peer_addr.sin_addr.s_addr;
-	
-		daddr->s6_addr32[0] = 0;
-		daddr->s6_addr32[1] = 0;
-		daddr->s6_addr32[2] = htonl(0xffff); 
-		daddr->s6_addr32[3] = INADDR_ANY;	//Temporary fix --Abi
+		struct in_addr any = { INADDR_ANY }; //Temporary fix --Abi
+		IPV4_TO_IPV6_MAP(&peer_addr.sin_addr, saddr);
+
+		IPV4_TO_IPV6_MAP(&any, daddr);
 	}
 
 	HIP_DEBUG_IN6ADDR("---udp src---:", saddr);
@@ -222,34 +217,6 @@ int hip_read_control_msg_udp(int socket, struct hip_common *hip_msg,
 	
 	type = hip_get_msg_type(hip_msg);
 	
-
-	switch(type) {
-        
-	case HIP_I1:
-                break;
-        case HIP_I2:
-                break;
-        case HIP_R1:
-                break;
-        case HIP_R2:
-                break;
-        case HIP_UPDATE:
-                break;
-        case HIP_NOTIFY:
-                break;
-        case HIP_BOS:
-                break;
-        case HIP_CLOSE:
-                break;
-        case HIP_CLOSE_ACK:
-                break;
-         default:
-                HIP_ERROR("Unknown packet %d\n", type);
-                err = -ENOSYS;
-        }
-
-	return 0;
-
  out_err:
 	return err;
 }
@@ -265,6 +232,7 @@ int hip_send_udp(struct in6_addr *local_addr,
 {
 
 	struct sockaddr_in src, dst;
+	struct in_addr any = {INADDR_ANY};
         int sockfd, n, len = 0 , err = 0;
 	int type = 0;
 
@@ -277,11 +245,12 @@ int hip_send_udp(struct in6_addr *local_addr,
 
 	src.sin_family=AF_INET;
 
-        if (local_addr)
-		src.sin_addr.s_addr = local_addr->s6_addr32[3];
-	else
+        if (local_addr) {
+		IPV6_TO_IPV4_MAP(local_addr, &src.sin_addr);
+	} else {
+		IPV6_TO_IPV4_MAP(local_addr, &any);
 		src.sin_addr.s_addr = INADDR_ANY;
-
+	}
 
         if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
         {
@@ -290,7 +259,6 @@ int hip_send_udp(struct in6_addr *local_addr,
         }
 
         dst.sin_family=AF_INET;
-      
        	type = hip_get_msg_type(msg);
 
 	switch(type) {
@@ -305,11 +273,20 @@ int hip_send_udp(struct in6_addr *local_addr,
 	       	//src.sin_port = htons(0);	/* Choose a random source port --Abi*/
         	src.sin_port = htons(HIP_NAT_UDP_SRC_PORT);	
 		/* Note: If we change this src.sin_port we need to put a listener to that port*/
-		dst.sin_addr.s_addr = peer_addr->s6_addr32[3];
         	dst.sin_port = htons(HIP_NAT_UDP_PORT);
 		
-		if(entry) 
+		if(entry) {
 			entry->I_udp_src_port = ntohs(src.sin_port);
+			/* In the case of initiator behind NAT, the peer_addr
+			   is actually the NAT address at least in the case of
+			   I2. We cannot use that because the I1 was sent to
+			   public address of the responder, and cookie
+			   indexing will fail. Therefore, we need to use the
+			   preferred address. */
+			IPV6_TO_IPV4_MAP(&entry->preferred_address,
+					 &dst.sin_addr);
+
+		}
 		break;
 #if 0
 	case HIP_I2:
@@ -339,7 +316,7 @@ int hip_send_udp(struct in6_addr *local_addr,
 			memcpy(&(entry->nat_address), peer_addr, sizeof(struct in6_addr));
 		}
        		dst.sin_port = htons(dst_port);
-                dst.sin_addr.s_addr = peer_addr->s6_addr32[3];	
+		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
 		break;
 #if 0
 	case HIP_R2:

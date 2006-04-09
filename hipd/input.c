@@ -1032,7 +1032,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 		   struct in6_addr *r1_saddr,
 		   struct in6_addr *r1_daddr,
 		   hip_ha_t *entry,
-		  struct hip_stateless_info *r1_info)
+		   struct hip_stateless_info *r1_info)
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
