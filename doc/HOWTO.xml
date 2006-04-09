@@ -808,7 +808,7 @@
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
           basic idea is that the initiator encapsulates HIP control packets
-          and ESP data packets within ESP. This way, the packets can traverse
+          and ESP data packets within UDP. This way, the packets can traverse
           the NAT box. However, both the initiator and responder have to
           support NAT extensions in order to make this work. Currently, the
           responder cannot be located behind a NAT.
