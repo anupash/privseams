@@ -49,12 +49,15 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
         }
 
 	if (entry && (type == HIP_R1 || type == HIP_R2)) {
-		/* In the case of initiator behind NAT, the peer_addr
-		   is actually the NAT address at least in the case of
-		   I2. We cannot use that because the I1 was sent to
-		   public address of the responder, and cookie
-		   indexing will fail. Therefore, we need to use the
-		   preferred address. */
+		/* When the responder equals to the NAT host, it can
+		   reply from the private address instead of the public
+		   address. In this case, the src_addr_orig will point to
+		   the private address, and using it for I2 will fail the
+		   puzzle indexing (I1 was sent to the public address). So,
+		   we make sure here that we're using the same dst address
+		   for the I2 as for I1. Also, this address is used for setting
+		   up the SAs: handle_r1 creates one-way SA and handle_i2 the
+		   other way; let's make sure that they are the same. */
 		src_addr = &entry->preferred_address;
 	} else {
 		src_addr = src_addr_orig;
