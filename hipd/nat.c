@@ -15,9 +15,9 @@ int hip_nat_off(struct hip_common *msg)
 }
 
 int hip_receive_control_packet_udp(struct hip_common *msg,
-                               struct in6_addr *src_addr,
-                               struct in6_addr *dst_addr,
-				struct hip_stateless_info *info)
+				   struct in6_addr *src_addr,
+				   struct in6_addr *dst_addr,
+				   struct hip_stateless_info *info)
 {
         hip_ha_t tmp;
 

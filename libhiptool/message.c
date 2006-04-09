@@ -103,7 +103,7 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 	len = recvmsg(socket, &msg, 0);
 
 	/* ICMPv6 packet */
-	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
+	HIP_IFEL((len < 0), -1, "ICMPv6 error: errno=%d, %s\n",
 		 errno, strerror(errno));
 
 	/* destination address comes from ancillary data passed
@@ -161,12 +161,13 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
+	/* ICMPv4 packet */
+	HIP_IFEL((len < 0), -1, "ICMPv4 error: errno=%d, %s\n",
+		 errno, strerror(errno));
+
 	HIP_DEBUG("msg len %d, iov msg len %d\n", len, iov.iov_len);
 	_HIP_HEXDUMP("Dumping msg ", &msg,  len);
 	HIP_HEXDUMP("Dumping msg ", hip_msg,  len);
-	/* ICMPv4 packet */
-	HIP_IFEL(len < 0, -1, "ICMPv4 error: errno=%d, %s\n",
-		 errno, strerror(errno));
 
 	/* destination address comes from ancillary data passed
 	 * with msg due to IP_PKTINFO socket option */

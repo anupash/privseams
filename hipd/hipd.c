@@ -722,8 +722,9 @@ int main(int argc, char *argv[]) {
 
 		//	if (hip_read_control_msg_udp(hip_nat_sock_udp, hip_msg, 1,
                   //                                 &saddr, &daddr))
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg, 1,
-                                                 &saddr, &daddr, &pkt_info))
+        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
+						    1, &saddr, &daddr,
+						    &pkt_info))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
