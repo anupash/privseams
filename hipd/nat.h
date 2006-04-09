@@ -14,7 +14,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
-extern int hip_raw_sock_udp;
+extern int hip_nat_sock_udp;
 extern int hip_nat_status;
 
 int hip_nat_on(struct hip_common *msg);

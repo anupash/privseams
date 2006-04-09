@@ -350,7 +350,7 @@ int hip_send_udp(struct in6_addr *local_addr,
         msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
 
-        n = sendto( hip_raw_sock_udp, msg, len, 0, (struct sockaddr *)&dst, sizeof(dst));
+        n = sendto( hip_nat_sock_udp, msg, len, 0, (struct sockaddr *)&dst, sizeof(dst));
 
         if(n<0)
         {
