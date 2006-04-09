@@ -48,7 +48,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                 HIP_ERROR("Agent reject packet\n");
         }
 
-	if (entry && type == HIP_R1) {
+	if (entry && (type == HIP_R1 || type == HIP_R2)) {
 		/* In the case of initiator behind NAT, the peer_addr
 		   is actually the NAT address at least in the case of
 		   I2. We cannot use that because the I1 was sent to
