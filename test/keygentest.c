@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <openssl/dsa.h>
+#include <openssl/rsa.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <sys/time.h>
