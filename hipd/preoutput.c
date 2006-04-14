@@ -133,7 +133,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		if (err == EADDRNOTAVAIL) {
 			HIP_DEBUG("Binding failed 1st time, trying again\n");
 			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
-			sleep(3);
+			sleep(4);
 		} else {
 			break;
 		}
