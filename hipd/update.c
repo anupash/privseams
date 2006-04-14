@@ -1436,11 +1436,29 @@ int hip_send_update(struct hip_hadb_state *entry,
  	} else
  		HIP_DEBUG("Address set has changed, continue\n");
 
-	/* spi_in->spi is equal to esp_info_old_spi */
+	/* Peer's preferred address. Can be changed by the source address
+	   selection below if we don't find any addresses of the same family
+	   as peer's preferred address (intrafamily handover). */
+        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
+
+	/* spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
+	   sure that the source and destination address families match */
 	if (addr_list && memcmp(&entry->local_address, &addr_list->address,
 				sizeof(struct in6_addr))) {
+		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
+		int i = 0;
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
-		ipv6_addr_copy(&entry->local_address, &addr_list->address);
+		/* XX FIXME: change daddr to an alternative peer address
+		   if no suitable saddr was found (interfamily handover) */
+		for(i = 0; i < addr_count; i++, loc_addr_item++) {
+			struct in6_addr *saddr = &loc_addr_item->address;
+			ipv6_addr_copy(&entry->local_address, saddr);
+			if (IN6_IS_ADDR_V4MAPPED(saddr) == 
+			    IN6_IS_ADDR_V4MAPPED(&daddr)) {
+				/* Select the first match */
+				break;
+			}
+		}
 	}
 
 	hip_update_set_new_spi_in(entry, esp_info_old_spi,
@@ -1471,7 +1489,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* Send UPDATE */
-        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
 	entry->state = HIP_STATE_REKEYING;
