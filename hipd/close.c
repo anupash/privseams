@@ -34,7 +34,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		goto out_err;
 	}
 
-	if (entry->state != HIP_STATE_ESTABLISHED) {
+        if (!(entry->state == HIP_STATE_ESTABLISHED ||
+	      entry->state == HIP_STATE_REKEYING)) { /* To be removed .. */
 		HIP_ERROR("State %d, not sending CLOSE\n");
 		goto out_err;
 	}
