@@ -133,8 +133,9 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr, struct hip_stateless_info *msg_info)
+			    int read_addr, struct in6_addr *saddr,
+			    struct in6_addr *daddr,
+			    struct hip_stateless_info *msg_info)
 {
         struct sockaddr_in addr_from;
         struct cmsghdr *cmsg;

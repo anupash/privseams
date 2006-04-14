@@ -702,13 +702,13 @@ int main(int argc, char *argv[]) {
 			{
 			  /* For some reason, the IPv4 header is always included.
 			           Let's remove it here. */
-			memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
-        				      HIP_MAX_PACKET - IPV4_HDR_SIZE);
+			  memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
+
+			  pkt_info.src_port = 0;
 	
-				err = hip_receive_control_packet(hip_msg,
-								 &saddr,
-								 &daddr,
-								&pkt_info);
+			  err = hip_receive_control_packet(hip_msg, &saddr,
+							   &daddr, &pkt_info);
 			}
 		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)){
 			/* do NAT recieving here !! --Abi */
