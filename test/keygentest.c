@@ -15,8 +15,8 @@
 int main(int argc, char *argv[]) {
   struct timeval stats_before, stats_after, stats_res;
   int err = 0, bits, use_rsa;
-  DSA *dsa;
-  RSA *rsa;
+  DSA *dsa = NULL;
+  RSA *rsa = NULL;
   int use_dsa;
 
   if (argc != 3) {
@@ -37,11 +37,12 @@ int main(int argc, char *argv[]) {
 
   gettimeofday(&stats_before, NULL);
 
-  if (use_dsa) {
-    HIP_IFEL(!(dsa = create_dsa_key(bits)), -1, "dsa key creation failed\n");
-  } else {
-    HIP_IFEL(!(rsa = create_rsa_key(bits)), -1, "rsa key creation failed\n");
-  }
+  if (use_dsa)
+    dsa = (DSA *) create_dsa_key(bits);
+  else
+    rsa = (RSA *) create_rsa_key(bits);
+
+  HIP_IFEL(!(rsa || dsa), -1, "key creation failed\n")
 
   gettimeofday(&stats_after, NULL);
 
