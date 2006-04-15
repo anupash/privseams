@@ -8,13 +8,13 @@ CFLAGS = $(hipl_common_cflags)
 # with netlink headers.
 include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
                   workqueue.h bos.h input.h output.h preoutput.h preinput.h \
-                  xfrm.h beet.h netdev.h update.h rvs.h close.h spam.h
+                  xfrm.h beet.h netdev.h update.h rvs.h close.h nat.h spam.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c close.c
-hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c spam.c
+hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c spam.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
@@ -52,6 +52,7 @@ input.c: input.h
 output.c: output.h
 preoutput.c: preoutput.h
 preinput.c: preinput.h
+nat.c : nat.h
 xfrm.c: xfrm.h
 beet.c: beet.h
 netdev.c: netdev.h

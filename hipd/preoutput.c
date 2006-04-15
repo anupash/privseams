@@ -20,7 +20,8 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
-		  struct hip_common* msg,
+		  uint32_t src_port, uint32_t dst_port,
+		  struct hip_common *msg,
 		  hip_ha_t *entry,
 		  int retransmit)
 {
@@ -37,6 +38,16 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if (hip_nat_status || (dst_is_ipv4 && 
+		((entry && entry->nat) ||
+		 (src_port != 0 || dst_port != 0))))//Temporary fix 
+	//if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
+	{
+		return hip_send_udp(local_addr, peer_addr,
+				    src_port, dst_port, msg, entry, retransmit);
+
+	} 
+	
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be

@@ -15,6 +15,10 @@
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
+int hip_nat_sock_udp = 0;	/* For NAT traversal of IPv4 packets for base exchange*/
+int hip_nat_sock_udp_data = 0;  /* For NAT traversal of IPv4 packets for Data traffic */
+
+int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
@@ -67,6 +71,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 	    entry->state != HIP_STATE_ESTABLISHED) {
 		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
 							   &entry->hip_msg_retrans.daddr,
+								0,0, /*need to correct it*/
 							   entry->hip_msg_retrans.buf,
 							   entry, 0);
 		entry->hip_msg_retrans.count--;
@@ -297,6 +302,89 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4) {
 	return err;
 }
 
+int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
+{
+	int on = 1, err = 0;
+	int off = 0;
+	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE ;
+        struct sockaddr_in myaddr;
+
+	HIP_DEBUG("----------Opening udp socket !--------------\n");
+	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
+        {
+                HIP_ERROR("Can not open socket for UDP\n");
+                return -1;
+        }
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on,
+		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &on,
+                   sizeof(on)), -1, "setsockopt udp recverr failed\n");
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
+                   sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
+
+        myaddr.sin_family=AF_INET;
+        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+        myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
+
+        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
+
+        if( bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+        {
+                HIP_ERROR("Unable to bind udp socket to port\n");
+                err = -1;
+		goto out_err;
+        }
+	HIP_DEBUG("socket done\n");
+        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+        return 0;
+
+
+ out_err:
+	return err;
+
+}
+
+int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
+{
+	int on = UDP_ENCAP_ESPINUDP, err = 0;
+	int off = 0;
+	
+	HIP_DEBUG("----------Opening udp socket !--------------\n");
+	if((*hip_nat_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
+        {
+                HIP_ERROR("Can not open socket for UDP\n");
+                return -1;
+        }
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, UDP_ENCAP, &on,
+		   sizeof(on)), -1, "setsockopt udp encap failed\n");
+
+
+        struct sockaddr_in myaddr;
+
+
+        myaddr.sin_family=AF_INET;
+        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+        myaddr.sin_port=htons(HIP_NAT_UDP_DATA_PORT);
+
+        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
+
+        if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+        {
+                HIP_ERROR("Unable to bind udp socket to port\n");
+                err = -1;
+		goto out_err;
+        }
+	HIP_DEBUG("socket done\n");
+        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+        return 0;
+
+
+ out_err:
+	return err;
+
+}
+
+
 /*
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -329,6 +417,10 @@ void hip_exit(int signal) {
 		close(hip_raw_sock_v6);
 	if (hip_raw_sock_v4)
 		close(hip_raw_sock_v4);
+	if(hip_nat_sock_udp)
+		close(hip_nat_sock_udp);
+	if(hip_nat_sock_udp_data)
+		close(hip_nat_sock_udp_data);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -496,11 +588,15 @@ int main(int argc, char *argv[]) {
 
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	//HIP_IFEL(hip_init_nat_sock_udp_data(&hip_nat_sock_udp_data), -1, "raw sock udp for data\n");
 
 	HIP_DEBUG("hip_raw_sock = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v6, highest_descriptor);
 	HIP_DEBUG("hip_raw_sock_v4 = %d highest_descriptor = %d\n",
 		  hip_raw_sock_v4, highest_descriptor);
+	HIP_DEBUG("hip_nat_sock_udp = %d highest_descriptor = %d\n",
+		  hip_nat_sock_udp, highest_descriptor);
 
 	if (flush_ipsec) {
 		hip_flush_all_sa();
@@ -535,7 +631,8 @@ int main(int argc, char *argv[]) {
 		1, "Changing permissions of daemon addr failed.")
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_agent_sock < 0), 1, "Could not create socket for agent communication.\n");
+	HIP_IFEL((hip_agent_sock < 0), 1,
+		 "Could not create socket for agent communication.\n");
 	unlink(HIP_AGENTADDR_PATH);
 	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 	hip_agent_addr.sun_family = AF_LOCAL;
@@ -543,9 +640,10 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
-	highest_descriptor = maxof(6, hip_nl_route.fd, hip_raw_sock_v6,
+	highest_descriptor = maxof(7, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_agent_sock, hip_raw_sock_v4);
+				   hip_agent_sock, hip_raw_sock_v4,
+				   hip_nat_sock_udp);
 	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
@@ -561,6 +659,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock_v6, &read_fdset);
 		FD_SET(hip_raw_sock_v4, &read_fdset);
+		FD_SET(hip_nat_sock_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
@@ -577,6 +676,7 @@ int main(int argc, char *argv[]) {
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
 			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
 
 			hip_msg_init(hip_msg);
 		
@@ -586,21 +686,59 @@ int main(int argc, char *argv[]) {
 			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
-								 &daddr);
+								 &daddr,
+								&pkt_info);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
+			//int src_port = 0;
 
 			hip_msg_init(hip_msg);
 			HIP_DEBUG("Getting a msg on v4\n");	
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
-						 &saddr, &daddr))
+						 &saddr, &daddr, &pkt_info))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
-				err = hip_receive_control_packet(hip_msg,
-								 &saddr,
-								 &daddr);
+			  /* For some reason, the IPv4 header is always included.
+			           Let's remove it here. */
+			  memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
+
+			  pkt_info.src_port = 0;
+	
+			  err = hip_receive_control_packet(hip_msg, &saddr,
+							   &daddr, &pkt_info);
 			}
+		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)){
+			/* do NAT recieving here !! --Abi */
+			
+			struct in6_addr saddr, daddr;
+			struct hip_stateless_info pkt_info;
+			//int src_port = 0;
+
+			hip_msg_init(hip_msg);
+			HIP_DEBUG("Getting a msg on udp\n");	
+
+		//	if (hip_read_control_msg_udp(hip_nat_sock_udp, hip_msg, 1,
+                  //                                 &saddr, &daddr))
+        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
+						    1, &saddr, &daddr,
+						    &pkt_info))
+                                HIP_ERROR("Reading network msg failed\n");
+                        else
+                        {
+				err =  hip_receive_control_packet_udp(hip_msg,
+                                                                 &saddr,
+                                                                 &daddr,
+								 &pkt_info);
+
+                                //err = hip_receive_control_packet(hip_msg,
+                                                                 //&saddr,
+                                                                 //&daddr);
+                        }
+
+			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);

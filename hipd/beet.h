@@ -38,6 +38,8 @@
 #  define NETLINK_XFRM            6       /* ipsec */
 #endif
 
+
+extern int  hip_nat_status;
 struct rtnl_handle;
 
 /* BEET database entry struct and access functions to retrieve them. */
@@ -71,7 +73,7 @@ void hip_beetdb_put_entry(void *entry);
  */
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
-		    uint32_t spi, int state, int dir);
+		    uint32_t spi, int state, int dir, struct hip_stateless_info *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   struct in6_addr *hit_our,
@@ -94,7 +96,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int enckey_len,
 			  int aalg, struct hip_crypto_key *authkey,
 			  int authkey_len,
-			  int preferred_family);
+			  int preferred_family,
+				int sport, int dport);// struct hip_stateless_info *sa_info);
 int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
 			  __u32 spi, int preferred_family);
 /* Allocates SPI for fixed time */
@@ -105,7 +108,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
-		    int already_acquired, int direction, int update);
+		    int already_acquired, int direction, int update,
+			int sport, int dport);
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family);
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <openssl/rsa.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/rand.h>
