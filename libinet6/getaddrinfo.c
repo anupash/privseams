@@ -82,6 +82,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NUM_MAX_HITS 50
 #endif
 
+// extern u32 opportunistic_mode;
 struct gaih_service
   {
     const char *name;
@@ -521,7 +522,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
     if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
       continue;
     }
-
+    
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
       if (at_ip->family == AF_INET && 
 	  IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
@@ -546,6 +547,130 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
     }
   }  
   free(msg);
+}
+
+void
+get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
+{
+  HIP_ASSERT(orig_at != NULL );
+  struct gaih_addrtuple *at_ip;
+  struct in6_addr addr6;
+
+  for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+    if (at_ip->family == AF_INET && 
+	IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
+      continue;
+    if (at_ip->family == AF_INET6 &&
+	ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
+      continue;
+    }
+    if (at_ip->family == AF_INET) {
+      IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
+      continue;
+      memcpy(ip, &addr6, sizeof(struct in6_addr));
+      HIP_DEBUG_HIT("!!!! IPV4_TO_IPV6_MAP addr=", &addr6);
+      HIP_HEXDUMP("!!!! IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
+    }
+    else 
+      addr6 = *(struct in6_addr *) at_ip->addr;
+      HIP_DEBUG_HIT("!!!! get_ip_from_gaih_addrtuple addr=", &addr6);
+      memcpy(ip, &addr6, sizeof(struct in6_addr));
+      HIP_HEXDUMP("!!!! get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
+  }  
+}
+
+int
+request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
+{
+  HIP_INFO("Hi, we are testing request_hipd_pseudo_hit()\n");
+  struct hip_common *msg = NULL;
+  struct gaih_addrtuple *at_hit = NULL;
+  struct in6_addr ip;
+  int err = 0;
+  int ret = 0;
+
+  memset(&ip, 0, sizeof(struct in6_addr));
+  
+  get_ip_from_gaih_addrtuple(orig_at, &ip );
+  
+  
+  if(!ipv6_addr_is_null(&ip)) {
+    msg = malloc(HIP_MAX_PACKET);
+    if (!msg){
+      HIP_ERROR("malloc failed\n");
+      goto out_err;
+    }	
+    hip_msg_init(msg);
+    
+    err = hip_build_param_contents(msg, (void *)(&ip), HIP_PARAM_IPV6_ADDR,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param request_hipd_seudo_hit failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    
+    /* Build the message header */
+    err = hip_build_user_hdr(msg, SO_HIP_GET_PSEUDO_HIT, 0);
+    if (err) {
+      HIP_ERROR("build hdr failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    
+    /* send and receive msg to/from hipd */
+    err = hip_send_recv_daemon_info(msg);
+    //err = hip_send_daemon_info(msg);
+    if (err) {
+      HIP_ERROR("sending msg failed\n");
+      goto out_err;
+    }
+    HIP_INFO("!!!! msg to hipd sent\n");
+    
+    /* getsockopt wrote the corresponding EID into the message, use it */
+    err = hip_get_msg_err(msg);
+    if (err) {
+      goto out_err;
+    }
+    
+
+    hit = hip_get_param_contents(msg, HIP_PARAM_HIT );
+    //err = hip_opportunistic_ipv6_to_hit(&ip, hit, HIP_HIT_TYPE_HASH120);
+    if(err){
+      HIP_DEBUG("!!!! err=%d\n", err);
+      goto out_err;
+    }
+
+    HIP_DEBUG_HIT("!!!! pseudo hit2=", hit);
+    HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit)); 
+    if (!hit) {
+      HIP_INFO("!!!! No pseudo hit received, maybe opp mode is not allowed\n");
+    } else { //Add hit to orig_at
+      for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
+	_HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
+	if(at_hit->next == NULL){
+	  at_hit->next = malloc (sizeof (struct gaih_addrtuple));
+	  at_hit = at_hit->next;
+	  at_hit->family = AF_INET6;
+	  at_hit->scopeid = 0;
+	  at_hit->next = NULL;
+	  memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
+	 _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
+	  break;
+	}
+      }
+
+      // TODO: Bing, test if the hit is added
+      for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
+	HIP_DEBUG_HIT("!!!! hit=", at_hit->addr);
+      }
+    }
+  } else{
+    HIP_ERROR("Failed to recv msg err=%d\n", err);
+    err = -1;
+  }
+ out_err:
+  if(msg)
+    free(msg);
+  return err;
 }
 
 int 
@@ -916,11 +1041,24 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       
       /* perform HIT-IPv6 mapping if both are found 
 	 AG: now the loop also takes in IPv4 addresses */
+      //HIP_DEBUG("!!!! ertern opportunistic_mode=%d", opportunistic_mode);
       if (found_hits) 
 	send_hipd_addr(*at);
-      //else 
-      //request_hipd_pseudo_hit();
-      
+      else //if(opportunistic_mode)
+	{
+	  struct in6_addr hit;
+	  bzero(&hit, sizeof(struct in6_addr));
+	  HIP_DEBUG_HIT("!!!! before pseudo hit=", &hit);
+	  int err = request_hipd_pseudo_hit(*at, &hit);
+	  if(err){
+	    HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
+	    return err;
+	  }
+	  HIP_DEBUG_HIT("!!!! after pseudo hit=", &hit);
+	  found_hits++;
+	  send_hipd_addr(*at);	  
+	}
+
       if (no_data != 0 && no_inet6_data != 0)
 	{
 	  _HIP_DEBUG("nodata\n");

@@ -1233,6 +1233,9 @@ int hip_socket_setsockopt(struct socket *sock, int level, int optname,
 		err = hip_socket_bos_wo(msg);
 		//err = hip_socket_send_bos(msg);
 		break;
+		//	case SO_HIP_SET_PSEUDO_HIT: // Bing, trial
+		//err = hip_recv_daemon_info(msg);
+		//break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

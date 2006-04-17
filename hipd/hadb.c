@@ -364,7 +364,7 @@ int hip_add_peer_map(const struct hip_common *input)
 #if 1
 	err = hip_hadb_add_peer_info(hit, ip);
 	HIP_DEBUG_HIT("!!!! hip_add_map_info peer's real hit=", hit);
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 #else
 	hip_hit_t nullhit;
 

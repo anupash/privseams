@@ -461,10 +461,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr)
 {
 	hip_ha_t tmp;
-	
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
+	if(type == HIP_I1){
+	  HIP_DEBUG("!!!! i1 received ");
+	}
+	else
+	  HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!! msg type=%d\n", type);
 
 	HIP_DEBUG("Received packet type %d\n", type);
 	_HIP_DUMP_MSG(msg);
@@ -474,7 +478,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	
+	HIP_DEBUG_HIT("!!!! &msg->hits=", &msg->hits);
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
 	else if(type == HIP_R1){ // Bing, check if it uses oppotunistic mode
@@ -498,7 +502,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    }
 	    // Bing, to test that we can get entry by both real hits
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	    //HIP_ASSERT(entry);
+	    HIP_ASSERT(entry);
 	    if (entry){
 	      HIP_DEBUG_HIT("!!!! entry_tmp->hit_peer", &entry_tmp->hit_peer);
 	      HIP_DEBUG("!!!! entry_tmp->hastate=%d\n",entry_tmp->hastate );

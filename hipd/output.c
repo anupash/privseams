@@ -47,8 +47,11 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	ipv6_addr_copy(&i1.hitr, &in6addr_any);
-	HIP_HEXDUMP("!!!! null dest hit", &i1.hitr, sizeof(struct in6_addr));
+	// if hitr is hashed null hit, send it as null on the wire
+	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
+	  ipv6_addr_copy(&i1.hitr, &in6addr_any);
+
+	HIP_HEXDUMP("!!!! dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
 
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,

@@ -85,6 +85,17 @@ struct list_head {
         { memset(hit, 0, sizeof(hip_hit_t));        \
           (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
 
+inline static ipv6_addr_is_null(struct in6_addr *ip){
+  return ((ip->s6_addr32[0] == 0) &&          
+	  (ip->s6_addr32[1] == 0) &&          
+	  (ip->s6_addr32[2] == 0) &&          
+	  (ip->s6_addr32[3] == 0));
+}
+
+static inline int hit_is_real_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] != 0x00));
+}
 static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
   return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
 	  (hit->s6_addr32[1] == 0) &&
@@ -213,10 +224,13 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_INC                  24
 #define SO_HIP_CONF_PUZZLE_DEC                  25
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           26 /*Bing, trial */
+#define SO_HIP_GET_PSEUDO_HIT                   27
+#define SO_HIP_SET_PSEUDO_HIT                   28
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
- 
+#define HIP_USERADDR_PATH                     "/tmp/hip_useraddr_path.tmp"
+
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
 #define HIP_ENDPOINT_FLAG_HIT              1

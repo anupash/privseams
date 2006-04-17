@@ -16,9 +16,12 @@
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
 
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
+/*Bing, moved from main() to here*/
+//struct sockaddr_un daemon_addr;
 
 /* For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec = { 0 };
@@ -30,7 +33,7 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-u32 opportunistic_mode = 0;
+u32 opportunistic_mode = 1;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -388,7 +391,7 @@ int periodic_maintenance() {
 	return err;
 }
 
-int hip_set_opportunistic_mode(struct hip_common *msg)
+int hip_set_opportunistic_mode(const struct hip_common *msg)
 {
   	int err =  0;
 	u32 mode = 0;
@@ -404,7 +407,106 @@ int hip_set_opportunistic_mode(struct hip_common *msg)
  out_err:
 	return err;
 }
-/* Bing, comment it away, no need
+
+int hip_get_pseudo_hit(/*const*/ struct hip_common *message)
+{
+  int err = 0;
+  int n = 0;
+  int alen = 0;
+  struct hip_common *msg = NULL;
+  struct in6_addr hit;
+  struct in6_addr *ip = NULL;
+
+
+  msg = malloc(HIP_MAX_PACKET);
+  if (!msg) {
+    HIP_ERROR("malloc failed\n");
+    goto out_err;
+  }	
+  hip_msg_init(msg);
+
+  if(opportunistic_mode){
+    //    struct in6_addr hit;
+    ip = (struct in6_addr *) hip_get_param_contents(message, HIP_PARAM_IPV6_ADDR);
+    HIP_DEBUG_HIT("!!!! local ip=", ip);
+    
+    err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
+    if(err){
+      HIP_DEBUG("!!!! err=%d\n", err);
+      goto out_err;
+    }
+
+    HIP_DEBUG_HIT("!!!! pseudo hit=", &hit);
+    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
+    // try to use message instead of msg
+    //err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    //			 sizeof(struct in6_addr));
+    hip_msg_init(message);
+    err = hip_build_param_contents(message, (void *) &hit, HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param hit failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    err = hip_hadb_add_peer_info(&hit, ip);
+    if (err) {
+      HIP_ERROR("add peer info failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    
+  }
+  else {
+    // try to use message instead of msg
+    //err = hip_build_param_contents(msg, (void *) NULL, HIP_PARAM_HIT,
+    //		       sizeof(struct in6_addr));
+    hip_msg_init(message);
+    err = hip_build_param_contents(message, (void *) NULL, HIP_PARAM_HIT,
+			       sizeof(struct in6_addr));
+    // Bing, do we need to add map if NULL
+    // hip_hadb_add_peer_info(NULL, ip);
+  }
+  
+  // try to use message instead of msg
+  //  hip_build_user_hdr(msg, SO_HIP_SET_PSEUDO_HIT, 0);
+  hip_build_user_hdr(message, SO_HIP_SET_PSEUDO_HIT, 0);
+  HIP_DEBUG("!!!! sending phit...\n"); 
+  /*
+  alen = sizeof(hip_agent_addr);
+  n = sendto(hip_agent_sock, msg, sizeof(struct hip_common),
+	     0, (struct sockaddr *) &hip_agent_addr, alen);
+  */
+  
+  //  int hip_user_sock = 0;
+  
+  bzero(&hip_user_addr, sizeof(hip_user_addr));
+  hip_user_addr.sun_family = AF_UNIX;
+  strcpy(hip_user_addr.sun_path, HIP_AGENTADDR_PATH);
+  alen = sizeof(hip_user_addr);
+  //alen = sizeof(daemon_addr);
+  // try to use message instead of msg
+  //n = sendto(hip_user_sock, msg,  hip_get_msg_total_len(msg),
+  //     0,(struct sockaddr *)&hip_user_addr, alen);
+    n = sendto(hip_user_sock, message,  hip_get_msg_total_len(message),
+	     0,(struct sockaddr *)&hip_user_addr, alen);
+  if (n < 0)
+    {
+      HIP_ERROR("sendto() failed.\n");
+      err = -1;
+      goto out_err;
+      //	continue;
+    }
+  
+  HIP_DEBUG("HIP agent ok.\n");
+  
+  
+ out_err:
+  if (msg)
+    HIP_FREE(msg);
+  return err;
+}
+
+// Bing, comment it away, no need
+/*
 int hip_our_host_id(struct hip_common *msg)
 {
   struct hip_host_id *pub = NULL;
@@ -426,7 +528,7 @@ int hip_our_host_id(struct hip_common *msg)
   pub = hip_get_public_key(pub);
   
   if(pub)
-    HIP_FREE(pub);
+  HIP_FREE(pub);
   if(priv)
     HIP_FREE(priv);
 
@@ -447,6 +549,7 @@ int main(int argc, char *argv[]) {
 
 	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
+	// Bing, move daemon_addr as global variable
 	struct sockaddr_un daemon_addr;
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
