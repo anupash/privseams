@@ -620,10 +620,10 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
     err = hip_send_recv_daemon_info(msg);
     //err = hip_send_daemon_info(msg);
     if (err) {
-      HIP_ERROR("sending msg failed\n");
+      HIP_ERROR("send_recv msg failed\n");
       goto out_err;
     }
-    HIP_INFO("!!!! msg to hipd sent\n");
+    HIP_INFO("!!!! send_recv msg succeed\n");
     
     /* getsockopt wrote the corresponding EID into the message, use it */
     err = hip_get_msg_err(msg);
@@ -632,18 +632,20 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
     }
     
 
-    hit = hip_get_param_contents(msg, HIP_PARAM_HIT );
-    //err = hip_opportunistic_ipv6_to_hit(&ip, hit, HIP_HIT_TYPE_HASH120);
+    hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT );
+    err = hip_opportunistic_ipv6_to_hit(&ip, hit, HIP_HIT_TYPE_HASH120);
+    //memset(hit, 0, sizeof(struct in6_addr));
     if(err){
       HIP_DEBUG("!!!! err=%d\n", err);
       goto out_err;
     }
-
-    HIP_DEBUG_HIT("!!!! pseudo hit2=", hit);
-    HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit)); 
-    if (!hit) {
-      HIP_INFO("!!!! No pseudo hit received, maybe opp mode is not allowed\n");
-    } else { //Add hit to orig_at
+    if(1){
+      //if (!hit_is_opportunistic_hashed_hit(hit)) {
+      //HIP_INFO("!!!! No pseudo hit received, maybe opp mode is not allowed\n");
+      //} else { //Add hit to orig_at
+      HIP_DEBUG_HIT("!!!! pseudo hit2=", hit);
+      //HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+      
       for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
 	_HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
 	if(at_hit->next == NULL){
@@ -894,7 +896,7 @@ gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *servic
       (*st)->next = NULL;
       (*st)->socktype = tp->socktype;
       (*st)->protocol = ((tp->protoflag & GAI_PROTO_PROTOANY)
-		      ? req->ai_protocol : tp->protocol);
+			 ? req->ai_protocol : tp->protocol);
       (*st)->port = htons (service->num);
     }
   return 0;
@@ -902,15 +904,15 @@ gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *servic
 
 int 
 gaih_inet_get_name(const char *name, const struct addrinfo *req, 
-		       const struct gaih_typeproto *tp, 
-		       struct gaih_servtuple *st, struct gaih_addrtuple **at, 
-		       int hip_transparent_mode) 
+		   const struct gaih_typeproto *tp, 
+		   struct gaih_servtuple *st, struct gaih_addrtuple **at, 
+		   int hip_transparent_mode) 
 {
   int rc;
   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
-		 (req->ai_flags & AI_V4MAPPED);
+    (req->ai_flags & AI_V4MAPPED);
   _HIP_DEBUG(">> name != NULL\n");
-
+  
   *at = malloc (sizeof (struct gaih_addrtuple));
   
   (*at)->family = AF_UNSPEC;
@@ -1054,9 +1056,15 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
 	    return err;
 	  }
-	  HIP_DEBUG_HIT("!!!! after pseudo hit=", &hit);
-	  found_hits++;
-	  send_hipd_addr(*at);	  
+	  if(hit_is_opportunistic_hashed_hit(&hit)){
+	    HIP_DEBUG_HIT("!!!! after pseudo hit=", &hit);
+	    found_hits++;
+	    send_hipd_addr(*at);
+	  } else{
+	    // NULL hit, what should we do ???
+	    //found_hits++;
+	    //send_hipd_addr(*at);
+	     }	  
 	}
 
       if (no_data != 0 && no_inet6_data != 0)

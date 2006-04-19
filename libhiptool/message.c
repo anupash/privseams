@@ -192,13 +192,19 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv6 dst, dropping\n");
 
+	// Bing added. since pktinfo is NULL  
+	if(saddr) {
+	  memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
+	  HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
+	}
+
 	if (read_addr) {
 		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
 		memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
 		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
 		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
 	}
-	
+
  out_err:
 	return err;
 }
