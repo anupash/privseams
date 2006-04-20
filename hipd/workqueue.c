@@ -183,7 +183,7 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
 							 &job->hdr.id1,
-							 &job->hdr.id2);
+							 &job->hdr.id2, NULL); /* sending null stateless info currently --Abi*/
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
@@ -309,8 +309,7 @@ int hip_do_work(struct hip_work_order *job)
 }
 
 int hip_handle_user_msg(struct hip_common *msg, 
-			const struct sockaddr_storage *src,
-			const struct sockaddr_storage *dst) {
+			const struct sockaddr_un *src) {
 	hip_hit_t *hit;
 	int err = 0;
 	int msg_type;
@@ -352,6 +351,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
+		break;
+	case SO_HIP_SET_NAT_ON:
+		HIP_DEBUG("Nat on!!\n");
+		err = hip_nat_on(msg);
+		break;
+	case SO_HIP_SET_NAT_OFF:
+		HIP_DEBUG("Nat off!!\n");
+		err = hip_nat_off(msg);
 		break;
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();

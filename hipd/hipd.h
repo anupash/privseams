@@ -20,6 +20,8 @@
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <sys/un.h>
+#include <netinet/udp.h>
+
 
 #ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"

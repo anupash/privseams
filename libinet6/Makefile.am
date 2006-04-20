@@ -78,4 +78,3 @@ include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
 
 SUBDIRS = include_glibc21 include_glibc22 include_glibc23
-

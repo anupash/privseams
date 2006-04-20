@@ -229,7 +229,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
  */
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip,
-				  struct in6_addr *dst_ip)
+				  struct in6_addr *dst_ip, 
+				  struct hip_stateless_info *update_info)
 {
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_esp_info *esp_info;
@@ -394,7 +395,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	entry->state = HIP_STATE_REKEYING;
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      src_ip,
+						      src_ip, update_info->src_port,
+							update_info->dst_port,
 						      update_packet,
 						      entry, 1), -1,
 		 "csum send failed\n");
@@ -514,10 +516,11 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address,
 			 hits, hitr, 
+	/* FIXME: Currently NULLing the stateless info. Send port info through entry parameter --Abi */
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -527,7 +530,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/ );
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
@@ -706,7 +709,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 		 "Failed to get peer address\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &daddr, update_packet,
+						      &daddr, 0, 0, update_packet,
 						      entry, 1), -1,
 		 "csum_send failed\n");
 
@@ -801,7 +804,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		/* test: send all addr check from same address */
 		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
 							      &addr->address,
-							      update_packet,
+							      0, 0, update_packet,
 							      entry, 0), -1,
 			 "csum_send failed\n");
 	}
@@ -855,7 +858,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 		 "Could not sign UPDATE. Failing\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (for LOCATOR)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
 						      update_packet, entry, 0),
 		 -1, "csum_send_failed\n");
 
@@ -934,7 +937,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		 -1, "Building of ECHO_RESPONSE failed\n");
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
 						      update_packet, entry, 0),
 		 -1, "csum_send failed\n");
 
@@ -959,9 +962,10 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  * allows it), otherwise < 0.
  */
 int hip_receive_update(struct hip_common *msg,
-		       struct sockaddr_storage *update_saddr,
-		       struct sockaddr_storage *update_daddr,
-		       hip_ha_t *entry)
+		       struct in6_addr *update_saddr,
+		       struct in6_addr *update_daddr,
+		       hip_ha_t *entry,
+		       struct hip_stateless_info *sinfo)
 {
 	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
 	struct in6_addr *hits;
@@ -1203,7 +1207,7 @@ int hip_receive_update(struct hip_common *msg,
 		if (state == HIP_STATE_ESTABLISHED) {
 			if (esp_info && seq) {
 				HIP_DEBUG("case 7: in ESTABLISHED and has ESP_INFO and SEQ\n");
-				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip);
+				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip, sinfo);
 			} else {
 				HIP_ERROR("in ESTABLISHED but no both ESP_INFO and SEQ\n");
 				err = -EINVAL;
@@ -1432,11 +1436,29 @@ int hip_send_update(struct hip_hadb_state *entry,
  	} else
  		HIP_DEBUG("Address set has changed, continue\n");
 
-	/* spi_in->spi is equal to esp_info_old_spi */
+	/* Peer's preferred address. Can be changed by the source address
+	   selection below if we don't find any addresses of the same family
+	   as peer's preferred address (intrafamily handover). */
+        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
+
+	/* spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
+	   sure that the source and destination address families match */
 	if (addr_list && memcmp(&entry->local_address, &addr_list->address,
 				sizeof(struct in6_addr))) {
+		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
+		int i = 0;
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6);
-		ipv6_addr_copy(&entry->local_address, &addr_list->address);
+		/* XX FIXME: change daddr to an alternative peer address
+		   if no suitable saddr was found (interfamily handover) */
+		for(i = 0; i < addr_count; i++, loc_addr_item++) {
+			struct in6_addr *saddr = &loc_addr_item->address;
+			ipv6_addr_copy(&entry->local_address, saddr);
+			if (IN6_IS_ADDR_V4MAPPED(saddr) == 
+			    IN6_IS_ADDR_V4MAPPED(&daddr)) {
+				/* Select the first match */
+				break;
+			}
+		}
 	}
 
 	hip_update_set_new_spi_in(entry, esp_info_old_spi,
@@ -1467,7 +1489,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 		 "Could not sign UPDATE. Failing\n");
 
 	/* Send UPDATE */
-        HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
 	entry->state = HIP_STATE_REKEYING;
@@ -1475,7 +1496,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending initial UPDATE packet\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
 						      update_packet, entry, 1),
 		 -1, "csum_send failed\n");
 

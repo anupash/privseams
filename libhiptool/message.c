@@ -145,8 +145,6 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 
 }
 
-
-
 /**
  * hip_read_control_msg - prepares the hip_common struct,
  * allocates memory for buffers and nested structs. Receives
@@ -164,21 +162,20 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
  * Returns -1 in case of an error, >0 otherwise.
  */
 int hip_read_control_msg(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct sockaddr_storage *saddr,
-			 struct sockaddr_storage *daddr)
+			 int read_addr, struct in6_addr *saddr,
+			 struct in6_addr *daddr)
 {
-  	//	struct sockaddr_in6 addr_from;
-  	struct sockaddr_storage addr_from;
+        struct sockaddr_in6 addr_from;
         struct cmsghdr *cmsg;
         struct msghdr msg;
         struct in6_pktinfo *pktinfo = NULL;
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
+
         /* setup message header with control and receive buffers */
-	msg.msg_name = &addr_from;
-	msg.msg_namelen = sizeof(struct sockaddr_storage); // XX CHECK
-	//	msg.msg_namelen = sizeof(struct sockaddr_in6);
+        msg.msg_name = &addr_from;
+        msg.msg_namelen = sizeof(struct sockaddr_in6);
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
 
@@ -190,18 +187,10 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
         iov.iov_len = HIP_MAX_PACKET;
         iov.iov_base = hip_msg;
 
-	memset(&addr_from, 0, sizeof(addr_from));
-
 	len = recvmsg(socket, &msg, 0);
-	HIP_HEXDUMP("!!!! Dump after addr_from : ", &addr_from, sizeof(struct sockaddr_storage));
-#if 0
-	if(len > 0)
-	  HIP_HEXDUMP("!!!! msg : ", &msg, sizeof(struct msghdr));
-	else 
-	  HIP_DEBUG("!!!! failed to receive msg len=%d\n", len);
-#endif
+
 	/* ICMPv6 packet */
-	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
+	HIP_IFEL((len < 0), -1, "ICMPv6 error: errno=%d, %s\n",
 		 errno, strerror(errno));
 
 	/* destination address comes from ancillary data passed
@@ -219,31 +208,21 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv6 dst, dropping\n");
 
-	// Bing added. since pktinfo is NULL  
-	if(saddr) {
-	  //HIP_DEBUG("!!!! sizeof = %d, sizeof =%d\n", sizeof(struct msghdr), sizeof(struct sockaddr_storage));
-	  //HIP_HEXDUMP("!!!! Dump before saddr : ", saddr, sizeof(struct sockaddr_storage));
-	  memcpy(saddr, &addr_from, sizeof( struct sockaddr_storage ));
-	  HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
-	  //HIP_HEXDUMP("!!!! Dump after  saddr : ", saddr, sizeof(struct sockaddr_storage));
-
-	}
-
 	if (read_addr) {
-	  	memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct sockaddr_storage)); // XX CHECK
-		//memcpy(saddr, &addr_from.sin6_addr, sizeof(struct sockaddr_storage));
-		memcpy(saddr, &addr_from, sizeof(struct sockaddr_storage));
+		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
+		memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
 		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
 		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
 	}
-
+	
  out_err:
 	return err;
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr)
+			    int read_addr, struct in6_addr *saddr,
+			    struct in6_addr *daddr,
+			    struct hip_stateless_info *msg_info)
 {
         struct sockaddr_in addr_from;
         struct cmsghdr *cmsg;
@@ -270,16 +249,18 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
+	/* ICMPv4 packet */
+	HIP_IFEL((len < 0), -1, "ICMPv4 error: errno=%d, %s\n",
+		 errno, strerror(errno));
+
 	HIP_DEBUG("msg len %d, iov msg len %d\n", len, iov.iov_len);
 	_HIP_HEXDUMP("Dumping msg ", &msg,  len);
-	_HIP_HEXDUMP("Dumping msg ", hip_msg,  len);
-	/* ICMPv4 packet */
-	HIP_IFEL(len < 0, -1, "ICMPv4 error: errno=%d, %s\n",
-		 errno, strerror(errno));
+	HIP_HEXDUMP("Dumping msg ", hip_msg,  len);
 
 	/* destination address comes from ancillary data passed
 	 * with msg due to IP_PKTINFO socket option */
 	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
+		HIP_DEBUG("Packet level: %d, Msg Type: %d\n",cmsg->cmsg_level, cmsg->cmsg_type); 
 		if ((cmsg->cmsg_level == IPPROTO_IP) && 
 		    (cmsg->cmsg_type == IP_PKTINFO)) {
 			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
@@ -290,6 +271,8 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(!pktinfo && read_addr, -1,
 		 "Could not determine IPv4 dst, dropping\n");
 
+	HIP_DEBUG("port number : %d, ntohs %d\n", addr_from.sin_port, ntohs(addr_from.sin_port));
+	msg_info->src_port = ntohs(addr_from.sin_port);
 	if (read_addr) {
 		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
 		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);
@@ -298,10 +281,14 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 		HIP_DEBUG_IN6ADDR("mapped dst\n", daddr);
 	}
 
+	/*This is removed from here and put in hipd.c. Because udp also uses 
+		this function to recieve the packet. 
+		Ipv6 and ipv4 recieving functions should be combined --Abi*/
+
 	/* For some reason, the IPv4 header is always included.
 	   Let's remove it here. */
-	memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
-		HIP_MAX_PACKET - IPV4_HDR_SIZE);
+	//memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+	//	HIP_MAX_PACKET - IPV4_HDR_SIZE);
 	
  out_err:
 	return err;

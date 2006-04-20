@@ -1,13 +1,11 @@
 #ifndef HIP_KERNEL_DEBUG_H
 #define HIP_KERNEL_DEBUG_H
 
-#ifdef __KERNEL__
-#  include <linux/ipv6.h>
-#  include <linux/skbuff.h>
-
+#include <linux/ipv6.h>
+#include <linux/skbuff.h>
 #include "misc.h"
-//#include "debug.h"
-#include "hip.h"
+
+#define CONFIG_HIP_DEBUG 1 /* Set 0 if you want to disable debug  */
 
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
@@ -34,7 +32,6 @@
 #define _HIP_ASSERT(s)
 #define _HIP_DEBUG_IN6ADDR(str, in6)
 #define _HIP_DEBUG_HIT(str, hit)
-#define _HIP_DEBUG_SKB(hdr, skb)
 
 /* Debugging messages are only printed in development code */
 #ifdef CONFIG_HIP_DEBUG
@@ -44,19 +41,14 @@
 #  define HIP_HEXDUMP(tag, data, len) hip_khexdump(tag, data, len)
 #  define HIP_DUMP_MSG(msg) { printk(KERN_DEBUG " %s dump:\n", __FUNCTION__); \
                             hip_dump_msg(msg); }
-#  define HIP_DEBUG_SKB(hdr, skb) hip_debug_skb(hdr, skb)
 #  define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #  define HIP_DEBUG_HIT(str, hit) hip_print_hit(str, hit)
-
-
-
 
 #else
 
   #define HIP_DEBUG(fmt, args...) do { } while(0)
   #define HIP_HEXDUMP(tag, data, len) do { } while(0)
   #define HIP_DUMP_MSG(msg) do { } while(0)
-  #define HIP_DEBUG_SKB(hdr, skb) do { } while(0)
   #define HIP_DEBUG_IN6ADDR(str, in6) do { } while(0)
   #define HIP_DEBUG_HIT(str, hit) do { } while(0)
 
@@ -64,14 +56,12 @@
 
 /* Forward declarations */
 
-extern void hip_khexdump(const char *tag, const void *data, const int len);
+extern void hip_khexdump(const char *tag,
+ const void *data, const int len);
 extern void hip_print_hit(const char *str, const struct in6_addr *hit);
-extern void hip_debug_skb(const struct ipv6hdr *hdr,
-			  const struct sk_buff *skb);
-extern const char *hip_state_str(unsigned int state);
 
-#else
-#include "libinet6/debug.h"
-#endif /* __KERNEL__ */
+uint64_t hton64(uint64_t i);
+uint64_t ntoh64(uint64_t i);
+
 #endif /* HIP_KERNEL_DEBUG_H */
 

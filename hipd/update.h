@@ -13,9 +13,9 @@
 #  define IPV6_ADDR_SITELOCAL     0x0040U
 
 int hip_receive_update(struct 	hip_common *msg,
-		       struct 	sockaddr_storage *update_saddr,
-		       struct 	sockaddr_storage *update_daddr,
-		       hip_ha_t *entry);
+		       struct 	in6_addr *update_saddr,
+		       struct 	in6_addr *update_daddr,
+		       hip_ha_t *entry, struct hip_stateless_info *);
 		       
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
@@ -43,9 +43,10 @@ void hip_update_handle_ack(hip_ha_t *entry,
 				struct hip_echo_response *echo_esp);
 				
 int hip_handle_update_established(hip_ha_t *entry,
-					struct hip_common *msg,
-					struct in6_addr *src_ip,
-					struct in6_addr *dst_ip);
+				  struct hip_common *msg,
+				  struct in6_addr *src_ip,
+				  struct in6_addr *dst_ip,
+				  struct hip_stateless_info *update_info);
 					
 int hip_handle_update_rekeying(hip_ha_t *entry,
 				struct hip_common *msg,

@@ -6,6 +6,7 @@
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Anthony D. Joseph <adj@hiit.fi>
+ * - Abhinav Pathak <abhinav.pathak@hiit.fi>
  *
  * Licence: GNU/GPL
  *
@@ -28,12 +29,16 @@ const char *usage = "new|add hi default\n"
         "hip rst all|peer_hit\n"
         "add rvs hit ipv6\n"
         "hip bos\n"
+	"hip nat on|off|peer_hit\n"
 #ifdef CONFIG_HIP_SPAM
         "get|set|inc|dec|new puzzle all|hit\n"
 #else
         "get|set|inc|dec|new puzzle all\n"
 #endif
         "set opp on|off\n";
+/* hip nat on|off|peer_hit is currently specified. 
+ * For peer_hit we should 'on' the nat mapping only when the 
+ * communication takes place with specified peer_hit --Abi */
 
 
 /*
@@ -48,6 +53,9 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_rvs,
 	handle_bos,
 	handle_puzzle,
+	handle_nat,
+	handle_del,
+	handle_puzzle
 	handle_opp
 };
 
@@ -128,6 +136,8 @@ int get_type(char *text) {
 		ret = TYPE_RVS;
 	else if (!strcmp("bos", text))
 		ret = TYPE_BOS;
+	else if (!strcmp("nat", text))
+		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;
 	else if (!strcmp("opp", text))
@@ -497,6 +507,71 @@ int handle_bos(struct hip_common *msg, int action,
 
  out:
 	return err;
+}
+
+/**
+ * handle_nat - Sends a msg to daemon about NAT setting
+ * @msg:    the buffer where the message for daemon will be written
+ * @action: the action (add/del) to performed (should be empty)
+ * @opt:    an array of pointers to the command line arguments after
+ *          the action and type (should be empty)
+ * @optc:   the number of elements in the array (=0, no extra arguments)
+ *
+ * Returns: zero on success, else non-zero.
+ */
+
+int handle_nat(struct hip_common *msg, int action,
+               const char *opt[], int optc)
+{
+	int err;
+	int status = 0;
+	int ret;
+	struct in6_addr hit;
+	
+	HIP_DEBUG("nat setting. Options:%s\n", opt[0]);
+
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (!strcmp("on",opt[0])) {
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_NAT_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		memset(&hit,0,sizeof(struct in6_addr));
+                status = SO_HIP_SET_NAT_OFF;
+	} else {
+		ret = inet_pton(AF_INET6, opt[0], &hit);
+		if (ret < 0 && errno == EAFNOSUPPORT) {
+			HIP_PERROR("inet_pton: not a valid address family\n");
+			err = -EAFNOSUPPORT;
+			goto out;
+		} else if (ret == 0) {
+			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+			err = -EINVAL;
+			goto out;
+		}
+		status = SO_HIP_SET_NAT_ON;
+	}
+
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, status, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+
 }
 
 int handle_puzzle(struct hip_common *msg, int action,
