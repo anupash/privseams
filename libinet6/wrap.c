@@ -10,9 +10,29 @@
 //#include "hipd.h"
 
 //extern int opp_mode_enabled();
+extern int __libc_connect(a, b, c);
+extern int __libc_send(int a, void * b, size_t c, int flags);
+extern int __libc_sendto(int a, const void * b, size_t c, int flags, void *to, int tolen);
+extern int __libc_sendmsg(int a, const struct msghdr* msg, int flags);
 
 int opp_mode(){
-  return 0; //opportunistic_mode;
+  int opp_mode;
+  opp_mode = 0;
+
+  // There are two choice to implement, which one is better?
+
+  // Todo:
+  // Send query message to hipd to query the value of opp_mode.
+  // use recvfrom to get message.
+  // return value of opp_mode
+
+  // or
+
+  // Todo:
+  // send ip to hipd to query phit
+  // use recvfrom to receive phit message
+  // if get phit, then opp_mode is on.
+  return opp_mode;
 }
 
 int is_ip(const struct in6_addr *ip){
@@ -21,9 +41,27 @@ int is_ip(const struct in6_addr *ip){
 	 !hit_is_opportunistic_hashed_hit(ip));
 }
 
-int exist_mapping(){
+int exist_mapping(const struct in6_addr *ip){
+  int err;
+  err = 0;
+  int has_mapping;
+  has_mapping = 0;
+  struct in6_addr hit;
 
-  return 0;
+  err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
+  if(err)
+    goto out_err;
+
+  //TODO: 
+  // send phit to hipd.
+  // hipd handler function use phit to check if there is HA.
+  // if yes/no, then there is/no  mapping, hipd send back the result.
+  // using recvfrom to receive the result. 
+
+  return has_mapping;
+
+ out_err:
+  return err;
 }
 
 int util_func(struct in6_addr *ip){
@@ -32,23 +70,23 @@ int util_func(struct in6_addr *ip){
 
   if(hit_is_real_hit(ip)){
     HIP_DEBUG("!!!! is real hit \n");
-    // TODO:Add mapping old socket == new socket
-
+    // TODO:
+    //Add mapping old socket == new socket
   }
   else {
-    if(!hit_is_opportunistic_hashed_hit(ip)) {// is ip
+    if(!hit_is_opportunistic_hashed_hit(ip)) {
       HIP_DEBUG("!!!! is ip\n");
-      if(exist_mapping()){
-	// change ip to phit
+      if(exist_mapping(ip)){
 	struct in6_addr hit;
 	err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
 	if(err)
 	  goto out_err;      
 	HIP_DEBUG_HIT("!!!! opportunistic hit ", &hit);
+	// change ip to phit
 	memcpy(ip, &hit, sizeof(struct in6_addr));
       }
       else { // no exit mapping
-	if(opp_mode()) {//opp_mode_enabled()
+	if(opp_mode()) {
 	  // TODO: create new socket, old socket != new socket
 	}
 	else {
@@ -66,8 +104,8 @@ int connect(int a, void * b, int c)
   int errno;
   errno = 0; 
   
-  struct in6_addr hit;
   struct in6_addr *ip;
+
   HIP_DEBUG_HIT("connect b = ", b);
   HIP_DEBUG("!!!! sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
   HIP_HEXDUMP("!!!! HEXDUMP b =", b, 32);

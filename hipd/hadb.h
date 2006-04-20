@@ -160,9 +160,9 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct sockaddr_storage *addr);
 
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
+int hip_del_peer_info(struct in6_addr *hit, struct sockaddr_storage *addr);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 

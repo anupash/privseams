@@ -461,11 +461,12 @@ int hip_get_pseudo_hit(const struct hip_common *message,
    return err;
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_storage *dst){
   int n = 0;
   HIP_DEBUG("!!!! sending phit...\n");
+  HIP_HEXDUMP("!!!! dst : ", dst, sizeof(struct sockaddr_storage));
   n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_storage));
   return n;
 
 }
@@ -700,17 +701,31 @@ int main(int argc, char *argv[]) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		} else if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
-			struct in6_addr saddr, daddr;
+		  	//	struct in6_addr saddr, daddr;
+		  	struct sockaddr_storage saddr, daddr;
 
 			hip_msg_init(hip_msg);
 		
 			if (hip_read_control_msg(hip_raw_sock_v6, hip_msg, 1,
 						 &saddr, &daddr))
 				HIP_ERROR("Reading network msg failed\n");
-			else
-				err = hip_receive_control_packet(hip_msg,
+			else{
+				  err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr);
+			/*	  
+			  // we do not need to convert in6_addre to sockaddr_storag
+			  struct in6_addr *psaddr, *pdaddr;
+			  struct sockaddr_in6 *ssin6, * dsin6;
+			  ssin6 = (struct sockaddr_in6 *) &saddr;
+			  dsin6 = (struct sockaddr_in6 *) &daddr;
+			  psaddr = (struct in6_addr *) ssin6;
+			  pdaddr = (struct in6_addr *) dsin6;
+			  err = hip_receive_control_packet(hip_msg,
+							   psaddr,
+							   pdaddr);
+			*/
+			}
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
 
@@ -726,15 +741,16 @@ int main(int argc, char *argv[]) {
 								 &daddr);
 			}
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-		  	struct sockaddr_un app_src, app_dst;
-			
+		  	//struct sockaddr_un app_src, app_dst;
+		  	struct sockaddr_storage app_src, app_dst;
+
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
 			if (hip_read_control_msg(hip_user_sock, hip_msg, 0, &app_src, &app_dst))
 				HIP_ERROR("Reading user msg failed\n");
 			else
-				err = hip_handle_user_msg_and_addr(hip_msg, &app_src, &app_dst);
+				err = hip_handle_user_msg(hip_msg, &app_src, &app_dst);
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;

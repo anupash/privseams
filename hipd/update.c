@@ -959,8 +959,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
  * allows it), otherwise < 0.
  */
 int hip_receive_update(struct hip_common *msg,
-		       struct in6_addr *update_saddr,
-		       struct in6_addr *update_daddr,
+		       struct sockaddr_storage *update_saddr,
+		       struct sockaddr_storage *update_daddr,
 		       hip_ha_t *entry)
 {
 	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;

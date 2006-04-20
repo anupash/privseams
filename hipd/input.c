@@ -457,8 +457,8 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 }
 
 int hip_receive_control_packet(struct hip_common *msg,
-			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr)
+			       struct sockaddr_storage *src_addr,
+			       struct sockaddr_storage *dst_addr)
 {
 	hip_ha_t tmp;
 	int err = 0, type, skip_sync = 0;
@@ -1168,8 +1168,8 @@ int hip_handle_r1(struct hip_common *r1,
  * Always frees the skb
  */
 int hip_receive_r1(struct hip_common *hip_common,
-		   struct in6_addr *r1_saddr,
-		   struct in6_addr *r1_daddr,
+		   struct sockaddr_storage *r1_saddr,
+		   struct sockaddr_storage *r1_daddr,
 		   hip_ha_t *entry)
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
@@ -1741,8 +1741,8 @@ int hip_handle_i2(struct hip_common *i2,
  * TODO: check if it is correct to return always 0 
  */
 int hip_receive_i2(struct hip_common *i2,
-		   struct in6_addr *i2_saddr,
-		   struct in6_addr *i2_daddr,
+		   struct sockaddr_storage *i2_saddr,
+		   struct sockaddr_storage *i2_daddr,
 		   hip_ha_t *entry)
 {
 	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
@@ -1989,8 +1989,8 @@ int hip_handle_i1(struct hip_common *i1,
  * Returns: zero on success, or negative error value on error.
  */
 int hip_receive_i1(struct hip_common *hip_i1,
-		   struct in6_addr *i1_saddr,
-		   struct in6_addr *i1_daddr,
+		   struct sockaddr_storage *i1_saddr,
+		   struct sockaddr_storage *i1_daddr,
 		   hip_ha_t *entry)
 {
 	int err = 0, state, mask = 0;
@@ -2079,8 +2079,8 @@ int hip_receive_i1(struct hip_common *hip_i1,
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_r2(struct hip_common *hip_common,
-		   struct in6_addr *r2_saddr,
-		   struct in6_addr *r2_daddr,
+		   struct sockaddr_storage *r2_saddr,
+		   struct sockaddr_storage *r2_daddr,
 		   hip_ha_t *entry)
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
@@ -2140,8 +2140,8 @@ int hip_receive_r2(struct hip_common *hip_common,
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_notify(struct hip_common *hip_common,
-		       struct in6_addr *notify_saddr,
-		       struct in6_addr *notity_daddr,
+		       struct sockaddr_storage *notify_saddr,
+		       struct sockaddr_storage *notity_daddr,
 		       hip_ha_t* entry)
 {
 	

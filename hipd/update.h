@@ -13,8 +13,8 @@
 #  define IPV6_ADDR_SITELOCAL     0x0040U
 
 int hip_receive_update(struct 	hip_common *msg,
-		       struct 	in6_addr *update_saddr,
-		       struct 	in6_addr *update_daddr,
+		       struct 	sockaddr_storage *update_saddr,
+		       struct 	sockaddr_storage *update_daddr,
 		       hip_ha_t *entry);
 		       
 int hip_send_update(struct hip_hadb_state *entry,

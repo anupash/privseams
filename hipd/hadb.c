@@ -256,7 +256,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 }
 
 /* Practically called only by when adding a HIT-IP mapping before bex */
-int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct sockaddr_storage *peer_addr)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -760,7 +760,7 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 /**
  * Currently deletes the whole entry...
  */		
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
+int hip_del_peer_info(struct in6_addr *hit, struct sockaddr_storage *addr)
 {
 	hip_ha_t *ha;
 

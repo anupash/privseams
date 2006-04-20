@@ -26,8 +26,8 @@
 
 
 int hip_receive_control_packet(struct hip_common *msg,
-			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr);
+			       struct sockaddr_storage *src_addr,
+			       struct sockaddr_storage *dst_addr);
 
 			  
 /* functions for receiving hip control messages*/ 
@@ -36,30 +36,30 @@ int hip_verify_packet_hmac(struct hip_common *,
 			   struct hip_crypto_key *);
 			   
 int hip_receive_i1(struct hip_common *, 
-		   struct in6_addr *, 
-		   struct in6_addr *,
+		   struct sockaddr_storage *, 
+		   struct sockaddr_storage *,
 		   hip_ha_t *);
 		   
 int hip_receive_r1(struct hip_common *, 
-		   struct in6_addr *,
-		   struct in6_addr *,
+		   struct sockaddr_storage *,
+		   struct sockaddr_storage *,
 		   hip_ha_t *);
 		   
 int hip_receive_i2(struct hip_common *, 
-		   struct in6_addr *,
-		   struct in6_addr *,
+		   struct sockaddr_storage *,
+		   struct sockaddr_storage *,
 		   hip_ha_t *);
 		   
 int hip_receive_r2(struct hip_common *, 
-		   struct in6_addr *,
-		   struct in6_addr *,
+		   struct sockaddr_storage *,
+		   struct sockaddr_storage *,
 		   hip_ha_t *);
 		   
 int hip_receive_notify(struct hip_common *,
-		       struct in6_addr *, 
-		       struct in6_addr *,
+		       struct sockaddr_storage *, 
+		       struct sockaddr_storage *,
 		       hip_ha_t*);
-		       
+		      
 int hip_receive_bos(struct hip_common *,
 		    struct in6_addr *,
 		    struct in6_addr *,

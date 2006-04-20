@@ -17,9 +17,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	int err = 0, n, len, hip_user_sock = 0;
 	int hip_agent_sock = 0;
 
-	struct sockaddr_un user_addr;
+	struct sockaddr_un app_addr, daemon_addr;
 	socklen_t alen;
-
+	char *app_name;
 	
 	/* Create and bind daemon socket. */
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -30,13 +30,30 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	bzero(&user_addr, sizeof(user_addr));
-	user_addr.sun_family = AF_UNIX;
-	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);
-	alen = sizeof(user_addr);
+	HIP_IFEL(!(app_name = tmpnam(NULL)), -1, "app_name\n");
+	HIP_DEBUG("app_name: %s\n", app_name);
+	//HIP_IFEL((creat(app_name, S_IRWXO) < 0), -1, "creat\n");
+
+	bzero(&app_addr, sizeof(app_addr));
+	app_addr.sun_family = AF_UNIX;
+	strcpy(app_addr.sun_path, app_name);
+	//	alen = sizeof(app_addr);
+	HIP_HEXDUMP("app_addr", &app_addr,  sizeof(app_addr));
+
+	bzero(&daemon_addr, sizeof(daemon_addr));
+	daemon_addr.sun_family = AF_UNIX;
+	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
+	//alen = sizeof(daemon_addr);
+
+	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
+		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
+		 -1, "app_addr bind failed");
 	//HIP_HEXDUMP("packet", msg,  hip_get_msg_total_len(msg));
-	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 
-			0,(struct sockaddr *)&user_addr, alen);
+	
+	connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	send(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
+	//n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	//		0,(struct sockaddr *)&daemon_addr, alen);
 	if (n < 0) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;
@@ -44,8 +61,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	HIP_DEBUG("!!!! wait to receive deamon info\n");
-	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
-	     0,(struct sockaddr *)&user_addr, &alen);
+	recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
+	//n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	//     0,(struct sockaddr *)&daemon_addr, &alen);
 	
 	// wait to receive deamon info	
 	/*if (hip_user_sock)
@@ -59,7 +77,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	n = recvfrom(hip_agent_sock, msg, hip_get_msg_total_len(msg), 
-		     0,(struct sockaddr *)&user_addr, &alen);
+		     0,(struct sockaddr *)&daemon_addr, &alen);
 	HIP_DEBUG("!!!! %d bytes received\n", n);
 	*/
 
@@ -146,20 +164,21 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
  * Returns -1 in case of an error, >0 otherwise.
  */
 int hip_read_control_msg(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr)
+			 int read_addr, struct sockaddr_storage *saddr,
+			 struct sockaddr_storage *daddr)
 {
-        struct sockaddr_in6 addr_from;
+  	//	struct sockaddr_in6 addr_from;
+  	struct sockaddr_storage addr_from;
         struct cmsghdr *cmsg;
         struct msghdr msg;
         struct in6_pktinfo *pktinfo = NULL;
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
-
         /* setup message header with control and receive buffers */
-        msg.msg_name = &addr_from;
-        msg.msg_namelen = sizeof(struct sockaddr_in6);
+	msg.msg_name = &addr_from;
+	msg.msg_namelen = sizeof(struct sockaddr_storage); // XX CHECK
+	//	msg.msg_namelen = sizeof(struct sockaddr_in6);
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
 
@@ -171,8 +190,16 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
         iov.iov_len = HIP_MAX_PACKET;
         iov.iov_base = hip_msg;
 
-	len = recvmsg(socket, &msg, 0);
+	memset(&addr_from, 0, sizeof(addr_from));
 
+	len = recvmsg(socket, &msg, 0);
+	HIP_HEXDUMP("!!!! Dump after addr_from : ", &addr_from, sizeof(struct sockaddr_storage));
+#if 0
+	if(len > 0)
+	  HIP_HEXDUMP("!!!! msg : ", &msg, sizeof(struct msghdr));
+	else 
+	  HIP_DEBUG("!!!! failed to receive msg len=%d\n", len);
+#endif
 	/* ICMPv6 packet */
 	HIP_IFEL(len < 0, -1, "ICMPv6 error: errno=%d, %s\n",
 		 errno, strerror(errno));
@@ -194,13 +221,18 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 
 	// Bing added. since pktinfo is NULL  
 	if(saddr) {
-	  memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
+	  //HIP_DEBUG("!!!! sizeof = %d, sizeof =%d\n", sizeof(struct msghdr), sizeof(struct sockaddr_storage));
+	  //HIP_HEXDUMP("!!!! Dump before saddr : ", saddr, sizeof(struct sockaddr_storage));
+	  memcpy(saddr, &addr_from, sizeof( struct sockaddr_storage ));
 	  HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
+	  //HIP_HEXDUMP("!!!! Dump after  saddr : ", saddr, sizeof(struct sockaddr_storage));
+
 	}
 
 	if (read_addr) {
-		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
-		memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
+	  	memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct sockaddr_storage)); // XX CHECK
+		//memcpy(saddr, &addr_from.sin6_addr, sizeof(struct sockaddr_storage));
+		memcpy(saddr, &addr_from, sizeof(struct sockaddr_storage));
 		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
 		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
 	}

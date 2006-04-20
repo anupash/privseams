@@ -550,7 +550,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 }
 
 void
-get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
+get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct sockaddr_storage *ip)
 {
   HIP_ASSERT(orig_at != NULL );
   struct gaih_addrtuple *at_ip;
@@ -585,7 +585,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
   HIP_INFO("Hi, we are testing request_hipd_pseudo_hit()\n");
   struct hip_common *msg = NULL;
   struct gaih_addrtuple *at_hit = NULL;
-  struct in6_addr ip;
+  struct sockaddr_storage ip;
   int err = 0;
   int ret = 0;
 
@@ -594,7 +594,8 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
   get_ip_from_gaih_addrtuple(orig_at, &ip );
   
   
-  if(!ipv6_addr_is_null(&ip)) {
+  //if(!ipv6_addr_is_null((struct in6_addr *)&ip)) {
+  if(1) {
     msg = malloc(HIP_MAX_PACKET);
     if (!msg){
       HIP_ERROR("malloc failed\n");
