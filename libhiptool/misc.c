@@ -9,7 +9,7 @@
 
 #include "misc.h"
 
-int hip_opportunistic_ipv6_to_hit(struct sockaddr_storage *ip, struct in6_addr *hit, int hit_type)
+int hip_opportunistic_ipv6_to_hit(struct in6_addr *ip, struct in6_addr *hit, int hit_type)
 {
   int err = 0;
   u8 digest[HIP_AH_SHA_LEN];

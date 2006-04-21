@@ -55,7 +55,7 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_puzzle,
 	handle_nat,
 	handle_del,
-	handle_puzzle
+	handle_puzzle,
 	handle_opp
 };
 

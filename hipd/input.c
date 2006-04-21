@@ -2120,16 +2120,10 @@ int hip_receive_i1(struct hip_common *hip_i1,
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_r2(struct hip_common *hip_common,
-<<<<<<< TREE
-		   struct sockaddr_storage *r2_saddr,
-		   struct sockaddr_storage *r2_daddr,
-		   hip_ha_t *entry)
-=======
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r2_info)
->>>>>>> MERGE-SOURCE
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;

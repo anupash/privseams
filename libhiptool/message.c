@@ -150,15 +150,22 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 {
 	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
 
-	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, hdr_size, MSG_PEEK, saddr,
-				    sizeof(*saddr))) != hdr_size), -1,
+	
+	//HIP_IFEL(((bytes = recvfrom(socket, hip_msg, hdr_size, MSG_PEEK, saddr,
+	//		    sizeof(*saddr))) != hdr_size), -1,
+	//	 "recv peek\n");
+	int len = sizeof(*saddr);
+	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, hdr_size, MSG_PEEK,
+				    (struct sockaddr *)saddr,
+				    &len)) != hdr_size), -1,
 		 "recv peek\n");
 	total = hip_get_msg_total_len(hip_msg);
 	HIP_DEBUG("msg total len = %d\n", total);
 
-	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, saddr,
-				    sizeof(*saddr))) != total), -1, "recv\n");
-
+	//HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, saddr,
+	//		    sizeof(*saddr))) != total), -1, "recv\n");
+	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
+				    &len)) != total), -1, "recv\n");
 	HIP_DEBUG("read %d bytes succesfully\n", bytes);
  out_err:
 	if (bytes < 0 || err)

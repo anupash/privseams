@@ -809,6 +809,7 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading network msg failed\n");
 			else{
 				  err = hip_receive_control_packet(hip_msg,
+								   &saddr,
 								   &daddr,
  								   &pkt_info);
 			/*	  
@@ -877,12 +878,12 @@ int main(int argc, char *argv[]) {
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 		  	//struct sockaddr_un app_src, app_dst;
-		  	struct sockaddr_storage app_src;
-
+		  //  	struct sockaddr_storage app_src;
+			struct sockaddr_un * app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
-			if (hip_read_user_control_msg(hip_user_sock, hip_msg, &app_src)
+			if (hip_read_user_control_msg(hip_user_sock, hip_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				err = hip_handle_user_msg(hip_msg, &app_src);

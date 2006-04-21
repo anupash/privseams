@@ -550,7 +550,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 }
 
 void
-get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct sockaddr_storage *ip)
+get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 {
   HIP_ASSERT(orig_at != NULL );
   struct gaih_addrtuple *at_ip;
@@ -585,7 +585,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
   HIP_INFO("Hi, we are testing request_hipd_pseudo_hit()\n");
   struct hip_common *msg = NULL;
   struct gaih_addrtuple *at_hit = NULL;
-  struct sockaddr_storage ip;
+  struct in6_addr ip;
   int err = 0;
   int ret = 0;
 

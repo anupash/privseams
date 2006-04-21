@@ -7,13 +7,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include "debug.h"
-//#include "hipd.h"
-
-//extern int opp_mode_enabled();
-extern int __libc_connect(a, b, c);
-extern int __libc_send(int a, void * b, size_t c, int flags);
-extern int __libc_sendto(int a, const void * b, size_t c, int flags, void *to, int tolen);
-extern int __libc_sendmsg(int a, const struct msghdr* msg, int flags);
+extern int connect(int a, const struct sockaddr * b, socklen_t c);
+extern ssize_t send(int a, const void * b, size_t c, int flags);
+extern ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr  *to, socklen_t tolen);
+extern ssize_t sendmsg(int a, const struct msghdr *msg, int flags);
 
 int opp_mode(){
   int opp_mode;
@@ -99,7 +96,7 @@ int util_func(struct in6_addr *ip){
   return err;
 }
 
-int connect(int a, void * b, int c)
+int connect(int a, const struct sockaddr * b, socklen_t c)
 {
   int errno;
   errno = 0; 
@@ -115,7 +112,7 @@ int connect(int a, void * b, int c)
   HIP_DEBUG_HIT("!!!! ip = ", ip);
   printf("Calling __libc_connect....\n");
 
-  errno = util_func(ip);
+  //  errno = util_func(ip);
   errno = __libc_connect(a, b, c);
   printf("Called __libc_connect with err=%d\n", errno);
   
@@ -126,59 +123,44 @@ int connect(int a, void * b, int c)
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
-int send(int a, void * b, size_t c, int flags)
+ssize_t send(int a, const void * b, size_t c, int flags)
 {
-  int errno;
-  int charno;
-  
-  errno = 0;
-  charno = 0;
+  int charnum;  
+  charnum = 0;
 
   //printf("Calling __libc_send ....\n");
-  charno =  __libc_send(a, b, c, flags);
-  printf("Called __libc_send with number of returned char=%d\n", charno);
+  charnum =  __libc_send(a, b, c, flags);
+  printf("Called __libc_send with number of returned char=%d\n", charnum);
 
-  return charno;
- out_err:
-  return errno;
+  return charnum;
 }
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
-int sendto(int a, const void * b, size_t c, int flags, void *to, int tolen)
+ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr  *to, socklen_t tolen)
 {
-  int errno; 
-  int charno;
-  
-  errno = 0;
-  charno = 0;
+  ssize_t charnum;
+  charnum = 0;
 
   //printf("Calling __libc_sendto ....\n");
-  charno =  __libc_sendto(a, b, c, flags, to, tolen);
-  printf("Called __libc_sendto with number of returned char=%d\n", charno);
+  charnum =  __libc_sendto(a, b, c, flags, to, tolen);
+  printf("Called __libc_sendto with number of returned char=%d\n", charnum);
 
-  return charno;
- out_err:
-  return errno;
+  return charnum;
 }
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
-int sendmsg(int a, const struct msghdr* msg, int flags)
+ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
-  int errno;
-  int charno;
-  
-  errno = 0;
-  charno = 0;
+  ssize_t charnum;
+  charnum = 0;
   
   //printf("Calling __libc_sendmsg ....\n");
-  charno =  __libc_sendmsg(a, msg, flags);
-  printf("Called __libc_sendmsg with number of returned chars=%d\n", charno);
+  charnum =  __libc_sendmsg(a, msg, flags);
+  printf("Called __libc_sendmsg with number of returned chars=%d\n", charnum);
 
-  return charno;
- out_err:
-  return errno;
+  return charnum;
 }

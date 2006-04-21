@@ -51,7 +51,7 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
 
-int hip_opportunistic_ipv6_to_hit(struct sockaddr_storage *ip, 
+int hip_opportunistic_ipv6_to_hit(struct in6_addr *ip, 
 				  struct in6_addr *hit, int hit_type);
 
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
