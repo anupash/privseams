@@ -1036,6 +1036,9 @@ int hip_receive_r1(struct hip_common *hip_common,
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
+#endif
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
