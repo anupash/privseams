@@ -413,7 +413,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, new_i1, NULL, 0);
+	err = hip_csum_send(NULL, final_dst, 0, 0, new_i1, NULL, 0); //Currenlty NULLing the stateless info --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {

@@ -62,6 +62,8 @@ hip_misc_func_set_t ahip_misc_func_set;
 hip_misc_func_set_t default_misc_func_set;
 #endif
 
+extern int hip_nat_status;
+
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 
@@ -102,7 +104,7 @@ void hip_hadb_put_entry(void *entry);
 		destructor(ha); \
                 HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \
-                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
                            atomic_read(&ha->refcnt)); \
         } \
 } while(0)

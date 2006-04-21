@@ -105,7 +105,7 @@
       series. We recommend the latter.
     </para>
     <para>
-      Download linux kernel 2.6.13.1. Compile the kernel with
+      Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
     <para>
@@ -525,10 +525,7 @@
       Prerequisites:
     </para>
     <para>
-      Kernel must be compiled with the following extra option(s) included.
-    </para>
-    <para>
-      [*]  HIP: Rendezvous Mechanism 
+      ./configure --enable-rvs
     </para>
     <para>
       The hipconf tool must support rvs option:
@@ -808,6 +805,24 @@
         <para>Clears all rules.</para>
   </chapter>
   <chapter>
+    <title>HIP NAT Extensions</title>
+    <para>HIPL supports also initiating connections from behind a NAT. The
+          basic idea is that the initiator encapsulates HIP control packets
+          and ESP data packets within UDP. This way, the packets can traverse
+          the NAT box. However, both the initiator and responder have to
+          support NAT extensions in order to make this work. Currently, the
+          responder cannot be located behind a NAT.
+    </para>
+    <para>The NAT traversal can be experimented in a similar way as depicted
+          in earlier sections. The only difference is that you have to
+          tell the initiator manually that it is behind a NAT using "hipconf
+          hip nat on". After this, you can initiate the base exchange
+          according to the previous instructions. The manual configuration is
+          currently required because support for automatic NAT detection (STUN)
+          has not been implemented yet.
+    </para>
+  </chapter>
+  <chapter>
     <title>HIP User Agent and GUI</title>
       <para>Manage HITs with graphical user interface.</para>
       <para>When new HIT is received, it and local HIT is filtered
@@ -853,5 +868,21 @@
           kernel module.
      </para>
    </chapter>
+  <chapter>
+    <title>OpenDHT Support (Experimental!)</title>
+    <para>
+    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    </para>
+    <para>
+    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
+    the unpacked hip-dht directory
+    </para>
+    <para>
+    &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
+    </para>
+    <para>
+    &nbsp; XX TODO: how to test?
+    </para>
+  </chapter>
 </book>    
 
