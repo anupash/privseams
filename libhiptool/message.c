@@ -78,6 +78,7 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 			 int read_addr, struct in6_addr *saddr,
 			 struct in6_addr *daddr)
 {
+	HIP_DEBUG("db1\n");
         struct sockaddr_in6 addr_from;
         struct cmsghdr *cmsg;
         struct msghdr msg;
@@ -102,6 +103,8 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
+	HIP_DEBUG("db2\n");
+
 	/* ICMPv6 packet */
 	HIP_IFEL((len < 0), -1, "ICMPv6 error: errno=%d, %s\n",
 		 errno, strerror(errno));
@@ -115,6 +118,8 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 			break;
 		}
 	}
+        
+        HIP_DEBUG("db3\n");
 
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */
