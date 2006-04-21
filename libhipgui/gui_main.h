@@ -21,6 +21,7 @@ int gui_init(void);
 int gui_main(void);
 void gui_quit(void);
 void *gui_get_window(void);
+void *gui_get_toolwindow(void);
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/
