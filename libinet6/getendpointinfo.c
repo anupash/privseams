@@ -136,6 +136,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
   struct if_nameindex *iface;
   struct hip_sockaddr_eid *sa_eid;
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
+  socklen_t msg_len;
   in_port_t port;
 
   if (ep_hip->family != PF_HIP) {
@@ -243,8 +244,9 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  int msg_len = hip_get_msg_total_len(msg);
-  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &msg_len);
+  msg_len = hip_get_msg_total_len(msg);
+  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT,
+		   (void *)msg, &msg_len);
   
   if (err) {
     HIP_ERROR("getsockopt failed\n");
@@ -295,6 +297,9 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   struct sockaddr_eid *sa_eid;
   in_port_t port = 0;
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
+  int socket_fd = 0;
+  socklen_t msg_len = 0;
+  socklen_t eid_len = sizeof(struct sockaddr_eid);
 
   HIP_DEBUG("\n");
 
@@ -398,8 +403,6 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   /**************************************/
 
-  int socket_fd = 0;
-
   /* Type of the socket? */
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
@@ -408,7 +411,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
   
-  int msg_len = hip_get_msg_total_len(msg);
+  msg_len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &msg_len);
  
   if(err) {
