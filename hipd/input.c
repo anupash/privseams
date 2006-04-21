@@ -1889,6 +1889,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
+	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 	HIP_IFEL(ipv6_addr_any(&hip_i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");

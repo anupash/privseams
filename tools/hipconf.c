@@ -190,6 +190,8 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 		goto out;
 	}
 
+	/* XX FIXME: IPv4 support */
+
 	ret = inet_pton(AF_INET6, opt[1], &ip6);
 	if (ret < 0 && errno == EAFNOSUPPORT) {
 		HIP_PERROR("inet_pton: not a valid address family\n");
