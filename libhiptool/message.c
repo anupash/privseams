@@ -81,7 +81,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	return err;
 }
 
-int hip_send_daemon_info(const struct hip_common *msg) {
+int hip_send_daemon_info(/*const*/ struct hip_common *msg) {
   	return hip_send_recv_daemon_info(msg);
 
   /*
