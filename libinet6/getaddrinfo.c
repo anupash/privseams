@@ -586,11 +586,12 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
   struct hip_common *msg = NULL;
   struct gaih_addrtuple *at_hit = NULL;
   struct in6_addr ip;
+  struct in6_addr *hit_recv = NULL;
   int err = 0;
   int ret = 0;
 
   bzero(&ip, sizeof(ip));
-  HIP_HEXDUMP("!!!!!!!!!!!!! ip = ", &ip, sizeof(ip));
+  //  HIP_HEXDUMP("!!!!!!!!!!!!! ip = ", &ip, sizeof(ip));
   HIP_ASSERT((ipv6_addr_any(&ip)));
 
   get_ip_from_gaih_addrtuple(orig_at, &ip );
@@ -631,10 +632,10 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       goto out_err;
     }
     
-    hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT );
-    if(hit){
+    hit_recv = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT );
+    memcpy(hit, hit_recv, sizeof(*hit));
+    if(hit_is_opportunistic_hashed_hit(hit)){
       HIP_DEBUG_HIT("!!!! pseudo hit=", hit);
-      HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
       
       for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
 	_HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
@@ -1033,25 +1034,24 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (found_hits) 
 	send_hipd_addr(*at);
       else {// try to get pseudo hit
-	struct in6_addr * hit = NULL;
-
-	int err = request_hipd_pseudo_hit(*at, hit);
+	//	struct in6_addr *hit = NULL;
+	struct in6_addr hit;
+	int err = request_hipd_pseudo_hit(*at, &hit);
 	if(err){
 	  HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
 	  return err;
 	}
-	if(hit) {
-	  if(hit_is_opportunistic_hashed_hit(hit)){
-	    HIP_DEBUG_HIT("!!!! got pseudo hit=", hit);
-	    found_hits++;
-	    send_hipd_addr(*at);
-	  } else{
-	    // NULL hit, what should we do ???
-	    //found_hits++;
-	    //send_hipd_addr(*at);	  
-	  }
-	} else
+	if(hit_is_opportunistic_hashed_hit(&hit)){
+	  HIP_DEBUG_HIT("!!!! got pseudo hit=", &hit);
+	  found_hits++;
+	  send_hipd_addr(*at);
+	} else{
 	  HIP_INFO("!!!! cannot get phit \n");
+	  // NULL hit, what should we do ???
+	  //found_hits++;
+	  //send_hipd_addr(*at);	  
+	}
+
       }
       if (no_data != 0 && no_inet6_data != 0)
 	{
