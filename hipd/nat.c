@@ -21,7 +21,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 {
         hip_ha_t tmp, *entry;
         int err = 0, type, skip_sync = 0;
-	struct in6_addr *src_addr;
+	struct in6_addr *src_addr = src_addr_orig;
 
         type = hip_get_msg_type(msg);
 
@@ -30,6 +30,15 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
         _HIP_HEXDUMP("dumping packet", msg,  40);
 
         entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+
+	if(entry) {
+		/* XX FIXME: this information is unreliable. We should
+		   be able to cancel it if hip_receive_control_packet fails */
+		entry->nat = 1;
+		entry->peer_udp_port = info->src_port;
+		HIP_DEBUG("entry found src port %d\n",
+			  entry->peer_udp_port);
+	}
 
 	if (entry && (type == HIP_R1 || type == HIP_R2)) {
 		/* When the responder equals to the NAT host, it can
@@ -42,15 +51,6 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		   up the SAs: handle_r1 creates one-way SA and handle_i2 the
 		   other way; let's make sure that they are the same. */
 		src_addr = &entry->preferred_address;
-	} else {
-		src_addr = src_addr_orig;
-	}
-
-	if(entry) {
-		entry->nat = 1;
-		entry->peer_udp_port = info->src_port;
-		HIP_DEBUG("entry found src port %d\n",
-			  entry->peer_udp_port);
 	}
 
 	HIP_IFEL(hip_receive_control_packet(msg,

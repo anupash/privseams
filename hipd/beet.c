@@ -433,7 +433,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
-				      authkey, authkey_len, AF_INET6, sport, dport), -1);
+				      authkey, authkey_len, AF_INET6,
+				      sport, dport), -1);
  out_err:
 	return err;
 }

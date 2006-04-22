@@ -1767,7 +1767,6 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
-
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
