@@ -13,12 +13,38 @@
 
 #include "message.h"
 
+int hip_peek_recv_total_len(int socket, int encap_hdr_size)
+{
+	int bytes = 0, err = 0;
+	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
+	char *msg = NULL;
+	struct hip_common *hip_hdr;
+	
+	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc failed\n");
+	
+	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
+				    NULL, NULL)) != hdr_size), -1,
+		 "recv peek\n");
+	
+	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
+	bytes = hip_get_msg_total_len(hip_hdr);
+	HIP_IFEL((bytes > HIP_MAX_PACKET), -1, "packet too long\n");
+	HIP_IFEL((bytes == 0), -1, "packet length is zero\n");
+	bytes += encap_hdr_size;
+	
+ out_err:
+	if (err)
+		bytes = -1;
+	if (msg)
+		free(msg);
+	return bytes;
+}
+
+
 int hip_send_daemon_info(const struct hip_common *msg) {
 	int err = 0, n, len, hip_user_sock = 0;
-
 	struct sockaddr_un user_addr;
 	socklen_t alen;
-
 	
 	/* Create and bind daemon socket. */
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -56,8 +82,6 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	return -1;
 }
 
-
-
 /**
  * hip_read_control_msg - prepares the hip_common struct,
  * allocates memory for buffers and nested structs. Receives
@@ -74,21 +98,33 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
  *
  * Returns -1 in case of an error, >0 otherwise.
  */
-int hip_read_control_msg(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr)
+int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
+			    int read_addr, struct in6_addr *saddr,
+			    struct in6_addr *daddr,
+                            struct hip_stateless_info *msg_info,
+                            int encap_hdr_size, int is_ipv4)
 {
-        struct sockaddr_in6 addr_from;
+        struct sockaddr_storage addr_from;
+	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
+	struct sockaddr_in6 *addr_from6 =
+		((struct sockaddr_in6 *) &addr_from);
         struct cmsghdr *cmsg;
         struct msghdr msg;
-        struct in6_pktinfo *pktinfo = NULL;
+	union {
+		struct in_pktinfo *pktinfo_in4;
+		struct in6_pktinfo *pktinfo_in6;
+	} pktinfo;
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
+	int cmsg_level, cmsg_type;
+
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
+		 "Bad packet length (%d)\n", len);
 
         /* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
-        msg.msg_namelen = sizeof(struct sockaddr_in6);
+        msg.msg_namelen = sizeof(struct sockaddr_storage);
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
 
@@ -97,112 +133,91 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
         msg.msg_controllen = sizeof(cbuff);
         msg.msg_flags = 0;
 
-        iov.iov_len = HIP_MAX_PACKET;
+        iov.iov_len = len;
         iov.iov_base = hip_msg;
+
+	pktinfo.pktinfo_in4 = NULL;
 
 	len = recvmsg(socket, &msg, 0);
 
-	/* ICMPv6 packet */
-	HIP_IFEL((len < 0), -1, "ICMPv6 error: errno=%d, %s\n",
-		 errno, strerror(errno));
+	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
+		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
+
+	cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
+	cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
 
 	/* destination address comes from ancillary data passed
 	 * with msg due to IPV6_PKTINFO socket option */
 	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
-		if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
-		    (cmsg->cmsg_type == IPV6_2292PKTINFO)) {
-			pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsg);
+		if ((cmsg->cmsg_level == cmsg_level) && 
+		    (cmsg->cmsg_type == cmsg_type)) {
+			/* The structure is a union, so this fills also the
+			   pktinfo_in6 pointer */
+			pktinfo.pktinfo_in4 =
+				(struct in_pktinfo*)CMSG_DATA(cmsg);
 			break;
 		}
 	}
 
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */
-	HIP_IFEL(!pktinfo && read_addr, -1,
-		 "Could not determine IPv6 dst, dropping\n");
+	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
+		 "Could not determine dst addr, dropping\n");
 
-	if (read_addr) {
-		memcpy(daddr, &pktinfo->ipi6_addr, sizeof(struct in6_addr));
-		memcpy(saddr, &addr_from.sin6_addr, sizeof(struct in6_addr));
-		HIP_DEBUG_IN6ADDR("packet src addr\n", saddr);
-		HIP_DEBUG_IN6ADDR("packet dst addr\n", daddr);
+	/* UDP port numbers */
+	if (is_ipv4) {
+		HIP_DEBUG("port number ntohs = %d\n",
+			  ntohs(addr_from4->sin_port));
+		msg_info->src_port = ntohs(addr_from4->sin_port);
 	}
-	
+
+	/* IPv4 addresses */
+	if (read_addr && is_ipv4) {
+		if (saddr)
+			IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, saddr);
+		if (daddr)
+			IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr,
+					 daddr);
+	}
+
+	/* IPv6 addresses */
+	if (read_addr && !is_ipv4) {
+		if (saddr)
+			memcpy(saddr, &addr_from6->sin6_addr,
+			       sizeof(struct in6_addr));
+		if (daddr)
+			memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+			       sizeof(struct in6_addr));
+	}
+
+	if (saddr)
+		HIP_DEBUG_IN6ADDR("src\n", saddr);
+	if (daddr)
+		HIP_DEBUG_IN6ADDR("dst\n", daddr);
+
  out_err:
 	return err;
+}
+
+
+int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
+			    int read_addr, struct in6_addr *saddr,
+			    struct in6_addr *daddr,
+                            struct hip_stateless_info *msg_info,
+                            int encap_hdr_size)
+{
+	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
+					daddr, msg_info, encap_hdr_size, 0);
+
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-			    struct hip_stateless_info *msg_info)
+			    struct hip_stateless_info *msg_info,
+			    int encap_hdr_size)
 {
-        struct sockaddr_in addr_from;
-        struct cmsghdr *cmsg;
-        struct msghdr msg;
-        struct in_pktinfo *pktinfo = NULL;
-        struct iovec iov;
-        char cbuff[CMSG_SPACE(256)];
-        int err = 0, len;
+	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
+					daddr, msg_info, encap_hdr_size, 1);
 
-	// HIP_HEXDUMP("Dumping msg", hip_msg,  hip_get_msg_total_len(hip_msg));
-	/* setup message header with control and receive buffers */
-        msg.msg_name = &addr_from;
-        msg.msg_namelen = sizeof(struct sockaddr_in);
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
-
-        memset(cbuff, 0, sizeof(cbuff));
-        msg.msg_control = cbuff;
-        msg.msg_controllen = sizeof(cbuff);
-        msg.msg_flags = 0;
-
-        iov.iov_len = HIP_MAX_PACKET;
-        iov.iov_base = hip_msg;
-
-	len = recvmsg(socket, &msg, 0);
-
-	/* ICMPv4 packet */
-	HIP_IFEL((len < 0), -1, "ICMPv4 error: errno=%d, %s\n",
-		 errno, strerror(errno));
-
-	HIP_DEBUG("msg len %d, iov msg len %d\n", len, iov.iov_len);
-	_HIP_HEXDUMP("Dumping msg ", &msg,  len);
-	HIP_HEXDUMP("Dumping msg ", hip_msg,  len);
-
-	/* destination address comes from ancillary data passed
-	 * with msg due to IP_PKTINFO socket option */
-	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
-		HIP_DEBUG("Packet level: %d, Msg Type: %d\n",cmsg->cmsg_level, cmsg->cmsg_type); 
-		if ((cmsg->cmsg_level == IPPROTO_IP) && 
-		    (cmsg->cmsg_type == IP_PKTINFO)) {
-			pktinfo = (struct in_pktinfo*)CMSG_DATA(cmsg);
-			break;
-		}
-	}
-
-	HIP_IFEL(!pktinfo && read_addr, -1,
-		 "Could not determine IPv4 dst, dropping\n");
-
-	HIP_DEBUG("port number : %d, ntohs %d\n", addr_from.sin_port, ntohs(addr_from.sin_port));
-	msg_info->src_port = ntohs(addr_from.sin_port);
-	if (read_addr) {
-		IPV4_TO_IPV6_MAP(&addr_from.sin_addr, saddr);
-		IPV4_TO_IPV6_MAP(&pktinfo->ipi_addr, daddr);
-
-		HIP_DEBUG_IN6ADDR("mapped src\n", saddr);
-		HIP_DEBUG_IN6ADDR("mapped dst\n", daddr);
-	}
-
-	/*This is removed from here and put in hipd.c. Because udp also uses 
-		this function to recieve the packet. 
-		Ipv6 and ipv4 recieving functions should be combined --Abi*/
-
-	/* For some reason, the IPv4 header is always included.
-	   Let's remove it here. */
-	//memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
-	//	HIP_MAX_PACKET - IPV4_HDR_SIZE);
-	
- out_err:
-	return err;
 }

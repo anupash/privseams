@@ -105,7 +105,7 @@
       series. We recommend the latter.
     </para>
     <para>
-      Download linux kernel 2.6.13.1. Compile the kernel with
+      Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
     <para>
