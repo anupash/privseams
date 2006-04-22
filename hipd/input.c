@@ -2182,8 +2182,8 @@ int hip_receive_r2(struct hip_common *hip_common,
  * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_notify(struct hip_common *hip_common,
-		       struct sockaddr_storage *notify_saddr,
-		       struct sockaddr_storage *notity_daddr,
+		       struct in6_addr *notify_saddr,
+		       struct in6_addr *notity_daddr,
 		       hip_ha_t* entry)
 {
 	

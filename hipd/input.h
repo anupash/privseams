@@ -60,8 +60,8 @@ int hip_receive_r2(struct hip_common *,
 	           struct hip_stateless_info *);
 		   
 int hip_receive_notify(struct hip_common *,
-		       struct sockaddr_storage *, 
-		       struct sockaddr_storage *,
+		       struct in6_addr *, 
+		       struct in6_addr *,
 		       hip_ha_t*);
 		      
 int hip_receive_bos(struct hip_common *,
