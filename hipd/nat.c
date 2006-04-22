@@ -46,39 +46,12 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		src_addr = src_addr_orig;
 	}
 
-        switch(type) {
-        case HIP_I1:
-		if(entry) /* no state */
-		{
-			entry->nat = 1;
-			entry->nat_mangled_port = info->src_port;
-			memcpy(&(entry->nat_address), src_addr,
-			       sizeof(struct in6_addr));
-			HIP_DEBUG("entry found src port %d\n",
-				  entry->nat_mangled_port);
-			HIP_DEBUG_IN6ADDR("NAT mangled address:",
-					  &(entry->nat_address));
-		}
-			
-		else
-		  HIP_ERROR("No entry found\n");
-                break;
-
-        case HIP_I2:
-		/* possibly state */
-                HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
-                if(entry){
-			HIP_DEBUG("entry found in received I2\n");
-			entry->nat = 1;
-			memcpy(&(entry->nat_address), src_addr, sizeof(struct in6_addr));
-			entry->nat_mangled_port = info->src_port;
-                } else {
-			HIP_DEBUG("Entry not found\n");
-                }
-                break;
-        default:
-                HIP_ERROR("Received some other packet %d\n", type);
-        }
+	if(entry) {
+		entry->nat = 1;
+		entry->peer_udp_port = info->src_port;
+		HIP_DEBUG("entry found src port %d\n",
+			  entry->peer_udp_port);
+	}
 
 	HIP_IFEL(hip_receive_control_packet(msg,
 					    src_addr,
@@ -107,7 +80,7 @@ int hip_send_udp(struct in6_addr *my_addr,
 
 	len = hip_get_msg_total_len(msg);
 
-	HIP_DEBUG("--------------Sending peer using UDP-----------\n");
+	HIP_DEBUG("Sending a packet to peer using UDP\n");
 	if(my_addr)
 		HIP_DEBUG_IN6ADDR("localAddr:", my_addr);
 	if(peer_addr)
@@ -139,12 +112,8 @@ int hip_send_udp(struct in6_addr *my_addr,
         	src.sin_port = htons(HIP_NAT_UDP_PORT);
         	dst.sin_port = htons(HIP_NAT_UDP_PORT);
 		/* Note: If we change this src.sin_port we need to put a
-		   listener to that port*/
+		   listener to that port */
 		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
-		
-		if(entry) {
-			entry->I_udp_src_port = ntohs(src.sin_port);
-		}
 		break;
         case HIP_R1:
 	case HIP_R2:
@@ -154,11 +123,6 @@ int hip_send_udp(struct in6_addr *my_addr,
 			HIP_DEBUG("Entry not found\n");
 	       	
 		src.sin_port = htons(HIP_NAT_UDP_PORT);
-		if(entry) {
-			entry->I_udp_src_port = dst_port;
-			memcpy(&(entry->nat_address), peer_addr,
-			       sizeof(struct in6_addr));
-		}
        		dst.sin_port = htons(dst_port);
 		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
 		break;
@@ -173,14 +137,10 @@ int hip_send_udp(struct in6_addr *my_addr,
 			HIP_ERROR("No entry, bailing out\n");
 			break;
 		}
-		src.sin_port = htons(HIP_NAT_UDP_PORT);
 		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
-
-		if (hip_nat_status) /* works only when one host behing nat */
-			dst.sin_port = htons(HIP_NAT_UDP_PORT);
-		else
-			dst.sin_port = htons(entry->nat_mangled_port);
-                break;
+		src.sin_port = htons(HIP_NAT_UDP_PORT);
+		dst.sin_port = htons(entry->peer_udp_port);
+		break;
 	 default:
                 HIP_ERROR("Unhandled packet type %d\n", type);
 		err = -1;

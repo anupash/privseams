@@ -996,9 +996,8 @@ struct hip_hadb_state
 	size_t               dh_shared_key_len;
 
 	uint16_t	     nat;	/* Does this HIP association is behind NAT? --Abi */
-        uint32_t	     I_udp_src_port;	/*Source port used by Initiator to send the packets*/
-	uint32_t	     nat_mangled_port;	/*Nat mangled port: the port used by NAT*/
-	struct in6_addr      nat_address; /*Used by R to get the NAT ip address*/
+	uint32_t	     peer_udp_port;
+  //struct in6_addr      peer_udp_address; /*Used by R to get the NAT ip address*/
 	
 
 	/* The initiator computes the keys when it receives R1.

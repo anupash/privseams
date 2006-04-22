@@ -264,8 +264,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   //preferred_family), -1);
 	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
 	{
-		xfrm_fill_encap(&encap,sport ? sport : HIP_NAT_UDP_PORT, 
-			dport ? dport : HIP_NAT_UDP_PORT, saddr);
+		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
+			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
@@ -331,12 +331,14 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
 			  struct in6_addr *peer_addr, __u32 spi,
-			  int preferred_family) {
-
+			  int preferred_family,
+			  int sport, int dport) {
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_id	xsid;
+	        //char   			buf[RTA_BUF_SIZE];
 	} req;
+	//struct xfrm_encap_tmpl encap;
 	char *idp = NULL;
 	int err = 0;
 
@@ -358,8 +360,15 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
                 req.xsid.family = preferred_family;
         }
 
-
-
+#if 0 /* XX FIXME: fill in information for UDP-NAT SAs */
+	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
+	{
+		xfrm_fill_encap((&encap,sport ? sport : HIP_NAT_UDP_PORT), 
+			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
+		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
+                                  (void *)&encap, sizeof(encap)), -1);
+	}
+#endif
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
@@ -372,9 +381,11 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family) {
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
+		   int sport, int dport) {
 
-	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family);
+	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
+			      dport);
 
 }
 
