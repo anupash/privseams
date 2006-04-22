@@ -1407,7 +1407,7 @@ int hip_handle_i2(struct hip_common *i2,
 		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
 		{
 			entry->nat = 1;
-			entry->I_udp_src_port = i2_info->src_port;
+			entry->peer_udp_port = i2_info->src_port;
 		}
 
 		hip_hadb_insert_state(entry);
