@@ -99,7 +99,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int preferred_family,
 				int sport, int dport);// struct hip_stateless_info *sa_info);
 int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
-			  __u32 spi, int preferred_family);
+			  __u32 spi, int preferred_family, int sport, int dport);
 /* Allocates SPI for fixed time */
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 
@@ -111,7 +111,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired, int direction, int update,
 			int sport, int dport);
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family);
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
+		   int sport, int dport);
 
 #endif /* HIP_BEET_H */
 
