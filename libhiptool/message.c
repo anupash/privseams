@@ -13,12 +13,38 @@
 
 #include "message.h"
 
+int hip_peek_recv_total_len(int socket, int encap_hdr_size)
+{
+	int bytes = 0, err = 0;
+	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
+	char *msg = NULL;
+	struct hip_common *hip_hdr;
+	
+	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc failed\n");
+	
+	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
+				    NULL, NULL)) != hdr_size), -1,
+		 "recv peek\n");
+	
+	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
+	bytes = hip_get_msg_total_len(hip_hdr);
+	HIP_IFEL((bytes > HIP_MAX_PACKET), -1, "packet too long\n");
+	HIP_IFEL((bytes == 0), -1, "packet length is zero\n");
+	bytes += encap_hdr_size;
+	
+ out_err:
+	if (err)
+		bytes = -1;
+	if (msg)
+		free(msg);
+	return bytes;
+}
+
+
 int hip_send_daemon_info(const struct hip_common *msg) {
 	int err = 0, n, len, hip_user_sock = 0;
-
 	struct sockaddr_un user_addr;
 	socklen_t alen;
-
 	
 	/* Create and bind daemon socket. */
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -74,9 +100,9 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
  *
  * Returns -1 in case of an error, >0 otherwise.
  */
-int hip_read_control_msg(int socket, struct hip_common *hip_msg,
-			 int read_addr, struct in6_addr *saddr,
-			 struct in6_addr *daddr)
+int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
+			    int read_addr, struct in6_addr *saddr,
+			    struct in6_addr *daddr)
 {
         struct sockaddr_in6 addr_from;
         struct cmsghdr *cmsg;
@@ -85,6 +111,9 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
+
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
+		 "Bad packet length (%d)\n", len);
 
         /* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
@@ -97,7 +126,7 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
         msg.msg_controllen = sizeof(cbuff);
         msg.msg_flags = 0;
 
-        iov.iov_len = HIP_MAX_PACKET;
+        iov.iov_len = len;
         iov.iov_base = hip_msg;
 
 	len = recvmsg(socket, &msg, 0);
@@ -135,7 +164,8 @@ int hip_read_control_msg(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-			    struct hip_stateless_info *msg_info)
+			    struct hip_stateless_info *msg_info,
+			    int encap_hdr_size)
 {
         struct sockaddr_in addr_from;
         struct cmsghdr *cmsg;
@@ -144,6 +174,9 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
         struct iovec iov;
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
+
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
+		 "Bad packet length (%d)\n", len);
 
 	// HIP_HEXDUMP("Dumping msg", hip_msg,  hip_get_msg_total_len(hip_msg));
 	/* setup message header with control and receive buffers */
@@ -157,7 +190,7 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
         msg.msg_controllen = sizeof(cbuff);
         msg.msg_flags = 0;
 
-        iov.iov_len = HIP_MAX_PACKET;
+        iov.iov_len = len;
         iov.iov_base = hip_msg;
 
 	len = recvmsg(socket, &msg, 0);
