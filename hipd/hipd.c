@@ -693,13 +693,14 @@ int main(int argc, char *argv[]) {
 			hip_msg_init(hip_msg);
 		
 			if (hip_read_control_msg_v6(hip_raw_sock_v6, hip_msg,
-						    1, &saddr, &daddr))
+						    1, &saddr, &daddr,
+						    &pkt_info, 0))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr,
-								&pkt_info);
+								 &pkt_info);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
@@ -755,11 +756,12 @@ int main(int argc, char *argv[]) {
 
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
+			struct hip_stateless_info pkt_info;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
 			if (hip_read_control_msg_v6(hip_user_sock, hip_msg,
-						    0, NULL, NULL))
+						    0, NULL, NULL, &pkt_info, 0))
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);
