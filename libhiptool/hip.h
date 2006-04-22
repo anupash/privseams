@@ -41,7 +41,6 @@
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
-#define HIP_NAT_UDP_SRC_PORT 54321 /*Need to put this number as const --Abi*/
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
 #define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
 #define UDP_ENCAP_ESPINUDP 2 
@@ -997,8 +996,7 @@ struct hip_hadb_state
 	size_t               dh_shared_key_len;
 
 	uint16_t	     nat;	/* Does this HIP association is behind NAT? --Abi */
-	uint32_t	     I_udp_src_port;	/*Source port used by Initiator to send the packets*/
-//	uint32_t	     R_udp_src_port;	/*Source port used by responder to send the packets*/
+        uint32_t	     I_udp_src_port;	/*Source port used by Initiator to send the packets*/
 	uint32_t	     nat_mangled_port;	/*Nat mangled port: the port used by NAT*/
 	struct in6_addr      nat_address; /*Used by R to get the NAT ip address*/
 	

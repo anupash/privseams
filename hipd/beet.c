@@ -262,7 +262,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
 			   0,0, AF_INET6), -1);
 			   //preferred_family), -1);
-	if(hip_nat_status || sport || dport)
+	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
 	{
 		xfrm_fill_encap(&encap,sport ? sport : HIP_NAT_UDP_PORT, 
 			dport ? dport : HIP_NAT_UDP_PORT, saddr);
