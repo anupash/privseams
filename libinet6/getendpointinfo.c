@@ -294,6 +294,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 	       const struct addrinfo *addrinfo)
 {
   int err = 0;
+  int len = 0;
   struct hip_common *msg = NULL;
   struct addrinfo *addr;
   struct sockaddr_eid *sa_eid;
@@ -380,10 +381,9 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     err = -1;
     goto out_err;
   }
-  
+
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SET_PEER_EID,
-		   (void *)msg, &eid_len);
- 
+ 		   (void *)msg, &eid_len);
   if(err) {
     HIP_ERROR("getsockopt failed\n");
     close(socket_fd);
@@ -1467,7 +1467,6 @@ int hip_get_dev_host_hits(/* some parameters here */ )
   HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!! start \n");
   for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
     family = g_iface->ifa_addr->sa_family;
-    //    result = strcmp(g_iface->ifa_name, &HIP_HIT_DEV);
     result = strcmp(g_iface->ifa_name, HIP_HIT_DEV);
     if( !result && (family == AF_INET6) ){
       fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);

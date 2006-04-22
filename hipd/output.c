@@ -52,7 +52,9 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 	  ipv6_addr_copy(&i1.hitr, &in6addr_any);
 
 	HIP_HEXDUMP("!!!! dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
-
+	HIP_HEXDUMP("!!!!! daddr", &daddr, sizeof(struct in6_addr));
+	HIP_HEXDUMP("!!!! entry", entry, sizeof(*entry));
+	
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,0,0, 
 				/* Kept 0 as src and dst port. This should be taken out from entry --Abi*/

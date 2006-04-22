@@ -7,10 +7,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include "debug.h"
-extern int connect(int a, const struct sockaddr * b, socklen_t c);
-extern ssize_t send(int a, const void * b, size_t c, int flags);
-extern ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr  *to, socklen_t tolen);
-extern ssize_t sendmsg(int a, const struct msghdr *msg, int flags);
+extern int __libc_connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+extern ssize_t __libc_send(int s, const void *buf, size_t len, int flags);
+extern ssize_t __libc_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+extern ssize_t __libc_sendmsg(int s, const struct msghdr *msg, int flags);
 
 int opp_mode(){
   int opp_mode;
@@ -103,9 +103,8 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   
   struct in6_addr *ip;
 
-  HIP_DEBUG_HIT("connect b = ", b);
-  HIP_DEBUG("!!!! sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
-  HIP_HEXDUMP("!!!! HEXDUMP b =", b, 32);
+  HIP_DEBUG("!!!! connect sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
+  HIP_HEXDUMP("!!!! connect HEXDUMP b =", b, 110/*sizeof(struct sockaddr_in)*/);
   
   ip =  (struct in6_addr *)( &(((struct sockaddr_in *)b)->sin_addr)+sizeof(unsigned char) );
   
@@ -128,7 +127,7 @@ ssize_t send(int a, const void * b, size_t c, int flags)
   int charnum;  
   charnum = 0;
 
-  //printf("Calling __libc_send ....\n");
+  printf("Calling __libc_send ....\n");
   charnum =  __libc_send(a, b, c, flags);
   printf("Called __libc_send with number of returned char=%d\n", charnum);
 
@@ -143,10 +142,15 @@ ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr
   ssize_t charnum;
   charnum = 0;
 
-  //printf("Calling __libc_sendto ....\n");
+  HIP_DEBUG("!!!! sendto sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
+  _HIP_HEXDUMP("!!!! sendto HEXDUMP b =", to, sizeof(*to));
+  HIP_HEXDUMP("!!!! sendto HEXDUMP b =", to, 110/*sizeof(struct sockaddr_un)*/);
+  printf("Calling __libc_sendto ....\n");
   charnum =  __libc_sendto(a, b, c, flags, to, tolen);
   printf("Called __libc_sendto with number of returned char=%d\n", charnum);
-
+  if(charnum < 0)
+    printf("!!!! sendto failed\n");
+  assert(charnum>0);
   return charnum;
 }
 
@@ -158,7 +162,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   ssize_t charnum;
   charnum = 0;
   
-  //printf("Calling __libc_sendmsg ....\n");
+  printf("Calling __libc_sendmsg ....\n");
   charnum =  __libc_sendmsg(a, msg, flags);
   printf("Called __libc_sendmsg with number of returned chars=%d\n", charnum);
 

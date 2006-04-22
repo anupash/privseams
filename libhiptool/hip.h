@@ -62,14 +62,17 @@
 #define SET_NULL_HIT(hit)                      \
         { memset(hit, 0, sizeof(hip_hit_t));        \
           (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
-/*
-inline static ipv6_addr_is_null(struct sockaddr_storage *ip){
-  return ((ip->s6_addr32[0] == 0) &&          
+
+inline static ipv6_addr_is_null(struct in6_addr *ip){
+  return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
+	   ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
+  /*  return ((ip->s6_addr32[0] == 0) &&          
 	  (ip->s6_addr32[1] == 0) &&          
 	  (ip->s6_addr32[2] == 0) &&          
 	  (ip->s6_addr32[3] == 0));
+  */
 }
-*/
+
 static inline int hit_is_real_hit(const struct in6_addr *hit){
   return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
 	  (hit->s6_addr[1] != 0x00));
@@ -86,10 +89,8 @@ static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
 
 }
 static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
-  return ((hit->s6_addr32[0] == 0) &&
-	  (hit->s6_addr32[1] == 0) &&
-	  (hit->s6_addr32[2] == 0) &&
-	  (hit->s6_addr32[3] == 0));
+  return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
+	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)

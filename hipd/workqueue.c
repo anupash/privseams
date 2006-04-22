@@ -313,8 +313,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	hip_hit_t *hit;
 	int err = 0;
 	int msg_type;
-	struct hip_common *msg_to_send = NULL;
-
+	
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -382,26 +381,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_GET_PSEUDO_HIT:
 	  { 
-	    	int a;
-		
 		int n = 0;
 
-		// no need to allocate new mem; just overwrite msg
-		msg_to_send = malloc(HIP_MAX_PACKET);
-		if (!msg_to_send) {
-		  HIP_ERROR("malloc failed\n");
-		  goto out_err;
-		}	
-		
-		hip_msg_init(msg_to_send);
-		err = hip_get_pseudo_hit(msg, msg_to_send);
+		err = hip_get_pseudo_hit(msg);
 		if(err){
 		  HIP_ERROR("get pseudo hit failed.\n");
 		  goto out_err;
 		}
 		
-		n = hip_sendto(msg_to_send, src);
-		
+		n = hip_sendto(msg, src);
 		if(n < 0){
 		  HIP_ERROR("hip_sendto() failed.\n");
 		  err = -1;
@@ -409,10 +397,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 		HIP_DEBUG("!!!! phit is sent\n");
 		
-		if(msg_to_send){
-		  free(msg_to_send);
-		  msg_to_send = NULL;
-		}
 	  }
 	  break;
 	default:
@@ -421,7 +405,5 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 
  out_err:
-	if(msg_to_send)
-	  free(msg_to_send);
 	return err;
 }

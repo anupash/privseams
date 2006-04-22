@@ -582,20 +582,20 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 int
 request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
 {
-  HIP_INFO("Hi, we are testing request_hipd_pseudo_hit()\n");
+  HIP_INFO("!!!!  testing request_hipd_pseudo_hit()\n");
   struct hip_common *msg = NULL;
   struct gaih_addrtuple *at_hit = NULL;
   struct in6_addr ip;
   int err = 0;
   int ret = 0;
 
-  memset(&ip, 0, sizeof(struct in6_addr));
-  
+  bzero(&ip, sizeof(ip));
+  HIP_HEXDUMP("!!!!!!!!!!!!! ip = ", &ip, sizeof(ip));
+  HIP_ASSERT((ipv6_addr_any(&ip)));
+
   get_ip_from_gaih_addrtuple(orig_at, &ip );
-  
-  
-  //if(!ipv6_addr_is_null((struct in6_addr *)&ip)) {
-  if(1) {
+
+  if(!ipv6_addr_any(&ip)) {
     msg = malloc(HIP_MAX_PACKET);
     if (!msg){
       HIP_ERROR("malloc failed\n");
@@ -619,7 +619,6 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
     
     /* send and receive msg to/from hipd */
     err = hip_send_recv_daemon_info(msg);
-    //err = hip_send_daemon_info(msg);
     if (err) {
       HIP_ERROR("send_recv msg failed\n");
       goto out_err;
@@ -632,20 +631,10 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       goto out_err;
     }
     
-
     hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT );
-    err = hip_opportunistic_ipv6_to_hit(&ip, hit, HIP_HIT_TYPE_HASH120);
-    //memset(hit, 0, sizeof(struct in6_addr));
-    if(err){
-      HIP_DEBUG("!!!! err=%d\n", err);
-      goto out_err;
-    }
-    if(1){
-      //if (!hit_is_opportunistic_hashed_hit(hit)) {
-      //HIP_INFO("!!!! No pseudo hit received, maybe opp mode is not allowed\n");
-      //} else { //Add hit to orig_at
-      HIP_DEBUG_HIT("!!!! pseudo hit2=", hit);
-      //HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+    if(hit){
+      HIP_DEBUG_HIT("!!!! pseudo hit=", hit);
+      HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
       
       for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
 	_HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
@@ -656,20 +645,16 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
 	  at_hit->scopeid = 0;
 	  at_hit->next = NULL;
 	  memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
-	 _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
+	  _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
 	  break;
 	}
       }
-
-      // TODO: Bing, test if the hit is added
+      // DO: test if the hit is added
       for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
 	HIP_DEBUG_HIT("!!!! hit=", at_hit->addr);
       }
-    }
-  } else{
-    HIP_ERROR("Failed to recv msg err=%d\n", err);
-    err = -1;
-  }
+    }// end of if(hit)
+  } // end of  if(!ipv6_addr_any(&ip))
  out_err:
   if(msg)
     free(msg);
@@ -1047,27 +1032,27 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       //HIP_DEBUG("!!!! ertern opportunistic_mode=%d", opportunistic_mode);
       if (found_hits) 
 	send_hipd_addr(*at);
-      else //if(opportunistic_mode)
-	{
-	  struct in6_addr hit;
-	  bzero(&hit, sizeof(struct in6_addr));
-	  HIP_DEBUG_HIT("!!!! before pseudo hit=", &hit);
-	  int err = request_hipd_pseudo_hit(*at, &hit);
-	  if(err){
-	    HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
-	    return err;
-	  }
-	  if(hit_is_opportunistic_hashed_hit(&hit)){
-	    HIP_DEBUG_HIT("!!!! after pseudo hit=", &hit);
+      else {// try to get pseudo hit
+	struct in6_addr * hit = NULL;
+
+	int err = request_hipd_pseudo_hit(*at, hit);
+	if(err){
+	  HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
+	  return err;
+	}
+	if(hit) {
+	  if(hit_is_opportunistic_hashed_hit(hit)){
+	    HIP_DEBUG_HIT("!!!! got pseudo hit=", hit);
 	    found_hits++;
 	    send_hipd_addr(*at);
 	  } else{
 	    // NULL hit, what should we do ???
 	    //found_hits++;
-	    //send_hipd_addr(*at);
-	     }	  
-	}
-
+	    //send_hipd_addr(*at);	  
+	  }
+	} else
+	  HIP_INFO("!!!! cannot get phit \n");
+      }
       if (no_data != 0 && no_inet6_data != 0)
 	{
 	  _HIP_DEBUG("nodata\n");

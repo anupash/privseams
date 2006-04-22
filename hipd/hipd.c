@@ -37,7 +37,7 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-u32 opportunistic_mode = 0;
+u32 opportunistic_mode = 1;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -503,61 +503,61 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
 	return err;
 }
 
-int hip_get_pseudo_hit(const struct hip_common *message,
-		       struct hip_common *msg_to_send)
+int hip_get_pseudo_hit(struct hip_common *msg)
 {
   int err = 0;
   int alen = 0;
   
-  struct in6_addr hit;
-  struct in6_addr *ip = NULL;
+  struct in6_addr hit, ip;
+  struct in6_addr *ptr = NULL;
 
   memset(&hit, 0, sizeof(struct in6_addr));
   if(opportunistic_mode){
-    ip = (struct in6_addr *) hip_get_param_contents(message, HIP_PARAM_IPV6_ADDR);
-    HIP_DEBUG_HIT("!!!! local ip=", ip);
+    ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+    memcpy(&ip, ptr, sizeof(ip));
+    HIP_DEBUG_HIT("!!!! local ip=", &ip);
     
-    err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
+    err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH120);
     if(err){
       HIP_DEBUG("!!!! err=%d\n", err);
       goto out_err;
     }
-
-    HIP_DEBUG_HIT("!!!! pseudo hit=", &hit);
     HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
 
-    err = hip_build_param_contents(msg_to_send, (void *) &hit, HIP_PARAM_HIT,
+    hip_msg_init(msg);
+    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				   sizeof(struct in6_addr));
     if (err) {
       HIP_ERROR("build param hit failed: %s\n", strerror(err));
       goto out_err;
     }
-    err = hip_build_user_hdr(msg_to_send, SO_HIP_SET_PSEUDO_HIT, 0);
+
+    err = hip_build_user_hdr(msg, SO_HIP_SET_PSEUDO_HIT, 0);
     if (err) {
       HIP_ERROR("build user header failed: %s\n", strerror(err));
       goto out_err;
     } 
-    err = hip_hadb_add_peer_info(&hit, ip);
+    err = hip_hadb_add_peer_info(&hit, &ip);
+
     if (err) {
       HIP_ERROR("add peer info failed: %s\n", strerror(err));
       goto out_err;
     }
     
   }
-  else {
-    memcpy(msg_to_send, message, sizeof(struct hip_common));
-  }
-     
+
  out_err:
    return err;
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_storage *dst){
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
   int n = 0;
-  HIP_DEBUG("!!!! sending phit...\n");
-  HIP_HEXDUMP("!!!! dst : ", dst, sizeof(struct sockaddr_storage));
+
+  HIP_HEXDUMP("!!!! dst : ", dst, sizeof(struct sockaddr_un));
+  HIP_DEBUG("!!!! hip_sendto sending phit...\n");
+
   n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_storage));
+	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
   return n;
 
 }
@@ -879,7 +879,7 @@ int main(int argc, char *argv[]) {
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 		  	//struct sockaddr_un app_src, app_dst;
 		  //  	struct sockaddr_storage app_src;
-			struct sockaddr_un * app_src;
+			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
