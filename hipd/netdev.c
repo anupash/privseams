@@ -434,7 +434,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			HIP_DEBUG("RTM_DELLINK\n");
 			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			//delete_address_from_list(NULL, ifinfo->ifi_index);
-			delete_address_from_list(NULL, ifindex);
+			//delete_address_from_list(NULL, ifindex);
 			/* should do here
 			   hip_send_update_all(NULL, 0, ifindex, SEND_UPDATE_REA);
 			   but ifconfig ethX down never seems to come here
