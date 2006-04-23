@@ -663,7 +663,7 @@ int handle_puzzle(struct hip_common *msg, int action,
 int handle_opp(struct hip_common *msg, int action,
 		  const char *opt[], int optc)
 {
-	u32 oppmode = 0;
+	unsigned int oppmode = 0;
 	int err = 0;
 
 	if (optc != 1) {
@@ -685,7 +685,7 @@ int handle_opp(struct hip_common *msg, int action,
 	}
 
 	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
-				       sizeof(u32));
+				       sizeof(unsigned int));
 	if (err) {
 		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
 		goto out;

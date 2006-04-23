@@ -313,7 +313,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	hip_hit_t *hit;
 	int err = 0;
 	int msg_type;
-	
+	int n = 0;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -330,6 +330,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
+		if(err){
+		  HIP_ERROR("!!!! add peer mapping failed.\n");
+		  goto out_err;
+		}
+		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
 		break;
 	case SO_HIP_DEL_PEER_MAP_HIT_IP:
 		err = hip_del_peer_map(msg);
@@ -381,9 +392,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_GET_PSEUDO_HIT:
 	  { 
-		int n = 0;
-
-		err = hip_get_pseudo_hit(msg);
+	    	err = hip_get_pseudo_hit(msg);
 		if(err){
 		  HIP_ERROR("get pseudo hit failed.\n");
 		  goto out_err;
@@ -396,7 +405,41 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  goto out_err;
 		}
 		HIP_DEBUG("!!!! phit is sent\n");
+	  }
+	  
+	  break;
+	case SO_HIP_QUERY_IP_HIT_MAPPING:
+	  {
+	    	err = hip_query_ip_hit_mapping(msg);
+		if(err){
+		  HIP_ERROR("!!!! query ip hit mapping failed.\n");
+		  goto out_err;
+		}
 		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
+		HIP_DEBUG("!!!! mapping result is sent\n");
+	  }
+	  break;	  
+	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
+	  {
+	    	err = hip_query_opportunistic_mode(msg);
+		if(err){
+		  HIP_ERROR("!!!! query opportunistic mode failed.\n");
+		  goto out_err;
+		}
+		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
+		HIP_DEBUG("!!!! opportunistic mode value is sent\n");
 	  }
 	  break;
 	default:

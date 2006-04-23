@@ -741,7 +741,7 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
 {
   int err = 0;
   struct hip_common *msg = NULL;
-  unsigned int *count, *acount;
+  unsigned int *count, *acount; 
   struct hip_host_id *host_id;
   hip_hit_t *hit;
   struct in6_addr *addr;

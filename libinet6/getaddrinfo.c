@@ -543,7 +543,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-      hip_send_daemon_info(msg);
+      hip_send_recv_daemon_info(msg);// hip_send_daemon_info(msg);
     }
   }  
   free(msg);
@@ -624,7 +624,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       HIP_ERROR("send_recv msg failed\n");
       goto out_err;
     }
-    HIP_INFO("!!!! send_recv msg succeed\n");
+    HIP_DEBUG("!!!! send_recv msg succeed\n");
     
     /* getsockopt wrote the corresponding EID into the message, use it */
     err = hip_get_msg_err(msg);
@@ -632,7 +632,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       goto out_err;
     }
     
-    hit_recv = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT );
+    hit_recv = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
     memcpy(hit, hit_recv, sizeof(*hit));
     if(hit_is_opportunistic_hashed_hit(hit)){
       HIP_DEBUG_HIT("!!!! pseudo hit=", hit);

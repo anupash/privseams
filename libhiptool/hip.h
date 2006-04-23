@@ -204,8 +204,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_SET_NAT_ON			26
 #define SO_HIP_SET_NAT_OFF			27
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           28 /*Bing, trial */
-#define SO_HIP_GET_PSEUDO_HIT                   29
-#define SO_HIP_SET_PSEUDO_HIT                   30
+#define SO_HIP_QUERY_OPPORTUNISTIC_MODE         29
+#define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  30
+#define SO_HIP_GET_PSEUDO_HIT                   31 
+#define SO_HIP_SET_PSEUDO_HIT                   32 
+#define SO_HIP_QUERY_IP_HIT_MAPPING		33 
+#define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	34
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -307,7 +311,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
-#define HIP_PARAM_KEYS                  32779 
+#define HIP_PARAM_KEYS                  32779
+#define HIP_PSEUDO_HIT                  32780 
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100

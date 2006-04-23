@@ -18,7 +18,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	int bytes = 0, err = 0;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
-	struct hip_common *hip_hdr;
+	struct hip_common *hip_hdr = NULL;
 	
 	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc failed\n");
 	
@@ -168,21 +168,21 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_DEBUG("!!!! read_user_control_msg sizeof(saddr) len=%d\n", len);
 	HIP_HEXDUMP("!!!! original saddr ", saddr, sizeof(struct sockaddr_un));
 
-	HIP_IFEL((total = hip_peek_recv_total_len(socket, 0) <= 0), -1,
+	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
 		 "recv peek failed\n");
-
+	
 #if 0
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, hdr_size, MSG_PEEK,
 				    (struct sockaddr *)saddr,
 				    &len)) != hdr_size), -1,
 		 "recv peek\n");
-#endif
-
+	
 	HIP_DEBUG("!!!! read_user_control_msg recv peek len=%d\n", len);
 	HIP_HEXDUMP("!!!! peek saddr ",  saddr, sizeof(struct sockaddr_un));
-#if 0
+
 	total = hip_get_msg_total_len(hip_msg);
 #endif
+
 	HIP_DEBUG("msg total length = %d\n", total);
 	HIP_DEBUG("!!!! read_user_control_msg sizeof(saddr) len=%d\n", sizeof(*saddr));
 

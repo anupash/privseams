@@ -37,7 +37,7 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-u32 opportunistic_mode = 1;
+unsigned int opportunistic_mode = 1;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -494,25 +494,27 @@ int periodic_maintenance() {
 	return err;
 }
 
-int opp_mode_enabled(){
-  return opportunistic_mode;
-}
-
 int hip_set_opportunistic_mode(const struct hip_common *msg)
 {
-  	int err =  0;
-	u32 mode = 0;
-	mode = *((u32*) hip_get_param_contents(msg, HIP_PARAM_UINT));
-	if(mode == 0 || mode == 1){
-		  opportunistic_mode = mode;
-	} else {
-	  	HIP_ERROR("Incorrect value for opportunistic mode\n");
-		err = -EINVAL;
-		goto out_err;
-	}
-	
+  int err =  0;
+  unsigned int *mode = NULL;
+  
+  mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
+  if (!mode) {
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  if(*mode == 0 || *mode == 1){
+    opportunistic_mode = *mode;
+  } else {
+    HIP_ERROR("Invalid value for opportunistic mode\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  
  out_err:
-	return err;
+  return err;
 }
 
 int hip_get_pseudo_hit(struct hip_common *msg)
@@ -537,7 +539,7 @@ int hip_get_pseudo_hit(struct hip_common *msg)
     HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
 
     hip_msg_init(msg);
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+    err = hip_build_param_contents(msg, (void *) &hit, HIP_PSEUDO_HIT,
 				   sizeof(struct in6_addr));
     if (err) {
       HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -560,6 +562,69 @@ int hip_get_pseudo_hit(struct hip_common *msg)
 
  out_err:
    return err;
+}
+
+int hip_query_ip_hit_mapping(struct hip_common *msg)
+{
+  int err = 0;
+  unsigned int mapping = 0;
+  struct in6_addr *hit = NULL;
+  hip_ha_t *entry = NULL;
+
+
+  hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+
+  HIP_DEBUG_HIT("!!!! phit=", hit);
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+    
+
+  entry = hip_hadb_try_to_find_by_peer_hit(hit);
+
+  if(entry)
+    mapping = 1;
+  else 
+    mapping = 0;
+
+  hip_msg_init(msg);
+  
+  err = hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
+				 sizeof(unsigned int));
+  if (err) {
+    HIP_ERROR("build param mapping failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0);
+  if (err) {
+    HIP_ERROR("build user header failed: %s\n", strerror(err));
+    goto out_err;
+  } 
+ out_err:
+  return err;
+}
+
+
+int hip_query_opportunistic_mode(struct hip_common *msg)
+{
+  int err = 0;
+  unsigned int opp_mode = opportunistic_mode;
+
+  hip_msg_init(msg);
+  
+  err = hip_build_param_contents(msg, (void *) &opp_mode, HIP_PARAM_UINT,
+				 sizeof(unsigned int));
+  if (err) {
+    HIP_ERROR("build param opp_mode failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0);
+  if (err) {
+    HIP_ERROR("build user header failed: %s\n", strerror(err));
+    goto out_err;
+  } 
+ out_err:
+  return err;
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){

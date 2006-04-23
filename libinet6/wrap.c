@@ -2,7 +2,6 @@
   Put all the functions you want to override here
 */
 #include <sys/types.h>
-#include <sys/types.h>
 //#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
@@ -12,24 +11,44 @@ extern ssize_t __libc_send(int s, const void *buf, size_t len, int flags);
 extern ssize_t __libc_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
 extern ssize_t __libc_sendmsg(int s, const struct msghdr *msg, int flags);
 
-int opp_mode(){
-  int opp_mode;
-  opp_mode = 0;
+int get_opp_mode(){
+  int err;
+  int *opp_mode = NULL;
+  struct hip_common *msg;
+  
+  err = 0;
 
-  // There are two choice to implement, which one is better?
-
-  // Todo:
-  // Send query message to hipd to query the value of opp_mode.
-  // use recvfrom to get message.
-  // return value of opp_mode
-
-  // or
-
-  // Todo:
-  // send ip to hipd to query phit
-  // use recvfrom to receive phit message
-  // if get phit, then opp_mode is on.
-  return opp_mode;
+  hip_msg_init(msg);
+  
+  err = hip_build_user_hdr(msg, SO_HIP_QUERY_OPPORTUNISTIC_MODE, 0);
+  if (err) {
+    HIP_ERROR("build hdr failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  /* send and receive msg to/from hipd */
+  err = hip_send_recv_daemon_info(msg);
+  if (err) {
+    HIP_ERROR("send_recv msg failed\n");
+    goto out_err;
+  }
+  HIP_DEBUG("!!!! send_recv msg succeed\n");
+  
+  /* getsockopt wrote the corresponding EID into the message, use it */
+  err = hip_get_msg_err(msg);
+  if (err) {
+    goto out_err;
+  }
+  
+  opp_mode = (int *)( hip_get_param_contents(msg, HIP_PARAM_UINT));
+  if (!opp_mode) {
+    err = -EINVAL;
+    goto out_err;
+  }
+  return *opp_mode;
+  
+ out_err:
+  return err;
 }
 
 int is_ip(const struct in6_addr *ip){
@@ -38,58 +57,108 @@ int is_ip(const struct in6_addr *ip){
 	 !hit_is_opportunistic_hashed_hit(ip));
 }
 
-int exist_mapping(const struct in6_addr *ip){
+int exist_mapping(const struct in6_addr * const phit){
   int err;
-  err = 0;
-  int has_mapping;
-  has_mapping = 0;
-  struct in6_addr hit;
+  int *mapping = NULL;
+  struct hip_common *msg;
 
-  err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
-  if(err)
+  msg = malloc(HIP_MAX_PACKET);
+  hip_msg_init(msg);
+
+  err = hip_build_param_contents(msg, (void *)(phit), HIP_PSEUDO_HIT,
+				 sizeof(struct in6_addr));
+  if (err) {
+    HIP_ERROR("build param phit failed: %s\n", strerror(err));
     goto out_err;
-
-  //TODO: 
-  // send phit to hipd.
-  // hipd handler function use phit to check if there is HA.
-  // if yes/no, then there is/no  mapping, hipd send back the result.
-  // using recvfrom to receive the result. 
-
-  return has_mapping;
-
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_QUERY_IP_HIT_MAPPING, 0);
+  if (err) {
+    HIP_ERROR("build hdr failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  /* send and receive msg to/from hipd */
+  err = hip_send_recv_daemon_info(msg);
+  if (err) {
+    HIP_ERROR("send_recv msg failed\n");
+    goto out_err;
+  }
+  HIP_DEBUG("!!!! send_recv msg succeed\n");
+  
+  /* getsockopt wrote the corresponding EID into the message, use it */
+  err = hip_get_msg_err(msg);
+  if (err) {
+    goto out_err;
+  }
+  
+  mapping = (int *)(hip_get_param_contents(msg, HIP_PARAM_UINT));
+  if (!mapping) {
+    err = -EINVAL;
+    goto out_err;
+  }
+  return *mapping;
+  
  out_err:
   return err;
 }
 
-int util_func(struct in6_addr *ip){
+int util_func(struct in6_addr *id){
   int err;
-  err = 0;
+  int opp_mode;
+  unsigned int has_mapping;
+  struct in6_addr hit;
 
-  if(hit_is_real_hit(ip)){
+  err = 0;
+  opp_mode = 0;
+
+  if(hit_is_real_hit(id)){
     HIP_DEBUG("!!!! is real hit \n");
     // TODO:
     //Add mapping old socket == new socket
   }
   else {
-    if(!hit_is_opportunistic_hashed_hit(ip)) {
+    if(!hit_is_opportunistic_hashed_hit(id)) {
       HIP_DEBUG("!!!! is ip\n");
-      if(exist_mapping(ip)){
-	struct in6_addr hit;
-	err = hip_opportunistic_ipv6_to_hit(ip, &hit, HIP_HIT_TYPE_HASH120);
-	if(err)
-	  goto out_err;      
-	HIP_DEBUG_HIT("!!!! opportunistic hit ", &hit);
-	// change ip to phit
-	memcpy(ip, &hit, sizeof(struct in6_addr));
+
+      err = hip_opportunistic_ipv6_to_hit(id, &hit, HIP_HIT_TYPE_HASH120);
+      if(err){
+	HIP_ERROR("create phit failed: %s\n", strerror(err));
+	goto out_err;
       }
-      else { // no exit mapping
-	if(opp_mode()) {
+      HIP_DEBUG_HIT("!!!! opportunistic hit ", &hit);
+      HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
+
+      has_mapping = exist_mapping(&hit);
+      
+      if (has_mapping == 1){ // found mapping
+	memcpy(id, &hit, sizeof(*id));
+	HIP_DEBUG_HIT("!!!! modified id=", id);
+      } else if (has_mapping == 0) { // no mapping
+	opp_mode = get_opp_mode();
+	if(opp_mode == 1) {
+	  err = hip_opportunistic_ipv6_to_hit(id, &hit, HIP_HIT_TYPE_HASH120);
+	  if(err){
+	    HIP_ERROR("create phit failed: %s\n", strerror(err));
+	    goto out_err;
+	  }
+	  HIP_DEBUG_HIT("!!!! opportunistic hit ", &hit);
+	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
+	  memcpy(id, &hit, sizeof(*id));
+	  
 	  // TODO: create new socket, old socket != new socket
-	}
-	else {
+	} else if (opp_mode == 0) {
 	  // TODO: Add mapping old socket == new socket
+	} else {
+	  err = -EINVAL;
+	  HIP_ERROR("invalid opp_mode value: %s\n", strerror(err));
+	  goto out_err;
 	}
-      }
+      } else {
+	HIP_ERROR("Invalid mapping value received\n");
+	err = -EINVAL;
+	goto out_err;
+      } 
     }
   }
  out_err:
@@ -99,20 +168,27 @@ int util_func(struct in6_addr *ip){
 int connect(int a, const struct sockaddr * b, socklen_t c)
 {
   int errno;
-  errno = 0; 
-  
-  struct in6_addr *ip;
+  int port;
+  struct in6_addr *id;
 
-  HIP_DEBUG("!!!! connect sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
-  HIP_HEXDUMP("!!!! connect HEXDUMP b =", b, 110/*sizeof(struct sockaddr_in)*/);
+  errno = 0;
+  port = 0; 
+  id = NULL;
+ 
+  port = ntohs(((struct sockaddr_in *)b)->sin_port);
+
+  HIP_DEBUG("!!!! connect sin_port=%d\n", port);
+  HIP_HEXDUMP("!!!! connect HEXDUMP b\n", b, 110/*sizeof(struct sockaddr_in)*/);
+  if(port == 1111){
+    HIP_DEBUG("connect port 1111 1111 1111 1111 1111 1111 1111 1111\n\n\n");
+  }
   
-  ip =  (struct in6_addr *)( &(((struct sockaddr_in *)b)->sin_addr)+sizeof(unsigned char) );
+  id =  (struct in6_addr *)( &(((struct sockaddr_in *)b)->sin_addr)+sizeof(unsigned char) );
   
-  HIP_DEBUG_HIT("!!!! ip = ", ip);
+  HIP_DEBUG_HIT("!!!! id = ", id);
   printf("Calling __libc_connect....\n");
-
-  //  errno = util_func(ip);
-  errno = __libc_connect(a, b, c);
+  //    errno = util_func(id);
+    errno = __libc_connect(a, b, c);
   printf("Called __libc_connect with err=%d\n", errno);
   
  out_err:
@@ -126,6 +202,8 @@ ssize_t send(int a, const void * b, size_t c, int flags)
 {
   int charnum;  
   charnum = 0;
+  
+  HIP_HEXDUMP("!!!! send HEXDUMP buffer\n", b, sizeof(*b));
 
   printf("Calling __libc_send ....\n");
   charnum =  __libc_send(a, b, c, flags);
@@ -140,18 +218,49 @@ ssize_t send(int a, const void * b, size_t c, int flags)
 ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr  *to, socklen_t tolen)
 {
   ssize_t charnum;
-  charnum = 0;
+  int port;
+  int errno;
+  struct in6_addr *id;
 
-  HIP_DEBUG("!!!! sendto sin_port=%d\n", ntohs(((struct sockaddr_in *)b)->sin_port) );
-  _HIP_HEXDUMP("!!!! sendto HEXDUMP b =", to, sizeof(*to));
-  HIP_HEXDUMP("!!!! sendto HEXDUMP b =", to, 110/*sizeof(struct sockaddr_un)*/);
+  charnum = 0;
+  port = 0;
+  errno = 0;
+  id = NULL;
+  port = ntohs(((struct sockaddr_in *)to)->sin_port);
+
+  HIP_DEBUG("!!!! sizeof(sockaddr_in)=%d, tolen=%d\n", 
+	    sizeof(struct sockaddr_in), tolen);
+  HIP_DEBUG("!!!! sendto sin_port=%d\n", port);
+  HIP_HEXDUMP("!!!! sendto HEXDUMP buffer\n", b, sizeof(*b));
+  HIP_HEXDUMP("!!!! sendto HEXDUMP to\n", to, 110/*sizeof(struct sockaddr_un)*/);
+
+  if(port == 1111){
+    HIP_DEBUG("sendto port 1111 1111 1111 1111 1111 1111 1111 1111\n\n\n");
+  }
+  
   printf("Calling __libc_sendto ....\n");
+  id =  (struct in6_addr *)( &(((struct sockaddr_in *)to)->sin_addr)+sizeof(unsigned char) );
+  
+  HIP_DEBUG_HIT("!!!! id = ", id);
+ 
+  //  errno = util_func(id);
+  //if(errno){
+  //HIP_ERROR("!!!! wrap.c util_func failed\n");
+  //goto out_err;
+  //}
   charnum =  __libc_sendto(a, b, c, flags, to, tolen);
   printf("Called __libc_sendto with number of returned char=%d\n", charnum);
-  if(charnum < 0)
+  if(charnum < 0){
     printf("!!!! sendto failed\n");
+    errno = charnum;
+    goto out_err;
+  }
+  //for debuging
   assert(charnum>0);
   return charnum;
+
+ out_err:
+  return errno;
 }
 
 /* 
