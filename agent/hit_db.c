@@ -139,7 +139,7 @@ int hit_db_clear(void)
 int hit_db_add_hit(HIT_Item *hit, int nolock)
 {
 	return (hit_db_add(hit->name, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, hit->type, nolock));
+	                   hit->url, hit->port, hit->type, hit->group, nolock));
 }
 /* END OF FUNCTION */
 
@@ -163,6 +163,7 @@ int hit_db_add(char *name,
                char *url,
                int port,
                int type,
+               char *group,
                int nolock)
 {
 	/* Variables. */
@@ -183,19 +184,21 @@ int hit_db_add(char *name,
 	/* Copy info. */
 	n = hit_db_n;
 	HIP_DEBUG("New item has index #%d...\n", n);
-	strncpy(hit_db[n].name, name, 48);
-	hit_db[n].name[48] = '\0';
+	strncpy(hit_db[n].name, name, 64);
+	hit_db[n].name[64] = '\0';
 	memcpy(&hit_db[n].lhit, lhit, sizeof(struct in6_addr));
 	memcpy(&hit_db[n].rhit, rhit, sizeof(struct in6_addr));
 	hit_db[n].port = port;
 	hit_db[n].type = type;
 	hit_db[n].index = n;
 	strcpy(hit_db[n].url, url);
+	strcpy(hit_db[n].group, group);
 
 /* XX TODO: Copy url too someday: hi_db[n].url */
 	HIP_DEBUG("Calling GUI to show new HIT...\n");
 	print_hit_to_buffer(hitb, &hit_db[n].rhit);
-	gui_add_remote_hit(hitb, "<none>", 80);
+	if (hit_db[n].type == HIT_DB_TYPE_LOCAL) gui_add_hit(name);
+	else gui_add_remote_hit(name, hit_db[n].group);
 	HIP_DEBUG("Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */
@@ -342,103 +345,69 @@ HIT_Item *hit_db_search(int *number,
 	{
 		fh1 = NULL;
 		fh2 = NULL;
+		err = 0;
 
 		/* If name is not NULL, compare name. */
 		if (name != NULL)
 		{
+			err = 1;
 			/* Compare name. */
 			if (strcmp(hit_db[n].name, name) == 0)
 			{
 				fh2 = &hit_db[n];
+				err = 0;
 			}
 		}
-		
-		if (fh1 == NULL)
-		{
-			fh1 = fh2;
-			fh2 = NULL;
-		}
+		if (err != 0) continue;
 
 		/* If hit is not NULL... */
 		if (lhit != NULL)
 		{
+			err = 1;
 			if (memcmp(&hit_db[n].lhit, lhit, sizeof(struct in6_addr)) == 0)
 			{
-				HIP_DEBUG("Found match for local hit...\n");
+				print_hit_to_buffer(buffer1, lhit);
+				print_hit_to_buffer(buffer2, &hit_db[n].lhit);
+				HIP_DEBUG("Found match for local hit:\n %s==%s\n", buffer1, buffer2);
 				fh2 = &hit_db[n];
+				err = 0;
 			}
 		}
-
-		if (fh1 != NULL && fh2 != NULL && fh1 != fh2)
-		{
-			/* This hit didn't match exactly to given description. */
-			fh1 = NULL;
-			continue;
-		}
-
-		if (fh1 == NULL)
-		{
-			fh1 = fh2;
-			fh2 = NULL;
-		}
+		if (err != 0) continue;
 
 		if (rhit != NULL)
 		{
+			err = 1;
 			if (memcmp(&hit_db[n].rhit, rhit, sizeof(struct in6_addr)) == 0)
 			{
 				print_hit_to_buffer(buffer1, rhit);
 				print_hit_to_buffer(buffer2, &hit_db[n].rhit);
 				HIP_DEBUG("Found match for remote hit:\n %s==%s\n", buffer1, buffer2);
 				fh2 = &hit_db[n];
+				err = 0;
 			}
 		}
+		if (err != 0) continue;
 
-		if ((fh1 != NULL && fh2 != NULL && fh1 != fh2) ||
-			(rhit != NULL && fh1 != NULL && fh1 != fh2))
-		{
-			/* This hit didn't match exactly to given description. */
-			fh1 = NULL;
-			continue;
-		}
-		
-		if (fh1 == NULL)
-		{
-			fh1 = fh2;
-			fh2 = NULL;
-		}
-		
 /* XX TODO: Compare URLs. */
 
 
 		/* If port is not zero... */
 		if (port != 0)
 		{
+			err = 1;
 			if (hit_db[n].port == port)
 			{
 				fh2 = &hit_db[n];
+				err = 0;
 			}
 		}
+		if (err != 0) continue;
 
-		if (fh1 != NULL && fh2 != NULL && fh1 != fh2)
-		{
-			/* This hit didn't match exactly to given description. */
-			fh1 = NULL;
-			continue;
-		}
-
-		if (fh1 == NULL)
-		{
-			fh1 = fh2;
-			fh2 = NULL;
-		}
-		
 		/* If reached this point and found hit. */
-		if (fh1 != NULL)
-		{
-			HIP_DEBUG("Remote hit matches with database.\n");
-			memcpy(&hits[hits_found], fh1, sizeof(HIT_Item));
-			hits_found++;
-		}
+		HIP_DEBUG("Remote hit matches with database.\n");
+		memcpy(&hits[hits_found], fh2, sizeof(HIT_Item));
+		hits_found++;
 		
 		if (hits_found >= max_find)
 		{
@@ -478,7 +447,7 @@ int hit_db_save_to_file(char *file)
 	HIT_Item *items = NULL;
 	FILE *f = NULL;
 	int err = -1, i;
-	char lhit[128], rhit[128];
+	char lhit[128], rhit[128], type[128];
 	
 	HIT_DB_LOCK();
 	
@@ -492,9 +461,20 @@ int hit_db_save_to_file(char *file)
 	{
 		print_hit_to_buffer(lhit, &hit_db[i].lhit);
 		print_hit_to_buffer(rhit, &hit_db[i].rhit);
-		fprintf(f, "%s %s %s %s %d %s\n",
-		        lhit, rhit, hit_db[i].name, hit_db[i].url, hit_db[i].port,
-		        ((hit_db[i].type == HIT_DB_TYPE_ACCEPT) ? "accept" : "deny"));
+		if (hit_db[i].type == HIT_DB_TYPE_ACCEPT) strcpy(type, "accept");
+		if (hit_db[i].type == HIT_DB_TYPE_DENY) strcpy(type, "deny");
+		if (hit_db[i].type == HIT_DB_TYPE_LOCAL) strcpy(type, "local");
+		
+		if (strlen(hit_db[i].group) < 1)
+		{
+			fprintf(f, "%s %s %s %s %d %s\n", lhit, rhit, hit_db[i].name,
+			        hit_db[i].url, hit_db[i].port, type);
+		}
+		else
+		{
+			fprintf(f, "%s %s %s %s %d %s %s\n", lhit, rhit, hit_db[i].name,
+			        hit_db[i].url, hit_db[i].port, type, hit_db[i].group);
+		}
 	}
 	
 	err = 0;
@@ -560,19 +540,22 @@ int hit_db_load_from_file(char *file)
 		if (buf[0] == '#') goto loop_end;
 		
 		/* Parse values from current line. */
-		n = sscanf(buf, "%s %s %s %s %d %s",
-		           lhit, rhit, item.name, item.url, &item.port, type);
+		n = sscanf(buf, "%s %s %s %s %d %s %s",
+		           lhit, rhit, item.name, item.url, &item.port, type, item.group);
 		
-		if (n != 6)
+		if (n != 6 && n != 7)
 		{
-			HIP_DEBUG("Broken line in database file: %s", buf);
+			HIP_DEBUG("Broken line in database file: %s\n", buf);
 			goto loop_end;
 		}
+
+		if (n == 6) memset(item.group, '\0', sizeof(item.group));
 		
-		HIP_DEBUG("Scanned line with values: %s %s %s %s %d %s\n",
-		          lhit, rhit, item.name, item.url, item.port, type);
+		HIP_DEBUG("Scanned line with values: %s %s %s %s %d %s %s\n",
+		          lhit, rhit, item.name, item.url, item.port, type, item.group);
 		
 		if (strstr(type, "accept") != NULL) item.type = HIT_DB_TYPE_ACCEPT;
+		if (strstr(type, "local") != NULL) item.type = HIT_DB_TYPE_LOCAL;
 		else item.type = HIT_DB_TYPE_DENY;
 
 		read_hit_from_buffer(&item.lhit, lhit);

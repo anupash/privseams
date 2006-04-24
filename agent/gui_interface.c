@@ -35,14 +35,14 @@ int check_hit(HIT_Item *hit)
 	  or incoming.
 	*/
 	fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, 1, 1);
+	                     hit->url, hit->port, 1, 1);
 	if (!fhit)
 	{
 		memcpy(&temp_hit, &hit->lhit, sizeof(struct in6_addr));
 		memcpy(&hit->lhit, &hit->rhit, sizeof(struct in6_addr));
 		memcpy(&hit->rhit, &temp_hit, sizeof(struct in6_addr));
-		fhit= hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-		                    hit->url, hit->port, 1, 1);
+		fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
+		                     hit->url, hit->port, 1, 1);
 	}
 
 	if (fhit)
@@ -105,17 +105,17 @@ int check_hit(HIT_Item *hit)
 #endif
 
 	/* Add hit info to database, if answer was yes. */
-	if (err == 0)
+	if (err == 1)
 	{
 		HIP_DEBUG("Adding new HIT to database with type accept.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_ACCEPT, 0);
+		           HIT_DB_TYPE_ACCEPT, "Services", 0);
 	}
-	if (err == -1)
+	if (err == 0)
 	{
 		HIP_DEBUG("Adding new HIT to database with type deny.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_DENY, 0);
+		           HIT_DB_TYPE_DENY, "Games", 0);
 	}
 
 

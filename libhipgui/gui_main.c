@@ -18,6 +18,7 @@
 /* VARIABLES */
 GtkWidget *gtk_window = NULL;
 GtkWidget *gtk_toolwindow = NULL;
+GtkWidget *gtk_acceptdialog = NULL;
 
 
 /******************************************************************************/
@@ -59,10 +60,17 @@ int gui_init(void)
 	g_signal_connect(G_OBJECT(gtk_toolwindow), "delete_event",
 	                 G_CALLBACK(tool_delete_event), NULL);
 	g_signal_connect(G_OBJECT(gtk_toolwindow), "destroy",
-	                 G_CALLBACK(destroy), NULL);
+	                 G_CALLBACK(tool_destroy), NULL);
+
+	/* Create accept window. */
+	gtk_acceptdialog = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
+	                                               "Accept", GTK_RESPONSE_YES,
+	                                               "Deny", GTK_RESPONSE_NO, NULL);
+	gtk_widget_hide(gtk_acceptdialog);
 	
 	/* Create window content for all windows. */
 	gui_create_toolwindow_content();
+	gui_create_acceptdialog_content();
 	gui_create_content();
 	
 	gui_set_info("HIP GUI started.");
@@ -117,6 +125,19 @@ void *gui_get_window(void)
 void *gui_get_toolwindow(void)
 {
 	return ((void *)gtk_toolwindow);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Get pointer to accept window.
+	
+	@return Pointer to accept window.
+*/
+void *gui_get_acceptdialog(void)
+{
+	return ((void *)gtk_acceptdialog);
 }
 /* END OF FUNCTION */
 

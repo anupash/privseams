@@ -109,7 +109,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
 	hip_hdr_type_t type;
-	HIT_Item hit;
+	HIT_Item hit, *phit;
 	socklen_t alen;
 	struct in6_addr *lhit;
 	int err = 0, ret, n;
@@ -136,7 +136,13 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 				lhit = hip_get_param_contents_direct(param);
 				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
 				print_hit_to_buffer(chit, lhit);
-				gui_add_hit(chit);
+				phit = hit_db_search(NULL, NULL, lhit, lhit, NULL, 0, 1, 0);
+				if (phit == NULL) hit_db_add(chit, lhit, lhit, "0", 0, HIT_DB_TYPE_LOCAL, "", 0);
+				else
+				{
+					HIP_DEBUG("Cancelling local HIT add, already in database.\n");
+					free(phit);
+				}
 				n++;
 			}
 		}
