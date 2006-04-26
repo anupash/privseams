@@ -20,7 +20,7 @@
  *
  * Returns: 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(hip_hit_t *srchit, hip_hit_t *dsthit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -32,14 +32,14 @@ int hip_send_i1(hip_hit_t *srchit, hip_hit_t *dsthit, hip_ha_t *entry)
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 
-#if 0
 	/* Assign a local private key, public key and HIT to HA */
-	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
-#endif
+	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
+		 "Could not assign a local host id\n");
 
-	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-			      mask, &entry->hit_our,
-			      dsthit);
+	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
+						     HIP_I1,
+						     mask, &entry->hit_our,
+						     dst_hit);
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
