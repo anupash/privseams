@@ -349,8 +349,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
 	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
-	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
+	HIP_DEBUG_HIT("src HIT", src_hit);
+	HIP_DEBUG_HIT("dst HIT", dst_hit);
+
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (!entry) {
 #if 0
 		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
@@ -399,7 +402,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto out_err;
 	}
 
-	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;

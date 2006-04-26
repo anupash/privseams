@@ -5,6 +5,7 @@
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Kristian Slavov <ksl@iki.fi>
+ * - Tobias Heer <heer@tobibox.de>
  *
  */
 
@@ -200,7 +201,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  *
  * Returns: pointer the next point where one can draw the next keymaterial
  */
-int hip_keymat_draw_and_copy(struct hip_crypto_key *dst,
+int hip_keymat_draw_and_copy(char *dst,
 			     struct hip_keymat_keymat *keymat, 
 			     int len){
 	int err  = 0;
