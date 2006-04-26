@@ -23,11 +23,36 @@
 	
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean delete_event(GtkWidget *widget,
-                      GdkEvent *event,
-                      gpointer data)
+gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
 	return (FALSE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	What to do when user example tries to close the tool window?
+	
+	@return TRUE if don't close or FALSE if close.
+*/
+gboolean tool_delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+	return (FALSE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	What to do when user example tries to close the tool window?
+	
+	@return TRUE if don't close or FALSE if close.
+*/
+gboolean accept_delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+	gtk_widget_hide(widget);
+	return (TRUE);
 }
 /* END OF FUNCTION */
 
@@ -37,6 +62,24 @@ gboolean delete_event(GtkWidget *widget,
 void destroy(GtkWidget *widget, gpointer data)
 {
 	gtk_main_quit();
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** On tool window destroy. */
+void tool_destroy(GtkWidget *widget, gpointer data)
+{
+	gtk_widget_hide(widget);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** On accept window destroy. */
+void accept_destroy(GtkWidget *widget, gpointer data)
+{
+	gtk_widget_hide(widget);
 }
 /* END OF FUNCTION */
 
@@ -53,29 +96,27 @@ void select_list(GtkTreeSelection *selection, gpointer data)
 	{
 		gtk_tree_model_get(model, &iter, 0, &hit, -1);
 		printf("You selected a HIT %s\n", hit);
-
-		gui_clear_remote_hits();
-
-		if (strstr(hit, "fake") != NULL)
-		{
-			/* Add fake items for HIT. */
-			if (hit[strlen(hit) - 1] == '1')
-			{
-				gui_add_remote_hit("fake:remote...xxx1", "none", 80);
-				gui_add_remote_hit("fake:remote...xxx2", "none", 80);
-				gui_add_remote_hit("fake:remote...xxx3", "none", 80);
-				gui_add_remote_hit("fake:remote...xxx4", "none", 80);
-				gui_add_remote_hit("fake:remote...xxx5", "none", 80);
-				gui_add_remote_hit("fake:remote...xxx6", "none", 80);
-			}
-			else if (hit[strlen(hit) - 1] == '2')
-			{
-				gui_add_remote_hit("fake:remote...yyy1", "none", 80);
-				gui_add_remote_hit("fake:remote...yyy2", "none", 80);
-			}
-		}
-		
 		g_free(hit);
+		info_mode_local();
+	}
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** On remote list select. */
+void select_rlist(GtkTreeSelection *selection, gpointer data)
+{
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	char *hit;
+
+	if (gtk_tree_selection_get_selected(selection, &model, &iter))
+	{
+		gtk_tree_model_get(model, &iter, 0, &hit, -1);
+		printf("You selected a remote group/HIT %s\n", hit);
+		g_free(hit);
+		info_mode_remote();
 	}
 }
 /* END OF FUNCTION */

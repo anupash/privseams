@@ -821,6 +821,25 @@
           currently required because support for automatic NAT detection (STUN)
           has not been implemented yet.
     </para>
+    <para>If you have problems in even getting I1 triggered using NAT code
+          e.g. with conntest-client-gai (occurred on 2.6.16.5), you may have
+          to specify the source HIT explicitly:
+    </para>
+     <para>
+      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+    </para>    
+     <para>
+      &nbsp;tools/hipconf hip nat on
+    </para>    
+     <para>
+      &nbsp; ping6 -I source_hit dst_hit
+    </para>    
+    <para>Make sure that the source is the same as in "ip xfrm policy" output.
+          We are aware of the problem (see bug id 161) and it is being solved.
+          Also, it seemed like the responder could not route packets
+          automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
+          was necessary at the responder (occurred on 2.6.16.5).
+    </para>
   </chapter>
   <chapter>
     <title>HIP User Agent and GUI</title>
