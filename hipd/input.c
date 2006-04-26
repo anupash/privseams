@@ -276,16 +276,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
-#define KEYMAT_DRAW_AND_COPY(dst, len)				\
-         {							\
-	   void *p = hip_keymat_draw(&km, len);		        \
-	   if (!p) {						\
-		 HIP_ERROR("Could not draw from keymat\n");	\
-		 err = -EINVAL;					\
-		 goto out_err;					\
-	   }							\
-	   memcpy(dst, p, len);					\
-        }
+
 #if 0
 	/* removed this because the cts is already set to 0 when it is
 	   created */
@@ -302,23 +293,23 @@ int hip_produce_keying_material(struct hip_common *msg,
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
 	if (we_are_HITg) {
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key, &km,	hip_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key, &km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
  	} else {
- 	 	KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
+ 	 	hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key,	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
  	}
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
