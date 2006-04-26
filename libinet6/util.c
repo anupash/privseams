@@ -66,6 +66,7 @@ void extractsubstrings(char *string, List *list) {
   sub_string = strtok(string, separator);
   _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
   if(sub_string)
+
     insert(list, sub_string);
   else 
     return;
@@ -102,11 +103,12 @@ void findkeyfiles(char *path, List *files) {
       //Get the status info for the current file
       if (stat(entry->d_name, &file_status) == 0) {
 	//Is this a directory, or a file?
-	//Go through all private key files
+	//Go through all public key files
 	if (!S_ISDIR(file_status.st_mode) && 
-	    !findsubstring(entry->d_name, ".pub") &&
+            findsubstring(entry->d_name, ".pub") &&    
+	    //!findsubstring(entry->d_name, ".pub") && original
 	    findsubstring(entry->d_name, "hip_host_")) {
-	  _HIP_DEBUG("Private key file: %s \n",entry->d_name);
+	  HIP_DEBUG("findkeyfiles: Public key file: %s \n",entry->d_name);
 	  insert(files, entry->d_name);
 	  
 	}

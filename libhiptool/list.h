@@ -1,7 +1,7 @@
 #ifndef HIP_LIST_H
 #define HIP_LIST_H
 
-#include <linux/stddef.h>
+#include "kerncompat.h"
 #include "hip.h"
 
 static inline void prefetch(const void *x) {;}

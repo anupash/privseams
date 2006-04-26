@@ -1,18 +1,20 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include <asm/types.h>
+#  include <sys/errno.h>
+#  include <sys/socket.h>
+#  include "kerncompat.h"
+#  include "list.h"
+#  include "hipd.h"
+#endif
+
 #include "hip.h"
 #include "debug.h"
-
-#include <sys/socket.h>
-#include "list.h"
 #include "timer.h"
-#include "cookie.h"
-#include "pk.h"
-
-typedef struct { } rwlock_t;
-#define RW_LOCK_UNLOCKED (rwlock_t) { }
-
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
@@ -42,21 +44,20 @@ typedef struct { } rwlock_t;
  */
 struct hip_db_struct {
 	struct list_head  db_head;
-        rwlock_t          db_lock;
+	rwlock_t          db_lock;
 	char *            db_name;
-        int               db_cnt;
+	int               db_cnt;
 };
-
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-        struct list_head list;
-        struct in6_addr peer_hit;
-        /* These two _MUST_ be left untouched. Feel free to add more
-         * to the end */
+	struct list_head list;
+	struct in6_addr peer_hit;
+	/* These two _MUST_ be left untouched. Feel free to add more
+	 * to the end */
 };
 
 struct hip_hadb_multi {
@@ -101,5 +102,8 @@ void hip_uninit_host_id_dbs(void);
 int hip_handle_add_local_hi(const struct hip_common *input);
 
 int hip_handle_del_local_hi(const struct hip_common *input);
+
+int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
+
 
 #endif /* _HIP_DB */

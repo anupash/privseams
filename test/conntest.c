@@ -508,17 +508,23 @@ int main_server_native(int socktype, char *port_name)
 	hints.ei_family = endpoint_family;
 	hints.ei_socktype = socktype;
 
+	HIP_DEBUG("Native server calls getendpointinfo\n");
+	
 	err = getendpointinfo(NULL, port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("Resolving of peer identifiers failed (%d)\n", err);
 		goto out;
 	}
 
+	HIP_DEBUG("Native server calls bind\n");
+
 	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
 		HIP_PERROR("bind");
 		err = 1;
 		goto out;
 	}
+	
+	HIP_DEBUG("Native server calls listen\n");
 
 	if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
 		HIP_PERROR("listen");
@@ -526,12 +532,14 @@ int main_server_native(int socktype, char *port_name)
 		goto out;
 	}
 
+	HIP_DEBUG("Native server waits connection request\n");
+
 	while(1) {
 		if (socktype == SOCK_STREAM) {
 			sockfd = accept(serversock, (struct sockaddr *) &peer_eid,
 					&peer_eid_len);
 			if (sockfd < 0) {
-				HIP_PERROR("accept");
+				HIP_PERROR("accept failed");
 				err = 1;
 				goto out;
 			}

@@ -58,6 +58,42 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	return 0;
 }
 
+int exists_address_in_list(struct sockaddr *addr, int ifindex)
+{
+	struct netdev_address *n, *t;
+	
+	list_for_each_entry_safe(n, t, &addresses, next) {
+	  int mapped = 0;
+	  int addr_match = 0;
+	  int family_match = 0;
+
+	  mapped = IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr));
+	  HIP_DEBUG("mapped=%d\n", mapped);
+
+	  if (mapped && addr->sa_family == AF_INET) {
+	    struct in6_addr *in6 = (struct in6_addr * ) SA2IP(&n->addr);
+	    struct in_addr *in = (struct in_addr *) SA2IP(addr);
+	    addr_match = IPV6_EQ_IPV4(in6, in);
+	    family_match = 1;
+	  } else if (!mapped && addr->sa_family == AF_INET6) { 
+	    addr_match = !memcmp(SA2IP(&n->addr), SA2IP(addr),
+				 SAIPLEN(&n->addr));
+	    family_match = (n->addr.ss_family == addr->sa_family);
+	  }
+
+	  HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n", n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
+	  if (n->addr.ss_family == AF_INET6) {
+	    HIP_DEBUG_IN6ADDR("addr6", SA2IP(&n->addr));
+	  } else if (n->addr.ss_family == AF_INET) {
+	    HIP_DEBUG_INADDR("addr4", SA2IP(&n->addr));
+	  }
+	  if (n->if_index == ifindex && family_match && addr_match)
+	    return 1;
+	}
+
+	return 0;
+}
+
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
@@ -163,15 +199,17 @@ int hip_netdev_find_if(struct sockaddr *addr)
 			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
 
 	list_for_each_entry(n, &addresses, next) {
-		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
-		HIP_DEBUG_IN6ADDR("n addr ",  &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
+		HIP_DEBUG("n family %d, addr family %d\n",
+			  n->addr.ss_family ,addr->sa_family);
+		HIP_DEBUG_IN6ADDR("n addr ", 
+			   &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
 		HIP_DEBUG("index %d\n", n->if_index);	
 		if ((n->addr.ss_family == addr->sa_family) &&
 		    ((memcmp(SA2IP(&n->addr), SA2IP(addr),
 			     SAIPLEN(addr))==0)) ||
 			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr)){ 
-		HIP_DEBUG("index %d\n", n->if_index);	
-		return n->if_index;
+			HIP_DEBUG("index %d\n", n->if_index);	
+			return n->if_index;
 		}
 
 	}
@@ -298,7 +336,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0;
 	hip_ha_t *entry;
-	hip_hit_t *dst_hit;
+	hip_hit_t *src_hit, *dst_hit;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr *dst_addr;
 	struct sockaddr_storage ss_addr;
@@ -308,8 +346,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG("Acquire: sending I1\n");
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
-	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
 	if (!entry) {
 #if 0
@@ -373,7 +413,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	int l, is_add, i;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
-	struct hip_rea_info_addr_item *reas;
+	struct hip_locator_info_addr_item *locators;
 	struct netdev_address *n, *t;
 	int pre_if_address_count;
 
@@ -381,7 +421,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	
 	for (; NLMSG_OK(msg, (u32)len);
 	     msg = NLMSG_NEXT(msg, len)) {
-		int ifindex;
+		int ifindex, addr_exists;
 
 		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 		ifindex = ifinfo->ifi_index;
@@ -396,7 +436,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			HIP_DEBUG("RTM_DELLINK\n");
 			//ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 			//delete_address_from_list(NULL, ifinfo->ifi_index);
-			delete_address_from_list(NULL, ifindex);
+			//delete_address_from_list(NULL, ifindex);
 			/* should do here
 			   hip_send_update_all(NULL, 0, ifindex, SEND_UPDATE_REA);
 			   but ifconfig ethX down never seems to come here
@@ -442,10 +482,24 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			pre_if_address_count = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
 				  pre_if_address_count, ifa->ifa_index);
+
+			addr_exists = exists_address_in_list(addr,
+							     ifa->ifa_index);
+			HIP_DEBUG("is_add=%d, exists=%d\n", is_add, addr_exists);
+			if ((is_add && addr_exists) ||
+			    (!is_add && !addr_exists)) {
+				/* radvd can try to add duplicate addresses.
+				   This can confused our address cache. */
+				HIP_DEBUG("Address %s discarded.\n",
+					  (is_add ? "add" : "del"));
+				return 0;
+			}
+
 			if (is_add)
 				add_address_to_list(addr, ifa->ifa_index);
 			else
 				delete_address_from_list(addr, ifa->ifa_index);
+
 			i = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
@@ -457,15 +511,15 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				   last address */			   
 				HIP_DEBUG("sending 0-addr REA\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
-						    SEND_UPDATE_REA);
+						    SEND_UPDATE_LOCATOR);
 			} else if (i == 0) {
 				HIP_DEBUG("no need to readdress\n");
 				goto skip_readdr;
 			}
 
-			reas = (struct hip_rea_info_addr_item *)
-				malloc(i * sizeof(struct hip_rea_info_addr_item));
-			if (reas) {
+			locators = (struct hip_locator_info_addr_item *)
+				malloc(i * sizeof(struct hip_locator_info_addr_item));
+			if (locators) {
 				i = 0;
 				list_for_each_entry_safe(n, t, &addresses, next) {
 					/* advertise only the addresses which are in
@@ -473,18 +527,26 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					if (n->if_index != ifa->ifa_index)
 						continue;
 
-					memcpy(&reas[i].address, SA2IP(&n->addr),
+					memcpy(&locators[i].address, SA2IP(&n->addr),
 					       SAIPLEN(&n->addr));
 					/* FIXME: Is this ok? (tkoponen), for boeing it is*/
-					reas[i].lifetime = 0;
+					locators[i].traffic_type =
+						HIP_LOCATOR_TRAFFIC_TYPE_DUAL; 
+					locators[i].locator_type =
+						HIP_LOCATOR_LOCATOR_TYPE_IPV6; 
+					locators[i].locator_length =
+						sizeof(struct in6_addr) / 4; 
 					/* For testing preferred address */
-					reas[i].reserved = i == 0 ? htonl(1 << 31) : 0;
-					i++;
+					locators[i].reserved =
+						i == 0 ? htonl(1 << 31) : 0;
+					locators[i].lifetime = 0;
+ i++;
 				}
 				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
-				hip_send_update_all(reas, i,
-						    ifa->ifa_index, SEND_UPDATE_REA);
-				free(reas);
+				hip_send_update_all(locators, i,
+						    ifa->ifa_index,
+						    SEND_UPDATE_LOCATOR);
+				free(locators);
 				break;
 			}
 		case XFRMGRP_ACQUIRE:
@@ -543,6 +605,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		}
 	}
 
+ out:
+	
 	return 0;
 }
 

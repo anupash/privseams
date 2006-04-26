@@ -44,7 +44,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
-				   hit_prefix, preferred_family), -1);
+				   hit_prefix, 0, 0, preferred_family), -1);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -179,7 +179,7 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 	/* SELECTOR <--> HITs */
 	HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
-				   hit_prefix, preferred_family), -1);
+				   hit_prefix, 0, 0, preferred_family), -1);
 /*
 	if (req.xpid.sel.family == AF_UNSPEC)
 		req.xpid.sel.family = AF_INET6;
@@ -214,9 +214,12 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int aalg,
 			  struct hip_crypto_key *authkey,
 			  int authkey_len,
-			  int preferred_family)
+			  int preferred_family,
+			  int sport, int dport )
+			//struct hip_stateless_info *sa_info)
 {
 	int err = 0;
+	struct xfrm_encap_tmpl encap;
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_info xsinfo;
@@ -224,6 +227,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	} req;
 
 	memset(&req, 0, sizeof(req));
+
+	HIP_DEBUG("***********************************************\n");
+	HIP_DEBUG("natstatus %d, sport %d, dport %d\n",  hip_nat_status, 
+				sport, dport);
 
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
@@ -253,8 +260,15 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
 			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
 			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
-			   AF_INET6), -1);
+			   0,0, AF_INET6), -1);
 			   //preferred_family), -1);
+	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
+	{
+		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
+			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
+		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
+                                  (void *)&encap, sizeof(encap)), -1);
+	}
 	
 	{
 		struct {
@@ -267,7 +281,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			 "blowfish", "cipher_null", "cipher_null"};
 		char *a_algo_names[] =
 			{"reserved", "sha1", "sha1", "md5",
-			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 //			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
@@ -280,7 +295,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		/* XFRMA_ALG_AUTH */
 		memset(&alg, 0, sizeof(alg));
 		HIP_IFE(xfrm_algo_parse((void *)&alg, XFRMA_ALG_AUTH, a_name,
-					 authkey->key, enckey_len,
+					 authkey->key, authkey_len,
 					sizeof(alg.buf)), -1);
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
@@ -316,12 +331,14 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
 			  struct in6_addr *peer_addr, __u32 spi,
-			  int preferred_family) {
-
+			  int preferred_family,
+			  int sport, int dport) {
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_id	xsid;
+	        //char   			buf[RTA_BUF_SIZE];
 	} req;
+	//struct xfrm_encap_tmpl encap;
 	char *idp = NULL;
 	int err = 0;
 
@@ -343,8 +360,15 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
                 req.xsid.family = preferred_family;
         }
 
-
-
+#if 0 /* XX FIXME: fill in information for UDP-NAT SAs */
+	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
+	{
+		xfrm_fill_encap((&encap,sport ? sport : HIP_NAT_UDP_PORT), 
+			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
+		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
+                                  (void *)&encap, sizeof(encap)), -1);
+	}
+#endif
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
@@ -357,9 +381,11 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family) {
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
+		   int sport, int dport) {
 
-	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family);
+	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
+			      dport);
 
 }
 
@@ -380,7 +406,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
-		    int direction, int update) {
+		    int direction, int update,
+		    int sport, int dport) {
+			// struct hip_stateless_info *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
@@ -405,7 +433,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
-				      authkey, authkey_len, AF_INET6), -1);
+				      authkey, authkey_len, AF_INET6,
+				      sport, dport), -1);
  out_err:
 	return err;
 }

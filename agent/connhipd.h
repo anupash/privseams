@@ -14,6 +14,8 @@
 //#include <socket.h>
 #include <sys/un.h>
 #include <pthread.h>
+#include <errno.h>
+#include <string.h>
 
 #include "hip.h"
 #ifndef __u32
@@ -40,7 +42,9 @@ extern "C" {
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
+int connhipd_sendto_hipd(char *, size_t);
 int connhipd_thread(void *);
+void connhipd_quit(void);
 
 
 /******************************************************************************/

@@ -62,6 +62,8 @@ hip_misc_func_set_t ahip_misc_func_set;
 hip_misc_func_set_t default_misc_func_set;
 #endif
 
+extern int hip_nat_status;
+
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 
@@ -102,7 +104,7 @@ void hip_hadb_put_entry(void *entry);
 		destructor(ha); \
                 HIP_DEBUG("HA: %p deleted\n", ha); \
 	} else { \
-                HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
+                _HIP_DEBUG("HA: %p, refcnt decremented to: %d\n", ha, \
                            atomic_read(&ha->refcnt)); \
         } \
 } while(0)
@@ -181,7 +183,7 @@ uint32_t hip_update_get_new_spi_in(hip_ha_t *entry, uint32_t spi);
 void hip_update_switch_spi_in(hip_ha_t *entry, uint32_t old_spi);
 void hip_update_switch_spi_out(hip_ha_t *entry, uint32_t old_spi);
 void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
-			   uint32_t update_id, int update_flags_or, struct hip_nes *nes,
+			   uint32_t update_id, int update_flags_or, struct hip_esp_info *esp_info,
 			   uint16_t keymat_index);
 void hip_update_clear_status(hip_ha_t *entry, uint32_t spi);
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
@@ -189,9 +191,9 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
                                    struct in6_addr *addr);
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes,
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info,
 			   struct hip_echo_response *echo_esp);
-void hip_update_handle_nes(hip_ha_t *entry, uint32_t peer_update_id);
+void hip_update_handle_(hip_ha_t *entry, uint32_t peer_update_id);
 int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
@@ -229,6 +231,11 @@ typedef struct hip_peer_opaque {
         struct hip_peer_entry_opaque *head;
         struct hip_peer_entry_opaque *end;
 } hip_peer_opaque_t;         /* Structure to record kernel peer list */
+
+struct hip_peer_map_info {
+	hip_hit_t peer_hit;
+	struct in6_addr our_addr, peer_addr;
+};
 
 void hip_hadb_remove_hs(uint32_t spi);
 

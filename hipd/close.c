@@ -34,12 +34,16 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		goto out_err;
 	}
 
+        if (!(entry->state == HIP_STATE_ESTABLISHED ||
+	      entry->state == HIP_STATE_REKEYING)) { /* To be removed .. */
+		HIP_ERROR("State %d, not sending CLOSE\n");
+		goto out_err;
+	}
+
 	HIP_DEBUG("Sending close to peer\n");
 
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
 			      &entry->hit_peer);
 
@@ -60,7 +64,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature\n");
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
@@ -94,8 +98,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 -1, "No echo request under signature\n");
 	echo_len = hip_get_param_contents_len(request);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);
@@ -114,16 +116,12 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature\n");
 
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close_ack, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSED;
 
 	HIP_DEBUG("CLOSED\n");
-
-	/* Note: I had some problems with deletion of peer info. Try to close
-	   a SA and then to re-establish without killing
-	   the hipd when you test the CLOSE. -miika */
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
 				  &entry->preferred_address), -1,
