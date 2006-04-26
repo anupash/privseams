@@ -508,7 +508,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 		// state
-		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
+		HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
 		HIP_IFCS(entry,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
@@ -1389,8 +1389,8 @@ int hip_handle_i2(struct hip_common *i2,
 		 * so lock the newly created entry as well */
 		HIP_LOCK_HA(entry);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
-		hip_init_us(entry, &i2->hitr);
+		ipv6_addr_copy(&entry->hit_our, &i2->hitr);
+		//hip_init_us(entry, &i2->hitr);
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
 		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
