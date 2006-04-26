@@ -9,27 +9,6 @@
 
 #include "debug.h"
 
-inline void hip_debug_skb(const struct ipv6hdr *hdr, const struct sk_buff *skb)
-{
-  	struct ipv6hdr *ip6hdr;
-	char src[INET6_ADDRSTRLEN];
-	char dst[INET6_ADDRSTRLEN];
-	_HIP_DEBUG("hdr=%p skb=%p\n", hdr, skb);
-	if (hdr && skb) {
-		ip6hdr = skb->nh.ipv6h;
-		_HIP_DEBUG("ip6hdr=%p src %p dst %p skbdev %p\n",
-			   ip6hdr, &ip6hdr->saddr, &ip6hdr->daddr,
-			   skb->dev);
-		hip_in6_ntop(&ip6hdr->saddr, src);
-		hip_in6_ntop(&ip6hdr->daddr, dst);
-		HIP_DEBUG("pkt out: saddr %s daddr %s\n", src, dst);
-		if (skb->dev) {
-			HIP_DEBUG("pkt out: dev %s (ifindex %d)\n",
-				  skb->dev->name, skb->dev->ifindex);
-		}
-	}
-}
-
 /**
  * hip_print_hit - print a HIT
  * @str: string to be printed before the HIT
@@ -67,7 +46,7 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 
 	/* every hexdump line contains offset+": "+32 bytes of data (space every 4 bytes) */
 	buflen = 4+2+2*32+((32-1)/4)+1;
-	buf = HIP_MALLOC(buflen, GFP_ATOMIC);
+	buf = kmalloc(buflen, GFP_ATOMIC);
 	if (!buf)
 		return;
 
@@ -95,28 +74,32 @@ inline void hip_khexdump(const char *tag, const void *data, const int len)
 	}
 
 	HIP_DEBUG("end of dump (0x%p)\n", data+len);
-	HIP_FREE(buf);
+	kfree(buf);
 	return;
 }
 
 
-/**
- * hip_state_str - get name for a state
- * @state: state value
- *
- * Returns: state name as a string.
- */
-inline const char *hip_state_str(unsigned int state)
+inline int is_big_endian(void)
 {
-	const char *str = "UNKNOWN";
-	static const char *states[] =
-		{ "NONE", "UNASSOCIATED", "I1_SENT",
-		  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
-		  "FAILED" };
-	if (state <= ARRAY_SIZE(states))
-		str = states[state];
-        else
-		HIP_ERROR("invalid state %u\n", state);
+	int i = 1;
+	char *p = (char *) &i;
 
-	return str;
+	if (p[0] == 1)
+		return 0;
+	else
+		return 1;
+}
+
+inline uint64_t hton64(uint64_t i) {
+	if (is_big_endian())
+		return i;
+	else
+		return ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff) );
+}
+
+inline uint64_t ntoh64(uint64_t i) {
+	if (is_big_endian())
+		return i;
+	else
+		return hton64(i);
 }

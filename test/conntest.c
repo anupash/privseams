@@ -508,11 +508,15 @@ int main_server_native(int socktype, char *port_name)
 	hints.ei_family = endpoint_family;
 	hints.ei_socktype = socktype;
 
+	HIP_DEBUG("Native server calls getendpointinfo\n");
+	
 	err = getendpointinfo(NULL, port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("Resolving of peer identifiers failed (%d)\n", err);
 		goto out;
 	}
+
+	HIP_DEBUG("Native server calls bind\n");
 
 	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
 		HIP_PERROR("bind");

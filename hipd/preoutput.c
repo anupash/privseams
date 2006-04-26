@@ -12,7 +12,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	       sizeof(struct in6_addr));
 	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
 	       sizeof(struct in6_addr));
-	entry->hip_msg_retrans.count = HIP_RETRANSMISSION_MAX;
+	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
 
  out_err:
 	return err;
@@ -20,11 +20,12 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
-		  struct hip_common* msg,
+		  uint32_t src_port, uint32_t dst_port,
+		  struct hip_common *msg,
 		  hip_ha_t *entry,
 		  int retransmit)
 {
-	int err = 0, sa_size, sent, len;
+	int err = 0, sa_size, sent, len, dupl, try_bind_again;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	struct sockaddr_in6 *src6, *dst6;
@@ -37,6 +38,16 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
+		((entry && entry->nat) ||
+		 (src_port != 0 || dst_port != 0))))//Temporary fix 
+	//if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
+	{
+		return hip_send_udp(local_addr, peer_addr,
+				    src_port, dst_port, msg, entry, retransmit);
+
+	} 
+	
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be
@@ -128,8 +139,17 @@ int hip_csum_send(struct in6_addr *local_addr,
 
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
-	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &src, sa_size), -1,
-		 "Binding to raw sock failed\n");
+	for (try_bind_again = 0; try_bind_again < 2; try_bind_again++) {
+		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
+		if (err == EADDRNOTAVAIL) {
+			HIP_DEBUG("Binding failed 1st time, trying again\n");
+			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
+			sleep(4);
+		} else {
+			break;
+		}
+	}
+	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
 
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet was lost (simulation)\n");
@@ -137,16 +157,18 @@ int hip_csum_send(struct in6_addr *local_addr,
 	}
 
 	/* For some reason, neither sendmsg or send (with bind+connect)
-	   do not seem to work. */
+	   do not seem to work properly. Thus, we use just sendto() */
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	/* For some reason, connect() was not working with a raw socket */
-	sent = sendto(hip_raw_sock, msg, len, 0, (struct sockaddr *) &dst,
-		      sa_size);
 
-	HIP_IFEL((sent != len), -1,
-		 "Could not send the all requested data (%d/%d)\n", sent, len);
+	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
+		sent = sendto(hip_raw_sock, msg, len, 0,
+			      (struct sockaddr *) &dst, sa_size);
+		HIP_IFEL((sent != len), -1,
+			 "Could not send the all requested data (%d/%d)\n",
+			 sent, len);
+	}
 
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");

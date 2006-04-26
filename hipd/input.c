@@ -30,13 +30,10 @@ extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_inde
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	return ((controls & ( HIP_CONTROL_CERTIFICATES |
-			      HIP_CONTROL_HIT_ANON
+	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
 #endif
-			      | HIP_CONTROL_SHT_MASK /* should check reserved ? */
-			      | HIP_CONTROL_DHT_MASK
 		)) | legal) == legal;
 }
 
@@ -175,6 +172,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
  *
  * The initial ESP keys are drawn out of the keying material.
  *
+ *
  * Returns zero on success, or negative on error.
  */
 int hip_produce_keying_material(struct hip_common *msg,
@@ -187,18 +185,22 @@ int hip_produce_keying_material(struct hip_common *msg,
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
 	int hip_tfm, esp_tfm, err = 0, dh_shared_len = 1024;
 	struct hip_keymat_keymat km;
+	struct hip_esp_info *esp_info;
 	char *keymat = NULL;
 	size_t keymat_len_min; /* how many bytes we need at least for the KEYMAT */
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
+	uint16_t esp_keymat_index, esp_default_keymat_index;
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)), -EINVAL, 
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)),
+		 -EINVAL, 
 		 "Could not find HIP transform\n");
 	HIP_IFEL((hip_tfm = hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not select HIP transform\n");
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_TRANSFORM)), -EINVAL, 
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_ESP_TRANSFORM)),
+		 -EINVAL, 
 		 "Could not find ESP transform\n");
 	HIP_IFEL((esp_tfm = hip_select_esp_transform((struct hip_esp_transform *) param)) == 0, 
 		 -EINVAL, "Could not select proper ESP transform\n");
@@ -220,6 +222,24 @@ int hip_produce_keying_material(struct hip_common *msg,
 	keymat_len_min = hip_transf_length + hmac_transf_length +
 		hip_transf_length + hmac_transf_length + esp_transf_length +
 		auth_transf_length + esp_transf_length + auth_transf_length;
+
+	/* assume esp keys are after authentication keys */
+	esp_default_keymat_index = hip_transf_length + hmac_transf_length +
+		hip_transf_length + hmac_transf_length;
+
+	/* R1 contains no ESP_INFO */
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	if (esp_info)
+		esp_keymat_index = ntohs(esp_info->keymat_index);
+	else
+		esp_keymat_index = esp_default_keymat_index;
+
+	if (esp_keymat_index != esp_default_keymat_index) {
+		/* XX FIXME */
+		HIP_ERROR("Varying keymat slices not supported yet\n");
+		err = -1;
+		goto out_err;
+	}
 
 	keymat_len = keymat_len_min;
 	if (keymat_len % HIP_AH_SHA_LEN)
@@ -309,6 +329,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	/* the next byte when creating new keymat */
 	ctx->current_keymat_index = keymat_len_min; /* offset value, so no +1 ? */
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
+	ctx->esp_keymat_index = esp_keymat_index;
 
 	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
@@ -340,7 +361,7 @@ int hip_receive_close(struct hip_common *close,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
 
 	/* XX FIX: CHECK THE SIGNATURE */
 
@@ -348,13 +369,7 @@ int hip_receive_close(struct hip_common *close,
 	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
 		 "Received NULL receiver HIT in CLOSE. Dropping\n");
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
-	if (!hip_controls_sane(ntohs(close->control), mask
-			  //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-			  //HIP_CONTROL_RVS_CAPABLE
-			  // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-		               )) {
+	if (!hip_controls_sane(ntohs(close->control), mask)) {
 		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
 			  ntohs(close->control));
 		goto out_err;
@@ -370,7 +385,6 @@ int hip_receive_close(struct hip_common *close,
 	}
 
  	switch(state) {
- 	case HIP_STATE_REKEYING: // XX CHECK: CORRECT?
  	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSING:
 		err = entry->hadb_handle_func->hip_handle_close(close, entry);
@@ -394,7 +408,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
 
 	/* XX FIX:  */
 
@@ -403,8 +417,6 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
 		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
 	if (!hip_controls_sane(ntohs(close_ack->control), mask
 		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
 		       //HIP_CONTROL_RVS_CAPABLE
@@ -445,7 +457,8 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr)
+			       struct in6_addr *dst_addr,
+	                       struct hip_stateless_info *msg_info)
 {
 	hip_ha_t tmp;
 	
@@ -478,7 +491,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		// no state
-		err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
+		err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
 		break;
 		
 	case HIP_I2:
@@ -488,9 +501,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 			err = entry->hadb_rcv_func->hip_receive_i2(msg,
 							src_addr,
 							dst_addr,
-							entry);
+							entry,
+							msg_info);
 		} else {
-			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry);
+			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
 		}
 		break;
 		
@@ -501,7 +515,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		//err = hip_receive_r1(msg, src_addr, dst_addr);
 		break;
 		
@@ -511,7 +526,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		//err = hip_receive_r2(msg, src_addr, dst_addr);
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
@@ -522,7 +538,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_update(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		break;
 		
 	case HIP_NOTIFY:
@@ -541,7 +558,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
 							src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		/*In case of BOS the msg->hitr is null, therefore it is replaced
 		  with our own HIT, so that the beet state can also be
 		  synchronized */
@@ -595,7 +613,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+	          struct hip_stateless_info *r1_info)
 {
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
@@ -609,7 +628,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_param *param;
 	struct hip_diffie_hellman *dh_req;
 	struct hip_spi_in_item spi_in_data;
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	HIP_DEBUG("\n");
 
@@ -632,15 +651,16 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	hip_hadb_delete_outbound_spi(entry, 0);
 
 	/* create I2 */
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
 
 	/********** ESP_INFO **********/
 	/* SPI is set below */
-	HIP_IFEL(hip_build_param_esp_info(i2, 0, 0, 0), -1, "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(i2,
+					  ctx->esp_keymat_index,
+					  0, 0),
+		 -1, "building of ESP_INFO failed.\n");
 
 	/********** R1 COUNTER (OPTIONAL) ********/
 	/* we build this, if we have recorded some value (from previous R1s) */
@@ -775,11 +795,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
+
+
 	/* let the setup routine give us a SPI. */
 	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr, &ctx->input->hits, &ctx->input->hitr,
 			    &spi_in, transform_esp_suite, 
 			    &ctx->esp_in, &ctx->auth_in, 0,
-			    HIP_SPI_DIRECTION_IN, 0), -1, 
+			    HIP_SPI_DIRECTION_IN, 0, r1_info->src_port, r1_info->dst_port), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -863,7 +887,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, i2,
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
+								r1_info->dst_port, i2,
 						     entry, 0), -1);
 
  out_err:
@@ -889,7 +914,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r1_info)
 {
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
@@ -961,7 +987,8 @@ int hip_handle_r1(struct hip_common *r1,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I, solved_puzzle),
+	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
+								solved_puzzle),
 			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
@@ -974,7 +1001,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
- 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
+ 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
 		 "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT) {
@@ -1004,16 +1031,15 @@ int hip_handle_r1(struct hip_common *r1,
 int hip_receive_r1(struct hip_common *hip_common,
 		   struct in6_addr *r1_saddr,
 		   struct in6_addr *r1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *r1_info)
 {
-	int state, mask, err = 0;
+	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), 0, 
 		 "Received illegal controls in R1: 0x%x Dropping\n",
 		 ntohs(hip_common->control));
@@ -1056,7 +1082,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry, r1_info);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1064,7 +1090,6 @@ int hip_receive_r1(struct hip_common *hip_common,
 		break;
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
- 	case HIP_STATE_REKEYING:
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1090,12 +1115,13 @@ int hip_receive_r1(struct hip_common *hip_common,
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
-	uint16_t mask;
+	uint16_t mask = 0;
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
@@ -1110,15 +1136,15 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/* Just swap the addresses to use the I2's destination HIT as
 	 * the R2's source HIT */
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(r2, HIP_R2, mask,
 			      &entry->hit_our, &entry->hit_peer);
 
  	/********** ESP_INFO **********/
 	//barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, 0, 0, spi_in), -1, "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
+					  0, spi_in), -1,
+		 "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_RVS
  	/* Do the Rendezvous functionality */
@@ -1161,9 +1187,11 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
+							i2_info->src_port,
 						      r2, entry, 0), -1,
 		 "Failed to send r2\n")
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1197,9 +1225,10 @@ int hip_create_r2(struct hip_context *ctx,
 int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,		  
-		  hip_ha_t *ha)
+		  hip_ha_t *ha,
+		  struct hip_stateless_info *i2_info)
 {
-	int err = 0, retransmission = 0;
+	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
 	char *tmp_enc = NULL, *enc = NULL;
@@ -1244,11 +1273,19 @@ int hip_handle_i2(struct hip_common *i2,
 	if (entry) {
 		/* If the I2 packet is a retransmission, we need reuse
 		   the the SPI/keymat that was setup already when the
-		   first I2 was received. However it is a
-		   retransmission only if the responder is in R2-SENT
-		   STATE */
+		   first I2 was received. */
 		retransmission = 
-			(entry->state == HIP_STATE_R2_SENT ? 1 : 0);
+			((entry->state == HIP_STATE_R2_SENT ||
+			  entry->state == HIP_STATE_ESTABLISHED) ? 1 : 0);
+		/* If the initiator is in established state (it has possibly
+		   sent duplicate I2 packets), we must make sure that we are
+		   reusing the old SPI as the initiator will just drop the
+		   R2, thus discarding any new SPIs we create. Notice that
+		   this works also in the case when initiator is not in
+		   established state, as the initiator just picks up the SPI
+		   from the R2. */
+		if (entry->state == HIP_STATE_ESTABLISHED)
+			spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material  */
@@ -1365,7 +1402,13 @@ int hip_handle_i2(struct hip_common *i2,
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
 		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		
+		/*FIXME : This is a temporary fix. Need to think on this a bit ! --Abi*/
+		//Add other info here
+		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
+		{
+			entry->nat = 1;
+			entry->peer_udp_port = i2_info->src_port;
+		}
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -1423,15 +1466,21 @@ int hip_handle_i2(struct hip_common *i2,
 		 "Error while adding the preferred peer address\n");
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
+	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
+
+	
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0);
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
+				i2_info->dst_port);
 	if (err) {
-		HIP_ERROR("Failed to setup IPsec SPD/SA entries.\n");
+		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 //		if (err == -EEXIST)
 //			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
 //				  spi_in);
@@ -1447,13 +1496,19 @@ int hip_handle_i2(struct hip_common *i2,
 
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
+
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+
+
 	err = hip_add_sa(i2_daddr, i2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
-			 1, HIP_SPI_DIRECTION_OUT, 0);
+			 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	if (err) {
-		HIP_DEBUG("Adding of outbound SA failed\n");
+		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
+			  spi_out);
 
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1499,7 +1554,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
-	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
+	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
 		 "Creation of R2 failed\n");
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
@@ -1570,17 +1625,16 @@ int hip_handle_i2(struct hip_common *i2,
 int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
 		   struct in6_addr *i2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
-	uint16_t mask;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
 	HIP_DEBUG("hip_receive_i2\n");
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
 		 "Received NULL receiver HIT in I2. Dropping\n");
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(i2->control), mask), 0, 
 		 "Received illegal controls in I2: 0x%x. Dropping\n",
 		 ntohs(i2->control));
@@ -1598,35 +1652,31 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry); //as there is no state established function pointers can't be used here
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 		} else {
 			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
 		}
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
-		break;
- 	case HIP_STATE_REKEYING:
-		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1660,7 +1710,8 @@ int hip_receive_i2(struct hip_common *i2,
 int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r2_info)
 {
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
@@ -1713,11 +1764,14 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
+
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
-			 HIP_SPI_DIRECTION_OUT, 0);
+			 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1774,7 +1828,8 @@ int hip_handle_r2(struct hip_common *r2,
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i1_info)
 {
 	//int err;
 #ifdef CONFIG_HIP_RVS
@@ -1806,7 +1861,7 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
 #endif
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst);
+	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
 }
 
 
@@ -1824,9 +1879,10 @@ int hip_handle_i1(struct hip_common *i1,
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *i1_info)
 {
-	int err = 0, state, mask;
+	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 #endif
@@ -1834,7 +1890,6 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_ALL, HIP_CONTROL_DHT_ALL);
  	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
 	
@@ -1873,12 +1928,12 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	switch(state) {
 	case HIP_STATE_NONE:
 		/* entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
                 if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		} else {
 			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -1887,12 +1942,9 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
-	case HIP_STATE_REKEYING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
-		break;
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	default:
 		/* should not happen */
@@ -1917,17 +1969,16 @@ int hip_receive_i1(struct hip_common *hip_i1,
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *r2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
-	uint16_t mask;
+	uint16_t mask = 0;
 
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");
 	
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1,
 		 "Received illegal controls in R2: 0x%x. Dropping\n", ntohs(hip_common->control));
 	//HIP_IFEL(!(entry = hip_hadb_find_byhits(&hip_common->hits, 
@@ -1944,7 +1995,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry, r2_info);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
@@ -1953,7 +2004,6 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
- 	case HIP_STATE_REKEYING:
 	case HIP_STATE_UNASSOCIATED:
  	case HIP_STATE_I1_SENT:
  	default:
@@ -1986,13 +2036,11 @@ int hip_receive_notify(struct hip_common *hip_common,
 	
 	int err = 0;
 	struct hip_notify *notify_param;
-	uint16_t mask;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
 
 	HIP_HEXDUMP("Incoming NOTIFY", hip_common,
 		    hip_get_msg_total_len(hip_common));
 
-	mask = hip_create_control_flags(1, 1, HIP_CONTROL_SHT_ALL,
-					HIP_CONTROL_DHT_ALL);
 	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1, 
 		 "Received illegal controls in NOTIFY: 0x%x. Dropping\n",
 		 ntohs(hip_common->control));
@@ -2030,7 +2078,8 @@ int hip_receive_notify(struct hip_common *hip_common,
 int hip_receive_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *bos_info)
 {
 	int err = 0, state = 0;
 
@@ -2051,11 +2100,10 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
- 	case HIP_STATE_REKEYING:
 		HIP_DEBUG("BOS not handled in state %s\n", hip_state_str(state));
 		break;
 	default:

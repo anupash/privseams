@@ -105,7 +105,7 @@
       series. We recommend the latter.
     </para>
     <para>
-      Download linux kernel 2.6.13.1. Compile the kernel with
+      Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
     <para>
@@ -270,10 +270,9 @@
       tools for dumping the network traffic during the base exchange.
     </para>
     <para>
-      There is also a script called "hipsetup" in "hipl/test" directory for
+      There is also a program called "hipsetup" in "hipl/test" directory for
       quick testing of the base exchange. Run it without arguments to see
-      how it is used. The script requires some external applications that
-      will be prompted if they are not found.
+      how it is used.
     </para>
   </chapter>
   <chapter>
@@ -526,10 +525,7 @@
       Prerequisites:
     </para>
     <para>
-      Kernel must be compiled with the following extra option(s) included.
-    </para>
-    <para>
-      [*]  HIP: Rendezvous Mechanism 
+      ./configure --enable-rvs
     </para>
     <para>
       The hipconf tool must support rvs option:
@@ -809,6 +805,43 @@
         <para>Clears all rules.</para>
   </chapter>
   <chapter>
+    <title>HIP NAT Extensions</title>
+    <para>HIPL supports also initiating connections from behind a NAT. The
+          basic idea is that the initiator encapsulates HIP control packets
+          and ESP data packets within UDP. This way, the packets can traverse
+          the NAT box. However, both the initiator and responder have to
+          support NAT extensions in order to make this work. Currently, the
+          responder cannot be located behind a NAT.
+    </para>
+    <para>The NAT traversal can be experimented in a similar way as depicted
+          in earlier sections. The only difference is that you have to
+          tell the initiator manually that it is behind a NAT using "hipconf
+          hip nat on". After this, you can initiate the base exchange
+          according to the previous instructions. The manual configuration is
+          currently required because support for automatic NAT detection (STUN)
+          has not been implemented yet.
+    </para>
+    <para>If you have problems in even getting I1 triggered using NAT code
+          e.g. with conntest-client-gai (occurred on 2.6.16.5), you may have
+          to specify the source HIT explicitly:
+    </para>
+     <para>
+      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+    </para>    
+     <para>
+      &nbsp;tools/hipconf hip nat on
+    </para>    
+     <para>
+      &nbsp; ping6 -I source_hit dst_hit
+    </para>    
+    <para>Make sure that the source is the same as in "ip xfrm policy" output.
+          We are aware of the problem (see bug id 161) and it is being solved.
+          Also, it seemed like the responder could not route packets
+          automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
+          was necessary at the responder (occurred on 2.6.16.5).
+    </para>
+  </chapter>
+  <chapter>
     <title>HIP User Agent and GUI</title>
       <para>Manage HITs with graphical user interface.</para>
       <para>When new HIT is received, it and local HIT is filtered
@@ -827,6 +860,48 @@
 		HIT database is saved and loaded on agent startup as default from
 		'/etc/hip/agentdb'-file.
       </para>
+  </chapter>
+  <chapter>
+    <title>HIP socket handler kernel module</title>
+    <para>The HIP socket handler is a component of the HIPL HIP
+	  implementation. It is used to intercept HIP socket
+	  API calls. The hipsock kernel module is used to 
+	  register a new protocol family and to handle the
+	  socket system calls for this family.
+    </para>
+    <para>The kernel patch: 
+          patches/kernel/hipmod-2.6.13.1-v2.patch has to be appiled to the running
+	  kernel in order to make the socket handler module run.
+    </para>
+    <para>Recompile the patched kernel. Change directory to hipsock to build
+          the socket handler module. The makefile assumes
+          that the kernel sources are located in /usr/src/linux. Override it
+          with "make LINUX=/path/to/linux/" if necessary.
+    </para>
+    <para>Use "insmod hipsock.ko" to activate the kernel module.
+          Check dmesg for messages. Use "rmmod hipsock.ko" to 
+	  remove the module from the kernel. If you get the error
+          "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
+          format", you have to specify the path of the kernel source (using
+          LINUX variable) for the system in which you are going to use the
+          kernel module.
+     </para>
+   </chapter>
+  <chapter>
+    <title>OpenDHT Support (Experimental!)</title>
+    <para>
+    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    </para>
+    <para>
+    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
+    the unpacked hip-dht directory
+    </para>
+    <para>
+    &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
+    </para>
+    <para>
+    &nbsp; XX TODO: how to test?
+    </para>
   </chapter>
 </book>    
 

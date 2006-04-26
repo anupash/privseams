@@ -84,8 +84,8 @@ int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer,
 		return -1;
         }
 
-	_HIP_HEXDUMP("Peer DH pubkey", dhf->public_value, len);
-	_HIP_HEXDUMP("shared key", buffer, bufsize);
+	HIP_HEXDUMP("Peer DH pubkey", dhf->public_value, len);
+	HIP_HEXDUMP("shared key", buffer, bufsize);
 
 	return err;
 }
