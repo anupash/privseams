@@ -232,6 +232,11 @@ typedef struct hip_peer_opaque {
         struct hip_peer_entry_opaque *end;
 } hip_peer_opaque_t;         /* Structure to record kernel peer list */
 
+struct hip_peer_map_info {
+	hip_hit_t peer_hit;
+	struct in6_addr our_addr, peer_addr;
+};
+
 void hip_hadb_remove_hs(uint32_t spi);
 
 void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi);

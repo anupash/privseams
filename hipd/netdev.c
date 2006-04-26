@@ -336,7 +336,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0;
 	hip_ha_t *entry;
-	hip_hit_t *dst_hit;
+	hip_hit_t *src_hit, *dst_hit;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr *dst_addr;
 	struct sockaddr_storage ss_addr;
@@ -346,8 +346,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG("Acquire: sending I1\n");
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
-	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
 	if (!entry) {
 #if 0
