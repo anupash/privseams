@@ -524,7 +524,7 @@ int main_server_native(int socktype, char *port_name)
 		goto out;
 	}
 	
-	HIP_DEBUG("Native server calls liste\n");
+	HIP_DEBUG("Native server calls listen\n");
 
 	if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
 		HIP_PERROR("listen");

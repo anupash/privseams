@@ -244,12 +244,6 @@ int hip_socket_bind(struct socket *sock,
 	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &lhi.hit);
 	HIP_DEBUG("binding to eid with value %d\n",
 		  ntohs(sockaddr_eid->eid_val));
-	//sock->local_ed = ntohs(sockaddr_eid->eid_val);
-	//HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
-	//	  sock->peer_ed);
-
-	/* Clear out the flowinfo, etc from sockaddr_in6 */
-	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
 	/* XX FIXME: select the IP address based on the mappings or interfaces
 	   from db and do not use in6_addr_any. */
@@ -258,7 +252,8 @@ int hip_socket_bind(struct socket *sock,
 	   does not work without modifications into the bind code because
 	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	sockaddr_in6.sin6_addr = in6addr_any;
+	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 	
@@ -271,10 +266,11 @@ int hip_socket_bind(struct socket *sock,
 		goto out_err;
 	}
 
+	/*
 	memcpy(&pinfo->rcv_saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
 	memcpy(&pinfo->saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
+	sizeof(struct in6_addr));*/
 	
  out_err:
 	
