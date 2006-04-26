@@ -7,6 +7,7 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
+ *	    Tobias Heer <heer@tobibox.de>
  *
  */
 #include "input.h"
@@ -285,7 +286,9 @@ int hip_produce_keying_material(struct hip_common *msg,
 	   }							\
 	   memcpy(dst, p, len);					\
         }
-
+#if 0
+	/* removed this because the cts is already set to 0 when it is
+	   created */
 	bzero(&ctx->hip_enc_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_enc_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_hmac_in.key, sizeof(struct hip_crypto_key));
@@ -294,7 +297,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	bzero(&ctx->esp_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_out.key, sizeof(struct hip_crypto_key));
-
+#endif
 	/* Draw keys: */
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
