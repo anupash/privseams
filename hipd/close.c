@@ -64,7 +64,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature\n");
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
@@ -116,14 +116,14 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature\n");
 
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close_ack, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSED;
 
 	HIP_DEBUG("CLOSED\n");
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed\n");
 	//hip_hadb_remove_state(entry);
@@ -170,7 +170,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	   a SA and then to re-establish without rmmod or killing
 	   the hipd when you test the CLOSE. -miika */
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				   &entry->preferred_address), -1,
 		 "Deleting peer info failed\n");
 

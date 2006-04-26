@@ -30,6 +30,7 @@
 /* DEFINES */
 #define HIT_DB_TYPE_ACCEPT				0
 #define HIT_DB_TYPE_DENY				1
+#define HIT_DB_TYPE_LOCAL				2
 
 
 /******************************************************************************/
@@ -41,9 +42,9 @@ typedef struct
 	int index;
 	/**
 		Stores HIT item 'human' identifier, it's name.
-		Maximum length for this is 48 + null.
+		Maximum length for this is 64 + null.
 	*/
-	char name[48 + 1];
+	char name[64 + 1];
 	/** Stores local HIT of this item. */
 	struct in6_addr lhit;
 	/** Stores remote HIT of this item. */
@@ -58,8 +59,10 @@ typedef struct
 		Used for accepting connections for this HIT.
 	*/
 	int port;
-	/** Is this hit accept or deny type. */
+	/** What is the type of the HIT. */
 	int type;
+	/** Remote HIT group. */
+	char group[64 + 1];
 } HIT_Item;
 
 
@@ -79,7 +82,7 @@ int hit_db_clear(void);
 
 int hit_db_add_hit(HIT_Item *, int);
 int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
-               char *, int, int, int);
+               char *, int, int, char *, int);
 int hit_db_del(struct in6_addr *, struct in6_addr *, int);
 
 HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,

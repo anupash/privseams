@@ -165,6 +165,7 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
+#if 0
 /**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
@@ -200,7 +201,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         }
         return NULL;
 }
-
+#endif
 
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
@@ -255,7 +256,10 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 }
 
 /* Practically called only by when adding a HIT-IP mapping before bex */
-int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
+				    hip_hit_t *peer_hit,
+				    struct in6_addr *local_addr,
+				    struct in6_addr *peer_addr)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -264,34 +268,33 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	   initiated to allow of them in order to prevent local DoS */
 
 	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
-	HIP_DEBUG_HIT("HIT", peer_hit);
-	HIP_DEBUG_IN6ADDR("addr", peer_addr);
+	HIP_DEBUG_HIT("our hit", local_hit);
+	HIP_DEBUG_HIT("peer hit", peer_hit);
+	HIP_DEBUG_IN6ADDR("our addr", local_addr);
+	HIP_DEBUG_IN6ADDR("peer addr", peer_addr);
 
-	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
-	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
+	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
-
+	
 	entry = hip_hadb_create_state(GFP_KERNEL);
 	HIP_IFEL(!entry, -1, "");
 	if (!entry) {
 		HIP_ERROR("Unable to create a new entry\n");
 		return -1;
 	}
-		    
+	
 	_HIP_DEBUG("created a new sdb entry\n");
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
-
-	/* XXX: This is wrong. As soon as we have native socket API, we
-	 * should enter here the correct sender... (currently unknown).
-	 */
-	if (!hip_init_us(entry, NULL))
-		HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-	else
-		HIP_INFO("Could not assign local hit, continuing\n");
+	ipv6_addr_copy(&entry->hit_our, local_hit);
+	ipv6_addr_copy(&entry->local_address, local_addr);
+	
+	/* Set the nat status here */
+	if(hip_nat_status)
+		entry->nat = 1;
 	
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */
-
+	
 	/* add initial HIT-IP mapping */
 	err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
 				     PEER_ADDR_STATE_ACTIVE);
@@ -300,13 +303,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		err = -2;
 		goto out_err;
 	}
-
-	HIP_IFEL(hip_select_source_address(&entry->local_address,
-					   peer_addr), -1,
-		 "Cannot find source address\n");
-	
-	HIP_DEBUG("Source address found\n");
-	
+		
 	/*
 	 * Create a security policy for triggering base exchange.
 	 *
@@ -315,14 +312,55 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	 * alternative b) add SP pair for all local HITs
 	 *
 	 */
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
-				       &entry->local_address,
-				       peer_addr, 0, 1, 0), -1,
+	HIP_DEBUG_HIT("peer's hit\n", peer_hit);
+	HIP_DEBUG_HIT("our hit\n", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("our ipv6\n", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("peer's ipv6\n", peer_addr);
+	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+				       local_addr, peer_addr, 0, 1, 0), -1,
 		 "Error in setting the SPs\n");
 
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
+	return err;
+}
+
+int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+				void *peer_map_void)
+{
+	struct hip_peer_map_info *peer_map = peer_map_void;
+	int err = 0;
+
+	HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
+						 &peer_map->peer_hit,
+						 &peer_map->our_addr,
+						 &peer_map->peer_addr), -1,
+		 "Failed to add peer info\n");
+
+ out_err:
+	return err;
+}
+
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+{
+	int err = 0;
+	hip_ha_t *entry;
+	struct hip_peer_map_info peer_map;
+
+	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+
+	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
+					   &peer_map.peer_addr), -1,
+		 "Cannot find source address\n");
+
+	HIP_DEBUG("Source address found\n");
+
+	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
+	         "for_each_hi err.\n");	
+	
+ out_err:
 	return err;
 }
 
@@ -359,6 +397,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
+#if 0
 int hip_del_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
@@ -383,7 +422,7 @@ int hip_del_peer_map(const struct hip_common *input)
 	HIP_DEBUG_HIT("hit", hit);
 	HIP_DEBUG_IN6ADDR("ip", ip);
 
-	err = hip_del_peer_info(hit, ip);
+	err = hip_del_peer_info(xx, hit, ip);
 	if (err) {
 		HIP_ERROR("Failed to delete mapping\n");
 		goto out;
@@ -393,6 +432,7 @@ int hip_del_peer_map(const struct hip_common *input)
 
 	return err;
 }
+#endif
 
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
@@ -705,12 +745,12 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 /**
  * Currently deletes the whole entry...
  */		
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
+int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
+		      struct in6_addr *addr)
 {
 	hip_ha_t *ha;
 
-	/* XX TODO: delete all ha entries that contain a matching peer hi? */
-	ha = hip_hadb_try_to_find_by_peer_hit(hit);
+	ha = hip_hadb_find_byhits(our_hit, peer_hit);
 	if (!ha) {
 		return -ENOENT;
 	}
@@ -737,7 +777,7 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 
 /* assume already locked entry */
 // SYNC
-static int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
+int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 {
 	int err = 0;
 	struct hip_spi_in_item *item, *tmp;
@@ -1959,11 +1999,11 @@ void hip_delete_all_sp()
 
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
-				hip_delete_sa(item->spi, &ha->local_address, AF_INET6);
+				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, 0, 0);
 			}
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
-				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6);
+				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, 0);
 			}
 		}
 	}
@@ -2140,15 +2180,15 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  				  item->spi, item->new_spi, item, item->addresses);
 			HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
-			HIP_DEBUG_IN6ADDR("cheng", &entry->local_address);
+			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
-				      AF_INET6);
+				      AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
 			//for(i = 0; i < item->addresses_n; i++)
 			//  hip_delete_sa(item->spi,
 			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
- 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6);
+ 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 0, 0);
  			if (item->addresses) {
  				HIP_DEBUG("deleting stored addrlist 0x%p\n",
  					  item->addresses);
@@ -2175,9 +2215,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
 			hip_delete_sa(item->spi, &entry->preferred_address,
-				      AF_INET6);
+				      AF_INET6, 0, 0);
 			hip_delete_sa(item->new_spi, &entry->preferred_address,
-				      AF_INET6);
+				      AF_INET6, 0, 0);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);

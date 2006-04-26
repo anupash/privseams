@@ -413,7 +413,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, new_i1, NULL, 0);
+	err = hip_csum_send(NULL, final_dst, 0, 0, new_i1, NULL, 0); //Currenlty NULLing the stateless info --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {
@@ -427,11 +427,12 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
-void hip_rvs_set_request_flag(struct in6_addr *hit)
+void hip_rvs_set_request_flag(struct in6_addr *src_hit,
+			      struct in6_addr *dst_hit)
 {
 	hip_ha_t *entry;
 
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
+	entry = hip_hadb_find_byhits(&src_hit, &dst_hit);
 	if (!entry) {
 		HIP_ERROR("Could not set RVS request bit\n");
 		return;

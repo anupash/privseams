@@ -20,7 +20,7 @@
  *
  * Returns: 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -33,11 +33,13 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 #endif
 
 	/* Assign a local private key, public key and HIT to HA */
-	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
+	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
+		 "Could not assign a local host id\n");
 
-	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-			      mask, &entry->hit_our,
-			      dsthit);
+	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
+						     HIP_I1,
+						     mask, &entry->hit_our,
+						     dst_hit);
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
@@ -48,7 +50,8 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 		 "No preferred IP address for the peer.\n");
 
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						   &daddr,
+						   &daddr,0,0, 
+				/* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
 						   (struct hip_common*) &i1,
 						   entry, 1);
 	HIP_DEBUG("err = %d\n", err);
@@ -212,8 +215,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * Returns: zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit,  struct in6_addr *dst_ip,
-		struct in6_addr *dst_hit)
+		struct in6_addr *src_hit, 
+		struct in6_addr *dst_ip, struct in6_addr *dst_hit, 
+		struct hip_stateless_info *i1_info)
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
@@ -235,8 +239,10 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(own_addr, dst_addr, r1pkt, NULL, 0), -1, 
+	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port, i1_info->src_port, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
+
  out_err:
 	if (r1pkt)
 		HIP_FREE(r1pkt);
@@ -257,7 +263,7 @@ void hip_send_notify(hip_ha_t *entry)
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, notify_packet,
+	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, 0,0, notify_packet,
 					     entry, 0);
 
  out_err:

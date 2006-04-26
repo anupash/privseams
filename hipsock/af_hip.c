@@ -171,7 +171,7 @@ out_err:
 
 /** hip_create_socket - create a new HIP socket
  * 
- *  @sock	function pointer to soket (used as return value)
+ *  @sock	function pointer to socket (used as return value)
  *  @protocol	protocol number
  *  @return 	returns .1 in case of an error, 0 otherwise
  */ 
@@ -196,7 +196,6 @@ int hip_create_socket(struct socket *sock, int protocol)
 int hip_socket_release(struct socket *sock)
 {	
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -215,21 +214,7 @@ int hip_socket_release(struct socket *sock)
 		goto out_err;
 	}
 	
-	/* XX FIX: RELEASE EID */
-		
-	if(sock->local_ed != 0) { 
-		hip_db_dec_eid_use_cnt(sock->local_ed, 1);
-		sock->local_ed = 0;
-	}
-	if(sock->peer_ed != 0) { 
-		hip_db_dec_eid_use_cnt(sock->peer_ed, 0);
-		sock->peer_ed = 0;
-	}
-	
-	/* XX FIX: DESTROY HI ? */
-	
  out_err:
-#endif
 
 	return err;
 	
@@ -241,7 +226,6 @@ int hip_socket_bind(struct socket *sock,
 		    int sockaddr_len)
 {
 	int err = 0;
-#if 0
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
@@ -249,7 +233,7 @@ int hip_socket_bind(struct socket *sock,
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_socket_bind called\n");
 
 	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
 				      1, &lhi);
@@ -260,12 +244,6 @@ int hip_socket_bind(struct socket *sock,
 	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &lhi.hit);
 	HIP_DEBUG("binding to eid with value %d\n",
 		  ntohs(sockaddr_eid->eid_val));
-	sock->local_ed = ntohs(sockaddr_eid->eid_val);
-	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
-		  sock->peer_ed);
-
-	/* Clear out the flowinfo, etc from sockaddr_in6 */
-	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 
 	/* XX FIXME: select the IP address based on the mappings or interfaces
 	   from db and do not use in6_addr_any. */
@@ -274,7 +252,8 @@ int hip_socket_bind(struct socket *sock,
 	   does not work without modifications into the bind code because
 	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	sockaddr_in6.sin6_addr = in6addr_any;
+	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 	
@@ -287,13 +266,13 @@ int hip_socket_bind(struct socket *sock,
 		goto out_err;
 	}
 
+	/*
 	memcpy(&pinfo->rcv_saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
 	memcpy(&pinfo->saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
+	sizeof(struct in6_addr));*/
 	
  out_err:
-#endif
 	
 	return err;
 }
@@ -302,7 +281,6 @@ int hip_socket_socketpair(struct socket *sock1,
 			  struct socket *sock2)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -319,7 +297,6 @@ int hip_socket_socketpair(struct socket *sock1,
 	}
 
  out_err:
-#endif
 	return err;
 }
 
@@ -330,13 +307,12 @@ int hip_socket_connect(struct socket *sock,
 		       int flags)
 {
 	int err = 0;
-#if 0
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uservaddr;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_socket_connect called\n");
 
 	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
 				      0, &lhi);
@@ -347,15 +323,16 @@ int hip_socket_connect(struct socket *sock,
 
 	HIP_DEBUG("connecting to eid with value %d\n",
 		  ntohs(sockaddr_eid->eid_val));
-	sock->peer_ed = ntohs(sockaddr_eid->eid_val);
-	HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
-		  sock->peer_ed);
+	//sock->peer_ed = ntohs(sockaddr_eid->eid_val);
+	//HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
+	//	  sock->peer_ed);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
 	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
+	HIP_DEBUG_HIT("connecting to the source HIT\n", &lhi.hit);
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
 
@@ -363,6 +340,8 @@ int hip_socket_connect(struct socket *sock,
 
 	/* XX CHECK: check does the autobind actually bind to an IPv6 address
 	   or HIT? Or inaddr_any? Should we do the autobind manually here? */
+
+	HIP_DEBUG("socket state %d \n", sock->state);
 
 	err = socket_handler->connect(sock, (struct sockaddr *) &sockaddr_in6,
 				      sizeof(struct sockaddr_in6), flags);
@@ -372,7 +351,6 @@ int hip_socket_connect(struct socket *sock,
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -383,11 +361,16 @@ int hip_socket_accept(struct socket *sock,
 		      int flags)
 {
 	int err = 0;
-	
-#if 0
 	struct proto_ops *socket_handler;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_socket_accept called\n");
+
+	if(!sock){
+	  HIP_DEBUG("sock is NULL\n");
+	}
+	if(!newsock){
+	  HIP_DEBUG("newsock is NULL\n");
+	}
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 	if (err) {
@@ -395,6 +378,7 @@ int hip_socket_accept(struct socket *sock,
 		goto out_err;
 	}
 
+	HIP_DEBUG("socket handler selected\n");
 	err = socket_handler->accept(sock, newsock, flags);
 	if (err) {
 		/* Can return e.g. ERESTARTSYS */
@@ -402,10 +386,11 @@ int hip_socket_accept(struct socket *sock,
 		goto out_err;
 	}
 
+	HIP_DEBUG("accepted\n");
+
 	/* XX FIXME: do something to the newsock? */
 
  out_err:
-#endif
 
 	return err;
 }
@@ -416,7 +401,6 @@ int hip_socket_getname(struct socket *sock,
 		       int peer)
 {
 	int err = 0;
-#if 0 
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
 	struct hip_eid_owner_info owner_info;
@@ -479,7 +463,6 @@ int hip_socket_getname(struct socket *sock,
 	*usockaddr_len = sizeof(struct sockaddr_eid);
 
  out_err:
-#endif
 
 	return err;
 }
@@ -491,9 +474,8 @@ unsigned int hip_socket_poll(struct file *file,
 			     struct socket *sock,
 			     struct poll_table_struct *wait)
 {
-	//int err = 0;
+	int err = 0;
 	int mask = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -507,7 +489,6 @@ unsigned int hip_socket_poll(struct file *file,
 	mask = socket_handler->poll(file, sock, wait);
 
  out_err:
-#endif
 
 	return mask;
 }
@@ -517,7 +498,6 @@ int hip_socket_ioctl(struct socket *sock,
 		     unsigned long arg)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -534,7 +514,6 @@ int hip_socket_ioctl(struct socket *sock,
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -543,7 +522,6 @@ int hip_socket_ioctl(struct socket *sock,
 int hip_socket_listen(struct socket *sock, int backlog)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -560,7 +538,6 @@ int hip_socket_listen(struct socket *sock, int backlog)
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -569,7 +546,6 @@ int hip_socket_listen(struct socket *sock, int backlog)
 int hip_socket_shutdown(struct socket *sock, int flags)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -586,7 +562,6 @@ int hip_socket_shutdown(struct socket *sock, int flags)
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -754,7 +729,8 @@ int hip_socket_getsockopt(struct socket *sock,
 	  err = hip_socket_handle_set_my_eid(msg);
 	  break;
 	case SO_HIP_SET_PEER_EID:
-		err = hip_socket_handle_set_peer_eid(msg);
+	  HIP_DEBUG("SO_HIP_PEER_EID option found\n");
+	    err = hip_socket_handle_set_peer_eid(msg);
 		break;
 	default:
 		err = -ESOCKTNOSUPPORT;
@@ -774,7 +750,6 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
 	struct inet_sock *inet = inet_sk(sk);
@@ -803,7 +778,6 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -814,7 +788,6 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 		       int flags)
 {
 	int err = 0;
-#if 0
 	struct sock *sk = sock->sk;
 	struct inet_sock *inet = inet_sk(sk);
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
@@ -844,7 +817,6 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -854,7 +826,6 @@ int hip_socket_mmap(struct file *file, struct socket *sock,
 		    struct vm_area_struct *vma)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -871,7 +842,6 @@ int hip_socket_mmap(struct file *file, struct socket *sock,
 	}
 
  out_err:
-#endif
 
 	return err;
 }
@@ -881,7 +851,6 @@ ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 			    size_t size, int flags)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 
 	HIP_DEBUG("\n");
@@ -898,6 +867,5 @@ ssize_t hip_socket_sendpage(struct socket *sock, struct page *page, int offset,
 	}
 
  out_err:
-#endif
 	return err;
 }

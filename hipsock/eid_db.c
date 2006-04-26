@@ -249,23 +249,10 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
         return err;
 }
 
-#if 0 /*Laura************************************************/
-int hip_handle_peer_map_work_order(const struct in6_addr *hit,
-                                   const struct in6_addr *ip,
-                                   int insert, int rvs)
-{
-
-        /* XX TODO: Laura */
-        int err = -1;
-        return err;
-}
-#endif /*****************************************************/
-
 int hip_socket_handle_set_peer_eid(struct hip_common *msg)
 {
         int err = 0;
         struct sockaddr_eid eid;
-        struct hip_tlv_common *param = NULL;
         struct hip_eid_endpoint *eid_endpoint;
         struct hip_lhi lhi;
         struct hip_eid_owner_info owner_info;
@@ -313,44 +300,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
                 goto out_err;
         }
         
-        /* Iterate through the addresses */
-
-        while((param = hip_get_next_param(msg, param)) != NULL) {
-                struct sockaddr_in6 *sockaddr;
-
-                HIP_DEBUG("Param type=%d\n", hip_get_param_type(param));
-
-                /* Skip other parameters (only the endpoint should
-                   really be there). */
-                if (hip_get_param_type(param) != HIP_PARAM_EID_SOCKADDR)
-                        continue;
-
-                HIP_DEBUG("EID sockaddr found in the msg\n");
-
-                sockaddr =
-                  (struct sockaddr_in6 *) hip_get_param_contents_direct(param);
-                if (sockaddr->sin6_family != AF_INET6) {
-                        HIP_INFO("sa_family %d not supported, ignoring\n",
-                                 sockaddr->sin6_family);
-                        continue;
-                }
-
-                HIP_DEBUG_IN6ADDR("Peer IPv6 address", &sockaddr->sin6_addr);
-
-                /* XX FIX: the mapping should be tagged with an uid */
-
-#if 0 /*Laura******************************/
-                err = hip_handle_peer_map_work_order(&lhi.hit,
-                                                     &sockaddr->sin6_addr,1,0);
-                if (err) {
-                        HIP_ERROR("Failed to insert map work order (%d)\n",
-                                  err);
-                        goto out_err;
-                }
-#endif /***********************************/
-        }
-
-        /* Finished. Write a return message with the EID (reuse the msg for
+        /* Write a return message with the EID (reuse the msg for
            result). */
 
         hip_msg_init(msg);

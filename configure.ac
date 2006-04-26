@@ -137,7 +137,7 @@ AC_CACHE_CHECK([whether to use agent],
 if test x"$enable_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT)
 # XX TODO: test on Debian and RH. Also, how to determine the version?
-        AC_CHECK_LIB(gtk, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
+        AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
         hipl_opt_build="$hipl_opt_build libhipgui agent"
 # autogen.sh fails on a system without gtk:
 #		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
