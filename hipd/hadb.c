@@ -255,7 +255,10 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 }
 
 /* Practically called only by when adding a HIT-IP mapping before bex */
-int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
+				    hip_hit_t *peer_hit,
+				    struct in6_addr *local_addr,
+				    struct in6_addr *peer_addr)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -264,11 +267,12 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	   initiated to allow of them in order to prevent local DoS */
 
 	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
-	HIP_DEBUG_HIT("HIT", peer_hit);
-	HIP_DEBUG_IN6ADDR("addr", peer_addr);
-	
-	/* XX TODO: should we search by (hit, our_default_hit) pair ? */
-	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
+	HIP_DEBUG_HIT("our hit", local_hit);
+	HIP_DEBUG_HIT("peer hit", peer_hit);
+	HIP_DEBUG_IN6ADDR("our addr", local_addr);
+	HIP_DEBUG_IN6ADDR("peer addr", peer_addr);
+
+	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
 	
 	entry = hip_hadb_create_state(GFP_KERNEL);
@@ -280,14 +284,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	
 	_HIP_DEBUG("created a new sdb entry\n");
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
-	
-	/* XXX: This is wrong. As soon as we have native socket API, we
-	 * should enter here the correct sender... (currently unknown).
-	 */
-	if (!hip_init_us(entry, NULL))
-		HIP_DEBUG_HIT("our hit seems to be", &entry->hit_our);
-	else
-		HIP_INFO("Could not assign local hit, continuing\n");
+	ipv6_addr_copy(&entry->hit_our, local_hit);
+	ipv6_addr_copy(&entry->local_address, local_addr);
 	
 	/* Set the nat status here */
 	if(hip_nat_status)
@@ -305,12 +303,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 		goto out_err;
 	}
 		
-	HIP_IFEL(hip_select_source_address(&entry->local_address,
-					   peer_addr), -1,
-		 "Cannot find source address\n");
-	
-	HIP_DEBUG("Source address found\n");
-	
 	/*
 	 * Create a security policy for triggering base exchange.
 	 *
@@ -323,14 +315,51 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	HIP_DEBUG_HIT("our hit\n", &entry->hit_our);
 	HIP_DEBUG_IN6ADDR("our ipv6\n", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("peer's ipv6\n", peer_addr);
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
-				       &entry->local_address,
-				       peer_addr, 0, 1, 0), -1,
+	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+				       local_addr, peer_addr, 0, 1, 0), -1,
 		 "Error in setting the SPs\n");
 
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
+	return err;
+}
+
+int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
+				void *peer_map_void)
+{
+	struct hip_peer_map_info *peer_map = peer_map_void;
+	int err = 0;
+
+	HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
+						 &peer_map->peer_hit,
+						 &peer_map->our_addr,
+						 &peer_map->peer_addr), -1,
+		 "Failed to add peer info\n");
+
+ out_err:
+	return err;
+}
+
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
+{
+	int err = 0;
+	hip_ha_t *entry;
+	struct hip_peer_map_info peer_map;
+
+	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+
+	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
+					   &peer_map.peer_addr), -1,
+		 "Cannot find source address\n");
+
+	HIP_DEBUG("Source address found\n");
+
+	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
+	         "for_each_hi err.\n");	
+	
+ out_err:
 	return err;
 }
 
