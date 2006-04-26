@@ -191,6 +191,25 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 	return ret;
 }
 
+/**
+ * hip_keymat_draw_and_copy - draw keying material and copy it to the given buffer
+ * @dst: destination buffer
+ * @keymat: pointer to the keymat structure which contains information
+ *          about the actual
+ * @length: size of keymat structure
+ *
+ * Returns: pointer the next point where one can draw the next keymaterial
+ */
+int hip_keymat_draw_and_copy(struct hip_crypto_key *dst,
+			     struct hip_keymat_keymat *keymat, 
+			     int len){
+	int err  = 0;
+	void *p = hip_keymat_draw(keymat, len);
+	HIP_IFEL(!p, -EINVAL, "Could not draw from keymat\n");
+	memcpy(dst, p, len);
+out_err:
+	return err;
+}
 /** hip_keymat_get_new - calculate new keying material
  * @key: buffer where the created KEYMAT is stored
  * @key_len: length of @key in bytes

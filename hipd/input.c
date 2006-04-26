@@ -7,6 +7,7 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
+ *	    Tobias Heer <heer@tobibox.de>
  *
  */
 #include "input.h"
@@ -256,10 +257,14 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
-
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
+	
+	struct hip_diffie_hellman * dhf;
+	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
-	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret((struct hip_diffie_hellman *) param, 
+	
+	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
+							      dhf->group_id,
+							      hip_get_param_contents_len(dhf) - 1, 
 							      dh_shared_key, dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
@@ -271,17 +276,10 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
-#define KEYMAT_DRAW_AND_COPY(dst, len)				\
-         {							\
-	   void *p = hip_keymat_draw(&km, len);		        \
-	   if (!p) {						\
-		 HIP_ERROR("Could not draw from keymat\n");	\
-		 err = -EINVAL;					\
-		 goto out_err;					\
-	   }							\
-	   memcpy(dst, p, len);					\
-        }
 
+#if 0
+	/* removed this because the cts is already set to 0 when it is
+	   created */
 	bzero(&ctx->hip_enc_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_enc_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_hmac_in.key, sizeof(struct hip_crypto_key));
@@ -290,28 +288,28 @@ int hip_produce_keying_material(struct hip_common *msg,
 	bzero(&ctx->esp_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_out.key, sizeof(struct hip_crypto_key));
-
+#endif
 	/* Draw keys: */
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
 	if (we_are_HITg) {
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key, &km,	hip_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key, &km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
  	} else {
- 	 	KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
+ 	 	hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key,	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
  	}
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
