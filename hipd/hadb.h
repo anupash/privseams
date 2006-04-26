@@ -130,7 +130,7 @@ void hip_delete_all_sp();
 //hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
 hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
-hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit);
+hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *);
 
 /* insert/create/delete */
 int hip_hadb_insert_state(hip_ha_t *ha);
@@ -164,7 +164,7 @@ int hip_add_peer_map(const struct hip_common *input);
 
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr);
+int hip_del_peer_info(hip_hit_t *, hip_hit_t *, struct in6_addr *);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 

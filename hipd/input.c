@@ -293,23 +293,23 @@ int hip_produce_keying_material(struct hip_common *msg,
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
 	if (we_are_HITg) {
-		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key, &km,	hip_transf_length);
-		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
-		hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key, &km,	hmac_transf_length);
-		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_enc_out.key, &km,	hip_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_in.key, &km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
  	} else {
- 	 	hip_keymat_draw_and_copy(&ctx->hip_enc_in.key, 	&km,	hip_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->hip_enc_out.key,	&km,	hip_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->hip_hmac_out.key,&km,	hmac_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->esp_in.key, 	&km,	esp_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->auth_in.key, 	&km,	auth_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->esp_out.key, 	&km,	esp_transf_length);
- 		hip_keymat_draw_and_copy(&ctx->auth_out.key, 	&km,	auth_transf_length);
+ 	 	hip_keymat_draw_and_copy(ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_enc_out.key,	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
  	}
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
@@ -508,7 +508,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 		// state
-		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
+		HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
 		HIP_IFCS(entry,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
@@ -798,10 +798,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 
 	/* let the setup routine give us a SPI. */
-	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr, &ctx->input->hits, &ctx->input->hitr,
+	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+			    &ctx->input->hits, &ctx->input->hitr,
 			    &spi_in, transform_esp_suite, 
 			    &ctx->esp_in, &ctx->auth_in, 0,
-			    HIP_SPI_DIRECTION_IN, 0, r1_info->src_port, r1_info->dst_port), -1, 
+			    HIP_SPI_DIRECTION_IN, 0,
+			    r1_info->src_port, r1_info->dst_port), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
