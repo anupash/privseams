@@ -71,12 +71,12 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		//HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(*(&id_entry->host_id)));
+		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(*(&id_entry->host_id)));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
 			return id_entry;
 	}
-	//HIP_DEBUG("***************RETURNING NULL***************\n");
+	HIP_DEBUG("***************RETURNING NULL***************\n");
 	return NULL;
 }
 

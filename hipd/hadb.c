@@ -319,6 +319,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	 * alternative b) add SP pair for all local HITs
 	 *
 	 */
+	HIP_DEBUG_HIT("peer's hit\n", peer_hit);
+	HIP_DEBUG_HIT("our hit\n", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("our ipv6\n", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("peer's ipv6\n", peer_addr);
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, &entry->hit_our,
 				       &entry->local_address,
 				       peer_addr, 0, 1, 0), -1,

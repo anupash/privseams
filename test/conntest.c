@@ -523,6 +523,8 @@ int main_server_native(int socktype, char *port_name)
 		err = 1;
 		goto out;
 	}
+	
+	HIP_DEBUG("Native server calls listen\n");
 
 	if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
 		HIP_PERROR("listen");
@@ -530,12 +532,14 @@ int main_server_native(int socktype, char *port_name)
 		goto out;
 	}
 
+	HIP_DEBUG("Native server waits connection request\n");
+
 	while(1) {
 		if (socktype == SOCK_STREAM) {
 			sockfd = accept(serversock, (struct sockaddr *) &peer_eid,
 					&peer_eid_len);
 			if (sockfd < 0) {
-				HIP_PERROR("accept");
+				HIP_PERROR("accept failed");
 				err = 1;
 				goto out;
 			}
