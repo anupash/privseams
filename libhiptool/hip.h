@@ -168,6 +168,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_DEC                  25
 #define SO_HIP_SET_NAT_ON			26
 #define SO_HIP_SET_NAT_OFF			27
+#define SO_HIP_ADD_DB_HI			28
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

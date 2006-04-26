@@ -133,7 +133,7 @@ int hip_agent_add_lhits(void)
 	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
 	         "for_each_hi err.\n");
 
-	err = hip_build_user_hdr(msg, SO_HIP_ADD_LOCAL_HI, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
@@ -141,7 +141,7 @@ int hip_agent_add_lhits(void)
 	}
 
 	HIP_DEBUG("Sending local HITs to agent,"
-	          " message body size is %d bytes.\n",
+	          " message body size is %d bytes...\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 
 	alen = sizeof(hip_agent_addr);                      
@@ -153,6 +153,8 @@ int hip_agent_add_lhits(void)
 		err = -1;
 		goto out_err;
 	}
+	else HIP_DEBUG("Sendto() OK.\n");
+
 #endif
 
 out_err:

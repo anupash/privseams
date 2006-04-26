@@ -17,6 +17,8 @@
 /******************************************************************************/
 /* VARIABLES */
 GtkWidget *gtk_window = NULL;
+GtkWidget *gtk_toolwindow = NULL;
+GtkWidget *gtk_acceptdialog = NULL;
 
 
 /******************************************************************************/
@@ -30,29 +32,58 @@ GtkWidget *gtk_window = NULL;
 */
 int gui_init(void)
 {
+	/* Variables. */
+	int err = 0;
+
+	/* Initialize libraries. */
+	g_thread_init(NULL);
+	gdk_threads_init();
 	gtk_init(NULL, NULL);
-    
+
+	/* Create main GUI window. */
 	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_show(gtk_window);
 	gtk_window_set_title(GTK_WINDOW(gtk_window), "HIP Config");
-	gtk_widget_set_size_request(gtk_window, 500, 400);
+	gtk_widget_set_size_request(gtk_window, 400, 300);
 
 	g_signal_connect(G_OBJECT(gtk_window), "delete_event",
 	                 G_CALLBACK(delete_event), NULL);
 	g_signal_connect(G_OBJECT(gtk_window), "destroy",
 	                 G_CALLBACK(destroy), NULL);
-	
-	gui_create_content();
 
-	/* Return. */
-	return (0);
+	/* Create tool window. */
+	gtk_toolwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_widget_show(gtk_toolwindow);
+	gtk_window_set_title(GTK_WINDOW(gtk_toolwindow), "HIP tool window");
+	gtk_widget_set_size_request(gtk_toolwindow, 200, 180);
+
+	g_signal_connect(G_OBJECT(gtk_toolwindow), "delete_event",
+	                 G_CALLBACK(tool_delete_event), NULL);
+	g_signal_connect(G_OBJECT(gtk_toolwindow), "destroy",
+	                 G_CALLBACK(tool_destroy), NULL);
+
+	/* Create accept window. */
+	gtk_acceptdialog = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
+	                                               "Accept", GTK_RESPONSE_YES,
+	                                               "Deny", GTK_RESPONSE_NO, NULL);
+	gtk_widget_hide(gtk_acceptdialog);
+	
+	/* Create window content for all windows. */
+	gui_create_toolwindow_content();
+	gui_create_acceptdialog_content();
+	gui_create_content();
+	
+	gui_set_info("HIP GUI started.");
+ 
+	return (err);
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	Run the GUI.
+	Run the GUI. This function is assumed to block the calling thread here
+	as long as GUI is running.
 */
 int gui_main(void)
 {
@@ -81,6 +112,32 @@ void gui_quit(void)
 void *gui_get_window(void)
 {
 	return ((void *)gtk_window);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Get pointer to tool window.
+	
+	@return Pointer to tool window.
+*/
+void *gui_get_toolwindow(void)
+{
+	return ((void *)gtk_toolwindow);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Get pointer to accept window.
+	
+	@return Pointer to accept window.
+*/
+void *gui_get_acceptdialog(void)
+{
+	return ((void *)gtk_acceptdialog);
 }
 /* END OF FUNCTION */
 
