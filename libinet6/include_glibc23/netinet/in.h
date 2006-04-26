@@ -75,8 +75,8 @@ enum
 #define IPPROTO_MTP		IPPROTO_MTP
     IPPROTO_ENCAP = 98,	   /* Encapsulation Header.  */
 /* BEGIN HIPL PATCH */
-#define IPPROTO_HIP		IPPROTO_HIP
-    IPPROTO_HIP = 99,	   /* Host Identity Protocol */
+#define IPPROTO_HIP             IPPROTO_HIP
+    IPPROTO_HIP = 253,      /* Host Identity Protocol */
 /* END HIP PATCH */
 #define IPPROTO_ENCAP		IPPROTO_ENCAP
     IPPROTO_PIM = 103,	   /* Protocol Independent Multicast.  */
@@ -140,6 +140,7 @@ struct in_addr
     in_addr_t s_addr;
   };
 
+
 /* Definitions of the bits in an Internet address integer.
 
    On subnets, host and network parts are found according to
@@ -188,6 +189,7 @@ struct in_addr
 #define INADDR_ALLRTRS_GROUP    ((in_addr_t) 0xe0000002) /* 224.0.0.2 */
 #define INADDR_MAX_LOCAL_GROUP  ((in_addr_t) 0xe00000ff) /* 224.0.0.255 */
 
+
 /* IPv6 address */
 struct in6_addr
   {
@@ -212,6 +214,7 @@ extern const struct in6_addr in6addr_loopback;   /* ::1 */
 
 /* Get the definition of the macro to define the common sockaddr members.  */
 #include <bits/socket.h>
+
 
 /* Structure describing an Internet socket address.  */
 struct sockaddr_in
@@ -401,7 +404,7 @@ extern int inet6_option_next (const struct cmsghdr *__cmsg, uint8_t **__tptrp) _
 extern int inet6_option_find (const struct cmsghdr *__cmsg, uint8_t **__tptrp, 
 			      int __type) __THROW;
 
-extern size_t inet6_rthdr_space (int __type, int __segments) __THROW;
+extern socklen_t inet6_rthdr_space (int __type, int __segments) __THROW;
 extern struct cmsghdr *inet6_rthdr_init (void *__bp, int __type) __THROW;
 extern int inet6_rthdr_add (struct cmsghdr *__cmsg, const struct in6_addr *__addr,
 			    unsigned int __flags) __THROW;
@@ -411,21 +414,21 @@ extern int inet6_rthdr_segments (const struct cmsghdr *__cmsg) __THROW;
 extern struct in6_addr *inet6_rthdr_getaddr (struct cmsghdr *__cmsg, int __index) __THROW;
 extern int inet6_rthdr_getflags (const struct cmsghdr *__cmsg, int __index) __THROW;
 
-#if 0
-extern int inet6_opt_init (void *__extbuf, size_t __extlen) __THROW;
-extern int inet6_opt_append (void *__extbuf, size_t __extlen, int __prevlen,
-			     uint8_t __type, size_t __len, uint8_t __align,
+#ifdef __USE_RFC3542
+extern int inet6_opt_init (void *__extbuf, socklen_t __extlen) __THROW;
+extern int inet6_opt_append (void *__extbuf, socklen_t __extlen, int __prevlen,
+			     uint8_t __type, socklen_t __len, uint8_t __align,
 			     void **__databufp) __THROW;
-extern int inet6_opt_finish (void *__extbuf, size_t __extlen, int __prevlen) __THROW;
-extern int inet6_opt_set_val (void *__extbuf, size_t __extlen, void *__val, int __vallen) __THROW;
+extern int inet6_opt_finish (void *__extbuf, socklen_t __extlen, int __prevlen) __THROW;
+extern int inet6_opt_set_val (void *__extbuf, socklen_t __extlen, void *__val, int __vallen) __THROW;
 
-extern int inet6_opt_next (void *__extbuf, size_t __extlen, int __prevlen, 
-			   uint8_t *__typep, size_t *__lenp, void **__databufp) __THROW;
-extern int inet6_opt_find (void *__extbuf, size_t __extlen, int __prevlen, 
-			   uint8_t __type, size_t *__lenp, void **__databufp) __THROW;
-extern int inet6_opt_get_val (void *__databuf, size_t __offset, void *__val, 
+extern int inet6_opt_next (void *__extbuf, socklen_t __extlen, int __prevlen, 
+			   uint8_t *__typep, socklen_t *__lenp, void **__databufp) __THROW;
+extern int inet6_opt_find (void *__extbuf, socklen_t __extlen, int __prevlen, 
+			   uint8_t __type, socklen_t *__lenp, void **__databufp) __THROW;
+extern int inet6_opt_get_val (void *__databuf, socklen_t __offset, void *__val, 
 			      int __vallen) __THROW;
-extern size_t inet6_rth_space (int __type, int __segments) __THROW;
+extern socklen_t inet6_rth_space (int __type, int __segments) __THROW;
 extern void *inet6_rth_init (void *__bp, int __bp_len, int __type, int __segments) __THROW;
 extern int inet6_rth_add (void *__bp, const struct in6_addr *__addr) __THROW;
 extern int inet6_rth_reverse (const void *__in, void *__out) __THROW;

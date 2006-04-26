@@ -13,6 +13,8 @@
 #include <fcntl.h>
 //#include <socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <signal.h>
 
 #include "hip.h"
 #ifndef __u32

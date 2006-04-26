@@ -564,6 +564,8 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
+	HIP_DEBUG("\n");
+
 	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
 	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
@@ -731,11 +733,46 @@ int set_up_device(char *dev, int up)
 }
 
 /**
+ * xfrm_selector_ipspec - fill port info in the selector.
+ * Selector is bound to HITs
+ * @sel: pointer to xfrm_selector to be filled in
+ * @src_port: Source port
+ * @dst_port: Destination port
+ *
+ * Returns: 0
+ */
+
+int xfrm_selector_upspec(struct xfrm_selector *sel,
+				uint32_t src_port, uint32_t dst_port)
+{
+	sel->sport = htons(src_port);
+        if (sel->sport)
+		sel->sport_mask = ~((__u16)0);
+
+	sel->dport = htons(dst_port);
+        if (sel->dport)
+        	sel->dport_mask = ~((__u16)0);
+	
+	return 0;
+
+	
+}
+int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
+{
+	encap->encap_type = UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
+	encap->encap_sport = htons(sport);
+	encap->encap_dport = htons(dport);
+	encap->encap_oa.a4 = oa->s6_addr32[3];
+	//memcpy(&encap->encap_oa, oa, sizeof(encap->encap_oa));
+	//memcpy(&encap->encap_oa, oa, sizeof(struct in_addr));
+	return 0;
+}
+/**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
  * @sel: pointer to xfrm_selector to be filled in
  * @hit_our: Source HIT
- * @hit_peer : Peer HIT
+ * @hit_peer: Peer HIT
  *
  * Returns: 0
  */
@@ -743,6 +780,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 		       struct in6_addr *hit_our,
 		       struct in6_addr *hit_peer,
 		       __u8 proto, u8 hit_prefix,
+		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family)
 {
 
@@ -757,6 +795,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	sel->prefixlen_d = hit_prefix;
 	sel->prefixlen_s = hit_prefix;
 
+	//xfrm_selector_upspec(sel, src_port, dst_port);
+	
 	return 0;
 }
 
@@ -803,8 +843,7 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 			return -1;
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
 		}
-		
-		strncpy(alg->alg_key, key, len);
+		memcpy(alg->alg_key, key, key_len * 8);
 	}
 	
 	alg->alg_key_len = len * 8;

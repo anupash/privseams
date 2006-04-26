@@ -4,12 +4,10 @@
  * Licence: GNU/GPL
  * Authors:
  * - Kristian Slavov <ksl@iki.fi>
+ * - Miika Komu <miika@iki.fi>
  *
- * Common comments: __get_cpu_var() is used instead of the get_cpu_var() since
- * each workqueue "listener" is bound to a certain cpu. Workorder is always
- * inserted into the workqueue of the sender. This is actually the only place
- * where we would like the adder to be in the same cpu as the workqueue he is
- * adding to. This is ensured by local_irq_save().
+ * We don't currently have a workqueue. The functionality in this file mostly
+ * covers catching userspace messages only.
  *
  */
 #include "workqueue.h"
@@ -185,7 +183,7 @@ int hip_do_work(struct hip_work_order *job)
 		case HIP_WO_SUBTYPE_RECV_CONTROL:
 			res = hip_receive_control_packet(job->msg,
 							 &job->hdr.id1,
-							 &job->hdr.id2);
+							 &job->hdr.id2, NULL); /* sending null stateless info currently --Abi*/
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
@@ -295,7 +293,7 @@ int hip_do_work(struct hip_work_order *job)
 			break;
 		case HIP_WO_SUBTYPE_SEND_CLOSE:
 			HIP_DEBUG("Sending CLOSE\n");
-			res = hip_send_close_to_all_peers();
+			res = hip_send_close(NULL);
 			break;
 		default:
 			HIP_ERROR("Unknown subtype: %d on type: %d\n",job->hdr.subtype,job->hdr.type);
@@ -310,7 +308,8 @@ int hip_do_work(struct hip_work_order *job)
 	return res;
 }
 
-int hip_handle_user_msg(const struct hip_common *msg) {
+int hip_handle_user_msg(struct hip_common *msg) {
+	hip_hit_t *hit;
 	int err = 0;
 	int msg_type;
 
@@ -335,7 +334,7 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 		err = hip_del_peer_map(msg);
 		break;
 	case SO_HIP_RST:
-		err = hip_send_close_to_all_peers();
+		err = hip_send_close(msg);
 		break;
 	case SO_HIP_ADD_RVS:
 #if 0 /* XX FIXME */
@@ -350,6 +349,31 @@ int hip_handle_user_msg(const struct hip_common *msg) {
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
+		break;
+	case SO_HIP_SET_NAT_ON:
+		HIP_DEBUG("Nat on!!\n");
+		err = hip_nat_on(msg);
+		break;
+	case SO_HIP_SET_NAT_OFF:
+		HIP_DEBUG("Nat off!!\n");
+		err = hip_nat_off(msg);
+		break;
+	case SO_HIP_CONF_PUZZLE_NEW:
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
+	case SO_HIP_CONF_PUZZLE_GET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_SET:
+		err = -ESOCKTNOSUPPORT; /* TBD */
+		break;
+	case SO_HIP_CONF_PUZZLE_INC:
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_inc_cookie_difficulty(hit);
+		break;
+	case SO_HIP_CONF_PUZZLE_DEC:
+		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_dec_cookie_difficulty(hit);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

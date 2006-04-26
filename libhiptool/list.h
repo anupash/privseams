@@ -1,7 +1,7 @@
 #ifndef HIP_LIST_H
 #define HIP_LIST_H
 
-#include <linux/stddef.h>
+#include "kerncompat.h"
 #include "hip.h"
 
 static inline void prefetch(const void *x) {;}
@@ -41,14 +41,14 @@ static inline void prefetch(const void *x) {;}
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void __list_add(struct list_head *new,
-			      struct list_head *prev,
-			      struct list_head *next)
+static inline void __list_add(struct list_head *lnew,
+			      struct list_head *lprev,
+			      struct list_head *lnext)
 {
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
+	lnext->prev = lnew;
+	lnew->next = lnext;
+	lnew->prev = lprev;
+	lprev->next = lnew;
 }
 
 /**
@@ -59,9 +59,9 @@ static inline void __list_add(struct list_head *new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static inline void list_add(struct list_head *new, struct list_head *head)
+static inline void list_add(struct list_head *lnew, struct list_head *lhead)
 {
-	__list_add(new, head, head->next);
+	__list_add(lnew, lhead, lhead->next);
 }
 
 /**
@@ -72,9 +72,9 @@ static inline void list_add(struct list_head *new, struct list_head *head)
  * Insert a new entry before the specified head.
  * This is useful for implementing queues.
  */
-static inline void list_add_tail(struct list_head *new, struct list_head *head)
+static inline void list_add_tail(struct list_head *lnew, struct list_head *lhead)
 {
-	__list_add(new, head->prev, head);
+	__list_add(lnew, lhead->prev, lhead);
 }
 
 /*
@@ -99,8 +99,8 @@ static inline void __list_del(struct list_head * prev, struct list_head * next)
 static inline void list_del(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
-	entry->next = LIST_POISON1;
-	entry->prev = LIST_POISON2;
+	entry->next = (struct list_head *) LIST_POISON1;
+	entry->prev = (struct list_head *) LIST_POISON2;
 }
 
 /**
@@ -359,8 +359,8 @@ static inline void __hlist_del(struct hlist_node *n)
 static inline void hlist_del(struct hlist_node *n)
 {
 	__hlist_del(n);
-	n->next = LIST_POISON1;
-	n->pprev = LIST_POISON2;
+	n->next = (struct hlist_node *) LIST_POISON1;
+	n->pprev = (struct hlist_node **) LIST_POISON2;
 }
 
 static inline void hlist_del_init(struct hlist_node *n)

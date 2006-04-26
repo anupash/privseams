@@ -5,17 +5,18 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
- *
+ * - Tobias Heer <heer@tobibox.de>
  */
 
-#include <asm/types.h>
-#include <sys/errno.h>
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#  include "debug.h"
+#  include "misc.h"
+#endif
 
-#include "misc.h"
 #include "hip.h"
-#include "debug.h"
-#include "crypto.h"
-//#include "../libinet6/include/bits/socket.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
@@ -50,16 +51,19 @@ void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common)
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh);
 
 
-void hip_set_param_spi_value(struct hip_spi *hspi, uint32_t spi);
-void hip_set_param_lsi_value(struct hip_spi *hspi, uint32_t lsi);
+void hip_set_param_spi_value(struct hip_esp_info *hspi, uint32_t spi);
+void hip_set_param_lsi_value(struct hip_esp_info *hspi, uint32_t lsi);
 
-uint32_t hip_get_param_spi_value(const struct hip_spi *hspi);
-uint32_t hip_get_param_lsi_value(const struct hip_spi *hspi);
-
+#if 0
+uint32_t hip_get_param_spi_value(const struct hip_esp_info *hspi);
+uint32_t hip_get_param_lsi_value(const struct hip_esp_info *hspi);
+#endif
 
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *test);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *test);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id);
+struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator);
+int hip_get_locator_addr_item_count(struct hip_locator *locator);
 
 int hip_check_msg_len(const struct hip_common *msg);
 int hip_check_userspace_msg_type(const struct hip_common *msg);
@@ -75,6 +79,8 @@ void *hip_get_nth_param(const struct hip_common *msg,
 void *hip_find_free_param(const struct hip_common *msg);
 void hip_calc_hdr_len(struct hip_common *msg);
 void hip_dump_msg(const struct hip_common *msg);
+char* hip_message_type_name(uint8_t msg_type);
+char* hip_param_type_name(uint16_t param_type);
 int hip_check_userspace_msg(const struct hip_common *msg);
 int hip_check_network_msg(const struct hip_common *msg);
 int hip_build_param_contents(struct hip_common *msg, const void *contents,
@@ -110,17 +116,15 @@ int hip_build_param_transform(struct hip_common *msg,
 			      const hip_transform_suite_t transform_suite[],
 			      const uint16_t transform_count);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv, const uint16_t index);
-int hip_build_param_rea(struct hip_common *msg,
-			uint32_t spi,
-			struct hip_rea_info_addr_item *addresses,
-			int address_count);
-int hip_build_param_nes(struct hip_common *msg, uint16_t keymat_index,
-			uint32_t old_spi, uint32_t new_spi);
+int hip_build_param_locator(struct hip_common *msg,
+			    struct hip_locator_info_addr_item *addresses,
+			    int address_count);
+int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
+			     uint32_t old_spi, uint32_t new_spi);
 int hip_build_param_seq(struct hip_common *msg, uint32_t update_id);
 int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
-int hip_build_param_spi(struct hip_common *msg, uint32_t spi);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 				      struct hip_host_id *host_id);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,

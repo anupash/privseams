@@ -61,6 +61,11 @@ include_HEADERS = libc-compat.h util.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
+if HIP_OPENDHT
+	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
+endif
+
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
 # only getendpointinfo).
@@ -73,4 +78,3 @@ include/netdb.h:
 	$(LN_S) -f include_glibc$(usagi_libc) include
 
 SUBDIRS = include_glibc21 include_glibc22 include_glibc23
-

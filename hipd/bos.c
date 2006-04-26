@@ -132,7 +132,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos, NULL, 0);
+		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
@@ -150,7 +150,7 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr, bos, NULL, 0);
+		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
@@ -206,7 +206,8 @@ int hip_verify_packet_signature(struct hip_common *bos,
 int hip_handle_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *stateless_info)
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;
