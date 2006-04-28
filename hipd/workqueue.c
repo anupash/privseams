@@ -314,7 +314,9 @@ int hip_do_work(struct hip_work_order *job)
 }
 
 int hip_handle_user_msg(struct hip_common *msg) {
-	hip_hit_t *hit;
+	hip_hit_t *src_hit, *dst_hit;
+	struct in6_addr *src_ip, *dst_ip;
+	hip_ha_t *entry = NULL;
 	int err = 0;
 	int msg_type;
 
@@ -344,15 +346,20 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		err = hip_send_close(msg);
 		break;
 	case SO_HIP_ADD_RVS:
-#if 0 /* XX FIXME */
-		err = hip_add_peer_map_hit_ip(msg);
-		err = hip_rvs_set_request_flag();
-		{
-			struct ipv6hdr hdr = {0};
-			ipv6_addr_copy(&hdr.daddr, &job->hdr.id2);
-			hip_handle_output(&hdr, NULL);
-		}
-#endif
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+						       HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+						       HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		HIP_IFEL(!(entry =
+			   hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
+			 -1, "setting of rvs request flag failed\n");
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -375,12 +382,12 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		err = -ESOCKTNOSUPPORT; /* TBD */
 		break;
 	case SO_HIP_CONF_PUZZLE_INC:
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		hip_inc_cookie_difficulty(hit);
+		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_inc_cookie_difficulty(dst_hit);
 		break;
 	case SO_HIP_CONF_PUZZLE_DEC:
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		hip_dec_cookie_difficulty(hit);
+		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_dec_cookie_difficulty(dst_hit);
 		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

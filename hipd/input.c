@@ -1036,6 +1036,9 @@ int hip_receive_r1(struct hip_common *hip_common,
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
+#endif
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
@@ -1885,6 +1888,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
+	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 	HIP_IFEL(ipv6_addr_any(&hip_i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
@@ -1900,7 +1904,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		hip_put_ha(entry);
 	} else {
 #ifdef CONFIG_HIP_RVS
- 		HIP_DEBUG("Doing RVA check\n");
+		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
  		rva = hip_rva_find_valid(&hip_i1->hitr);
  		if (rva) {
  			/* we should now relay the I1.
