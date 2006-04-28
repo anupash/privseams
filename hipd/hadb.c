@@ -165,7 +165,6 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
-#if 0
 /**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
@@ -180,6 +179,9 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  *
  * NOTE: This way of finding HA entries doesn't work properly if we have 
  * multiple entries with the same peer_hit.
+ *
+ * NOTE: DON'T USE THIS FUNCTION BECAUSE IT DOES NOT DEAL PROPERLY
+ * WITH MULTIPLE SOURCE HITS. PREFER hip_hadb_find_byhits FUNCTION.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 {
@@ -201,7 +203,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         }
         return NULL;
 }
-#endif
 
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
