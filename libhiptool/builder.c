@@ -928,7 +928,6 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	}
 
  out:
-
 	return err;
 }
 

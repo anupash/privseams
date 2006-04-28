@@ -590,13 +590,13 @@
       4. Put some server listening at R:
     </para>
     <para>
-      responder # test/conntest-server-native tcp 5000
+      responder # test/conntest-server tcp 5000
     </para>
     <para>
       5. Start a connection at I:
     </para>
     <para>
-      initiator # test/conntest-client-native &lt;responder-hostname&gt; tcp 5000
+      initiator # test/conntest-client-gai &lt;responder-hostname&gt; tcp 5000
     </para>
     <para>
       6. Type some text...
@@ -613,10 +613,7 @@
       example, the double jump scenario does not work.
     </para>
     <para>
-      &nbsp;* Changes will be made when upgrade from mm-00 to mm-02 is finished.
-    </para>
-    <para>
-      &nbsp;* The mechanism  does not comply 100% with the RVS draft.
+      &nbsp;* The mechanism  does not comply 100% with the RVS-00 draft.
     </para>
     <para>
       &nbsp;* We don't use REA TLV in R1 (from responder to initiator). The same 
