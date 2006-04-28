@@ -1904,7 +1904,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		hip_put_ha(entry);
 	} else {
 #ifdef CONFIG_HIP_RVS
- 		HIP_DEBUG("Doing RVA check\n");
+		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
  		rva = hip_rva_find_valid(&hip_i1->hitr);
  		if (rva) {
  			/* we should now relay the I1.
