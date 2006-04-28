@@ -123,7 +123,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED\n");
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed\n");
 	//hip_hadb_remove_state(entry);
@@ -170,7 +170,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	   a SA and then to re-establish without rmmod or killing
 	   the hipd when you test the CLOSE. -miika */
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				   &entry->preferred_address), -1,
 		 "Deleting peer info failed\n");
 

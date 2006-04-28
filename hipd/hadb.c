@@ -165,6 +165,7 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
+#if 0
 /**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
@@ -200,7 +201,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         }
         return NULL;
 }
-
+#endif
 
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
@@ -396,6 +397,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
+#if 0
 int hip_del_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
@@ -420,7 +422,7 @@ int hip_del_peer_map(const struct hip_common *input)
 	HIP_DEBUG_HIT("hit", hit);
 	HIP_DEBUG_IN6ADDR("ip", ip);
 
-	err = hip_del_peer_info(hit, ip);
+	err = hip_del_peer_info(xx, hit, ip);
 	if (err) {
 		HIP_ERROR("Failed to delete mapping\n");
 		goto out;
@@ -430,6 +432,7 @@ int hip_del_peer_map(const struct hip_common *input)
 
 	return err;
 }
+#endif
 
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
@@ -742,12 +745,12 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 /**
  * Currently deletes the whole entry...
  */		
-int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
+int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
+		      struct in6_addr *addr)
 {
 	hip_ha_t *ha;
 
-	/* XX TODO: delete all ha entries that contain a matching peer hi? */
-	ha = hip_hadb_try_to_find_by_peer_hit(hit);
+	ha = hip_hadb_find_byhits(our_hit, peer_hit);
 	if (!ha) {
 		return -ENOENT;
 	}
