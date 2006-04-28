@@ -197,10 +197,12 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_OUTGOING:
 	{			
 		switch(job->hdr.subtype) {
+#if 0
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
 			// FIXME: create HA here, on the fly if needed (Hi3)
+			// XX FIX: use hip_hadb_find_byhits
  			entry = hip_hadb_try_to_find_by_peer_hit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
@@ -222,6 +224,7 @@ int hip_do_work(struct hip_work_order *job)
 				hip_db_put_ha(entry, hip_hadb_delete_state);
 			break;
 		}
+#endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -264,13 +267,15 @@ int hip_do_work(struct hip_work_order *job)
 			}
 
 			break;
+#if 0
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(&job->hdr.id2,
+			res = hip_del_peer_info(xx, &job->hdr.id2,
 						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+#endif
 		case HIP_WO_SUBTYPE_ADDHI:
 			/* FIXME: Synchronize the BEET database */
 			HIP_DEBUG("Adding \n");
@@ -332,9 +337,11 @@ int hip_handle_user_msg(struct hip_common *msg) {
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
 		break;
+#if 0
 	case SO_HIP_DEL_PEER_MAP_HIT_IP:
 		err = hip_del_peer_map(msg);
 		break;
+#endif
 	case SO_HIP_RST:
 		err = hip_send_close(msg);
 		break;

@@ -6,6 +6,7 @@
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Kristian Slavov <ksl@iki.fi>
+ * - Tobias Heer <heer@tobibox.de>
  */ 
 
 #include "dh.h"
@@ -59,33 +60,34 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * hip_calculate_shared_secret - Creates a shared secret based on the
  * public key of the peer (passed as an argument) and own DH private key
  * (created beforehand).
- * @dhf: Peer's Diffie-Hellman public key
+ * public_value: Peer's Diffie-Hellman public key
+ * group_id: the Diffie-Hellman group ID
+ * len: the length of the public value
  * @buffer: Buffer that holds enough space for the shared secret.
+ * @bufsize: size of the buffer
  *
- * Returns the length of the shared secret in octets if successful,
+ * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(struct hip_diffie_hellman *dhf, u8* buffer, 
+int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id, signed int len, u8* buffer, 
 				int bufsize)
 {
-	signed int len;
 	int err;
 
-	if (dh_table[dhf->group_id] == NULL) {
-		HIP_ERROR("Unsupported DH group: %d\n",dhf->group_id);
+	if (dh_table[group_id] == NULL) {
+		HIP_ERROR("Unsupported DH group: %d\n",group_id);
 		return -1;
         }
 
-	len = hip_get_param_contents_len(dhf) - 1;
-	err = hip_gen_dh_shared_key(dh_table[dhf->group_id], dhf->public_value,
+	err = hip_gen_dh_shared_key(dh_table[group_id], public_value,
 				    len, buffer, bufsize);
 	if (err < 0) {
                 HIP_ERROR("Could not create shared secret\n");
 		return -1;
         }
 
-	HIP_HEXDUMP("Peer DH pubkey", dhf->public_value, len);
-	HIP_HEXDUMP("shared key", buffer, bufsize);
+	HIP_HEXDUMP("Peer DH pubkey", public_value, len);
+	HIP_HEXDUMP("Shared key", buffer, bufsize);
 
 	return err;
 }

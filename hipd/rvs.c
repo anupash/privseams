@@ -427,13 +427,14 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
-int hip_rvs_set_request_flag(struct in6_addr *hit)
+void hip_rvs_set_request_flag(struct in6_addr *src_hit,
+			      struct in6_addr *dst_hit)
 {
 	int err = 0;
 	hip_ha_t *entry;
 
-	HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(hit)), -1,
-		 "Could not set RVS request bit\n");
+	HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit)),
+		 -1, "Could not set RVS request bit\n");
 
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);

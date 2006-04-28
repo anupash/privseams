@@ -35,14 +35,14 @@ int check_hit(HIT_Item *hit)
 	  or incoming.
 	*/
 	fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, 1, 1);
+	                     hit->url, hit->port, 1, 1);
 	if (!fhit)
 	{
 		memcpy(&temp_hit, &hit->lhit, sizeof(struct in6_addr));
 		memcpy(&hit->lhit, &hit->rhit, sizeof(struct in6_addr));
 		memcpy(&hit->rhit, &temp_hit, sizeof(struct in6_addr));
-		fhit= hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-		                    hit->url, hit->port, 1, 1);
+		fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
+		                     hit->url, hit->port, 1, 1);
 	}
 
 	if (fhit)
@@ -97,26 +97,25 @@ int check_hit(HIT_Item *hit)
 		fprintf(stdout, "Please, answer y or n...\n");
 	}
 #else
-/* XX TODO: Call the real GUI here. */
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
-	sprintf(msg, "New HIT received, accept?\n"
-	        " sender hit: %s\n receiver hit: %s", hits, hitr);
-//	err = gui_ask_hit_accept("Accept new HIT?", msg);
-	err = 0;
+/*	sprintf(msg, "New HIT received, accept?\n"
+	        " sender hit: %s\n receiver hit: %s", hits, hitr);*/
+	err = gui_ask_new_hit(hit);
+	//err = 0;
 #endif
 
 	/* Add hit info to database, if answer was yes. */
-	if (err == 0)
+	if (err == 1)
 	{
 		HIP_DEBUG("Adding new HIT to database with type accept.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_ACCEPT, 0);
+		           HIT_DB_TYPE_ACCEPT, "Services", 0);
 	}
-	if (err == -1)
+	if (err == 0)
 	{
 		HIP_DEBUG("Adding new HIT to database with type deny.\n");
 		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_DENY, 0);
+		           HIT_DB_TYPE_DENY, "Games", 0);
 	}
 
 

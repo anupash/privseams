@@ -73,6 +73,6 @@ void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n);
 /************ constructs *************/
 
 int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen);
-int hip_rvs_set_request_flag(struct in6_addr *hit);
+void hip_rvs_set_request_flag(hip_hit_t *, hip_hit_t *);
 
 #endif

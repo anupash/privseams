@@ -41,7 +41,6 @@
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
-#define HIP_NAT_UDP_SRC_PORT 54321 /*Need to put this number as const --Abi*/
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
 #define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
 #define UDP_ENCAP_ESPINUDP 2 
@@ -169,6 +168,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_DEC                  25
 #define SO_HIP_SET_NAT_ON			26
 #define SO_HIP_SET_NAT_OFF			27
+#define SO_HIP_ADD_DB_HI			28
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -996,12 +996,9 @@ struct hip_hadb_state
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 
-	uint16_t	     nat;	/* Does this HIP association is behind NAT? --Abi */
-	uint32_t	     I_udp_src_port;	/*Source port used by Initiator to send the packets*/
-//	uint32_t	     R_udp_src_port;	/*Source port used by responder to send the packets*/
-	uint32_t	     nat_mangled_port;	/*Nat mangled port: the port used by NAT*/
-	struct in6_addr      nat_address; /*Used by R to get the NAT ip address*/
-	
+	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
+	uint32_t	     peer_udp_port;    /* NAT mangled port */
+	//struct in6_addr      peer_udp_address; /* NAT address */
 
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them

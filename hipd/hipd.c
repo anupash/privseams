@@ -134,7 +134,7 @@ int hip_agent_add_lhits(void)
 	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
 	         "for_each_hi err.\n");
 
-	err = hip_build_user_hdr(msg, SO_HIP_ADD_LOCAL_HI, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
@@ -142,7 +142,7 @@ int hip_agent_add_lhits(void)
 	}
 
 	HIP_DEBUG("Sending local HITs to agent,"
-	          " message body size is %d bytes.\n",
+	          " message body size is %d bytes...\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 
 	alen = sizeof(hip_agent_addr);                      
@@ -154,6 +154,8 @@ int hip_agent_add_lhits(void)
 		err = -1;
 		goto out_err;
 	}
+	else HIP_DEBUG("Sendto() OK.\n");
+
 #endif
 
 out_err:
@@ -281,6 +283,10 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6) {
 			    IPV6_2292PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
 
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on,
+			    sizeof(on)), -1,
+		 "setsockopt v6 reuseaddr failed\n");
+
  out_err:
 	return err;
 }
@@ -295,9 +301,14 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4) {
 	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
 		   sizeof(on)), -1, "setsockopt v4 recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
-		   sizeof(on)), -1, "setsockopt v4 failed to set broadcast \n");
+		   sizeof(on)), -1,
+		 "setsockopt v4 failed to set broadcast \n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
+
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on,
+			    sizeof(on)), -1,
+		 "setsockopt v4 reuseaddr failed\n");
 
  out_err:
 	return err;
@@ -307,7 +318,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
 	int on = 1, err = 0;
 	int off = 0;
-	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE ;
+	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE;
         struct sockaddr_in myaddr;
 
 	HIP_DEBUG("----------Opening udp socket !--------------\n");
@@ -322,6 +333,9 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
                    sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on,
+			    sizeof(encap_on)), -1,
+		 "setsockopt udp reuseaddr failed\n");
 
         myaddr.sin_family=AF_INET;
         myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
@@ -681,28 +695,32 @@ int main(int argc, char *argv[]) {
 
 			hip_msg_init(hip_msg);
 		
-			if (hip_read_control_msg(hip_raw_sock_v6, hip_msg, 1,
-						 &saddr, &daddr))
+			if (hip_read_control_msg_v6(hip_raw_sock_v6, hip_msg,
+						    1, &saddr, &daddr,
+						    &pkt_info, 0))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 				err = hip_receive_control_packet(hip_msg,
 								 &saddr,
 								 &daddr,
-								&pkt_info);
+								 &pkt_info);
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
 			//int src_port = 0;
 
 			hip_msg_init(hip_msg);
-			HIP_DEBUG("Getting a msg on v4\n");	
-			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg, 1,
-						 &saddr, &daddr, &pkt_info))
+			HIP_DEBUG("Getting a msg on v4\n");
+			/* Assuming that IPv4 header does not include any
+			   options */
+			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg,
+						    1, &saddr, &daddr,
+						    &pkt_info, IPV4_HDR_SIZE))
 				HIP_ERROR("Reading network msg failed\n");
 			else
 			{
-			  /* For some reason, the IPv4 header is always included.
-			           Let's remove it here. */
+			  /* For some reason, the IPv4 header is always
+			     included. Let's remove it here. */
 			  memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
 				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
 
@@ -725,7 +743,7 @@ int main(int argc, char *argv[]) {
                   //                                 &saddr, &daddr))
         		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
 						    1, &saddr, &daddr,
-						    &pkt_info))
+						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
@@ -741,10 +759,12 @@ int main(int argc, char *argv[]) {
 
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
+			struct hip_stateless_info pkt_info;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
-			if (hip_read_control_msg(hip_user_sock, hip_msg, 0, NULL, NULL))
+			if (hip_read_control_msg_v6(hip_user_sock, hip_msg,
+						    0, NULL, NULL, &pkt_info, 0))
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				hip_handle_user_msg(hip_msg);

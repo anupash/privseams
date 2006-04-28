@@ -795,6 +795,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 	return err;
 }
 
+
 /**
  * check_and_create_dir - check and create a directory
  * @dirname: the name of the directory
