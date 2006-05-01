@@ -54,7 +54,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 {
 	int hash = ht->hash(ht->get_key(entry), ht->hashsize);
-	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+	HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
 	HIP_LOCK_HT(ht);
 	list_add(hip_ht_get_list(entry, ht->offset), &ht->head[hash]);
 	ht->hold(entry);

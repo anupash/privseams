@@ -6,13 +6,15 @@ CFLAGS = $(hipl_common_cflags)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
-include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
+#include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
+include_HEADERS = cookie.h hidb.h hadb.h keymat.h keymat.h \
                   workqueue.h bos.h input.h output.h preoutput.h preinput.h \
                   xfrm.h beet.h netdev.h update.h rvs.h close.h nat.h spam.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
+#hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c hashtable.c keymat.c
+hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c spam.c
 
@@ -44,7 +46,7 @@ endif
 cookie.c: cookie.h
 hidb.c: hidb.h
 hadb.c: hadb.h
-hashtable.c: hashtable.h
+#hashtable.c: hashtable.h
 keymat.c: keymat.h
 workqueue.c: workqueue.h
 bos.c: bos.h

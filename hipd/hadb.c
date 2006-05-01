@@ -773,7 +773,7 @@ int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 	}
 
 	if (!ipv6_addr_any(addr)) {
-	  hip_hadb_delete_inbound_spi(ha, 0); // Bing, ? if ha->peer_hit==nullhit,do not delete.
+	  	hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
@@ -2214,7 +2214,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	  //int bool = 0;
 	  //bool = (&item->list != (&entry->spis_in)  );
 	  //if(bool){
-	  HIP_DEBUG("!!!! loop counter %d\n", ++counter );
+	  //HIP_DEBUG("!!!! loop counter %d\n", ++counter );
 	  if (!spi || item->spi == spi) {
 	    HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
 		      "inbound list, item=0x%p addresses=0x%p\n",

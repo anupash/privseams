@@ -582,7 +582,6 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 int
 request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
 {
-  HIP_INFO("!!!!  testing request_hipd_pseudo_hit()\n");
   struct hip_common *msg = NULL;
   struct gaih_addrtuple *at_hit = NULL;
   struct in6_addr ip;
@@ -591,7 +590,6 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
   int ret = 0;
 
   bzero(&ip, sizeof(ip));
-  //  HIP_HEXDUMP("!!!!!!!!!!!!! ip = ", &ip, sizeof(ip));
   HIP_ASSERT((ipv6_addr_any(&ip)));
 
   get_ip_from_gaih_addrtuple(orig_at, &ip );
@@ -633,27 +631,30 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
     }
     
     hit_recv = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
-    memcpy(hit, hit_recv, sizeof(*hit));
-    if(hit_is_opportunistic_hashed_hit(hit)){
-      HIP_DEBUG_HIT("!!!! pseudo hit=", hit);
-      
-      for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
-	_HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
-	if(at_hit->next == NULL){
-	  at_hit->next = malloc (sizeof (struct gaih_addrtuple));
-	  at_hit = at_hit->next;
-	  at_hit->family = AF_INET6;
-	  at_hit->scopeid = 0;
-	  at_hit->next = NULL;
-	  memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
-	  _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
-	  break;
+    if(hit_recv)
+      memcpy(hit, hit_recv, sizeof(*hit));
+    if(hit){
+      if(hit_is_opportunistic_hashed_hit(hit)){
+	HIP_DEBUG_HIT("!!!! pseudo hit=", hit);
+	
+	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
+	  _HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
+	  if(at_hit->next == NULL){
+	    at_hit->next = malloc (sizeof (struct gaih_addrtuple));
+	    at_hit = at_hit->next;
+	    at_hit->family = AF_INET6;
+	    at_hit->scopeid = 0;
+	    at_hit->next = NULL;
+	    memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
+	    _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
+	    break;
+	  }
 	}
-      }
-      // DO: test if the hit is added
-      for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
-	HIP_DEBUG_HIT("!!!! hit=", at_hit->addr);
-      }
+	// DO: test if the hit is added
+	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
+	  HIP_DEBUG_HIT("!!!! hit=", at_hit->addr);
+	}
+      }// end of if (hit_is_opportunistic_hashed_hit)
     }// end of if(hit)
   } // end of  if(!ipv6_addr_any(&ip))
  out_err:
@@ -1033,12 +1034,12 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       //HIP_DEBUG("!!!! ertern opportunistic_mode=%d", opportunistic_mode);
       if (found_hits) 
 	send_hipd_addr(*at);
-      else {// try to get pseudo hit
+      else if(0){// Bing, we will get pseudo hit in wrap.c, not here
 	//	struct in6_addr *hit = NULL;
 	struct in6_addr hit;
 	int err = request_hipd_pseudo_hit(*at, &hit);
 	if(err){
-	  HIP_ERROR("!!!! Failed to get pseudo hit with err=\n", err);
+	  HIP_ERROR("!!!! Failed to get pseudo hit with err=%d\n", err);
 	  return err;
 	}
 	if(hit_is_opportunistic_hashed_hit(&hit)){

@@ -557,7 +557,6 @@ int hip_get_pseudo_hit(struct hip_common *msg)
       HIP_ERROR("add peer info failed: %s\n", strerror(err));
       goto out_err;
     }
-    
   }
 
  out_err:
