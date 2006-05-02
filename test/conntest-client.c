@@ -127,9 +127,9 @@ int main(int argc,char *argv[]) {
 		while((datasent < datalen) || (datareceived < datalen)) { // lähetä kaikki
 
 			if (datasent < datalen) {
-			  //sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
-			  sendnum = sendto(sock, mylovemostdata+datasent, datalen-datasent, 0,
-					   (struct sockaddr *) &peeraddr, sizeof(peeraddr));
+			  sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
+			  //sendnum = sendto(sock, mylovemostdata+datasent, datalen-datasent, 0,
+			  //	   (struct sockaddr *) &peeraddr, sizeof(peeraddr));
 			 
 			  if (sendnum < 0) {
 					perror("send");
