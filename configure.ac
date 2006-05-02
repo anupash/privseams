@@ -158,6 +158,16 @@ if test x"$enable_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS)
 fi
 
+AC_ARG_ENABLE(opportunistic,
+             AC_HELP_STRING([--enable-opportunistic],
+                            [HIP opportunistic extensions (default is NO)]),
+             [ac_cv_use_opportunistic=$withval], [ac_cv_use_opportunistic=no])
+AC_CACHE_CHECK([whether to use opportunistic],
+               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=no])
+if test x"$enable_opportunistic" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC)
+fi
+
 AC_ARG_ENABLE(hi3,
              AC_HELP_STRING([--enable-hi3],
                             [Hi3 support (default is NO)]),
