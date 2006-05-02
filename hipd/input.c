@@ -7,10 +7,10 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
+ *          Bing Zhou <bingzhou@cc.hut.fi>
  *
  */
 #include "input.h"
-// Bing, added
 #include "util.h"
 
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
@@ -465,12 +465,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
-	if(type == HIP_I1){
-	  HIP_DEBUG("!!!! i1 received ");
-	}
-	else
-	  HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!! msg type=%d\n", type);
-
+	
 	HIP_DEBUG("Received packet type %d\n", type);
 	_HIP_DUMP_MSG(msg);
 	_HIP_HEXDUMP("dumping packet", msg,  40);
@@ -479,74 +474,33 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_DEBUG_HIT("!!!! &msg->hits=", &msg->hits);
+	_HIP_DEBUG_HIT("&msg->hits=", &msg->hits);
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	else if(type == HIP_R1){ // Bing, check if it uses oppotunistic mode
+	else if(type == HIP_R1){ // check if it uses oppotunistic mode
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_hit_t nullhit;
-	  //SET_NULL_HIT(&nullhit);
-	  //HIP_ASSERT(hit_is_opportunistic_hit(&nullhit));
-	  HIP_DEBUG_HIT("!!!! src_addr=", src_addr);
+	 
+	  _HIP_DEBUG_HIT("src_addr=", src_addr);
 	  err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
-	  HIP_DEBUG_HIT("!!!! create hashed nullhit=", &nullhit);
 	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
 	  
 	  hip_ha_t *entry_tmp = NULL;
 	  entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
 	  HIP_ASSERT(entry_tmp);
 	  if (entry_tmp){
-	    // Bing, add new HA with real hit
+	    // add new HA with real hit
 	    err = hip_hadb_add_peer_info(&msg->hits, src_addr);
 	    if (err) {
 	      HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	      goto out_err;
 	    }
-	    // Bing, to test that we can get entry by both real hits
+	    // we should get entry by both real hits
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	    HIP_ASSERT(entry);
 	    if (entry){
-	      HIP_DEBUG_HIT("!!!! entry_tmp->hit_peer", &entry_tmp->hit_peer);
-	      HIP_DEBUG("!!!! entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      HIP_DEBUG("!!!! entry_tmp->state=%d\n",entry_tmp->state );
-	      	      
-	      HIP_DEBUG_HIT("!!!! entry->hit_peer", &entry->hit_peer);
-	      HIP_DEBUG("!!!! entry->hastate=%d\n",entry->hastate );
-	      HIP_DEBUG("!!!! entry->state=%d\n",entry->state );
-	    
 	      // old HA has state 2, new HA has state 1, so copy it
 	      entry->state = entry_tmp->state;
-	      
-	      /*
-	      hip_hit_t entry_hit_peer = entry->hit_peer;
-	      hip_hit_t entry_hash_key = entry->hash_key;
-	      struct list_head entry_spis_in = entry->spis_in;
-	      struct list_head entry_spis_out = entry->spis_out;
-	      hip_xmit_func_set_t *entry_hadb_xmit_func = entry->hadb_xmit_func;
-	      struct list_head entry_next_hit = entry->next_hit;
-	      */
-	      // copy old HA to new HA
-	      //memcpy(entry, entry_tmp, sizeof(hip_ha_t));
-	      
-	      // roll back hit_peer, hash_key and ....
-	      /*entry->hit_peer = entry_hit_peer;
-	      entry->hash_key = entry_hash_key;
-	      entry->spis_in = entry_spis_in;
-	      entry->spis_out = entry_spis_out;
-	      entry->hadb_xmit_func = entry_hadb_xmit_func;
-	      entry->next_hit = entry_next_hit;
-	      */
-	      
-	      HIP_DEBUG("!!!! after copy entry_tmp->hastate=%d\n",entry_tmp->hastate );
-	      HIP_DEBUG("!!!! after copy entry_tmp->state=%d\n",entry_tmp->state );
-	      	      
-	      HIP_DEBUG_HIT("!!!! after copy entry->hit_peer", &entry->hit_peer);
-	      HIP_DEBUG("!!!! after copy entry->hastate=%d\n",entry->hastate );
-	      HIP_DEBUG("!!!! after copy entry->state=%d\n",entry->state );
-
-	      hip_ha_t *test_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	      HIP_DEBUG_HIT("!!!! test_entry->hit_peer", &test_entry->hit_peer);
-	      HIP_DEBUG("!!!! test_entry->hastate=%d\n", test_entry->hastate );
-	      HIP_DEBUG("!!!! test_entry->state=%d\n", test_entry->state );
 	    }
 	    else {
 	      HIP_ERROR("Cannot find the added HA entry\n");
@@ -560,25 +514,17 @@ int hip_receive_control_packet(struct hip_common *msg,
 	      goto out_err;
 	    }
 	  } //  end if (entry_tmp)
-	  else { // we cannot get HA entry after receive r1, does it make sense to continue? 
+	  else { 
 	    HIP_ERROR("Cannot find HA entry after receive r1\n");
 	    goto out_err;
 	  }
-	  // finally delete nullhit HA // should we delete in a later stage,no such process error
-	  // moved to the end of if(entry_tmp)
-	  // entry_tmp = NULL;
-	  // err = hip_del_peer_info(&nullhit, src_addr);
-	  // if (err) {
-	  // HIP_ERROR("Failed to delete mapping\n");
-	  // goto out_err;
-	  // }
 	  
 	  // we should still get entry after delete old nullhit HA
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	  HIP_ASSERT(entry);
 	  if (entry)
 	    err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	  
+#endif	  
 	} // end else if(type == HIP_R1)
 	else
 	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
@@ -594,21 +540,18 @@ int hip_receive_control_packet(struct hip_common *msg,
 	
 	switch(type) {
 	case HIP_I1:
-		// no state
-	  //if(hit_is_opportunistic_hit(&msg->hitr)){
-	  //if(hit_is_opportunistic_hashed_hit(&msg->hitr)){
+	  // no state
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	  if(hit_is_opportunistic_null(&msg->hitr)){
 	    struct gaih_addrtuple *at = NULL;
 	    struct gaih_addrtuple **pat = &at;
 	    
 	    get_local_hits(NULL, pat);
-	    HIP_DEBUG_HIT("!!!! The local HIT =", &at->addr);
-	    HIP_DEBUG_HIT("!!!! The null HIT =", &msg->hitr);
+	    _HIP_DEBUG_HIT("The local HIT =", &at->addr);
+	    _HIP_DEBUG_HIT("The null HIT =", &msg->hitr);
 
-	    // ipv6_addr_copy(&src_hit, one_of_src_real_hi);
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-	    HIP_DEBUG_HIT("!!!! by get_local_hits msg->hitr", &msg->hitr);
-	    
+	    	    
 	    // Since get_local_hits() returns old hit format, hardcoded
 	    /* 
 	    msg->hitr.s6_addr[0] = (0x11);
@@ -631,8 +574,13 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    HIP_DEBUG_HIT("!!!! hard coded  msg->hitr", &msg->hitr);
 	    */
 	  }
-	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
-		break;
+#endif // CONFIG_HIP_OPPORTUNISTIC
+	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg,
+										       src_addr,
+										       dst_addr,
+										       entry,
+										       msg_info);
+	  break;
 		
 	case HIP_I2:
 		// possibly state
@@ -649,13 +597,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_R1:
-	  // state
-	  // Bing modified R2 => R1
-	  //HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
-	  HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
-	  //HIP_DEBUG_HIT("!!!! hip_receive_control_packet ?40cc? msg->hits", &msg->hits);
-		// Bing, should we add new map? using hip_add_peer_map(&msg->hits,src_addr)
-		// or modify the existing map with nullhit and &msg->hitr
+	  	// state
+	  	HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
 		HIP_IFCS(entry,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
@@ -797,12 +740,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	hip_hadb_delete_outbound_spi(entry, 0);
 
 	/* create I2 */
-
-	HIP_DEBUG_HIT("!!!! ctx->input->hitr=",&ctx->input->hitr );
-	HIP_DEBUG_HIT("!!!! ctx->input->hits=",&ctx->input->hits );
-	HIP_DEBUG_HIT("!!!! entry->hit_our=", &entry->hit_our);
-	HIP_DEBUG_HIT("!!!! entry-hit_peer=", &entry->hit_peer);
-
 	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 			      &(ctx->input->hitr),
 			      &(ctx->input->hits));
@@ -1969,7 +1906,6 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
-	HIP_DEBUG("!!!! Established entry = %x \n", entry);
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:

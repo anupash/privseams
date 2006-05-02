@@ -4,6 +4,7 @@
  * 
  * Authors:
  * - Miika Komu <miika@iki.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * TODO
  * - asynchronous term should be replaced with a better one
@@ -57,19 +58,19 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	HIP_IFEL(!(app_name = tmpnam(NULL)), -1, "app_name\n");
-	HIP_DEBUG("app_name: %s\n", app_name);
+	_HIP_DEBUG("app_name: %s\n", app_name);
 	//HIP_IFEL((creat(app_name, S_IRWXO) < 0), -1, "creat\n");
 
 	bzero(&app_addr, sizeof(app_addr));
 	app_addr.sun_family = AF_UNIX;
 	strcpy(app_addr.sun_path, app_name);
 
-	HIP_HEXDUMP("app_addr", &app_addr,  sizeof(app_addr));
+	_HIP_HEXDUMP("app_addr", &app_addr,  sizeof(app_addr));
 
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sun_family = AF_UNIX;
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
-	HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
+	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
 
 	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
 		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
@@ -86,12 +87,12 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	HIP_DEBUG("!!!! wait to receive deamon info\n");
+	HIP_DEBUG("waiting to receive deamon info\n");
 	//recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
 	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
 	     0,(struct sockaddr *)&daemon_addr, &alen);
 	
-	HIP_DEBUG("!!!! %d bytes received\n", n);
+	HIP_DEBUG("%d bytes received\n", n);
 	
 	if (n < 0) {
 		HIP_ERROR("Could not receive message from daemon.\n");
@@ -111,8 +112,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 int hip_send_daemon_info(const struct hip_common *msg) {
   	// return hip_send_recv_daemon_info(msg);
   
-  	// Bing, do not call send_recv function here,
-  	// since this function is called at several place
+  	// do not call send_recv function here,
+  	// since this function is called at several other places
 	// TODO: copy send_recv function's recvfrom to hip_recv_daemon_info()
 
   	int err = 0, n, len, hip_user_sock = 0;
@@ -164,9 +165,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total, len;
 	
 	len = sizeof(*saddr);
-	HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
-	HIP_DEBUG("!!!! read_user_control_msg sizeof(saddr) len=%d\n", len);
-	HIP_HEXDUMP("!!!! original saddr ", saddr, sizeof(struct sockaddr_un));
+	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
 
 	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
 		 "recv peek failed\n");
@@ -177,22 +176,20 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 				    &len)) != hdr_size), -1,
 		 "recv peek\n");
 	
-	HIP_DEBUG("!!!! read_user_control_msg recv peek len=%d\n", len);
-	HIP_HEXDUMP("!!!! peek saddr ",  saddr, sizeof(struct sockaddr_un));
+	_HIP_DEBUG("read_user_control_msg recv peek len=%d\n", len);
+	_HIP_HEXDUMP("peek saddr ",  saddr, sizeof(struct sockaddr_un));
 
 	total = hip_get_msg_total_len(hip_msg);
 #endif
 
-	HIP_DEBUG("msg total length = %d\n", total);
-	HIP_DEBUG("!!!! read_user_control_msg sizeof(saddr) len=%d\n", sizeof(*saddr));
+	_HIP_DEBUG("msg total length = %d\n", total);
 
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
 				    &len)) != total), -1, "recv\n");
 
-	HIP_DEBUG("!!!! read_user_control_msg recv len=%d\n", len);
-	HIP_DEBUG("!!!! read_user_control_msg sizeof(saddr) len=%d\n", sizeof(*saddr));
-	HIP_HEXDUMP("!!!! recv saddr ", saddr, sizeof(struct sockaddr_un));
-	HIP_DEBUG("read %d bytes succesfully\n", bytes);
+	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
+	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
+	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
  out_err:
 	if (bytes < 0 || err)
 		HIP_PERROR("perror: ");

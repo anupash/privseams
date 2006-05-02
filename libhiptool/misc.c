@@ -5,10 +5,11 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
 #include "misc.h"
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hit, int hit_type)
 {
   int err = 0;
@@ -17,10 +18,8 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 
   unsigned int key_len = sizeof(struct in6_addr);
 
-  HIP_DEBUG("!!!! length of in6_addr=%u\n", key_len);
- 
   HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-  HIP_HEXDUMP("key", key, key_len);
+  _HIP_HEXDUMP("key", key, key_len);
   HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err, 
 	   "Building of digest failed\n");
   
@@ -37,6 +36,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
   
        return err;
 }
+#endif //CONFIG_HIP_OPPORTUNISTIC
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @t1: timevalue 1

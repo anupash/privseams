@@ -421,7 +421,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   List list;
   int found_hits = 0;
 
-#ifdef CONFIG_HIP_OPENDHT // Bing, here is not called
+#ifdef CONFIG_HIP_OPENDHT // here is not called
   struct in6_addr tmp_hit, tmp_ip;
 
   if (gethiphostbyname(name,&tmp_hit) 
@@ -446,7 +446,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
 #endif
 									
   /* TODO: check return values */
-  HIP_ERROR("!!!! Opening %s\n", _PATH_HIP_HOSTS);
+  _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
   fp = fopen(_PATH_HIP_HOSTS, "r");					
 									
   while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
@@ -478,7 +478,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
         }								
         (**pat)->next = NULL;						
         (**pat)->family = AF_INET6;
-	HIP_DEBUG_HIT("!!!! gethostshit:: hit=", &hit);
+	
         memcpy((**pat)->addr, &hit, sizeof(struct in6_addr));		
         *pat = &((**pat)->next);				     	
 	/* AG: add LSI as well */					
@@ -491,7 +491,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
         memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
         *pat = &((**pat)->next);					      
       }									
-    } // end of if !!!! Bing, acure pseudo hit here
+    } // end of if 
     destroy(&list);                                                     
   } // end of while	              							
   if (fp)                                                               
@@ -568,17 +568,18 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
       IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
       continue;
       memcpy(ip, &addr6, sizeof(struct in6_addr));
-      HIP_DEBUG_HIT("!!!! IPV4_TO_IPV6_MAP addr=", &addr6);
-      HIP_HEXDUMP("!!!! IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
+      _HIP_DEBUG_HIT("IPV4_TO_IPV6_MAP addr=", &addr6);
+      _HIP_HEXDUMP("IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
     }
     else 
       addr6 = *(struct in6_addr *) at_ip->addr;
-      HIP_DEBUG_HIT("!!!! get_ip_from_gaih_addrtuple addr=", &addr6);
+      _HIP_DEBUG_HIT("get_ip_from_gaih_addrtuple addr=", &addr6);
       memcpy(ip, &addr6, sizeof(struct in6_addr));
-      HIP_HEXDUMP("!!!! get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
+      _HIP_HEXDUMP("get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
   }  
 }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 int
 request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
 {
@@ -622,7 +623,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       HIP_ERROR("send_recv msg failed\n");
       goto out_err;
     }
-    HIP_DEBUG("!!!! send_recv msg succeed\n");
+    HIP_DEBUG("send_recv msg succeed\n");
     
     /* getsockopt wrote the corresponding EID into the message, use it */
     err = hip_get_msg_err(msg);
@@ -635,10 +636,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
       memcpy(hit, hit_recv, sizeof(*hit));
     if(hit){
       if(hit_is_opportunistic_hashed_hit(hit)){
-	HIP_DEBUG_HIT("!!!! pseudo hit=", hit);
-	
 	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
-	  _HIP_DEBUG_HIT("!!!! before hit=", at_hit->addr);
 	  if(at_hit->next == NULL){
 	    at_hit->next = malloc (sizeof (struct gaih_addrtuple));
 	    at_hit = at_hit->next;
@@ -646,13 +644,13 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
 	    at_hit->scopeid = 0;
 	    at_hit->next = NULL;
 	    memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
-	    _HIP_DEBUG_HIT("!!!! memcpy hit=", at_hit->addr);
+	    _HIP_DEBUG_HIT("memcpy hit=", at_hit->addr);
 	    break;
 	  }
 	}
 	// DO: test if the hit is added
 	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
-	  HIP_DEBUG_HIT("!!!! hit=", at_hit->addr);
+	  _HIP_DEBUG_HIT("hit=", at_hit->addr);
 	}
       }// end of if (hit_is_opportunistic_hashed_hit)
     }// end of if(hit)
@@ -662,6 +660,7 @@ request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
     free(msg);
   return err;
 }
+#endif // CONFIG_HIP_OPPORTUNISTIC
 
 int 
 gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st, 
@@ -1006,7 +1005,6 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
 	}
       }
-      // !!!! Bing  if (!found_hits) add_pseudo_hit(&pat) 
       /* If we are looking for both IPv4 and IPv6 address we don't
 	 want the lookup functions to automatically promote IPv4
 	 addresses to IPv6 addresses.  Currently this is decided
@@ -1031,26 +1029,21 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       
       /* perform HIT-IPv6 mapping if both are found 
 	 AG: now the loop also takes in IPv4 addresses */
-      //HIP_DEBUG("!!!! ertern opportunistic_mode=%d", opportunistic_mode);
       if (found_hits) 
 	send_hipd_addr(*at);
-      else if(0){// Bing, we will get pseudo hit in wrap.c, not here
-	//	struct in6_addr *hit = NULL;
+      else if(0){// we will get pseudo hit in wrap.c, not here
 	struct in6_addr hit;
 	int err = request_hipd_pseudo_hit(*at, &hit);
 	if(err){
-	  HIP_ERROR("!!!! Failed to get pseudo hit with err=%d\n", err);
+	  HIP_ERROR("failed to get pseudo hit with err=%d\n", err);
 	  return err;
 	}
 	if(hit_is_opportunistic_hashed_hit(&hit)){
-	  HIP_DEBUG_HIT("!!!! got pseudo hit=", &hit);
+	  HIP_DEBUG_HIT("got pseudo hit=", &hit);
 	  found_hits++;
 	  send_hipd_addr(*at);
 	} else{
-	  HIP_INFO("!!!! cannot get phit \n");
-	  // NULL hit, what should we do ???
-	  //found_hits++;
-	  //send_hipd_addr(*at);	  
+	  _HIP_DEBUG("cannot get phit \n");
 	}
 
       }
@@ -1405,18 +1398,7 @@ getaddrinfo (const char *name, const char *service,
 
   if (p)
     freeaddrinfo (p);
-  //int tmp111 = GAIH_EAI;
-  //int tmp222 = EAI_NONAME;
-  int tmp333 = (last_i & GAIH_EAI);
-  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
-  
-  tmp333 = EAI_NONAME;
-  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
-  tmp333 = -(last_i & GAIH_EAI);
-  
-  //int tmp444 = GAIH_OKIFUNSPEC;
-  HIP_DEBUG("The returned value list_i=%d\n", tmp333 );
-  return tmp333;
+
   return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 

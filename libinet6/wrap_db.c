@@ -1,4 +1,12 @@
-
+/*
+ * libinet6 wrap_db.c
+ *
+ * Licence: GNU/GPL
+ * Authors: 
+ * - Bing Zhou <bingzhou@cc.hut.fi>
+ *
+ */
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -29,7 +37,6 @@ struct hip_opp_socket_entry {
   struct in6_addr      	dst_hit;
 };
 
-//typedef struct hip_opp_pid_socket_entry hip_opp_pid_socket_t;
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
 // not implemented for hs either
@@ -40,7 +47,6 @@ typedef struct hip_opp_socket_entry hip_opp_socket_t;
 #define HIP_SOCKETDB_SIZE 53
 
 HIP_HASHTABLE socketdb;
-//struct hip_ht_common  socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 void hip_init_socket_db();
@@ -88,22 +94,21 @@ inline void hip_socketdb_add_dst_hit(hip_opp_socket_t *entry, const struct in6_a
 {
   memcpy(&entry->dst_hit, hit, sizeof(entry->dst_hit));
 } 
-//int hip_hash_hit(const void *key, int range)
+
 inline int hip_hash_pid_socket(const void *hashed_pit_socket, int range)
 {
   int hash = 0;
-  printf("hashed_pit_socket %d, range %d\n", *(int *)hashed_pit_socket, range);
+  HIP_DEBUG("hashed_pit_socket %d, range %d\n", *(int *)hashed_pit_socket, range);
   hash = *(int*)hashed_pit_socket;
   return hash % range;
 }
 
 inline int hip_socketdb_match(const void *key_1, const void *key_2)
 {
-  printf("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
+  HIP_DEBUG("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
   return *(int *)key_1 == *(int *)key_2;
 }
 
-// no need to implement, because hip_opp_socket_entry does not have spinlock_t and atomic_t
 inline void hip_socketdb_hold_entry(void *entry)
 {
   	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
@@ -112,7 +117,6 @@ inline void hip_socketdb_put_entry(void *entry)
 {  	HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry, hip_socketdb_del_entry_by_entry);
 }
 
-//static void *hip_hadb_get_key_hit(void *entry)
 inline void *hip_socketdb_get_key(void *entry)
 {
   return &(((hip_opp_socket_t *)entry)->hash_key);
@@ -141,7 +145,7 @@ void hip_init_socket_db()
   
   hip_ht_init(&socketdb);
 }
-//TODO what?
+
 void hip_uninit_socket_db()
 {
   int i = 0;
@@ -157,8 +161,6 @@ void hip_uninit_socket_db()
     list_for_each_entry_safe(item, tmp, &socketdb_by_pid_socket_list[i], next_entry) {
       if (atomic_read(&item->refcnt) > 2)
 	HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-      //      hip_hadb_remove_state_hit(item);
-      //      hip_db_put_ha(ha, hip_hadb_delete_state);
       hip_socketdb_put_entry(item);
     }
   }  
@@ -170,7 +172,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 	HIP_DEBUG("entry=0x%p pid=%d, old_socket=%d\n", entry,
 		  entry->pid, entry->old_socket);
 	HIP_LOCK_SOCKET(entry);
-	hip_ht_delete(&socketdb, entry); // hashtabel delete function
+	hip_ht_delete(&socketdb, entry);
 	HIP_UNLOCK_SOCKET(entry);
 	HIP_FREE(entry);
 }
@@ -230,7 +232,6 @@ void hip_socketdb_dump(void)
 hip_opp_socket_t *hip_create_opp_entry() 
 {
   hip_opp_socket_t * entry = NULL;
-  //  int err = 0;
 
   entry = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
   if (!entry){
@@ -280,13 +281,10 @@ int hip_socketdb_add_entry(int pid, int socket)
   return err;
 }
 
-//int hip_del_peer_info(struct in6_addr *hit, struct in6_addr *addr)
 int hip_socketdb_del_entry(int pid, int socket)
 {
-  //hip_ha_t *ha;
   hip_opp_socket_t *entry = NULL;
 
-	//ha = hip_hadb_try_to_find_by_peer_hit(hit);
   entry = hip_scoketdb_find_entry(pid, socket);
   if (!entry) {
     return -ENOENT;
@@ -296,14 +294,4 @@ int hip_socketdb_del_entry(int pid, int socket)
 
 }
 
-
-/*
-void hip_init_socket_db();
-void hip_uninit_socket_db();
-hip_opp_socket_t *hip_create_opp_entry();
-void hip_socketdb_dump();
-hip_opp_socket_t *hip_scoketdb_find_entry(int pid, int socket);
-int hip_socketdb_add_entry(int pid, int socket);
-int hip_socketdb_del_entry(int pid, int socket);
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
-*/
+#endif // CONFIG_HIP_OPPORTUNISTIC

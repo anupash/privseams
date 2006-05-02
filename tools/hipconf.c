@@ -7,6 +7,7 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Anthony D. Joseph <adj@hiit.fi>
  * - Abhinav Pathak <abhinav.pathak@hiit.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * Licence: GNU/GPL
  *
@@ -35,7 +36,12 @@ const char *usage = "new|add hi default\n"
 #else
         "get|set|inc|dec|new puzzle all\n"
 #endif
-        "set opp on|off\n";
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+        "set opp on|off\n"
+#endif
+
+;
 /* hip nat on|off|peer_hit is currently specified. 
  * For peer_hit we should 'on' the nat mapping only when the 
  * communication takes place with specified peer_hit --Abi */
@@ -56,7 +62,9 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_nat,
 	handle_del,
 	handle_puzzle,
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	handle_opp
+#endif
 };
 
 /**
@@ -140,8 +148,10 @@ int get_type(char *text) {
 		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
                 ret = TYPE_OPP; 
+#endif
 	return ret;
 }
 
@@ -660,6 +670,7 @@ int handle_puzzle(struct hip_common *msg, int action,
  out:
 	return err;
 }
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 int handle_opp(struct hip_common *msg, int action,
 		  const char *opt[], int optc)
 {
@@ -701,6 +712,7 @@ int handle_opp(struct hip_common *msg, int action,
  out:
 	return err;
 }
+#endif
 
 /* Parse command line arguments and send the appropiate message to
  * the kernel module

@@ -1446,53 +1446,6 @@ const char *gepi_strerror(int errcode)
   return "HIP native resolver failed"; /* XX FIXME */
 }
 
-// Bing, The function may not needed.
-// should we put this function to hipd, and call it
-// the application is hung when call this function in get_localhost_endpoint()
-int hip_get_dev_host_hits(/* some parameters here */ )
-{
-  struct ifaddrs *g_ifaces = NULL;
-  struct ifaddrs *g_iface = NULL;
-  int err = 0;
-  int maxlen = 0;
-  void *addr = NULL;
-  char addr_str[INET6_ADDRSTRLEN+1];
-  sa_family_t family;
-  int result = 0;
-  err = getifaddrs(&g_ifaces);
-  if (err) {
-    HIP_ERROR("getifaddr failed\n");
-    goto out;
-  }
-  HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!! start \n");
-  for (g_iface = g_ifaces; g_iface; g_iface = g_iface->ifa_next) {
-    family = g_iface->ifa_addr->sa_family;
-    result = strcmp(g_iface->ifa_name, HIP_HIT_DEV);
-    if( !result && (family == AF_INET6) ){
-      fprintf(stderr, "name: %s, family: %d, address ", g_iface->ifa_name, family);
-      
-      // HIP_DEBUG_SOCKADDR(NULL, family, g_iface->ifa_addr);
-      maxlen = INET6_ADDRSTRLEN;
-      addr = &(((struct sockaddr_in6 *) g_iface->ifa_addr)->sin6_addr);
-      if (!inet_ntop(family, addr, addr_str, maxlen)) {
-	HIP_ERROR("inet_ntop");
-	err = errno;
-	goto out;
-      }
-      HIP_DEBUG("%s\n", addr_str);
-      // TODO: filter out fe80::241c:cdff:fec6:f88e, and store hit to parameter
-    }
-    
-  }
-  HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!! end \n");
-
- out:
-
-  if (g_ifaces)
-    freeifaddrs(g_ifaces);
-  return err;
-}
-
 int get_localhost_endpoint(const char *basename,
 			    const char *servname,
 			    struct endpointinfo *hints,

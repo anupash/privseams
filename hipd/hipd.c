@@ -24,8 +24,6 @@ int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned o
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
-/*Bing, moved from main() to here*/
-//struct sockaddr_un daemon_addr;
 
 /* For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec = { 0 };
@@ -37,7 +35,9 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
+#endif // CONFIG_HIP_OPPORTUNISTIC
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -71,15 +71,10 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 		goto out_err;
 
 	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
-	HIP_DEBUG("!!!! state = %s\n",hip_state_str(entry->state));
-	HIP_DEBUG("!!!! entry = %x\n", entry);
-	HIP_DEBUG_HIT("!!!! hit_peer", &entry->hit_peer);
-	HIP_DEBUG_HIT("!!!! hit_our", &entry->hit_our);
-	HIP_DEBUG("!!!! entry->hip_msg_retrans.count=%d\n",entry->hip_msg_retrans.count  );
+	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
+	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
 	if (entry->hip_msg_retrans.count > 0 &&
 	    entry->state != HIP_STATE_ESTABLISHED) {
-	  HIP_DEBUG("!!!! true entry->hadb_xmit_func->hip_csum_send, %x=%x\n",
-		    entry->hadb_xmit_func->hip_csum_send,&entry->hadb_xmit_func->hip_csum_send );
 		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
 							   &entry->hip_msg_retrans.daddr,
 								0,0, /*need to correct it*/
@@ -87,9 +82,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 							   entry, 0);
 		entry->hip_msg_retrans.count--;
 	} else {
-	  HIP_DEBUG("!!!! false entry->hadb_xmit_func->hip_csum_send, %x=%x\n",
-	  entry->hadb_xmit_func->hip_csum_send,&entry->hadb_xmit_func->hip_csum_send );
-		HIP_FREE(entry->hip_msg_retrans.buf);
+	  	HIP_FREE(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
 		entry->hip_msg_retrans.count = 0;
 	}
@@ -493,7 +486,7 @@ int periodic_maintenance() {
 	
 	return err;
 }
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_set_opportunistic_mode(const struct hip_common *msg)
 {
   int err =  0;
@@ -529,11 +522,10 @@ int hip_get_pseudo_hit(struct hip_common *msg)
   if(opportunistic_mode){
     ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
     memcpy(&ip, ptr, sizeof(ip));
-    HIP_DEBUG_HIT("!!!! local ip=", &ip);
+    HIP_DEBUG_HIT("local ip=", &ip);
     
     err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH120);
     if(err){
-      HIP_DEBUG("!!!! err=%d\n", err);
       goto out_err;
     }
     HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
@@ -563,46 +555,6 @@ int hip_get_pseudo_hit(struct hip_common *msg)
    return err;
 }
 
-int hip_query_ip_hit_mapping(struct hip_common *msg)
-{
-  int err = 0;
-  unsigned int mapping = 0;
-  struct in6_addr *hit = NULL;
-  hip_ha_t *entry = NULL;
-
-
-  hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
-
-  HIP_DEBUG_HIT("!!!! phit=", hit);
-  HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
-    
-
-  entry = hip_hadb_try_to_find_by_peer_hit(hit);
-
-  if(entry)
-    mapping = 1;
-  else 
-    mapping = 0;
-
-  hip_msg_init(msg);
-  
-  err = hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
-				 sizeof(unsigned int));
-  if (err) {
-    HIP_ERROR("build param mapping failed: %s\n", strerror(err));
-    goto out_err;
-  }
-  
-  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0);
-  if (err) {
-    HIP_ERROR("build user header failed: %s\n", strerror(err));
-    goto out_err;
-  } 
- out_err:
-  return err;
-}
-
-
 int hip_query_opportunistic_mode(struct hip_common *msg)
 {
   int err = 0;
@@ -626,48 +578,53 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
   return err;
 }
 
+
+
+int hip_query_ip_hit_mapping(struct hip_common *msg)
+{
+  int err = 0;
+  unsigned int mapping = 0;
+  struct in6_addr *hit = NULL;
+  hip_ha_t *entry = NULL;
+
+
+  hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+
+  entry = hip_hadb_try_to_find_by_peer_hit(hit);
+  if(entry)
+    mapping = 1;
+  else 
+    mapping = 0;
+
+  hip_msg_init(msg);
+  err = hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
+				 sizeof(unsigned int));
+  if (err) {
+    HIP_ERROR("build param mapping failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0);
+  if (err) {
+    HIP_ERROR("build user header failed: %s\n", strerror(err));
+    goto out_err;
+  } 
+ out_err:
+  return err;
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
   int n = 0;
 
-  HIP_HEXDUMP("!!!! dst : ", dst, sizeof(struct sockaddr_un));
-  HIP_DEBUG("!!!! hip_sendto sending phit...\n");
+  HIP_DEBUG("hip_sendto sending phit...\n");
 
   n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
 	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
   return n;
-
 }
-// Bing, comment it away, no need
-/*
-int hip_our_host_id(struct hip_common *msg)
-{
-  struct hip_host_id *pub = NULL;
-  struct hip_host_id *priv = NULL;
-  int len = 0;
-  
-  if (!(priv = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_RSA)))
-    {
-      HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
-      HIP_IFEL(!(priv = hip_get_host_id(HIP_DB_LOCAL_HID,
-					NULL,
-					HIP_HI_DSA)),
-	       -1, "Could not acquire a local host id with DSA\n");
-    }
 
-  len = hip_get_param_total_len(priv);
-  HIP_IFEL(!(pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
-  memcpy(pub, priv, len);
-  pub = hip_get_public_key(pub);
-  
-  if(pub)
-  HIP_FREE(pub);
-  if(priv)
-    HIP_FREE(priv);
-
- out_err:
-	return err;
-}
-*/
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -681,7 +638,6 @@ int main(int argc, char *argv[]) {
 
 	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
-	// Bing, move daemon_addr as global variable
 	struct sockaddr_un daemon_addr;
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches

@@ -57,8 +57,7 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
-/* Bing added */
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 #define SET_NULL_HIT(hit)                      \
         { memset(hit, 0, sizeof(hip_hit_t));        \
           (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
@@ -72,20 +71,39 @@ inline static ipv6_addr_is_null(struct in6_addr *ip){
 	  (ip->s6_addr32[3] == 0));
   */
 }
-static inline int create_new_TCP_socket()
+
+static inline int create_new_AF_INET_TCP_socket()
+{
+  return socket(AF_INET, SOCK_STREAM, 0);
+}
+
+static inline int create_new_AF_INET6_TCP_socket()
 {
   return socket(AF_INET6, SOCK_STREAM, 0);
 }
+
+static inline int create_new_AF_INET_UDP_socket()
+{
+  return socket(AF_INET, SOCK_DGRAM, 0);
+}
+
+static inline int create_new_AF_INET6_UDP_socket()
+{
+  return socket(AF_INET6, SOCK_DGRAM, 0);
+}
+
 static inline int hit_is_real_hit(const struct in6_addr *hit){
   return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
 	  (hit->s6_addr[1] != 0x00));
 }
+
 static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
   return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
 	  (hit->s6_addr32[1] == 0) &&
 	  (hit->s6_addr32[2] == 0) &&
 	  (hit->s6_addr32[3] == 0));
 }
+
 static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
   return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
 	  (hit->s6_addr[1] == 0x00));
@@ -95,6 +113,7 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
 	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
+#endif // CONFIG_HIP_OPPORTUNISTIC
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {

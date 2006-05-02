@@ -5,6 +5,7 @@
  * Authors:
  * - Kristian Slavov <ksl@iki.fi>
  * - Miika Komu <miika@iki.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * We don't currently have a workqueue. The functionality in this file mostly
  * covers catching userspace messages only.
@@ -331,7 +332,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
 		if(err){
-		  HIP_ERROR("!!!! add peer mapping failed.\n");
+		  HIP_ERROR("add peer mapping failed.\n");
 		  goto out_err;
 		}
 		
@@ -387,7 +388,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(hit);
 		break;
-	case SO_HIP_SET_OPPORTUNISTIC_MODE: // Bing, added
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PSEUDO_HIT:
@@ -404,15 +406,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  err = -1;
 		  goto out_err;
 		}
-		HIP_DEBUG("!!!! phit is sent\n");
+		_HIP_DEBUG("phit sent\n");
 	  }
 	  
 	  break;
+
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
 	  {
 	    	err = hip_query_ip_hit_mapping(msg);
 		if(err){
-		  HIP_ERROR("!!!! query ip hit mapping failed.\n");
+		  HIP_ERROR("query ip hit mapping failed.\n");
 		  goto out_err;
 		}
 		
@@ -422,14 +425,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  err = -1;
 		  goto out_err;
 		}
-		HIP_DEBUG("!!!! mapping result is sent\n");
+		HIP_DEBUG("mapping result sent\n");
 	  }
 	  break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
 	  {
 	    	err = hip_query_opportunistic_mode(msg);
 		if(err){
-		  HIP_ERROR("!!!! query opportunistic mode failed.\n");
+		  HIP_ERROR("query opportunistic mode failed.\n");
 		  goto out_err;
 		}
 		
@@ -439,9 +442,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  err = -1;
 		  goto out_err;
 		}
-		HIP_DEBUG("!!!! opportunistic mode value is sent\n");
+		HIP_DEBUG("opportunistic mode value is sent\n");
 	  }
 	  break;
+#endif
 	default:
 	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		 err = -ESOCKTNOSUPPORT;

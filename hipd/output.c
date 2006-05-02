@@ -46,14 +46,14 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
 	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
 	  ipv6_addr_copy(&i1.hitr, &in6addr_any);
 
-	HIP_HEXDUMP("!!!! dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
-	HIP_HEXDUMP("!!!!! daddr", &daddr, sizeof(struct in6_addr));
-	HIP_HEXDUMP("!!!! entry", entry, sizeof(*entry));
+	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
+#endif // CONFIG_HIP_OPPORTUNISTIC
 	
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,0,0, 
@@ -234,20 +234,18 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
-	HIP_DEBUG_HIT("!!!! hip_xmit_r1:: src_hit", src_hit);
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	// it sould not be null hit, null hit has been replaced by real local hit
-	//HIP_ASSERT(!hit_is_opportunistic_hit(src_hit));
-	//HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 	HIP_ASSERT(!hit_is_opportunistic_null(src_hit));
-	
+#endif
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
 		 "No precreated R1\n");
-	HIP_DEBUG_HIT("!!!! hip_xmit_r1:: dst_hit", dst_hit);
+	_HIP_DEBUG_HIT("hip_xmit_r1:: dst_hit", dst_hit);
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
-	HIP_DEBUG_HIT("!!!! hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
+	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
 
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));

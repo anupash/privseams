@@ -94,13 +94,13 @@ int main(int argc,char *argv[]) {
 	peeraddr.sin6_family = AF_INET6;
 	peeraddr.sin6_port = htons(port);
 	peeraddr.sin6_flowinfo = 0;
-	HIP_HEXDUMP("peeraddr before addr assignment ", &peeraddr, sizeof(peeraddr));
-	HIP_DEBUG("dog addr %s\n", argv[1]);
+	_HIP_HEXDUMP("peeraddr before addr assignment ", &peeraddr, sizeof(peeraddr));
+	_HIP_DEBUG("responder's addr %s\n", argv[1]);
 	if(inet_pton(AF_INET6, argv[1], (struct in6_addr *) &peeraddr.sin6_addr) < 0) {
 		perror("inet_pton");
 		exit(1);
 	}
-	HIP_HEXDUMP("peeraddr after addr assignment ", &peeraddr, sizeof(peeraddr));
+	_HIP_HEXDUMP("peeraddr after addr assignment ", &peeraddr, sizeof(peeraddr));
 	// data from stdin to buffer
 	bzero(receiveddata, IP_MAXPACKET);
 	bzero(mylovemostdata, IP_MAXPACKET);

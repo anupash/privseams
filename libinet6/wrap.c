@@ -1,13 +1,22 @@
 /*
+ * libinet6 wrap.c
+ *
+ * Licence: GNU/GPL
+ * Authors: 
+ * - Bing Zhou <bingzhou@cc.hut.fi>
+ *
+ */
+
+/*
   Put all the functions you want to override here
 */
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
-//#include <linuxnet.h> // ? for socket build error
-
-#include "linuxnet.h"
+#include <linuxnet.h>
+//#include "linuxnet.h"
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
@@ -59,7 +68,7 @@ int util_func(int * const socket)
 
   if(!db_exist){
     hip_init_socket_db();
-    HIP_DEBUG("!!!! db initialized\n");
+    HIP_DEBUG("socketdb initialized\n");
     db_exist = 1;
   }
   
@@ -81,15 +90,28 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
   int pid = 0;
   int port = 0;
   int mapping = 0;
+  int proto_inet6 = 0;
+  int socktype_tcp = 0;
   struct in6_addr phit;
-  
-
-  if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ||
-      ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 ) {
     
+  // we are only interested in AF_INET and AFINET6
+  if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
+      ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ){ 
+
+    if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 )
+      proto_inet6 = 1;
+    // we only support inet6 now
+    assert(proto_inet6);
+    //TODO:: get to know the socktype
+    //    if(((struct addrinfo *)to)->ai_socktype == SOCK_DGRAM)
+    //socktype_tcp = -1;
+    //if(((struct addrinfo *)to)->ai_socktype == SOCK_STREAM)
+    //socktype_tcp = 1;
+    //printf("socktype_tcp %d\n", socktype_tcp);
+
     if(!db_exist){
       hip_init_socket_db();
-      HIP_DEBUG("!!!! db initialized\n");
+      HIP_DEBUG("socketdb initialized\n");
       db_exist = 1;
     }
 
@@ -97,9 +119,9 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     //  port = ntohs(((struct sockaddr_in *)to)->sin_port);
     port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
     id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
-    HIP_DEBUG("!!!! connect sin_port=%d\n", port);
-    HIP_DEBUG_HIT("!!!! sin6_addr id = ", id);
-    HIP_HEXDUMP("!!!! connect HEXDUMP to\n", to, 110/*sizeof(struct sockaddr_in)*/);
+    HIP_DEBUG("connect sin_port=%d\n", port);
+    HIP_DEBUG_HIT("sin6_addr id = ", id);
+    _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110/*sizeof(struct sockaddr_in)*/);
     
     if(hit_is_real_hit(id)){
       mapping = exists_mapping(pid, *socket);
@@ -129,17 +151,20 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
       } else { // no mapping
 	err = request_pseudo_hit_from_hipd(id, &phit);
 	if(err){
-	  HIP_ERROR("!!!! Failed to get pseudo hit err=\n",  strerror(err));
+	  HIP_ERROR("failed to get pseudo hit err=\n",  strerror(err));
 	  return err;
 	}
 	
 	if(hit_is_opportunistic_hashed_hit(&phit)){
-	  HIP_DEBUG_HIT("!!!! opp mode, pseudo hit=", &phit);
-	  // TODO::create new socket, socket will add mapping
+	  // TODO::create new socket, socket()func will add mapping
 	  int old_socket = *socket;
-	  // socket() call will add socket as old_socket, 
+	  // socket() call will add socket as old_socket in entry, 
 	  //we need to change it to new_socket later
-	  *socket = create_new_TCP_socket(); // TODO:: make it working
+	  if(proto_inet6){
+	    *socket = create_new_AF_INET6_TCP_socket();
+	  } else {
+	    *socket = create_new_AF_INET_TCP_socket();
+	  }
 	  if (*socket < 0) {
 	    perror("socket");
 	    err = *socket;
@@ -147,7 +172,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  }
 
 	  hip_opp_socket_t *entry = NULL;
-	  //__libc_socket() does not work, so we create entry here
+	  //__libc_socket() does not work for Bing, so we create entry here
 	  hip_socketdb_add_entry(pid, old_socket);
 	  entry = hip_scoketdb_find_entry(pid, old_socket);
 	  assert(entry);
@@ -190,7 +215,7 @@ int notwork_socket(int domain, int type, int protocol)
   
   if(!db_exist){
     hip_init_socket_db();
-    HIP_DEBUG("!!!! db initialized\n");
+    HIP_DEBUG("db initialized\n");
     db_exist = 1;
   }
   
@@ -205,7 +230,7 @@ int notwork_socket(int domain, int type, int protocol)
 	return err;
     } 
   }
-  printf("Called __libc_socket socket_fd=%d\n", socket_fd);
+  HIP_DEBUG("Called __libc_socket socket_fd=%d\n", socket_fd);
   
   return socket_fd;
 }
@@ -220,7 +245,7 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
   //assert(db_exist);
   if(!db_exist){
     hip_init_socket_db();
-    HIP_DEBUG("!!!! db initialized\n");
+    HIP_DEBUG("db initialized\n");
     db_exist = 1;
     //hip_uninit_socket_db();
   }
@@ -231,7 +256,7 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
     goto out_err;
   
   //errno = __libc_bind(socket, my_addr, addrlen);
-  printf("Called __libc_connect with err=%d\n", errno);
+  HIP_DEBUG("Called __libc_connect with err=%d\n", errno);
   
  out_err:
   return errno;
@@ -247,7 +272,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   //assert(db_exist);
   if(!db_exist){
     hip_init_socket_db();
-    HIP_DEBUG("!!!! db initialized\n");
+    HIP_DEBUG("db initialized\n");
     db_exist = 1;
     //hip_uninit_socket_db();
   }
@@ -258,7 +283,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
     goto out_err;
 
   errno = __libc_connect(socket, b, c);
-  printf("Called __libc_connect with err=%d\n", errno);
+  HIP_DEBUG("Called __libc_connect with err=%d\n", errno);
   
  out_err:
   return errno;
@@ -283,9 +308,9 @@ ssize_t send(int a, const void * b, size_t c, int flags)
     return errno;
   }
   
-  printf("Calling __libc_send ....\n");
+  HIP_DEBUG("Calling __libc_send ....\n");
   charnum =  __libc_send(socket, b, c, flags);
-  printf("Called __libc_send with number of returned char=%d\n", charnum);
+  HIP_DEBUG("Called __libc_send with number of returned char=%d\n", charnum);
 
   return charnum;
 }
@@ -306,14 +331,14 @@ ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr
   //  errno = util_func_with_sockaddr(to, id, &socket);
   errno = util_func(&socket);
   if(errno){
-    HIP_ERROR("!!!! sendto util_func_with_sockaddr failed\n");
+    HIP_ERROR("sendto util_func_with_sockaddr failed\n");
     goto out_err;
   }
-  printf("Calling __libc_sendto ....\n");
+  HIP_DEBUG("Calling __libc_sendto ....\n");
   charnum =  __libc_sendto(socket, b, c, flags, to, tolen);
-  printf("Called __libc_sendto with number of returned char=%d\n", charnum);
+  HIP_DEBUG("Called __libc_sendto with number of returned char=%d\n", charnum);
   if(charnum < 0){
-    printf("!!!! sendto failed\n");
+    HIP_DEBUG("sendto failed\n");
     errno = charnum;
     goto out_err;
   }
@@ -339,7 +364,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
     return errno;
   }
   charnum =  __libc_sendmsg(socket, msg, flags);
-  printf("Called __libc_sendmsg with number of returned chars=%d\n", charnum);
+  HIP_DEBUG("Called __libc_sendmsg with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
@@ -380,7 +405,7 @@ int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phi
       HIP_ERROR("send_recv msg failed\n");
       goto out_err;
     }
-    HIP_DEBUG("!!!! send_recv msg succeed\n");
+    HIP_DEBUG("send_recv msg succeed\n");
     
     /* getsockopt wrote the corresponding EID into the message, use it */
     err = hip_get_msg_err(msg);
@@ -426,7 +451,7 @@ int notwork_socketpair(int d, int type, int protocol, int sv[2])
   errno = 0;
 
   //  errno =  __libc_socketpair(d, type, protocol, sv[2]);
-  printf("Called __libc_socketpair with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_socketpair with errno=%d\n", errno);
 
   return errno;
 
@@ -438,7 +463,7 @@ int notwork_listen(int s, int backlog)
   errno = 0;
 
   //  errno =  __libc_listen(s, backlog);
-  printf("Called __libc_listen with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_listen with errno=%d\n", errno);
 
   return errno;
 
@@ -450,7 +475,7 @@ int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
   errno = 0;
 
   errno =  __libc_accept(s, addr, addrlen);
-  printf("Called __libc_accept with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_accept with errno=%d\n", errno);
 
   if(errno)
     return errno;
@@ -464,7 +489,7 @@ int notwork_getsockopt(int s, int level, int optname, void *optval, socklen_t *o
   errno = 0;
 
   //  errno =  __libc_getsockopt(s, level, optname, optval, optlen);
-  printf("Called __libc_getsockopt with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_getsockopt with errno=%d\n", errno);
 
   if(errno)
     return errno;
@@ -476,7 +501,7 @@ int notwork_setsockopt(int s, int level, int optname, const void *optval, sockle
   errno = 0;
 
   //errno =  __libc_setsockopt(s, level, optname, optval, optlen);
-  printf("Called __libc_setsockopt with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_setsockopt with errno=%d\n", errno);
 
   if(errno)
     return errno;
@@ -487,7 +512,7 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
   ssize_t charnum = 0;
 
   charnum =  __libc_recv(s, buf, len, flags);
-  printf("Called __libc_recv with number of returned chars=%d\n", charnum);
+  HIP_DEBUG("Called __libc_recv with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
@@ -497,7 +522,7 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
   ssize_t charnum = 0;
 
   charnum =  __libc_recvfrom(s, buf, len, flags, from, fromlen);
-  printf("Called __libc_recvfrom with number of returned chars=%d\n", charnum);
+  HIP_DEBUG("Called __libc_recvfrom with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
@@ -507,7 +532,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
   ssize_t charnum = 0;
 
   charnum =  __libc_recvmsg(s, msg, flags);
-  printf("Called __libc_recvmsg with number of returned chars=%d\n", charnum);
+  HIP_DEBUG("Called __libc_recvmsg with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
@@ -519,7 +544,7 @@ int notwork_getpeername(int s, struct sockaddr *name, socklen_t *namelen)
   errno = 0;
 
   //  errno =  __libc_getpeername(s, name, namelen);
-  printf("Called __libc_getpeername with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_getpeername with errno=%d\n", errno);
 
   return errno;
 }
@@ -531,7 +556,7 @@ int notwork_getsockname(int s, struct sockaddr *name, socklen_t *namelen)
   errno = 0;
 
   //  errno =  __libc_getsockname(s, name, namelen);
-  printf("Called __libc_getsockname with errno=%d\n", errno);
+  HIP_DEBUG("Called __libc_getsockname with errno=%d\n", errno);
 
   return errno;
 }
@@ -579,7 +604,7 @@ void test_db(){
   HIP_ASSERT(entry);
   hip_socketdb_dump();
 
-  HIP_DEBUG("!!!!3333  testing del entry\n\n");
+  HIP_DEBUG("3333  testing del entry\n\n");
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
   entry = hip_scoketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
@@ -591,7 +616,7 @@ void test_db(){
   hip_socketdb_dump();
 
 
-  HIP_DEBUG("!!!! 2222 testing del entry by entry\n\n");
+  HIP_DEBUG("2222 testing del entry by entry\n\n");
   socket--;
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
   entry = hip_scoketdb_find_entry(pid, socket);
@@ -602,7 +627,7 @@ void test_db(){
   HIP_ASSERT(!entry);
   hip_socketdb_dump();
 
-  HIP_DEBUG("!!!! 1111 testing del entry by entry\n\n");
+  HIP_DEBUG("1111 testing del entry by entry\n\n");
   socket--;
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
   entry = hip_scoketdb_find_entry(pid, socket);
@@ -612,49 +637,7 @@ void test_db(){
   entry = hip_scoketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   hip_socketdb_dump();
-  HIP_DEBUG("!!!! end of testing db\n");
+  HIP_DEBUG("end of testing db\n");
 }
 
-
-////////////////////////// unused func ////////////////////////////////////////////////////
-int get_opp_mode(){
-  int err;
-  int *opp_mode = NULL;
-  struct hip_common *msg;
-  
-  err = 0;
-
-  hip_msg_init(msg);
-  
-  err = hip_build_user_hdr(msg, SO_HIP_QUERY_OPPORTUNISTIC_MODE, 0);
-  if (err) {
-    HIP_ERROR("build hdr failed: %s\n", strerror(err));
-    goto out_err;
-  }
-  
-  /* send and receive msg to/from hipd */
-  err = hip_send_recv_daemon_info(msg);
-  if (err) {
-    HIP_ERROR("send_recv msg failed\n");
-    goto out_err;
-  }
-  HIP_DEBUG("!!!! send_recv msg succeed\n");
-  
-  /* getsockopt wrote the corresponding EID into the message, use it */
-  err = hip_get_msg_err(msg);
-  if (err) {
-    goto out_err;
-  }
-  
-  opp_mode = (int *)( hip_get_param_contents(msg, HIP_PARAM_UINT));
-  if (!opp_mode) {
-    err = -EINVAL;
-    goto out_err;
-  }
-  return *opp_mode;
-  
- out_err:
-  if(msg)
-    free(msg);
-  return err;
-}
+#endif // CONFIG_HIP_OPPORTUNISTIC
