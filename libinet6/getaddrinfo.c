@@ -1031,7 +1031,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 AG: now the loop also takes in IPv4 addresses */
       if (found_hits) 
 	send_hipd_addr(*at);
-      else if(0){// we will get pseudo hit in wrap.c, not here
+      else if(1){// we will get pseudo hit in wrap.c, not here
 	struct in6_addr hit;
 	int err = request_hipd_pseudo_hit(*at, &hit);
 	if(err){

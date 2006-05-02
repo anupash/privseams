@@ -72,24 +72,9 @@ inline static ipv6_addr_is_null(struct in6_addr *ip){
   */
 }
 
-static inline int create_new_AF_INET_TCP_socket()
+static inline int create_new_socket(int type, int protocol)
 {
-  return socket(AF_INET, SOCK_STREAM, 0);
-}
-
-static inline int create_new_AF_INET6_TCP_socket()
-{
-  return socket(AF_INET6, SOCK_STREAM, 0);
-}
-
-static inline int create_new_AF_INET_UDP_socket()
-{
-  return socket(AF_INET, SOCK_DGRAM, 0);
-}
-
-static inline int create_new_AF_INET6_UDP_socket()
-{
-  return socket(AF_INET6, SOCK_DGRAM, 0);
+  return socket(AF_INET6, type, protocol);
 }
 
 static inline int hit_is_real_hit(const struct in6_addr *hit){

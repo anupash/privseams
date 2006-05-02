@@ -90,33 +90,19 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
   int pid = 0;
   int port = 0;
   int mapping = 0;
-  int proto_inet6 = 0;
-  int socktype_tcp = 0;
   struct in6_addr phit;
     
   // we are only interested in AF_INET and AFINET6
   if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
       ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ){ 
 
-    if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 )
-      proto_inet6 = 1;
-    // we only support inet6 now
-    assert(proto_inet6);
-    //TODO:: get to know the socktype
-    //    if(((struct addrinfo *)to)->ai_socktype == SOCK_DGRAM)
-    //socktype_tcp = -1;
-    //if(((struct addrinfo *)to)->ai_socktype == SOCK_STREAM)
-    //socktype_tcp = 1;
-    //printf("socktype_tcp %d\n", socktype_tcp);
-
-    if(!db_exist){
+      if(!db_exist){
       hip_init_socket_db();
       HIP_DEBUG("socketdb initialized\n");
       db_exist = 1;
     }
 
     pid = getpid();
-    //  port = ntohs(((struct sockaddr_in *)to)->sin_port);
     port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
     id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
     HIP_DEBUG("connect sin_port=%d\n", port);
@@ -124,6 +110,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110/*sizeof(struct sockaddr_in)*/);
     
     if(hit_is_real_hit(id)){
+      HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
       mapping = exists_mapping(pid, *socket);
       assert(!mapping);
       hip_socketdb_add_entry(pid, *socket);
@@ -160,11 +147,8 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  int old_socket = *socket;
 	  // socket() call will add socket as old_socket in entry, 
 	  //we need to change it to new_socket later
-	  if(proto_inet6){
-	    *socket = create_new_AF_INET6_TCP_socket();
-	  } else {
-	    *socket = create_new_AF_INET_TCP_socket();
-	  }
+	    *socket = create_new_socket(SOCK_STREAM, 0);
+
 	  if (*socket < 0) {
 	    perror("socket");
 	    err = *socket;
@@ -256,7 +240,7 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
     goto out_err;
   
   //errno = __libc_bind(socket, my_addr, addrlen);
-  HIP_DEBUG("Called __libc_connect with err=%d\n", errno);
+  HIP_DEBUG("Called __libc_bind with err=%d\n", errno);
   
  out_err:
   return errno;
