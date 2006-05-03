@@ -256,6 +256,7 @@ int hip_socket_bind(struct socket *sock,
 	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
+	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	
 	/* XX FIX: check access permissions from eid_owner_info */
 

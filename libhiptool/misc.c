@@ -434,7 +434,8 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	return tid;
 }
 
-/* In the case IPv4 address, the address is converted to IPv6 mapped format */
+#ifndef __KERNEL__
+
 int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	int ret = 0, err = 0;
 	struct in_addr ip4;
@@ -464,8 +465,6 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
  out_err:
 	return err;
 }
-
-#ifndef __KERNEL__
 
 void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
 		int src_len) {
