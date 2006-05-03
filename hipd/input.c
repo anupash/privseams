@@ -506,7 +506,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    }
 	    // delete nullhit HA
 	    entry_tmp = NULL;
-	    err = hip_del_peer_info(&nullhit, src_addr);
+	    err = hip_del_peer_info(&msg->hitr, &nullhit, src_addr);
 	    if (err) {
 	      HIP_ERROR("Failed to delete mapping\n");
 	      goto out_err;
