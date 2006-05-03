@@ -234,6 +234,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         int err = 0, len;
 	int cmsg_level, cmsg_type;
 
+	HIP_DEBUG("db1\n");
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);
 
@@ -255,6 +256,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
+	HIP_DEBUG("db2\n");
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -273,6 +275,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 			break;
 		}
 	}
+        
+        HIP_DEBUG("db3\n");
 
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */

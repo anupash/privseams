@@ -62,8 +62,12 @@ include_HEADERS = libc-compat.h util.h
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 if HIP_OPENDHT
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
-	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
+endif
+
+if HIP_HI3
+ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 endif
 
 # Enable the following option if you want to compile HIP enabled apps without

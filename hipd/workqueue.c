@@ -198,10 +198,12 @@ int hip_do_work(struct hip_work_order *job)
 	case HIP_WO_TYPE_OUTGOING:
 	{			
 		switch(job->hdr.subtype) {
+#if 0
 		case HIP_WO_SUBTYPE_SEND_I1:
 		{
 			hip_ha_t *entry;
 			// FIXME: create HA here, on the fly if needed (Hi3)
+			// XX FIX: use hip_hadb_find_byhits
  			entry = hip_hadb_try_to_find_by_peer_hit(&job->hdr.id2);
 			if (!entry) {
 				HIP_ERROR("Unknown HA\n");
@@ -223,6 +225,7 @@ int hip_do_work(struct hip_work_order *job)
 				hip_db_put_ha(entry, hip_hadb_delete_state);
 			break;
 		}
+#endif
 		default:
 			HIP_ERROR("Unknown subtype: %d (type=%d)\n",
 				  job->hdr.subtype, job->hdr.type);
@@ -265,13 +268,15 @@ int hip_do_work(struct hip_work_order *job)
 			}
 
 			break;
+#if 0
 		case HIP_WO_SUBTYPE_DELMAP:
 			/* arg1 = d-hit arg2=d-ipv6 */
-			res = hip_del_peer_info(&job->hdr.id2,
+			res = hip_del_peer_info(xx, &job->hdr.id2,
 						&job->hdr.id1);
 			if (res < 0)
 				res = KHIPD_ERROR;
 			break;
+#endif
 		case HIP_WO_SUBTYPE_ADDHI:
 			/* FIXME: Synchronize the BEET database */
 			HIP_DEBUG("Adding \n");
@@ -312,6 +317,9 @@ int hip_do_work(struct hip_work_order *job)
 int hip_handle_user_msg(struct hip_common *msg, 
 			const struct sockaddr_un *src) {
 	hip_hit_t *hit;
+	hip_hit_t *src_hit, *dst_hit;
+	struct in6_addr *src_ip, *dst_ip;
+	hip_ha_t *entry = NULL;
 	int err = 0;
 	int msg_type;
 	int n = 0;
@@ -343,22 +351,29 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  goto out_err;
 		}
 		break;
+#if 0
 	case SO_HIP_DEL_PEER_MAP_HIT_IP:
 		err = hip_del_peer_map(msg);
 		break;
+#endif
 	case SO_HIP_RST:
 		err = hip_send_close(msg);
 		break;
 	case SO_HIP_ADD_RVS:
-#if 0 /* XX FIXME */
-		err = hip_add_peer_map_hit_ip(msg);
-		err = hip_rvs_set_request_flag();
-		{
-			struct ipv6hdr hdr = {0};
-			ipv6_addr_copy(&hdr.daddr, &job->hdr.id2);
-			hip_handle_output(&hdr, NULL);
-		}
-#endif
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+						       HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+						       HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		HIP_IFEL(!(entry =
+			   hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
+			 -1, "setting of rvs request flag failed\n");
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -381,12 +396,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = -ESOCKTNOSUPPORT; /* TBD */
 		break;
 	case SO_HIP_CONF_PUZZLE_INC:
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		hip_inc_cookie_difficulty(hit);
+		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_inc_cookie_difficulty(dst_hit);
 		break;
 	case SO_HIP_CONF_PUZZLE_DEC:
-		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		hip_dec_cookie_difficulty(hit);
+		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hip_dec_cookie_difficulty(dst_hit);
 		break;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:

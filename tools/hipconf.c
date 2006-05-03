@@ -181,60 +181,33 @@ int get_type_arg(int action) {
 int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 	       int optc)
 {
+	struct in6_addr hit, ip6;
 	int err;
 	int ret;
-	struct in6_addr hit, ip6;
 	
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 
-	if (optc != 2) {
-		HIP_ERROR("Missing arguments\n");
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-	ret = inet_pton(AF_INET6, opt[0], &hit);
-	if (ret < 0 && errno == EAFNOSUPPORT) {
-		HIP_PERROR("inet_pton: not a valid address family\n");
-		err = -EAFNOSUPPORT;
-		goto out;
-	} else if (ret == 0) {
-		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+		 "string to address conversion failed\n");
 
-	ret = inet_pton(AF_INET6, opt[1], &ip6);
-	if (ret < 0 && errno == EAFNOSUPPORT) {
-		HIP_PERROR("inet_pton: not a valid address family\n");
-		err = -EAFNOSUPPORT;
-		goto out;
-	} else if (ret == 0) {
-		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
-		err = -EINVAL;
-		goto out;
-	}
+	/* XX TODO: source HIT selection? */
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
 	
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
-	
-	err = hip_build_param_contents(msg, (void *) &ip6, HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
 
-	err = hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0);
-	if (err) {
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
-	}
-out:
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
+		 "build hdr failed\n");
+
+out_err:
 	return err;
 
 }
@@ -313,86 +286,40 @@ int handle_map(struct hip_common *msg, int action,
 	int ret;
 	struct in6_addr hit, ip6;
 
-	HIP_INFO("action=%d optc=%d\n", action, optc);
+	HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
-	if (optc != 2) {
-		HIP_ERROR("Missing arguments\n");
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-	ret = inet_pton(AF_INET6, opt[0], &hit);
-	if (ret < 0 && errno == EAFNOSUPPORT) {
-		HIP_PERROR("inet_pton: not a valid address family\n");
-		err = -EAFNOSUPPORT;
-		goto out;
-	} else if (ret == 0) {
-		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
 
-	ret = inet_pton(AF_INET6, opt[1], &ip6);
-	if (ret < 0 && errno == EAFNOSUPPORT) {
-		HIP_PERROR("inet_pton: not a valid address family\n");
-		err = -EAFNOSUPPORT;
-		goto out;
-	} else if (ret == 0) {
-		struct in_addr ip4;
-		int ret4;
-		
-		//Might be an ipv4 address. Lets catch it here.
-		
-		ret4 = inet_pton(AF_INET, opt[1], &ip4);
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+		 "string to address conversion failed\n");
 
-		if (ret4 < 0 && errno == EAFNOSUPPORT) {
-                	HIP_PERROR("inet_pton: not a valid address family\n");
-                	err = -EAFNOSUPPORT;
-                	goto out;
-		}
-		else if (ret4 ==0) {
-		
-			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[1]);
-			err = -EINVAL;
-			goto out;
-		}
-		
-		IPV4_TO_IPV6_MAP(&ip4, &ip6);
-		HIP_DEBUG("Mapped v4 to v6\n");
-		HIP_DEBUG_IN6ADDR("mapped v6 addr", &ip6); 	
-	}
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
 
-	err = hip_build_param_contents(msg, (void *) &ip6, HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
 
 	switch(action) {
 	case ACTION_ADD:
-		err = hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-		if (err) {
-			HIP_ERROR("build hdr failed: %s\n", strerror(err));
-			goto out;
-		}
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
+					    0), -1, "add peer map failed\n");
 		break;
 	case ACTION_DEL:
-		err = hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP, 0);
-		if (err) {
-			HIP_ERROR("build hdr failed: %s\n", strerror(err));
-			goto out;
-		}
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,
+					    0), -1, "del peer map failed\n");
+		break;
+	default:
+		err = -1;
 		break;
 	}
 	
-out:
+out_err:
 	return err;
 }
 

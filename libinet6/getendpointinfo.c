@@ -140,6 +140,8 @@ int setmyeid(struct sockaddr_eid *my_eid,
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
   socklen_t msg_len;
   in_port_t port;
+  int socket_fd = 0;
+  int len = 0;
 
   if (ep_hip->family != PF_HIP) {
     HIP_ERROR("Only HIP endpoints are supported\n");
@@ -187,6 +189,8 @@ int setmyeid(struct sockaddr_eid *my_eid,
       
   struct hip_host_id *host_identity = &ep_hip->id.host_id;
   if(hip_host_id_contains_private_key(host_identity)){
+
+    HIP_DEBUG("Private key found from hip_host_id\n");
     
     err = hip_private_host_id_to_hit(host_identity, &ep_hip->id.hit, 
 				     HIP_HIT_TYPE_HASH120);
@@ -198,7 +202,9 @@ int setmyeid(struct sockaddr_eid *my_eid,
   /* Only public key*/
   else {
     
-    /*Generate HIT from the private HI */
+     HIP_DEBUG("Public key found from hip_host_id\n");
+
+    /*Generate HIT from the public HI */
     err = hip_host_id_to_hit(host_identity, &ep_hip->id.hit, 
 			     HIP_HIT_TYPE_HASH120);
     
@@ -207,11 +213,13 @@ int setmyeid(struct sockaddr_eid *my_eid,
       goto out_err;
     }
   }
-  
+
+  HIP_DEBUG_HIT("Calculated HIT from hip_host_id\n", &ep_hip->id.hit);
+
   err = hip_build_param_contents(msg, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr));
   if (err) {
-    HIP_ERROR("build param hit failed: %s\n", strerror(err));
+    HIP_ERROR("Build param hit failed: %s\n", strerror(err));
     goto out_err;
   }
   
@@ -237,8 +245,6 @@ int setmyeid(struct sockaddr_eid *my_eid,
   /*Laura*********************/
   //hip_send_daemon_info(msg_HIT); // for app. specified HIs
   
-  int socket_fd = 0;
-  
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
@@ -246,9 +252,8 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  msg_len = hip_get_msg_total_len(msg);
-  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT,
-		   (void *)msg, &msg_len);
+  len = hip_get_msg_total_len(msg);
+  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &len);
   
   if (err) {
     HIP_ERROR("getsockopt failed\n");
@@ -293,14 +298,14 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 	       const struct endpoint *endpoint,
 	       const struct addrinfo *addrinfo)
 {
-  int err = 0;
-  int len = 0;
-  struct hip_common *msg = NULL;
+  int err = 0, len = 0;
+  struct hip_common *msg = NULL, *msg_mapping;
   struct addrinfo *addr;
   struct sockaddr_eid *sa_eid;
   in_port_t port = 0;
+  struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
   int socket_fd = 0;
-  socklen_t eid_len = sizeof(struct sockaddr_eid);
+  int msg_len = 0;
 
   HIP_DEBUG("\n");
 
@@ -312,7 +317,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
 #ifdef CONFIG_HIP_DEBUG
   {
-    struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
+    
     if (ep_hip->flags & HIP_ENDPOINT_FLAG_HIT) {
       HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
 		  sizeof(struct in6_addr));
@@ -347,20 +352,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     goto out_err;
   }
 
-  for(addr = (struct addrinfo *) addrinfo; addr; addr = addr->ai_next) {
-    HIP_DEBUG("setpeereid addr family=%d len=%d\n",
-	      addrinfo->ai_family,
-	      addrinfo->ai_addrlen);
-    HIP_HEXDUMP("setpeereid addr: ", addrinfo->ai_addr, addrinfo->ai_addrlen);
-    err = hip_build_param_eid_sockaddr(msg, addrinfo->ai_addr,
-				       addrinfo->ai_addrlen);
-    if (err) {
-      err = EEI_MEMORY;
-      goto out_err;
-    }
-  }
-
-
+  
 #if 0 //hip_recv_daemon_info returns currently -1, temporary solution is shown below.
   err = hip_recv_daemon_info(msg, 0);
   if (err) {
@@ -371,19 +363,66 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 
   /*Revove this part after hip_recv_daemon has beem implemented (2.3.2006 Laura)*/
  
-  /* Send HIT-IP mapping to the daemon. Under construction*/
-  hip_send_daemon_info(msg);
+  /* Send HIT-IP mapping to the daemon.********************************/
+
+  msg_mapping = hip_msg_alloc();
+  if (!msg_mapping) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+
+  /* Is it possible that there are several public HITs for the peer (/etc/hip/hosts)?
+   * Do we send all possible mappings to the daemon? 
+  */
+  for(addr = (struct addrinfo *) addrinfo; addr; addr = addr->ai_next) {
+    struct sockaddr_in6 *sock_addr_ipv6;
+    struct in6_addr ipv6_addr;
+
+    if(addr->ai_family != AF_INET6)
+      continue;
+    
+    sock_addr_ipv6 = (struct sockaddr_in6 *)addrinfo->ai_addr;
+    ipv6_addr = sock_addr_ipv6->sin6_addr;
+
+    HIP_DEBUG("Adding HIP-IP mapping: ");
+    HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *) &ep_hip->id.hit);
+    HIP_DEBUG_IN6ADDR("IP", &ipv6_addr);
+   
+    hip_msg_init(msg_mapping);
+    err = hip_build_param_contents(msg_mapping, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+
+    if (err) {
+      HIP_ERROR("build param hit failed: %s\n", strerror(err));
+      goto out_err;
+    }
+
+    err = hip_build_param_contents(msg_mapping, (void *) &ipv6_addr, HIP_PARAM_IPV6_ADDR, 
+				   sizeof(struct in6_addr));
+
+    if (err) {
+      HIP_ERROR("build param ipv6 failed: %s\n", strerror(err));
+      goto out_err;
+    }
+
+    hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+    hip_send_daemon_info(msg_mapping);
+  }
+  free(msg_mapping);
+
+  /**************************************/
+
   
-  /* Type of the socket? */
+  /* Type of the socket? Does it matter?*/
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
     err = -1;
     goto out_err;
   }
-
-  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SET_PEER_EID,
- 		   (void *)msg, &eid_len);
+  
+  msg_len = hip_get_msg_total_len(msg);
+  err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &msg_len);
   if(err) {
     HIP_ERROR("getsockopt failed\n");
     close(socket_fd);
@@ -391,7 +430,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   }
   
   close(socket_fd);
-  /******************************************************************************/
+  /***************************************************************************/
   
   /* The HIP module wrote the eid into the msg. Let's use it. */
   
@@ -565,11 +604,6 @@ int get_localhost_endpointinfo(const char *basename,
     goto out_err;
   }
   
-  /* System specific HIs should be added into the kernel with the
-     HIP_HI_REUSE_ANY flag set, because this way we make the HIs
-     readable by all processes. This function calls setmyeid() internally.. */
-  hints->ei_flags |= HIP_HI_REUSE_ANY;
-  
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
@@ -592,8 +626,10 @@ int get_localhost_endpointinfo(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
+
+  /*Laura 10.4.
   fgets(first_key_line,30,fp);  //read first line.
-  _HIP_DEBUG("1st key line: %s",first_key_line);
+  HIP_DEBUG("1st key line: %s",first_key_line);
   fclose(fp);
   
   if(findsubstring(first_key_line, "RSA"))
@@ -604,19 +640,38 @@ int get_localhost_endpointinfo(const char *basename,
     HIP_ERROR("Wrong kind of key file: %s\n",basename);
     err = -ENOMEM;
     goto out_err;
-  }
+  }*/
   
+  HIP_DEBUG("Debug1\n");
+
+  
+  if(findsubstring(basename, "rsa"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(basename, "dsa"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+    }
+
+  HIP_DEBUG("Debug2: basename %s\n", basename);
+
   /* Only private keys are handled. */
   if(algo == HIP_HI_RSA)
-    err = load_rsa_private_key(basename, &rsa);
+    err = load_rsa_public_key(basename, &rsa);
+  //err = load_rsa_private_key(basename, &rsa);
   else
-    err = load_dsa_private_key(basename, &dsa);
+    err = load_dsa_public_key(basename, &dsa);
+    //err = load_dsa_private_key(basename, &dsa);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Loading of private key %s failed\n", basename);
     goto out_err;
   }
   
+  HIP_DEBUG("Debug3\n");
+
   if(algo == HIP_HI_RSA)
     err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
   else
@@ -626,7 +681,9 @@ int get_localhost_endpointinfo(const char *basename,
     err = EEI_SYSTEM;
     goto out_err;
   }
-  
+
+  HIP_DEBUG("Debug4\n");
+
   _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	       hip_get_param_total_len(&endpoint_hip->id.host_id));
   
