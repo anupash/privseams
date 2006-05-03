@@ -472,7 +472,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! find entry by &msg->hits=", &msg->hits);
+
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
 	else if(type == HIP_R1){ // check if it uses oppotunistic mode
@@ -545,11 +545,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    struct gaih_addrtuple **pat = &at;
 	    
 	    get_local_hits(NULL, pat);
-	    _HIP_DEBUG_HIT("The local HIT =", &at->addr);
-	    _HIP_DEBUG_HIT("The null HIT =", &msg->hitr);
+	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
+	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
 
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-	    	    
+	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	    // Since get_local_hits() returns old hit format, hardcoded
 	    /* 
 	    msg->hitr.s6_addr[0] = (0x11);

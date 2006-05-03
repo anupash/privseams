@@ -10,6 +10,7 @@
 /*
   Put all the functions you want to override here
 */
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -91,7 +92,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
   int port = 0;
   int mapping = 0;
   struct in6_addr phit;
-    
+  
   // we are only interested in AF_INET and AFINET6
   if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
       ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ){ 
@@ -105,9 +106,10 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     pid = getpid();
     port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
     id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
+    HIP_DEBUG_HIT("begain util id ", id);
     HIP_DEBUG("connect sin_port=%d\n", port);
     HIP_DEBUG_HIT("sin6_addr id = ", id);
-    _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110/*sizeof(struct sockaddr_in)*/);
+    _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110); //sizeof(struct sockaddr_in)
     
     if(hit_is_real_hit(id)){
       HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
@@ -121,13 +123,18 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
       hip_socketdb_add_new_socket(entry, *socket);
       hip_socketdb_add_dst_hit(entry, id);
     } else if(!hit_is_opportunistic_hashed_hit(id)){ // is ip
+      HIP_DEBUG("!!!!!!!!!!!!!!!! ip !!!!!!!!!!!!!!!\n");
       if(exists_mapping(pid, *socket)){
+	HIP_DEBUG("!!!!!!!!!!!!!!!! has mapping  !!!!!!!!!!!!!!!\n");
 	err = hip_opportunistic_ipv6_to_hit(id, &phit, HIP_HIT_TYPE_HASH120);
 	if(err){
 	  HIP_ERROR("create phit failed: %s\n", strerror(err));
 	  goto out_err;
 	}
-	id = &phit;
+	HIP_DEBUG_HIT("!!!! &phit ", &phit);
+	//id = &phit;
+	memcpy(id, &phit, sizeof(phit));
+	HIP_DEBUG_HIT("!!!! id=&phit ", id);
 	hip_opp_socket_t *entry = NULL;
 	entry = hip_scoketdb_find_entry(pid, *socket);
 	if(entry){
@@ -136,15 +143,17 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  }
 	}
       } else { // no mapping
+	HIP_DEBUG("!!!!!!!!!!!!!!!! no mapping  !!!!!!!!!!!!!!!\n");
 	err = request_pseudo_hit_from_hipd(id, &phit);
 	if(err){
 	  HIP_ERROR("failed to get pseudo hit err=\n",  strerror(err));
 	  return err;
 	}
-	
 	if(hit_is_opportunistic_hashed_hit(&phit)){
+
 	  // TODO::create new socket, socket()func will add mapping
 	  int old_socket = *socket;
+
 	  // socket() call will add socket as old_socket in entry, 
 	  //we need to change it to new_socket later
 	  *socket = create_new_socket(SOCK_STREAM, 0); // XX TODO: BING CHECK
@@ -160,16 +169,18 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  hip_socketdb_add_entry(pid, old_socket);
 	  entry = hip_scoketdb_find_entry(pid, old_socket);
 	  assert(entry);
-	  // modify the old_socket now
-	  //hip_socketdb_modify_old_socket(entry, old_socket);
+	  
 	  hip_socketdb_add_new_socket(entry, *socket);
 	  hip_socketdb_add_dst_ip(entry, id);
 	  hip_socketdb_add_dst_hit(entry, &phit);
-	  
-	} else{ // not opp mode
+	  HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
+	  hip_socketdb_dump();
+	  memcpy(id, &phit, sizeof(phit));
+	  HIP_DEBUG_HIT("opp mode enabled id ", id);
+	} else{ // not opp mode 
 	  hip_socketdb_add_entry(pid, *socket);
 	  
-	  hip_opp_socket_t *entry = NULL;
+	  hip_opp_socket_t *entry = NULL; 
 	  entry = hip_scoketdb_find_entry(pid, *socket);
 	  assert(entry);
 	  hip_socketdb_add_new_socket(entry, *socket);
@@ -178,6 +189,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
       }
     }
   } // end if(AF_INET || AF_INET6)
+  
  out_err:
   return err;
 }
@@ -195,7 +207,7 @@ int notwork_socket(int domain, int type, int protocol)
   err = 0;
   
   //TODO::make it working
-  socket_fd = __socketcall(domain, type, protocol);
+  //socket_fd = __socketcall(domain, type, protocol);
   
   if(!db_exist){
     hip_init_socket_db();
@@ -271,7 +283,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   errno = util_func_with_sockaddr(b, id, &socket);
   if(errno)
     goto out_err;
-
+  HIP_DEBUG("!!!! calling... __libc_connect \n");
   errno = __libc_connect(socket, b, c);
   HIP_DEBUG("Called __libc_connect with err=%d\n", errno);
   
@@ -322,17 +334,13 @@ ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr
   errno = util_func(&socket);
   if(errno){
     HIP_ERROR("sendto util_func_with_sockaddr failed\n");
-    goto out_err;
   }
   HIP_DEBUG("Calling __libc_sendto ....\n");
   charnum =  __libc_sendto(socket, b, c, flags, to, tolen);
   HIP_DEBUG("Called __libc_sendto with number of returned char=%d\n", charnum);
-  if(charnum < 0){
+  if(charnum < 0)
     HIP_DEBUG("sendto failed\n");
-    errno = charnum;
-    goto out_err;
-  }
- out_err:
+
   return charnum;
 }
 

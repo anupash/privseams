@@ -238,7 +238,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	/* dst_addr is the IP address of the Initiator... */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// it sould not be null hit, null hit has been replaced by real local hit
-	HIP_ASSERT(!hit_is_opportunistic_null(src_hit));
+	HIP_DEBUG_HIT("src_hit ", src_hit);
+	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
 		 "No precreated R1\n");
