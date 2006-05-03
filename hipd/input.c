@@ -480,12 +480,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 	else if(type == HIP_R1){ // check if it uses oppotunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_hit_t nullhit;
+	  hip_ha_t *entry_tmp = NULL;
 	 
 	  _HIP_DEBUG_HIT("src_addr=", src_addr);
 	  err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
 	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
 	  
-	  hip_ha_t *entry_tmp = NULL;
 	  entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
 	  HIP_ASSERT(entry_tmp);
 	  if (entry_tmp){

@@ -161,7 +161,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
-	
+
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		sent = sendto(hip_raw_sock, msg, len, 0,
 			      (struct sockaddr *) &dst, sa_size);
@@ -169,7 +169,6 @@ int hip_csum_send(struct in6_addr *local_addr,
 			 "Could not send the all requested data (%d/%d)\n",
 			 sent, len);
 	}
-
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 
