@@ -111,11 +111,15 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 	
         /* We need to save the addresses because the actual input handlers
 	   may need them later */
-	memcpy(&hwo->hdr.src_addr, SA2IP(&src), SAIPLEN(&src));
-	memcpy(&hwo->hdr.dst_addr, SA2IP(&dst), SAIPLEN(&dst));
+	//AG: FIXME - is src_addr == id1?
+	memcpy(&hwo->hdr.id1, SA2IP(&src), SAIPLEN(&src));
+	memcpy(&hwo->hdr.id2, SA2IP(&dst), SAIPLEN(&dst));
 
 	type = hip_get_msg_type(hip_common);
 	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
+
+	//AG: these HIP_WO do not exist anymore
+#if 0
         switch(type) {
 	case HIP_I1:
 		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I1;
@@ -142,7 +146,7 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 		HIP_FREE(hwo);
 		return;
         }
-
+#endif
         hip_insert_work_order_cpu(hwo, 0);
 
  out_err:

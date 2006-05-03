@@ -21,14 +21,14 @@ hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
 if HIP_HI3
-	hipd_SOURCES += hi3.c
-	INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-	hipd_LDADD += ../i3/i3_client/.libs/libi3client.a ../i3/aeshash/.libs/libaes.a
+ hipd_SOURCES += hi3.c
+ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+ hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
 endif
 
 if HIP_OPENDHT
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
-	hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
 endif
 
 # KeyNotev2
@@ -59,3 +59,4 @@ netdev.c: netdev.h
 update.c: update.h
 rvs.c: rvs.h
 spam.c: spam.h
+
