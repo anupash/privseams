@@ -304,7 +304,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		err = -2;
 		goto out_err;
 	}
-		
+
 	/*
 	 * Create a security policy for triggering base exchange.
 	 *
@@ -348,7 +348,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
-
+	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! add_peer_info=", peer_hit);
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 
@@ -385,25 +385,10 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
-#if 1
+
 	err = hip_hadb_add_peer_info(hit, ip);
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
-#else
-	hip_hit_t nullhit;
-	
-	// initialize hashed null hit
-	err = hip_opportunistic_ipv6_to_hit(ip, &nullhit, HIP_HIT_TYPE_HASH120);
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
-	
-	memcpy(hit, &nullhit, sizeof(hip_hit_t));
-	
-	HIP_DEBUG_HIT("hip_add_map_info set hashed null to peer hit=", hit);
-	HIP_DEBUG_HIT("hip_add_map_info nullhit=", &nullhit);
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
-
-	err = hip_hadb_add_peer_info(hit, ip);
-#endif
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;

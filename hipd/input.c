@@ -472,7 +472,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	_HIP_DEBUG_HIT("&msg->hits=", &msg->hits);
+	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! find entry by &msg->hits=", &msg->hits);
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
 	else if(type == HIP_R1){ // check if it uses oppotunistic mode

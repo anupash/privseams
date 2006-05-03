@@ -147,7 +147,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  int old_socket = *socket;
 	  // socket() call will add socket as old_socket in entry, 
 	  //we need to change it to new_socket later
-	    *socket = create_new_socket(SOCK_STREAM, 0);
+	  *socket = create_new_socket(SOCK_STREAM, 0); // XX TODO: BING CHECK
 
 	  if (*socket < 0) {
 	    perror("socket");
@@ -195,7 +195,7 @@ int notwork_socket(int domain, int type, int protocol)
   err = 0;
   
   //TODO::make it working
-  //  socket_fd = __libc_socket(domain, type, protocol);
+  socket_fd = __socketcall(domain, type, protocol);
   
   if(!db_exist){
     hip_init_socket_db();
@@ -245,6 +245,12 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
  out_err:
   return errno;
 }
+
+#if 0
+int socket(xx) {
+  errno = util_func_with_sockaddr(b, id, &socket);
+}
+#endif
 
 int connect(int a, const struct sockaddr * b, socklen_t c)
 {
@@ -327,7 +333,7 @@ ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr
     goto out_err;
   }
  out_err:
-  return errno;
+  return charnum;
 }
 
 /* 
