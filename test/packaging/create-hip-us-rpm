@@ -10,13 +10,13 @@ PKGROOT=$PWD
 HIPL=$PWD/..
 PKGDIR=$PKGROOT/${NAME}-$VERSION
 
-error_cleanup()
-{
- if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
-   echo "removing '$PKGDIR'"
-   rm -rf "$PKGDIR"
- fi
-}
+#error_cleanup()
+#{
+# if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
+#   echo "removing '$PKGDIR'"
+#   rm -rf "$PKGDIR"
+# fi
+#}
 
 echo "** Creating the directory structure and files for building the"
 echo "** source package needed for RPM package containing HIPL"
@@ -35,18 +35,13 @@ fi
 make dist
 
 echo "** Package building root is '$PKGROOT'" 
-cd $PKGROOT
-rm -rf $PKGROOT/${NAME}-$VERSION
 tar xfz $HIPL/${NAME}-main.tar.gz
 mv -v ${NAME} $PKGDIR
-
-#cd "$PKGDIR"
-cp -v $HIPL/autogen.sh $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
 tar czf $PKGROOT/hipl${SUFFIX}.tar.gz $PKGDIR
 ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
-mv $PKGROOT/hipl${SUFFIX}.tar.gz $PKGROOT/test/packaging
+mv $PKGROOT/hipl${SUFFIX}.tar.gz $PKGROOT/test/packaging/SOURCES
 
 rpmbuild -ba --buildroot $PKGROOT/test/packaging $PKGROOT/test/packaging/hipl.spec
 

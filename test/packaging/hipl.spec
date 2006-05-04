@@ -25,7 +25,7 @@ other related tools and test software.
 %setup
 
 %build
-./autogen.sh && ./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir} && make CFLAGS="$RPM_OPT_FLAGS"
+./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir} && make CFLAGS="$RPM_OPT_FLAGS"
 make -C doc all
 
 %install
