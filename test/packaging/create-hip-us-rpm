@@ -48,12 +48,6 @@ mv -v hipl-main $PKGDIR
 cd "$PKGDIR"
 cp -v $HIPL/autogen.sh .
 
-if ! mkdir -p linux/include/net;then
-  echo "** Error creating directory '$PKGDIR/linux/include/net'"
-  error_cleanup
-fi
-cp -v $HIPL/linux/include/net/hip.h linux/include/net/
-
 find -name '.arch*' | xargs rm -rf
 
 echo "** Creating source package $PKGROOT/hipl-userspace${SUFFIX}.tgz"
