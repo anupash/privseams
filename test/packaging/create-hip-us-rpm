@@ -46,19 +46,19 @@ cd "$PKGDIR"
 cp -v $HIPL/autogen.sh .
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
-tar czpf $PKGROOT/${NAME}${SUFFIX}.tgz .
-ls -l $PKGROOT/${NAME}${SUFFIX}.tgz
+tar czpf $PKGROOT/hipl${SUFFIX}.tgz .
+ls -l $PKGROOT/hipl${SUFFIX}.tgz
 
 cat <<EOF
 **
 ** Finished building the source package
 **
 ** Now login as root and
-** cp $PKGROOT/${NAME}${SUFFIX}.tgz /usr/src/rpm/SOURCES
+** cp $PKGROOT/hipl${SUFFIX}.tgz /usr/src/rpm/SOURCES
 ** rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 **
 ** When everyting is finished successfully, there will be RPM package
-** /usr/src/rpm/RPMS/i386/${NAME}${SUFFIX}.i386.rpm
+** /usr/src/rpm/RPMS/i386/hipl${SUFFIX}.i386.rpm
 EOF
 
 error_cleanup
