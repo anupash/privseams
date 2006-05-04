@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 
 MAJOR=1
 MINOR=0
@@ -35,8 +35,6 @@ fi
 make dist
 
 echo "** Package building root is '$PKGROOT'" 
-cd "$PKGROOT"
-
 cd $PKGROOT
 rm -rf $PKGROOT/${NAME}-$VERSION
 tar xfz $HIPL/${NAME}.tar.gz
@@ -45,7 +43,7 @@ mv -v ${NAME} $PKGDIR
 cd "$PKGDIR"
 cp -v $HIPL/autogen.sh .
 
-echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
+echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
 tar czpf $PKGROOT/hipl${SUFFIX}.tar.gz .
 ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
