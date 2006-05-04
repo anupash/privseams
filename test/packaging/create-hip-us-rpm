@@ -1,0 +1,66 @@
+#!/bin/sh
+
+MAJOR=1
+MINOR=0
+VERSION="$MAJOR.$MINOR"
+RELEASE=1
+SUFFIX="-$VERSION-$RELEASE"
+NAME=hipl-main
+PKGROOT=$PWD
+HIPL=$PWD
+PKGDIR=$PKGROOT/${NAME}-$VERSION
+
+error_cleanup()
+{
+ if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
+   echo "removing '$PKGDIR'"
+   rm -rf "$PKGDIR"
+ fi
+}
+
+echo "** Creating the directory structure and files for building the"
+echo "** source package needed for RPM package containing HIPL"
+echo "** user space software"
+echo "**"
+echo "** Version $VERSION (release $RELEASE)"
+echo "**"
+
+echo "** Using directory '$HIPL' as the HIPL installation directory"
+
+if [ ! -d "$HIPL" ];then
+  echo "** Error: '$HIPL' is not a directory" 
+  exit 1
+fi
+
+./autogen.sh
+./configure
+make dist
+
+echo "** Package building root is '$PKGROOT'" 
+cd "$PKGROOT"
+
+cd $PKGROOT
+rm -rf $PKGROOT/${NAME}-$VERSION
+tar xfz $HIPL/${NAME}.tar.gz
+mv -v ${NAME} $PKGDIR
+
+cd "$PKGDIR"
+cp -v $HIPL/autogen.sh .
+
+echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
+tar czpf $PKGROOT/${NAME}${SUFFIX}.tgz .
+ls -l $PKGROOT/${NAME}${SUFFIX}.tgz
+
+cat <<EOF
+**
+** Finished building the source package
+**
+** Now login as root and
+** cp $PKGROOT/${NAME}${SUFFIX}.tgz /usr/src/rpm/SOURCES
+** rpmbuild -ba $PKGROOT/${NAME}${SUFFIX}.spec
+**
+** When everyting is finished successfully, there will be RPM package
+** /usr/src/rpm/RPMS/i386/${NAME}${SUFFIX}.i386.rpm
+EOF
+
+error_cleanup
