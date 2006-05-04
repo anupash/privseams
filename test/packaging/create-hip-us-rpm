@@ -46,8 +46,8 @@ cd "$PKGDIR"
 cp -v $HIPL/autogen.sh .
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
-tar czpf $PKGROOT/hipl${SUFFIX}.tgz .
-ls -l $PKGROOT/hipl${SUFFIX}.tgz
+tar czpf $PKGROOT/hipl${SUFFIX}.tar.gz .
+ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
 cat <<EOF
 **
