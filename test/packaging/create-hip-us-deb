@@ -40,19 +40,6 @@ echo "** Compiling user space software"
 echo "**"
 cd "$HIPL"
 
-if [ -x "autogen.sh" ];then
-  echo "** Running $HIPL/autogen.sh"
-  if ! ./autogen.sh;then
-   echo "** Error: autogen.sh failed, exiting"
-   exit 1
-  fi
-  echo "** Running $HIPL/configure" 
-  if ! ./configure;then
-   echo "** Error: configure failed, exiting"
-   exit 1
-  fi
-fi
-
 echo "** Running make in $HIPL"
 if ! make;then
   echo "** Error while running make in $HIPL, exiting"

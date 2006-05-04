@@ -32,8 +32,6 @@ if [ ! -d "$HIPL" ];then
   exit 1
 fi
 
-./autogen.sh
-./configure
 make dist
 
 echo "** Package building root is '$PKGROOT'" 
