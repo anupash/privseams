@@ -49,16 +49,7 @@ echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
 tar czpf $PKGROOT/hipl${SUFFIX}.tar.gz .
 ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
-cat <<EOF
-**
-** Finished building the source package
-**
-** Now login as root and
-** cp $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
-** rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
-**
-** When everyting is finished successfully, there will be RPM package
-** /usr/src/rpm/RPMS/i386/hipl${SUFFIX}.i386.rpm
-EOF
+mv $PKGROOT/hipl${SUFFIX}.tar.gz $PKGROOT/test/packaging
+rpmbuild -ba --buildroot $PKGROOT/test/packaging $PKGROOT/test/packaging/hipl.spec
 
 error_cleanup
