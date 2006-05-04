@@ -54,7 +54,7 @@ cat <<EOF
 ** Finished building the source package
 **
 ** Now login as root and
-** cp $PKGROOT/hipl${SUFFIX}.tgz /usr/src/rpm/SOURCES
+** cp $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
 ** rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 **
 ** When everyting is finished successfully, there will be RPM package

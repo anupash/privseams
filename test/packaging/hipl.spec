@@ -57,7 +57,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc /usr/share/doc/hipl
 
 %changelog
-* Tue Feb 14 2006 Miika Komu <miika@iki.fi>
-- added changelog
 * Fri May 5 2006 Miika Komu <miika@iki.fi>
 - Renamed to hipl.spec (original was from Mika) and modularized
+* Tue Feb 14 2006 Miika Komu <miika@iki.fi>
+- added changelog
