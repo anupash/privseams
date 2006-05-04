@@ -22,9 +22,8 @@ echo "**"
 echo "** Version $VERSION (release $RELEASE)"
 echo "**"
 
-PKGROOT="`pwd`"
-cd ../../
-HIPL=`pwd`
+PKGROOT="test/packaging"
+HIPL=`.`
 echo "** Using directory '$HIPL' as the HIPL installation directory"
 
 if [ ! -d "$HIPL" ];then

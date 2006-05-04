@@ -10,3 +10,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 #
 SUBDIRS = libinet6 libhiptool tools hipd test $(hipl_opt_build)
 
+rpm:
+	test/packaging/create-hip-us-rpm
+deb:
+	test/packaging/create-hip-us-deb
