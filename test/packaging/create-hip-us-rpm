@@ -55,7 +55,7 @@ cat <<EOF
 **
 ** Now login as root and
 ** cp $PKGROOT/${NAME}${SUFFIX}.tgz /usr/src/rpm/SOURCES
-** rpmbuild -ba $PKGROOT/${NAME}${SUFFIX}.spec
+** rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 **
 ** When everyting is finished successfully, there will be RPM package
 ** /usr/src/rpm/RPMS/i386/${NAME}${SUFFIX}.i386.rpm
