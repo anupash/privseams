@@ -7,7 +7,7 @@ RELEASE=1
 SUFFIX="-$VERSION.$RELEASE"
 NAME=hipl
 PKGROOT=$PWD
-HIPL=$PWD
+HIPL=$PWD/..
 PKGDIR=$PKGROOT/${NAME}-$VERSION
 
 error_cleanup()
@@ -37,7 +37,7 @@ make dist
 echo "** Package building root is '$PKGROOT'" 
 cd $PKGROOT
 rm -rf $PKGROOT/${NAME}-$VERSION
-tar xfz $HIPL/${NAME}.tar.gz
+tar xfz $HIPL/${NAME}-main.tar.gz
 mv -v ${NAME} $PKGDIR
 
 cd "$PKGDIR"
