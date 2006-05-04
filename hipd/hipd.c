@@ -461,6 +461,41 @@ int init_random_seed()
 	return err;
 }
 
+/* insert mapping for local host IP addresses to HITs to DHT */
+void register_to_dht ()
+{
+#ifdef CONFIG_HIP_OPENDHT
+
+  struct netdev_address *n, *t;
+  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+    return;
+  
+  HIP_INFO("Using hostname: %s\n", hostname);
+  
+  list_for_each_entry_safe(n, t, &addresses, next) {
+    //AG this should be replaced with a loop with hip_for_each_hi
+    struct in6_addr tmp_hit;
+    char *tmp_hit_str, *tmp_addr_str;
+    if (ipv6_addr_is_hit(SA2IP(&n->addr)))
+	continue;
+
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+      HIP_ERROR("No HIT found\n");
+      return;
+    }
+	 
+    tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+    tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+    
+    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
+	      tmp_hit_str, tmp_addr_str, hostname);
+    updateHIT(hostname, tmp_hit_str);
+    updateHIT(tmp_hit_str, tmp_addr_str);
+  } 	
+#endif
+}
+
 int periodic_maintenance() {
 	int err = 0;
 
@@ -494,41 +529,6 @@ int periodic_maintenance() {
 	
 	return err;
 }
-
-/* insert mapping for local host IP addresses to HITs to DHT */
-void register_to_dht ()
-{
-#ifdef CONFIG_HIP_OPENDHT
-
-  struct netdev_address *n, *t;
-  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
-    return;
-  
-  HIP_INFO("Using hostname: %s\n", hostname);
-  
-  list_for_each_entry_safe(n, t, &addresses, next) {
-    //AG this should be replaced with a loop with hip_for_each_hi
-    struct in6_addr tmp_hit;
-    char *tmp_hit_str, *tmp_addr_str;
-    
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
-      HIP_ERROR("No HIT found\n");
-      return;
-    }
-	 
-    tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-    tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
-    
-    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
-	      tmp_hit_str, tmp_addr_str, hostname);
-    updateHIT(hostname, tmp_hit_str);
-    updateHIT(tmp_hit_str, tmp_addr_str);
-  } 	
-#endif
-}
-
-
 
 int main(int argc, char *argv[]) {
 	int ch;
