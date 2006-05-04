@@ -40,11 +40,11 @@ rm -rf $PKGROOT/${NAME}-$VERSION
 tar xfz $HIPL/${NAME}-main.tar.gz
 mv -v ${NAME} $PKGDIR
 
-cd "$PKGDIR"
-cp -v $HIPL/autogen.sh .
+#cd "$PKGDIR"
+cp -v $HIPL/autogen.sh $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
-tar czpf $PKGROOT/hipl${SUFFIX}.tar.gz .
+tar czpf $PKGROOT/hipl${SUFFIX}.tar.gz $PKGDIR
 ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
 mv $PKGROOT/hipl${SUFFIX}.tar.gz $PKGROOT/test/packaging
