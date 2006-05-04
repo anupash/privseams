@@ -5,6 +5,7 @@ MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
+NAME=hipl-release
 
 error_cleanup()
 {
@@ -38,31 +39,32 @@ make dist
 echo "** Package building root is '$PKGROOT'" 
 cd "$PKGROOT"
 
-PKGDIR=$PKGROOT/hipl-userspace-$VERSION
+PKGDIR=$PKGROOT/${NAME}-$VERSION
 
 cd $PKGROOT
-rm -rf $PKGROOT/hipl-userspace-$VERSION
-tar xfz $HIPL/hipl-main.tar.gz
-mv -v hipl-main $PKGDIR
+rm -rf $PKGROOT/${NAME}-$VERSION
+tar xfz $HIPL/${NAME}.tar.gz
+mv -v ${NAME} $PKGDIR
 
 cd "$PKGDIR"
 cp -v $HIPL/autogen.sh .
 
 find -name '.arch*' | xargs rm -rf
 
-echo "** Creating source package $PKGROOT/hipl-userspace${SUFFIX}.tgz"
-tar czpf $PKGROOT/hipl-userspace${SUFFIX}.tgz .
-ls -l $PKGROOT/hipl-userspace${SUFFIX}.tgz
+echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tgz"
+tar czpf $PKGROOT/${NAME}${SUFFIX}.tgz .
+ls -l $PKGROOT/${NAME}${SUFFIX}.tgz
 
 cat <<EOF
 **
 ** Finished building the source package
 **
-** Now login as root and copy $PKGROOT/hipl-userspace${SUFFIX}.tgz to
-** /usr/src/rpm/SOURCES. After that run command:
-** rpmbuild -ba $PKGROOT/hipl-userspace${SUFFIX}.spec
+** Now login as root and
+** cp $PKGROOT/${NAME}${SUFFIX}.tgz /usr/src/rpm/SOURCES
+** rpmbuild -ba $PKGROOT/${NAME}${SUFFIX}.spec
+**
 ** When everyting is finished successfully, there will be RPM package
-** /usr/src/rpm/RPMS/i386/hipl-userspace${SUFFIX}.i386.rpm
+** /usr/src/rpm/RPMS/i386/${NAME}${SUFFIX}.i386.rpm
 EOF
 
 error_cleanup

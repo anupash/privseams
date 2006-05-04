@@ -335,7 +335,7 @@ software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created. 
 
 To create the RPM package, go to the directory test/packaging. Then run
-./create-hip-us-pkg. This will create a source package (in tar.gz form in
+./create-hip-us-rpm. This will create a source package (in tar.gz form in
 the same directory) which will be used when building the RPM file. After
 the script has run successfully, follow the instructions given by the
 script. That is, login as root and copy the source package (e.g.
