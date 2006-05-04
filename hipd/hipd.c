@@ -660,6 +660,37 @@ int main(int argc, char *argv[]) {
 				   hip_agent_sock, hip_raw_sock_v4,
 				   hip_nat_sock_udp);
 	
+#ifdef CONFIG_HIP_OPENDHT
+	{
+	  /* insert mapping for local host IP addresses to HITs to DHT */
+	  struct netdev_address *n, *t;
+	  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+		return 1;
+
+   	  HIP_INFO("Using hostname: %s\n", hostname);
+
+	  list_for_each_entry_safe(n, t, &addresses, next) {
+	    //AG this should be replaced with a loop with hip_for_each_hi
+	    struct in6_addr tmp_hit;
+	    char *tmp_hit_str, *tmp_addr_str;
+
+	    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+	      HIP_ERROR("No HIT found\n");
+	      return 1;
+	    }
+	 
+	    tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+	    tmp_addr_str = hip_convert_hit_to_str(&n->addr, NULL);
+
+	    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
+		      tmp_hit_str, tmp_addr_str, hostname);
+	    updateHIT(hostname, tmp_hit_str);
+	    updateHIT(tmp_hit_str, tmp_addr_str);
+	  } 	
+    }
+#endif
+
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT, 
