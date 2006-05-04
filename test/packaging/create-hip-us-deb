@@ -1,12 +1,14 @@
 #!/bin/sh
 
+# Diego: XX FIXME: how to handle source package building?
+
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl-main
-PKGROOT=$PWD
+PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-$VERSION-deb
 HIPL=$PWD
 
@@ -107,6 +109,7 @@ PKGNAME="${NAME}_${VERSION}-${RELEASE}_i386.deb"
 echo "** Creating the Debian package '$PKGNAME'"
 if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
   echo "** Successfully finished building the binary Debian package"
+  echo "** The debian packages is located in $PKGROOT/$PKGNAME"
   echo "** The package can now be installed with dpkg -i $PKGNAME"
 else
  echo "** Error: unable to build package, exiting"
