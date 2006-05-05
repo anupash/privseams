@@ -4,7 +4,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_PREREQ(2.53)
-AC_INIT(hipl, main, hipl-users@freelists.org, hipl--main--2.6.tar.gz)
+AC_INIT(hipl, main, hipl-users@freelists.org, hipl-main.tar.gz)
 AC_CONFIG_SRCDIR([tools/hipconf.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
