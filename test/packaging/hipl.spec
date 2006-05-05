@@ -1,7 +1,7 @@
 Name: hipl
 Version: 1.0.1
 Release: 1
-Summary: An IPsec key exchange management daemon for HIP.
+Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
@@ -45,7 +45,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr (-, root, root)
 %{_sbindir}/*
 %{_sbindir}/*
-%{_libdir}/*
+
 %{_bindir}/hipsetup
 %{_bindir}/conntest-client
 %{_bindir}/conntest-client-native-user-key
@@ -54,6 +54,11 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_bindir}/conntest-client-native
 %{_bindir}/conntest-server-legacy
 %{_bindir}/conntest-server-native
+%{_libdir}/usr/local/lib/libinet6.a
+%{_libdir}/usr/local/lib/libinet6.so
+%{_libdir}/usr/local/lib/libinet6.so.0.0.0
+%{_libdir}/usr/local/lib/libinet6.la
+%{_libdir}/usr/local/lib/libinet6.so.0
 %doc /usr/share/doc/hipl
 
 %changelog
