@@ -11,6 +11,8 @@ GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 include_HEADERS = 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI)
 
+if HIP_AGENT
+
 sbin_PROGRAMS = agent
 agent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 
@@ -21,6 +23,8 @@ agent_LDADD = ../libinet6/.libs/libinet6.a ../libhipgui/libhipgui.a
 #agent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 agent_LDADD += ../libhiptool/.libs/libhiptool.a
 agent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
+
+endif
 
 tags:
 	etags $(agent_SOURCES) $(include_HEADERS)

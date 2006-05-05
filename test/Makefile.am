@@ -11,8 +11,8 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
-	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
 endif
 
 bin_PROGRAMS = conntest-client

@@ -231,6 +231,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
+	hip_lsi_t lsi_tmp;
 	//struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("\n");
@@ -283,11 +284,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
-	  hip_add_iface_local_route_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit)));
+	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
+	  hip_add_iface_local_route_lsi(lsi_tmp);
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
-	  HIP_IFEL(hip_add_iface_local_lsi(htonl(HIT2LSI((uint8_t *) &lhi.hit))), -1,
+	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
 		   "Failed to add LSI to the device\n");
 	}
 

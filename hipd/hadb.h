@@ -116,7 +116,7 @@ void hip_hadb_put_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-	return (uint32_t)key_1 == (uint32_t)key_2;
+	return (uint32_t) key_1 == (uint32_t) key_2;
 }
 
 void hip_init_hadb(void);
