@@ -80,6 +80,11 @@ int gui_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pane, label);
 	gtk_widget_show(pane);
  
+	label = gtk_label_new("HITs in use");
+	label2 = gtk_label_new("HITs in use");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
+	gtk_widget_show(label);
+
 	label = gtk_label_new("Net");
 	label2 = gtk_label_new("Net");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
@@ -239,6 +244,18 @@ int gui_create_toolwindow_content(void)
 	gtk_widget_show(w);
 
 	w = gtk_combo_new();
+	glist = g_list_append(glist, "Normal");
+	glist = g_list_append(glist, "Lightweight");
+	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
+	g_list_free(glist); glist = NULL;
+	gtk_entry_set_text(w, "Normal");
+	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	gtk_widget_show(w);
+	w = gtk_label_new("Lightweiht:");
+	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
+	gtk_widget_show(w);
+
+	w = gtk_combo_new();
 	glist = g_list_append(glist, "Primary");
 	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
 	g_list_free(glist); glist = NULL;
@@ -339,6 +356,18 @@ int gui_create_acceptdialog_content(void)
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Local HIT:");
+	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
+	gtk_widget_show(w);
+
+	w = gtk_combo_new();
+	glist = g_list_append(glist, "Normal");
+	glist = g_list_append(glist, "Lightweight");
+	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
+	g_list_free(glist); glist = NULL;
+	gtk_entry_set_text(w, "Normal");
+	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	gtk_widget_show(w);
+	w = gtk_label_new("Lightweight:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 

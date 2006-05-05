@@ -137,7 +137,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
 				print_hit_to_buffer(chit, lhit);
 				phit = hit_db_search(NULL, NULL, lhit, lhit, NULL, 0, 1, 0);
-				if (phit == NULL) hit_db_add(chit, lhit, lhit, "0", 0, HIT_DB_TYPE_LOCAL, "", 0);
+				if (phit == NULL) hit_db_add(chit, lhit, lhit, "0", 0, HIT_DB_TYPE_LOCAL, "", 0, 0);
 				else
 				{
 					HIP_DEBUG("Cancelling local HIT add, already in database.\n");

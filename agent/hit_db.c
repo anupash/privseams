@@ -139,7 +139,8 @@ int hit_db_clear(void)
 int hit_db_add_hit(HIT_Item *hit, int nolock)
 {
 	return (hit_db_add(hit->name, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, hit->type, hit->group, nolock));
+	                   hit->url, hit->port, hit->type,
+	                   hit->group, hit->lightweight, nolock));
 }
 /* END OF FUNCTION */
 
@@ -153,6 +154,8 @@ int hit_db_add_hit(HIT_Item *hit, int nolock)
 	@param url URL, which is connected to this item, can be NULL.
 	@param port Port, which is connected to this item, can be 0 if not needed.
 	@param type HIT type, accept or deny.
+	@param group HIT group.
+	@param lightweight Whether HIT is used as lightweight or not.
 	@param nolock Set to one if no database lock is needed.
 
 	@return 0 on success, -1 on errors.
@@ -164,6 +167,7 @@ int hit_db_add(char *name,
                int port,
                int type,
                char *group,
+               int lightweight,
                int nolock)
 {
 	/* Variables. */
@@ -193,6 +197,7 @@ int hit_db_add(char *name,
 	hit_db[n].index = n;
 	strcpy(hit_db[n].url, url);
 	strcpy(hit_db[n].group, group);
+	hit_db[n].lightweight = lightweight;
 
 /* XX TODO: Copy url too someday: hi_db[n].url */
 	HIP_DEBUG("Calling GUI to show new HIT...\n");

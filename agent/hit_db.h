@@ -63,6 +63,8 @@ typedef struct
 	int type;
 	/** Remote HIT group. */
 	char group[64 + 1];
+	/** Is HIT lightweight or not. */
+	int lightweight;
 } HIT_Item;
 
 
@@ -82,7 +84,7 @@ int hit_db_clear(void);
 
 int hit_db_add_hit(HIT_Item *, int);
 int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
-               char *, int, int, char *, int);
+               char *, int, int, char *, int, int);
 int hit_db_del(struct in6_addr *, struct in6_addr *, int);
 
 HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
