@@ -54,11 +54,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_bindir}/conntest-client-native
 %{_bindir}/conntest-server-legacy
 %{_bindir}/conntest-server-native
-%{_libdir}/usr/local/lib/libinet6.a
-%{_libdir}/usr/local/lib/libinet6.so
-%{_libdir}/usr/local/lib/libinet6.so.0.0.0
-%{_libdir}/usr/local/lib/libinet6.la
-%{_libdir}/usr/local/lib/libinet6.so.0
+%{_libdir}/usr/local/lib/*
 %doc /usr/share/doc/hipl
 
 %changelog

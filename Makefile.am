@@ -8,7 +8,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool tools hipd test $(hipl_opt_build)
+SUBDIRS = libinet6 libhiptool tools hipd test firewall libhipgui agent
 
 rpm:
 	test/packaging/create-rpm.sh
