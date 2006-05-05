@@ -8,6 +8,25 @@
 #ifndef GUI_MANAGE_H
 #define GUI_MANAGE_H
 
+
+/******************************************************************************/
+/* DEFINES */
+enum
+{
+	ID_RLISTMODEL = 0,
+	ID_LLISTMODEL,
+	ID_RLISTVIEW,
+	ID_LLISTVIEW,
+	ID_STATUSBAR,
+	ID_INFOLOCAL,
+	ID_INFOREMOTE,
+	ID_INFOGROUP,
+	ID_NEWHIT,
+
+	IDS_N,
+};
+
+
 /******************************************************************************/
 /* INCLUDES */
 #include "gui_main.h"
@@ -16,9 +35,10 @@
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int gui_create_content(void);
-int gui_create_toolwindow_content(void);
-int gui_create_acceptdialog_content(void);
+int widget_init(void);
+void widget_quit(void);
+void widget_set(int, void *);
+void *widget(int);
 
 void gui_add_hit(char *);
 void gui_add_rgroup(char *);

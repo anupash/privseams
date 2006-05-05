@@ -39,6 +39,7 @@ int gui_init(void)
 	g_thread_init(NULL);
 	gdk_threads_init();
 	gtk_init(NULL, NULL);
+	widget_init();
 
 	/* Create main GUI window. */
 	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -98,7 +99,7 @@ int gui_main(void)
 */
 void gui_quit(void)
 {
-	
+	widget_quit();
 }
 /* END OF FUNCTION */
 

@@ -10,7 +10,7 @@ include_HEADERS =
 
 noinst_LIBRARIES = libhipgui.a
 
-libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c
+libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c gui_create.c
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
