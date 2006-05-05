@@ -121,14 +121,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	} else
 	        memcpy(&n->addr, addr, SALEN(addr));
 
-#ifdef CONFIG_HIP_OPENDHT
-	{
-	//AG this should be replaced with a loop with hip_for_each_hi
-	  struct in6_addr tmp_hit;
-	  hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DSA);
-	  updateHIT(&tmp_hit,&n->addr);
-	}
-#endif
+
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);

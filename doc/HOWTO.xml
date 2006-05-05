@@ -887,7 +887,7 @@
   <chapter>
     <title>OpenDHT Support (Experimental!)</title>
     <para>
-    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    &nbsp; unpack patches/misc/hip-dht-04052006.tgz
     </para>
     <para>
     &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
@@ -897,7 +897,35 @@
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
     </para>
     <para>
-    &nbsp; XX TODO: how to test?
+    &nbsp; To test, just run normally conntest-server 
+	and conntest-client-gai between hosts. You would see messages 
+	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+        should work without additional actions.
+    </para>
+    <para> May need a change of contact OpenDHT server, currently 
+	running list is at http://www.opendht.org/servers.txt.
+	For documentation, please also check 
+        http://kom.aau.dk/group/05gr680/
+    </para>
+  </chapter>
+
+  <chapter>
+    <title>Hi3 Support (Experimental!)</title>
+    <para>
+    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz
+    </para>
+    <para>
+    &nbsp; make a link called "hipl--main--2.6/i3" that points to
+    the unpacked i3_0.3/i3 directory
+    </para>
+    <para>
+    &nbsp; Compile hipl--main--2.6 with ./configure --enable-hi3
+    </para>
+    <para>
+    &nbsp; Not tested for a long time. To work, needs to use some set of
+	i3 servers started locally from i3 distro or running on 
+        PlanetLab. See e.g. http://hipl.infrahip.net/i3_status.html or 
+	http://rose.cs.berkeley.edu:8080/i3_status.html
     </para>
   </chapter>
 </book>    

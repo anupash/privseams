@@ -44,5 +44,10 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 #include_HEADERS =
 
 if HIP_OPENDHT
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
 endif
+
+if HIP_HI3
+ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+endif
+
