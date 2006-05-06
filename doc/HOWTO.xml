@@ -936,10 +936,10 @@
     &nbsp; hipd/hipd
     </para>
     <para>
-    &nbsp; 6. Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "test/hipconf set opp on|off" command is used to enable/disable opportunistic mode
+    &nbsp; 6. Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode
     </para>
     <para>
-    &nbsp; test/hipconf set opp on
+    &nbsp; tools/hipconf set opp on
     </para>
     <para>
     &nbsp; Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in Chapter 6. 
