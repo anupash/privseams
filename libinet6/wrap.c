@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <linuxnet.h>
+#include <netinet/tcp.h>
 //#include "linuxnet.h"
 #include "debug.h"
 #include "hadb.h"
@@ -106,7 +107,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     pid = getpid();
     port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
     id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
-    HIP_DEBUG_HIT("begain util id ", id);
+
     HIP_DEBUG("connect sin_port=%d\n", port);
     HIP_DEBUG_HIT("sin6_addr id = ", id);
     _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110); //sizeof(struct sockaddr_in)
@@ -149,21 +150,33 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	  HIP_ERROR("failed to get pseudo hit err=\n",  strerror(err));
 	  return err;
 	}
+	HIP_DEBUG("request_pseudo_hit_from_hipd succeed\n");
+
 	if(hit_is_opportunistic_hashed_hit(&phit)){
 
 	  // TODO::create new socket, socket()func will add mapping
-	  int old_socket = *socket;
+	  int type = 0;
+	  struct hip_common option;
+	  int optlen = sizeof(option);
+	  if (!getsockopt(*socket, IPPROTO_TCP, TCP_NODELAY, &option, &optlen))
+	    type = SOCK_STREAM;
+	  else if (!getsockopt(*socket, IPPROTO_UDP, TIOCOUTQ, &option, &optlen))
+	    type = SOCK_DGRAM;
+	  HIP_DEBUG("tcp %d, udp %d, type %d\n", SOCK_STREAM, SOCK_DGRAM, type);
 
+	  int old_socket = 0;
+	  old_socket = *socket;
+	  
 	  // socket() call will add socket as old_socket in entry, 
 	  //we need to change it to new_socket later
-	  *socket = create_new_socket(SOCK_STREAM, 0); // XX TODO: BING CHECK
-
-	  if (*socket < 0) {
-	    perror("socket");
-	    err = *socket;
-	    goto out_err;
-	  }
-
+	  if(type != 0) {
+	    *socket = create_new_socket(type, 0); // XX TODO: BING CHECK
+	    if (*socket < 0) {
+	      perror("socket");
+	      err = *socket;
+	      goto out_err;
+	    }
+	  }    
 	  hip_opp_socket_t *entry = NULL;
 	  //__libc_socket() does not work for Bing, so we create entry here
 	  hip_socketdb_add_entry(pid, old_socket);
@@ -207,7 +220,7 @@ int notwork_socket(int domain, int type, int protocol)
   err = 0;
   
   //TODO::make it working
-  //socket_fd = __socketcall(domain, type, protocol);
+  //  socket_fd = ///*__libc_socket*/(domain, type, protocol);
   
   if(!db_exist){
     hip_init_socket_db();

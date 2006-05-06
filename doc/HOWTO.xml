@@ -900,5 +900,50 @@
     &nbsp; XX TODO: how to test?
     </para>
   </chapter>
+  <chapter>
+    <title>Using Opportunistic mode</title>
+    <para>
+    &nbsp; Opportunistic mode is not compiled by default. In order to use Opportunistic mode enabled HIP, the following steps are needed:
+    </para>
+    <para>
+    &nbsp; 1. Move to top level of HIPL
+    </para>
+    <para>
+    &nbsp; e.g. cd hipl
+    </para>
+    <para>
+    &nbsp; 2. Run autogen.sh
+    </para>
+    <para>
+    &nbsp; ./autogen.sh
+    </para>
+    <para>
+    &nbsp; 3. Run configure with flag --enable-opportunistic. See "./configure --help" for a full list of options
+    </para>
+    <para>
+    &nbsp; ./configure --enable-opportunistic
+    </para>
+    <para>
+    &nbsp; 4. Run make
+    </para>
+    <para>
+    &nbsp; make
+    </para>
+    <para>
+    &nbsp; 5. Run hip daemon on both "crash" and "oops"
+    </para>
+    <para>
+    &nbsp; hipd/hipd
+    </para>
+    <para>
+    &nbsp; 6. Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "test/hipconf set opp on|off" command is used to enable/disable opportunistic mode
+    </para>
+    <para>
+    &nbsp; test/hipconf set opp on
+    </para>
+    <para>
+    &nbsp; Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in Chapter 6. 
+    </para>
+  </chapter>
 </book>    
 

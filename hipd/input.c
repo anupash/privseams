@@ -480,7 +480,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  hip_hit_t nullhit;
 	  hip_ha_t *entry_tmp = NULL;
 	 
-	  _HIP_DEBUG_HIT("src_addr=", src_addr);
+	  HIP_DEBUG_HIT("src_addr=", src_addr);
 	  err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
 	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
 	  
@@ -488,17 +488,32 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  HIP_ASSERT(entry_tmp);
 	  if (entry_tmp){
 	    // add new HA with real hit
-	    err = hip_hadb_add_peer_info(&msg->hits, src_addr);
+	    //err = hip_hadb_add_peer_info(&msg->hits, src_addr);
+	    
+	    HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	    HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	    HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	    HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+
+	    
+	    err = hip_hadb_add_peer_info_complete(&msg->hitr,
+						  &msg->hits,
+						  dst_addr,
+						  src_addr);
 	    if (err) {
 	      HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 	      goto out_err;
 	    }
+	    
 	    // we should get entry by both real hits
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	    HIP_ASSERT(entry);
 	    if (entry){
+	      // Bing, we need entry->our_pub and our_priv, so init_us
+	      err= hip_init_us(entry, &entry->hit_our);
 	      // old HA has state 2, new HA has state 1, so copy it
 	      entry->state = entry_tmp->state;
+	      
 	    }
 	    else {
 	      HIP_ERROR("Cannot find the added HA entry\n");

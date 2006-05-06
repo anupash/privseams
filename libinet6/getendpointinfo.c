@@ -477,6 +477,8 @@ int load_hip_endpoint_pem(const char *filename,
     err = -ENOMEM;
     goto out_err;
   }
+  else 
+    HIP_DEBUG("open key file %s for reading\n", filename);
   fgets(first_key_line,30,fp);  //read first line. 
   _HIP_DEBUG("1st key line: %s", first_key_line);
   fclose(fp);
@@ -1545,6 +1547,7 @@ int get_localhost_endpoint(const char *basename,
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* check the algorithm from PEM format key */
+  /* Bing, replace the following code:
   fp = fopen(basename, "rb");
   if (!fp) {
     HIP_ERROR("Couldn't open key file %s for reading\n", basename);
@@ -1564,11 +1567,28 @@ int get_localhost_endpoint(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
+  */
+  /*Bing, the following code is used instead of the above code*/
+  if(findsubstring(basename, "rsa"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(basename, "dsa"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  
+
 
   if(algo == HIP_HI_RSA)
-    err = load_rsa_private_key(basename, &rsa);
+    //modified according Laura's suggestion
+    //    err = load_rsa_private_key(basename, &rsa);
+    err = load_rsa_public_key(basename, &rsa);
   else
-    err = load_dsa_private_key(basename, &dsa);
+    //err = load_dsa_private_key(basename, &dsa);
+    err = load_dsa_public_key(basename, &dsa);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Loading of private key %s failed\n", basename);
@@ -1598,7 +1618,8 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1612,7 +1633,8 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;

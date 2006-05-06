@@ -92,8 +92,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
 	     0,(struct sockaddr *)&daemon_addr, &alen);
 	
-	HIP_DEBUG("%d bytes received\n", n);
-	
 	if (n < 0) {
 		HIP_ERROR("Could not receive message from daemon.\n");
 		err = -1;
