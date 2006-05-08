@@ -18,10 +18,13 @@
 #include <errno.h>
 #include <linuxnet.h>
 #include <netinet/tcp.h>
+#include <dlfcn.h>
 //#include "linuxnet.h"
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
+
+#define SOFILE "/lib/libc.so.6" 
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 static db_exist = 0;
@@ -48,17 +51,15 @@ void test_db();
 int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit);
 int exists_mapping(int pid, int socket);
 
-int exists_mapping(int pid, int socket)
-{
-  int mapping = 0;
-  hip_opp_socket_t *entry = NULL;
+// used for dlsym_util
+int (*socket_dlsym)(int domain, int type, int protocol);
+int (*conn)(int a, const struct sockaddr * b, socklen_t c);
+ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
+ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
 
-  entry = hip_scoketdb_find_entry(pid, socket);
-  if(entry)
-    mapping = 1;
 
-  return mapping;
-}
+
 
 int util_func(int * const socket)
 {
@@ -115,8 +116,12 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     if(hit_is_real_hit(id)){
       HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
       mapping = exists_mapping(pid, *socket);
-      assert(!mapping);
-      hip_socketdb_add_entry(pid, *socket);
+      // it should has mapping now, since we added mapping in socket() function
+      //      assert(!mapping);
+      //      hip_socketdb_add_entry(pid, *socket);
+      assert(mapping);
+      if(!mapping)
+	hip_socketdb_add_entry(pid, *socket);
       
       hip_opp_socket_t *entry = NULL;
       entry = hip_scoketdb_find_entry(pid, *socket);
@@ -178,10 +183,14 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	    }
 	  }    
 	  hip_opp_socket_t *entry = NULL;
-	  //__libc_socket() does not work for Bing, so we create entry here
-	  hip_socketdb_add_entry(pid, old_socket);
+	  //socket_ldsym() works for Bing, so we do not need to create entry
 	  entry = hip_scoketdb_find_entry(pid, old_socket);
 	  assert(entry);
+	  //__libc_socket() does not work for Bing before, so we create entry here
+	  //if(!entry)
+	  //hip_socketdb_add_entry(pid, old_socket);
+	  //entry = hip_scoketdb_find_entry(pid, old_socket);
+	  //assert(entry);
 	  
 	  hip_socketdb_add_new_socket(entry, *socket);
 	  hip_socketdb_add_dst_ip(entry, id);
@@ -209,7 +218,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 
 // notwork_ prefix means this function is not implemented properly,
 // because compiler complains __libc_ call
-int notwork_socket(int domain, int type, int protocol)
+int socket(int domain, int type, int protocol)
 {
   int pid;
   int socket_fd;
@@ -219,10 +228,34 @@ int notwork_socket(int domain, int type, int protocol)
   socket_fd = 0;
   err = 0;
   
+  void *dp = NULL;
+  char *error = NULL;
+  
+  dp=dlopen(SOFILE, RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  socket_dlsym = dlsym(dp, "socket");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  HIP_DEBUG("Calling socket_dlsym\n");
+  socket_fd = socket_dlsym(domain, type, protocol);
+  HIP_DEBUG("Called socket_dlsym, return fd %d\n", socket_fd);
+  dlclose(dp);
+
   //TODO::make it working
-  //  socket_fd = ///*__libc_socket*/(domain, type, protocol);
+  //  socket_fd = __libc_socket(domain, type, protocol);
   
   if(!db_exist){
+    HIP_DEBUG("db initializing...\n");
     hip_init_socket_db();
     HIP_DEBUG("db initialized\n");
     db_exist = 1;
@@ -232,6 +265,9 @@ int notwork_socket(int domain, int type, int protocol)
     pid = getpid();
     
     if(exists_mapping(pid, socket_fd)){
+      HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
+      HIP_DEBUG("!!!! it should not happen\n");
+      //hip_uninit_socket_db();
       HIP_ASSERT(0);
     } else{
       err = hip_socketdb_add_entry(pid, socket_fd);
@@ -239,7 +275,8 @@ int notwork_socket(int domain, int type, int protocol)
 	return err;
     } 
   }
-  HIP_DEBUG("Called __libc_socket socket_fd=%d\n", socket_fd);
+
+  HIP_DEBUG("Called socket_dlsym socket_fd=%d\n", socket_fd);
   
   return socket_fd;
 }
@@ -277,6 +314,7 @@ int socket(xx) {
 }
 #endif
 
+
 int connect(int a, const struct sockaddr * b, socklen_t c)
 {
   int errno;
@@ -296,9 +334,32 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   errno = util_func_with_sockaddr(b, id, &socket);
   if(errno)
     goto out_err;
-  HIP_DEBUG("!!!! calling... __libc_connect \n");
-  errno = __libc_connect(socket, b, c);
-  HIP_DEBUG("Called __libc_connect with err=%d\n", errno);
+ 
+  void *dp = NULL;
+  char *error = NULL;
+
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  conn = dlsym(dp, "connect");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  HIP_DEBUG("Calling connect_dlsym\n");
+  errno = conn(socket, b, c);
+  
+  dlclose(dp);
+
+  //errno = __libc_connect(socket, b, c);
+  HIP_DEBUG("Called connect_dlsym with err=%d\n", errno);
   
  out_err:
   return errno;
@@ -323,9 +384,30 @@ ssize_t send(int a, const void * b, size_t c, int flags)
     return errno;
   }
   
-  HIP_DEBUG("Calling __libc_send ....\n");
-  charnum =  __libc_send(socket, b, c, flags);
-  HIP_DEBUG("Called __libc_send with number of returned char=%d\n", charnum);
+  void *dp = NULL;
+  char *error = NULL;
+
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  send_dlsym = dlsym(dp, "send");
+  
+  error = dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  
+  charnum = send_dlsym(socket, b, c, flags);
+  dlclose(dp);
+  
+  //  charnum =  __libc_send(socket, b, c, flags);
+  HIP_DEBUG("Called send_dlsym with number of returned char=%d\n", charnum);
 
   return charnum;
 }
@@ -348,9 +430,32 @@ ssize_t sendto(int a, const void * b, size_t c, int flags, const struct sockaddr
   if(errno){
     HIP_ERROR("sendto util_func_with_sockaddr failed\n");
   }
-  HIP_DEBUG("Calling __libc_sendto ....\n");
-  charnum =  __libc_sendto(socket, b, c, flags, to, tolen);
-  HIP_DEBUG("Called __libc_sendto with number of returned char=%d\n", charnum);
+  
+  void *dp = NULL;
+  char *error = NULL;
+  
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  sendto_dlsym = dlsym(dp, "sendto");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  HIP_DEBUG("Calling sendto_dlsym\n");
+  charnum = sendto_dlsym(socket, b, c, flags, to, tolen);
+  
+  dlclose(dp);
+  
+  //charnum =  __libc_sendto(socket, b, c, flags, to, tolen);
+  HIP_DEBUG("Called sendto_dlsym with number of returned char=%d\n", charnum);
   if(charnum < 0)
     HIP_DEBUG("sendto failed\n");
 
@@ -374,8 +479,32 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
     HIP_ERROR("sendmsg util_func call failed: %s\n", strerror(errno));
     return errno;
   }
-  charnum =  __libc_sendmsg(socket, msg, flags);
-  HIP_DEBUG("Called __libc_sendmsg with number of returned chars=%d\n", charnum);
+  
+  void *dp = NULL;
+  char *error = NULL;
+
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  sendmsg_dlsym = dlsym(dp, "sendmsg");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  
+  charnum = sendmsg_dlsym(socket, msg, flags);
+  
+  dlclose(dp);
+  
+  //  charnum =  __libc_sendmsg(socket, msg, flags);
+  HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
 
   return charnum;
 }

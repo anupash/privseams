@@ -59,6 +59,17 @@ int hip_socketdb_del_entry(int pid, int socket);
 int hip_socketdb_add_entry_by_entry(const hip_opp_socket_t *entry); //TODO::implement this func
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
+int exists_mapping(int pid, int socket)
+{
+  hip_opp_socket_t *entry = NULL;
+
+  entry = hip_scoketdb_find_entry(pid, socket);
+  if(entry)
+    return (entry->pid == pid && entry->old_socket == socket);
+  else 
+    return 0;
+}
+
 inline int hip_socketdb_has_new_socket(hip_opp_socket_t *entry)
 {
   if(entry->new_socket > 0)
