@@ -13,7 +13,7 @@
       </para>
     </chapter>
   <chapter>
-    <title>Requirements</title>
+    <title>Software Requirements</title>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
       compilation and usage. Refer to linux/README for further instructions.
@@ -48,7 +48,7 @@
       &nbsp;* wxgtk 2.6.2 and libgtk-2.x library and development headers
     </para>
     <para>
-      * Optional
+      * Optional Software Requirements
     </para>
     <para>
       &nbsp;* iputils-ping (or netkit-ping): ping, ping6
@@ -74,8 +74,23 @@
       HIPL documentation)
     </para>
     <para>
-      &nbsp;* java compiler for "jip" (java hip resolver) if you want to build
-      HIP enabled java programs
+      &nbsp;* java compiler for "jip" (java hip resolver) if you want to
+              build HIP enabled java programs
+    </para>
+    <para>*Network Requirements</para>
+    <para>
+      &nbsp;* Make sure that the end-host firewall does not block HIP
+              and ESP traffic (try "iptables -L") or otherwise you won't get
+              any traffic through. As a workaround, you try enabling the
+              NAT mode at the end-host.
+    </para>
+    <para>
+      &nbsp;* Make sure that a middlebox is not blocking HIP traffic.
+              If there is firewall between the machines, it might have been
+              configured to block HIP or ESP traffic. If there is a NAT
+              between the machines, it might also be blocking traffic.
+              Either make sure that the middlebox allows HIP and ESP traffic,
+              or you can try enabling the NAT mode at the end-host.
     </para>
   </chapter>
   <chapter>
@@ -590,13 +605,13 @@
       4. Put some server listening at R:
     </para>
     <para>
-      responder # test/conntest-server-native tcp 5000
+      responder # test/conntest-server tcp 5000
     </para>
     <para>
       5. Start a connection at I:
     </para>
     <para>
-      initiator # test/conntest-client-native &lt;responder-hostname&gt; tcp 5000
+      initiator # test/conntest-client-gai &lt;responder-hostname&gt; tcp 5000
     </para>
     <para>
       6. Type some text...
@@ -613,10 +628,7 @@
       example, the double jump scenario does not work.
     </para>
     <para>
-      &nbsp;* Changes will be made when upgrade from mm-00 to mm-02 is finished.
-    </para>
-    <para>
-      &nbsp;* The mechanism  does not comply 100% with the RVS draft.
+      &nbsp;* The mechanism  does not comply 100% with the RVS-00 draft.
     </para>
     <para>
       &nbsp;* We don't use REA TLV in R1 (from responder to initiator). The same 
@@ -890,7 +902,7 @@
   <chapter>
     <title>OpenDHT Support (Experimental!)</title>
     <para>
-    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    &nbsp; unpack patches/misc/hip-dht-04052006.tgz
     </para>
     <para>
     &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
@@ -900,7 +912,35 @@
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
     </para>
     <para>
-    &nbsp; XX TODO: how to test?
+    &nbsp; To test, just run normally conntest-server 
+	and conntest-client-gai between hosts. You would see messages 
+	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+        should work without additional actions.
+    </para>
+    <para> May need a change of contact OpenDHT server, currently 
+	running list is at http://www.opendht.org/servers.txt.
+	For documentation, please also check 
+        http://kom.aau.dk/group/05gr680/
+    </para>
+  </chapter>
+
+  <chapter>
+    <title>Hi3 Support (Experimental!)</title>
+    <para>
+    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz
+    </para>
+    <para>
+    &nbsp; make a link called "hipl--main--2.6/i3" that points to
+    the unpacked i3_0.3/i3 directory
+    </para>
+    <para>
+    &nbsp; Compile hipl--main--2.6 with ./configure --enable-hi3
+    </para>
+    <para>
+    &nbsp; Not tested for a long time. To work, needs to use some set of
+	i3 servers started locally from i3 distro or running on 
+        PlanetLab. See e.g. http://hipl.infrahip.net/i3_status.html or 
+	http://rose.cs.berkeley.edu:8080/i3_status.html
     </para>
   </chapter>
 </book>    

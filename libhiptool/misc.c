@@ -436,6 +436,36 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 
 #ifndef __KERNEL__
 
+int convert_string_to_address(const char *str, struct in6_addr *ip6) {
+	int ret = 0, err = 0;
+	struct in_addr ip4;
+
+	ret = inet_pton(AF_INET6, str, ip6);
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
+		 err = -1,
+		 "inet_pton: not a valid address family\n");
+	if (ret > 0) {
+                /* IPv6 address conversion was ok */
+		HIP_DEBUG_IN6ADDR("id", ip6);
+		goto out_err;
+	}
+
+	/* Might be an ipv4 address (ret == 0). Lets catch it here. */
+		
+	ret = inet_pton(AF_INET, str, &ip4);
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret == 0), -1,
+		 "inet_pton: %s: not a valid network address\n", str);
+		
+	IPV4_TO_IPV6_MAP(&ip4, ip6);
+	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
+
+ out_err:
+	return err;
+}
+
 void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
 		int src_len) {
 	int index; 
@@ -794,6 +824,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 
 	return err;
 }
+
 
 /**
  * check_and_create_dir - check and create a directory

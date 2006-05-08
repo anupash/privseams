@@ -121,14 +121,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	} else
 	        memcpy(&n->addr, addr, SALEN(addr));
 
-#ifdef CONFIG_HIP_OPENDHT
-	{
-	//AG this should be replaced with a loop with hip_for_each_hi
-	  struct in6_addr tmp_hit;
-	  hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DSA);
-	  updateHIT(&tmp_hit,&n->addr);
-	}
-#endif
+
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
@@ -336,7 +329,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0;
 	hip_ha_t *entry;
-	hip_hit_t *dst_hit;
+	hip_hit_t *src_hit, *dst_hit;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr *dst_addr;
 	struct sockaddr_storage ss_addr;
@@ -346,9 +339,14 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG("Acquire: sending I1\n");
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
-	entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
 
+	HIP_DEBUG_HIT("src HIT", src_hit);
+	HIP_DEBUG_HIT("dst HIT", dst_hit);
+
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (!entry) {
 #if 0
 		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
@@ -397,7 +395,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto out_err;
 	}
 
-	HIP_IFEL(hip_send_i1(&entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
