@@ -25,7 +25,7 @@ other related tools and test software.
 %setup
 
 %build
-./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir} && make CFLAGS="$RPM_OPT_FLAGS"
+./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir} && make
 make -C doc all
 
 %install
@@ -43,21 +43,26 @@ rm -rf ${RPM_BUILD_ROOT}
 # Note: we are not distributing everything from test directory, just essentials
 %files
 %defattr (-, root, root)
-%{_sbindir}/*
-%{_sbindir}/*
-
+%{_sbindir}/hipd
+%{_sbindir}/hipconf
 %{_bindir}/hipsetup
 %{_bindir}/conntest-client
-%{_bindir}/conntest-client-native-user-key
 %{_bindir}/conntest-client-gai
-%{_bindir}/conntest-server
 %{_bindir}/conntest-client-native
-%{_bindir}/conntest-server-legacy
+%{_bindir}/conntest-client-native-user-key
+%{_bindir}/conntest-server
 %{_bindir}/conntest-server-native
-%{_libdir}/usr/local/lib/*
-%doc /usr/share/doc/hipl
+%{_libdir}/libinet6.a
+%{_libdir}/libinet6.so
+%{_libdir}/libinet6.so.0.0.0
+%{_libdir}/libinet6.la
+%{_libdir}/libinet6.so.0
+%dir /etc/hip
+%doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Mon May 6 2006 Miika Komu <miika@iki.fi>
+- Minor changes. Works, finally!
 * Fri May 5 2006 Miika Komu <miika@iki.fi>
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
