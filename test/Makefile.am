@@ -5,6 +5,10 @@ AUTOMAKE_OPTIONS = foreign
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 
+include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
+include_HEADERS += unittest.h conntest.h hipconf.h misc_install.h unit.h
+
+
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
