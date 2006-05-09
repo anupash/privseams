@@ -29,16 +29,33 @@ other related tools and test software.
 make -C doc all
 
 %install
-rm -rf ${RPM_BUILD_ROOT}
-install -d ${RPM_BUILD_ROOT}%{_bindir}
-install -d ${RPM_BUILD_ROOT}%{_sbindir}
-install -d ${RPM_BUILD_ROOT}%{_libdir}
-install -d ${RPM_BUILD_ROOT}%{_docdir}
+rm -rf %{buildroot}
+install -d %{buildroot}%{_bindir}
+install -d %{buildroot}%{_sbindir}
+install -d %{buildroot}%{_libdir}
+install -d %{buildroot}%{_docdir}
 make install
-install -m 644 doc/HOWTO.txt ${RPM_BUILD_ROOT}%{_docdir}
+install -m 644 doc/HOWTO.txt %{buildroot}%{_docdir}
+install -d %{buildroot}/etc/rc.d/init.d
+install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+
+%pre
+if [ -x /etc/rc.d/init.d/hipd ]; then
+	/etc/rc.d/init.d/hipd stop
+fi
+
+%post
+/sbin/chkconfig --add hipd
+
+%preun
+/etc/rc.d/init.d/hipd stop
+
+%postun
+/sbin/chkconfig --del hipd
+
 
 %clean
-rm -rf ${RPM_BUILD_ROOT}
+rm -rf %{buildroot}
 
 # Note: we are not distributing everything from test directory, just essentials
 %files
@@ -61,6 +78,8 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Tue May 9 2006 Miika Komu <miika@iki.fi>
+- init.d script
 * Mon May 6 2006 Miika Komu <miika@iki.fi>
 - Minor changes. Works, finally!
 * Fri May 5 2006 Miika Komu <miika@iki.fi>
