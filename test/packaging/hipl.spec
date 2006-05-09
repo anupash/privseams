@@ -71,8 +71,8 @@ rm -rf %{buildroot}
 # Note: we are not distributing everything from test directory, just essentials
 %files
 %defattr (-, root, root)
-%{_libdir}/*
-%{_sbindir}/*
+%{_sbindir}/hipconf
+%{_sbindir}/hipd
 %{_bindir}/hipsetup
 %{_bindir}/conntest-client
 %{_bindir}/conntest-client-gai
@@ -80,6 +80,7 @@ rm -rf %{buildroot}
 %{_bindir}/conntest-client-native-user-key
 %{_bindir}/conntest-server
 %{_bindir}/conntest-server-native
+%{_libdir}/*
 %config /etc/rc.d/init.d/hipd
 %doc doc/HOWTO.txt doc/howto-html
 

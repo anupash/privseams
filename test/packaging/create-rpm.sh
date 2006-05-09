@@ -48,7 +48,7 @@ cat <<EOF
 
 *** Now, execute the following commands as root:
 
-mv $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
+mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
 rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 
 
