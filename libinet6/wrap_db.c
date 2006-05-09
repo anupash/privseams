@@ -12,7 +12,6 @@
 #include <errno.h>
 #include <stddef.h>
 #include <sys/socket.h>
-#include <linuxnet.h>
 #include "hashtable.h"
 #include "hadb.h"
 //#include "list.h"

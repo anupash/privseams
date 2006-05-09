@@ -16,10 +16,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
-#include <linuxnet.h>
 #include <netinet/tcp.h>
 #include <dlfcn.h>
-//#include "linuxnet.h"
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
@@ -39,13 +37,6 @@ int hip_socketdb_add_entry(int pid, int socket);
 int hip_socketdb_del_entry(int pid, int socket);
 int hip_socketdb_add_entry_by_entry(hip_opp_socket_t *entry); //TODO::implement this func if need
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
-
-
-extern int __libc_socket(int domain, int type, int protocol);
-extern int __libc_connect(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-extern ssize_t __libc_send(int s, const void *buf, size_t len, int flags);
-extern ssize_t __libc_sendto(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
-extern ssize_t __libc_sendmsg(int s, const struct msghdr *msg, int flags);
 
 void test_db();
 int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit);
@@ -574,9 +565,10 @@ int close(int fd)
     pid = getpid();
     entry = hip_scoketdb_find_entry(pid, fd);
     if(entry){
-      if(hip_socketdb_has_new_socket(entry))// close new_socket too
+      if(hip_socketdb_has_new_socket(entry)) // close new_socket too
 	__libc_close(hip_socketdb_get_new_socket(entry));
       hip_socketdb_del_entry_by_entry(entry);
+
     }    
   }
   
@@ -615,6 +607,7 @@ int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
   errno = 0;
 
   errno =  __libc_accept(s, addr, addrlen);
+
   HIP_DEBUG("Called __libc_accept with errno=%d\n", errno);
 
   if(errno)
@@ -652,6 +645,7 @@ ssize_t recv(int s, void *buf, size_t len, int flags)
   ssize_t charnum = 0;
 
   charnum =  __libc_recv(s, buf, len, flags);
+
   HIP_DEBUG("Called __libc_recv with number of returned chars=%d\n", charnum);
 
   return charnum;
@@ -662,6 +656,7 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
   ssize_t charnum = 0;
 
   charnum =  __libc_recvfrom(s, buf, len, flags, from, fromlen);
+
   HIP_DEBUG("Called __libc_recvfrom with number of returned chars=%d\n", charnum);
 
   return charnum;
@@ -672,6 +667,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
   ssize_t charnum = 0;
 
   charnum =  __libc_recvmsg(s, msg, flags);
+
   HIP_DEBUG("Called __libc_recvmsg with number of returned chars=%d\n", charnum);
 
   return charnum;
