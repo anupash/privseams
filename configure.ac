@@ -3,7 +3,6 @@
 #
 # Generated with autoscan and manually edited -Miika
 
-AC_PREREQ(2.53)
 AC_INIT(hipl, main, hipl-users@freelists.org, hipl-main.tar.gz)
 AC_CONFIG_SRCDIR([tools/hipconf.c])
 AM_INIT_AUTOMAKE(hipl, main)
@@ -124,7 +123,7 @@ if test x"$enable_firewall" = x"yes"; then
 #                         AC_MSG_ERROR(glibc development headers missing))
 #        AC_CHECK_HEADERS(libipq.h,,
 #                         AC_MSG_ERROR(libipq development headers missing))
-        AC_DEFINE(CONFIG_HIP_FIREWALL)
+        AC_DEFINE(CONFIG_HIP_FIREWALL, AC_PREREQ(2.53))
 #        hipl_opt_build="$hipl_opt_build firewall"
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$enable_firewall" = x"yes")
@@ -136,7 +135,7 @@ AC_ARG_ENABLE(agent,
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=no])
 if test x"$enable_agent" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_AGENT)
+        AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
         AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
 #        hipl_opt_build="$hipl_opt_build libhipgui agent"
@@ -152,7 +151,7 @@ AC_ARG_ENABLE(hi3,
 AC_CACHE_CHECK([whether to use hi3],
                [ac_cv_use_hi3], [ac_cv_use_hi3=no])
 if test x"$enable_hi3" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HI3)
+        AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$enable_hi3" = x"yes")
 
@@ -163,7 +162,7 @@ AC_ARG_ENABLE(spam,
 AC_CACHE_CHECK([whether to use spam],
                [ac_cv_use_spam], [ac_cv_use_spam=no])
 if test x"$enable_spam" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_SPAM)
+        AC_DEFINE(CONFIG_HIP_SPAM, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -173,7 +172,7 @@ AC_ARG_ENABLE(rvs,
 AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$enable_rvs" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_RVS)
+        AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(opendht,
@@ -183,15 +182,15 @@ AC_ARG_ENABLE(opendht,
 AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=no])
 if test x"$enable_opendht" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENDHT)
+        AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
 
 #AC_SUBST(hipl_opt_build)
 
 # Some default settings (could be detected also with AC_ARG_ENABLE)
-AC_DEFINE(HIP_LOGFMT_LONG)
-AC_DEFINE(CONFIG_HIP_DEBUG)
+AC_DEFINE(HIP_LOGFMT_LONG, AC_PREREQ(2.53))
+AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
 AC_SUBST(GDB_CFLAG, "-g")
 
 # Path definitions
