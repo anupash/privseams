@@ -25,6 +25,7 @@ other related tools and test software.
 %prep
 %setup
 
+# Note: in subsequent releases me may want to use --disable-debugging
 %build
 ./configure --bindir=%{buildroot}/%{_bindir} --sbindir=%{buildroot}/%{_sbindir} --datadir=%{buildroot}/%{_datadir} --sysconfdir=%{buildroot}/%{_sysconfdir} --libdir=%{buildroot}/%{_libdir} --includedir=%{buildroot}/%{_includedir} --infodir=%{buildroot}/%{_infodir} --mandir=%{buildroot}/%{_bindir} && make
 make -C doc all

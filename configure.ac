@@ -186,12 +186,19 @@ if test x"$enable_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
 
-#AC_SUBST(hipl_opt_build)
 
-# Some default settings (could be detected also with AC_ARG_ENABLE)
-AC_DEFINE(HIP_LOGFMT_LONG, AC_PREREQ(2.53))
-AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
-AC_SUBST(GDB_CFLAG, "-g")
+AC_ARG_ENABLE(debugging,
+             AC_HELP_STRING([--enable-debugging],
+                            [Enable debugging (default is YES)]),
+             [ac_cv_use_debugging=$withval],
+             [ac_cv_use_debugging=yes])
+AC_CACHE_CHECK([whether the build is for production purposes],
+               [ac_cv_use_debugging], [ac_cv_use_debugging=yes])
+if test x"$enable_debugging" = x"yes"; then
+        AC_DEFINE(HIP_LOGFMT_LONG, AC_PREREQ(2.53))
+	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
+	AC_SUBST(GDB_CFLAG, "-g")
+fi
 
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
