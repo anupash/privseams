@@ -115,7 +115,7 @@ AC_ARG_ENABLE(firewall,
              [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=no])
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=no])
-if test x"$enable_firewall" = x"yes"; then
+if test x"$ac_cv_use_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
         AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
 # Do not work -mk
@@ -126,7 +126,7 @@ if test x"$enable_firewall" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_FIREWALL, AC_PREREQ(2.53))
 #        hipl_opt_build="$hipl_opt_build firewall"
 fi
-AM_CONDITIONAL(HIP_FIREWALL, test x"$enable_firewall" = x"yes")
+AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
@@ -134,7 +134,7 @@ AC_ARG_ENABLE(agent,
              [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=no])
-if test x"$enable_agent" = x"yes"; then
+if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
         AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
@@ -142,7 +142,7 @@ if test x"$enable_agent" = x"yes"; then
 # autogen.sh fails on a system without gtk:
 #		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
 fi
-AM_CONDITIONAL(HIP_AGENT, test x"$enable_agent" = x"yes")
+AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
 AC_ARG_ENABLE(hi3,
              AC_HELP_STRING([--enable-hi3],
@@ -150,10 +150,10 @@ AC_ARG_ENABLE(hi3,
              [ac_cv_use_hi3=$enableval], [ac_cv_use_hi3=no])
 AC_CACHE_CHECK([whether to use hi3],
                [ac_cv_use_hi3], [ac_cv_use_hi3=no])
-if test x"$enable_hi3" = x"yes"; then
+if test x"$ac_cv_use_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
 fi
-AM_CONDITIONAL(HIP_HI3, test x"$enable_hi3" = x"yes")
+AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
 
 AC_ARG_ENABLE(spam,
              AC_HELP_STRING([--enable-spam],
@@ -161,7 +161,7 @@ AC_ARG_ENABLE(spam,
              [ac_cv_use_spam=$enableval], [ac_cv_use_spam=no])
 AC_CACHE_CHECK([whether to use spam],
                [ac_cv_use_spam], [ac_cv_use_spam=no])
-if test x"$enable_spam" = x"yes"; then
+if test x"$ac_cv_use_spam" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_SPAM, AC_PREREQ(2.53))
 fi
 
@@ -171,7 +171,7 @@ AC_ARG_ENABLE(rvs,
              [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=no])
 AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=no])
-if test x"$enable_rvs" = x"yes"; then
+if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
@@ -181,10 +181,10 @@ AC_ARG_ENABLE(opendht,
              [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
 AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=no])
-if test x"$enable_opendht" = x"yes"; then
+if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
 fi
-AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
+AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
 
 AC_ARG_ENABLE(debug,
