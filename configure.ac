@@ -108,7 +108,7 @@ if test x"$glibc_version" = x"unknown"; then
 fi
 AC_SUBST(usagi_libc)
 
-hipl_opt_build=
+#hipl_opt_build=
 
 AC_ARG_ENABLE(firewall,
              AC_HELP_STRING([--enable-firewall],
@@ -125,8 +125,9 @@ if test x"$enable_firewall" = x"yes"; then
 #        AC_CHECK_HEADERS(libipq.h,,
 #                         AC_MSG_ERROR(libipq development headers missing))
         AC_DEFINE(CONFIG_HIP_FIREWALL)
-        hipl_opt_build="$hipl_opt_build firewall"
+#        hipl_opt_build="$hipl_opt_build firewall"
 fi
+AM_CONDITIONAL(HIP_FIREWALL, test x"$enable_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
@@ -138,10 +139,11 @@ if test x"$enable_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT)
 # XX TODO: test on Debian and RH. Also, how to determine the version?
         AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
-        hipl_opt_build="$hipl_opt_build libhipgui agent"
+#        hipl_opt_build="$hipl_opt_build libhipgui agent"
 # autogen.sh fails on a system without gtk:
 #		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
 fi
+AM_CONDITIONAL(HIP_AGENT, test x"$enable_agent" = x"yes")
 
 AC_ARG_ENABLE(hi3,
              AC_HELP_STRING([--enable-hi3],
@@ -185,7 +187,7 @@ if test x"$enable_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
 
-AC_SUBST(hipl_opt_build)
+#AC_SUBST(hipl_opt_build)
 
 # Some default settings (could be detected also with AC_ARG_ENABLE)
 AC_DEFINE(HIP_LOGFMT_LONG)
