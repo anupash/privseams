@@ -39,7 +39,6 @@ link to it from userspace (CVS does not accept links). For example,
 	builder.c:
         	$(LN_S) ../linux/net/ipv6/hip/builder.c .
 
-
 CODING CONVENTIONS
 ==================
 
@@ -318,6 +317,15 @@ some tangled functionality, especially in the kernel, that is
 very difficult to test with unit testing. Manual black box testing
 should be used to cover changes in the code in such cases.
 
+CREATING A TARBALL OF THE SOURCE CODE
+=====================================
+
+There is a "make dist" target which builds a tarball of the hipl source   
+code. It includes only the files which are necessary. The included files  
+are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
+possible to force some extra files in top most Makefile.am.
+
+
 PREBUILT BINARY PACKAGES
 ========================
 
@@ -346,7 +354,27 @@ is finished successfully, there will be a binary RPM package
 "/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
 can then be installed with rpm -i.
 
+For more info about rpm packaging, please see:
+
+http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
+http://fedoranews.org/tchung/htmldoc/htmldoc.spec
+
 DEB package is created similarly: "./autogen && ./configure && make
 deb". The resulting package file is placed into the same
 directory. The package can be installed using dpkg, e.g. "dpkg -i
 hipl-userspace_1.0-1_i386.deb".
+
+HOW TO CREATE KERNEL PACKAGES
+=============================
+
+Debian
+------
+
+XX TODO: DIEGO
+- short instructions for patching, creating source and binary images
+
+Redhat
+------
+
+XX TODO: DIEGO
+- short instructions for patching, creating source and binary images
