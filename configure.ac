@@ -112,7 +112,7 @@ AC_SUBST(usagi_libc)
 AC_ARG_ENABLE(firewall,
              AC_HELP_STRING([--enable-firewall],
                             [HIP enabled firewall daemon (default is NO)]),
-             [ac_cv_use_firewall=$withval], [ac_cv_use_firewall=no])
+             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=no])
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=no])
 if test x"$enable_firewall" = x"yes"; then
@@ -131,7 +131,7 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$enable_firewall" = x"yes")
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
                             [HIP user agent (default is NO)]),
-             [ac_cv_use_agent=$withval], [ac_cv_use_agent=no])
+             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=no])
 if test x"$enable_agent" = x"yes"; then
@@ -147,7 +147,7 @@ AM_CONDITIONAL(HIP_AGENT, test x"$enable_agent" = x"yes")
 AC_ARG_ENABLE(hi3,
              AC_HELP_STRING([--enable-hi3],
                             [Hi3 support (default is NO)]),
-             [ac_cv_use_hi3=$withval], [ac_cv_use_hi3=no])
+             [ac_cv_use_hi3=$enableval], [ac_cv_use_hi3=no])
 AC_CACHE_CHECK([whether to use hi3],
                [ac_cv_use_hi3], [ac_cv_use_hi3=no])
 if test x"$enable_hi3" = x"yes"; then
@@ -158,7 +158,7 @@ AM_CONDITIONAL(HIP_HI3, test x"$enable_hi3" = x"yes")
 AC_ARG_ENABLE(spam,
              AC_HELP_STRING([--enable-spam],
                             [HIP spamassassing extensions (default is NO)]),
-             [ac_cv_use_spam=$withval], [ac_cv_use_spam=no])
+             [ac_cv_use_spam=$enableval], [ac_cv_use_spam=no])
 AC_CACHE_CHECK([whether to use spam],
                [ac_cv_use_spam], [ac_cv_use_spam=no])
 if test x"$enable_spam" = x"yes"; then
@@ -168,7 +168,7 @@ fi
 AC_ARG_ENABLE(rvs,
              AC_HELP_STRING([--enable-rvs],
                             [HIP Rendezvous Extensions (default is NO)]),
-             [ac_cv_use_rvs=$withval], [ac_cv_use_rvs=no])
+             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=no])
 AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$enable_rvs" = x"yes"; then
@@ -178,7 +178,7 @@ fi
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
                             [OpenDHT support (default is NO)]),
-             [ac_cv_use_opendht=$withval], [ac_cv_use_opendht=no])
+             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
 AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=no])
 if test x"$enable_opendht" = x"yes"; then
@@ -187,14 +187,14 @@ fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$enable_opendht" = x"yes")
 
 
-AC_ARG_ENABLE(debugging,
-             AC_HELP_STRING([--enable-debugging],
-                            [Enable debugging (default is YES)]),
-             [ac_cv_use_debugging=$withval],
-             [ac_cv_use_debugging=yes])
-AC_CACHE_CHECK([whether the build is for production purposes],
-               [ac_cv_use_debugging], [ac_cv_use_debugging=yes])
-if test x"$enable_debugging" = x"yes"; then
+AC_ARG_ENABLE(debug,
+             AC_HELP_STRING([--enable-debug],
+                            [Enable debug (default is YES)]),
+             [ac_cv_use_debug=$enableval],
+             [ac_cv_use_debug=yes])
+AC_CACHE_CHECK([whether to have verbose debug],
+               [ac_cv_use_debug], [ac_cv_use_debug=yes])
+if test x"$ac_cv_use_debug" = x"yes"; then
         AC_DEFINE(HIP_LOGFMT_LONG, AC_PREREQ(2.53))
 	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
 	AC_SUBST(GDB_CFLAG, "-g")
