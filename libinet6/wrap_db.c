@@ -43,7 +43,7 @@ typedef struct hip_opp_socket_entry hip_opp_socket_t;
 #define HIP_UNLOCK_SOCKET_INIT(entry)
 #define HIP_LOCK_SOCKET(entry)  
 #define HIP_UNLOCK_SOCKET(entry)
-#define HIP_SOCKETDB_SIZE 53
+#define HIP_SOCKETDB_SIZE 533
 
 HIP_HASHTABLE socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
@@ -52,7 +52,8 @@ void hip_init_socket_db();
 void hip_uninit_socket_db();
 hip_opp_socket_t *hip_create_opp_entry();
 void hip_socketdb_dump();
-hip_opp_socket_t *hip_scoketdb_find_entry(int pid, int socket);
+//void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
+hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket);
 int hip_socketdb_add_entry(int pid, int socket);
 int hip_socketdb_del_entry(int pid, int socket);
 int hip_socketdb_add_entry_by_entry(const hip_opp_socket_t *entry); //TODO::implement this func
@@ -62,19 +63,27 @@ int exists_mapping(int pid, int socket)
 {
   hip_opp_socket_t *entry = NULL;
 
-  entry = hip_scoketdb_find_entry(pid, socket);
-  if(entry)
-    return (entry->pid == pid && entry->old_socket == socket);
-  else 
+  entry = hip_socketdb_find_entry(pid, socket);
+  if(entry) {
+    if(entry->pid == pid && entry->old_socket == socket)
+      return 1;
+    else // this should not happen
+      assert(0);
+  } else
     return 0;
 }
 
 inline int hip_socketdb_has_new_socket(hip_opp_socket_t *entry)
 {
-  if(entry->new_socket > 0)
-    return 1;
-  else
+  if(entry)
+    return (entry->new_socket > 0);
+  else 
     return 0;
+
+}
+inline int hip_socketdb_get_old_socket(hip_opp_socket_t *entry)
+{
+    return entry->old_socket;
 }
 inline int hip_socketdb_get_new_socket(hip_opp_socket_t *entry)
 {
@@ -108,14 +117,21 @@ inline void hip_socketdb_add_dst_hit(hip_opp_socket_t *entry, const struct in6_a
 inline int hip_hash_pid_socket(const void *hashed_pit_socket, int range)
 {
   int hash = 0;
-  HIP_DEBUG("hashed_pit_socket %d, range %d\n", *(int *)hashed_pit_socket, range);
+
+  HIP_DEBUG("range %d\n", range);
+
   hash = *(int*)hashed_pit_socket;
+  _HIP_DEBUG("hash %d\n", hash);
+
+  //int hashed = 0;
+  //hashed = hash % range;
+  _HIP_DEBUG("hashed %d\n", hashed);
   return hash % range;
 }
 
 inline int hip_socketdb_match(const void *key_1, const void *key_2)
 {
-  HIP_DEBUG("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
+  _HIP_DEBUG("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
   return *(int *)key_1 == *(int *)key_2;
 }
 
@@ -191,19 +207,20 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
  * by pid and old_socket.
  */
 //hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
-hip_opp_socket_t *hip_scoketdb_find_entry(int pid, int socket)
+hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
         int key = 0;
-	hip_opp_socket_t *entry = NULL;
-
+		
 	hip_xor_pid_socket(&key, pid, socket);
-	HIP_DEBUG("pid %d\n", pid);
-	HIP_DEBUG("socket %d\n", socket);
-	HIP_DEBUG("the computed key is %d\n", key);
-        
-	entry = (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
+	HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
 
-	return entry;
+	return (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
+}
+
+void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket)
+{
+  // deprecated, do not use
+
 }
 
 void hip_socketdb_dump(void)
@@ -228,9 +245,9 @@ void hip_socketdb_dump(void)
 	hip_in6_ntop(&item->src_hit, src_hit);
 	hip_in6_ntop(&item->dst_hit, dst_hit);
 
-	HIP_DEBUG("pid=%d old_socket=%d new_socket=%d hash_key=%d src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s\n",
+	HIP_DEBUG("pid=%d old_socket=%d new_socket=%d hash_key=%d src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
 		  item->pid, item->old_socket, item->new_socket,
-		  item->hash_key, src_ip, dst_ip, src_hit, dst_hit);
+		  item->hash_key, src_ip, dst_ip, src_hit, dst_hit, item->lock, item->refcnt);
       }
     }
   }
@@ -279,14 +296,15 @@ int hip_socketdb_add_entry(int pid, int socket)
   new_item->pid = pid;
   new_item->old_socket = socket;
   new_item->new_socket = 0;
+
   ipv6_addr_copy(&new_item->src_ip, &in6addr_any);
   ipv6_addr_copy(&new_item->dst_ip, &in6addr_any);
   ipv6_addr_copy(&new_item->src_hit, &in6addr_any);
-  ipv6_addr_copy(&new_item->src_hit, &in6addr_any);
-  
+  ipv6_addr_copy(&new_item->dst_hit, &in6addr_any);
   err = hip_ht_add(&socketdb, new_item);                                     
   HIP_DEBUG("pid %d, old_socket %d are added to HT socketdb, entry=%p\n",
-	    new_item->pid, new_item->old_socket, new_item); 
+	    new_item->pid, new_item->old_socket,  new_item); 
+  hip_socketdb_dump();
 
   return err;
 }
@@ -295,7 +313,7 @@ int hip_socketdb_del_entry(int pid, int socket)
 {
   hip_opp_socket_t *entry = NULL;
 
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = hip_socketdb_find_entry(pid, socket);
   if (!entry) {
     return -ENOENT;
   }

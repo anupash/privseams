@@ -32,11 +32,14 @@ void hip_init_socket_db();
 void hip_uninit_socket_db();
 hip_opp_socket_t *hip_create_opp_entry();
 void hip_socketdb_dump();
-hip_opp_socket_t *hip_scoketdb_find_entry(int pid, int socket);
+//void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
+hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket);
 int hip_socketdb_add_entry(int pid, int socket);
 int hip_socketdb_del_entry(int pid, int socket);
 int hip_socketdb_add_entry_by_entry(hip_opp_socket_t *entry); //TODO::implement this func if need
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
+inline int hip_socketdb_get_old_socket(hip_opp_socket_t *entry);
+inline int hip_socketdb_get_new_socket(hip_opp_socket_t *entry);
 
 void test_db();
 int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit);
@@ -48,9 +51,31 @@ int (*conn)(int a, const struct sockaddr * b, socklen_t c);
 ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
 ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
 ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
+int (*close_dlsym)(int fd);
 
 
+void dlsym_util(void *dp, char *error, void *func, const char * const func_name)
+{
+  //void *dp = NULL;
+  //char *error = NULL;
 
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  func = dlsym(dp, "connect");//func_name);
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  //  HIP_DEBUG("Calling %s _dlsym\n", func_name);
+}
 
 int util_func(int * const socket)
 {
@@ -68,7 +93,7 @@ int util_func(int * const socket)
   
   pid = getpid();
   
-  entry = hip_scoketdb_find_entry(pid, *socket);
+  entry =  hip_socketdb_find_entry(pid, *socket);
   if(entry){
     if(hip_socketdb_has_new_socket(entry)){
       *socket = hip_socketdb_get_new_socket(entry);
@@ -111,94 +136,65 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
       //      assert(!mapping);
       //      hip_socketdb_add_entry(pid, *socket);
       assert(mapping);
-      if(!mapping)
-	hip_socketdb_add_entry(pid, *socket);
+      //if(!mapping)
+      //hip_socketdb_add_entry(pid, *socket);
       
       hip_opp_socket_t *entry = NULL;
-      entry = hip_scoketdb_find_entry(pid, *socket);
+      entry = hip_socketdb_find_entry(pid, *socket);
       assert(entry);
       hip_socketdb_add_new_socket(entry, *socket);
       hip_socketdb_add_dst_hit(entry, id);
     } else if(!hit_is_opportunistic_hashed_hit(id)){ // is ip
       HIP_DEBUG("!!!!!!!!!!!!!!!! ip !!!!!!!!!!!!!!!\n");
-      if(exists_mapping(pid, *socket)){
-	HIP_DEBUG("!!!!!!!!!!!!!!!! has mapping  !!!!!!!!!!!!!!!\n");
-	err = hip_opportunistic_ipv6_to_hit(id, &phit, HIP_HIT_TYPE_HASH120);
-	if(err){
-	  HIP_ERROR("create phit failed: %s\n", strerror(err));
-	  goto out_err;
-	}
-	HIP_DEBUG_HIT("!!!! &phit ", &phit);
-	//id = &phit;
-	memcpy(id, &phit, sizeof(phit));
-	HIP_DEBUG_HIT("!!!! id=&phit ", id);
+      err = request_pseudo_hit_from_hipd(id, &phit);
+      if(err){
+	HIP_ERROR("failed to get pseudo hit err=\n",  strerror(err));
+	return err;
+      }
+      HIP_DEBUG("request_pseudo_hit_from_hipd succeed\n");
+      
+      if(hit_is_opportunistic_hashed_hit(&phit)){
+	int type = 0;
+	struct hip_common option;
+	int optlen = sizeof(option);
+	int old_socket = 0;
 	hip_opp_socket_t *entry = NULL;
-	entry = hip_scoketdb_find_entry(pid, *socket);
-	if(entry){
-	  if(hip_socketdb_has_new_socket(entry)){
-	    *socket = hip_socketdb_get_new_socket(entry);
+
+	if (!getsockopt(*socket, IPPROTO_TCP, TCP_NODELAY, &option, &optlen))
+	  type = SOCK_STREAM;
+	else if (!getsockopt(*socket, IPPROTO_UDP, TIOCOUTQ, &option, &optlen))
+	  type = SOCK_DGRAM;
+	
+	old_socket = *socket;
+	
+	// socket() call will add socket as old_socket in entry, 
+	//we need to change it to new_socket later
+	if(type != 0) {
+	  *socket = create_new_socket(type, 0); // XX TODO: BING CHECK
+	  if (*socket < 0) {
+	    perror("socket");
+	    err = *socket;
+	    goto out_err;
 	  }
-	}
-      } else { // no mapping
-	HIP_DEBUG("!!!!!!!!!!!!!!!! no mapping  !!!!!!!!!!!!!!!\n");
-	err = request_pseudo_hit_from_hipd(id, &phit);
-	if(err){
-	  HIP_ERROR("failed to get pseudo hit err=\n",  strerror(err));
-	  return err;
-	}
-	HIP_DEBUG("request_pseudo_hit_from_hipd succeed\n");
-
-	if(hit_is_opportunistic_hashed_hit(&phit)){
-
-	  // TODO::create new socket, socket()func will add mapping
-	  int type = 0;
-	  struct hip_common option;
-	  int optlen = sizeof(option);
-	  if (!getsockopt(*socket, IPPROTO_TCP, TCP_NODELAY, &option, &optlen))
-	    type = SOCK_STREAM;
-	  else if (!getsockopt(*socket, IPPROTO_UDP, TIOCOUTQ, &option, &optlen))
-	    type = SOCK_DGRAM;
-	  HIP_DEBUG("tcp %d, udp %d, type %d\n", SOCK_STREAM, SOCK_DGRAM, type);
-
-	  int old_socket = 0;
-	  old_socket = *socket;
-	  
-	  // socket() call will add socket as old_socket in entry, 
-	  //we need to change it to new_socket later
-	  if(type != 0) {
-	    *socket = create_new_socket(type, 0); // XX TODO: BING CHECK
-	    if (*socket < 0) {
-	      perror("socket");
-	      err = *socket;
-	      goto out_err;
-	    }
-	  }    
-	  hip_opp_socket_t *entry = NULL;
-	  //socket_ldsym() works for Bing, so we do not need to create entry
-	  entry = hip_scoketdb_find_entry(pid, old_socket);
-	  assert(entry);
-	  //__libc_socket() does not work for Bing before, so we create entry here
-	  //if(!entry)
-	  //hip_socketdb_add_entry(pid, old_socket);
-	  //entry = hip_scoketdb_find_entry(pid, old_socket);
-	  //assert(entry);
-	  
-	  hip_socketdb_add_new_socket(entry, *socket);
-	  hip_socketdb_add_dst_ip(entry, id);
-	  hip_socketdb_add_dst_hit(entry, &phit);
-	  HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
-	  hip_socketdb_dump();
-	  memcpy(id, &phit, sizeof(phit));
-	  HIP_DEBUG_HIT("opp mode enabled id ", id);
-	} else{ // not opp mode 
-	  hip_socketdb_add_entry(pid, *socket);
-	  
-	  hip_opp_socket_t *entry = NULL; 
-	  entry = hip_scoketdb_find_entry(pid, *socket);
-	  assert(entry);
-	  hip_socketdb_add_new_socket(entry, *socket);
-	  hip_socketdb_add_dst_ip(entry, id);
-	}
+	}    
+	
+	entry =  hip_socketdb_find_entry(pid, old_socket);
+	assert(entry);
+	
+	hip_socketdb_add_new_socket(entry, *socket);
+	hip_socketdb_add_dst_ip(entry, id);
+	hip_socketdb_add_dst_hit(entry, &phit);
+	HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
+	//hip_socketdb_dump();
+	// modify sockaddr, id points to sockaddr's sin6_addr
+	memcpy(id, &phit, sizeof(phit));
+	HIP_DEBUG_HIT("opp mode enabled id ", id);
+      } else{ // not opp mode 
+	hip_opp_socket_t *entry = NULL; 
+	entry = hip_socketdb_find_entry(pid, *socket);
+	assert(entry);
+	hip_socketdb_add_new_socket(entry, *socket);
+	hip_socketdb_add_dst_ip(entry, id);
       }
     }
   } // end if(AF_INET || AF_INET6)
@@ -257,13 +253,17 @@ int socket(int domain, int type, int protocol)
     
     if(exists_mapping(pid, socket_fd)){
       HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
-      HIP_DEBUG("!!!! it should not happen\n");
-      //hip_uninit_socket_db();
-      HIP_ASSERT(0);
+      HIP_DEBUG("!!!! it should not happen, but indeed it happend and not the db problem!!!\n");
+      //err = hip_socketdb_del_entry(pid, socket_fd);
+      //HIP_DEBUG("delete entry returns %d\n", err);
+      //HIP_ASSERT(0);
     } else{
       err = hip_socketdb_add_entry(pid, socket_fd);
       if(err)
 	return err;
+      hip_opp_socket_t *entry = NULL;
+      entry = hip_socketdb_find_entry(pid, socket_fd);
+      assert(entry);
     } 
   }
 
@@ -328,7 +328,10 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
  
   void *dp = NULL;
   char *error = NULL;
-
+  // char *func_name = "connect";
+ 
+  //  dlsym_util(dp, error, conn, func_name);
+  
   dp=dlopen(SOFILE,RTLD_LAZY);
   
   if (dp==NULL)
@@ -345,11 +348,12 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
       exit(1);
     }
   HIP_DEBUG("Calling connect_dlsym\n");
+
+
   errno = conn(socket, b, c);
   
   dlclose(dp);
 
-  //errno = __libc_connect(socket, b, c);
   HIP_DEBUG("Called connect_dlsym with err=%d\n", errno);
   
  out_err:
@@ -561,22 +565,64 @@ int close(int fd)
 
   errno = 0;
 
+  void *dp = NULL;
+  char *error = NULL;
+   
+  //  dlsym_util(dp, error, conn, func_name);
+  
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  close_dlsym = dlsym(dp, "close");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+
   if(db_exist){
     pid = getpid();
-    entry = hip_scoketdb_find_entry(pid, fd);
-    if(entry){
-      if(hip_socketdb_has_new_socket(entry)) // close new_socket too
-	__libc_close(hip_socketdb_get_new_socket(entry));
-      hip_socketdb_del_entry_by_entry(entry);
+    entry = hip_socketdb_find_entry(pid, fd);
+    HIP_DEBUG("close() pid %d, fd %d\n", pid, fd);
 
+    if(!entry){
+      HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!! should not happen, dumping socket db\n");
+      hip_socketdb_dump();
+      assert(0);
+    }
+    if(entry){
+
+      if(hip_socketdb_has_new_socket(entry)){
+	int old_socket = hip_socketdb_get_old_socket(entry);
+	int new_socket = hip_socketdb_get_new_socket(entry);
+	// close new_socket too
+	if(old_socket != new_socket){
+	  HIP_DEBUG("old_socket %d new_socket %d\n", 
+		    old_socket, new_socket);	  
+	  errno = close_dlsym(new_socket);
+	  if(errno){
+	    HIP_DEBUG("close new_socket failed errno %d\n", errno);
+	  } else
+	    HIP_DEBUG("close new_socket no error\n");
+	}
+      }
     }    
   }
   
-  errno = __libc_close(fd);
-  
+  errno = close_dlsym(fd);
+  dlclose(dp);
+  //errno = __libc_close(fd);
+  HIP_DEBUG("close_dlsym called with errno %d\n", errno);
+
   return errno;
 }
-
+/*
 int notwork_socketpair(int d, int type, int protocol, int sv[2])
 {
   int errno;
@@ -601,12 +647,12 @@ int notwork_listen(int s, int backlog)
 
 }
 
-int accept(int s, struct sockaddr *addr, socklen_t *addrlen)
+int _accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 {
   int errno;
   errno = 0;
 
-  errno =  __libc_accept(s, addr, addrlen);
+  //  errno =  __libc_accept(s, addr, addrlen);
 
   HIP_DEBUG("Called __libc_accept with errno=%d\n", errno);
 
@@ -640,33 +686,33 @@ int notwork_setsockopt(int s, int level, int optname, const void *optval, sockle
     return errno;
 }
 
-ssize_t recv(int s, void *buf, size_t len, int flags)
+ssize_t _recv(int s, void *buf, size_t len, int flags)
 {
   ssize_t charnum = 0;
 
-  charnum =  __libc_recv(s, buf, len, flags);
+  //  charnum =  __libc_recv(s, buf, len, flags);
 
   HIP_DEBUG("Called __libc_recv with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
 
-ssize_t recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen)
+ssize_t _recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen)
 {
   ssize_t charnum = 0;
 
-  charnum =  __libc_recvfrom(s, buf, len, flags, from, fromlen);
+  //charnum =  __libc_recvfrom(s, buf, len, flags, from, fromlen);
 
   HIP_DEBUG("Called __libc_recvfrom with number of returned chars=%d\n", charnum);
 
   return charnum;
 }
 
-ssize_t recvmsg(int s, struct msghdr *msg, int flags)
+ssize_t _recvmsg(int s, struct msghdr *msg, int flags)
 {
   ssize_t charnum = 0;
 
-  charnum =  __libc_recvmsg(s, msg, flags);
+  //charnum =  __libc_recvmsg(s, msg, flags);
 
   HIP_DEBUG("Called __libc_recvmsg with number of returned chars=%d\n", charnum);
 
@@ -696,6 +742,7 @@ int notwork_getsockname(int s, struct sockaddr *name, socklen_t *namelen)
 
   return errno;
 }
+*/
 
 // used to test socketdb
 void test_db(){
@@ -707,11 +754,11 @@ void test_db(){
   //  struct hip_opp_socket_entry *entry = NULL;
 
   HIP_DEBUG("1111 pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry =   hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   err = hip_socketdb_add_entry(pid, socket);
   HIP_ASSERT(!err);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry =  hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
   hip_socketdb_dump();
 
@@ -719,11 +766,12 @@ void test_db(){
   //  pid++; 
   socket++;
   HIP_DEBUG("2222 pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   err = hip_socketdb_add_entry(pid, socket);
   HIP_ASSERT(!err);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = hip_socketdb_find_entry(pid, socket);
   hip_socketdb_add_new_socket(entry, socket+100);
   HIP_ASSERT(entry);
   hip_socketdb_dump();
@@ -732,22 +780,26 @@ void test_db(){
   //pid++; 
   socket++;
   HIP_DEBUG("3333 pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   err = hip_socketdb_add_entry(pid, socket);
   HIP_ASSERT(!err);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry =  hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
   hip_socketdb_dump();
 
   HIP_DEBUG("3333  testing del entry\n\n");
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
   entry = NULL;
   err = hip_socketdb_del_entry(pid, socket);
   HIP_ASSERT(!err);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   hip_socketdb_dump();
 
@@ -755,22 +807,25 @@ void test_db(){
   HIP_DEBUG("2222 testing del entry by entry\n\n");
   socket--;
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
   hip_socketdb_del_entry_by_entry(entry);
   entry = NULL;
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   hip_socketdb_dump();
 
   HIP_DEBUG("1111 testing del entry by entry\n\n");
   socket--;
   HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry = NULL;
+  entry = hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(entry);
   hip_socketdb_del_entry_by_entry(entry);
   entry = NULL;
-  entry = hip_scoketdb_find_entry(pid, socket);
+  entry =  hip_socketdb_find_entry(pid, socket);
   HIP_ASSERT(!entry);
   hip_socketdb_dump();
   HIP_DEBUG("end of testing db\n");
