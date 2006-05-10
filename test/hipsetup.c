@@ -1,4 +1,4 @@
-#include "hipsetupNew.h"
+#include "hipsetup.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;

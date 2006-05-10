@@ -1,10 +1,16 @@
 #!/bin/sh
 
+# Diego: XX FIXME: how to handle source package building?
+
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
+NAME=hipl
+PKGROOT=$PWD/test/packaging
+PKGDIR=$PKGROOT/${NAME}-$VERSION-deb
+HIPL=$PWD
 
 error_cleanup()
 {
@@ -22,10 +28,6 @@ echo "**"
 echo "** Building: Version $VERSION (release $RELEASE)"
 echo "**"
 
-PKGROOT="`pwd`"
-PKGDIR=$PKGROOT/hipl-userspace-$VERSION-deb
-cd ../../
-HIPL=`pwd`
 echo "** Using directory '$HIPL' as the HIPL installation directory"
 echo "** Package building root is '$PKGROOT'" 
 echo "** Temporary Debian package root is '$PKGDIR'" 
@@ -39,19 +41,6 @@ fi
 echo "** Compiling user space software"
 echo "**"
 cd "$HIPL"
-
-if [ -x "autogen.sh" ];then
-  echo "** Running $HIPL/autogen.sh"
-  if ! ./autogen.sh;then
-   echo "** Error: autogen.sh failed, exiting"
-   exit 1
-  fi
-  echo "** Running $HIPL/configure" 
-  if ! ./configure;then
-   echo "** Error: configure failed, exiting"
-   exit 1
-  fi
-fi
 
 echo "** Running make in $HIPL"
 if ! make;then
@@ -86,23 +75,23 @@ copy_files ()
  done
 
  echo "** Copying binary files to '$PKGDIR'"
- cd "$PKGDIR"
+ cd "$PKGDIR/CONTENTS"
  # create directory structure
- mkdir -p usr/local/sbin usr/local/bin usr/local/lib etc/hip /usr/share/doc
+ mkdir -p usr/sbin usr/bin usr/lib etc/hip /usr/share/doc
  cd "$HIPL"
 
- cp tools/hipconf $PKGDIR/usr/local/sbin/
+ cp tools/hipconf $PKGDIR/usr/sbin/
  for suffix in "" -gai -native -native-user-key;do
-   cp test/conntest-client$suffix $PKGDIR/usr/local/bin/
+   cp test/conntest-client$suffix $PKGDIR/usr/bin/
  done
  for suffix in "" -legacy -native;do
-   cp test/conntest-server$suffix $PKGDIR/usr/local/bin/
+   cp test/conntest-server$suffix $PKGDIR/usr/bin/
  done
- cp test/hipsetup $PKGDIR/usr/local/sbin/
+ cp test/hipsetup $PKGDIR/usr/sbin/
  for suffix in a so so.0 so.0.0.0;do
-   cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/local/lib/
+   cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
  done
- cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/local/lib/
+ cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 
  echo "** Copying documentation to '$PKGDIR'"
  cd "$HIPL/doc"
@@ -116,10 +105,11 @@ if ! copy_files;then
 fi
 
 cd "$PKGROOT"
-PKGNAME="hipl-userspace_${VERSION}-${RELEASE}_i386.deb"
+PKGNAME="${NAME}_${VERSION}-${RELEASE}_i386.deb"
 echo "** Creating the Debian package '$PKGNAME'"
 if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
   echo "** Successfully finished building the binary Debian package"
+  echo "** The debian packages is located in $PKGROOT/$PKGNAME"
   echo "** The package can now be installed with dpkg -i $PKGNAME"
 else
  echo "** Error: unable to build package, exiting"

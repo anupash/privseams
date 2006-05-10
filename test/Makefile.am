@@ -5,14 +5,18 @@ AUTOMAKE_OPTIONS = foreign
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 
+include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
+include_HEADERS += unittest.h conntest.h hipconf.h misc_install.h unit.h
+
+
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
-	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
 endif
 
 bin_PROGRAMS = conntest-client

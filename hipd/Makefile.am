@@ -6,9 +6,11 @@ CFLAGS = $(hipl_common_cflags)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
-include_HEADERS = cookie.h hidb.h hadb.h hashtable.h keymat.h keymat.h \
-                  workqueue.h bos.h input.h output.h preoutput.h preinput.h \
-                  xfrm.h beet.h netdev.h update.h rvs.h close.h nat.h spam.h
+include_HEADERS =  beet.h hadb.h hipd.h netdev.h rvs.h workqueue.h
+include_HEADERS += bos.h hashtable.h input.h output.h spam.h xfrm.h
+include_HEADERS += close.h hi3.h keymat.h preinput.h timer.h
+include_HEADERS += cookie.h hidb.h nat.h preoutput.h update.h
+
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
@@ -21,14 +23,14 @@ hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto
 
 if HIP_HI3
-	hipd_SOURCES += hi3.c
-	INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-	hipd_LDADD += ../i3/i3_client/.libs/libi3client.a ../i3/aeshash/.libs/libaes.a
+ hipd_SOURCES += hi3.c
+ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+ hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
 endif
 
 if HIP_OPENDHT
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
-	hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
 endif
 
 # KeyNotev2
@@ -59,3 +61,4 @@ netdev.c: netdev.h
 update.c: update.h
 rvs.c: rvs.h
 spam.c: spam.h
+
