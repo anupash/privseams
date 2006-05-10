@@ -21,5 +21,5 @@ dist-hook:
 	rm -rf `find $(distdir) -name '{arch}'`
 	rm -rf `find $(distdir) -name '.arch-ids'`
 	rm -rf `find $(distdir) -name .arch-inventory`
-	rm -rf `find $(distdir) -name ,,*`
+	rm -rf `find $(distdir) -name ",,*"`
 	rm -rf `find $(distdir) -name .deps`
