@@ -376,10 +376,12 @@ XX TODO: DIEGO
 Redhat notes
 ------------
 
-I did not find the updated source packages for RH Enterprise, so I
-just downloaded the latest Fedora kernel source package from
+For Fedora, you need to download the kernel from somewhere from here:
 
   http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
+
+For RH/Enterprise, you need to have an account on rhn.redhat.com to
+get the latest packages. Browse/and search the channels list.
 
 I basically followed these instructions:
 
