@@ -10,11 +10,15 @@ CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h
 INCLUDES = $(hipl_common_include_paths)
 
+if HIP_FIREWALL
+
 sbin_PROGRAMS = firewall
 
 firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c
 
 firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+
+endif
 
 tags:
 	etags $(firewall_SOURCES) $(include_HEADERS)

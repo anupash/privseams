@@ -732,7 +732,7 @@ int get_localhost_endpointinfo(const char *basename,
     goto out_err;
   }
   
-#if CONFIG_HIP_DEBUG
+#ifdef CONFIG_HIP_DEBUG
   {
     struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
     HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
@@ -1684,7 +1684,7 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
   
-#if CONFIG_HIP_DEBUG
+#ifdef CONFIG_HIP_DEBUG
   {
     struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
     _HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,

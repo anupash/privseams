@@ -62,7 +62,7 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 ### TARGETS ##################################################################
 
 all:	$(HOWTO).txt $(HOWTO).html \
-	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
+#	$(DESIGN_CHOICES).dvi $(DESIGN_CHOICES).ps $(DESIGN_CHOICES).pdf
 
 $(DESIGN_CHOICES).dvi:	$(DESIGN_CHOICES).tex $(DESIGN_CHOICES_SOURCES) \
 			$(FIGS:.fig=.eps)

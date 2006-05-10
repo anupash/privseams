@@ -53,6 +53,10 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 INCLUDES =
 INCLUDES += $(hipl_common_include_paths) -Iinclude_glibc
 CFLAGS += $(hipl_common_cflags)
+# Enable the following option if you want to compile HIP enabled apps without
+# no changes to code using the legacy HIP API (assuming that the code uses
+# only getaddrinfo).
+CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
 LDADD  = ../libhiptool/.libs/libhiptool.a
@@ -69,12 +73,6 @@ endif
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 endif
-
-# Enable the following option if you want to compile HIP enabled apps without
-# no changes to code using the legacy HIP API (assuming that the code uses
-# only getendpointinfo).
-#
-#libinet6_la_CFLAGS = -DHIP_TRANSPARENT_API
 
 getendpointinfo.c: include/netdb.h
 

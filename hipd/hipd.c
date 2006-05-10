@@ -51,6 +51,7 @@ struct list_head addresses;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
+float opendht_counter = OPENDHT_REFRESH_INIT;
 
 time_t load_time;
 
@@ -466,6 +467,41 @@ int init_random_seed()
 	return err;
 }
 
+/* insert mapping for local host IP addresses to HITs to DHT */
+void register_to_dht ()
+{
+#ifdef CONFIG_HIP_OPENDHT
+
+  struct netdev_address *n, *t;
+  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+    return;
+  
+  HIP_INFO("Using hostname: %s\n", hostname);
+  
+  list_for_each_entry_safe(n, t, &addresses, next) {
+    //AG this should be replaced with a loop with hip_for_each_hi
+    struct in6_addr tmp_hit;
+    char *tmp_hit_str, *tmp_addr_str;
+    if (ipv6_addr_is_hit(SA2IP(&n->addr)))
+	continue;
+
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+      HIP_ERROR("No HIT found\n");
+      return;
+    }
+	 
+    tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+    tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+    
+    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
+	      tmp_hit_str, tmp_addr_str, hostname);
+    updateHIT(hostname, tmp_hit_str);
+    updateHIT(tmp_hit_str, tmp_addr_str);
+  } 	
+#endif
+}
+
 int periodic_maintenance() {
 	int err = 0;
 
@@ -484,6 +520,16 @@ int periodic_maintenance() {
 	} else {
 		precreate_counter--;
 	}
+
+#ifdef CONFIG_HIP_OPENDHT
+	if (precreate_counter < 0) {
+		register_to_dht();
+		opendht_counter = OPENDHT_REFRESH_INIT;
+	} else {
+                opendht_counter--;
+        }
+#endif
+
 	
  out_err:
 	
@@ -804,6 +850,8 @@ int main(int argc, char *argv[]) {
 				   hip_agent_sock, hip_raw_sock_v4,
 				   hip_nat_sock_udp);
 	
+	register_to_dht();
+
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT, 
@@ -982,7 +1030,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		err = periodic_maintenance();
-
 		if (err) {
 			HIP_ERROR("Error (%d) ignoring. %s\n", err,
 				  ((errno) ? strerror(errno) : ""));

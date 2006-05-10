@@ -421,27 +421,36 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   List list;
   int found_hits = 0;
 
-#ifdef CONFIG_HIP_OPENDHT // here is not called
-  struct in6_addr tmp_hit, tmp_ip;
+#ifdef CONFIG_HIP_OPENDHT
+  char tmp_hit_str[INET6_ADDRSTRLEN], tmp_addr_str[INET6_ADDRSTRLEN];	
+  struct in6_addr tmp_hit, tmp_addr;
 
-  if (gethiphostbyname(name,&tmp_hit) 
-      && gethiphostbyhit(&tmp_hit,&tmp_ip)) 
+  if (!gethiphostbyname(name, tmp_hit_str) 
+      && !gethiphostbyhit(tmp_hit_str, tmp_addr_str)) 
     { 
-      if (**pat == NULL) {						
+
+      if (inet_pton(AF_INET6, tmp_hit_str, &tmp_hit) >0 &&
+          inet_pton(AF_INET6, tmp_addr_str, &tmp_addr) >0) {
+
+	HIP_DEBUG("Obtained HIT=%s with IP=%s for hostname %s from DHT\n",
+                      tmp_hit_str, tmp_addr_str, name);
+
+	if (**pat == NULL) {						
+	  **pat = malloc(sizeof(struct gaih_addrtuple));
+	  (**pat)->scopeid = 0;				
+	}
+	(**pat)->family = AF_INET6;					
+	memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+	*pat = &((**pat)->next);				     	
+	
 	**pat = malloc(sizeof(struct gaih_addrtuple));
 	(**pat)->scopeid = 0;				
+	(**pat)->next = NULL;						
+	(**pat)->family = AF_INET6;					
+	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
+	*pat = &((**pat)->next);
+	return 1;
       }
-      (**pat)->family = AF_INET6;					
-      memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-      *pat = &((**pat)->next);				     	
- 
-      **pat = malloc(sizeof(struct gaih_addrtuple));
-      (**pat)->scopeid = 0;				
-      (**pat)->next = NULL;						
-      (**pat)->family = AF_INET6;					
-      memcpy((**pat)->addr, &tmp_ip, sizeof(struct in6_addr));	
-      *pat = &((**pat)->next);
-      return 1;
     }
 #endif
 									
@@ -1298,7 +1307,7 @@ getaddrinfo (const char *name, const char *service,
   if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
     return EAI_BADFLAGS;
 
-#ifdef HIP_TRANSPARENT_MODE
+#ifdef HIP_TRANSPARENT_API
   /* Transparent mode does not work with HIP native resolver */
   hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else

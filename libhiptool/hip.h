@@ -143,6 +143,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INIT \
+           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
