@@ -1,10 +1,12 @@
 AUTOMAKE_OPTIONS = foreign
 
 # For "make dist"
-EXTRA_DIST = doc/COPYING doc/design_choices.tex doc/hipl.tex doc/HACKING
-EXTRA_DIST += doc/acronyms.tex doc/design_choices_macros.tex
-EXTRA_DIST += doc/HOWTO.xml doc/catalogue.tex doc/drafts doc/Makefile doc/fig
+EXTRA_DIST = doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
+EXTRA_DIST += hipsock jip test/packaging
+# The design choices doc is currently depracated
+EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
+EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 
 # Note: libinet6 has to be the first one
 #

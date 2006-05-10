@@ -512,11 +512,28 @@
       http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
     </para>
     <para>
+	E.g. "env 
+LD_PRELOAD=/home/gurtov/hipl--main--2.6/libinet6/.libs/libinet6.so:/home/gurtov/hipl--main--2.6/libhiptool/.libs/libhiptool.so 
+ firefox hipserver.infrahip.net"
+        Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so and 
+LD_LIBRARY_PATH=/home/gurtov/hipl--main--2.6/libhiptool/.libs/:/home/gurtov/hipl--main--2.6/libinet6/.libs/
+    </para>
+    <para>
+Make sure that libinet6 is compiled with 
+HIP_TRANSPARENT_API on in libinet6/Makefile.in
+CFLAGS += -DHIP_TRANSPARENT_API
+    </para>
+    <para>
       Note! Methods two and three assume two prequisites! First, the
-      application must be IPv6 in order to support HITs. Second, the 
+      application must be IPv6-enabled in order to support HITs. Second, the 
       application must really use the getaddrinfo interface because 
       otherwise the getaddrinfo hack (i.e. sending HIT-to-IPv6 mapping 
       to the HIP module) does not work.
+    </para>
+    <para>
+	Following applications use getaddrinfo on FC4: telnet, firefox, 
+lynx, ssh. Not 
+using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
     4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
