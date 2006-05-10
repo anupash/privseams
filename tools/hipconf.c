@@ -60,8 +60,6 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_bos,
 	handle_puzzle,
 	handle_nat,
-	handle_del,
-	handle_puzzle,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	handle_opp
 #endif

@@ -44,15 +44,15 @@
 #define ACTION_MAX 9 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI  1
-#define TYPE_MAP 2
-#define TYPE_RST 3
-#define TYPE_RVS 4
-#define TYPE_BOS 5
-#define TYPE_NAT 6
-#define TYPE_PUZZLE 7
-#define TYPE_OPP 8
-#define TYPE_MAX 9 /* exclusive */
+#define TYPE_HI     1
+#define TYPE_MAP    2
+#define TYPE_RST    3
+#define TYPE_RVS    4
+#define TYPE_BOS    5
+#define TYPE_PUZZLE 6
+#define TYPE_NAT    7
+#define TYPE_OPP    8
+#define TYPE_MAX    9 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
