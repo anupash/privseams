@@ -1955,7 +1955,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     get_localhost_endpoint_no_setmyeid(filenamebase, servname,
 				       &modified_hints, &new, &hit);
 
-    _HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
+    _HIP_DEBUG_HIT("Got HIT: ", &hit.hit);
     
     if (*adr == NULL) {
       *adr = malloc(sizeof(struct gaih_addrtuple));
@@ -1964,9 +1964,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    adr = &((*adr)->next);
-    
-    
+    //adr = &((*adr)->next);
   }
  err_out:
   if(filenamebase_len)

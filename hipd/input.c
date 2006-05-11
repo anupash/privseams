@@ -475,7 +475,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	else if(type == HIP_R1){ // check if it uses oppotunistic mode
+	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_hit_t nullhit;
 	  hip_ha_t *entry_tmp = NULL;
@@ -536,7 +536,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	  HIP_ASSERT(entry);
 	  if (entry)
-	    err = entry->hadb_input_filter_func->hip_input_filter(msg);
+	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
 #endif	  
 	} // end else if(type == HIP_R1)
 	else
