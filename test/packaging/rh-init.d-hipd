@@ -18,14 +18,14 @@ RETVAL=0
 DAEMON="/usr/sbin/hipd"
 BASENAME="hipd"
 
-PID_FILE=/var/run/hipd.pid
+#PID_FILE=/var/run/hipd.pid
 LOCK_FILE=/var/lock/subsys/hipd
 OPTIONS="-b"
 
 start()
 {
 	echo -n $"Starting $BASENAME:"
-	initlog -c "$DAEMON $OPTIONS" && success || failure
+	$DAEMON $DAEMON $OPTIONS && success || failure
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && touch $LOCK_FILE
 	echo
@@ -34,25 +34,9 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	if [ -n "`pidfileofproc $DAEMON`" ] ; then
-	    killproc $DAEMON -TERM
-	else
-	    failure $"Stopping $BASENAME"
-	fi
+	killproc $DAEMON
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
-	echo
-}
-
-reload()
-{
-	echo -n $"Reloading $BASENAME:"
-	if [ -n "`pidfileofproc $DAEMON`" ] ; then
-	    killproc $DAEMON -HUP
-	else
-	    failure $"Reloading $BASENAME"
-	fi
-	RETVAL=$?
 	echo
 }
 
@@ -66,19 +50,6 @@ case "$1" in
 	restart)
 		stop
 		start
-		;;
-	reload)
-		reload
-		;;
-	condrestart)
-		if [ -f $LOCK_FILE ] ; then
-			if [ "$RETVAL" = 0 ] ; then
-				stop
-				# avoid race
-				sleep 3
-				start
-			fi
-		fi
 		;;
 	status)
 		status $DAEMON
