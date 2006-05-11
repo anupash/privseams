@@ -1,6 +1,10 @@
 #ifndef __NAT_H__
 #define __NAT_H__
+
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
+#define HIP_NAT_KEEP_ALIVE_TIME 5
+
+
 #include "hip.h"
 #include "workqueue.h"
 #include "debug.h"
@@ -35,6 +39,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
                                struct in6_addr *dst_addr,
                                 struct hip_stateless_info *info);
 
+int hip_nat_keep_alive();
 
 #endif //__NAT_H__
 

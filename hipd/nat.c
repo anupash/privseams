@@ -172,3 +172,11 @@ int hip_send_udp(struct in6_addr *my_addr,
 	return err;
 }
 
+int hip_nat_keep_alive()
+{
+	int err = 0 ;
+	HIP_DEBUG("Sending keepalives\n");
+	
+ out_err:
+	return err;
+}

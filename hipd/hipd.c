@@ -44,6 +44,7 @@ struct sockaddr_un hip_agent_addr;
 int address_count;
 struct list_head addresses;
 
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 float opendht_counter = OPENDHT_REFRESH_INIT;
@@ -524,7 +525,13 @@ int periodic_maintenance() {
         }
 #endif
 
-	
+	if(nat_keep_alive_counter < 0){
+		HIP_IFEL(hip_nat_keep_alive(), -1, 
+			"Failed to send out keepalives\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+	} else {
+		nat_keep_alive_counter--;
+	}	
  out_err:
 	
 	return err;
