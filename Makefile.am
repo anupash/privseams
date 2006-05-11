@@ -18,7 +18,6 @@ deb:
 	test/packaging/create-deb.sh
 
 dist-hook:
-	rm -rf `find $(distdir) -name '{arch}'`
 	rm -rf `find $(distdir) -name '.arch-ids'`
 	rm -rf `find $(distdir) -name .arch-inventory`
 	rm -rf `find $(distdir) -name ",,*"`
