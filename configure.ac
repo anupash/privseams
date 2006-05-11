@@ -88,7 +88,7 @@ AC_EGREP_CPP(%%%yes%%%, [
 	],[
 		AC_EGREP_CPP(%%%yes%%%, [
 #include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 3
+#if defined(__GLIBC__) && __GLIBC__ == 2 && (__GLIBC_MINOR__ == 3 || __GLIBC_MINOR__ == 4)
 %%%yes%%%
 #endif
 		],[
