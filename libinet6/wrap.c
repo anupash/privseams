@@ -266,6 +266,11 @@ int socket(int domain, int type, int protocol)
       assert(entry);
     } 
   }
+  else
+    {
+      HIP_DEBUG("\n\n\n\n!!!!!!!!!!!!!!!! Socket failed with -1 !!!!!!!!!!!!!!\n\n\n\n\n\n\n");
+      assert(0);
+    }
 
   HIP_DEBUG("Called socket_dlsym socket_fd=%d\n", socket_fd);
   
