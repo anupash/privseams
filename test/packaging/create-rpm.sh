@@ -38,7 +38,7 @@ make dist
 
 #echo "** Package building root is '$PKGROOT'" 
 tar xzf ${NAME}-main.tar.gz
-find -name '.arch*' | xargs rm -rf
+find ${NAME}-main -name '.arch*' | xargs rm -rf
 mv -v ${NAME}-main $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
