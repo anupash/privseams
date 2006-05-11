@@ -227,7 +227,7 @@ int gui_create_toolwindow_content(void)
 	gtk_entry_set_text(w, "Normal");
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
-	w = gtk_label_new("Lightweiht:");
+	w = gtk_label_new("Lightweight:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
@@ -306,12 +306,13 @@ int gui_create_acceptdialog_content(void)
 	w = gtk_label_new("<empty>");
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
-	widget_set(ID_NEWHIT, w);
+	widget_set(ID_AD_NEWHIT, w);
 	w = gtk_label_new("New HIT:");
 	y += 0; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
 	w = gtk_combo_new();
+	widget_set(ID_AD_GROUP, w);
 //	glist = g_list_append(glist, "Services");
 	glist = g_list_append(glist, "Games");
 	glist = g_list_append(glist, "Friends");
@@ -326,6 +327,7 @@ int gui_create_acceptdialog_content(void)
 	gtk_widget_show(w);
 
 	w = gtk_combo_new();
+	widget_set(ID_AD_LHIT, w);
 	glist = g_list_append(glist, "Primary");
 	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
 	g_list_free(glist); glist = NULL;

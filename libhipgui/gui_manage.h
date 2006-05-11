@@ -21,7 +21,11 @@ enum
 	ID_INFOLOCAL,
 	ID_INFOREMOTE,
 	ID_INFOGROUP,
-	ID_NEWHIT,
+	
+	/* Accept dialog IDs. */
+	ID_AD_NEWHIT,
+	ID_AD_GROUP,
+	ID_AD_LHIT,
 
 	IDS_N,
 };

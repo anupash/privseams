@@ -107,16 +107,15 @@ int check_hit(HIT_Item *hit)
 	/* Add hit info to database, if answer was yes. */
 	if (err == 1)
 	{
-		HIP_DEBUG("Adding new HIT to database with type accept.\n");
-		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_ACCEPT, "Services", hit->lightweight, 0);
+		HIP_DEBUG("Adding new remote HIT to database with type accept.\n");
 	}
 	if (err == 0)
 	{
-		HIP_DEBUG("Adding new HIT to database with type deny.\n");
-		hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
-		           HIT_DB_TYPE_DENY, "Games", hit->lightweight, 0);
+		HIP_DEBUG("Adding new remote HIT to database with type deny.\n");
 	}
+
+	hit_db_add(hit->name, &hit->lhit, &hit->rhit, hit->url, hit->port,
+	           hit->type, hit->group, hit->lightweight, 0);
 
 
 out_err:

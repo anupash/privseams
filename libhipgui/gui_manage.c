@@ -230,18 +230,15 @@ void gui_terminate(void)
 int gui_ask_new_hit(HIT_Item *hit)
 {
 	/* Variables. */
-	int err = 0;
 	GtkDialog *dialog = gui_get_acceptdialog();
-	char phit[128];
+	char phit[128], *ps;
+	int err = 0;
 	
 	gdk_threads_enter();
 	gtk_widget_show(dialog);
 	print_hit_to_buffer(phit, &hit->rhit);
-	gtk_label_set_text(widget(ID_NEWHIT), phit);
+	gtk_label_set_text(widget(ID_AD_NEWHIT), phit);
 
-/*	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-	                                GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-	                                "Accept new HIT?");*/
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch (err)
 	{
@@ -253,8 +250,13 @@ int gui_ask_new_hit(HIT_Item *hit)
 		err = 0;
 		break;
 	}
-//	gtk_widget_destroy(dialog);
 	
+	if (err = 1) hit->type = HIT_DB_TYPE_ACCEPT;
+	else hit->type = HIT_DB_TYPE_DENY;
+
+	ps = gtk_combo_box_get_active_text(widget(ID_AD_GROUP));
+	HIP_DEBUG("%s.\n", ps);
+
 	gtk_widget_hide(dialog);
 	gdk_threads_leave();
 	
