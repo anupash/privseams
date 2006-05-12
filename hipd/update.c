@@ -520,7 +520,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 0); //, -1,
+			// 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -530,7 +531,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, entry->peer_udp_port);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
@@ -1079,6 +1080,13 @@ int hip_receive_update(struct hip_common *msg,
 
 	//hip_delete_sa(spi_in->spi, &entry->_address, AF_INET6);
 	//ipv6_addr_copy(&entry->local_address, &addr_list->address);
+	//if(hip_nat_status == 1)
+	if(hip_nat_status == 1 || (sinfo->src_port != 0 || sinfo->dst_port != 0))
+	{
+		HIP_DEBUG("Nat status is on. So fill up port info in the packet\n");	
+		HIP_DEBUG("src_port %d, dst_port %d\n",sinfo->src_port, sinfo->dst_port);
+		entry->peer_udp_port = sinfo->src_port; //src port of the incoming packet !! --Abi 
+	}
 
 	update_id_in = entry->update_id_in;
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
