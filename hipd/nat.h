@@ -41,6 +41,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 
 int hip_nat_keep_alive();
 int hip_handle_keep_alive(hip_ha_t *entry, void *not_used);
-
+int hip_set_nat_off_sa(hip_ha_t *entry, void *not_used);
+int hip_set_nat_on_sa(hip_ha_t *entry, void *not_used);
 #endif //__NAT_H__
 

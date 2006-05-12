@@ -2,17 +2,29 @@
 
 int hip_nat_on(struct hip_common *msg)
 {
+	int err = 0;
+
 	hip_nat_status = 1;
+	HIP_IFEL(hip_for_each_ha(hip_set_nat_on_sa, NULL), 0,
+                         "for_each_ha err.\n");
+
 	// Extend it to handle peer_hit case for "hipconf hip nat peer_hit"
 	// This would be helpful in multihoming case --Abi
-	return 0;
+ out_err:
+	return err;
 }
 
 
 int hip_nat_off(struct hip_common *msg)
 {
+	int err = 0;
+
 	hip_nat_status = 0;
-	return 0;
+	HIP_IFEL(hip_for_each_ha(hip_set_nat_off_sa, NULL), 0,
+                         "for_each_ha err.\n");
+
+ out_err:
+	return err;
 }
 
 int hip_receive_control_packet_udp(struct hip_common *msg,
@@ -195,7 +207,9 @@ int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
 	int err = 0;
 	int n = 0, len, mask = 0;
 	struct hip_common *update_packet;
-
+	
+	if(entry->state != HIP_STATE_ESTABLISHED)
+		goto out_err;
 	//Create an empty update packet and send to all the peer of the hip association;
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
         	         "Out of memory.\n");
@@ -233,6 +247,31 @@ int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
 	//		(struct sockaddr *) &dst, sizeof(dst)); 
 		
 
+ out_err:
+	return err;
+}
+int hip_set_nat_on_sa(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->nat = 1;
+	}
+ out_err:
+	return err;
+}
+int hip_set_nat_off_sa(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = 0;
+		entry->nat = 0;
+		HIP_DEBUG("****************Setting nat off nat: %d\n", entry->nat);
+	}
  out_err:
 	return err;
 }
