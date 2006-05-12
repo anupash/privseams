@@ -6,7 +6,7 @@ URL: http://infrahip.hiit.fi/hipl/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
-Copyright: GPL
+License: GPL
 Group: System Environment/Kernel
 Requires: openssl
 ExclusiveOS: linux

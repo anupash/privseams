@@ -378,3 +378,49 @@ Redhat
 
 XX TODO: DIEGO
 - short instructions for patching, creating source and binary images
+=======
+
+HOW TO CREATE KERNEL PACKAGES
+=============================
+
+Debian
+------
+
+XX TODO: DIEGO
+- short instructions for patching, creating source and binary images
+
+Redhat notes
+------------
+
+For Fedora, you need to download the kernel from somewhere from here:
+
+  http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
+
+For RH/Enterprise, you need to have an account on rhn.redhat.com to
+get the latest packages. Browse/and search the channels list.
+
+I basically followed these instructions:
+
+  http://tqmcube.com/fc3_custom_kernel.htm
+
+This is what I did:
+
+  * rpm -ivh kernel-2.6.10-1.760_FC3.src.rpm
+  * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
+    patches:
+
+     # 1.211 -> 1.2111
+     %define release %(R="$Revision: 1.2111 $"; RR="${R##: }"; echo ${RR%%?})_FC5%{rhbsys}
+     # HIPL patches
+     Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
+     Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
+     Patch192: policy-sleep-2.6.16.5-v2.patch
+     Patch193: hipmod-2.6.16.5-v1.patch 
+     # HIP patches
+     %patch190 -p1
+     %patch191 -p1
+     %patch192 -p1
+     %patch193 -p1
+
+   * copied the patches to /usr/src/redhat/SOURCES
+   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.spec
