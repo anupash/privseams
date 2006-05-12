@@ -1073,6 +1073,7 @@ int hip_receive_update(struct hip_common *msg,
 
 	if (!handle_upd) {
 		HIP_ERROR("NOT processing UPDATE packet\n");
+		HIP_DEBUG("This could be a NAT Keep alive packet !!\n");
 		goto out_err;
 	}
 
