@@ -221,7 +221,7 @@ else
 	rm -rf "${NAME}-${VERSION}"
 
 	echo "** Successfully finished building the source Debian package"
-	echo "** The debian packages are located in $PKGDIR"
+	echo "** The debian packages are located in $PKGDIR_SRC"
 	echo "** and they are named:"
 	echo "${NAME}-${VERSION}.diff.gz"
 	echo "${NAME}-${VERSION}.dsc"

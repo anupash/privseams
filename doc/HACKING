@@ -360,17 +360,30 @@ http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
 http://fedoranews.org/tchung/htmldoc/htmldoc.spec
 
 DEB package is created similarly: "./autogen && ./configure && make
-deb". The resulting package file is placed into the same
-directory. The package can be installed using dpkg, e.g. "dpkg -i
-hipl-userspace_1.0-1_i386.deb".
+deb".
+The result is both binary and source debian packages:
+- Binary
+Binary Debian package can be found in test/packaging/ direcotry
+with the following name: hipl-1.0-1_i386.deb.
+The package can be installed using dpkg, e.g. "dpkg -i
+hipl-1.0-1_i386.deb".
+- Source
+Debian source package is made of three files which are:
+
+	hipl-1.0.diff.gz
+	hipl-1.0.dsc
+	hipl-1.0.orig.tar.gz
+
+and can be found under directory test/packaging/hipl-1.0-deb-src/
+
 
 HOW TO CREATE KERNEL PACKAGES
 =============================
 
 Debian
 ------
+TODO: Diego is working on this .!.
 
-XX TODO: DIEGO
 - short instructions for patching, creating source and binary images
 
 Redhat notes
