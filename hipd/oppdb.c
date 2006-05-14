@@ -133,8 +133,7 @@ void hip_init_opp_db()
 void hip_oppdb_dump()
 {
   int i;
-  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
-  
+  //  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
   hip_opp_block_t *item = NULL;
   hip_opp_block_t *tmp = NULL;
 
@@ -145,10 +144,11 @@ void hip_oppdb_dump()
     if (!list_empty(&oppdb_list[i])) {
       HIP_DEBUG("HT[%d]\n", i);
       list_for_each_entry_safe(item, tmp, &(oppdb_list[i]), next_entry) {
-	hip_in6_ntop(&item->peer_real_hit, peer_real_hit);
-
-	HIP_DEBUG("hash_key=%d peer_real_hit=%s lock=%d refcnt=%d\n",
-		  item->hash_key, peer_real_hit, item->lock, item->refcnt);
+	
+	//hip_in6_ntop(&item->peer_real_hit, peer_real_hit);
+	HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n",
+		  item->hash_key, item->lock, item->refcnt);
+	HIP_DEBUG_HIT("item->peer_real_hit", &item->peer_real_hit);
 	HIP_HEXDUMP("caller", &item->caller, sizeof(struct sockaddr_un));
       }
     }

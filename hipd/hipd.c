@@ -619,9 +619,19 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
     hip_init_opp_db();
     HIP_DEBUG("oppdb initialized\n");
     oppdb_exist = 1;
+
+    err = hip_oppdb_add_entry(&phit, &hit_our, src);
+    if(err){
+      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
+      goto out_err;
+    }
+    hip_send_i1(&hit_our, &phit, ha);
+    // first call, not consecutive base exchange. So we do not execute the following code
+    goto out_err;
   }
- 
+  
   entry = hip_oppdb_find_byhits(&phit, &hit_our);
+  
   if(entry){ // two consecutive base exchanges
     //DST_HIT = from database list;
     hip_msg_init(msg);

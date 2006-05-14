@@ -480,6 +480,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_hit_t nullhit;
+	  //hip_hit_t *peer_hit = NULL;
 	  hip_ha_t *entry_tmp = NULL;
 	  struct hip_common *message = NULL;
 	  int n = 0;
@@ -553,6 +554,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    HIP_ERROR("malloc failed\n");
 	    goto out_err;
 	  }	
+
+	  hip_msg_init(message);
 	  err = hip_build_param_contents(message, (void *)(&msg->hits), HIP_PARAM_HIT,
 					 sizeof(struct in6_addr));
 	  if (err) {
@@ -566,15 +569,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  } 
 	  memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
 	  n = hip_sendto(message, &block_entry->caller);
+	  free(message);
+	  message = NULL;
 	  if(n < 0){
 	    HIP_ERROR("hip_sendto() failed.\n");
 	    err = -1;
 	    goto out_err;
 	  }
-	  
-    
-
-
+      
 	  // we should still get entry after delete old nullhit HA
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	  HIP_ASSERT(entry);
