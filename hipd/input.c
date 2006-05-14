@@ -19,7 +19,8 @@ extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
-
+extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+					      const hip_hit_t *hit_our);
 /**
  * hip_controls_sane - check for illegal controls
  * @controls: control value to be checked
@@ -475,11 +476,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
+	// XX TODO BING: ISOLATE TO A SEPARATE FUNCTION
 	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_hit_t nullhit;
 	  hip_ha_t *entry_tmp = NULL;
-	 
+	  struct hip_common *message = NULL;
+	  int n = 0;
+
 	  HIP_DEBUG_HIT("src_addr=", src_addr);
 	  err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
 	  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
@@ -494,7 +498,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	    HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
 	    HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
-
 	    
 	    err = hip_hadb_add_peer_info_complete(&msg->hitr,
 						  &msg->hits,
@@ -531,7 +534,47 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    HIP_ERROR("Cannot find HA entry after receive r1\n");
 	    goto out_err;
 	  }
+
+	  // hashtable=hip_opp_blocking_request_entry
+	  // ent = find_opp_entry_from_hashtable(SRC_HIT, DST_PHIT)
+	  // msg = REAL_DST_HIT
+	  // memcpy(ent->real_peer_hit, real_dst_hit);
+	  // sendto(entry->caller, msg);
+	  HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	  HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	  HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	  HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
 	  
+	  hip_opp_block_t *block_entry = NULL;
+	  block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
+	  HIP_ASSERT(entry);
+	  message = malloc(HIP_MAX_PACKET);
+	  if (!message){
+	    HIP_ERROR("malloc failed\n");
+	    goto out_err;
+	  }	
+	  err = hip_build_param_contents(message, (void *)(&msg->hits), HIP_PARAM_HIT,
+					 sizeof(struct in6_addr));
+	  if (err) {
+	    HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+	    goto out_err;
+	  }
+	  err = hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0);
+	  if (err) {
+	    HIP_ERROR("build user header failed: %s\n", strerror(err));
+	    goto out_err;
+	  } 
+	  memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
+	  n = hip_sendto(message, &block_entry->caller);
+	  if(n < 0){
+	    HIP_ERROR("hip_sendto() failed.\n");
+	    err = -1;
+	    goto out_err;
+	  }
+	  
+    
+
+
 	  // we should still get entry after delete old nullhit HA
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	  HIP_ASSERT(entry);

@@ -38,6 +38,9 @@ struct sockaddr_un hip_agent_addr;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
+unsigned int oppdb_exist = 0;
+extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+						const hip_hit_t *hit_our);
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 /* We are caching the IP addresses of the host here. The reason is that during
@@ -559,6 +562,100 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
   return err;
 }
 
+int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
+{
+  int n = 0;
+  int err = 0;
+  int alen = 0;
+  struct in6_addr phit, dst_ip, hit_our;
+  struct in6_addr *ptr = NULL;
+  hip_opp_block_t *entry = NULL;
+  hip_ha_t *ha = NULL;
+
+  if(!opportunistic_mode)
+    {
+      hip_msg_init(msg);
+      err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
+      if (err) {
+	HIP_ERROR("build user header failed: %s\n", strerror(err));
+	goto out_err;
+      } 
+      n = hip_sendto(msg, src);
+      if(n < 0){
+	HIP_ERROR("hip_sendto() failed.\n");
+	err = -1;
+      }
+      goto out_err;
+    }
+  // hip_hadb_find_byhits(SRC_HIT, PHIT);
+  // if (exists(hashtable(SRC_HIT, DST_PHIT)) { // two consecutive base exchanges
+  //   msg = REAL_DST_HIT
+  //   sendto(src, msg);
+  // } else {
+  //   add_to_hash_table(index=XOR(SRC_HIT, DST_PHIT), value=src);
+  //   hip_send_i1(SRC_HIT, PHIT);
+  // }
+  memset(&hit_our, 0, sizeof(struct in6_addr));
+  ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+  memcpy(&hit_our, ptr, sizeof(hit_our));
+  HIP_DEBUG_HIT("hit_our=", &hit_our);
+  
+  ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+  memcpy(&dst_ip, ptr, sizeof(dst_ip));
+  HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+  
+  err = hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH120);
+  if(err){
+    goto out_err;
+  }
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+  
+  err = hip_hadb_add_peer_info(&phit, &dst_ip);
+  ha = hip_hadb_find_byhits(&hit_our, &phit);
+  HIP_ASSERT(ha);
+
+  if(!oppdb_exist){
+    HIP_DEBUG("initializing oppdb\n");
+    hip_init_opp_db();
+    HIP_DEBUG("oppdb initialized\n");
+    oppdb_exist = 1;
+  }
+ 
+  entry = hip_oppdb_find_byhits(&phit, &hit_our);
+  if(entry){ // two consecutive base exchanges
+    //DST_HIT = from database list;
+    hip_msg_init(msg);
+    err = hip_build_param_contents(msg, (void *)(&entry->peer_real_hit), HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
+    if (err) {
+      HIP_ERROR("build user header failed: %s\n", strerror(err));
+      goto out_err;
+    } 
+    
+    n = hip_sendto(msg, src);
+    if(n < 0){
+      HIP_ERROR("hip_sendto() failed.\n");
+      err = -1;
+    }
+    
+    goto out_err;
+  } else {
+    err = hip_oppdb_add_entry(&phit, hit_our, src);
+    if(err){
+      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
+      goto out_err;
+    }
+    hip_send_i1(&hit_our, &phit, ha);
+  }
+ out_err:
+   return err;
+}
+
 int hip_get_pseudo_hit(struct hip_common *msg)
 {
   int err = 0;
@@ -571,7 +668,7 @@ int hip_get_pseudo_hit(struct hip_common *msg)
   if(opportunistic_mode){
     ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
     memcpy(&ip, ptr, sizeof(ip));
-    HIP_DEBUG_HIT("local ip=", &ip);
+    HIP_DEBUG_HIT("dst ip=", &ip);
     
     err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH120);
     if(err){

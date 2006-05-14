@@ -24,6 +24,7 @@
 
 #define SOFILE "/lib/libc.so.6" 
 
+extern hip_hit_t *get_local_hits_wrapper();
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
 static db_exist = 0;
 
@@ -43,6 +44,9 @@ inline int hip_socketdb_get_new_socket(hip_opp_socket_t *entry);
 
 void test_db();
 int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit);
+int request_peer_hit_from_hipd(const struct in6_addr *ip, 
+			       struct in6_addr *peer_hit,
+			       const struct in6_addr *local_hit);
 int exists_mapping(int pid, int socket);
 
 // used for dlsym_util
@@ -103,8 +107,102 @@ int util_func(int * const socket)
   return err;
 }
 
-int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket)
+
+int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, 
+			    int * const socket, const hip_hit_t *local_hit)
 {
+  int err = 0;
+  int pid = 0;
+  int port = 0;
+  int mapping = 0;
+  struct in6_addr *peer_hit;
+  
+  // we are only interested in AF_INET and AFINET6
+  if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
+      ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ){ 
+
+      if(!db_exist){
+      hip_init_socket_db();
+      HIP_DEBUG("socketdb initialized\n");
+      db_exist = 1;
+    }
+
+    pid = getpid();
+    port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
+    id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
+
+    HIP_DEBUG("connect sin_port=%d\n", port);
+    HIP_DEBUG_HIT("sin6_addr id = ", id);
+    _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110); //sizeof(struct sockaddr_in)
+    
+    if(hit_is_real_hit(id)){
+      hip_opp_socket_t *entry = NULL;
+      
+      HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
+      //mapping = exists_mapping(pid, *socket);
+      //assert(mapping);
+      
+      entry = hip_socketdb_find_entry(pid, *socket);
+      assert(entry);
+      hip_socketdb_add_new_socket(entry, *socket);
+      hip_socketdb_add_dst_hit(entry, id);
+    } else if(!hit_is_opportunistic_hashed_hit(id)){ // is ip
+      HIP_DEBUG("!!!!!!!!!!!!!!!! ip !!!!!!!!!!!!!!!\n");
+      err = request_peer_hit_from_hipd(id, peer_hit, local_hit);
+      if(err){
+	HIP_ERROR("failed to get peer hit err=\n",  strerror(err));
+	return err;
+      }
+      HIP_DEBUG("request_peer_hit_from_hipd succeed\n");
+      
+      if(peer_hit){
+	int type = SOCK_STREAM;;	
+	int old_socket = 0;
+	hip_opp_socket_t *entry = NULL;
+	
+	old_socket = *socket;
+	
+	// socket() call will add socket as old_socket in entry, 
+	//we need to change it to new_socket later
+	if(type != 0) {
+	  *socket = create_new_socket(type, 0); // XX TODO: BING CHECK
+	  if (*socket < 0) {
+	    perror("socket");
+	    err = *socket;
+	    goto out_err;
+	  }
+	}    
+	
+	entry =  hip_socketdb_find_entry(pid, old_socket);
+	assert(entry);
+	
+	hip_socketdb_add_new_socket(entry, *socket);
+	hip_socketdb_add_dst_ip(entry, id);
+	hip_socketdb_add_dst_hit(entry, &peer_hit);
+	HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
+	//hip_socketdb_dump();
+	// modify sockaddr, id points to sockaddr's sin6_addr
+	memcpy(id, peer_hit, sizeof(*peer_hit));
+	HIP_DEBUG_HIT("opp mode enabled, peer hit: id=", id);
+      } else{ // not opp mode 
+	hip_opp_socket_t *entry = NULL; 
+	entry = hip_socketdb_find_entry(pid, *socket);
+	assert(entry);
+	hip_socketdb_add_new_socket(entry, *socket);
+	hip_socketdb_add_dst_ip(entry, id);
+      }
+    }
+  } // end if(AF_INET || AF_INET6)
+  
+ out_err:
+  return err;
+}
+
+
+#if 0
+int __util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket)
+{
+  // do not use, deprecated
   int err = 0;
   int pid = 0;
   int port = 0;
@@ -130,6 +228,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
     _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110); //sizeof(struct sockaddr_in)
     
     if(hit_is_real_hit(id)){
+      hip_opp_socket_t *entry = NULL;
       HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
       mapping = exists_mapping(pid, *socket);
       // it should has mapping now, since we added mapping in socket() function
@@ -139,7 +238,6 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
       //if(!mapping)
       //hip_socketdb_add_entry(pid, *socket);
       
-      hip_opp_socket_t *entry = NULL;
       entry = hip_socketdb_find_entry(pid, *socket);
       assert(entry);
       hip_socketdb_add_new_socket(entry, *socket);
@@ -160,6 +258,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
 	int old_socket = 0;
 	hip_opp_socket_t *entry = NULL;
 
+	// no needed
 	if (!getsockopt(*socket, IPPROTO_TCP, TCP_NODELAY, &option, &optlen))
 	  type = SOCK_STREAM;
 	else if (!getsockopt(*socket, IPPROTO_UDP, TIOCOUTQ, &option, &optlen))
@@ -202,6 +301,7 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int 
  out_err:
   return err;
 }
+#endif
 
 // notwork_ prefix means this function is not implemented properly,
 // because compiler complains __libc_ call
@@ -238,9 +338,6 @@ int socket(int domain, int type, int protocol)
   HIP_DEBUG("Called socket_dlsym, return fd %d\n", socket_fd);
   dlclose(dp);
 
-  //TODO::make it working
-  //  socket_fd = __libc_socket(domain, type, protocol);
-  
   if(!db_exist){
     HIP_DEBUG("db initializing...\n");
     hip_init_socket_db();
@@ -293,7 +390,7 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
   }
 
   socket = sockfd;
-  errno = util_func_with_sockaddr(my_addr, id, &socket);
+  //  errno = util_func_with_sockaddr(my_addr, id, &socket);
   if(errno)
     goto out_err;
   
@@ -304,17 +401,92 @@ int notwork_bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
   return errno;
 }
 
-#if 0
-int socket(xx) {
-  errno = util_func_with_sockaddr(b, id, &socket);
-}
-#endif
-
-
 int connect(int a, const struct sockaddr * b, socklen_t c)
 {
   int errno;
   int socket = 0;
+  struct sockaddr bindhit;
+  hip_hit_t *hit_ptr = NULL;
+
+  void *dp = NULL;
+  char *error = NULL;
+  struct in6_addr *id = NULL;
+  hip_hit_t *hit_local = NULL;
+  
+  errno = 0;
+  
+  //assert(db_exist);
+  if(!db_exist){
+    hip_init_socket_db();
+    HIP_DEBUG("db initialized\n");
+    db_exist = 1;
+    //hip_uninit_socket_db();
+  }
+
+  // SRC_HIT = get_local_hits(NULL, xx)  
+  hit_local = get_local_hits_wrapper();
+  //get_local_hits_wrapper(hit_local);
+  assert(hit_local);
+  HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
+  socket = a;
+
+  // PUT THIS TO THE UTIL FUNCTION:
+  // XX TODO: query for real HIT of peer (send SRC_HIT + DST_IP to daemon)
+  // we get a response from hipd which contains real (DST_HIT | EMPTY)
+  errno = util_func_with_sockaddr(b, id, &socket, hit_local);
+  if(errno)
+    goto out_err;
+  // bind(&socket, SRC_HIT, sizeof(hip_hit_t));
+
+  memcpy(&bindhit, b, sizeof(bindhit));
+  hit_ptr = (struct in6_addr *)( &(((struct sockaddr_in6 *)&bindhit)->sin6_addr) );
+  memcpy(hit_ptr, hit_local, sizeof(hip_hit_t));
+  errno = bind(a, &bindhit, sizeof(bindhit));
+  //errno = bind(a, hit_local, sizeof(hip_hit_t));
+  if(errno){
+    HIP_DEBUG("!!!! bind failed\n");
+    assert(0);
+    goto out_err;
+  }
+  // char *func_name = "connect";
+  //  dlsym_util(dp, error, conn, func_name);
+  
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  conn = dlsym(dp, "connect");
+  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+  HIP_DEBUG("Calling connect_dlsym\n");
+
+
+  errno = conn(socket, b, c);
+  
+  dlclose(dp);
+
+  HIP_DEBUG("Called connect_dlsym with err=%d\n", errno);
+  
+ out_err:
+  return errno;
+}
+
+
+#if 0
+int old_connect(int a, const struct sockaddr * b, socklen_t c)
+{
+  // do not use, deprecated.
+  int errno;
+  int socket = 0;
+  void *dp = NULL;
+  char *error = NULL;
   struct in6_addr *id = NULL;
   
   errno = 0;
@@ -326,13 +498,17 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
     //hip_uninit_socket_db();
   }
 
+  // SRC_HIT = get_local_hits(NULL, xx)
   socket = a;
-  errno = util_func_with_sockaddr(b, id, &socket);
+  // PUT THIS TO THE UTIL FUNCTION:
+  // XX TODO: query for real HIT of peer (send SRC_HIT + DST_IP to daemon)
+  // we get a response from hipd which contains real (DST_HIT | EMPTY)
+  //  errno = util_func_with_sockaddr(b, id, &socket);
   if(errno)
     goto out_err;
+  // bind(&socket, SRC_HIT, sizeof(hip_hit_t));
+
  
-  void *dp = NULL;
-  char *error = NULL;
   // char *func_name = "connect";
  
   //  dlsym_util(dp, error, conn, func_name);
@@ -364,6 +540,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
  out_err:
   return errno;
 }
+#endif
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
@@ -509,7 +686,67 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   return charnum;
 }
 
+int request_peer_hit_from_hipd(const struct in6_addr *ip, 
+			       struct in6_addr *peer_hit,
+			       const struct in6_addr *local_hit)
+{
+  struct hip_common *msg = NULL;
+  struct in6_addr *hit_recv = NULL;
+  int err = 0;
+  int ret = 0;
 
+  if(!ipv6_addr_any(ip)) {
+    msg = malloc(HIP_MAX_PACKET);
+    if (!msg){
+      HIP_ERROR("malloc failed\n");
+      goto out_err;
+    }	
+    hip_msg_init(msg);
+    
+    err = hip_build_param_contents(msg, (void *)(local_hit), HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    err = hip_build_param_contents(msg, (void *)(ip), HIP_PARAM_IPV6_ADDR,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param HIP_PARAM_IPV6_ADDR  failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    
+    /* Build the message header */
+    err = hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0);
+    if (err) {
+      HIP_ERROR("build hdr failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    
+    /* send and receive msg to/from hipd */
+    err = hip_send_recv_daemon_info(msg);
+    if (err) {
+      HIP_ERROR("send_recv msg failed\n");
+      goto out_err;
+    }
+    HIP_DEBUG("send_recv msg succeed\n");
+    
+    /* getsockopt wrote the corresponding EID into the message, use it */
+    err = hip_get_msg_err(msg);
+    if (err) {
+      goto out_err;
+    }
+
+    peer_hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+  } // end of  if(!ipv6_addr_any(&ip))
+ out_err:
+  if(msg)
+    free(msg);
+  return err;
+}
+
+// we will request real hit
+#if 0
 int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit)
 {
   struct hip_common *msg = NULL;
@@ -561,6 +798,7 @@ int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phi
     free(msg);
   return err;
 }
+#endif
 
 int close(int fd)
 {

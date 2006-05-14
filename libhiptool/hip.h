@@ -58,6 +58,19 @@
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+
+#include <sys/un.h> // for sockaddr_un
+struct hip_opp_blocking_request_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+
+  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
+  struct in6_addr       peer_real_hit;
+  struct sockaddr_un    caller;
+};
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+
 #define SET_NULL_HIT(hit)                      \
         { memset(hit, 0, sizeof(hip_hit_t));        \
           (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
@@ -222,6 +235,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_QUERY_IP_HIT_MAPPING		33 
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	34
 #define SO_HIP_ADD_DB_HI			35
+#define SO_HIP_GET_PEER_HIT			36
+#define SO_HIP_SET_PEER_HIT			37
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

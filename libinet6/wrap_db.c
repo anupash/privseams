@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include "hashtable.h"
 #include "hadb.h"
+//#include "hip.h"
 //#include "list.h"
 //#include "debug.h"
 
@@ -137,10 +138,11 @@ inline int hip_socketdb_match(const void *key_1, const void *key_2)
 
 inline void hip_socketdb_hold_entry(void *entry)
 {
-  	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
+  HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
 }
 inline void hip_socketdb_put_entry(void *entry)
-{  	HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry, hip_socketdb_del_entry_by_entry);
+{  	
+  HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry, hip_socketdb_del_entry_by_entry);
 }
 
 inline void *hip_socketdb_get_key(void *entry)
@@ -223,7 +225,7 @@ void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket)
 
 }
 
-void hip_socketdb_dump(void)
+void hip_socketdb_dump()
 {
   int i;
   char src_ip[INET6_ADDRSTRLEN] = "\0";
@@ -253,7 +255,6 @@ void hip_socketdb_dump(void)
   }
   HIP_UNLOCK_HT(&socketdb);
   HIP_DEBUG("end socketdb dump\n");
-
 }
 
 hip_opp_socket_t *hip_create_opp_entry() 
