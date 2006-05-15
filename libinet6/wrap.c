@@ -13,7 +13,7 @@
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <netinet/tcp.h>
@@ -55,6 +55,7 @@ int (*conn)(int a, const struct sockaddr * b, socklen_t c);
 ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
 ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
 ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
+ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
 int (*close_dlsym)(int fd);
 
 
@@ -533,6 +534,47 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   return charnum;
 }
 
+ssize_t recv(int a, void *b, size_t c, int flags)
+{
+  int errno;
+  int charnum = 0;  
+  int socket = 0;
+
+  errno = 0;
+  socket = a;
+
+  //  assert(db_exist);
+  errno = util_func(&socket);
+  if(errno){
+    HIP_ERROR("util_func call failed: %s\n", strerror(errno));
+    return errno;
+  }
+  
+  void *dp = NULL;
+  char *error = NULL;
+
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  recv_dlsym = dlsym(dp, "recv");
+  
+  error = dlerror();
+  if (error){
+    fputs(error,stderr);
+    exit(1);
+  }
+  
+  charnum = recv_dlsym(socket, b, c, flags);
+  dlclose(dp);
+  
+  HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", charnum);
+
+  return charnum;
+}
 
 int close(int fd)
 {

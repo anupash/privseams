@@ -141,7 +141,10 @@ int main(int argc,char *argv[]) {
 			}
 
 			if (datareceived < datalen) {
-				recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
+			  // assert(0);
+			  HIP_DEBUG("before receive \n");
+			  recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
+			  HIP_DEBUG("after receive recvnum %d \n", recvnum);
 				if (recvnum <= 0) {
 					perror("recv");
 					exit(2);
