@@ -340,9 +340,9 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	struct {
 		struct nlmsghdr 	n;
 		struct xfrm_usersa_id	xsid;
-	        //char   			buf[RTA_BUF_SIZE];
+	        char   			buf[RTA_BUF_SIZE];
 	} req;
-	//struct xfrm_encap_tmpl encap;
+	struct xfrm_encap_tmpl encap;
 	char *idp = NULL;
 	int err = 0;
 
@@ -364,15 +364,17 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
                 req.xsid.family = preferred_family;
         }
 
-#if 0 /* XX FIXME: fill in information for UDP-NAT SAs */
+	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
+//#if 0 /* XX FIXME: fill in information for UDP-NAT SAs */
 	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
 	{
-		xfrm_fill_encap((&encap,sport ? sport : HIP_NAT_UDP_PORT), 
+		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
+		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
-#endif
+//#endif
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
