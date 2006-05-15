@@ -211,7 +211,10 @@
       privileges.
     </para>
     <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
+      oops:
+    </para>
+    <para>
+      &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
     </para>
     <para>
       &nbsp;cd somewhere/hipl
@@ -233,7 +236,7 @@
       &nbsp;/etc/hosts:
     </para>
     <para>
-      &nbsp;&nbsp;3ffe::1 oops
+      &nbsp;&nbsp;3ffe::2 oops
       </para>
     <para>
      &nbsp; /etc/hip/hosts:
@@ -242,7 +245,7 @@
       &nbsp;&nbsp;HIT_OF_OOPS oops
     </para>
     <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
+      &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
       &nbsp;cd somewhere/hipl
