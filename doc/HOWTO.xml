@@ -150,9 +150,9 @@
       compile HIP as a kernel module, and the IPv6 support as built-in.
     </para>
     <para>
-      Notice that if you use modules instead of built-in, you should 
-      update your /etc/modules accordingly, because hotplug does not
-      probe for the the modules automatically. Insert "xfrm6_tunnel", 
+      The hipd tries to probe the necessary kernel modules automatically,
+      However, should this fail, you should make sure that you have
+      configured your /etc/modules accordingly. Insert "xfrm6_tunnel", 
       "xfrm4_tunnel", "xfrm_user", "dummy", "esp6", "esp4", "ipv6", 
       "aes", "crypto_null", and "des" to your /etc/modules.
     </para>
