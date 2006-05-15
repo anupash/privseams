@@ -231,7 +231,11 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	HIP_DEBUG("***********************************************\n");
 	HIP_DEBUG("natstatus %d, sport %d, dport %d\n",  hip_nat_status, 
 				sport, dport);
-
+	
+	HIP_DEBUG_IN6ADDR("saddr in sa \n", saddr);
+	HIP_DEBUG_IN6ADDR("daddr in sa \n", daddr);
+	
+	
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
 		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];

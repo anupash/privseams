@@ -1089,12 +1089,28 @@ int hip_receive_update(struct hip_common *msg,
 		//entry->peer_udp_port = sinfo->src_port; //src port of the incoming packet !! --Abi 
 	//}
 
+	//HIP_DEBUG_IN6ADDR("addr list addr\n", &addr_list->address);
+	HIP_DEBUG_IN6ADDR("entry->localaddress \n", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("src_ip \n", src_ip);
+	HIP_DEBUG_IN6ADDR("dst_ip \n", dst_ip);
+
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0)
 	{
 		HIP_DEBUG("^^^^^^^^^^^ setting off nat ... update has come not on udp\n");
 		entry->nat = 0;
 		entry->peer_udp_port = 0;
 	}
+	else
+	{
+		ipv6_addr_copy(&entry->local_address, dst_ip);
+		ipv6_addr_copy(&entry->preferred_address, src_ip);
+		/*Somehow the addresses in the entry doesnt get updated for mobility behind nat case.
+			The else would be called only when the client moves from behind nat to behind nat.
+			updating the entry addresses here.
+			Miika: Is it the correct place to be done? -- Abi
+		*/	
+	}
+	
 
 	update_id_in = entry->update_id_in;
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);

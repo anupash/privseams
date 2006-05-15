@@ -3,7 +3,7 @@
 
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
 #define HIP_NAT_KEEP_ALIVE_TIME 5
-
+#define HIP_NAT_NUM_RETRANSMISSION 2
 
 #include "hip.h"
 #include "workqueue.h"

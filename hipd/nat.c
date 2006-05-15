@@ -90,6 +90,7 @@ int hip_send_udp(struct in6_addr *my_addr,
 	struct in6_addr local_addr;
         int sockfd = 0, n, len = 0 , err = 0;
 	int type = 0;
+	int i = 0;
 
 	len = hip_get_msg_total_len(msg);
 
@@ -177,8 +178,18 @@ int hip_send_udp(struct in6_addr *my_addr,
 
 	HIP_DEBUG("sending with src port=%d, dst port=%d\n", src.sin_port,
 		  dst.sin_port);
-        n = sendto( hip_nat_sock_udp, msg, len, 0,
-		    (struct sockaddr *) &dst, sizeof(dst));
+	for(i = 0; i < HIP_NAT_NUM_RETRANSMISSION; i++)
+	{
+        	n = sendto( hip_nat_sock_udp, msg, len, 0,
+			    (struct sockaddr *) &dst, sizeof(dst));
+		if(n<0)
+		{
+			HIP_DEBUG("Some problem in sending packet ! Check route - Sleeping 2 seconds\n");
+			sleep(2);
+		}
+		else
+			break;
+	}
 	HIP_IFEL(( n < 0), -1, "Error in sending packet to server %d\n",n);
         HIP_DEBUG("Packet sent successfully over UDP n=%d d=%d\n",
 				n, len);
