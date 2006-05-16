@@ -31,6 +31,9 @@ struct hip_opp_socket_entry {
   int 			old_socket;
   int  			new_socket;
   int 			hash_key;// pid XOR old_socket
+  int 	       		domain;
+  int 			type;
+  int 			protocol;
   struct in6_addr      	src_ip;
   struct in6_addr      	dst_ip;
   struct in6_addr      	src_hit;
@@ -74,19 +77,24 @@ int exists_mapping(int pid, int socket)
     return 0;
 }
 
-inline int hip_socketdb_has_new_socket(hip_opp_socket_t *entry)
+inline int hip_socketdb_has_new_socket(const hip_opp_socket_t *entry)
 {
+  HIP_DEBUG("new socket %d\n", entry->new_socket);
   if(entry)
     return (entry->new_socket > 0);
   else 
     return 0;
 
 }
-inline int hip_socketdb_get_old_socket(hip_opp_socket_t *entry)
+inline int hip_socketdb_get_old_socket(const hip_opp_socket_t *entry)
 {
     return entry->old_socket;
 }
-inline int hip_socketdb_get_new_socket(hip_opp_socket_t *entry)
+inline int hip_socketdb_get_type(const hip_opp_socket_t *entry)
+{
+    return entry->type;
+}
+inline int hip_socketdb_get_new_socket(const hip_opp_socket_t *entry)
 {
     return entry->new_socket;
 }
@@ -97,6 +105,19 @@ inline void hip_socketdb_modify_old_socket(hip_opp_socket_t *entry, int socket)
 inline void hip_socketdb_add_new_socket(hip_opp_socket_t *entry, int socket)
 {
   entry->new_socket = socket;
+}
+inline void hip_socketdb_add_domain(hip_opp_socket_t *entry, int domain)
+{
+  entry->domain = domain;
+}
+inline void hip_socketdb_add_type(hip_opp_socket_t *entry, int type)
+{
+  entry->type = type;
+
+}
+inline void hip_socketdb_add_protocol(hip_opp_socket_t *entry, int protocol)
+{
+  entry->protocol = protocol;
 }
 inline void hip_socketdb_add_src_ip(hip_opp_socket_t *entry, const struct in6_addr *ip)
 {
@@ -247,9 +268,11 @@ void hip_socketdb_dump()
 	hip_in6_ntop(&item->src_hit, src_hit);
 	hip_in6_ntop(&item->dst_hit, dst_hit);
 
-	HIP_DEBUG("pid=%d old_socket=%d new_socket=%d hash_key=%d src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
+	HIP_DEBUG("pid=%d old_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
+src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
 		  item->pid, item->old_socket, item->new_socket,
-		  item->hash_key, src_ip, dst_ip, src_hit, dst_hit, item->lock, item->refcnt);
+		  item->hash_key, item->domain, item->type, item->protocol,
+		  src_ip, dst_ip, src_hit, dst_hit, item->lock, item->refcnt);
       }
     }
   }

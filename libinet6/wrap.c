@@ -56,6 +56,8 @@ ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
 ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
 ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
 ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
+ssize_t (*rrr_dlsym)(int s, void *buf, size_t len, int flags, 
+		 struct sockaddr *from, socklen_t *fromlen);
 int (*close_dlsym)(int fd);
 
 
@@ -74,12 +76,18 @@ int util_func(int * const socket)
   }
   
   pid = getpid();
-  
+  HIP_DEBUG("before find entry socket %d\n", *socket);  
   entry =  hip_socketdb_find_entry(pid, *socket);
+  
+  HIP_DEBUG("after find entry socket %d\n", *socket);
   if(entry){
+    HIP_DEBUG("before hasnew socket %d\n", *socket);
     if(hip_socketdb_has_new_socket(entry)){
       *socket = hip_socketdb_get_new_socket(entry);
+      HIP_DEBUG("hasnew socket %d\n", *socket);
     }
+    else 
+      HIP_DEBUG("no new socket\n");
   }
  out_err:
   return err;
@@ -98,13 +106,13 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id,
   // we are only interested in AF_INET and AFINET6
   if( ((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
       ((struct sockaddr_in6 *)to)->sin6_family == AF_INET ){ 
-
-      if(!db_exist){
+    
+    if(!db_exist){
       hip_init_socket_db();
       HIP_DEBUG("socketdb initialized\n");
       db_exist = 1;
     }
-
+    
     pid = getpid();
     port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
     id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
@@ -137,9 +145,16 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id,
       HIP_DEBUG_HIT("!!!! peer_hit", &peer_hit);
       
       if(hit_is_real_hit(&peer_hit)){
-	int type = SOCK_STREAM;;	
+	int type = SOCK_STREAM;	
 	int old_socket = 0;
 	hip_opp_socket_t *entry = NULL;
+
+	struct hip_common option;
+	int optlen = sizeof(option);
+	if (!getsockopt(*socket, IPPROTO_TCP, TCP_NODELAY, &option, &optlen))
+	type = SOCK_STREAM;
+	else if (!getsockopt(*socket, IPPROTO_UDP, TIOCOUTQ, &option, &optlen))
+	type = SOCK_DGRAM;
 	
 	old_socket = *socket;
 	
@@ -251,13 +266,14 @@ int socket(int domain, int type, int protocol)
   int pid;
   int socket_fd;
   int err;
-  
+  void *dp = NULL;
+  char *error = NULL;
+
   pid = 0;
   socket_fd = 0;
   err = 0;
   
-  void *dp = NULL;
-  char *error = NULL;
+
   
   dp=dlopen(SOFILE, RTLD_LAZY);
   
@@ -302,6 +318,11 @@ int socket(int domain, int type, int protocol)
       hip_opp_socket_t *entry = NULL;
       entry = hip_socketdb_find_entry(pid, socket_fd);
       assert(entry);
+      if(entry){
+	hip_socketdb_add_domain(entry, domain);
+	hip_socketdb_add_type(entry, type);
+	hip_socketdb_add_protocol(entry, protocol);
+      }
     } 
   }
   else{
@@ -339,13 +360,19 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
   socket = a;
 
-  errno = util_func_with_sockaddr(b, id, &socket, hit_local);
-  if(errno)
-    goto out_err;
+  //moved inside == AFINET6
+  //  errno = util_func_with_sockaddr(b, id, &socket, hit_local);
+  //if(errno)
+  //goto out_err;
 
   // we are only interested in AF_INET and AFINET6
   if( ((struct sockaddr_in6 *)b)->sin6_family == AF_INET6 || 
       ((struct sockaddr_in6 *)b)->sin6_family == AF_INET ){ 
+
+    errno = util_func_with_sockaddr(b, id, &socket, hit_local);
+    if(errno)
+      goto out_err;
+
     memcpy(&bindhit, b, sizeof(bindhit));
     HIP_HEXDUMP("bindhit before ", &bindhit, 110);
     hit_ptr = (struct in6_addr *)( &(((struct sockaddr_in6 *)&bindhit)->sin6_addr) );
@@ -442,25 +469,65 @@ ssize_t sendto(int a, const void * b, size_t c, int flags,
 {
   int errno;
   ssize_t charnum = 0;
+  int pid = 0;
   int socket = 0;
+  int socket_type = 0;
   struct in6_addr *id = NULL;
   void *dp = NULL;
   char *error = NULL;
   hip_hit_t *hit_local = NULL;
+  struct sockaddr bindhit;
+  hip_hit_t *hit_ptr = NULL;
+  hip_opp_socket_t *entry = NULL;
 
   errno = 0;
   socket = a;
 
-  hit_local = get_local_hits_wrapper();
-  assert(hit_local);
-  HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
-
-  //errno = util_func_with_sockaddr(to, id, &socket,hit_local );
-  errno = util_func(&socket);
-  if(errno){
-    HIP_ERROR("sendto util_func_with_sockaddr failed\n");
+  if(!db_exist){
+    hip_init_socket_db();
+    HIP_DEBUG("socketdb initialized\n");
+    db_exist = 1;
   }
+  
+  pid = getpid();
+  entry = hip_socketdb_find_entry(pid, socket);
+  if(entry){
+    socket_type = hip_socketdb_get_type(entry);
+  }
+  HIP_DEBUG("socket_type %d\n", socket_type);
+  HIP_DEBUG("stream %d datagram %d raw %d\n", SOCK_STREAM, SOCK_DGRAM, SOCK_RAW);
+
+  // we are only interested in (AF_INET/AFINET6 && !SOCKET_RAW)
+  if( (((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
+       ((struct sockaddr_in6 *)to)->sin6_family == AF_INET) &&
+      socket_type != SOCK_RAW ){ 
     
+    
+    hit_local = get_local_hits_wrapper();
+    assert(hit_local);
+    HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
+    
+    errno = util_func_with_sockaddr(to, id, &socket, hit_local);
+    if(errno)
+      goto out_err;
+    /*
+    memcpy(&bindhit, b, sizeof(bindhit));
+    HIP_HEXDUMP("bindhit before ", &bindhit, 110);
+    hit_ptr = (struct in6_addr *)( &(((struct sockaddr_in6 *)&bindhit)->sin6_addr) );
+    HIP_DEBUG_HIT("hit_ptr", hit_ptr);
+    if(!hit_is_real_hit(hit_ptr)){
+      memcpy(hit_ptr, hit_local, sizeof(hip_hit_t));
+      HIP_HEXDUMP("bindhit after ", &bindhit, 110);
+      errno = bind(a, &bindhit, sizeof(bindhit));
+      if(errno){
+	HIP_DEBUG("!!!! bind failed\n");
+	assert(0);
+	goto out_err;
+      }
+    }
+    */
+  }
+
   dp=dlopen(SOFILE,RTLD_LAZY);
   
   if (dp==NULL)
@@ -486,6 +553,8 @@ ssize_t sendto(int a, const void * b, size_t c, int flags,
     HIP_DEBUG("sendto failed\n");
 
   return charnum;
+ out_err:
+  return errno;
 }
 
 /* 
@@ -497,8 +566,62 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   int socket = 0;
   ssize_t charnum = 0;
 
+  struct in6_addr *id = NULL;
+  struct sockaddr *is = NULL;
+
+
+
+
+  // The following code is used to get ipv6/sockaddr, but no luck 
+  struct in6_addr daddr;
+  union {
+    struct in_pktinfo *pktinfo_in4;
+    struct in6_pktinfo *pktinfo_in6;
+  } pktinfo;
+  struct cmsghdr *cmsg;
+  int cmsg_level, cmsg_type;
+  int is_ipv4 = 0;
+  int gotip   = 0;
+  
+  memset(&daddr, 0, sizeof(daddr));
+  cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
+  cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_PKTINFO; //IPV6_2292PKTINFO;
+  for (cmsg=CMSG_FIRSTHDR(msg); cmsg; cmsg=CMSG_NXTHDR(msg,cmsg)){
+    if ((cmsg->cmsg_level == cmsg_level) && 
+	(cmsg->cmsg_type == cmsg_type)) {
+      /* The structure is a union, so this fills also the
+	 pktinfo_in6 pointer */
+      pktinfo.pktinfo_in4 =
+	(struct in_pktinfo*)CMSG_DATA(cmsg);
+      gotip   = 1;
+      break;
+    }
+  }
+  if(gotip){
+    HIP_HEXDUMP("pktinfo", &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
+    memcpy(&daddr, &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
+    
+    HIP_DEBUG_HIT("!!!!! daddr", &daddr);
+    
+    HIP_HEXDUMP("msghdr", msg, 200);
+    is = (struct sockaddr *)(msg->msg_name);
+    if(is){
+      HIP_DEBUG_HIT("msg->msgname", is);
+      id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)is)->sin6_addr) );
+      HIP_DEBUG_HIT("id", id);
+    }
+    else {
+      HIP_DEBUG("!!!! Faint,");
+      assert(0);
+    }
+  }
+  // end of get ipv6/sockaddr
+
+
   errno = 0;
   socket = a;
+
+  // errno = util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket, const hip_hit_t *local_hit);
 
   errno = util_func(&socket);
   if(errno){
@@ -575,6 +698,54 @@ ssize_t recv(int a, void *b, size_t c, int flags)
 
   return charnum;
 }
+
+ssize_t recvfrom(int s, void *buf, size_t len, int flags, 
+		 struct sockaddr *from, socklen_t *fromlen)
+{
+  int errno;
+  int charnum = 0;  
+  int socket = 0;
+  void *dp = NULL;
+  char *error = NULL;
+
+  errno = 0;
+  socket = s;
+
+  //  assert(db_exist);
+  errno = util_func(&socket);
+  if(errno){
+    HIP_ERROR("util_func call failed: %s\n", strerror(errno));
+    return errno;
+  }
+  HIP_DEBUG("before dlopen \n");
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  HIP_DEBUG("after dlopen\n");
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  HIP_DEBUG("before dlopen recvfrom\n");
+  recv_dlsym = dlsym(dp, "recvfrom");
+  HIP_DEBUG("after dlopen recvfrom\n");
+  error = dlerror();
+  if (error){
+    fputs(error,stderr);
+    exit(1);
+  }
+  dlclose(dp);
+  //(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
+  HIP_DEBUG("recvfrom_dlsym dlopen recvfrom socket %d\n", socket);
+  //  charnum = rrr_dlsym(socket, buf, len, flags, from, fromlen);
+  charnum = __libc_recvfrom(socket, buf, len, flags, from, fromlen);
+  HIP_DEBUG("recvfrom_dlsym dlopen recvfrom\n");
+  //dlclose(dp);
+  
+  HIP_DEBUG("Called recvfrom_dlsym with number of returned char=%d\n", charnum);
+
+  return charnum;
+}
+
 
 int close(int fd)
 {
@@ -733,7 +904,7 @@ void test_db(){
 
 // we will request real hit
 #if 0
-int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit)
+int __request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit)
 {
   struct hip_common *msg = NULL;
   struct in6_addr *hit_recv = NULL;
@@ -785,7 +956,7 @@ int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phi
   return err;
 }
 
-int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket)
+int __util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket)
 {
   // do not use, deprecated
   int err = 0;
