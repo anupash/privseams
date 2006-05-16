@@ -31,10 +31,14 @@
 /* VARIABLES */
 /** All HIT-data in the database is stored in here. */
 HIT_Item *hit_db = NULL;
+/** All groups in database are stored in here. */
+HIT_Group *group_db = NULL, *group_db_last = NULL;
 /** Counts items in database. */
 int hit_db_n = 0;
 /** Counts amount of allocated items. */
 int hit_db_ni = 0;
+/** Count groups in database. */
+int group_db_n = 0;
 
 /** Almost atomic lock. */
 int hit_db_lock = 1;
@@ -101,6 +105,9 @@ out:
 */
 void hit_db_quit(char *file)
 {
+	/* Variables. */
+	HIT_Group *g1, *g2;
+
 	if (file) hit_db_save_to_file(file);
 
 	/* Lock just for sure. */
@@ -112,6 +119,16 @@ void hit_db_quit(char *file)
 		hit_db = NULL;
 		hit_db_ni = 0;
 		hit_db_n = 0;
+	}
+	
+	/* Free groups. */
+	g1 = group_db;
+	group_db = NULL;
+	while (g1)
+	{
+		g2 = g1->next;
+		free(g1);
+		g1 = g2;
 	}
 }
 /* END OF FUNCTION */
@@ -198,8 +215,17 @@ int hit_db_add(char *name,
 	strcpy(hit_db[n].url, url);
 	strcpy(hit_db[n].group, group);
 	hit_db[n].lightweight = lightweight;
+	
+	if (type != HIT_DB_TYPE_LOCAL)
+	{
+		/* Try to add possibly new group and call GUI to show it. */
+		if (hit_db_add_rgroup(group) == NULL)
+		{
+			HIP_DEBUG("Something failed when searching/adding new remote group?\n");
+		}
+	}
 
-/* XX TODO: Copy url too someday: hi_db[n].url */
+	/* Then call GUI to show new HIT. */
 	HIP_DEBUG("Calling GUI to show new HIT...\n");
 	print_hit_to_buffer(hitb, &hit_db[n].rhit);
 	if (hit_db[n].type == HIT_DB_TYPE_LOCAL) gui_add_hit(name);
@@ -246,13 +272,13 @@ int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
 	if (!nolock) HIT_DB_LOCK();
 
 	/* Search for given HIT pair. */
-	fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, 1, 0);
+	fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, HIT_DB_TYPE_ALL, 1, 0);
 	if (!fhit)
 	{
 		memcpy(&temp_hit, lhit, sizeof(struct in6_addr));
 		memcpy(lhit, rhit, sizeof(struct in6_addr));
 		memcpy(rhit, &temp_hit, sizeof(struct in6_addr));
-		fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, 1, 0);
+		fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, HIT_DB_TYPE_ALL, 1, 0);
 	}
 
 	if (!fhit)
@@ -307,6 +333,7 @@ out:
 	@param hit Pointer to hip_lhi-struct.
 	@param url Pointer to url.
 	@param port Port number.
+	@param type HIT type, example HIT_DB_TYPE_LOCAL.
 	@param max_find Atmost return this many hits found.
 	@param nolock If no database locking is needed.
 	@return Pointer to array of HITs if found, NULL if not.
@@ -318,6 +345,7 @@ HIT_Item *hit_db_search(int *number,
 			            struct in6_addr *rhit,
 			            char *url,
 			            int port,
+			            int type,
 			            int max_find,
 			            int nolock)
 {
@@ -337,7 +365,8 @@ HIT_Item *hit_db_search(int *number,
 	}
 
 	/* If whole database should be returned? */
-	if (!name && !lhit && !rhit && !url && port == 0)
+	if (!name && !lhit && !rhit && !url && port == 0 &&
+	    type == HIT_DB_TYPE_ALL)
 	{
 		memcpy(hits, hit_db, sizeof(HIT_Item) * hit_db_n);
 		if (number) *number = hit_db_n;
@@ -352,6 +381,15 @@ HIT_Item *hit_db_search(int *number,
 		fh2 = NULL;
 		err = 0;
 
+		/* Match type first. */
+		err = 1;
+		if (hit_db[n].type & type)
+		{
+			fh2 = &hit_db[n];
+			err = 0;
+		}
+		if (err != 0) continue;
+		
 		/* If name is not NULL, compare name. */
 		if (name != NULL)
 		{
@@ -414,7 +452,7 @@ HIT_Item *hit_db_search(int *number,
 		memcpy(&hits[hits_found], fh2, sizeof(HIT_Item));
 		hits_found++;
 		
-		if (hits_found >= max_find)
+		if (hits_found >= max_find && max_find > 0)
 		{
 			break;
 		}
@@ -588,6 +626,160 @@ out:
 	if (f) fclose(f);
 	HIT_DB_UNLOCK();
 	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add new remote group to HIT group database. Notice that this function don't
+	lock the database!
+	
+	@return Returns pointer to new group or if group already existed, pointer
+	        to old one. Returns NULL on errors.
+*/
+HIT_Group *hit_db_add_rgroup(char *name)
+{
+	/* Variables. */
+	HIT_Group *g, *err = NULL;
+
+	/* Check group name length. */
+	HIP_IFEL(strlen(name) < 1, NULL, "Remote group name too short.\n");
+ 
+	/* Check database for group already with same name. */
+	g = hit_db_find_rgroup(name);
+	HIP_IFEL(g != NULL, g, "Group already found from database, returning it."
+	                       " (This is not an actual error)\n");
+
+	/* Allocate new remote group item. */
+	g = (HIT_Group *)malloc(sizeof(HIT_Group));
+	HIP_IFEL(g == NULL, NULL, "Failed to allocate new remote group item.\n");
+	
+	/* Setup remote group item. */
+	memset(g, 0, sizeof(HIT_Group));
+	strncpy(g->name, name, 64);
+
+	/* Add remote group item to database. */
+	if (group_db == NULL) group_db = g;
+	else group_db_last->next = (void *)g;
+
+	group_db_last = g;
+	group_db_n++;
+
+	HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
+
+	/* Tell GUI to show new group item. */
+	gui_add_rgroup(g);
+	err = g;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Delete remote group from HIT group database.
+
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_del_rgroup(char *name)
+{
+	/* Variables. */
+	int err = -1;
+
+	/* XX TODO: Implement! */
+	HIP_DEBUG("Group delete not implemented yet!!!\n");
+	
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Find a group from remote group database.
+	
+	@param group Name of remote group to be searched.
+	@return Pointer to group found, or NULL if none found.
+*/
+HIT_Group *hit_db_find_rgroup(char *name)
+{
+	/* Variables. */
+	HIT_Group *g;
+	
+	g = group_db;
+	while (g != NULL)
+	{
+		if (strncmp(g->name, name, 64) == 0) break;
+		g = (HIT_Group *)g->next;
+	}
+	
+	return (g);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Enumerate all remote groups in database. This function does not lock the
+	database!
+
+	@param f Function to call for every group in database. This function should
+	         return 0 if continue enumeration and something else, if enumeration
+	         should be stopped.
+	@param p Pointer to user data.
+	@return Number of groups enumerated.
+*/
+int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
+{
+	/* Variables. */
+	HIT_Group *g;
+	int err = 0, n = 0;
+	
+	g = group_db;
+	while (g != NULL && err == 0)
+	{
+		err = f(g, p);
+		n++;
+		g = (HIT_Group *)g->next;
+	}
+
+	HIP_DEBUG("Enumerated %d groups.\n", n);
+	
+	return (n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Enumerate all local HITs in database. This function locks the database.
+	
+	@param f Function to call for every local HIT in database. This function
+	         should return 0 if continue enumeration and something else, if
+	         enumeration should be stopped.
+	@param p Pointer to user data.
+	@return Number of HITs enumerated.
+*/
+int hit_db_enum_locals(int (*f)(HIT_Item *, void *), void *p)
+{
+	/* Variables. */
+	HIT_Item *hits;
+	int err = 0, n, i;
+	
+	hits = hit_db_search(&n, NULL, NULL, NULL, NULL, 0, HIT_DB_TYPE_LOCAL, 0, 1);
+	for (i = 0; i < n && err == 0; i++)
+	{
+		err = f(&hits[i], p);
+	}
+	free(hits);
+
+	HIP_DEBUG("Enumerated %d local HITs.\n", i);
+	
+	return (n);
 }
 /* END OF FUNCTION */
 

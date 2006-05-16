@@ -11,7 +11,7 @@
 /* STANDARD */
 
 /* THIS */
-#include "gui_create.h"
+#include "create.h"
 
 
 /******************************************************************************/
@@ -28,7 +28,7 @@ extern GtkTreeIter local_top, remote_top;
 	
 	@return 0 if success, -1 on errors.
 */
-int gui_create_content(void)
+int main_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)gui_get_window();
@@ -122,19 +122,6 @@ int gui_create_content(void)
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
 
-	/* Add some fake HITs to the window */
-//	gui_add_remote_hit("Nordea", "Services");
-//	gui_add_remote_hit("Sonera", "Services");
-	gui_add_remote_hit("Starcraft", "Games");
-	gui_add_remote_hit("Total Annihilation", "Games");
-	gui_add_remote_hit("Action Quake", "Games");
-	gui_add_remote_hit("Miika", "Friends");
-	gui_add_remote_hit("Tobias", "Friends");
-	gui_add_remote_hit("Matti", "Friends");
-	gui_add_remote_hit("Seppo", "Friends");
-	gui_add_remote_hit("something", "Misc");
-	gui_add_remote_hit("else", "Misc");
-	
 	button = gtk_button_new_with_label("testi2");
 	gtk_paned_add2(GTK_PANED(pane), button);
 	gtk_widget_show(button);
@@ -153,7 +140,7 @@ int gui_create_content(void)
 	
 	@return 0 if success, -1 on errors.
 */
-int gui_create_toolwindow_content(void)
+int tooldlg_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)gui_get_toolwindow();
@@ -232,10 +219,7 @@ int gui_create_toolwindow_content(void)
 	gtk_widget_show(w);
 
 	w = gtk_combo_new();
-	glist = g_list_append(glist, "Primary");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Primary");
+	widget_set(ID_TOOLLHITS, w);
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Local HIT:");
@@ -243,12 +227,7 @@ int gui_create_toolwindow_content(void)
 	gtk_widget_show(w);
 
 	w = gtk_combo_new();
-	glist = g_list_append(glist, "Games");
-	glist = g_list_append(glist, "Friends");
-	glist = g_list_append(glist, "Misc");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Services");
+	widget_set(ID_TOOLRGROUPS, w);
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Group:");
@@ -283,7 +262,7 @@ int gui_create_toolwindow_content(void)
 	
 	@return 0 if success, -1 on errors.
 */
-int gui_create_acceptdialog_content(void)
+int acceptdlg_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)gui_get_acceptdialog();

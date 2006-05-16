@@ -13,7 +13,7 @@ if HIP_AGENT
 
 noinst_LIBRARIES = libhipgui.a
 
-libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c gui_create.c
+libhipgui_a_SOURCES = event.c main.c manage.c create.c widgets.c
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)

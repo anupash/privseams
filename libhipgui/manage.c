@@ -11,80 +11,16 @@
 /* STANDARD */
 
 /* THIS */
-#include "gui_manage.h"
+#include "manage.h"
 
 
 /******************************************************************************/
-/* VARIABLES */
-void **gui_widgets = NULL;
-
-GtkTreeIter local_top, remote_top;
-int remote_hits_n = 0;
-int gui_entry_fill_flag = GTK_FILL | GTK_EXPAND;
+/* EXTERNS */
+extern GtkTreeIter local_top, remote_top;
 
 
 /******************************************************************************/
 /* FUNCTIONS */
-
-/******************************************************************************/
-/**
-	Initialize GUI widgets system.
-	
-	@return 0 on success, -1 on errors.
-*/
-int widget_init(void)
-{
-	/* Variables. */
-	int err = 0;
-
-	gui_widgets = (void **)malloc(sizeof(void *) * IDS_N);
-	HIP_IFEL(gui_widgets == NULL, -1, "Failed to allocate widgets pointers.\n");
-	memset(gui_widgets, sizeof(GtkWidget *) * IDS_N, 0);
-
-out_err:
-	return (err);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Deinitalize GUI widgets system. */
-void widget_quit(void)
-{
-	if (gui_widgets) free(gui_widgets);
-	gui_widgets = NULL;
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Set pointer for given widget.
-	
-	@param n Widget identifier.
-	@param p Pointer to widget.
-*/
-void widget_set(int n, void *p)
-{
-	if (n >= 0 && n < IDS_N) gui_widgets[n] = p;
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Returns pointer to given widget.
-	
-	@param n Widget identifier.
-	@return Pointer to widget.
-*/
-void *widget(int n)
-{
-	if (n < 0 || n >= IDS_N) return (NULL);
-	return (gui_widgets[n]);
-}
-/* END OF FUNCTION */
-
 
 /******************************************************************************/
 /**
@@ -111,19 +47,21 @@ void gui_add_hit(char *hit)
 /**
 	Tell GUI to add new remote group into list.
 
-	@param New hit to add.
+	@param group New group to add.
 */
-void gui_add_rgroup(char *hit)
+void gui_add_rgroup(HIT_Group *group)
 {
 	/* Variables. */
 	GtkWidget *w;
 	GtkTreeIter iter;
-	gchar *msg = g_strdup_printf(hit);
+	gchar *msg = g_strdup_printf(group->name);
 
+	gdk_threads_enter();
 	w = widget(ID_RLISTMODEL);
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &remote_top);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
 	g_free(msg);
+	gdk_threads_leave();
 }
 /* END OF FUNCTION */
 
@@ -165,9 +103,9 @@ void gui_add_remote_hit(char *hit, char *group)
 out_err:
 	if (err)
 	{
-		HIP_DEBUG("Did not find remote group \"%s\", creating group.\n", group);
-		gui_add_rgroup(group);
-		gui_add_remote_hit(hit, group);
+		HIP_DEBUG("Did not find remote group \"%s\", could not show new HIT!\n", group);
+		//hit_db_add_rgroup(group);
+		//gui_add_remote_hit(hit, group);
 	}
 	return;
 }
@@ -287,6 +225,44 @@ void gui_set_info(const char *string, ...)
 
 	/* End args. */
 	va_end(args);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add remote groups to tool dialog.
+	This is a enumeration callback function.
+*/
+int tooldlg_add_rgroups(HIT_Group *group, void *p)
+{
+	/* Variables. */
+	GList **glist = (GList **)p;
+	
+	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
+	*glist = g_list_append(*glist, group->name);
+	
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add local HITs to tool dialog.
+	This is a enumeration callback function.
+*/
+int tooldlg_add_lhits(HIT_Item *hit, void *p)
+{
+	/* Variables. */
+	GList **glist = (GList **)p;
+	gchar name[64 + 1];
+
+	HIP_DEBUG("Appending new local HIT \"%s\" to tool window list.\n", hit->name);
+	strlcpy(name, "moi", 64);
+	*glist = g_list_append(*glist, name);
+
+	return (0);
 }
 /* END OF FUNCTION */
 

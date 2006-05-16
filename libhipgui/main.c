@@ -11,7 +11,7 @@
 /* STANDARD */
 
 /* THIS */
-#include "gui_main.h"
+#include "main.h"
 
 
 /******************************************************************************/
@@ -70,9 +70,9 @@ int gui_init(void)
 	gtk_widget_hide(gtk_acceptdialog);
 	
 	/* Create window content for all windows. */
-	gui_create_toolwindow_content();
-	gui_create_acceptdialog_content();
-	gui_create_content();
+	tooldlg_create_content();
+	acceptdlg_create_content();
+	main_create_content();
 	
 	gui_set_info("HIP GUI started.");
  
@@ -88,6 +88,23 @@ int gui_init(void)
 */
 int gui_main(void)
 {
+	GtkWidget *w;
+	GList *glist = NULL;
+	
+	HIP_DEBUG("Appending remote groups to tool window...\n");
+	w = widget(ID_TOOLRGROUPS);
+	hit_db_enum_rgroups(tooldlg_add_rgroups, &glist);
+	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
+	if (glist) g_list_free(glist);
+	glist = NULL;
+
+	HIP_DEBUG("Appending local HITs to tool window...\n");
+	w = widget(ID_TOOLLHITS);
+	hit_db_enum_locals(tooldlg_add_lhits, &glist);
+	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
+	if (glist) g_list_free(glist);
+	glist = NULL;
+	
 	gtk_main();
 }
 /* END OF FUNCTION */

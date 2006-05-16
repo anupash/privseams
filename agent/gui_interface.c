@@ -35,14 +35,14 @@ int check_hit(HIT_Item *hit)
 	  or incoming.
 	*/
 	fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-	                     hit->url, hit->port, 1, 1);
+	                     hit->url, hit->port, HIT_DB_TYPE_ALL, 1, 1);
 	if (!fhit)
 	{
 		memcpy(&temp_hit, &hit->lhit, sizeof(struct in6_addr));
 		memcpy(&hit->lhit, &hit->rhit, sizeof(struct in6_addr));
 		memcpy(&hit->rhit, &temp_hit, sizeof(struct in6_addr));
 		fhit = hit_db_search(&ndx, NULL, &hit->lhit, &hit->rhit,
-		                     hit->url, hit->port, 1, 1);
+		                     hit->url, hit->port, HIT_DB_TYPE_ALL, 1, 1);
 	}
 
 	if (fhit)
