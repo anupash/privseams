@@ -502,8 +502,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, 0);
-	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, 0, 0);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, entry->peer_udp_port);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, entry->peer_udp_port,0);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -1187,7 +1187,7 @@ int hip_receive_update(struct hip_common *msg,
 			    memcmp(src_ip, &entry->preferred_address,
 				   sizeof(struct in6_addr)) && spi) {
 				hip_delete_sa(spi, &entry->preferred_address,
-					      AF_INET6, 0, 0);
+					      AF_INET6, 0, entry->peer_udp_port);
 				ipv6_addr_copy(&entry->preferred_address,
 					       locator_address);
 			} 
@@ -1481,7 +1481,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 		int i = 0;
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6,
-			      0, 0);
+			      entry->peer_udp_port, 0);
 		/* XX FIXME: change daddr to an alternative peer address
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
