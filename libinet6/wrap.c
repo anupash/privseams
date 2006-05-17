@@ -53,11 +53,14 @@ int exists_mapping(int pid, int socket);
 int (*socket_dlsym)(int domain, int type, int protocol);
 int (*conn)(int a, const struct sockaddr * b, socklen_t c);
 ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
-ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, 
+			const struct sockaddr *to, socklen_t tolen);
 ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
 ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
 ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
 		 struct sockaddr *from, socklen_t *fromlen);
+ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
+
 int (*close_dlsym)(int fd);
 
 
@@ -689,6 +692,8 @@ ssize_t recv(int a, void *b, size_t c, int flags)
   int errno;
   int charnum = 0;  
   int socket = 0;
+  void *dp = NULL;
+  char *error = NULL;
 
   errno = 0;
   socket = a;
@@ -700,8 +705,7 @@ ssize_t recv(int a, void *b, size_t c, int flags)
     return errno;
   }
   
-  void *dp = NULL;
-  char *error = NULL;
+
 
   dp=dlopen(SOFILE,RTLD_LAZY);
   
@@ -739,7 +743,7 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
   socket = s;
 
   //  assert(db_exist);
-  //errno = util_func(&socket);
+  errno = util_func(&socket);
   if(errno){
     HIP_ERROR("util_func call failed: %s\n", strerror(errno));
     return errno;
@@ -770,7 +774,43 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
   return charnum;
 }
 
+ssize_t recvmsg(int s, struct msghdr *msg, int flags)
+{
+  int errno;
+  int charnum = 0;  
+  int socket = 0;
+  void *dp = NULL;
+  char *error = NULL;
 
+  socket = s;
+  errno = util_func(&socket);
+  if(errno){
+    HIP_ERROR("util_func call failed: %s\n", strerror(errno));
+    return errno;
+  }
+  
+  dp=dlopen(SOFILE,RTLD_LAZY);
+  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  recvmsg_dlsym = dlsym(dp, "recvmsg");
+  
+  error = dlerror();
+  if (error){
+    fputs(error,stderr);
+    exit(1);
+  }
+  
+  charnum = recvmsg_dlsym(socket, msg, flags);
+  dlclose(dp);
+
+  HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n", charnum);
+
+  return charnum;
+}
 int close(int fd)
 {
   int errno;
