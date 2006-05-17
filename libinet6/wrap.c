@@ -56,7 +56,7 @@ ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
 ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
 ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
 ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
-ssize_t (*rrr_dlsym)(int s, void *buf, size_t len, int flags, 
+ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
 		 struct sockaddr *from, socklen_t *fromlen);
 int (*close_dlsym)(int fd);
 
@@ -564,26 +564,50 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
   int errno;
   int socket = 0;
+  int pid = 0;
   ssize_t charnum = 0;
-
+  hip_hit_t *local_hit = NULL;
+  hip_opp_socket_t *entry = NULL;
   struct in6_addr *id = NULL;
   struct sockaddr *is = NULL;
+  void *dp = NULL;
+  char *error = NULL;
 
-
-
-
-  // The following code is used to get ipv6/sockaddr, but no luck 
-  struct in6_addr daddr;
   union {
     struct in_pktinfo *pktinfo_in4;
     struct in6_pktinfo *pktinfo_in6;
   } pktinfo;
-  struct cmsghdr *cmsg;
+  struct cmsghdr *cmsg = NULL;
   int cmsg_level, cmsg_type;
-  int is_ipv4 = 0;
-  int gotip   = 0;
-  
-  memset(&daddr, 0, sizeof(daddr));
+  int is_ipv4;
+  int gotip = 0;
+
+  errno = 0;
+  socket = a;
+
+  dp=dlopen(SOFILE,RTLD_LAZY);  
+  if (dp==NULL)
+    {
+      fputs(dlerror(),stderr);
+      exit(1);
+    }
+  sendmsg_dlsym = dlsym(dp, "sendmsg");  
+  error=dlerror();
+  if (error)
+    {
+      fputs(error,stderr);
+      exit(1);
+    }
+
+  if(!db_exist){
+    hip_init_socket_db();
+    HIP_DEBUG("socketdb initialized\n");
+    db_exist = 1;
+  }
+
+  pktinfo.pktinfo_in4 = NULL;
+  pktinfo.pktinfo_in6 = NULL;
+  is_ipv4 = 1;
   cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
   cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_PKTINFO; //IPV6_2292PKTINFO;
   for (cmsg=CMSG_FIRSTHDR(msg); cmsg; cmsg=CMSG_NXTHDR(msg,cmsg)){
@@ -593,61 +617,64 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 	 pktinfo_in6 pointer */
       pktinfo.pktinfo_in4 =
 	(struct in_pktinfo*)CMSG_DATA(cmsg);
-      gotip   = 1;
+      gotip = 1;
       break;
     }
   }
-  if(gotip){
-    HIP_HEXDUMP("pktinfo", &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
-    memcpy(&daddr, &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
-    
-    HIP_DEBUG_HIT("!!!!! daddr", &daddr);
-    
-    HIP_HEXDUMP("msghdr", msg, 200);
-    is = (struct sockaddr *)(msg->msg_name);
-    if(is){
-      HIP_DEBUG_HIT("msg->msgname", is);
-      id =   (struct in6_addr *)( &(((struct sockaddr_in6 *)is)->sin6_addr) );
-      HIP_DEBUG_HIT("id", id);
-    }
-    else {
-      HIP_DEBUG("!!!! Faint,");
-      assert(0);
+  if(!gotip){ // try ipv6
+    is_ipv4 = 0;
+    cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
+    cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_PKTINFO; //IPV6_2292PKTINFO;
+    for (cmsg=CMSG_FIRSTHDR(msg); cmsg; cmsg=CMSG_NXTHDR(msg,cmsg)){
+      if ((cmsg->cmsg_level == cmsg_level) && 
+	  (cmsg->cmsg_type == cmsg_type)) {
+	/* The structure is a union, so this fills also the
+	   pktinfo_in6 pointer */
+	pktinfo.pktinfo_in4 =
+	  (struct in_pktinfo*)CMSG_DATA(cmsg);
+      gotip = 1;
+      break;
+      }
     }
   }
   // end of get ipv6/sockaddr
 
+  pid = getpid();
+  entry = hip_socketdb_find_entry(pid, socket);
+  if(entry){
+    int domain = hip_socketdb_get_domain(entry);
+    int type = hip_socketdb_get_type(entry);
+    int protocol = hip_socketdb_get_protocol(entry);
 
-  errno = 0;
-  socket = a;
+    if ( (!(domain == PF_INET || domain == PF_INET6)) ||
+	 (!(type == SOCK_STREAM) || (type == SOCK_DGRAM)) || 
+	 (!(protocol == 0))||
+	 ((msg->msg_name != NULL) && \
+	  (!(((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == PF_INET || \
+	     ((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == PF_INET6))) ||
+	 (!pktinfo.pktinfo_in4) ){
+      charnum = sendmsg_dlsym(socket, msg, flags);
+      dlclose(dp);
+      HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
+      return charnum;
+    }
+  } 
+  
+  assert(pktinfo.pktinfo_in6);
+  HIP_HEXDUMP("pktinfo", &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
+  assert(msg->msg_name);
+  is = (struct sockaddr *)(msg->msg_name);
+  _HIP_HEXDUMP("msg->msgname", is, sizeof(struct sockaddr));
+ 
+  local_hit = get_local_hits_wrapper();
+  assert(local_hit);
 
-  // errno = util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, int * const socket, const hip_hit_t *local_hit);
-
-  errno = util_func(&socket);
+  errno = util_func_with_sockaddr(is, id, &socket, local_hit);
+  
   if(errno){
     HIP_ERROR("sendmsg util_func call failed: %s\n", strerror(errno));
     return errno;
   }
-  
-  void *dp = NULL;
-  char *error = NULL;
-
-  dp=dlopen(SOFILE,RTLD_LAZY);
-  
-  if (dp==NULL)
-    {
-      fputs(dlerror(),stderr);
-      exit(1);
-    }
-  sendmsg_dlsym = dlsym(dp, "sendmsg");
-  
-  error=dlerror();
-  if (error)
-    {
-      fputs(error,stderr);
-      exit(1);
-    }
-  
   charnum = sendmsg_dlsym(socket, msg, flags);
   
   dlclose(dp);
@@ -712,34 +739,31 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
   socket = s;
 
   //  assert(db_exist);
-  errno = util_func(&socket);
+  //errno = util_func(&socket);
   if(errno){
     HIP_ERROR("util_func call failed: %s\n", strerror(errno));
     return errno;
   }
-  HIP_DEBUG("before dlopen \n");
   dp=dlopen(SOFILE,RTLD_LAZY);
-  HIP_DEBUG("after dlopen\n");
   if (dp==NULL)
     {
       fputs(dlerror(),stderr);
       exit(1);
     }
-  HIP_DEBUG("before dlopen recvfrom\n");
-  recv_dlsym = dlsym(dp, "recvfrom");
-  HIP_DEBUG("after dlopen recvfrom\n");
+  recvfrom_dlsym = dlsym(dp, "recvfrom");
   error = dlerror();
   if (error){
     fputs(error,stderr);
     exit(1);
   }
-  dlclose(dp);
+  
   //(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
   HIP_DEBUG("recvfrom_dlsym dlopen recvfrom socket %d\n", socket);
-  //  charnum = rrr_dlsym(socket, buf, len, flags, from, fromlen);
-  charnum = __libc_recvfrom(socket, buf, len, flags, from, fromlen);
+  charnum = recvfrom_dlsym(socket, buf, len, flags, from, fromlen);
+  //charnum = __libc_recvfrom(socket, buf, len, flags, from, fromlen);
+
   HIP_DEBUG("recvfrom_dlsym dlopen recvfrom\n");
-  //dlclose(dp);
+  dlclose(dp);
   
   HIP_DEBUG("Called recvfrom_dlsym with number of returned char=%d\n", charnum);
 

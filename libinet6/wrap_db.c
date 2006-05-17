@@ -90,9 +90,17 @@ inline int hip_socketdb_get_old_socket(const hip_opp_socket_t *entry)
 {
     return entry->old_socket;
 }
+inline int hip_socketdb_get_domain(const hip_opp_socket_t *entry)
+{
+    return entry->domain;
+}
 inline int hip_socketdb_get_type(const hip_opp_socket_t *entry)
 {
     return entry->type;
+}
+inline int hip_socketdb_get_protocol(const hip_opp_socket_t *entry)
+{
+    return entry->protocol;
 }
 inline int hip_socketdb_get_new_socket(const hip_opp_socket_t *entry)
 {
