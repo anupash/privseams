@@ -625,7 +625,7 @@ using getaddrinfo: ping, ping6, tla, svn.
       3. R has to tell the RVS that it would like to use RVS's services:
     </para>
     <para>
-      responder # hipconf rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
+      responder # hipconf add rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
     </para>
     <para>
       This will establish a HIP SA between the rendezvous server and the responder.
