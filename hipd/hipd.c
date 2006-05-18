@@ -647,11 +647,6 @@ int main(int argc, char *argv[]) {
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
-	if (rtnl_open_byproto(&hip_nl_ipsec, 0, NETLINK_XFRM) < 0) {
-		err = 1;
-		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
-		goto out_err;
-	}
 	if (rtnl_open_byproto(&hip_nl_route,
 			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 				| RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -667,6 +662,17 @@ int main(int argc, char *argv[]) {
 		err = 1;
 		goto out_err;
 	}
+
+#if 0
+	{
+		const int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(int);
+		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+			   &ipsec_buf_size, ipsec_buf_sizeof);
+		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+			   &ipsec_buf_size, ipsec_buf_sizeof);
+	}
+#endif
 
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");

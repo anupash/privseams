@@ -387,8 +387,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
 	if (entry->state == HIP_STATE_NONE ||
-	    entry->state == HIP_STATE_UNASSOCIATED ||
-	    entry->state == HIP_STATE_I1_SENT) {
+	    entry->state == HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("State is %d, sending i1\n", entry->state);
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
@@ -551,8 +550,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			return -1;
 			break;
 		case XFRMGRP_EXPIRE:
-			/* XX TODO  does this ever happen? */
-			return -1;
+			HIP_DEBUG("received expiration, ignored\n");
+			return 0;
 			break;
 #if 0
 		case XFRMGRP_SA:
