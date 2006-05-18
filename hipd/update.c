@@ -452,14 +452,17 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_DEBUG("\n");
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
 
-	HIP_DEBUG("handled ESP_INFO: Old SPI: 0x%x\n", esp_info->old_spi);
-	HIP_DEBUG("handled ESP_INFO: New SPI: 0x%x\n", esp_info->new_spi);
+	HIP_DEBUG("handled ESP_INFO: Old SPI: 0x%x\n", ntohl(esp_info->old_spi));
+	HIP_DEBUG("handled ESP_INFO: New SPI: 0x%x\n", ntohl(esp_info->new_spi));
 	HIP_DEBUG("handled ESP_INFO: Keymat Index: %u\n",
-		  esp_info->keymat_index);
+		  ntohs(esp_info->keymat_index));
 
-	prev_spi_out = esp_info->old_spi;
-	new_spi_out = esp_info->new_spi ? esp_info->new_spi : prev_spi_out;
+	prev_spi_out = ntohl(esp_info->old_spi);
+	new_spi_out = ntohl(esp_info->new_spi) ? ntohl(esp_info->new_spi) : prev_spi_out;
 	
+	_HIP_DEBUG("new_spi_out: 0x%x\n",
+		  new_spi_out);	
+
 	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
 	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
@@ -478,7 +481,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two ESP_INFO parameters. */
 	_HIP_DEBUG("entry keymat index=%u\n", entry->current_keymat_index);
-	keymat_index = kmindex_saved < esp_info->keymat_index ? kmindex_saved : esp_info->keymat_index;
+	keymat_index = kmindex_saved < ntohs(esp_info->keymat_index) ? kmindex_saved : ntohs(esp_info->keymat_index);
 	_HIP_DEBUG("lowest keymat_index=%u\n", keymat_index);
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
@@ -747,7 +750,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	uint16_t mask = 0;
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
-	HIP_IFE(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1);
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
+		 "SPI 0x%x not in SPI list\n");
 
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");

@@ -1176,7 +1176,7 @@ getaddrinfo (const char *name, const char *service,
   if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
     return EAI_BADFLAGS;
 
-#ifdef HIP_TRANSPARENT_MODE
+#ifdef HIP_TRANSPARENT_API
   /* Transparent mode does not work with HIP native resolver */
   hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else
