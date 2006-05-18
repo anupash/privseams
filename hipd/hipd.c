@@ -537,6 +537,25 @@ int periodic_maintenance() {
 	return err;
 }
 
+void hip_probe_kernel_modules() {
+	int count;
+	char cmd[40];
+        /* update also this if you add more modules */
+	const int mod_total = 10;
+	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
+			    "xfrm_user", "dummy", "esp6", "esp4",
+			    "ipv6", "aes", "crypto_null", "des"};
+
+	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
+	for (count = 0; count < mod_total; count++) {
+		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+			 mod_name[count]);
+		HIP_DEBUG("%s\n", cmd);
+		system(cmd);
+	}
+	HIP_DEBUG("Probing completed\n");
+}
+
 int main(int argc, char *argv[]) {
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -578,6 +597,8 @@ int main(int argc, char *argv[]) {
 			return err;
 		}
 	}
+
+	hip_probe_kernel_modules();
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
