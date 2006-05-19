@@ -52,7 +52,13 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		HIP_DEBUG("entry found src port %d\n",
 			  entry->peer_udp_port);
 	}
+#ifndef CONFIG_HIP_RVS
 
+	/* The ip of RVS is taken to be ip of the peer while using RVS server to relay R1.
+	 * Hence have removed this part for RVS --Abi
+	 */
+
+	
 	if (entry && (type == HIP_R1 || type == HIP_R2)) {
 		/* When the responder equals to the NAT host, it can
 		   reply from the private address instead of the public
@@ -65,7 +71,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		   other way; let's make sure that they are the same. */
 		src_addr = &entry->preferred_address;
 	}
-
+#endif
 	HIP_IFEL(hip_receive_control_packet(msg,
 					    src_addr,
 					    dst_addr,

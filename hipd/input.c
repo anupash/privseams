@@ -14,7 +14,7 @@
 
 
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-			struct in6_addr *i1_daddr, HIP_RVA *rva);
+			struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info);
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
@@ -1915,7 +1915,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  			   cases.
  			*/
 
-			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva);
+			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva, i1_info);
 			if (err)
  				HIP_ERROR("Relaying I1 failed\n");
  			else
