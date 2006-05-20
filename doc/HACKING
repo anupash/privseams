@@ -395,9 +395,10 @@ To create the package from vanilla sources for Debian distribution
 or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
 follow the following instructions.
 
-* Download and extract the vanilla kernel source
-(I did this in /usr/src and I added my username to src group
-by typing adduser diego src)
+* Download and extract the vanilla kernel source (I got it from
+(ftp://ftp.funet.fi/pub/linux/kernel/v2.6)
+I extract it to /usr/src and I added my username to src group
+by typing adduser my_username src
 * cd linux-2.6.xx
 * Patch the kernel with the hip patches you can find under hipl/patches directory
 * cp /boot/config-something .config
