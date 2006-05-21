@@ -168,6 +168,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
+
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 

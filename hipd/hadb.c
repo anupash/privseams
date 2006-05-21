@@ -1132,9 +1132,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 			if (set_flags & 0x2)
 				item->update_state_flags |= update_flags_or;
 			if (esp_info && (set_flags & 0x4)) {
-				item->stored_received_esp_info.old_spi = ntohl(esp_info->old_spi);
-				item->stored_received_esp_info.new_spi = ntohl(esp_info->new_spi);
-				item->stored_received_esp_info.keymat_index = ntohs(esp_info->keymat_index);
+				item->stored_received_esp_info.old_spi = esp_info->old_spi;
+				item->stored_received_esp_info.new_spi = esp_info->new_spi;
+				item->stored_received_esp_info.keymat_index = esp_info->keymat_index;
 			}
 			if (set_flags & 0x8)
 				item->keymat_index = keymat_index;
@@ -1391,9 +1391,10 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes already locked entry */
 
-	_HIP_DEBUG("SPI=0x%x\n", spi);
+	_HIP_DEBUG("Search spi list for SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		if (item->spi == spi)
+	_HIP_DEBUG("search: 0x%x ?= 0x%x\n", item->spi, spi);	
+	if (item->spi == spi)
 			return item;
         }
 	return NULL;

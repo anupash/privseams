@@ -1,12 +1,12 @@
 Name: hipl
-Version: 1.0.1
+Version: 1.0.0
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
-Copyright: GPL
+License: GPL
 Group: System Environment/Kernel
 Requires: openssl
 ExclusiveOS: linux
@@ -52,18 +52,16 @@ install -m 644 doc/HOWTO.txt %{buildroot}/%{_docdir}
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
 %pre
-if [ -x /etc/rc.d/init.d/hipd ]; then
-	/etc/rc.d/init.d/hipd stop
-fi
 
 %post
 /sbin/chkconfig --add hipd
+/sbin/service hipd start
 
 %preun
-/etc/rc.d/init.d/hipd stop
+/sbin/service hipd stop
+/sbin/chkconfig --del hipd
 
 %postun
-/sbin/chkconfig --del hipd
 
 
 %clean

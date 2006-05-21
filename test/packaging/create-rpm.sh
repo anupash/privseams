@@ -2,7 +2,7 @@
 
 MAJOR=1
 MINOR=0
-RELEASE=1
+RELEASE=0
 VERSION="$MAJOR.$MINOR"
 SUFFIX="-$VERSION.$RELEASE"
 NAME=hipl
@@ -38,6 +38,7 @@ make dist
 
 #echo "** Package building root is '$PKGROOT'" 
 tar xzf ${NAME}-main.tar.gz
+find ${NAME}-main -name '.arch*' | xargs rm -rf
 mv -v ${NAME}-main $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"

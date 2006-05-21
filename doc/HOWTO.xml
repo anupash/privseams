@@ -29,8 +29,10 @@
      &nbsp; * Linux Operating System
     </para>
     <para>
-      &nbsp;* A BEET patched Linux 2.6 kernel with dummy device, XFRM,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support
+      &nbsp;* A BEET patched Linux 2.6 kernel with dummy device,
+      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support. Also,
+      you should have also CONFIG_IP_ADVANCED_ROUTER and
+      CONFIG_IP_MULTIPLE_TABLES as built-in.
     </para>
     <para>
       &nbsp;* OpenSSL-library and developer headers
@@ -150,11 +152,11 @@
       compile HIP as a kernel module, and the IPv6 support as built-in.
     </para>
     <para>
-      HIP debugging is not mandatory, but use of it is highly recommended in
-      order to get more information when problems arise. HIP debugging
-      information is logged using syslog's facility "kernel" and priority
-      "debug". Remember to set up your /etc/syslog.conf correctly if you do
-      not see the log messages (see syslog.conf manual page for more info).
+      The hipd tries to probe the necessary kernel modules automatically,
+      However, should this fail, you should make sure that you have
+      configured your /etc/modules accordingly. Insert "xfrm6_tunnel", 
+      "xfrm4_tunnel", "xfrm_user", "dummy", "esp6", "esp4", "ipv6", 
+      "aes", "crypto_null", and "des" to your /etc/modules.
     </para>
   </chapter>
   <chapter>
@@ -211,7 +213,10 @@
       privileges.
     </para>
     <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
+      oops:
+    </para>
+    <para>
+      &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
     </para>
     <para>
       &nbsp;cd somewhere/hipl
@@ -233,7 +238,7 @@
       &nbsp;/etc/hosts:
     </para>
     <para>
-      &nbsp;&nbsp;3ffe::1 oops
+      &nbsp;&nbsp;3ffe::2 oops
       </para>
     <para>
      &nbsp; /etc/hip/hosts:
@@ -242,7 +247,7 @@
       &nbsp;&nbsp;HIT_OF_OOPS oops
     </para>
     <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
+      &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
       </para>
     <para>
       &nbsp;cd somewhere/hipl
@@ -283,6 +288,8 @@
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
+      For tcpdump, you can use "tcpdump -n -i any esp or proto 253 or 
+      port 50500" to catch HIP-only traffic.
     </para>
     <para>
       There is also a program called "hipsetup" in "hipl/test" directory for
