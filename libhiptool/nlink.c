@@ -139,7 +139,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 
         n->nlmsg_seq = seq = ++nl->seq;
 
-	/* Note: the #if 0 statement are here because I experienced problems
+	/* Note: the TALK_ACK are here because I experienced problems
 	   with SMP machines. The application added a mapping which caused
 	   the control flow to arrive here. The sendmsg adds an SP and the
 	   while loop tries to read the ACK for the SP. However, there will
@@ -151,10 +151,9 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 	   as it is here or create another thread for handling acquires.
 	   For testing SP/SA related issues you might want to re-enable these
 	   -mk */
-#if 0
-        if (answer == NULL)
-                n->nlmsg_flags |= NLM_F_ACK;
-#endif
+	if (HIP_NETLINK_TALK_ACK)
+		if (answer == NULL)
+			n->nlmsg_flags |= NLM_F_ACK;
 
         status = sendmsg(nl->fd, &msg, 0);
         if (status < 0) {
@@ -166,11 +165,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
         memset(buf,0,sizeof(buf));
         iov.iov_base = buf;
 
-#if 0
-        while (1) {
-#else
-        while (0) {
-#endif
+        while (HIP_NETLINK_TALK_ACK) {
                 iov.iov_len = sizeof(buf);
                 status = recvmsg(nl->fd, &msg, 0);
 
