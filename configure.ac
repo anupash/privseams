@@ -88,7 +88,7 @@ AC_EGREP_CPP(%%%yes%%%, [
 	],[
 		AC_EGREP_CPP(%%%yes%%%, [
 #include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 3
+#if defined(__GLIBC__) && __GLIBC__ == 2 && (__GLIBC_MINOR__ == 3 || __GLIBC_MINOR__ == 4)
 %%%yes%%%
 #endif
 		],[
@@ -184,6 +184,7 @@ AC_CACHE_CHECK([whether to use opportunistic],
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
+AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],

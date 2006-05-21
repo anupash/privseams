@@ -7,6 +7,7 @@
  *
  */
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 #ifndef HIP_OPPDB_H
 #define HIP_OPPDB_H
 
@@ -37,6 +38,5 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our,
 int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our);
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 
-
-
 #endif /* HIP_HADB_H */
+#endif /* CONFIG_HIP_OPPORTUNISTIC */

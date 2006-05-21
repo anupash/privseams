@@ -19,8 +19,6 @@ extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
-extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
-					      const hip_hit_t *hit_our);
 /**
  * hip_controls_sane - check for illegal controls
  * @controls: control value to be checked

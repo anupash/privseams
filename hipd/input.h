@@ -23,7 +23,10 @@
 #include "rvs.h"
 #include "netdev.h"
 
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer,
+					      const hip_hit_t *hit_our);
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,

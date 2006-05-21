@@ -7,6 +7,8 @@
  *
  */
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+
 #include "oppdb.h"
 
 HIP_HASHTABLE oppdb;
@@ -156,3 +158,5 @@ void hip_oppdb_dump()
   HIP_UNLOCK_HT(&oppdb);
   HIP_DEBUG("end oppdb dump\n");
 }
+
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
