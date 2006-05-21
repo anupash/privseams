@@ -42,7 +42,7 @@ link to it from userspace (CVS does not accept links). For example,
 CODING CONVENTIONS
 ==================
 
-- Don't invent your own coding style. It will give the the code an
+- Don't invent your own coding style. It will give the code an
   ununified look. Especially, if you don't follow the memory deallocation
   procedure below, you might even cause some memory leaks.
 
@@ -257,6 +257,8 @@ or production build):
 DOCUMENTATION
 =============
 
+This section is currently deprecated.
+
 The list of available HIPL documentation is listed in README. Both the
 kernel and the userspace API are documented in Linux kernel docbook
 format (see hipl/linux/Documentation/DocBook). Here is an example how
@@ -329,6 +331,9 @@ possible to force some extra files in top most Makefile.am.
 PREBUILT BINARY PACKAGES
 ========================
 
+Redhat
+------
+
 Note well: Currently the status of the packaging scripts is in very initial
 phase. They are not tested throughly.
 
@@ -347,9 +352,9 @@ This will create a source package (in tar.gz form in the same
 directory) which will be used when building the RPM file. After the
 script has run successfully, follow the instructions given by the
 script. That is, login as root and copy the source package (e.g.
-hipl-userspace-1.0-1.tgz) to directory /usr/src/rpm/SOURCES. Then
+hipl-userspace-1.0-1.tgz) to directory /usr/src/redhat/SOURCES. Then
 issue the command "rpmbuild -ba
-<hiplroot>/test/packaging/hipl-userspace-1.0-1.spec".  When everyting
+<hiplroot>/test/packaging/hiplx.spec".  When everyting
 is finished successfully, there will be a binary RPM package
 "/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
 can then be installed with rpm -i.
@@ -359,10 +364,26 @@ For more info about rpm packaging, please see:
 http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
 http://fedoranews.org/tchung/htmldoc/htmldoc.spec
 
+Debian
+------
+
 DEB package is created similarly: "./autogen && ./configure && make
-deb". The resulting package file is placed into the same
-directory. The package can be installed using dpkg, e.g. "dpkg -i
-hipl-userspace_1.0-1_i386.deb".
+deb".
+The result is both binary and source debian packages:
+- Binary
+Binary Debian package can be found in test/packaging/ directory
+with the following name: hipl-1.0-1_i386.deb.
+The package can be installed using dpkg, e.g. "dpkg -i
+hipl-1.0-1_i386.deb".
+- Source
+Debian source package is made of three files which are:
+
+	hipl-1.0.diff.gz
+	hipl-1.0.dsc
+	hipl-1.0.orig.tar.gz
+
+and can be found under directory test/packaging/hipl-1.0-deb-src/
+
 
 HOW TO CREATE KERNEL PACKAGES
 =============================
@@ -370,8 +391,32 @@ HOW TO CREATE KERNEL PACKAGES
 Debian
 ------
 
-XX TODO: DIEGO
-- short instructions for patching, creating source and binary images
+To create the package from vanilla sources for Debian distribution
+or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
+follow the following instructions.
+
+* Download and extract the vanilla kernel source (I got it from
+(ftp://ftp.funet.fi/pub/linux/kernel/v2.6)
+I extract it to /usr/src and I added my username to src group
+by typing adduser my_username src
+* cd linux-2.6.xx
+* Patch the kernel with the hip patches you can find under hipl/patches directory
+* cp /boot/config-something .config
+* fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_image
+
+After the kernel has been successfully compiled, you will find the
+debian package in the top directory.
+
+To install it type:
+dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
+and reboot. The debian package should already include the new 
+installed kernel for grub.
+If you need grub check this:
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
+
+Main reference (.)
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html
+
 
 Redhat
 ------
@@ -392,7 +437,32 @@ XX TODO: DIEGO
 Redhat notes
 ------------
 
-For Fedora, you need to download the kernel from somewhere from here:
+To create the package from vanilla sources (preferred method) for
+Fedora, follow the instructions of this document:
+
+http://www.openvps.org/Plone/docs/developer/kernelrpm
+http://www.fedoraforum.org/forum/archive/index.php/t-28290.html
+
+In short:
+* download and extract kernel sources
+* cd linux-2.6.xx
+* apply hip patches
+* cp /boot/config-something .config
+* make rpm
+
+To install, do this:
+* rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
+* /sbin/new-kernel-pkg --mkinitrd --depmod --install --make-default 2.6.xx
+
+NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
+THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
+
+That will create and install vanilla rpm. However, if you want to use
+the Fedora/Redhat patches to improve e.g. hardware support, use the
+instructions below.
+
+To create rpm for Fedora patched kernel, you need to download the
+kernel from somewhere from here:
 
   http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
 

@@ -229,7 +229,7 @@ int hip_socket_bind(struct socket *sock,
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
-	struct ipv6_pinfo *pinfo = inet6_sk(sk);
+	//struct ipv6_pinfo *pinfo = inet6_sk(sk); TH: removed because unused
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 

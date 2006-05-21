@@ -16,6 +16,7 @@ rpm:
 	test/packaging/create-rpm.sh
 deb:
 	test/packaging/create-deb.sh
+	test/packaging/create-deb.sh -s
 
 dist-hook:
 	rm -rf `find $(distdir) -name '.arch-ids'`
