@@ -32,11 +32,6 @@ if HIP_OPENDHT
  hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
 endif
 
-if HIP_OPPORTUNISTIC
-oppdb.h
-
-endif
-
 # KeyNotev2
 #INCLUDES += -Ikeynote
 #hipd_LDADD += keynote/.libs/libkeynote.a
