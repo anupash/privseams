@@ -30,7 +30,9 @@
     </para>
     <para>
       &nbsp;* A BEET patched Linux 2.6 kernel with dummy device,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support
+      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support. Also,
+      you should have also CONFIG_IP_ADVANCED_ROUTER and
+      CONFIG_IP_MULTIPLE_TABLES as built-in.
     </para>
     <para>
       &nbsp;* OpenSSL-library and developer headers
