@@ -42,7 +42,6 @@
 #endif
 
 
-
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;

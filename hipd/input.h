@@ -29,7 +29,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
 			       struct hip_stateless_info *msg_info);
-
 			  
 /* functions for receiving hip control messages*/ 
 			       
@@ -64,7 +63,7 @@ int hip_receive_notify(struct hip_common *,
 		       struct in6_addr *, 
 		       struct in6_addr *,
 		       hip_ha_t*);
-		       
+		      
 int hip_receive_bos(struct hip_common *,
 		    struct in6_addr *,
 		    struct in6_addr *,

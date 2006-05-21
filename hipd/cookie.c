@@ -94,6 +94,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
 		 NULL, "Requested source HIT no more available.\n");
+	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
 	hip_r1table = hid->r1;
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);

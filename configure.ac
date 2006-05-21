@@ -88,7 +88,7 @@ AC_EGREP_CPP(%%%yes%%%, [
 	],[
 		AC_EGREP_CPP(%%%yes%%%, [
 #include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && (__GLIBC_MINOR__ == 3 || __GLIBC_MINOR__ == 4)
+#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 3
 %%%yes%%%
 #endif
 		],[
@@ -173,6 +173,16 @@ AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
+fi
+
+AC_ARG_ENABLE(opportunistic,
+             AC_HELP_STRING([--enable-opportunistic],
+                            [HIP opportunistic extensions (default is NO)]),
+             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=no])
+AC_CACHE_CHECK([whether to use opportunistic],
+               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=no])
+if test x"$ac_cv_use_opportunistic" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(opendht,
