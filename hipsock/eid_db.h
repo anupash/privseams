@@ -14,7 +14,10 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
                           struct hip_eid_owner_info *owner_info,
                           int is_local);
 
-
+int hip_db_set_eid(struct sockaddr_eid *eid,
+                   const struct hip_lhi *lhi,
+                   const struct hip_eid_owner_info *owner_info,
+                   int is_local);
 
 int hip_socket_handle_set_my_eid(struct hip_common *msg);
 int hip_socket_handle_set_peer_eid(struct hip_common *msg);
