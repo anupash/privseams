@@ -57,6 +57,62 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+
+#include <sys/un.h> // for sockaddr_un
+struct hip_opp_blocking_request_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+
+  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
+  struct in6_addr       peer_real_hit;
+  struct sockaddr_un    caller;
+};
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+
+#define SET_NULL_HIT(hit)                      \
+        { memset(hit, 0, sizeof(hip_hit_t));        \
+          (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
+
+inline static ipv6_addr_is_null(struct in6_addr *ip){
+  return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
+	   ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
+  /*  return ((ip->s6_addr32[0] == 0) &&          
+	  (ip->s6_addr32[1] == 0) &&          
+	  (ip->s6_addr32[2] == 0) &&          
+	  (ip->s6_addr32[3] == 0));
+  */
+}
+
+static inline int create_new_socket(int type, int protocol)
+{
+  return socket(AF_INET6, type, protocol);
+}
+
+static inline int hit_is_real_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] != 0x00));
+}
+
+static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr32[1] == 0) &&
+	  (hit->s6_addr32[2] == 0) &&
+	  (hit->s6_addr32[3] == 0));
+}
+
+static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] == 0x00));
+
+}
+static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
+	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
@@ -111,6 +167,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
  /* Packet loss probability in percents */
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -171,11 +229,21 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_DEC                  25
 #define SO_HIP_SET_NAT_ON			26
 #define SO_HIP_SET_NAT_OFF			27
-#define SO_HIP_ADD_DB_HI			28
+#define SO_HIP_SET_OPPORTUNISTIC_MODE           28 /*Bing, trial */
+#define SO_HIP_QUERY_OPPORTUNISTIC_MODE         29
+#define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  30
+#define SO_HIP_GET_PSEUDO_HIT                   31 
+#define SO_HIP_SET_PSEUDO_HIT                   32 
+#define SO_HIP_QUERY_IP_HIT_MAPPING		33 
+#define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	34
+#define SO_HIP_ADD_DB_HI			35
+#define SO_HIP_GET_PEER_HIT			36
+#define SO_HIP_SET_PEER_HIT			37
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
- 
+#define HIP_USERADDR_PATH                     "/tmp/hip_useraddr_path.tmp"
+
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
 #define HIP_ENDPOINT_FLAG_HIT              1
@@ -272,7 +340,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
-#define HIP_PARAM_KEYS                  32779 
+#define HIP_PARAM_KEYS                  32779
+#define HIP_PSEUDO_HIT                  32780 
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100

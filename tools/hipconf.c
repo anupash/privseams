@@ -7,6 +7,7 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Anthony D. Joseph <adj@hiit.fi>
  * - Abhinav Pathak <abhinav.pathak@hiit.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * Licence: GNU/GPL
  *
@@ -35,7 +36,12 @@ const char *usage = "new|add hi default\n"
 #else
         "get|set|inc|dec|new puzzle all\n"
 #endif
-	;
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+        "set opp on|off\n"
+#endif
+
+;
 /* hip nat on|off|peer_hit is currently specified. 
  * For peer_hit we should 'on' the nat mapping only when the 
  * communication takes place with specified peer_hit --Abi */
@@ -52,9 +58,11 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_rst,
 	handle_rvs,
 	handle_bos,
+	handle_puzzle,
 	handle_nat,
-	handle_del,
-	handle_puzzle
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	handle_opp
+#endif
 };
 
 /**
@@ -138,6 +146,10 @@ int get_type(char *text) {
 		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	else if (!strcmp("opp", text))
+                ret = TYPE_OPP; 
+#endif
 	return ret;
 }
 
@@ -582,6 +594,49 @@ int handle_puzzle(struct hip_common *msg, int action,
  out:
 	return err;
 }
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int handle_opp(struct hip_common *msg, int action,
+		  const char *opt[], int optc)
+{
+	unsigned int oppmode = 0;
+	int err = 0;
+
+	if (optc != 1) {
+		HIP_ERROR("Incorrect number of arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	
+
+	if (!strcmp("on",opt[0])) {
+		oppmode = 1;
+	} else if (!strcmp("off", opt[0])){
+		oppmode = 0;
+	} else {
+		HIP_ERROR("Invalid argument\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
+				       sizeof(unsigned int));
+	if (err) {
+		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	/* Build the message header */
+	err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+}
+#endif
 
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
@@ -591,7 +646,7 @@ int main(int argc, char *argv[]) {
 	int type_arg, err = 0;
 	long int action, type;
 	struct hip_common *msg;
-
+	HIP_INFO("Hi, we are testing hipconf\n");
 	if (argc < 2) {
 		err = -EINVAL;
 		//  display_usage();
@@ -645,8 +700,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* hipconf new hi does not involve any messages to kernel */
-	if (hip_get_msg_type(msg) == 0)
-		goto skip_msg;
+	if (hip_get_msg_type(msg) == 0){
+	  HIP_INFO("!!!!  new hi does not involve any messages to kernel\n");
+	  goto skip_msg;
+	}
 	
 	/* send msg to hipd */
 	err = hip_send_daemon_info(msg);
@@ -654,6 +711,7 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("sending msg failed\n");
 		goto out_malloc;
 	}
+	HIP_INFO("!!!! msg to hipd sent\n");
 
 skip_msg:
 

@@ -44,14 +44,15 @@
 #define ACTION_MAX 9 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI  1
-#define TYPE_MAP 2
-#define TYPE_RST 3
-#define TYPE_RVS 4
-#define TYPE_BOS 5
-#define TYPE_NAT 6
-#define TYPE_PUZZLE 7
-#define TYPE_MAX 8 /* exclusive */
+#define TYPE_HI     1
+#define TYPE_MAP    2
+#define TYPE_RST    3
+#define TYPE_RVS    4
+#define TYPE_BOS    5
+#define TYPE_PUZZLE 6
+#define TYPE_NAT    7
+#define TYPE_OPP    8
+#define TYPE_MAX    9 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -66,6 +67,7 @@ int handle_rvs(struct hip_common *, int type, const char **opt, int optc);
 int handle_del(struct hip_common *, int type, const char **opt, int optc);
 int handle_nat(struct hip_common *, int type, const char **opt, int optc);
 int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
+int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int get_action(char *action);
 int get_type(char *type);
 

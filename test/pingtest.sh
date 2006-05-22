@@ -23,6 +23,7 @@ for DST_HIT in $DST_HITS
   for SRC_HIT in $SRC_HITS
     do
     echo "--- Round $ROUND ---"
+    ping6 -c 1 -I $SRC_HIT $DST_HIT
     ping6 -c 4 -I $SRC_HIT $DST_HIT
     ROUND=`echo $ROUND + 1|bc`
   done

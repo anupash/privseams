@@ -170,7 +170,6 @@ int hip_csum_send(struct in6_addr *local_addr,
 			 "Could not send the all requested data (%d/%d)\n",
 			 sent, len);
 	}
-
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 

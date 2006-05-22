@@ -17,7 +17,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
 # Checks for libraries.
-AC_PROG_LIBTOOL
+AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 AC_HEADER_SYS_WAIT
@@ -173,6 +173,16 @@ AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=no])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
+fi
+
+AC_ARG_ENABLE(opportunistic,
+             AC_HELP_STRING([--enable-opportunistic],
+                            [HIP opportunistic extensions (default is NO)]),
+             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=no])
+AC_CACHE_CHECK([whether to use opportunistic],
+               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=no])
+if test x"$ac_cv_use_opportunistic" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(opendht,
