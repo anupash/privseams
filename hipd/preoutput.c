@@ -38,6 +38,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if(entry) HIP_DEBUG("**********NAT status %d\n", entry->nat);
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
 		((entry && entry->nat) ||
 		 (src_port != 0 || dst_port != 0))))//Temporary fix 

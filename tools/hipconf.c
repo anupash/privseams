@@ -180,7 +180,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 	       int optc)
 {
 	struct in6_addr hit, ip6;
-	int err;
+	int err=0;
 	int ret;
 	
 	HIP_INFO("action=%d optc=%d\n", action, optc);
@@ -191,7 +191,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 		 "string to address conversion failed\n");
 	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 		 "string to address conversion failed\n");
-
+	
 	/* XX TODO: source HIT selection? */
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
@@ -204,7 +204,6 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
 		 "build hdr failed\n");
-
 out_err:
 	return err;
 

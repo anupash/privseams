@@ -2003,11 +2003,11 @@ void hip_delete_all_sp()
 
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
-				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, ha->peer_udp_port, 0);
 			}
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
-				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, ha->peer_udp_port);
 			}
 		}
 	}
@@ -2189,13 +2189,15 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			hip_hadb_remove_hs(item->spi);
 			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, entry->peer_udp_port, 0);
+				      //AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
 			//for(i = 0; i < item->addresses_n; i++)
 			//  hip_delete_sa(item->spi,
 			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
- 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 0, 0);
+ 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 
+					entry->peer_udp_port, 0);
  			if (item->addresses) {
  				HIP_DEBUG("deleting stored addrlist 0x%p\n",
  					  item->addresses);
@@ -2223,9 +2225,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
 			hip_delete_sa(item->spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			hip_delete_sa(item->new_spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
