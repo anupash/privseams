@@ -12,6 +12,7 @@
 /* INCLUDES */
 #include <string.h>
 #include <gtk/gtk.h>
+#include "debug.h"
 
 
 /******************************************************************************/
@@ -22,8 +23,9 @@ gboolean accept_delete_event(GtkWidget *, GdkEvent *, gpointer);
 void destroy(GtkWidget *, gpointer);
 void tool_destroy(GtkWidget *, gpointer);
 void accept_destroy(GtkWidget *, gpointer);
-void select_list(GtkTreeSelection *, gpointer);
-void select_rlist(GtkTreeSelection *, gpointer);
+gboolean select_list(GtkTreeSelection *, GtkTreeModel *, GtkTreePath *,
+                     gboolean, gpointer);
+gboolean select_rlist(GtkTreeSelection *, gpointer);
 void button_event(GtkWidget *, gpointer);
 
 

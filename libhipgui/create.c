@@ -117,7 +117,8 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-	g_signal_connect(G_OBJECT(select), "changed", G_CALLBACK(select_rlist), (gpointer)"hit list");
+//	g_signal_connect(G_OBJECT(select), "changed", G_CALLBACK(select_rlist), (gpointer)"hit list");
+	gtk_tree_selection_set_select_function(select, select_list, NULL, NULL);
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
@@ -194,48 +195,44 @@ int tooldlg_create_content(void)
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
-	glist = g_list_append(glist, "Accept");
-	glist = g_list_append(glist, "Deny");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Accept");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	w = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(w, "Accept");
+	gtk_combo_box_append_text(w, "Deny");
+	gtk_combo_box_set_active(w, 0);
+	y += 25; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Type:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
-	glist = g_list_append(glist, "Normal");
-	glist = g_list_append(glist, "Lightweight");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Normal");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	w = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(w, "Normal");
+	gtk_combo_box_append_text(w, "Lightweight");
+	gtk_combo_box_set_active(w, 0);
+	y += 25; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Lightweight:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
+	w = gtk_combo_box_new_text();
 	widget_set(ID_TOOLLHITS, w);
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	y += 25; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Local HIT:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
+	w = gtk_combo_box_new_text();
 	widget_set(ID_TOOLRGROUPS, w);
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	y += 25; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Group:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
 	w = gtk_button_new_with_label("Apply");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 10, y);
+	y += 30; gtk_fixed_put(GTK_FIXED(fixed), w, 10, y);
 	gtk_widget_show(w);
 	w = gtk_button_new_with_label("Cancel");
 	gtk_fixed_put(GTK_FIXED(fixed), w, 70, y);

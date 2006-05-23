@@ -88,22 +88,16 @@ int gui_init(void)
 */
 int gui_main(void)
 {
+	/* Variables. */
 	GtkWidget *w;
-	GList *glist = NULL;
 	
 	HIP_DEBUG("Appending remote groups to tool window...\n");
 	w = widget(ID_TOOLRGROUPS);
-	hit_db_enum_rgroups(tooldlg_add_rgroups, &glist);
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	if (glist) g_list_free(glist);
-	glist = NULL;
+	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
 
 	HIP_DEBUG("Appending local HITs to tool window...\n");
 	w = widget(ID_TOOLLHITS);
-	hit_db_enum_locals(tooldlg_add_lhits, &glist);
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	if (glist) g_list_free(glist);
-	glist = NULL;
+	hit_db_enum_locals(tooldlg_add_lhits, w);
 	
 	gtk_main();
 }

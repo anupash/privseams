@@ -237,10 +237,10 @@ void gui_set_info(const char *string, ...)
 int tooldlg_add_rgroups(HIT_Group *group, void *p)
 {
 	/* Variables. */
-	GList **glist = (GList **)p;
+	GtkWidget *w = (GtkWidget *)p;
 	
 	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
-	*glist = g_list_append(*glist, group->name);
+	gtk_combo_box_append_text(w, group->name);
 	
 	return (0);
 }
@@ -255,12 +255,10 @@ int tooldlg_add_rgroups(HIT_Group *group, void *p)
 int tooldlg_add_lhits(HIT_Item *hit, void *p)
 {
 	/* Variables. */
-	GList **glist = (GList **)p;
-	gchar name[64 + 1];
+	GtkWidget *w = (GtkWidget *)p;
 
 	HIP_DEBUG("Appending new local HIT \"%s\" to tool window list.\n", hit->name);
-	strlcpy(name, "moi", 64);
-	*glist = g_list_append(*glist, name);
+	gtk_combo_box_append_text(w, hit->name);
 
 	return (0);
 }

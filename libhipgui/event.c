@@ -86,26 +86,63 @@ void accept_destroy(GtkWidget *widget, gpointer data)
 
 /******************************************************************************/
 /** On list select. */
-void select_list(GtkTreeSelection *selection, gpointer data)
+gboolean select_list(GtkTreeSelection *selection, GtkTreeModel *arg_model,
+                     GtkTreePath *path, gboolean pathsel, gpointer data)
 {
+	/* Variables. */
 	GtkTreeIter iter;
 	GtkTreeModel *model;
-	char *hit;
+	char *str = NULL, *spath;
+	int depth, *indices;
+	
+	if (pathsel != FALSE &&
+	    gtk_tree_selection_path_is_selected(selection, path) != TRUE)
+	{
+	    return (TRUE);
+	}
+
+	depth = gtk_tree_path_get_depth(path);
+	indices = gtk_tree_path_get_indices(path);
+	spath = gtk_tree_path_to_string(path);
+	HIP_DEBUG("Path is: %s\n", spath);
+	g_free(spath);
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
-		gtk_tree_model_get(model, &iter, 0, &hit, -1);
-		printf("You selected a HIT %s\n", hit);
-		g_free(hit);
-		info_mode_local();
+		gtk_tree_model_get(model, &iter, 0, &str, -1);
 	}
+	else str = NULL;
+
+	if (depth == 1)
+	{
+		if (indices[0] == 0) HIP_DEBUG("You selected local HITs group.\n");
+		if (indices[0] == 1) HIP_DEBUG("You selected remote HITs root group.\n");
+	}
+	else if (depth == 2)
+	{
+		if (indices[0] == 0) HIP_DEBUG("You selected a local HIT.\n");
+		if (indices[0] == 1) HIP_DEBUG("You selected remote HIT(s) group.\n");
+	}
+	else if (depth == 3 && indices[0] == 1)
+	{
+		HIP_DEBUG("You selected a remote HIT: %s.\n", str);
+	}
+
+	if (str) g_free(str);
+
+/*	str = gtk_tree_path_to_string(path);
+	if (HIP_DEBUG("You selected a remote group/HIT %s\n", str);
+	g_free(str);
+	info_mode_remote();*/
+
+	return (TRUE);
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
 /** On remote list select. */
-void select_rlist(GtkTreeSelection *selection, gpointer data)
+gboolean select_rlist(GtkTreeSelection *selection, gpointer data)
 {
 	GtkTreeIter iter;
 	GtkTreeModel *model;
@@ -118,6 +155,8 @@ void select_rlist(GtkTreeSelection *selection, gpointer data)
 		g_free(hit);
 		info_mode_remote();
 	}
+	
+	return (TRUE);
 }
 /* END OF FUNCTION */
 
