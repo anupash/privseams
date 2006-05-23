@@ -69,20 +69,21 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_handle_retransmission(hip_ha_t *entry, time_t *current_time)
+int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
 	int err = 0;
-	
+	time_t *now = (time_t*) current_time;	
+
 	if (!entry->hip_msg_retrans.buf)
 		goto out_err;
 	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
- 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *current_time,
+ 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
 		   entry->hip_msg_retrans.count, entry->state);
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
-	if(*current_time - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
+	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 	    	entry->state != HIP_STATE_ESTABLISHED) {
 			HIP_DEBUG("Retransmit packet\n");
