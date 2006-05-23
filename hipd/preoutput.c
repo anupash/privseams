@@ -13,7 +13,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
 	       sizeof(struct in6_addr));
 	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
-
+	time(&entry->hip_msg_retrans.last_transmit);
  out_err:
 	return err;
 }
@@ -151,7 +151,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		}
 	}
 	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
-
+	HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet was lost (simulation)\n");
 		goto out_err;
