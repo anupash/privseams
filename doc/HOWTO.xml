@@ -354,6 +354,13 @@
       node to a different network. The readdressing fails, because either
       node has no way of reaching the other node.
     </para>
+
+    <para>
+	Make sure to add the route for the new address as soon as the new address is 
+	added. If the route is missing, the update packets might not get sent at all. 
+	The daemon waits for a couple of seconds if a transmit of an update fails for 
+	restransmitting it. 
+    </para>
   </chapter>
   <chapter>
     <title> Compiling Java Applications</title>
@@ -620,7 +627,7 @@ using getaddrinfo: ping, ping6, tla, svn.
       3. R has to tell the RVS that it would like to use RVS's services:
     </para>
     <para>
-      responder # hipconf rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
+      responder # hipconf add rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
     </para>
     <para>
       This will establish a HIP SA between the rendezvous server and the responder.
@@ -859,15 +866,16 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>If you have problems in even getting I1 triggered using NAT code
           e.g. with conntest-client-gai (occurred on 2.6.16.5), you may have
-          to specify the source HIT explicitly:
+          to specify the source HIT explicitly. The procedure to initiate a connection
+	  behind NAT is as follows:
     </para>
-     <para>
-      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
-    </para>    
-     <para>
+    <para>
       &nbsp;tools/hipconf hip nat on
     </para>    
-     <para>
+    <para>
+      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+    </para>    
+    <para>
       &nbsp; ping6 -I source_hit dst_hit
     </para>    
     <para>Make sure that the source is the same as in "ip xfrm policy" output.
@@ -876,6 +884,15 @@ using getaddrinfo: ping, ping6, tla, svn.
           automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
           was necessary at the responder (occurred on 2.6.16.5).
     </para>
+    <para>
+	Three cases of mobility of the initiator have been implemented for the NAT code.
+    </para>
+	<para>Mobility from behind NAT to behind the same NAT:
+		For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
+	</para>
+	<para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
+	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
+
   </chapter>
   <chapter>
     <title>HIP User Agent and GUI</title>

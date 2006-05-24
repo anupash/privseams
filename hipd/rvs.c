@@ -377,7 +377,7 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 }
 
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		 struct in6_addr *i1_daddr, HIP_RVA *rva)
+		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
 {
 	struct in6_addr *final_dst = NULL, *original_src;
 	struct hip_common *old_i1, *new_i1;
@@ -416,7 +416,8 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, 0, 0, new_i1, NULL, 0); //Currenlty NULLing the stateless info --Abi
+	err = hip_csum_send(NULL, final_dst, i1_info->src_port, i1_info->dst_port, new_i1, NULL, 0); 
+		//Sending the port info from the I1 from initiator behind NAT to the server --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {
