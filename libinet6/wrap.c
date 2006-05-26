@@ -323,10 +323,10 @@ int socket(int domain, int type, int protocol)
   dlsym_wrapper(name, dp, error);
   assert(dp);  
   socket_fd = socket_dlsym(domain, type, protocol);
-  HIP_DEBUG("Called socket_dlsym, return fd %d\n", socket_fd);
-  HIP_DEBUG(" socket_dlsym dp closing \n");
+  _HIP_DEBUG("Called socket_dlsym, return fd %d\n", socket_fd);
+  _HIP_DEBUG(" socket_dlsym dp closing \n");
   dlclose(dp);
-  HIP_DEBUG(" socket_dlsym dp closed \n");
+  _HIP_DEBUG(" socket_dlsym dp closed \n");
   initialize_db_when_not_exist();
 
   if(socket_fd != -1){
@@ -383,7 +383,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
   
 
-
+  HIP_DEBUG("!!!!!!!!!!! in wrap.c::connect() !!!!!!!!!!!!!!!\n");
   // we are only interested in AF_INET and AFINET6
   if( check_sin6_family_and_socket_type(b, socket_type)){
     errno = util_func_with_sockaddr(b, id, &socket, hit_local);
@@ -395,6 +395,7 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
     hit_ptr = (struct in6_addr *)( &(((struct sockaddr_in6 *)&bindhit)->sin6_addr) );
     HIP_DEBUG_HIT("hit_ptr", hit_ptr);
     if(!hit_is_real_hit(hit_ptr)){
+      HIP_DEBUG_HIT("hit_ptr is not real hit", hit_ptr);
       memcpy(hit_ptr, hit_local, sizeof(hip_hit_t));
       HIP_HEXDUMP("bindhit after ", &bindhit, 110);
       errno = bind(a, &bindhit, sizeof(bindhit));
@@ -404,14 +405,17 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
 	goto out_err;
       }
     }
+    HIP_DEBUG_HIT("hit_ptr is real hit", hit_ptr);
   }
+  HIP_DEBUG("11\n");
   dp = dlopen(SOFILE, RTLD_LAZY);
+  HIP_DEBUG("22\n");
   dlsym_wrapper(name, dp, error);
-
+  HIP_DEBUG("33\n");
   errno = connect_dlsym(socket, b, c);
-  
+  HIP_DEBUG("44\n");
   dlclose(dp);
-
+  HIP_DEBUG("55\n");
   HIP_DEBUG("Called connect_dlsym with err=%d\n", errno);
   
  out_err:
@@ -587,7 +591,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   HIP_HEXDUMP("pktinfo", &pktinfo.pktinfo_in6->ipi6_addr, sizeof(struct in6_addr));
   assert(msg->msg_name);
   is = (struct sockaddr *)(msg->msg_name);
-  _HIP_HEXDUMP("msg->msgname", is, sizeof(struct sockaddr));
+  HIP_HEXDUMP("msg->msgname", is, sizeof(struct sockaddr));
  
   local_hit = get_local_hits_wrapper();
   assert(local_hit);
@@ -711,7 +715,7 @@ int close(int fd)
     HIP_DEBUG("close() pid %d, fd %d\n", pid, fd);
 
     if(!entry){
-      HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!! should not happen, dumping socket db\n");
+      _HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!! should not happen, dumping socket db\n");
       hip_socketdb_dump();
       assert(0);
     }
@@ -726,9 +730,10 @@ int close(int fd)
 		    old_socket, new_socket);	  
 	  errno = close_dlsym(new_socket);
 	  if(errno){
-	    HIP_DEBUG("close new_socket failed errno %d\n", errno);
-	  } else
-	    HIP_DEBUG("close new_socket no error\n");
+	    _HIP_DEBUG("close new_socket failed errno %d\n", errno);
+	  } else{
+	    _HIP_DEBUG("close new_socket no error\n");
+	  }
 	}
       }
     }    

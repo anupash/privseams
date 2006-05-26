@@ -60,9 +60,7 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_bos,
 	handle_puzzle,
 	handle_nat,
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 	handle_opp
-#endif
 };
 
 /**
@@ -594,7 +592,6 @@ int handle_puzzle(struct hip_common *msg, int action,
  out:
 	return err;
 }
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 int handle_opp(struct hip_common *msg, int action,
 		  const char *opt[], int optc)
 {
@@ -636,7 +633,6 @@ int handle_opp(struct hip_common *msg, int action,
  out:
 	return err;
 }
-#endif
 
 /* Parse command line arguments and send the appropiate message to
  * the kernel module

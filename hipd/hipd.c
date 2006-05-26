@@ -69,28 +69,37 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
+int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
 	int err = 0;
+	time_t *now = (time_t*) current_time;	
 
 	if (!entry->hip_msg_retrans.buf)
 		goto out_err;
-
-	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
+	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
+ 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		   entry->hip_msg_retrans.count, entry->state);
+	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-	if (entry->hip_msg_retrans.count > 0 &&
-	    entry->state != HIP_STATE_ESTABLISHED) {
-		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-							   &entry->hip_msg_retrans.daddr,
-								0,0, /*need to correct it*/
-							   entry->hip_msg_retrans.buf,
-							   entry, 0);
-		entry->hip_msg_retrans.count--;
-	} else {
-	  	HIP_FREE(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf = NULL;
-		entry->hip_msg_retrans.count = 0;
+	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
+	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
+		if (entry->hip_msg_retrans.count > 0 &&
+	    	entry->state != HIP_STATE_ESTABLISHED) {
+			HIP_DEBUG("Retransmit packet\n");
+			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
+								   &entry->hip_msg_retrans.daddr,
+									0,0, /*need to correct it*/
+								   entry->hip_msg_retrans.buf,
+								   entry, 0);
+			entry->hip_msg_retrans.count--;
+			/* set the last transmission time to the current time value */
+			time(&entry->hip_msg_retrans.last_transmit);
+		} else {
+		  	HIP_FREE(entry->hip_msg_retrans.buf);
+			entry->hip_msg_retrans.buf = NULL;
+			entry->hip_msg_retrans.count = 0;
+		}
 	}
 
  out_err:
@@ -100,7 +109,9 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 int hip_scan_retransmissions()
 {
 	int err = 0;
-	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, NULL), 0, 
+	time_t current_time;
+	time(&current_time);
+	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, &current_time), 0, 
 		 "for_each_ha err.\n");
  out_err:
 	return err;

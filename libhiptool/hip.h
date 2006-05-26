@@ -148,11 +148,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
 
-#define HIP_SELECT_TIMEOUT          1
+#define HIP_SELECT_TIMEOUT      1
 #define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 10 /* seconds */
+#define HIP_RETRANSMIT_INTERVAL 1 /* seconds */
+/* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+/* wait about n seconds before retransmitting.
+   the actual time is between n and n + RETRANSMIT_INIT seconds */
+#define HIP_RETRANSMIT_WAIT 5 
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -165,7 +169,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 /* Set to 1 if you want to simulate lost output packet */
 #define HIP_SIMULATE_PACKET_LOSS             0
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
@@ -1109,6 +1113,7 @@ struct hip_hadb_state
 
 	struct {
 		int count;
+		time_t last_transmit;
 		struct in6_addr saddr, daddr;
 		struct hip_common *buf;
 	} hip_msg_retrans;

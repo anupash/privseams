@@ -463,12 +463,19 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
   	hip_hit_t nullhit;
 	//hip_hit_t *peer_hit = NULL;
 	hip_ha_t *entry_tmp = NULL;
+	hip_ha_t *pEntry;
 	struct hip_common *message = NULL;
 	int n = 0;
 	int err = 0;
 	
 	HIP_DEBUG_HIT("src_addr=", src_addr);
 	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
+	if(err){
+	  HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
+	  goto out_err;
+	}
+
+
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
 	
 	entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
@@ -492,11 +499,19 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 	  }
 	  
 	  // we should get entry by both real hits
-	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	  HIP_ASSERT(entry);
+	  //	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	  pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	  HIP_ASSERT(pEntry);
+	  if(pEntry)
+	    memcpy(entry, pEntry, sizeof(hip_ha_t));
+
 	  if (entry){
 	    // Bing, we need entry->our_pub and our_priv, so init_us
 	    err= hip_init_us(entry, &entry->hit_our);
+	    if(err){
+	      HIP_ERROR("hip_init_us failed\n");
+	      goto out_err;
+	    }
 	    // old HA has state 2, new HA has state 1, so copy it
 	    entry->state = entry_tmp->state;
 	    
@@ -530,7 +545,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 	
 	hip_opp_block_t *block_entry = NULL;
 	block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
-	HIP_ASSERT(entry);
+	//HIP_ASSERT(entry);
 	message = malloc(HIP_MAX_PACKET);
 	if (!message){
 	  HIP_ERROR("malloc failed\n");
@@ -560,11 +575,26 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 	}
 	
 	// we should still get entry after delete old nullhit HA
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(entry);
-	if (entry)
+	pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	HIP_ASSERT(pEntry);
+	memcpy(entry, pEntry, sizeof(hip_ha_t));
+	
+	if (entry){
 	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
-
+	  if (err == -ENOENT) {
+	    HIP_DEBUG("No agent running, continuing\n");
+	    err = 0;
+	  } else if (err == 0) {
+	    HIP_DEBUG("Agent accepted packet\n");
+	  } else if (err) {
+	    HIP_ERROR("Agent reject packet\n");
+	  }
+	  if(err){
+	    //HIP_ERROR("hip_get_input_filter_default_func_set failed\n");
+	    //goto out_err;
+	  }
+	}
+	
  out_err:
 	return err;
 }
@@ -594,9 +624,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 	// XX TODO BING: ISOLATE TO A SEPARATE FUNCTION
 	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+	  hip_ha_t oppEntry;
+	  entry = &oppEntry;
 	  err = hip_check_hip_ri_opportunistic_mode(msg, src_addr, dst_addr, msg_info, entry);
-	  if(err)
+	  if(err){
+	    HIP_ERROR("hip_check_hip_ri_opportunistic_mode failed\n");
+	    HIP_ASSERT(0);
 	    goto out_err;
+	  }
 #endif	  
 	} // end else if(type == HIP_R1)
 	else
@@ -672,6 +707,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_R1:
 	  	// state
 	  	HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
+		HIP_ASSERT(entry);
 		HIP_IFCS(entry,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
