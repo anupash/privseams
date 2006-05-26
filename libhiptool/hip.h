@@ -167,7 +167,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             1
+#define HIP_SIMULATE_PACKET_LOSS             0
  /* Packet loss probability in percents */
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
