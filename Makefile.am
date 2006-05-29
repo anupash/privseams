@@ -17,10 +17,3 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
-
-dist-hook:
-	rm -rf `find $(distdir) -name '.arch-ids'`
-	rm -rf `find $(distdir) -name .arch-inventory`
-	rm -rf `find $(distdir) -name ",,*"`
-	rm -rf `find $(distdir) -name .deps`
-

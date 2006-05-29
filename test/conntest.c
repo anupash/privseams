@@ -106,16 +106,17 @@ int main_server(int proto, int port)
 	while(1) {
     
 		if (proto == IPPROTO_TCP) {
-			peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
+		  peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
 			if (peer < 0) {
 				perror("accept");
 				exit(2);
 			}
-			//fprintf(stderr, "accept %s\n", inet_ntop(AF_INET6, &peeraddr.sin6_addr, addrstr, sizeof(addrstr)));
+			_HIP_HEXDUMP("!!!! peer addr",&peeraddr.sin6_addr, sizeof(struct sockaddr));
+			fprintf(stderr, "accept %s\n", inet_ntop(AF_INET6, &peeraddr.sin6_addr, addrstr, sizeof(addrstr)));
       
 			while((recvnum = recv(peer, mylovemostdata, sizeof(mylovemostdata), 0)) > 0 ) {
 				mylovemostdata[recvnum] = '\0';
-				printf("%s", mylovemostdata);
+				printf("mylovemostdate %s", mylovemostdata);
 				fflush(stdout);
 				if (recvnum == 0) {
 					close(peer);
@@ -128,6 +129,7 @@ int main_server(int proto, int port)
 					perror("send");
 					exit(2);
 				}
+				printf("mylovemostdate send back\n");
 			}
 		} else { /* UDP */
 			peerlen = sizeof(struct sockaddr_in6);
@@ -172,6 +174,7 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
 	FILE *fp = NULL;
+
 	if (filename)
 		if ((fp = fopen(filename, "a")) == NULL) {
 			HIP_ERROR("Error opening file\n");
@@ -192,26 +195,66 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 			printf("socket creation failed\n");
 			goto out_err;
 		}
+		HIP_HEXDUMP("before ai->ai_addr 110\n", ai->ai_addr, 110);
+		HIP_HEXDUMP("before ai->ai_addr sockaddr\n", ai->ai_addr, sizeof(struct sockaddr));
+		HIP_HEXDUMP("before ai->ai_addr sockaddr_in6\n", ai->ai_addr, sizeof(struct sockaddr_in6));
 
+	       	HIP_HEXDUMP("before ai_flags\n", &ai->ai_flags, 8);
+		HIP_HEXDUMP("before ai_family\n", &ai->ai_family, sizeof(int));
+		HIP_HEXDUMP("before ai_socktype\n", &ai->ai_socktype, sizeof(int));
+		HIP_HEXDUMP("before ai_protocol\n", &ai->ai_protocol, sizeof(int));
+		HIP_HEXDUMP("before ai_addrlen\n", &ai->ai_addrlen, sizeof(size_t));
+		if(ai->ai_canonname)
+		  HIP_HEXDUMP("before ai_canonname\n",(char*)ai->ai_canonname, 64);
+				
+		HIP_DEBUG("ai_flags %d\n",ai->ai_flags );
+		HIP_DEBUG("ai_family %d\n",ai->ai_family); 
+		HIP_DEBUG("ai_socktype %d\n",ai->ai_socktype); 
+		HIP_DEBUG("ai_protocol%d\n",ai->ai_protocol); 
+		HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
+		HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
+		HIP_DEBUG("ai->ai_addr %x\n", *ai->ai_addr); 
+		/*
+		sin6->sin6_addr.s6_addr[0] = (0x11);
+		sin6->sin6_addr.s6_addr[1] = (0x59);
+		sin6->sin6_addr.s6_addr[2] = (0x01);
+		sin6->sin6_addr.s6_addr[3] = (0xb5);
+		sin6->sin6_addr.s6_addr[4] = (0xa6);
+		sin6->sin6_addr.s6_addr[5] = (0x53);
+		sin6->sin6_addr.s6_addr[6] = (0xdb);
+		sin6->sin6_addr.s6_addr[7] = (0x63);
+		sin6->sin6_addr.s6_addr[8] = (0x41);
+		sin6->sin6_addr.s6_addr[9] = (0xa2);
+		sin6->sin6_addr.s6_addr[10] = (0xcd);
+		sin6->sin6_addr.s6_addr[11] = (0xe4);
+		sin6->sin6_addr.s6_addr[12] = (0xbf);
+		sin6->sin6_addr.s6_addr[13] = (0x5b);
+		sin6->sin6_addr.s6_addr[14] = (0xac);
+		sin6->sin6_addr.s6_addr[15] = (0x8e);
+		HIP_HEXDUMP("after ai->ai_addr\n", ai->ai_addr, 110);
+		 */
 		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
 			       sizeof(addr_str))) {
 			perror("inet_ntop\n");
 			goto out_err;
 		}
-
+		
 		if ((sin6->sin6_addr.s6_addr32[0] | sin6->sin6_addr.s6_addr32[1] | 
 		     sin6->sin6_addr.s6_addr32[2] | sin6->sin6_addr.s6_addr32[3] ) != 0) {
 			
 			printf("Trying to connect to %s\n", addr_str);
 			gettimeofday(&stats_before, NULL);
+			// Bing, failed with phit
 			e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-			
+			printf("After call conntest.c: connect to %s\n", addr_str);
+
 			gettimeofday(&stats_after, NULL);
 			stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 			stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
 			
-			//printf("connect ret=%d errno=%d\n", e, errno);
+			printf("connect ret=%d errno=%d\n", e, errno);
 			if (e < 0) {
+			  	strerror(errno);
 				close(sock);
 				sock = 0;
 				printf("trying next\n");
@@ -291,10 +334,11 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
+	HIP_INFO("!!!! conntest.c Connecting...\n");
 	sock = hip_connect_func(proto, res, NULL);
 	if (!sock)
 		goto out_err;
-
+	HIP_INFO("!!!! conntest.c got sock\n");
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;

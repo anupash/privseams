@@ -2,7 +2,6 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
-
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
@@ -285,6 +284,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 	
 	_HIP_DEBUG("created a new sdb entry\n");
+	//ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
@@ -304,7 +304,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		err = -2;
 		goto out_err;
 	}
-		
+
 	/*
 	 * Create a security policy for triggering base exchange.
 	 *
@@ -348,7 +348,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
-
+	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! add_peer_info=", peer_hit);
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 
@@ -387,6 +387,8 @@ int hip_add_peer_map(const struct hip_common *input)
 	}
 
 	err = hip_hadb_add_peer_info(hit, ip);
+	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
+	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;
@@ -757,7 +759,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 	}
 
 	if (!ipv6_addr_any(addr)) {
-		hip_hadb_delete_inbound_spi(ha, 0);
+	  	hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
@@ -2001,11 +2003,11 @@ void hip_delete_all_sp()
 
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
-				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, ha->peer_udp_port, 0);
 			}
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
-				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, ha->peer_udp_port);
 			}
 		}
 	}
@@ -2175,22 +2177,27 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes locked entry */
 	HIP_DEBUG("SPI=0x%x\n", spi);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if (!spi || item->spi == spi) {
-			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
- 				  "inbound list, item=0x%p addresses=0x%p\n",
- 				  item->spi, item->new_spi, item, item->addresses);
-			HIP_ERROR("remove SPI from HIT-SPI HT\n");
+	int counter = 0;
+
+
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list){ 
+	  	if (!spi || item->spi == spi) {
+		  	HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
+				  "inbound list, item=0x%p addresses=0x%p\n",
+				  item->spi, item->new_spi, item, item->addresses);
+		  	HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
 			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, entry->peer_udp_port, 0);
+				      //AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
 			//for(i = 0; i < item->addresses_n; i++)
 			//  hip_delete_sa(item->spi,
 			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
- 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 0, 0);
+ 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 
+					entry->peer_udp_port, 0);
  			if (item->addresses) {
  				HIP_DEBUG("deleting stored addrlist 0x%p\n",
  					  item->addresses);
@@ -2199,6 +2206,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			list_del(&item->list);
 			HIP_FREE(item);
 			break;
+			
 		}
         }
 }
@@ -2217,9 +2225,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
 			hip_delete_sa(item->spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			hip_delete_sa(item->new_spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
@@ -2279,7 +2287,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		//HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
 		{
 			_HIP_DEBUG("List_for_each_entry_safe\n");

@@ -34,6 +34,7 @@ sbin_PROGRAMS = modtest
 bin_PROGRAMS += cookietest
 bin_PROGRAMS += keygentest
 bin_PROGRAMS += sha1ime_test
+#bin_PROGRAMS += hipconf
 
 #sbin_SCRIPTS = hipsetup
 
@@ -52,6 +53,7 @@ keygentest_SOURCES = keygentest.c
 sha1ime_test_SOURCES = sha1ime_test.c
 #second_test_SOURCES = second_test.c hipconf.c misc_install.c conntest.c
 modtest_SOURCES = modtest.c
+#hipconf_SOURCE = hipconf.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

@@ -1056,7 +1056,7 @@ int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
                 rta = RTA_NEXT(rta,len);
         }
         if (len)
-                HIP_ERROR("!!!Deficit len %d, rta_len=%d\n",
+                HIP_ERROR("Deficit len %d, rta_len=%d\n",
 			  len, rta->rta_len);
         return 0;
 }
@@ -1131,7 +1131,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                         HIP_ERROR("Truncated message\n");
                                         return -1;
                                 }
-                                HIP_ERROR("!!!malformed message: len=%d\n", len);
+                                HIP_ERROR("malformed message: len=%d\n", len);
                                 return -1;
                         }
 
@@ -1176,7 +1176,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         continue;
                 }
                 if (status) {
-                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        HIP_ERROR("Remnant of size %d\n", status);
                         return -1;
                 }
         }
@@ -1257,7 +1257,7 @@ skip_it:
                         continue;
                 }
                 if (status) {
-                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        HIP_ERROR("Remnant of size %d\n", status);
                         return -1;
                 }
         }

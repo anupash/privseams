@@ -4,6 +4,7 @@
  * 
  * Authors:
  * - Miika Komu <miika@iki.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * TODO
  * - asynchronous term should be replaced with a better one
@@ -18,7 +19,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	int bytes = 0, err = 0;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
-	struct hip_common *hip_hdr;
+	struct hip_common *hip_hdr = NULL;
 	
 	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc failed\n");
 	
@@ -40,13 +41,84 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	return bytes;
 }
 
+int hip_send_recv_daemon_info(struct hip_common *msg) {
+	int err = 0, n, len, hip_user_sock = 0;
+	int hip_agent_sock = 0;
+	socklen_t alen = 0;
+	struct sockaddr_un app_addr, daemon_addr;
+	char *app_name;
+	
+	/* Create and bind daemon socket. */
+	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (hip_user_sock < 0)
+	{
+		HIP_ERROR("Failed to create socket.\n");
+		err = -1;
+		goto out_err;
+	}
+
+	HIP_IFEL(!(app_name = tmpnam(NULL)), -1, "app_name\n");
+	_HIP_DEBUG("app_name: %s\n", app_name);
+	//HIP_IFEL((creat(app_name, S_IRWXO) < 0), -1, "creat\n");
+
+	bzero(&app_addr, sizeof(app_addr));
+	app_addr.sun_family = AF_UNIX;
+	strcpy(app_addr.sun_path, app_name);
+
+	_HIP_HEXDUMP("app_addr", &app_addr,  sizeof(app_addr));
+
+	bzero(&daemon_addr, sizeof(daemon_addr));
+	daemon_addr.sun_family = AF_UNIX;
+	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
+	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
+
+	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
+		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
+		 -1, "app_addr bind failed");
+
+	n = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+		   0,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+
+	if (n < 0) {
+		HIP_ERROR("Could not send message to daemon.\n");
+		err = -1;
+		goto out_err;
+	}
+
+	HIP_DEBUG("waiting to receive deamon info\n");
+	//recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
+	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	     0,(struct sockaddr *)&daemon_addr, &alen);
+	
+	if (n < 0) {
+		HIP_ERROR("Could not receive message from daemon.\n");
+		err = -1;
+		goto out_err;
+	}
+	else {
+	  HIP_DEBUG("%d bytes received\n", n); 
+	}
+
+ out_err:
+	if (hip_user_sock)
+		close(hip_user_sock);
+	return err;
+}
 
 int hip_send_daemon_info(const struct hip_common *msg) {
-	int err = 0, n, len, hip_user_sock = 0;
+  	// return hip_send_recv_daemon_info(msg);
+  
+  	// do not call send_recv function here,
+  	// since this function is called at several other places
+	// TODO: copy send_recv function's recvfrom to hip_recv_daemon_info()
+
+  	int err = 0, n, len, hip_user_sock = 0;
 	struct sockaddr_un user_addr;
 	socklen_t alen;
 	
-	/* Create and bind daemon socket. */
+	// Create and bind daemon socket.
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
 	{
@@ -80,6 +152,47 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	/* XX TODO: required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
+  	//hip_send_daemon_info(msg);
+	
+
+}
+
+int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
+			      struct sockaddr_un *saddr)
+{
+	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total, len;
+	
+	len = sizeof(*saddr);
+	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
+
+	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
+		 "recv peek failed\n");
+	
+#if 0
+	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, hdr_size, MSG_PEEK,
+				    (struct sockaddr *)saddr,
+				    &len)) != hdr_size), -1,
+		 "recv peek\n");
+	
+	_HIP_DEBUG("read_user_control_msg recv peek len=%d\n", len);
+	_HIP_HEXDUMP("peek saddr ",  saddr, sizeof(struct sockaddr_un));
+
+	total = hip_get_msg_total_len(hip_msg);
+#endif
+
+	_HIP_DEBUG("msg total length = %d\n", total);
+
+	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
+				    &len)) != total), -1, "recv\n");
+
+	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
+	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
+	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
+ out_err:
+	if (bytes < 0 || err)
+		HIP_PERROR("perror: ");
+
+	return err;
 }
 
 /**

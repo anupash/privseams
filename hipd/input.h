@@ -23,13 +23,20 @@
 #include "rvs.h"
 #include "netdev.h"
 
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer,
+					      const hip_hit_t *hit_our);
+int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
+					struct in6_addr *src_addr,
+					struct in6_addr *dst_addr,
+					struct hip_stateless_info *msg_info,
+					hip_ha_t *entry);
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
 			       struct hip_stateless_info *msg_info);
-
 			  
 /* functions for receiving hip control messages*/ 
 			       
@@ -64,7 +71,7 @@ int hip_receive_notify(struct hip_common *,
 		       struct in6_addr *, 
 		       struct in6_addr *,
 		       hip_ha_t*);
-		       
+		      
 int hip_receive_bos(struct hip_common *,
 		    struct in6_addr *,
 		    struct in6_addr *,
