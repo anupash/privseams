@@ -15,6 +15,13 @@
   <chapter>
     <title>Software Requirements</title>
     <para>
+     It is recommended that you get the latest source and compile it yourself.
+     As an alternative, you may download frozen, binary releases of the kernel
+     from http://hipl.hiit.fi/hipl/release/. However, before reporting any
+     bugs, please have a go with the latest source instead of the binaries
+     because the bug may already have been resolved upstream.
+    </para>
+    <para>
       As the first requirement, you also need know the basics on Linux kernel
       compilation and usage. Refer to linux/README for further instructions.
     </para>
