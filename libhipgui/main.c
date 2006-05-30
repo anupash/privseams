@@ -94,7 +94,7 @@ int gui_main(void)
 	HIP_DEBUG("Appending remote groups to tool window...\n");
 	w = widget(ID_TOOLRGROUPS);
 	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
-
+	
 	HIP_DEBUG("Appending local HITs to tool window...\n");
 	w = widget(ID_TOOLLHITS);
 	hit_db_enum_locals(tooldlg_add_lhits, w);
