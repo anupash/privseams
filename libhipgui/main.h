@@ -24,6 +24,7 @@ void gui_quit(void);
 void *gui_get_window(void);
 void *gui_get_toolwindow(void);
 void *gui_get_acceptdialog(void);
+void *gui_get_rundialog(void);
 
 
 #endif /* END OF HEADER FILE */

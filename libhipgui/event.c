@@ -170,6 +170,55 @@ void button_event(GtkWidget *widget, gpointer value)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/** When toolbar button is pressed. */
+void toolbar_event(GtkWidget *warg, gpointer data)
+{
+	/* Variables. */
+	static HIT_Item hit;
+	GtkWidget *dialog;
+	int id = (int)data;
+	pthread_t pt;
+	int err;
+	char *ps;
+
+	switch (id)
+	{
+	case ID_TOOLBAR_RUN:
+		HIP_DEBUG("Toolbar: Run application.\n");
+		dialog = gui_get_rundialog();
+		gtk_widget_show(dialog);
+		gtk_widget_grab_focus(widget(ID_RUN_COMMAND));
+		err = gtk_dialog_run(GTK_DIALOG(dialog));
+		if (err == GTK_RESPONSE_OK)
+		{
+			ps = gtk_entry_get_text(widget(ID_RUN_COMMAND));
+			if (strlen(ps) > 0) err = fork();
+			else err = -1;
+			
+			if (err < 0);
+			else if (err > 0);
+			else if(err == 0)
+			{
+				HIP_DEBUG("Exec new application.\n");
+				err = execlp(ps, "", (char *)0);
+				if (err != 0) exit(1);
+			}
+		}
+		gtk_widget_hide(dialog);
+		break;
+
+	case ID_TOOLBAR_NEWHIT:
+		HIP_DEBUG("Toolbar: Fake popup for new HIT.\n");
+		memset(&hit, 0, sizeof(HIT_Item));
+		strcpy(hit.name, "Fake hit popup");
+		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
+		break;
+	}
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

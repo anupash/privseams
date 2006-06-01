@@ -11,9 +11,23 @@
 /******************************************************************************/
 /* INCLUDES */
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 #include <gtk/gtk.h>
 #include "debug.h"
+#include "hit_db.h"
+#include "manage.h"
 
+
+/******************************************************************************/
+/* DEFINES */
+enum TOOLBAR_IDS
+{
+	ID_TOOLBAR_RUN = 0,
+	ID_TOOLBAR_NEWHIT,
+
+	TOOLBAR_IDS_N
+};
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
@@ -27,6 +41,7 @@ gboolean select_list(GtkTreeSelection *, GtkTreeModel *, GtkTreePath *,
                      gboolean, gpointer);
 gboolean select_rlist(GtkTreeSelection *, gpointer);
 void button_event(GtkWidget *, gpointer);
+void toolbar_event(GtkWidget *, gpointer);
 
 
 #endif /* END OF HEADER FILE */

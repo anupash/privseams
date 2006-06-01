@@ -168,15 +168,22 @@ void gui_terminate(void)
 int gui_ask_new_hit(HIT_Item *hit)
 {
 	/* Variables. */
+	static int in_use = 0;
 	GtkDialog *dialog = gui_get_acceptdialog();
 	char phit[128], *ps;
 	int err = 0;
 	
+	while (in_use != 0) usleep(100 * 1000);
+	in_use = 1;
+
 	gdk_threads_enter();
 	gtk_widget_show(dialog);
 	print_hit_to_buffer(phit, &hit->rhit);
 	gtk_label_set_text(widget(ID_AD_NEWHIT), phit);
-
+	gtk_entry_set_text(widget(ID_AD_NAME), hit->name);
+	gtk_combo_box_set_active(widget(ID_AD_RGROUPS), 0);
+	gtk_combo_box_set_active(widget(ID_AD_LHITS), 0);
+	
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch (err)
 	{
@@ -192,12 +199,16 @@ int gui_ask_new_hit(HIT_Item *hit)
 	if (err = 1) hit->type = HIT_DB_TYPE_ACCEPT;
 	else hit->type = HIT_DB_TYPE_DENY;
 
-	ps = gtk_combo_box_get_active_text(widget(ID_AD_GROUP));
-	HIP_DEBUG("%s.\n", ps);
+	ps = gtk_combo_box_get_active_text(widget(ID_AD_RGROUPS));
+	strcpy(hit->group, ps);
+	ps = gtk_entry_get_text(widget(ID_AD_NAME));
+	strcpy(hit->name, ps);
+	HIP_DEBUG("New hit with parameters: %s, %s.\n", hit->name, hit->group);
 
 	gtk_widget_hide(dialog);
 	gdk_threads_leave();
-	
+	in_use = 0;
+
 	return (err);
 }
 /* END OF FUNCTION */
@@ -239,7 +250,7 @@ int tooldlg_add_rgroups(HIT_Group *group, void *p)
 	/* Variables. */
 	GtkWidget *w = (GtkWidget *)p;
 	
-	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
+//	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
 	gtk_combo_box_append_text(w, group->name);
 	
 	return (0);
@@ -257,7 +268,43 @@ int tooldlg_add_lhits(HIT_Item *hit, void *p)
 	/* Variables. */
 	GtkWidget *w = (GtkWidget *)p;
 
-	HIP_DEBUG("Appending new local HIT \"%s\" to tool window list.\n", hit->name);
+//	HIP_DEBUG("Appending new local HIT \"%s\" to tool window list.\n", hit->name);
+	gtk_combo_box_append_text(w, hit->name);
+
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add remote groups to ask dialog.
+	This is a enumeration callback function.
+*/
+int askdlg_add_rgroups(HIT_Group *group, void *p)
+{
+	/* Variables. */
+	GtkWidget *w = (GtkWidget *)p;
+	
+//	HIP_DEBUG("Appending new remote group \"%s\" to ask window list.\n", group->name);
+	gtk_combo_box_append_text(w, group->name);
+	
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add local HITs to ask dialog.
+	This is a enumeration callback function.
+*/
+int askdlg_add_lhits(HIT_Item *hit, void *p)
+{
+	/* Variables. */
+	GtkWidget *w = (GtkWidget *)p;
+
+//	HIP_DEBUG("Appending new local HIT \"%s\" to ask window list.\n", hit->name);
 	gtk_combo_box_append_text(w, hit->name);
 
 	return (0);

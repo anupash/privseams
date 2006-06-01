@@ -35,9 +35,9 @@ int widget_init(void)
 	/* Variables. */
 	int err = 0;
 
-	gui_widgets = (void **)malloc(sizeof(void *) * IDS_N);
+	gui_widgets = (void **)malloc(sizeof(void *) * WIDGET_IDS_N);
 	HIP_IFEL(gui_widgets == NULL, -1, "Failed to allocate widgets pointers.\n");
-	memset(gui_widgets, sizeof(GtkWidget *) * IDS_N, 0);
+	memset(gui_widgets, sizeof(GtkWidget *) * WIDGET_IDS_N, 0);
 
 out_err:
 	return (err);
@@ -65,7 +65,7 @@ void widget_quit(void)
 */
 void widget_set(int n, void *p)
 {
-	if (n >= 0 && n < IDS_N) gui_widgets[n] = p;
+	if (n >= 0 && n < WIDGET_IDS_N) gui_widgets[n] = p;
 }
 /* END OF FUNCTION */
 
@@ -79,7 +79,7 @@ void widget_set(int n, void *p)
 */
 void *widget(int n)
 {
-	if (n < 0 || n >= IDS_N) return (NULL);
+	if (n < 0 || n >= WIDGET_IDS_N) return (NULL);
 	return (gui_widgets[n]);
 }
 /* END OF FUNCTION */

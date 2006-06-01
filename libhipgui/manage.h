@@ -34,6 +34,8 @@ void gui_set_info(const char *, ...);
 
 int tooldlg_add_rgroups(HIT_Group *, void *);
 int tooldlg_add_lhits(HIT_Item *, void *);
+int askdlg_add_rgroups(HIT_Group *, void *);
+int askdlg_add_lhits(HIT_Item *, void *);
 
 void info_mode_none(void);
 void info_mode_local(void);

@@ -13,11 +13,13 @@
 /* DEFINES */
 enum WIDGET_IDS
 {
+	/* Main window IDs. */
 	ID_RLISTMODEL = 0,
 	ID_LLISTMODEL,
 	ID_RLISTVIEW,
 	ID_LLISTVIEW,
 	ID_STATUSBAR,
+	ID_TOOLBAR,
 
 	/* Tool dialog IDs. */
 	ID_INFOLOCAL,
@@ -28,10 +30,14 @@ enum WIDGET_IDS
 	
 	/* Accept dialog IDs. */
 	ID_AD_NEWHIT,
-	ID_AD_GROUP,
-	ID_AD_LHIT,
+	ID_AD_RGROUPS,
+	ID_AD_LHITS,
+	ID_AD_NAME,
 
-	IDS_N,
+	/* Run dialog IDs. */
+	ID_RUN_COMMAND,
+
+	WIDGET_IDS_N
 };
 
 

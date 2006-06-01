@@ -19,6 +19,7 @@
 int main_create_content(void);
 int tooldlg_create_content(void);
 int acceptdlg_create_content(void);
+int rundlg_create_content(void);
 
 
 #endif /* END OF HEADER FILE */

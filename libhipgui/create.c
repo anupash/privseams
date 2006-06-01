@@ -40,6 +40,8 @@ int main_create_content(void)
 	GtkWidget *label, *label2;
 	GtkTreeStore *model;
 	GtkWidget *list;
+	GtkWidget *toolbar;
+	GtkWidget *iconw;
 
     GtkCellRenderer *cell;
     GtkTreeViewColumn *column;
@@ -57,6 +59,25 @@ int main_create_content(void)
 	gtk_container_add(GTK_CONTAINER(window), pane);
 	gtk_widget_show(pane);
 
+	/* Create toolbar. */
+	toolbar = gtk_toolbar_new();
+	gtk_box_pack_start(GTK_BOX(pane), toolbar, FALSE, FALSE, 0);
+	gtk_widget_show(toolbar);
+	widget_set(ID_TOOLBAR, toolbar);
+	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_TEXT);
+
+	/* Create toolbar contents. */
+	iconw = gtk_image_new_from_file("run.xpm");
+	w = gtk_toolbar_append_item(GTK_TOOLBAR(toolbar), "Run", "Run new process",
+	                            "Private", iconw,
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
+	gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
+	iconw = gtk_image_new_from_file("run.xpm");
+	w = gtk_toolbar_append_item(GTK_TOOLBAR(toolbar), "New HIT",
+	                            "Popup new HIT dialog for debugging",
+	                            "Private", iconw,
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
+
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
@@ -65,7 +86,7 @@ int main_create_content(void)
 
 	/* Create status bar. */
 	w = gtk_statusbar_new();
-	gtk_box_pack_start(GTK_BOX(pane), w, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(pane), w, FALSE, FALSE, 0);
 	gtk_widget_show(w);
 	widget_set(ID_STATUSBAR, w);
 
@@ -296,20 +317,20 @@ int acceptdlg_create_content(void)
 	GtkWidget *fixed = NULL;
 	GtkWidget *label = NULL;
 	GtkWidget *w = NULL;
-	GList *glist = NULL;
 	int y;
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
 
 	/* Create main widget for adding subwidgets to tool window. */
 	fixed = gtk_fixed_new();
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), fixed, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), fixed, TRUE, TRUE, 3);
 	gtk_widget_show(fixed);
 
 	/* Create local HIT info. */
 	y = 0;
 
 	w = gtk_label_new("<empty>");
+	gtk_widget_set_size_request(w, 200, -1);
 	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	widget_set(ID_AD_NEWHIT, w);
@@ -317,45 +338,83 @@ int acceptdlg_create_content(void)
 	y += 0; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
-	widget_set(ID_AD_GROUP, w);
-//	glist = g_list_append(glist, "Services");
-	glist = g_list_append(glist, "Games");
-	glist = g_list_append(glist, "Friends");
-	glist = g_list_append(glist, "Misc");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Services");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	w = gtk_entry_new();
+	gtk_entry_set_text(w, "<New HIT name>");
+	gtk_widget_set_size_request(w, 200, -1);
+	y += 26; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	gtk_widget_show(w);
+	widget_set(ID_AD_NAME, w);
+	w = gtk_label_new("HIT name:");
+	y += 0; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
+	gtk_widget_show(w);
+
+	w = gtk_combo_box_new_text();
+	widget_set(ID_AD_RGROUPS, w);
+	gtk_widget_set_size_request(w, 200, -1);
+	y += 26; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Group:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
-	widget_set(ID_AD_LHIT, w);
-	glist = g_list_append(glist, "Primary");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Primary");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	w = gtk_combo_box_new_text();
+	widget_set(ID_AD_LHITS, w);
+	gtk_widget_set_size_request(w, 200, -1);
+	y += 26; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Local HIT:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
-	w = gtk_combo_new();
-	glist = g_list_append(glist, "Normal");
-	glist = g_list_append(glist, "Lightweight");
-	gtk_combo_set_popdown_strings(GTK_COMBO(w), glist);
-	g_list_free(glist); glist = NULL;
-	gtk_entry_set_text(w, "Normal");
-	y += 23; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
+	w = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(w, "Normal");
+	gtk_combo_box_append_text(w, "Lightweight");
+	gtk_combo_box_set_active(w, 0);
+	gtk_widget_set_size_request(w, 200, -1);
+	y += 26; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);
 	gtk_widget_show(w);
 	w = gtk_label_new("Lightweight:");
 	y += 4; gtk_fixed_put(GTK_FIXED(fixed), w, 0, y);
 	gtk_widget_show(w);
 
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Create run dialog contents.
+	
+	@return 0 if success, -1 on errors.
+*/
+int rundlg_create_content(void)
+{
+	/* Variables. */
+	GtkWidget *window = (GtkWidget *)gui_get_rundialog();
+	GtkWidget *hb = NULL;
+	GtkWidget *w = NULL;
+
+	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
+
+	/* Create main widget for adding subwidgets to window. */
+	hb = gtk_hbox_new(TRUE, 5);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), hb, TRUE, TRUE, 3);
+	gtk_widget_show(hb);
+
+	/* Create command input widget. */
+	w = gtk_entry_new();
+	widget_set(ID_RUN_COMMAND, w);
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 3);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+	
+	/* Add buttons to dialog. */
+	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
+	gtk_widget_grab_default(w);
+	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
+	
 	return (0);
 }
 /* END OF FUNCTION */
