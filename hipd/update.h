@@ -12,6 +12,8 @@
 #  define IPV6_ADDR_LINKLOCAL     0x0020U
 #  define IPV6_ADDR_SITELOCAL     0x0040U
 
+extern int hip_nat_status;
+
 int hip_receive_update(struct 	hip_common *msg,
 		       struct 	in6_addr *update_saddr,
 		       struct 	in6_addr *update_daddr,

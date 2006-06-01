@@ -27,7 +27,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
-
+#include "debug.h"
 int create_socket(int proto) {
 	int fd;
 
@@ -94,11 +94,13 @@ int main(int argc,char *argv[]) {
 	peeraddr.sin6_family = AF_INET6;
 	peeraddr.sin6_port = htons(port);
 	peeraddr.sin6_flowinfo = 0;
+	_HIP_HEXDUMP("peeraddr before addr assignment ", &peeraddr, sizeof(peeraddr));
+	_HIP_DEBUG("responder's addr %s\n", argv[1]);
 	if(inet_pton(AF_INET6, argv[1], (struct in6_addr *) &peeraddr.sin6_addr) < 0) {
 		perror("inet_pton");
 		exit(1);
 	}
-
+	_HIP_HEXDUMP("peeraddr after addr assignment ", &peeraddr, sizeof(peeraddr));
 	// data from stdin to buffer
 	bzero(receiveddata, IP_MAXPACKET);
 	bzero(mylovemostdata, IP_MAXPACKET);
@@ -107,7 +109,7 @@ int main(int argc,char *argv[]) {
 		mylovemostdata[datalen] = (unsigned char) ch;
 		datalen++;
 	}
-	//fprintf(stderr, "datalen=%d\n", datalen);
+	fprintf(stderr, "datalen=%d\n", datalen);
 
 
 	/* send and receive data */
@@ -125,8 +127,11 @@ int main(int argc,char *argv[]) {
 		while((datasent < datalen) || (datareceived < datalen)) { // lähetä kaikki
 
 			if (datasent < datalen) {
-				sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
-				if (sendnum < 0) {
+			  sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
+			  //sendnum = sendto(sock, mylovemostdata+datasent, datalen-datasent, 0,
+			  //	   (struct sockaddr *) &peeraddr, sizeof(peeraddr));
+			 
+			  if (sendnum < 0) {
 					perror("send");
 					printf("FAIL\n");
 					exit(2);
@@ -136,7 +141,8 @@ int main(int argc,char *argv[]) {
 			}
 
 			if (datareceived < datalen) {
-				recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
+			  // assert(0);
+			  recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
 				if (recvnum <= 0) {
 					perror("recv");
 					exit(2);

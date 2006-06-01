@@ -21,6 +21,7 @@ int hip_nat_sock_udp_data = 0;  /* For NAT traversal of IPv4 packets for Data tr
 
 int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
 
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
@@ -35,6 +36,13 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+unsigned int opportunistic_mode = 1;
+unsigned int oppdb_exist = 0;
+extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+						const hip_hit_t *hit_our);
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -44,6 +52,7 @@ struct sockaddr_un hip_agent_addr;
 int address_count;
 struct list_head addresses;
 
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 float opendht_counter = OPENDHT_REFRESH_INIT;
@@ -60,27 +69,37 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
+int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 {
 	int err = 0;
+	time_t *now = (time_t*) current_time;	
 
 	if (!entry->hip_msg_retrans.buf)
 		goto out_err;
-
-	HIP_DEBUG("%d %d\n", entry->hip_msg_retrans.count, entry->state);
-
-	if (entry->hip_msg_retrans.count > 0 &&
-	    entry->state != HIP_STATE_ESTABLISHED) {
-		err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-							   &entry->hip_msg_retrans.daddr,
-								0,0, /*need to correct it*/
-							   entry->hip_msg_retrans.buf,
-							   entry, 0);
-		entry->hip_msg_retrans.count--;
-	} else {
-		HIP_FREE(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf = NULL;
-		entry->hip_msg_retrans.count = 0;
+	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
+ 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		   entry->hip_msg_retrans.count, entry->state);
+	
+	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
+	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
+	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
+	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
+		if (entry->hip_msg_retrans.count > 0 &&
+	    	entry->state != HIP_STATE_ESTABLISHED) {
+			HIP_DEBUG("Retransmit packet\n");
+			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
+								   &entry->hip_msg_retrans.daddr,
+									0,0, /*need to correct it*/
+								   entry->hip_msg_retrans.buf,
+								   entry, 0);
+			entry->hip_msg_retrans.count--;
+			/* set the last transmission time to the current time value */
+			time(&entry->hip_msg_retrans.last_transmit);
+		} else {
+		  	HIP_FREE(entry->hip_msg_retrans.buf);
+			entry->hip_msg_retrans.buf = NULL;
+			entry->hip_msg_retrans.count = 0;
+		}
 	}
 
  out_err:
@@ -90,7 +109,9 @@ int hip_handle_retransmission(hip_ha_t *entry, void *not_used)
 int hip_scan_retransmissions()
 {
 	int err = 0;
-	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, NULL), 0, 
+	time_t current_time;
+	time(&current_time);
+	HIP_IFEL(hip_for_each_ha(hip_handle_retransmission, &current_time), 0, 
 		 "for_each_ha err.\n");
  out_err:
 	return err;
@@ -524,10 +545,277 @@ int periodic_maintenance() {
         }
 #endif
 
-	
+	if(nat_keep_alive_counter < 0){
+		HIP_IFEL(hip_nat_keep_alive(), -1, 
+			"Failed to send out keepalives\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+	} else {
+		nat_keep_alive_counter--;
+	}	
  out_err:
 	
 	return err;
+}
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_set_opportunistic_mode(const struct hip_common *msg)
+{
+  int err =  0;
+  unsigned int *mode = NULL;
+  
+  mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
+  if (!mode) {
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+  if(*mode == 0 || *mode == 1){
+    opportunistic_mode = *mode;
+  } else {
+    HIP_ERROR("Invalid value for opportunistic mode\n");
+    err = -EINVAL;
+    goto out_err;
+  }
+  
+ out_err:
+  return err;
+}
+
+int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
+{
+  int n = 0;
+  int err = 0;
+  int alen = 0;
+  struct in6_addr phit, dst_ip, hit_our;
+  struct in6_addr *ptr = NULL;
+  hip_opp_block_t *entry = NULL;
+  hip_ha_t *ha = NULL;
+
+  if(!opportunistic_mode)
+    {
+      hip_msg_init(msg);
+      err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
+      if (err) {
+	HIP_ERROR("build user header failed: %s\n", strerror(err));
+	goto out_err;
+      } 
+      n = hip_sendto(msg, src);
+      if(n < 0){
+	HIP_ERROR("hip_sendto() failed.\n");
+	err = -1;
+      }
+      goto out_err;
+    }
+  // hip_hadb_find_byhits(SRC_HIT, PHIT);
+  // if (exists(hashtable(SRC_HIT, DST_PHIT)) { // two consecutive base exchanges
+  //   msg = REAL_DST_HIT
+  //   sendto(src, msg);
+  // } else {
+  //   add_to_hash_table(index=XOR(SRC_HIT, DST_PHIT), value=src);
+  //   hip_send_i1(SRC_HIT, PHIT);
+  // }
+  memset(&hit_our, 0, sizeof(struct in6_addr));
+  ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+  memcpy(&hit_our, ptr, sizeof(hit_our));
+  HIP_DEBUG_HIT("hit_our=", &hit_our);
+  
+  ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+  memcpy(&dst_ip, ptr, sizeof(dst_ip));
+  HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+  
+  err = hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH120);
+  if(err){
+    goto out_err;
+  }
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+  
+  err = hip_hadb_add_peer_info(&phit, &dst_ip);
+  ha = hip_hadb_find_byhits(&hit_our, &phit);
+  HIP_ASSERT(ha);
+
+  if(!oppdb_exist){
+    HIP_DEBUG("initializing oppdb\n");
+    hip_init_opp_db();
+    HIP_DEBUG("oppdb initialized\n");
+    oppdb_exist = 1;
+
+    err = hip_oppdb_add_entry(&phit, &hit_our, src);
+    if(err){
+      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
+      goto out_err;
+    }
+    hip_send_i1(&hit_our, &phit, ha);
+    // first call, not consecutive base exchange. So we do not execute the following code
+    goto out_err;
+  }
+  
+  entry = hip_oppdb_find_byhits(&phit, &hit_our);
+  
+  if(entry){ // two consecutive base exchanges
+    //DST_HIT = from database list;
+    hip_msg_init(msg);
+    err = hip_build_param_contents(msg, (void *)(&entry->peer_real_hit), HIP_PARAM_HIT,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+      goto out_err;
+    }
+    err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
+    if (err) {
+      HIP_ERROR("build user header failed: %s\n", strerror(err));
+      goto out_err;
+    } 
+    
+    n = hip_sendto(msg, src);
+    if(n < 0){
+      HIP_ERROR("hip_sendto() failed.\n");
+      err = -1;
+    }
+    
+    goto out_err;
+  } else {
+    err = hip_oppdb_add_entry(&phit, hit_our, src);
+    if(err){
+      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
+      goto out_err;
+    }
+    hip_send_i1(&hit_our, &phit, ha);
+  }
+ out_err:
+   return err;
+}
+
+int hip_get_pseudo_hit(struct hip_common *msg)
+{
+  int err = 0;
+  int alen = 0;
+  
+  struct in6_addr hit, ip;
+  struct in6_addr *ptr = NULL;
+
+  memset(&hit, 0, sizeof(struct in6_addr));
+  if(opportunistic_mode){
+    ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+    memcpy(&ip, ptr, sizeof(ip));
+    HIP_DEBUG_HIT("dst ip=", &ip);
+    
+    err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH120);
+    if(err){
+      goto out_err;
+    }
+    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
+
+    hip_msg_init(msg);
+    err = hip_build_param_contents(msg, (void *) &hit, HIP_PSEUDO_HIT,
+				   sizeof(struct in6_addr));
+    if (err) {
+      HIP_ERROR("build param hit failed: %s\n", strerror(err));
+      goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_SET_PSEUDO_HIT, 0);
+    if (err) {
+      HIP_ERROR("build user header failed: %s\n", strerror(err));
+      goto out_err;
+    } 
+    err = hip_hadb_add_peer_info(&hit, &ip);
+
+    if (err) {
+      HIP_ERROR("add peer info failed: %s\n", strerror(err));
+      goto out_err;
+    }
+  }
+
+ out_err:
+   return err;
+}
+
+int hip_query_opportunistic_mode(struct hip_common *msg)
+{
+  int err = 0;
+  unsigned int opp_mode = opportunistic_mode;
+
+  hip_msg_init(msg);
+  
+  err = hip_build_param_contents(msg, (void *) &opp_mode, HIP_PARAM_UINT,
+				 sizeof(unsigned int));
+  if (err) {
+    HIP_ERROR("build param opp_mode failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0);
+  if (err) {
+    HIP_ERROR("build user header failed: %s\n", strerror(err));
+    goto out_err;
+  } 
+ out_err:
+  return err;
+}
+
+
+
+int hip_query_ip_hit_mapping(struct hip_common *msg)
+{
+  int err = 0;
+  unsigned int mapping = 0;
+  struct in6_addr *hit = NULL;
+  hip_ha_t *entry = NULL;
+
+
+  hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+
+  entry = hip_hadb_try_to_find_by_peer_hit(hit);
+  if(entry)
+    mapping = 1;
+  else 
+    mapping = 0;
+
+  hip_msg_init(msg);
+  err = hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
+				 sizeof(unsigned int));
+  if (err) {
+    HIP_ERROR("build param mapping failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0);
+  if (err) {
+    HIP_ERROR("build user header failed: %s\n", strerror(err));
+    goto out_err;
+  } 
+ out_err:
+  return err;
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+  int n = 0;
+
+  HIP_DEBUG("hip_sendto sending phit...\n");
+
+  n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+  return n;
+}
+
+void hip_probe_kernel_modules() {
+	int count;
+	char cmd[40];
+        /* update also this if you add more modules */
+	const int mod_total = 10;
+	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
+			    "xfrm_user", "dummy", "esp6", "esp4",
+			    "ipv6", "aes", "crypto_null", "des"};
+
+	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
+	for (count = 0; count < mod_total; count++) {
+		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+			 mod_name[count]);
+		HIP_DEBUG("%s\n", cmd);
+		system(cmd);
+	}
+	HIP_DEBUG("Probing completed\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -571,6 +859,8 @@ int main(int argc, char *argv[]) {
 			return err;
 		}
 	}
+
+	hip_probe_kernel_modules();
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
@@ -626,11 +916,6 @@ int main(int argc, char *argv[]) {
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
 
-	if (rtnl_open_byproto(&hip_nl_ipsec, 0, NETLINK_XFRM) < 0) {
-		err = 1;
-		HIP_ERROR("IPsec socket error: %s\n", strerror(errno));
-		goto out_err;
-	}
 	if (rtnl_open_byproto(&hip_nl_route,
 			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 				| RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -646,6 +931,17 @@ int main(int argc, char *argv[]) {
 		err = 1;
 		goto out_err;
 	}
+
+#if 0
+	{
+		const int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(int);
+		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+			   &ipsec_buf_size, ipsec_buf_sizeof);
+		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+			   &ipsec_buf_size, ipsec_buf_sizeof);
+	}
+#endif
 
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
@@ -807,15 +1103,16 @@ int main(int argc, char *argv[]) {
 
 			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-			struct hip_stateless_info pkt_info;
+		  	//struct sockaddr_un app_src, app_dst;
+		  //  	struct sockaddr_storage app_src;
+			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
-			if (hip_read_control_msg_v6(hip_user_sock, hip_msg,
-						    0, NULL, NULL, &pkt_info, 0))
+			if (hip_read_user_control_msg(hip_user_sock, hip_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
 			else
-				hip_handle_user_msg(hip_msg);
+				err = hip_handle_user_msg(hip_msg, &app_src);
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;

@@ -452,14 +452,17 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	HIP_DEBUG("\n");
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
 
-	HIP_DEBUG("handled ESP_INFO: Old SPI: 0x%x\n", esp_info->old_spi);
-	HIP_DEBUG("handled ESP_INFO: New SPI: 0x%x\n", esp_info->new_spi);
+	HIP_DEBUG("handled ESP_INFO: Old SPI: 0x%x\n", ntohl(esp_info->old_spi));
+	HIP_DEBUG("handled ESP_INFO: New SPI: 0x%x\n", ntohl(esp_info->new_spi));
 	HIP_DEBUG("handled ESP_INFO: Keymat Index: %u\n",
-		  esp_info->keymat_index);
+		  ntohs(esp_info->keymat_index));
 
-	prev_spi_out = esp_info->old_spi;
-	new_spi_out = esp_info->new_spi ? esp_info->new_spi : prev_spi_out;
+	prev_spi_out = ntohl(esp_info->old_spi);
+	new_spi_out = ntohl(esp_info->new_spi) ? ntohl(esp_info->new_spi) : prev_spi_out;
 	
+	_HIP_DEBUG("new_spi_out: 0x%x\n",
+		  new_spi_out);	
+
 	HIP_ASSERT(prev_spi_out != 0 && new_spi_out != 0);
 
 	prev_spi_in = hip_update_get_prev_spi_in(entry, ntohl(ack->peer_update_id));
@@ -478,7 +481,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* 2. .. If the system did not generate new KEYMAT, it uses
 	   the lowest Keymat Index of the two ESP_INFO parameters. */
 	_HIP_DEBUG("entry keymat index=%u\n", entry->current_keymat_index);
-	keymat_index = kmindex_saved < esp_info->keymat_index ? kmindex_saved : esp_info->keymat_index;
+	keymat_index = kmindex_saved < ntohs(esp_info->keymat_index) ? kmindex_saved : ntohs(esp_info->keymat_index);
 	_HIP_DEBUG("lowest keymat_index=%u\n", keymat_index);
 
 	/* 3. The system draws keys for new incoming and outgoing ESP
@@ -502,8 +505,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, 0);
-	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, 0, 0);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, entry->peer_udp_port);
+	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, entry->peer_udp_port,0);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -520,7 +523,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 0); //, -1,
+			// 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
@@ -530,7 +534,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, entry->peer_udp_port);
+			 //1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
 		HIP_DEBUG("Setting up new inbound IPsec SA failed\n");
@@ -747,7 +752,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	uint16_t mask = 0;
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
-	HIP_IFE(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1);
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
+		 "SPI 0x%x not in SPI list\n");
 
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");
@@ -1073,11 +1079,11 @@ int hip_receive_update(struct hip_common *msg,
 
 	if (!handle_upd) {
 		HIP_ERROR("NOT processing UPDATE packet\n");
+		HIP_DEBUG("This could be a NAT Keep alive packet !!\n");
 		goto out_err;
 	}
 
-	//hip_delete_sa(spi_in->spi, &entry->_address, AF_INET6);
-	//ipv6_addr_copy(&entry->local_address, &addr_list->address);
+
 
 	update_id_in = entry->update_id_in;
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
@@ -1185,14 +1191,45 @@ int hip_receive_update(struct hip_common *msg,
 			    memcmp(src_ip, &entry->preferred_address,
 				   sizeof(struct in6_addr)) && spi) {
 				hip_delete_sa(spi, &entry->preferred_address,
-					      AF_INET6, 0, 0);
+					      AF_INET6, 0, entry->peer_udp_port);
 				ipv6_addr_copy(&entry->preferred_address,
 					       locator_address);
 			} 
 		}
 	}
 	/**********************/
+	//hip_delete_sa(spi_in->spi, &entry->_address, AF_INET6);
+	//ipv6_addr_copy(&entry->local_address, &addr_list->address);
+	//if(hip_nat_status == 1)
+	//if(hip_nat_status == 1 || (sinfo->src_port != 0 || sinfo->dst_port != 0))
+	//{
+	//	HIP_DEBUG("Nat status is on. So fill up port info in the packet\n");	
+	//	HIP_DEBUG("src_port %d, dst_port %d\n",sinfo->src_port, sinfo->dst_port);
+		//entry->peer_udp_port = sinfo->src_port; //src port of the incoming packet !! --Abi 
+	//}
 
+	//HIP_DEBUG_IN6ADDR("addr list addr\n", &addr_list->address);
+	HIP_DEBUG_IN6ADDR("entry->localaddress \n", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("src_ip \n", src_ip);
+	HIP_DEBUG_IN6ADDR("dst_ip \n", dst_ip);
+
+	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0)
+	{
+		HIP_DEBUG("^^^^^^^^^^^ setting off nat ... update has come not on udp\n");
+		entry->nat = 0;
+		entry->peer_udp_port = 0;
+	}
+	else
+	{
+		ipv6_addr_copy(&entry->local_address, dst_ip);
+		ipv6_addr_copy(&entry->preferred_address, src_ip);
+		/*Somehow the addresses in the entry doesnt get updated for mobility behind nat case.
+			The else would be called only when the client moves from behind nat to behind nat.
+			updating the entry addresses here.
+			Miika: Is it the correct place to be done? -- Abi
+		*/	
+	}
+	
 	if (handle_upd == 2) {
 		/* LOCATOR, SEQ */
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
@@ -1448,7 +1485,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 		int i = 0;
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6,
-			      0, 0);
+			      entry->peer_udp_port, 0);
 		/* XX FIXME: change daddr to an alternative peer address
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {

@@ -5,6 +5,7 @@
  * Authors:
  * - Kristian Slavov <ksl@iki.fi>
  * - Miika Komu <miika@iki.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  *
  * We don't currently have a workqueue. The functionality in this file mostly
  * covers catching userspace messages only.
@@ -19,6 +20,18 @@ struct hip_pc_wq {
 
 static struct hip_pc_wq hip_workqueue;
 
+// XX BING: ADD LIST: KEY INDEX = XOR(SRC_HIT, DST_PHIT)
+// hip_opp_blocking_requests
+// moved to hip.h
+/* 
+struct hip_opp_blocking_request_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+  hip_hit_t             peer_real_hit;
+  struct sockaddr_un    caller;
+};
+*/
 /**
  * hwo_default_destructor - Default destructor for work order
  *
@@ -313,13 +326,15 @@ int hip_do_work(struct hip_work_order *job)
 	return res;
 }
 
-int hip_handle_user_msg(struct hip_common *msg) {
+int hip_handle_user_msg(struct hip_common *msg, 
+			const struct sockaddr_un *src) {
+	hip_hit_t *hit;
 	hip_hit_t *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 	int msg_type;
-
+	int n = 0;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -336,6 +351,17 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		break;
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
+		if(err){
+		  HIP_ERROR("add peer mapping failed.\n");
+		  goto out_err;
+		}
+		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
 		break;
 #if 0
 	case SO_HIP_DEL_PEER_MAP_HIT_IP:
@@ -389,12 +415,86 @@ int hip_handle_user_msg(struct hip_common *msg) {
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(dst_hit);
 		break;
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	case SO_HIP_SET_OPPORTUNISTIC_MODE:
+	  	err = hip_set_opportunistic_mode(msg);
+		break;
+	case SO_HIP_GET_PSEUDO_HIT: // it won't be here anymore, since we ask real hit
+	  { 
+	    	err = hip_get_pseudo_hit(msg);
+		if(err){
+		  HIP_ERROR("get pseudo hit failed.\n");
+		  goto out_err;
+		}
+		// delay untile get r1 (moved to hip_receive_control_packet)	
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
+		_HIP_DEBUG("phit sent\n");
+	  }
+	  break;
+	case SO_HIP_GET_PEER_HIT: // we get try to get real hit instead of phit
+	  { 
+	    err = hip_get_peer_hit(msg, src);
+	    if(err){
+	      HIP_ERROR("get pseudo hit failed.\n");
+	      goto out_err;
+	    }
+	    // PHIT = calculate a pseudo hit
+	    // hip_hadb_add_peer_info(PHIT, IP) -> SP: INIT_SRC_HIT + RESP_PSEUDO_HIT
+	    // hip_hadb_find_byhits(SRC_HIT, PHIT);
+	    // if (exists(hashtable(SRC_HIT, DST_PHIT)) { // two consecutive base exchanges
+	    //   msg = REAL_DST_HIT
+	    //   sendto(src, msg);
+	    // } else {
+	    //   add_to_hash_table(index=XOR(SRC_HIT, DST_PHIT), value=src);
+	    //   hip_send_i1(SRC_HIT, PHIT);
+	    // }
+	  }
+	  break;
+	case SO_HIP_QUERY_IP_HIT_MAPPING:
+	  {
+	    	err = hip_query_ip_hit_mapping(msg);
+		if(err){
+		  HIP_ERROR("query ip hit mapping failed.\n");
+		  goto out_err;
+		}
+		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
+		HIP_DEBUG("mapping result sent\n");
+	  }
+	  break;	  
+	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
+	  {
+	    	err = hip_query_opportunistic_mode(msg);
+		if(err){
+		  HIP_ERROR("query opportunistic mode failed.\n");
+		  goto out_err;
+		}
+		
+		n = hip_sendto(msg, src);
+		if(n < 0){
+		  HIP_ERROR("hip_sendto() failed.\n");
+		  err = -1;
+		  goto out_err;
+		}
+		HIP_DEBUG("opportunistic mode value is sent\n");
+	  }
+	  break;
+#endif
 	default:
-		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
-		err = -ESOCKTNOSUPPORT;
+	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
+		 err = -ESOCKTNOSUPPORT;
 	}
 
  out_err:
-
 	return err;
 }
