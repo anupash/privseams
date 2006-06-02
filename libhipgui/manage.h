@@ -21,6 +21,7 @@
 void gui_add_hit(char *);
 void gui_add_rgroup(HIT_Group *);
 void gui_add_remote_hit(char *, char *);
+void gui_add_process(int, char *, int, int);
 void gui_remote_hit_callback(GtkWidget *, gpointer);
 void gui_clear_remote_hits(void);
 

@@ -16,7 +16,7 @@
 
 /******************************************************************************/
 /* EXTERNS */
-extern GtkTreeIter local_top, remote_top;
+extern GtkTreeIter local_top, remote_top, process_top;
 
 
 /******************************************************************************/
@@ -108,6 +108,28 @@ out_err:
 		//gui_add_remote_hit(hit, group);
 	}
 	return;
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Tell GUI to add new process to process list.
+
+	@param pid Process ID.
+	@param name Process name.
+	@param time Time used.
+	@param msgs Number of messages.
+*/
+void gui_add_process(int pid, char *name, int time, int msgs)
+{
+	/* Variables. */
+	GtkWidget *w;
+	GtkTreeIter iter;
+
+	w = widget(ID_PLISTMODEL);
+	gtk_tree_store_insert(GTK_TREE_STORE(w), &iter, NULL, MAX_EXEC_PIDS);
+	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, pid, 1, name, 2, time, 3, msgs, -1);
 }
 /* END OF FUNCTION */
 

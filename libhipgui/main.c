@@ -46,7 +46,7 @@ int gui_init(void)
 	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_widget_show(gtk_window);
 	gtk_window_set_title(GTK_WINDOW(gtk_window), "HIP Config");
-	gtk_widget_set_size_request(gtk_window, 350, 450);
+	gtk_widget_set_size_request(gtk_window, 400, 300);
 
 	g_signal_connect(G_OBJECT(gtk_window), "delete_event",
 	                 G_CALLBACK(delete_event), NULL);
@@ -80,9 +80,12 @@ int gui_init(void)
 	acceptdlg_create_content();
 	rundlg_create_content();
 	main_create_content();
-	
+
+	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
+
 	gui_set_info("HIP GUI started.");
  
+ out_err:
 	return (err);
 }
 /* END OF FUNCTION */
@@ -129,6 +132,7 @@ int gui_main(void)
 */
 void gui_quit(void)
 {
+	exec_quit();
 	widget_quit();
 }
 /* END OF FUNCTION */

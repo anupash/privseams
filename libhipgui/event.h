@@ -17,6 +17,7 @@
 #include "debug.h"
 #include "hit_db.h"
 #include "manage.h"
+#include "exec.h"
 
 
 /******************************************************************************/

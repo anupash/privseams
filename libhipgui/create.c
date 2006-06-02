@@ -16,7 +16,7 @@
 
 /******************************************************************************/
 /* EXTERNS */
-extern GtkTreeIter local_top, remote_top;
+extern GtkTreeIter local_top, remote_top, process_top;
 
 
 /******************************************************************************/
@@ -32,7 +32,7 @@ int main_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)gui_get_window();
-	GtkWidget *pane = NULL;
+	GtkWidget *pane = NULL, *pbox;
 	GtkWidget *notebook = NULL;
 	GtkWidget *w = NULL;
 	GtkWidget *button = NULL;
@@ -116,6 +116,11 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
 	gtk_widget_show(label);
 
+	pbox = gtk_hbox_new(TRUE, 1);
+	label2 = gtk_label_new("Processes");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pbox, label2);
+	gtk_widget_show(pbox);
+
 	/* Remote HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
@@ -144,13 +149,41 @@ int main_create_content(void)
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
 
-	button = gtk_button_new_with_label("testi2");
-	gtk_paned_add2(GTK_PANED(pane), button);
-	gtk_widget_show(button);
+	/* Process list. */
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	model = gtk_tree_store_new(4, G_TYPE_INT, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
+//	gtk_tree_store_append(model, &process_top, NULL);
+
+	list = gtk_tree_view_new();
+	widget_set(ID_PLISTVIEW, list);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("PID", cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("process", cell, "text", 1, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("time", cell, "text", 2, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("messages", cell, "text", 3, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
+	gtk_widget_set_size_request(scroll, 200, 0);
+	gtk_box_pack_start(GTK_BOX(pbox), scroll, TRUE, TRUE, 1);
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
+	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
+	gtk_widget_show(list);
+	gtk_widget_show(scroll);
+	widget_set(ID_PLISTMODEL, model);
 
 	gtk_widget_show(notebook);
 	gtk_widget_show(window);
- 
+
 	return (0);
 }
 /* END OF FUNCTION */

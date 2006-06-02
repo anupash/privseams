@@ -17,7 +17,7 @@
 /******************************************************************************/
 /* VARIABLES */
 void **gui_widgets = NULL;
-GtkTreeIter local_top, remote_top;
+GtkTreeIter local_top, remote_top, process_top;
 
 
 /******************************************************************************/
