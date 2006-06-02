@@ -561,6 +561,9 @@ using getaddrinfo: ping, ping6, tla, svn.
        the HIT-to-IP mapping with "hipconf add map HIT IP". This is the
        quick-and-dirty method...
     </para>
+    <para>
+    5. Use the opportunistic mode as described in section "opportunistic mode".
+    </para>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
