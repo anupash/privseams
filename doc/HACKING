@@ -402,10 +402,15 @@ by typing adduser my_username src
 * cd linux-2.6.xx
 * Patch the kernel with the hip patches you can find under hipl/patches directory
 * cp /boot/config-something .config
+
+In order to build the binary package type the following:
 * fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_image
 
+Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
+* fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_source
+
 After the kernel has been successfully compiled, you will find the
-debian package in the top directory.
+debian packages in the top directory.
 
 To install it type:
 dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
