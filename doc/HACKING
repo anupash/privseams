@@ -468,8 +468,8 @@ This is what I did:
   * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
     patches:
 
-     # 1.211 -> 1.2111
-     %define release %(R="$Revision: 1.2111 $"; RR="${R##: }"; echo ${RR%%?})_FC5%{rhbsys}
+     %define rhbsys .beet
+
      # HIPL patches
      Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
      Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
@@ -482,4 +482,4 @@ This is what I did:
      %patch193 -p1
 
    * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.spec
+   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
