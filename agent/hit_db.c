@@ -490,7 +490,7 @@ int hit_db_save_to_file(char *file)
 	HIT_Item *items = NULL;
 	FILE *f = NULL;
 	int err = -1, i;
-	char lhit[128], rhit[128], type[128];
+	char lhit[128], rhit[128], type[128], chtype;
 	
 	HIT_DB_LOCK();
 	
@@ -499,24 +499,33 @@ int hit_db_save_to_file(char *file)
 	f = fopen(file, "w");
 	HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
 
+	/* Write all remote groups to file. */
+	hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f);
+
 	/* Write all HITs to file. */
 	for (i = 0; i < hit_db_n; i++)
 	{
+		chtype = 'r';
 		print_hit_to_buffer(lhit, &hit_db[i].lhit);
 		print_hit_to_buffer(rhit, &hit_db[i].rhit);
 		if (hit_db[i].type == HIT_DB_TYPE_ACCEPT) strcpy(type, "accept");
 		if (hit_db[i].type == HIT_DB_TYPE_DENY) strcpy(type, "deny");
-		if (hit_db[i].type == HIT_DB_TYPE_LOCAL) strcpy(type, "local");
+		if (hit_db[i].type == HIT_DB_TYPE_LOCAL)
+		{
+			chtype = 'l';
+			strcpy(type, "local");
+		}
 		
 		if (strlen(hit_db[i].group) < 1)
 		{
-			fprintf(f, "%s %s %s %s %d %s\n", lhit, rhit, hit_db[i].name,
-			        hit_db[i].url, hit_db[i].port, type);
+			fprintf(f, "%c %s %s %s %s %d %s\n", chtype, lhit, rhit,
+			        hit_db[i].name, hit_db[i].url, hit_db[i].port, type);
 		}
 		else
 		{
-			fprintf(f, "%s %s %s %s %d %s %s\n", lhit, rhit, hit_db[i].name,
-			        hit_db[i].url, hit_db[i].port, type, hit_db[i].group);
+			fprintf(f, "%c %s %s %s %s %d %s %s\n", chtype, lhit, rhit,
+			        hit_db[i].name, hit_db[i].url, hit_db[i].port, type,
+			        hit_db[i].group);
 		}
 	}
 	
@@ -532,6 +541,23 @@ out_err:
 
 /******************************************************************************/
 /**
+	Write remote group to agent database -file.
+	This is a enumeration callback function used by hit_db_enum_rgroups().
+*/
+int hit_db_save_rgroup_to_file(HIT_Group *group, void *p)
+{
+	/* Variables. */
+	FILE *f = (FILE *)p;
+	
+	fprintf(f, "g %s\n", group->name);
+	
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Load database from file.
 	
 	@param file Filename for saving database.
@@ -540,12 +566,9 @@ out_err:
 int hit_db_load_from_file(char *file)
 {
 	/* Variables. */
-	HIT_Item item;
 	FILE *f = NULL;
-	struct in6_addr slhit, srhit;
-	char buf[1024], ch, lhit[128], rhit[128];
-	char name[128], url[320], type[128];
-	int err = 0, i, n, port;
+	char buf[1024], ch;
+	int err = 0, i, n;
 
 	hit_db_clear();
 	HIT_DB_LOCK();
@@ -579,33 +602,12 @@ int hit_db_load_from_file(char *file)
 		if (ch != '\r') ungetc(ch, f);
 		
 		/* Check for empty lines and for commented lines. */
-		if (strlen(buf) < 1) goto loop_end;
+		if (strlen(buf) < 3) goto loop_end;
 		if (buf[0] == '#') goto loop_end;
 		
-		/* Parse values from current line. */
-		n = sscanf(buf, "%s %s %s %s %d %s %s",
-		           lhit, rhit, item.name, item.url, &item.port, type, item.group);
+		if (buf[0] == 'r' || buf[0] == 'l') hit_db_parse_hit(&buf[2]);
+		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
 		
-		if (n != 6 && n != 7)
-		{
-			HIP_DEBUG("Broken line in database file: %s\n", buf);
-			goto loop_end;
-		}
-
-		if (n == 6) memset(item.group, '\0', sizeof(item.group));
-		
-		HIP_DEBUG("Scanned line with values: %s %s %s %s %d %s %s\n",
-		          lhit, rhit, item.name, item.url, item.port, type, item.group);
-		
-		if (strstr(type, "accept") != NULL) item.type = HIT_DB_TYPE_ACCEPT;
-		if (strstr(type, "local") != NULL) item.type = HIT_DB_TYPE_LOCAL;
-		else item.type = HIT_DB_TYPE_DENY;
-
-		read_hit_from_buffer(&item.lhit, lhit);
-		read_hit_from_buffer(&item.rhit, rhit);
-		
-		hit_db_add_hit(&item, 1);
-	
 	loop_end:
 		/* Clear buffer. */
 		memset(buf, '\0', 1024); i = 0;
@@ -625,6 +627,72 @@ out_err:
 out:
 	if (f) fclose(f);
 	HIT_DB_UNLOCK();
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Load one HIT from given string.
+	
+	@param buf String containing HIT information.
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_parse_hit(char *buf)
+{
+	/* Variables. */
+	HIT_Item item;
+	struct in6_addr slhit, srhit;
+	int err = 0, n, port;
+	char type[128], lhit[128], rhit[128];
+
+	/* Parse values from current line. */
+	n = sscanf(buf, "%s %s %s %s %d %s %s",
+	           lhit, rhit, item.name, item.url, &item.port, type, item.group);
+		
+	HIP_IFEL(n != 6 && n != 7, -1, "Broken line in database file: %s\n", buf);
+
+	if (n == 6) memset(item.group, '\0', sizeof(item.group));
+		
+	HIP_DEBUG("Scanned HIT line with values: %s %s %s %s %d %s %s\n",
+	          lhit, rhit, item.name, item.url, item.port, type, item.group);
+		
+	if (strstr(type, "accept") != NULL) item.type = HIT_DB_TYPE_ACCEPT;
+	if (strstr(type, "local") != NULL) item.type = HIT_DB_TYPE_LOCAL;
+	else item.type = HIT_DB_TYPE_DENY;
+
+	read_hit_from_buffer(&item.lhit, lhit);
+	read_hit_from_buffer(&item.rhit, rhit);
+		
+	hit_db_add_hit(&item, 1);
+
+out_err:	
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Load one remote group from given string.
+	
+	@param buf String containing remote group information.
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_parse_rgroup(char *buf)
+{
+	/* Variables. */
+	int err = 0, n;
+	char name[64 + 1];
+	
+	/* Parse values from current line. */
+	n = sscanf(buf, "%s", name);
+	HIP_IFEL(n != 1, -1, "Broken line in database file: %s\n", buf);
+	HIP_DEBUG("Scanned remote group line with values: %s\n", name);
+	hit_db_add_rgroup(name);
+
+out_err:	
 	return (err);
 }
 /* END OF FUNCTION */

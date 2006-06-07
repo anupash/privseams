@@ -102,7 +102,11 @@ HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
 			            char *, int, int, int, int);
 
 int hit_db_save_to_file(char *);
+int hit_db_save_rgroup_to_file(HIT_Group *, void *);
 int hit_db_load_from_file(char *);
+
+int hit_db_parse_hit(char *);
+int hit_db_parse_rgroup(char *);
 
 HIT_Group *hit_db_add_rgroup(char *);
 int hit_db_del_rgroup(char *);

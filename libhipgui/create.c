@@ -131,7 +131,7 @@ int main_create_content(void)
 	gtk_widget_show(pbox);
 
 	chat = gtk_vbox_new(FALSE, 1);
-	label2 = gtk_label_new("Test chat");
+	label2 = gtk_label_new("Terminal");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), chat, label2);
 	gtk_widget_show(chat);
 
@@ -198,7 +198,7 @@ int main_create_content(void)
 	widget_set(ID_PLISTMODEL, model);
 
 	/***************************************
-	/* Chat. */
+	/* Terminal. */
 	div = gtk_hpaned_new();
 	gtk_box_pack_start(chat, div, TRUE, TRUE, 1);
 	gtk_widget_show(div);
@@ -209,9 +209,9 @@ int main_create_content(void)
 	gtk_paned_add1(div, scroll);
 	gtk_widget_show(scroll);
 	w = gtk_text_view_new();
-	widget_set(ID_CHATSCREEN, w);
+	widget_set(ID_TERMSCREEN, w);
 	w2 = gtk_text_view_get_buffer(w);
-	widget_set(ID_CHATBUFFER, w2);
+	widget_set(ID_TERMBUFFER, w2);
 	gtk_text_buffer_insert_at_cursor(w2, "* HIP GUI started.\n" , -1);
 	gtk_text_view_set_editable(w, FALSE);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), w);
@@ -253,7 +253,7 @@ int main_create_content(void)
 	
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "");
-	widget_set(ID_CHATINPUT, w);
+	widget_set(ID_TERMINPUT, w);
 	gtk_box_pack_start(w2, w, TRUE, TRUE, 1);
 	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_grab_focus(w);
@@ -393,6 +393,7 @@ int tooldlg_create_content(void)
 
 	w = gtk_combo_box_new_text();
 	widget_set(ID_TOOLRGROUPS, w);
+	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_CB_RGROUPS);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
 	w = gtk_label_new("Group:");
@@ -470,6 +471,7 @@ int acceptdlg_create_content(void)
 	gtk_widget_show(w);
 
 	w = gtk_combo_box_new_text();
+	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_CB_RGROUPS);
 	widget_set(ID_AD_RGROUPS, w);
 	gtk_widget_set_size_request(w, 200, -1);
 	y += 26; gtk_fixed_put(GTK_FIXED(fixed), w, 80, y);

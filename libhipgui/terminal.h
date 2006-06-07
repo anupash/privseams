@@ -5,8 +5,8 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef GUI_CHAT_H
-#define GUI_CHAT_H
+#ifndef GUI_TERMINAL_H
+#define GUI_TERMINAL_H
 
 /******************************************************************************/
 /* INCLUDES */
@@ -20,7 +20,7 @@ typedef struct
 {
 	char *cmd;
 	void (*func)(char *);
-} GUI_CHAT_COMMAND;
+} TERMINAL_COMMAND;
 
 
 /******************************************************************************/
@@ -28,8 +28,8 @@ typedef struct
 void cmd_help(char *);
 void cmd_exec(char *);
 
-void chat_exec_command(char *);
-void chat_print(const char *, ...);
+void term_exec_command(char *);
+void term_print(const char *, ...);
 
 
 #endif /* END OF HEADER FILE */

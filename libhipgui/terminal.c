@@ -7,17 +7,13 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
-#include "chat.h"
+#include "terminal.h"
 
 
 /******************************************************************************/
 /* GLOBALS */
 /* Command list. */
-GUI_CHAT_COMMAND cmds[] =
+TERMINAL_COMMAND cmds[] =
 {
 	{ "help", cmd_help },
 	{ "exec", cmd_exec },
@@ -32,7 +28,7 @@ GUI_CHAT_COMMAND cmds[] =
 /** Help-command. */
 void cmd_help(char *x)
 {
-	chat_print("\n"
+	term_print("\n"
 	           "* HIP GUI chat help:\n"
 	           "*  help         - Prints this help.\n"
 	           "*  exec         - Show application execute dialog.\n"
@@ -54,7 +50,7 @@ void cmd_exec(char *x)
 /**
 	Execute command.
 */
-void chat_exec_command(char *cmd)
+void term_exec_command(char *cmd)
 {
 	/* Variables. */
 	int i;
@@ -89,7 +85,7 @@ void chat_exec_command(char *cmd)
 	/* If command not found. */
 	if (!b)
 	{
-		chat_print("* Invalid command.\n");
+		term_print("* Invalid command.\n");
 	}
 	
 	/* Return. */
@@ -100,9 +96,9 @@ void chat_exec_command(char *cmd)
 
 /******************************************************************************/
 /**
-	Print string to chat. Use like printf().
+	Print string to terminal. Use like printf().
 */
-void chat_print(const char *string, ...)
+void term_print(const char *string, ...)
 {
 	/* Variables. */
 	va_list args;
@@ -111,9 +107,9 @@ void chat_print(const char *string, ...)
 	/* Get args. */
 	va_start(args, string);
 
-	/* Print to chat. */
+	/* Print to terminal. */
 	vsprintf(str, string, args);
-	gtk_text_buffer_insert_at_cursor(widget(ID_CHATBUFFER), str, -1);
+	gtk_text_buffer_insert_at_cursor(widget(ID_TERMBUFFER), str, -1);
 	
 	/* End args. */
 	va_end(args);

@@ -120,7 +120,8 @@ int gui_main(void)
 	
 	HIP_DEBUG("Appending remote groups to tool window...\n");
 	w = widget(ID_TOOLRGROUPS);
-	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
+//	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
+	gtk_combo_box_append_text(w, "<create new...>");
 	gtk_combo_box_set_active(w, 0);
 
 	HIP_DEBUG("Appending local HITs to tool window...\n");
@@ -130,7 +131,8 @@ int gui_main(void)
 
 	HIP_DEBUG("Appending remote groups to ask window...\n");
 	w = widget(ID_AD_RGROUPS);
-	hit_db_enum_rgroups(askdlg_add_rgroups, w);
+//	hit_db_enum_rgroups(askdlg_add_rgroups, w);
+	gtk_combo_box_append_text(w, "<create new...>");
 	gtk_combo_box_set_active(w, 0);
 	
 	HIP_DEBUG("Appending local HITs to ask window...\n");

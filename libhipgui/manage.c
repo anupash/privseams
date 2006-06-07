@@ -60,6 +60,10 @@ void gui_add_rgroup(HIT_Group *group)
 	w = widget(ID_RLISTMODEL);
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &remote_top);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
+	
+	tooldlg_add_rgroups(group, widget(ID_TOOLRGROUPS));
+	askdlg_add_rgroups(group, widget(ID_AD_RGROUPS));
+	
 	g_free(msg);
 	gdk_threads_leave();
 }
@@ -273,7 +277,7 @@ int tooldlg_add_rgroups(HIT_Group *group, void *p)
 	GtkWidget *w = (GtkWidget *)p;
 	
 //	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
-	gtk_combo_box_append_text(w, group->name);
+	gtk_combo_box_insert_text(w, 0, group->name);
 	
 	return (0);
 }
@@ -309,7 +313,7 @@ int askdlg_add_rgroups(HIT_Group *group, void *p)
 	GtkWidget *w = (GtkWidget *)p;
 	
 //	HIP_DEBUG("Appending new remote group \"%s\" to ask window list.\n", group->name);
-	gtk_combo_box_append_text(w, group->name);
+	gtk_combo_box_insert_text(w, 0, group->name);
 	
 	return (0);
 }
@@ -379,14 +383,18 @@ void info_mode_rgroup(void)
 
 
 /******************************************************************************/
-/** Create new remote group. */
-void create_remote_group(void)
+/**
+	Create new remote group.
+	
+	@return Name of new remote group.
+*/
+char *create_remote_group(void)
 {
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_CREATEDLG);
 	HIT_Group group;
-	int err;
-	char *ps;
+	int err = -1;
+	char *ps = NULL;
 	pthread_t pt;
 
 	gtk_widget_show(dialog);
@@ -401,11 +409,12 @@ void create_remote_group(void)
 		{
 			pthread_create(&pt, NULL, hit_db_add_rgroup, ps);
 		}
+		else ps = NULL;
 	}
 
 out_err:
 	gtk_widget_hide(dialog);
-	return;
+	return (ps);
 }
 /* END OF FUNCTION */
 

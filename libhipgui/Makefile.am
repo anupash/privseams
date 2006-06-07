@@ -21,7 +21,7 @@ libhipgui_a_SOURCES = \
 	widgets.c \
 	exec.c \
 	tools.c \
-	chat.c
+	terminal.c
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)

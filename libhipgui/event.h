@@ -19,7 +19,7 @@
 #include "manage.h"
 #include "exec.h"
 #include "tools.h"
-#include "chat.h"
+#include "terminal.h"
 
 
 /******************************************************************************/
@@ -37,7 +37,8 @@ enum TOOLBAR_IDS
 enum BUTTON_IDS
 {
 	IDB_SEND,
-	
+	IDB_CB_RGROUPS,
+
 	BUTTON_IDS_N
 };
 
