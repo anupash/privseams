@@ -38,7 +38,8 @@ gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 */
 gboolean tool_delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
-	return (FALSE);
+	gtk_widget_hide(widget);
+	return (TRUE);
 }
 /* END OF FUNCTION */
 
@@ -162,10 +163,35 @@ gboolean select_rlist(GtkTreeSelection *selection, gpointer data)
 
 
 /******************************************************************************/
-/** On button event (clicked). */
-void button_event(GtkWidget *widget, gpointer value)
+/** When button was pressed. */
+void button_event(GtkWidget *warg, gpointer data)
 {
-	printf("Received button event (value: %d).\n", (int)value);
+	/* Variables. */
+	int id = (int)data;
+	char *ps, str[1024];
+	time_t rawtime;
+	struct tm *tinfo;
+
+	switch (id)
+	{
+	case IDB_SEND:
+		ps = gtk_entry_get_text(widget(ID_CHATINPUT));
+		if (strlen(ps) < 1) break;
+		if (strlen(ps) > (1024 - 128)) ps[1024 - 128] = '\0';
+		
+		if (ps[0] == '/' && strlen(ps) < 2);
+		else if (ps[0] == '/') chat_exec_command(&ps[1]);
+		else
+		{
+			time(&rawtime);
+			tinfo = localtime(&rawtime);
+			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,
+			        tinfo->tm_min, get_nick(), ps);
+			gtk_text_buffer_insert_at_cursor(widget(ID_CHATBUFFER), str, -1);
+		}
+		gtk_entry_set_text(widget(ID_CHATINPUT), "");
+		break;
+	}
 }
 /* END OF FUNCTION */
 
@@ -194,6 +220,17 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 		memset(&hit, 0, sizeof(HIT_Item));
 		strcpy(hit.name, "Fake hit popup");
 		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
+		break;
+	
+	case ID_TOOLBAR_TOGGLETOOLWINDOW:
+		HIP_DEBUG("Toolbar: Toggle toolwindow visibility.\n");
+		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(gui_get_toolwindow());
+		else gtk_widget_hide(gui_get_toolwindow());
+		break;
+	
+	case ID_TOOLBAR_NEWGROUP:
+		HIP_DEBUG("Toolbar: Create remote group.\n");
+		create_remote_group();
 		break;
 	}
 }

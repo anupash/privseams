@@ -1,26 +1,22 @@
 /*
-    HIP Agent
-    
+    DNET - Duge's Networking Library
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef GUI_CREATE_H
-#define GUI_CREATE_H
-
+#ifndef TOOLS_H
+#define TOOLS_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include "manage.h"
+#include <stdlib.h>
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int main_create_content(void);
-int tooldlg_create_content(void);
-int acceptdlg_create_content(void);
-int rundlg_create_content(void);
-int create_create_content(void);
+char *get_nick(void);
+void set_nick(char *);
 
 
 #endif /* END OF HEADER FILE */

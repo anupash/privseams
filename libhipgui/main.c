@@ -34,7 +34,9 @@ GtkWidget *gtk_rundialog = NULL;
 int gui_init(void)
 {
 	/* Variables. */
+	GtkWidget *w;
 	int err = 0;
+	char str[320];
 
 	/* Initialize libraries. */
 	g_thread_init(NULL);
@@ -44,6 +46,7 @@ int gui_init(void)
 
 	/* Create main GUI window. */
 	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	widget_set(ID_MAINWND, gtk_window);
 	gtk_widget_show(gtk_window);
 	gtk_window_set_title(GTK_WINDOW(gtk_window), "HIP Config");
 	gtk_widget_set_size_request(gtk_window, 400, 300);
@@ -53,8 +56,9 @@ int gui_init(void)
 	g_signal_connect(G_OBJECT(gtk_window), "destroy",
 	                 G_CALLBACK(destroy), NULL);
 
-	/* Create tool window. */
+	/* Create tool-dialog. */
 	gtk_toolwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	widget_set(ID_TOOLDLG, gtk_toolwindow);
 	gtk_widget_show(gtk_toolwindow);
 	gtk_window_set_title(GTK_WINDOW(gtk_toolwindow), "HIP tool window");
 	gtk_widget_set_size_request(gtk_toolwindow, 450, 300);
@@ -64,28 +68,41 @@ int gui_init(void)
 	g_signal_connect(G_OBJECT(gtk_toolwindow), "destroy",
 	                 G_CALLBACK(tool_destroy), NULL);
 
-	/* Create accept window. */
+	/* Create accept-dialog. */
 	gtk_acceptdialog = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
 	                                               "Accept", GTK_RESPONSE_YES,
 	                                               "Deny", GTK_RESPONSE_NO, NULL);
+	widget_set(ID_ACCEPTDLG, gtk_acceptdialog);
 	gtk_widget_hide(gtk_acceptdialog);
 
-	/* Create accept window. */
+	/* Create run-dialog. */
 	gtk_rundialog = gtk_dialog_new_with_buttons("Run application", NULL,
 	                                            GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_RUNDLG, gtk_rundialog);
 	gtk_widget_hide(gtk_rundialog);
+
+	/* Create create-dialog. */
+	w = gtk_dialog_new_with_buttons("Create new remote group", NULL,
+	                                GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_CREATEDLG, w);
+	gtk_widget_hide(w);
 	
 	/* Create window content for all windows. */
-	tooldlg_create_content();
-	acceptdlg_create_content();
-	rundlg_create_content();
-	main_create_content();
+	HIP_IFEL(tooldlg_create_content(), -1, "Failed to create tool-dialog contents.\n");
+	HIP_IFEL(acceptdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
+	HIP_IFEL(rundlg_create_content(), -1, "Failed to create run-dialog contents.\n");
+	HIP_IFEL(createdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
+	HIP_IFEL(main_create_content(), -1, "Failed to create main-window contents.\n");
 
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
- 
- out_err:
+
+	/* Create some random nickname. */
+	sprintf(str, "user%0.3d", rand() % 1000);
+	set_nick(str);
+
+out_err:
 	return (err);
 }
 /* END OF FUNCTION */

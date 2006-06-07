@@ -32,22 +32,19 @@ int main_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)gui_get_window();
-	GtkWidget *pane = NULL, *pbox;
-	GtkWidget *notebook = NULL;
-	GtkWidget *w = NULL;
-	GtkWidget *button = NULL;
-	GtkWidget *scroll = NULL;
+	GtkWidget *pane, *pbox, *notebook, *w, *w2;
+	GtkWidget *button, *scroll, *chat, *div;
 	GtkWidget *label, *label2;
 	GtkTreeStore *model;
 	GtkWidget *list;
 	GtkWidget *toolbar;
 	GtkWidget *iconw;
-
+    PangoFontDescription *font_desc;
+    GdkColor color;
     GtkCellRenderer *cell;
     GtkTreeViewColumn *column;
 	GtkTreeSelection *select;
 	GtkTreeIter top, child;
-
 	char str[320];
 	int i;
 
@@ -61,19 +58,31 @@ int main_create_content(void)
 
 	/* Create toolbar. */
 	toolbar = gtk_toolbar_new();
-	gtk_box_pack_start(GTK_BOX(pane), toolbar, FALSE, FALSE, 0);
+	gtk_box_pack_start(pane, toolbar, FALSE, FALSE, 0);
 	gtk_widget_show(toolbar);
 	widget_set(ID_TOOLBAR, toolbar);
-	gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_TEXT);
+	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_TEXT);
 
 	/* Create toolbar contents. */
 	iconw = gtk_image_new_from_file("run.xpm");
-	w = gtk_toolbar_append_item(GTK_TOOLBAR(toolbar), "Run", "Run new process",
+	w = gtk_toolbar_append_element(toolbar, GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
+	                               NULL, "Toolwindow", "Show/hide toolwindow",
+	                               "Private", iconw,
+	                               GTK_SIGNAL_FUNC(toolbar_event),
+	                               ID_TOOLBAR_TOGGLETOOLWINDOW);
+	gtk_toolbar_append_space(toolbar);
+	iconw = gtk_image_new_from_file("run.xpm");
+	w = gtk_toolbar_append_item(toolbar, "New group",
+	                            "Create new remote group",
+	                            "Private", iconw,
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
+	gtk_toolbar_append_space(toolbar);
+	iconw = gtk_image_new_from_file("run.xpm");
+	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-	gtk_toolbar_append_space(GTK_TOOLBAR(toolbar));
 	iconw = gtk_image_new_from_file("run.xpm");
-	w = gtk_toolbar_append_item(GTK_TOOLBAR(toolbar), "New HIT",
+	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
@@ -121,6 +130,12 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pbox, label2);
 	gtk_widget_show(pbox);
 
+	chat = gtk_vbox_new(FALSE, 1);
+	label2 = gtk_label_new("Test chat");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), chat, label2);
+	gtk_widget_show(chat);
+
+	/***************************************
 	/* Remote HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
@@ -149,6 +164,7 @@ int main_create_content(void)
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
 
+	/***************************************
 	/* Process list. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
@@ -180,6 +196,78 @@ int main_create_content(void)
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_PLISTMODEL, model);
+
+	/***************************************
+	/* Chat. */
+	div = gtk_hpaned_new();
+	gtk_box_pack_start(chat, div, TRUE, TRUE, 1);
+	gtk_widget_show(div);
+
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_paned_add1(div, scroll);
+	gtk_widget_show(scroll);
+	w = gtk_text_view_new();
+	widget_set(ID_CHATSCREEN, w);
+	w2 = gtk_text_view_get_buffer(w);
+	widget_set(ID_CHATBUFFER, w2);
+	gtk_text_buffer_insert_at_cursor(w2, "* HIP GUI started.\n" , -1);
+	gtk_text_view_set_editable(w, FALSE);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), w);
+	gtk_widget_show(w);
+	/* Change default font throughout the widget */
+	font_desc = pango_font_description_from_string("Monospace 12");
+	gtk_widget_modify_font(w, font_desc);
+	pango_font_description_free(font_desc);
+	/* Change default color throughout the widget */
+	gdk_color_parse("green", &color);
+	gtk_widget_modify_text(w, GTK_STATE_NORMAL, &color);
+	gdk_color_parse("black", &color);
+	gtk_widget_modify_base(w, GTK_STATE_NORMAL, &color);
+
+/*	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	model = gtk_tree_store_new(1, G_TYPE_STRING);
+
+	list = gtk_tree_view_new();
+	widget_set(ID_USERVIEW, list);
+	gtk_tree_view_set_model(list, model);
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Users", cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
+	gtk_paned_add2(div, scroll);
+	w = gtk_tree_view_get_selection(list);
+	gtk_tree_selection_set_mode(w, GTK_SELECTION_SINGLE);
+	gtk_widget_show(list);
+	gtk_widget_show(scroll);
+	widget_set(ID_USERMODEL, model);
+	gtk_paned_set_position(div, 400);*/
+	
+	w2 = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(chat, w2, FALSE, FALSE, 1);
+	gtk_widget_show(w2);
+	
+	w = gtk_entry_new();
+	gtk_entry_set_text(w, "");
+	widget_set(ID_CHATINPUT, w);
+	gtk_box_pack_start(w2, w, TRUE, TRUE, 1);
+	gtk_entry_set_activates_default(w, TRUE);
+	gtk_widget_grab_focus(w);
+	gtk_widget_show(w);
+	
+	w = gtk_button_new_with_label("Send");
+	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);
+	gtk_box_pack_end(w2, w, FALSE, FALSE, 1);
+	gtk_widget_grab_default(w);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_SEND);
+	gtk_widget_show(w);
+	
+	/* done with notebook tabs. */
+	/***************************************/
 
 	gtk_widget_show(notebook);
 	gtk_widget_show(window);
@@ -328,7 +416,7 @@ int tooldlg_create_content(void)
 	gtk_widget_show(w);
 	widget_set(ID_INFOGROUP, w);*/
 
-	gtk_widget_show(window);
+	gtk_widget_hide(window);
  
  //	info_mode_none();
  
@@ -424,7 +512,70 @@ int acceptdlg_create_content(void)
 int rundlg_create_content(void)
 {
 	/* Variables. */
-	GtkWidget *window = (GtkWidget *)gui_get_rundialog();
+	GtkWidget *window = (GtkWidget *)widget(ID_RUNDLG);
+	GtkWidget *box = NULL;
+	GtkWidget *w = NULL;
+
+	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
+
+	/* Create main widget for adding subwidgets to window. */
+	box = gtk_vbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), box, TRUE, TRUE, 3);
+	gtk_widget_show(box);
+
+	/* Create command-input widget. */
+	w = gtk_label_new("Command to execute:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_COMMAND, w);
+	gtk_entry_set_text(w, "xterm");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+
+	/* Create LD_PRELOAD-input widget. */
+	w = gtk_label_new("LD_PRELOAD:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_LDPRELOAD, w);
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+
+	/* Create LD_LIBRARY_PATH-input widget. */
+	w = gtk_label_new("LD_LIBRARY_PATH:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_LDLIBRARYPATH, w);
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+	
+	/* Add buttons to dialog. */
+	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
+	gtk_widget_grab_default(w);
+	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
+	
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Create run dialog contents.
+	
+	@return 0 if success, -1 on errors.
+*/
+int createdlg_create_content(void)
+{
+	/* Variables. */
+	GtkWidget *window = (GtkWidget *)widget(ID_CREATEDLG);
 	GtkWidget *hb = NULL;
 	GtkWidget *w = NULL;
 
@@ -435,16 +586,16 @@ int rundlg_create_content(void)
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), hb, TRUE, TRUE, 3);
 	gtk_widget_show(hb);
 
-	/* Create command input widget. */
+	/* Create group name input widget. */
 	w = gtk_entry_new();
-	widget_set(ID_RUN_COMMAND, w);
+	widget_set(ID_CREATE_NAME, w);
 	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 3);
 	gtk_widget_show(w);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
 	
 	/* Add buttons to dialog. */
-	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
+	w = gtk_dialog_add_button(window, "Create", GTK_RESPONSE_OK);
 	gtk_widget_grab_default(w);
 	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
 	

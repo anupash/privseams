@@ -40,6 +40,9 @@ int main(int argc, char *argv[])
 	/* Variables. */
 	int err = 0;
 
+	/* Set some random seed. */
+	srand(time(NULL));
+
 	/* Set signalling. */
 	signal(SIGINT, sig_catch_int);
 

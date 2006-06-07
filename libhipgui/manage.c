@@ -378,6 +378,38 @@ void info_mode_rgroup(void)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/** Create new remote group. */
+void create_remote_group(void)
+{
+	/* Variables. */
+	GtkWidget *dialog = (GtkWidget *)widget(ID_CREATEDLG);
+	HIT_Group group;
+	int err;
+	char *ps;
+	pthread_t pt;
+
+	gtk_widget_show(dialog);
+	gtk_widget_grab_focus(widget(ID_CREATE_NAME));
+	gtk_entry_set_text(widget(ID_CREATE_NAME), "");
+
+	err = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (err == GTK_RESPONSE_OK)
+	{
+		ps = gtk_entry_get_text(widget(ID_CREATE_NAME));
+		if (strlen(ps) > 0)
+		{
+			pthread_create(&pt, NULL, hit_db_add_rgroup, ps);
+		}
+	}
+
+out_err:
+	gtk_widget_hide(dialog);
+	return;
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

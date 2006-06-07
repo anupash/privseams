@@ -18,6 +18,8 @@
 #include "hit_db.h"
 #include "manage.h"
 #include "exec.h"
+#include "tools.h"
+#include "chat.h"
 
 
 /******************************************************************************/
@@ -26,9 +28,19 @@ enum TOOLBAR_IDS
 {
 	ID_TOOLBAR_RUN = 0,
 	ID_TOOLBAR_NEWHIT,
+	ID_TOOLBAR_TOGGLETOOLWINDOW,
+	ID_TOOLBAR_NEWGROUP,
 
 	TOOLBAR_IDS_N
 };
+
+enum BUTTON_IDS
+{
+	IDB_SEND,
+	
+	BUTTON_IDS_N
+};
+
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */

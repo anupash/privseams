@@ -43,6 +43,8 @@ void info_mode_local(void);
 void info_mode_remote(void);
 void info_mode_rgroup(void);
 
+void create_remote_group(void);
+
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

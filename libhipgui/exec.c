@@ -74,7 +74,7 @@ void exec_application(void)
 	/* Variables. */
 	GtkWidget *dialog;
 	int err, cpid;
-	char *ps;
+	char *ps, *ps2, *ps3;
 
 	dialog = gui_get_rundialog();
 	gtk_widget_show(dialog);
@@ -98,6 +98,10 @@ void exec_application(void)
 		if (strlen(ps) > 0) err = fork();
 		else err = -1;
 		
+		/* Get environment variables. */
+		ps2 = gtk_entry_get_text(widget(ID_RUN_LDPRELOAD));
+		ps3 = gtk_entry_get_text(widget(ID_RUN_LDLIBRARYPATH));
+		
 		if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
 		else if (err > 0)
 		{
@@ -107,6 +111,17 @@ void exec_application(void)
 		else if(err == 0)
 		{
 			HIP_DEBUG("Exec new application.\n");
+			/* Set environment variables for new process. */
+			if (strlen(ps2) > 0)
+			{
+				setenv("LD_PRELOAD", ps2, 1);
+				HIP_DEBUG("Set LD_PRELOAD=%s\n", ps2);
+			}
+			if (strlen(ps3) > 0)
+			{
+				setenv("LD_LIBRARY_PATH", ps3, 1);
+				HIP_DEBUG("Set LD_LIBRARY_PATH=%s\n", ps3);
+			}
 			err = execlp(ps, "", (char *)0);
 			if (err != 0)
 			{
