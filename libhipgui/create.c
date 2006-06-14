@@ -1,16 +1,12 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
 #include "create.h"
 
 
@@ -25,7 +21,7 @@ extern GtkTreeIter local_top, remote_top, process_top;
 /******************************************************************************/
 /**
 	Create contents of the gui in here.
-	
+
 	@return 0 if success, -1 on errors.
 */
 int main_create_content(void)
@@ -39,14 +35,24 @@ int main_create_content(void)
 	GtkWidget *list;
 	GtkWidget *toolbar;
 	GtkWidget *iconw;
-    PangoFontDescription *font_desc;
-    GdkColor color;
-    GtkCellRenderer *cell;
-    GtkTreeViewColumn *column;
+	PangoFontDescription *font_desc;
+	GdkColor color;
+	GtkCellRenderer *cell;
+	GtkTreeViewColumn *column;
 	GtkTreeSelection *select;
 	GtkTreeIter top, child;
+	/* XX TODO:
+		When GTK-2.10+ version is released,
+		add support for "system tray" status icon.
+
+		GtkStatusIcon *status_icon;
+		status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
+		gtk_status_icon_set_visible(status_icon, TRUE);
+		err = gtk_status_icon_is_embedded(status_icon);
+		HIP_DEBUG("Status icon %s.\n", (err ? "is visible", "could not be shown"));
+	*/
 	char str[320];
-	int i;
+	int i, err;
 
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
@@ -104,7 +110,7 @@ int main_create_content(void)
 	label = gtk_label_new("Treeview");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pane, label);
 	gtk_widget_show(pane);
- 
+
 	label = gtk_label_new("HITs in use");
 	label2 = gtk_label_new("HITs in use");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
@@ -144,7 +150,7 @@ int main_create_content(void)
 	gtk_tree_store_append(model, &local_top, NULL);
 	gtk_tree_store_set(model, &local_top, 0, "Local HITs", -1);
 	gtk_tree_store_append(model, &remote_top, NULL);
-	gtk_tree_store_set(model, &remote_top, 0, "Remote HITs", -1);
+	gtk_tree_store_set(model, &remote_top, 0, "Remote HIT groups", -1);
 
 	list = gtk_tree_view_new();
 	widget_set(ID_RLISTVIEW, list);
@@ -212,7 +218,6 @@ int main_create_content(void)
 	widget_set(ID_TERMSCREEN, w);
 	w2 = gtk_text_view_get_buffer(w);
 	widget_set(ID_TERMBUFFER, w2);
-	gtk_text_buffer_insert_at_cursor(w2, "* HIP GUI started.\n" , -1);
 	gtk_text_view_set_editable(w, FALSE);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), w);
 	gtk_widget_show(w);
@@ -246,11 +251,11 @@ int main_create_content(void)
 	gtk_widget_show(scroll);
 	widget_set(ID_USERMODEL, model);
 	gtk_paned_set_position(div, 400);*/
-	
+
 	w2 = gtk_hbox_new(FALSE, 1);
 	gtk_box_pack_start(chat, w2, FALSE, FALSE, 1);
 	gtk_widget_show(w2);
-	
+
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "");
 	widget_set(ID_TERMINPUT, w);
@@ -258,14 +263,14 @@ int main_create_content(void)
 	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_grab_focus(w);
 	gtk_widget_show(w);
-	
+
 	w = gtk_button_new_with_label("Send");
 	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);
 	gtk_box_pack_end(w2, w, FALSE, FALSE, 1);
 	gtk_widget_grab_default(w);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_SEND);
 	gtk_widget_show(w);
-	
+
 	/* done with notebook tabs. */
 	/***************************************/
 
@@ -280,7 +285,7 @@ int main_create_content(void)
 /******************************************************************************/
 /**
 	Create contents of the tool window in here.
-	
+
 	@return 0 if success, -1 on errors.
 */
 int tooldlg_create_content(void)
@@ -305,8 +310,8 @@ int tooldlg_create_content(void)
 	gtk_fixed_put(GTK_FIXED(fixed), w, 0, 0);
 	gtk_widget_show(w);
 	widget_set(ID_INFOLOCAL, w);
-*/	
-	
+*/
+
 
 	/* Create remote HIT info. */
 	frame = gtk_frame_new(NULL);
@@ -320,7 +325,7 @@ int tooldlg_create_content(void)
 	vb = gtk_vbox_new(FALSE, 1);
 	gtk_container_add(GTK_CONTAINER(frame), vb);
 	gtk_widget_show(vb);
-	
+
 	sw = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(sw, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_box_pack_start(vb, sw, TRUE, TRUE, 1);
@@ -403,7 +408,7 @@ int tooldlg_create_content(void)
 	hb = gtk_hbox_new(FALSE, 1);
 	gtk_box_pack_end(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
-	
+
 	w = gtk_button_new_with_label("Apply");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
@@ -418,9 +423,9 @@ int tooldlg_create_content(void)
 	widget_set(ID_INFOGROUP, w);*/
 
 	gtk_widget_hide(window);
- 
+
  //	info_mode_none();
- 
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -429,7 +434,7 @@ int tooldlg_create_content(void)
 /******************************************************************************/
 /**
 	Create contents of the accept dialog in here.
-	
+
 	@return 0 if success, -1 on errors.
 */
 int acceptdlg_create_content(void)
@@ -508,7 +513,7 @@ int acceptdlg_create_content(void)
 /******************************************************************************/
 /**
 	Create run dialog contents.
-	
+
 	@return 0 if success, -1 on errors.
 */
 int rundlg_create_content(void)
@@ -557,12 +562,12 @@ int rundlg_create_content(void)
 	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
 	gtk_widget_show(w);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-	
+
 	/* Add buttons to dialog. */
 	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
 	gtk_widget_grab_default(w);
 	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
-	
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -571,7 +576,7 @@ int rundlg_create_content(void)
 /******************************************************************************/
 /**
 	Create run dialog contents.
-	
+
 	@return 0 if success, -1 on errors.
 */
 int createdlg_create_content(void)
@@ -595,12 +600,12 @@ int createdlg_create_content(void)
 	gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 3);
 	gtk_widget_show(w);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-	
+
 	/* Add buttons to dialog. */
 	w = gtk_dialog_add_button(window, "Create", GTK_RESPONSE_OK);
 	gtk_widget_grab_default(w);
 	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
-	
+
 	return (0);
 }
 /* END OF FUNCTION */

@@ -576,7 +576,7 @@ int hit_db_load_from_file(char *file)
 	HIP_DEBUG("Loading HIT database from %s.\n", file);
 
 	f = fopen(file, "r");
-	if (!f) goto out_err;
+	HIP_IFEL(!f, -1, "Failed to open HIT database file \"%s\" for reading!\n", file);
 
 	/* Start parsing. */
 	memset(buf, '\0', 1024); i = 0; n = -1;
@@ -613,6 +613,12 @@ int hit_db_load_from_file(char *file)
 		memset(buf, '\0', 1024); i = 0;
 	}
 	
+	if (group_db_n < 1)
+	{
+		HIP_DEBUG("Group database emty, adding default group.\n");
+		hit_db_add_rgroup("default");
+	}
+
 	goto out;
 	
 out_err:
@@ -623,7 +629,6 @@ out_err:
 		hit_db_ni = 0;
 		hit_db_n = 0;
 	}
-	err = -1;
 out:
 	if (f) fclose(f);
 	HIT_DB_UNLOCK();

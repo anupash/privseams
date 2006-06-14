@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -11,6 +11,7 @@
 
 /******************************************************************************/
 /* INCLUDES */
+#include <gtk/gtk.h>
 #include "manage.h"
 
 

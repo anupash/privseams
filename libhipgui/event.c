@@ -60,7 +60,7 @@ gboolean accept_delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
 
 /******************************************************************************/
 /** On window destroy. */
-void destroy(GtkWidget *widget, gpointer data)
+void main_destroy(GtkWidget *widget, gpointer data)
 {
 	gtk_main_quit();
 }

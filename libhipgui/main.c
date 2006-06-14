@@ -54,7 +54,7 @@ int gui_init(void)
 	g_signal_connect(G_OBJECT(gtk_window), "delete_event",
 	                 G_CALLBACK(delete_event), NULL);
 	g_signal_connect(G_OBJECT(gtk_window), "destroy",
-	                 G_CALLBACK(destroy), NULL);
+	                 G_CALLBACK(main_destroy), NULL);
 
 	/* Create tool-dialog. */
 	gtk_toolwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -97,6 +97,7 @@ int gui_init(void)
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
+	term_print("* HIP GUI started.\n");
 
 	/* Create some random nickname. */
 	sprintf(str, "user%0.3d", rand() % 1000);

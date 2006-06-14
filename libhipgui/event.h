@@ -48,7 +48,7 @@ enum BUTTON_IDS
 gboolean delete_event(GtkWidget *, GdkEvent *, gpointer);
 gboolean tool_delete_event(GtkWidget *, GdkEvent *, gpointer);
 gboolean accept_delete_event(GtkWidget *, GdkEvent *, gpointer);
-void destroy(GtkWidget *, gpointer);
+void main_destroy(GtkWidget *, gpointer);
 void tool_destroy(GtkWidget *, gpointer);
 void accept_destroy(GtkWidget *, gpointer);
 gboolean select_list(GtkTreeSelection *, GtkTreeModel *, GtkTreePath *,
