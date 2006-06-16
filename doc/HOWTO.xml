@@ -286,6 +286,11 @@
       &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
+      It is also possible to use DNS or OpenDHT for the mappings. Tip: if you
+      don't want to configure BIND and you are using virtual machines,
+      dnsmasq and /etc/hosts may do the trick...
+    </para>
+    <para>
       Link local IPv6 addresses are not supported well, so do not use
       them. Use global IPv6 addresses instead for testing. The reason for
       this is that it is hard to know if the peer belongs to the same local
@@ -562,7 +567,10 @@ using getaddrinfo: ping, ping6, tla, svn.
        quick-and-dirty method...
     </para>
     <para>
-    5. Use HIP agent GUI to run the application. This is a new, not very well
+    5. Use the opportunistic mode as described in section "opportunistic mode".
+    </para>
+    <para>
+    6. Use HIP agent GUI to run the application. This is a new, not very well
        tested feature, but it should work. You can execute applications
        with GUI and edit their library-path as you like. Also you should be
        able to see list of processes you have executed from GUI.

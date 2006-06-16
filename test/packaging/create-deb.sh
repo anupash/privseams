@@ -54,6 +54,8 @@ copy_files ()
  mkdir -p usr/sbin usr/bin usr/lib etc/hip /usr/share/doc
  cd "$HIPL"
 
+ cp hipd/hipd $PKGDIR/usr/bin/
+
  cp tools/hipconf $PKGDIR/usr/sbin/
  for suffix in "" -gai -native -native-user-key;do
    cp test/conntest-client$suffix $PKGDIR/usr/bin/
