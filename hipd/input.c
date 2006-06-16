@@ -660,27 +660,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
 	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
-	    // Since get_local_hits() returns old hit format, hardcoded
-	    /* 
-	    msg->hitr.s6_addr[0] = (0x11);
-	    msg->hitr.s6_addr[1] = (0x99);
-	    msg->hitr.s6_addr[2] = (0x3e);
-	    msg->hitr.s6_addr[3] = (0xd6);
-	    msg->hitr.s6_addr[4] = (0x1b);
-	    msg->hitr.s6_addr[5] = (0x7b);
-	    msg->hitr.s6_addr[6] = (0x59);
-	    msg->hitr.s6_addr[7] = (0xe9);
-	    msg->hitr.s6_addr[8] = (0xd9);
-	    msg->hitr.s6_addr[9] = (0x08);
-	    msg->hitr.s6_addr[10] = (0xb4);
-	    msg->hitr.s6_addr[11] = (0xe2);
-	    msg->hitr.s6_addr[12] = (0x8e);
-	    msg->hitr.s6_addr[13] = (0x91);
-	    msg->hitr.s6_addr[14] = (0x5f);
-	    msg->hitr.s6_addr[15] = (0x18);
-	    
-	    HIP_DEBUG_HIT("!!!! hard coded  msg->hitr", &msg->hitr);
-	    */
 	  }
 #endif // CONFIG_HIP_OPPORTUNISTIC
 	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg,
