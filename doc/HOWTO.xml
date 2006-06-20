@@ -286,9 +286,8 @@
       &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
-      It is also possible to use DNS or OpenDHT for the mappings. Tip: if you
-      don't want to configure BIND and you are using virtual machines,
-      dnsmasq and /etc/hosts may do the trick...
+      It is also possible to use DNS or OpenDHT for the mappings. See the
+      relevant sections from this document.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
