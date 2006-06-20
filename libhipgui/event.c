@@ -94,10 +94,11 @@ gboolean select_list(GtkTreeSelection *selection, GtkTreeModel *arg_model,
 	GtkTreeIter iter;
 	GtkTreeModel *model;
 	char *str = NULL, *spath;
-	int depth, *indices;
+	int depth, *indices, n;
 	
-	if (pathsel != FALSE &&
-	    gtk_tree_selection_path_is_selected(selection, path) != TRUE)
+	if (pathsel == FALSE ||
+		(pathsel != FALSE &&
+	     gtk_tree_selection_path_is_selected(selection, path) != TRUE))
 	{
 	    return (TRUE);
 	}
@@ -113,7 +114,7 @@ gboolean select_list(GtkTreeSelection *selection, GtkTreeModel *arg_model,
 		gtk_tree_model_get(model, &iter, 0, &str, -1);
 	}
 	else str = NULL;
-
+	
 	if (depth == 1)
 	{
 		if (indices[0] == 0) HIP_DEBUG("You selected local HITs group.\n");
@@ -143,7 +144,7 @@ gboolean select_list(GtkTreeSelection *selection, GtkTreeModel *arg_model,
 
 /******************************************************************************/
 /** On remote list select. */
-gboolean select_rlist(GtkTreeSelection *selection, gpointer data)
+gboolean select_rlist(GtkTreeSelection *selection, gboolean barg, gpointer data)
 {
 	GtkTreeIter iter;
 	GtkTreeModel *model;
@@ -154,7 +155,7 @@ gboolean select_rlist(GtkTreeSelection *selection, gpointer data)
 		gtk_tree_model_get(model, &iter, 0, &hit, -1);
 		printf("You selected a remote group/HIT %s\n", hit);
 		g_free(hit);
-		info_mode_remote();
+		//info_mode_remote();
 	}
 	
 	return (TRUE);

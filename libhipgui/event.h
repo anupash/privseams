@@ -53,7 +53,7 @@ void tool_destroy(GtkWidget *, gpointer);
 void accept_destroy(GtkWidget *, gpointer);
 gboolean select_list(GtkTreeSelection *, GtkTreeModel *, GtkTreePath *,
                      gboolean, gpointer);
-gboolean select_rlist(GtkTreeSelection *, gpointer);
+gboolean select_rlist(GtkTreeSelection *, gboolean, gpointer);
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 

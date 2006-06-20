@@ -576,43 +576,48 @@ int hit_db_load_from_file(char *file)
 	HIP_DEBUG("Loading HIT database from %s.\n", file);
 
 	f = fopen(file, "r");
-	HIP_IFEL(!f, -1, "Failed to open HIT database file \"%s\" for reading!\n", file);
-
-	/* Start parsing. */
-	memset(buf, '\0', 1024); i = 0; n = -1;
-	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
+	if (!f)
 	{
-		/* Remove whitespaces from line start. */
-		if (i == 0 && (ch == ' ' || ch == '\t')) continue;
-		
-		/* Find end of line. */
-		if (ch != '\n')
-		{
-			buf[i] = ch;
-			i++;
-			continue;
-		}
-
-		/*
-			Check whether there is carriage return
-			in the stream and remove it.
-		*/
-		ch = fgetc(f);
-		
-		if (ch != '\r') ungetc(ch, f);
-		
-		/* Check for empty lines and for commented lines. */
-		if (strlen(buf) < 3) goto loop_end;
-		if (buf[0] == '#') goto loop_end;
-		
-		if (buf[0] == 'r' || buf[0] == 'l') hit_db_parse_hit(&buf[2]);
-		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
-		
-	loop_end:
-		/* Clear buffer. */
-		memset(buf, '\0', 1024); i = 0;
+		HIP_DEBUG("Failed to open HIT database file \"%s\" for reading!\n", file);
 	}
-	
+	else
+	{
+		/* Start parsing. */
+		memset(buf, '\0', 1024); i = 0; n = -1;
+		for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
+		{
+			/* Remove whitespaces from line start. */
+			if (i == 0 && (ch == ' ' || ch == '\t')) continue;
+			
+			/* Find end of line. */
+			if (ch != '\n')
+			{
+				buf[i] = ch;
+				i++;
+				continue;
+			}
+
+			/*
+				Check whether there is carriage return
+				in the stream and remove it.
+			*/
+			ch = fgetc(f);
+			
+			if (ch != '\r') ungetc(ch, f);
+		
+			/* Check for empty lines and for commented lines. */
+			if (strlen(buf) < 3) goto loop_end;
+			if (buf[0] == '#') goto loop_end;
+		
+			if (buf[0] == 'r' || buf[0] == 'l') hit_db_parse_hit(&buf[2]);
+			else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
+		
+		loop_end:
+			/* Clear buffer. */
+			memset(buf, '\0', 1024); i = 0;
+		}
+	}
+
 	if (group_db_n < 1)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");

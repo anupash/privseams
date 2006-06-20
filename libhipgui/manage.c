@@ -133,7 +133,7 @@ void gui_add_process(int pid, char *name, int time, int msgs)
 
 	w = widget(ID_PLISTMODEL);
 	gtk_tree_store_insert(GTK_TREE_STORE(w), &iter, NULL, MAX_EXEC_PIDS);
-	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, pid, 1, name, 2, time, 3, msgs, -1);
+	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, pid, 1, name, -1);
 }
 /* END OF FUNCTION */
 

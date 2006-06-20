@@ -164,8 +164,8 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-//	g_signal_connect(G_OBJECT(select), "changed", G_CALLBACK(select_rlist), (gpointer)"hit list");
-	gtk_tree_selection_set_select_function(select, select_list, NULL, NULL);
+//	g_signal_connect(G_OBJECT(select), "select-cursor-row", G_CALLBACK(select_rlist), (gpointer)"hit list");
+//	gtk_tree_selection_set_select_function(select, select_list, NULL, NULL);
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
@@ -188,11 +188,6 @@ int main_create_content(void)
 	column = gtk_tree_view_column_new_with_attributes("process", cell, "text", 1, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
 	cell = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("time", cell, "text", 2, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
-	cell = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("messages", cell, "text", 3, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);
