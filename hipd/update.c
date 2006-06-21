@@ -955,7 +955,110 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
+int hip_handle_update_seq(hip_ha_t *entry, 
+		          struct hip_common *msg)
+	
+{
+	int err = 0;
+	uint32_t pkt_update_id = 0; /* UPDATE ID in packet */
+        uint32_t update_id_in = 0;  /* stored incoming UPDATE ID */
+        int is_retransmission = 0;
+        struct hip_seq *seq = NULL;
+	struct hip_hmac *hmac = NULL;
+	struct hip_dh_fixed *dh;
 
+	seq = hip_get_param(msg, HIP_PARAM_SEQ);
+	pkt_update_id = ntohl(seq->update_id);
+	HIP_DEBUG("SEQ: UPDATE ID: %u\n", pkt_update_id);
+	
+	update_id_in = entry->update_id_in;
+	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
+	
+	/* 1. If the SEQ parameter is present, and the Update ID in the
+	   received SEQ is smaller than the stored Update ID for the host,		 the packet MUST BE dropped. */
+	if (pkt_update_id < update_id_in) {
+			HIP_DEBUG("SEQ param present and received UPDATE ID (%u) < stored incoming UPDATE ID (%u). Dropping\n", 
+		        pkt_update_id, update_id_in);
+			err = -EINVAL;
+			goto out_err;
+	} else if (pkt_update_id == update_id_in) {
+	/* 2. If the SEQ parameter is present, and the Update ID in the
+	   received SEQ is equal to the stored Update ID for the host, the
+	   packet is treated as a retransmission. */
+		is_retransmission = 1;
+		HIP_DEBUG("Retransmitted UPDATE packet (?), continuing\n");
+			/* todo: ignore this packet or process anyway ? */
+		
+	}
+
+
+	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
+	HIP_IFEL(hmac == NULL, -1, "HMAC not found. Dropping packet\n");
+	
+	/* 3. The system MUST verify the HMAC in the UPDATE packet.
+	   If the verification fails, the packet MUST be dropped. */
+	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
+		 "HMAC validation on UPDATE failed\n");
+
+	/* 5. The system MAY verify the SIGNATURE in the UPDATE
+	   packet. If the verification fails, the packet SHOULD be
+	   dropped and an error message logged. */
+	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
+		 "Verification of UPDATE signature failed\n");
+
+	/* 6.  If a new SEQ parameter is being processed, 
+	   the system MUST record the Update ID in the 
+	   received SEQ parameter, for replay protection. */
+	if (seq && !is_retransmission) {
+		entry->update_id_in = pkt_update_id;
+		_HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", pkt_update_id);
+	}
+ out_err:
+	if (err)
+		HIP_ERROR("SEQUENCE handler failed, err=%d\n", err);
+
+	return err;
+
+
+}
+
+int hip_update_handle_locator(hip_ha_t *entry,
+		          struct hip_esp_info *esp_info,
+			  struct hip_locator *locator,
+		          struct in6_addr *src_ip)
+{ 
+	
+	struct hip_locator_info_addr_item *locator_address_item;
+	int i, n_addrs;
+	uint32_t spi = 0;
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	spi = ntohl(esp_info->new_spi);
+	locator_address_item =	hip_get_locator_first_addr_item(locator);
+	for(i = 0; i < n_addrs; i++, locator_address_item++) {
+		struct in6_addr *locator_address = &locator_address_item->address;
+		uint32_t lifetime = ntohl(locator_address_item->lifetime);
+		int is_preferred = ntohl(locator_address_item->reserved) == 1 << 31;
+		HIP_DEBUG_HIT("REA address", locator_address);
+		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1, is_preferred ? "yes" : "no", ntohl(locator_address_item->reserved),lifetime);
+	/* 2. check that the address is a legal unicast or anycast address */
+		if (!hip_update_test_locator_addr(locator_address))
+			continue;
+		if (i > 0) {
+		/* preferred address allowed only for the first address */
+			if (is_preferred)
+				HIP_ERROR("bug, preferred flag set to other than the first address\n");
+				is_preferred = 0;
+		}
+		if (is_preferred && memcmp(src_ip, &entry->preferred_address,
+		   sizeof(struct in6_addr)) && spi) {
+			hip_delete_sa(spi, &entry->preferred_address,
+		  		      AF_INET6, 0, entry->peer_udp_port);
+			ipv6_addr_copy(&entry->preferred_address,
+					       locator_address);
+		} 
+	}
+	return 0;
+}
 /**
  * hip_receive_update - receive UPDATE packet
  * @msg: buffer where the HIP packet is in
@@ -974,7 +1077,7 @@ int hip_receive_update(struct hip_common *msg,
 		       hip_ha_t *entry,
 		       struct hip_stateless_info *sinfo)
 {
-	int err = 0, state = 0, is_retransmission = 0, handle_upd = 0;
+	int err = 0, /*update_state = 0,*/  handle_upd = 0, state = 0;
 	struct in6_addr *hits;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
@@ -982,10 +1085,6 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_locator *locator = NULL;
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
-	struct hip_hmac *hmac = NULL;
-	//struct hip_signature *signature = NULL;
-	uint32_t pkt_update_id = 0; /* UPDATE ID in packet */
-	uint32_t update_id_in = 0;  /* stored incoming UPDATE ID */
 	uint16_t keymat_index = 0;
 	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
@@ -1000,7 +1099,11 @@ int hip_receive_update(struct hip_common *msg,
 
 	HIP_IFEL(!entry, -1, "Entry not found\n");
 	HIP_LOCK_HA(entry);
-	state = entry->state; /* todo: remove variable state */
+	state = entry->state;
+	/*update_state = entry->update_state; 
+
+
+	HIP_DEBUG("Received UPDATE in update_state %s\n", hip_update_state_str(update_state));*/
 
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
 
@@ -1011,8 +1114,7 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
 
-	if (! (state == HIP_STATE_ESTABLISHED ||
-	       state == HIP_STATE_REKEYING) ) {
+	if (! (state == HIP_STATE_ESTABLISHED || state == HIP_STATE_REKEYING)) {
 		HIP_DEBUG("Received UPDATE in illegal state %s. Dropping\n",
 			  hip_state_str(state));
 		err = -EINVAL;
@@ -1033,10 +1135,6 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("ESP_INFO: Old SPI: 0x%x New SPI: 0x%x\n",
 			  ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
 	}
-	if (seq) {
-		pkt_update_id = ntohl(seq->update_id);
-		HIP_DEBUG("SEQ: UPDATE ID: %u\n", pkt_update_id);
-	}
 	if (ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
 	if (esp_info)
@@ -1052,7 +1150,9 @@ int hip_receive_update(struct hip_common *msg,
 		handle_upd = 1;
 	}
 
-	if (!handle_upd && state == HIP_STATE_REKEYING && ack && !echo) {
+
+
+	if (!handle_upd && /*update_*/state == /*HIP_UPDATE_*/HIP_STATE_REKEYING && ack && !echo) {
 		HIP_DEBUG("in REKEYING state and ACK and not ECHO_REQUEST, MUST process this UPDATE\n");
 		handle_upd = 1;
 	}
@@ -1060,67 +1160,39 @@ int hip_receive_update(struct hip_common *msg,
 	/* UPDATE tests */
 	if (!handle_upd && locator && seq && esp_info) {
 		HIP_DEBUG("have LOCATOR and SEQ but no ESP_INFO, process this UPDATE\n");
-		handle_upd = 2;
+//		handle_upd = 2;
 	}
 
 	if (!handle_upd && /* SPI && */ seq && !esp_info && echo) {
 		/* ACK might have been in a separate packet */
 		HIP_DEBUG("have SEQ,ECHO_REQUEST but no ESP_INFO, process this UPDATE\n");
-		handle_upd = 3;
+//		handle_upd = 3;
 	}
 	if (!handle_upd && ack && echo) {
 		HIP_DEBUG("have ACK and ECHO_REQUEST, process this UPDATE\n");
-		handle_upd = 4;
+//		handle_upd = 4;
 	}
 
 	if (!handle_upd && ack) {
 		HIP_DEBUG("have only ACK, process this UPDATE\n");
-		handle_upd = 5;
+//		handle_upd = 5;
 	}
 
-	if (!handle_upd) {
+/*	if (!handle_upd) {
 		HIP_ERROR("NOT processing UPDATE packet\n");
 		HIP_DEBUG("This could be a NAT Keep alive packet !!\n");
 		goto out_err;
 	}
+*/
 
 
-
-	update_id_in = entry->update_id_in;
+	//update_id_in = entry->update_id_in;
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
-	if (seq) {
-		/* 1. If the SEQ parameter is present, and the Update ID in the
-		   received SEQ is smaller than the stored Update ID for the host,
-		   the packet MUST BE dropped. */
-		if (pkt_update_id < update_id_in) {
-			HIP_DEBUG("SEQ param present and received UPDATE ID (%u) < stored incoming UPDATE ID (%u). Dropping\n",
-				  pkt_update_id, update_id_in);
-			err = -EINVAL;
-			goto out_err;
-		} else if (pkt_update_id == update_id_in) {
-			/* 2. If the SEQ parameter is present, and the Update ID in the
-			   received SEQ is equal to the stored Update ID for the host, the
-			   packet is treated as a retransmission. */
-			is_retransmission = 1;
-			HIP_DEBUG("Retransmitted UPDATE packet (?), continuing\n");
-			/* todo: ignore this packet or process anyway ? */
-		}
-	}
-
-	HIP_DEBUG("handle_upd=%d\n", handle_upd);
-	if (handle_upd > 1) {
-		_HIP_DEBUG("UPDATE\n");
-	}
-
-	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
-	HIP_IFEL(hmac == NULL, -1, "HMAC not found. Dropping packet\n");
+	if (seq)
+		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
 	
-	/* 3. The system MUST verify the HMAC in the UPDATE packet.
-	   If the verification fails, the packet MUST be dropped. */
-	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
-		 "HMAC validation on UPDATE failed\n");
-
-	/* 4. If the received UPDATE contains a Diffie-Hellman
+	
+	/* If the received UPDATE contains a Diffie-Hellman
 	   parameter, the received Keymat Index MUST be zero. If this
 	   test fails, the packet SHOULD be dropped and the system
 	   SHOULD log an error message. */
@@ -1133,19 +1205,7 @@ int hip_receive_update(struct hip_common *msg,
 			 "keymat value %u in ESP_INFO. Dropping\n", keymat_index);
 	}
 
-	/* 5. The system MAY verify the SIGNATURE in the UPDATE
-	   packet. If the verification fails, the packet SHOULD be
-	   dropped and an error message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
-		 "Verification of UPDATE signature failed\n");
-
-	/* 6.  If a new SEQ parameter is being processed, the system MUST record
-	   the Update ID in the received SEQ parameter, for replay
-	   protection. */
-	if (seq && !is_retransmission) {
-		entry->update_id_in = pkt_update_id;
-		_HIP_DEBUG("Stored peer's incoming UPDATE ID %u\n", pkt_update_id);
-	}
+        //Check: Is there an outstanding keying request?
 
 	/* check that Old SPI value exists */
 	HIP_IFEL(esp_info &&
@@ -1156,67 +1216,15 @@ int hip_receive_update(struct hip_common *msg,
 		 ntohl(esp_info->old_spi));
 
 	/**********************/
-	if (locator && esp_info) {
-		struct hip_locator_info_addr_item *locator_address_item;
-		int i, n_addrs;
-		uint32_t spi = 0;
-		n_addrs = hip_get_locator_addr_item_count(locator);
-		spi = ntohl(esp_info->new_spi);
-		locator_address_item =
-			hip_get_locator_first_addr_item(locator);
-		for(i = 0; i < n_addrs; i++, locator_address_item++) {
-			struct in6_addr *locator_address =
-				&locator_address_item->address;
-			uint32_t lifetime =
-				ntohl(locator_address_item->lifetime);
-			int is_preferred =
-			      ntohl(locator_address_item->reserved) == 1 << 31;
-			
-			HIP_DEBUG_HIT("REA address", locator_address);
-			HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
-				  is_preferred ? "yes" : "no",
-				  ntohl(locator_address_item->reserved),
-				  lifetime);
-			/* 2. check that the address is a legal unicast or anycast address */
-			if (!hip_update_test_locator_addr(locator_address))
-				continue;
-
-			if (i > 0) {
-				/* preferred address allowed only for the first address */
-				if (is_preferred)
-					HIP_ERROR("bug, preferred flag set to other than the first address\n");
-				is_preferred = 0;
-			}
-
-			if (is_preferred && 
-			    memcmp(src_ip, &entry->preferred_address,
-				   sizeof(struct in6_addr)) && spi) {
-				hip_delete_sa(spi, &entry->preferred_address,
-					      AF_INET6, 0, entry->peer_udp_port);
-				ipv6_addr_copy(&entry->preferred_address,
-					       locator_address);
-			} 
-		}
-	}
-	/**********************/
-	//hip_delete_sa(spi_in->spi, &entry->_address, AF_INET6);
-	//ipv6_addr_copy(&entry->local_address, &addr_list->address);
-	//if(hip_nat_status == 1)
-	//if(hip_nat_status == 1 || (sinfo->src_port != 0 || sinfo->dst_port != 0))
-	//{
-	//	HIP_DEBUG("Nat status is on. So fill up port info in the packet\n");	
-	//	HIP_DEBUG("src_port %d, dst_port %d\n",sinfo->src_port, sinfo->dst_port);
-		//entry->peer_udp_port = sinfo->src_port; //src port of the incoming packet !! --Abi 
-	//}
-
-	//HIP_DEBUG_IN6ADDR("addr list addr\n", &addr_list->address);
 	HIP_DEBUG_IN6ADDR("entry->localaddress \n", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("src_ip \n", src_ip);
 	HIP_DEBUG_IN6ADDR("dst_ip \n", dst_ip);
-
+	if(locator && esp_info){
+		HIP_IFEL(hip_update_handle_locator(entry, esp_info, locator, src_ip),-1,"Error in processing locator Info\n");
+	}	
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0)
 	{
-		HIP_DEBUG("^^^^^^^^^^^ setting off nat ... update has come not on udp\n");
+		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
 		entry->nat = 0;
 		entry->peer_udp_port = 0;
 	}
@@ -1231,13 +1239,13 @@ int hip_receive_update(struct hip_common *msg,
 		*/	
 	}
 	
-	if (handle_upd == 2) {
+	if (!handle_upd && locator && seq && esp_info) {
 		/* LOCATOR, SEQ */
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
-	} else if (handle_upd == 3) {
+	} else if (seq && !esp_info && echo) {
 		/* SPI, SEQ, ACK, ECHO_REQUEST */
 		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
-	} else if (handle_upd == 5) {
+	} else if (ack && !echo) {
 		/* ACK, ECHO_RESPONSE */
 		entry->hadb_update_func->hip_update_handle_ack(entry, ack, 0, echo_response);
 	} else {
@@ -1334,7 +1342,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
 	uint16_t mask = 0;
 	struct hip_spi_in_item *spi_in = NULL;
-
+	struct hip_own_addr_list_item *own_address_item, *tmp;
+	
+	
+	
 	add_locator = flags & SEND_UPDATE_LOCATOR;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
 		  addr_list, addr_count, ifindex, flags);
@@ -1487,11 +1498,38 @@ int hip_send_update(struct hip_hadb_state *entry,
 		int i = 0;
 		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6,
 			      entry->peer_udp_port, 0);
+//AB: Matching with only one addres.. isnt it supposed to be an address list??
 		/* XX FIXME: change daddr to an alternative peer address
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
 			struct in6_addr *saddr = &loc_addr_item->address;
-			ipv6_addr_copy(&entry->local_address, saddr);
+			/*TODO: For each address in locator, check if it exists 
+			 * in our src_address list. 
+			 * If no, add it with state as WAITING_ECHO_REQUEST
+			 * If yes, leave it as it as it is
+			 * If an address is in our src_address list but not existing 
+			 * in the locator parameter delete it.(DEPRECATED??)
+			 */
+			list_for_each_entry_safe(own_address_item, tmp, &entry->src_address_list, list) {
+
+		        	address_item =	hip_get_locator_first_addr_item(locator);
+
+					if (!ipv6_addr_cmp(&own_address_item->address, locator_address)) {
+				for(i = 0; i < n_addrs; i++, locator_address_item++) {
+					struct in6_addr *locator_address = &locator_address_item->address;
+	
+					if (!ipv6_addr_cmp(&own_address_item->address, locator_address)) {
+						
+					break;
+				}
+
+			}
+			if (!spi_addr_is_in_locator) {
+				HIP_DEBUG_HIT("deprecating address", &a->address);
+				a->address_state = PEER_ADDR_STATE_DEPRECATED;
+			}
+		}
+		ipv6_addr_copy(&entry->local_address, saddr);
 			if (IN6_IS_ADDR_V4MAPPED(saddr) == 
 			    IN6_IS_ADDR_V4MAPPED(&daddr)) {
 				/* Select the first match */
@@ -1525,28 +1563,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	/* Add SIGNATURE */
 	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	/* Send UPDATE */
-	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
-
-	entry->state = HIP_STATE_REKEYING;
-	HIP_DEBUG("moved to state REKEYING\n");
-
-	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-        HIP_DEBUG("Sending initial UPDATE packet\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
-						      update_packet, entry, 1),
-		 -1, "csum_send failed\n");
-
-	/* remember the address set we have advertised to the peer */
-	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
-	if (err) {
-		HIP_ERROR("addr list copy failed\n");
-		goto out_err;
-	}
-
-	/* todo: 5. The system SHOULD start a timer whose timeout value
 	   should be ..*/
 	goto out;
 
@@ -1622,7 +1638,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-
+//AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid ha entries
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {

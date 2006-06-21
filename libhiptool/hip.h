@@ -996,6 +996,22 @@ struct hip_peer_addr_list_item
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
 };
 
+struct hip_own_addr_list_item
+{
+	struct list_head list;
+
+	struct in6_addr  address;
+	int              address_state; /* current state of the
+					 * address (PEER_ADDR_STATE_xx) */
+	int              is_preferred;  /* 1 if this address was set as
+					   preferred address in the LOCATOR */
+//	uint32_t         lifetime;
+//	struct timeval   modified_time; /* time when this address was
+//					   added or updated */
+//	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
+//					   this address is related to */
+//	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+}
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
 	struct list_head list;
@@ -1063,7 +1079,8 @@ struct hip_hadb_state
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
-        struct in6_addr      local_address;   /* Our IP address */
+        struct  in6_addr     local_address;   /* Our IP address */
+	struct  list_head    src_address_list;
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
