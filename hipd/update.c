@@ -233,9 +233,14 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 		if (!hip_update_locator_contains_item(locator, a)) {
 			HIP_DEBUG_HIT("deprecating address", &a->address);
 			a->address_state = PEER_ADDR_STATE_DEPRECATED;
+			if(ipv6_addr_cmp(&entry->preferred_address, 
+						&a->address)){
+				//TODO: Handle this:Choose a random address from amongst the active addresses? -Bagri
+				HIP_DEBUG_HIT("Preferred Address deprecated", &a->address);
+			}
+						
 		}
 	}
-
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
 		(void)hip_hadb_relookup_default_out(entry);

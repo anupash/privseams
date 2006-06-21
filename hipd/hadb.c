@@ -1426,7 +1426,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	struct hip_spi_out_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
 	struct hip_peer_addr_list_item *a, *tmp;
-
+	struct in6_addr *preferred_address; 
 	/* Assumes already locked entry */
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
@@ -1440,6 +1440,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	/* Check if addr already exists. If yes, then just update values. */
 	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
 		if (!ipv6_addr_cmp(&a->address, addr)) {
+			// Do we send a verification if state is unverified?
+			// The address should be awaiting verifivation already
 			new_addr = a;
 			new = 0;
 			break;
@@ -1476,7 +1478,13 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
  		case PEER_ADDR_STATE_ACTIVE:
 			HIP_DEBUG("address state stays in ACTIVE\n");
 			break;
+		case PEER_ADDR_STATE_UNVERIFIED:
+			HIP_DEBUG("address state stays in UNVERIFIED\n");
+		//	entry->hadb_update_func->hip_update_send_addr_verify(entry, new);
+
+			break;
 		default:
+			// Does this mean that unverified cant be here? Why?
 			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
 			break;
 		}
@@ -1496,7 +1504,9 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
-
+	if(is_preferred_addr){
+		ipv6_addr_copy(&entry->preferred_address,&new_addr->address);
+	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
