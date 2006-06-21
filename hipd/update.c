@@ -8,6 +8,36 @@
 
 #include "update.h"
 
+int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
+					  struct hip_locator_info_addr_item *i,
+					  void *opaq),
+			      hip_ha_t *entry,
+			      struct hip_locator *locator,
+			      void *opaque)
+{
+	int i = 0, err = 0, n_addrs;
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
+
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
+	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
+		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
+			  ntohs(locator->length));
+	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
+		  n_addrs, hip_get_param_total_len(locator));
+
+	HIP_IFE(!func, -1);
+
+	locator_address_item = hip_get_locator_first_addr_item(locator);
+	for(i = 0; i < n_addrs; i++, locator_address_item++) {
+		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
+			 "Called locator handler function returned error\n");
+	}
+	
+ out_err:
+
+	return err;
+}
 
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
@@ -108,6 +138,60 @@ int hip_update_test_locator_addr(struct in6_addr *addr)
 	return filter_address((struct sockaddr *) &ss, -1);
 }
 
+int hip_update_add_peer_addr_item(hip_ha_t *entry,
+		       struct hip_locator_info_addr_item *locator_address_item,
+		       uint32_t *spi)
+{
+	struct in6_addr *locator_address =
+		&locator_address_item->address;
+	uint32_t lifetime = ntohl(locator_address_item->lifetime);
+	int is_preferred = ntohl(locator_address_item->reserved) == 1 << 31;
+	int err = 0, i;
+	
+	HIP_DEBUG_HIT("LOCATOR address", locator_address);
+	HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+		  is_preferred ? "yes" : "no",
+		  ntohl(locator_address_item->reserved),
+		  lifetime);
+
+	/* 2. check that the address is a legal unicast or anycast
+	   address */
+	if (!hip_update_test_locator_addr(locator_address)) {
+		err = -1;
+		HIP_DEBUG_IN6ADDR("Bad locator type", locator_address);
+		goto out_err;
+	}
+	
+	/* 3. check if the address is already bound to the SPI +
+	   add/update address */
+	HIP_IFE(hip_hadb_add_addr_to_spi(entry, *spi, locator_address,
+					 0,
+					 lifetime, is_preferred), -1);
+
+ out_err:
+	return err;
+}
+
+int hip_update_locator_match(hip_ha_t *unused,
+			     struct hip_locator_info_addr_item *item1,
+			     struct hip_locator_info_addr_item *item2) {
+	if (ipv6_addr_cmp(&item1->address, &item2->address))
+		return 0;
+	else
+		return 1;
+}
+
+int hip_update_locator_contains_item(struct hip_locator *locator,
+				  struct hip_peer_addr_list_item *item)
+{
+	int err = 0;
+	HIP_IFE(for_each_locator_addr_item(hip_update_locator_match,
+					   NULL, locator, item), -1);
+ out_err:
+	return err;
+}
+
+
 /** hip_update_handle_locator_parameter - Process locator parameters in the UPDATE
  * @entry: corresponding hadb entry of the peer
  * @locator: the locator parameter in the packet
@@ -124,26 +208,14 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	int err = 0; /* set to -Esomething ?*/
 	uint32_t spi = 0;
 	struct hip_locator_info_addr_item *locator_address_item;
-	int i, n_addrs;
+	int i;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
 
 	spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
 
-	n_addrs = hip_get_locator_addr_item_count(locator);
-	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
-		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
-			  ntohs(locator->length));
-
-	HIP_ASSERT(n_addrs >= 0);
-
-	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
-		  n_addrs, hip_get_param_total_len(locator));
-
-	/* 1. The host checks if the SPI listed is a new one. If it
-	   is a new one, it creates a new SPI that contains no addresses. */
-	/* If following exits, its a bug: outbound SPI must have been
+	/* If following does not exit, its a bug: outbound SPI must have been
 	   already created by the corresponding ESP_INFO in the same UPDATE
 	   packet */
 	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
@@ -153,61 +225,24 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 		a->is_preferred = 0;
 	}
 
-	locator_address_item = hip_get_locator_first_addr_item(locator);
-	for(i = 0; i < n_addrs; i++, locator_address_item++) {
-		struct in6_addr *locator_address =
-			&locator_address_item->address;
-		uint32_t lifetime = ntohl(locator_address_item->lifetime);
-		int is_preferred = ntohl(locator_address_item->reserved) == 1 << 31;
-
-		HIP_DEBUG_HIT("LOCATOR address", locator_address);
-		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
-			   is_preferred ? "yes" : "no", ntohl(locator_address_item->reserved),
-			  lifetime);
-		/* 2. check that the address is a legal unicast or anycast
-		   address */
-		if (!hip_update_test_locator_addr(locator_address))
-			continue;
-
-		if (i > 0) {
-			/* preferred address allowed only for the first
-			   address */
-			if (is_preferred)
-				HIP_ERROR("bug, preferred flag set to other than the first address\n");
-			is_preferred = 0;
-		}
-		/* 3. check if the address is already bound to the SPI +
-		   add/update address */
-		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-						 0,
-						 lifetime, is_preferred), -1);
-	}
+	HIP_IFEL(for_each_locator_addr_item(hip_update_add_peer_addr_item,
+					    entry, locator, &spi), -1,
+		 "Locator handling failed\n");
 
 	/* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
 	   parameter as DEPRECATED. */
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
-		int spi_addr_is_in_locator = 0;
-
-		locator_address_item =
-			hip_get_locator_first_addr_item(locator);
-		for(i = 0; i < n_addrs; i++, locator_address_item++) {
-			struct in6_addr *locator_address = &locator_address_item->address;
-
-			if (!ipv6_addr_cmp(&a->address, locator_address)) {
-				spi_addr_is_in_locator = 1;
-				break;
-			}
-
-		}
-		if (!spi_addr_is_in_locator) {
+		if (!hip_update_locator_contains_item(locator, a)) {
 			HIP_DEBUG_HIT("deprecating address", &a->address);
 			a->address_state = PEER_ADDR_STATE_DEPRECATED;
 		}
 	}
 
+#if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
 		(void)hip_hadb_relookup_default_out(entry);
 	/* relookup always ? */
+#endif
 
  out_err:
 	return err;
@@ -1013,10 +1048,14 @@ int hip_update_handle_locator(hip_ha_t *entry,
 	for(i = 0; i < n_addrs; i++, locator_address_item++) {
 		struct in6_addr *locator_address = &locator_address_item->address;
 		uint32_t lifetime = ntohl(locator_address_item->lifetime);
-		int is_preferred = ntohl(locator_address_item->reserved) == 1 << 31;
+		int is_preferred =
+			ntohl(locator_address_item->reserved) == 1 << 31;
 		HIP_DEBUG_HIT("REA address", locator_address);
-		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1, is_preferred ? "yes" : "no", ntohl(locator_address_item->reserved),lifetime);
-	/* 2. check that the address is a legal unicast or anycast address */
+		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n",
+			  i+1, is_preferred ? "yes" : "no",
+			  ntohl(locator_address_item->reserved),lifetime);
+		/* 2. check that the address is a legal unicast or anycast
+		   address */
 		if (!hip_update_test_locator_addr(locator_address))
 			continue;
 		if (i > 0) {
