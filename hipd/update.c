@@ -185,7 +185,7 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 				  struct hip_peer_addr_list_item *item)
 {
 	int err = 0;
-	HIP_IFE(for_each_locator_addr_item(hip_update_locator_match,
+	HIP_IFE(hip_for_each_locator_addr_item(hip_update_locator_match,
 					   NULL, locator, item), -1);
  out_err:
 	return err;
@@ -223,7 +223,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 		a->is_preferred = 0;
 	}
 
-	HIP_IFEL(for_each_locator_addr_item(hip_update_add_peer_addr_item,
+	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
 					    entry, locator, &spi), -1,
 		 "Locator handling failed\n");
 
@@ -1558,9 +1558,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Send UPDATE */
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
-
-//	entry->update_state = HIP_UPDATE_STATE_REKEYING;
-        entry->state = HIP_STATE_REKEYING;
 
 	HIP_DEBUG("moved to state REKEYING\n");
 
