@@ -205,10 +205,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 					struct hip_locator *locator,
 					struct hip_esp_info *esp_info)
 {
-	int err = 0; /* set to -Esomething ?*/
-	uint32_t spi = 0;
+	uint32_t spi = 0, i, err = 0;
 	struct hip_locator_info_addr_item *locator_address_item;
-	int i;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
 
