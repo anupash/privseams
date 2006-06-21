@@ -807,41 +807,18 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 		}
 
 		if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
-			HIP_DEBUG("not verifying already active address\n"); 
+
+			HIP_DEBUG("Verifying already active address. Setting as deprecated\n"); 
+			addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			if (addr->is_preferred) {
 				HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
 				hip_hadb_set_default_out_addr(entry, spi_out,
-							      &addr->address);
+							      &addr->address); //CHECK: Is this the correct function? -Bagri
 			}
-			continue;
+			//continue;
 		}
-		HIP_DEBUG("building verification packet\n");
-		hip_msg_init(update_packet);
-		entry->hadb_misc_func->hip_build_network_hdr(update_packet,
-							     HIP_UPDATE, mask,
-							     hitr, hits);
-		entry->update_id_out++;
-		addr->seq_update_id = entry->update_id_out;
-		_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
-			   addr->seq_update_id);
-		/* todo: handle overflow if (!update_id_out) */
-		HIP_IFEBL2(hip_build_param_seq(update_packet,
-					       addr->seq_update_id), -1,
-			 continue, "Building of SEQ failed\n");
-		/* Add HMAC */
-		HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
-							 &entry->hip_hmac_out),
-			  -1, continue, "Building of HMAC failed\n");
-		/* Add SIGNATURE */
-		HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
-			   -EINVAL, continue, "Could not sign UPDATE\n");
-		get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
-		_HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
-			     addr->echo_data, sizeof(addr->echo_data));
-		HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
-						sizeof(addr->echo_data), 0, 1),
-			   -1, continue, "Building of ECHO_REQUEST failed\n");
-		HIP_DEBUG("sending addr verify pkt\n");
+		HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, hits, hitr),
+			       	-1, "Building Verification Packet failed\n");
 		/* test: send all addr check from same address */
 		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
 							      &addr->address,
@@ -857,7 +834,50 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
+int hip_build_verification_pkt(hip_ha_t *entry,
+			       struct hip_common *update_packet, 
+			       struct hip_peer_addr_list_item *addr,
+			       struct in6_addr *hits,
+	       		       struct in6_addr *hitr){
 
+	int err = 0;
+	uint16_t mask = 0;
+	HIP_DEBUG("building verification packet\n");
+	hip_msg_init(update_packet);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet,
+						     HIP_UPDATE, mask,
+						     hitr, hits);
+	entry->update_id_out++;
+	addr->seq_update_id = entry->update_id_out;
+	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
+			   addr->seq_update_id);
+		/* todo: handle overflow if (!update_id_out) */
+	HIP_IFEBL2(hip_build_param_seq(update_packet,
+				       addr->seq_update_id), -1,
+		 return , "Building of SEQ failed\n");
+	/* Add HMAC */
+	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
+						 &entry->hip_hmac_out),
+			  -1, return , "Building of HMAC failed\n");
+	/* Add SIGNATURE */
+	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
+		   -EINVAL, return , "Could not sign UPDATE\n");
+	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
+	_HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
+			     addr->echo_data, sizeof(addr->echo_data));
+	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
+						sizeof(addr->echo_data), 0, 1),
+			   -1, return , "Building of ECHO_REQUEST failed\n");
+	HIP_DEBUG("sending addr verify pkt\n");
+
+ out_err:
+	if (update_packet)
+		HIP_FREE(update_packet);
+	HIP_DEBUG("end, err=%d\n", err);
+	return err;
+
+
+}
 /** hip_handle_update_plain_locator - handle UPDATE(LOCATOR, SEQ)
  * @entry: hadb entry corresponding to the peer
  * @msg: the HIP packet
