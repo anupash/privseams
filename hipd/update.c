@@ -3,6 +3,7 @@
  * Authors:
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Tobias Heer <tobi@tobibox.de>
+ * - Abhijit Bagri <abagri@gmail.com>
  */
 
 #include "update.h"
