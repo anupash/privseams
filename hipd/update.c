@@ -759,10 +759,6 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");
 
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet,
-						     HIP_UPDATE, mask,
-						     hitr, hits);
-
 	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
 		HIP_DEBUG_HIT("new addr to check", &addr->address);
 		HIP_DEBUG("address state=%d\n", addr->address_state);
@@ -848,26 +844,6 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_seq *seq;
 	struct hip_locator *locator;
 	uint16_t mask = 0;
-
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, 
-		 "Out of memory.\n");
-
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
-						     mask, hitr, hits);
-
-	/* ACK the received UPDATE SEQ */
-	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)),
-		 -1, "Building of ACK failed\n");
-
-	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	HIP_DEBUG("Sending reply UPDATE packet (for LOCATOR)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
-						      update_packet, entry, 0),
-		 -1, "csum_send_failed\n");
 
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	HIP_IFEL(locator == NULL, -1, "No locator!\n");
