@@ -1504,7 +1504,10 @@ int hip_send_update(struct hip_hadb_state *entry,
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	/* spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
-	   sure that the source and destination address families match */
+	 * sure that the source and destination address families match
+	 */
+
+	   	
 	if (addr_list && memcmp(&entry->local_address, &addr_list->address,
 				sizeof(struct in6_addr))) {
 		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
@@ -1516,33 +1519,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
 			struct in6_addr *saddr = &loc_addr_item->address;
-			/*TODO: For each address in locator, check if it exists 
-			 * in our src_address list. 
-			 * If no, add it with state as WAITING_ECHO_REQUEST
-			 * If yes, leave it as it as it is
-			 * If an address is in our src_address list but not existing 
-			 * in the locator parameter delete it.(DEPRECATED??)
-			 */
-			list_for_each_entry_safe(own_address_item, tmp, &entry->src_address_list, list) {
-
-		        	address_item =	hip_get_locator_first_addr_item(locator);
-
-					if (!ipv6_addr_cmp(&own_address_item->address, locator_address)) {
-				for(i = 0; i < n_addrs; i++, locator_address_item++) {
-					struct in6_addr *locator_address = &locator_address_item->address;
-	
-					if (!ipv6_addr_cmp(&own_address_item->address, locator_address)) {
-						
-					break;
-				}
-
-			}
-			if (!spi_addr_is_in_locator) {
-				HIP_DEBUG_HIT("deprecating address", &a->address);
-				a->address_state = PEER_ADDR_STATE_DEPRECATED;
-			}
-		}
-		ipv6_addr_copy(&entry->local_address, saddr);
+			ipv6_addr_copy(&entry->local_address, saddr);
 			if (IN6_IS_ADDR_V4MAPPED(saddr) == 
 			    IN6_IS_ADDR_V4MAPPED(&daddr)) {
 				/* Select the first match */
@@ -1576,7 +1553,49 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	/* Add SIGNATURE */
 	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-	   should be ..*/
+	 	 "Could not sign UPDATE. Failing\n");
+
+	/* Send UPDATE */
+	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
+
+
+//	entry->update_state = HIP_UPDATE_STATE_REKEYING;
+        entry->state = HIP_STATE_REKEYING;
+
+	HIP_DEBUG("moved to state REKEYING\n");
+
+	memcpy(&saddr, &entry->local_address, sizeof(saddr));
+        HIP_DEBUG("Sending initial UPDATE packet\n");
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
+						      update_packet, entry, 1),
+		 -1, "csum_send failed\n");
+
+	/* remember the address set we have advertised to the peer */
+	{
+		int i;
+		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
+		for(i = 0; i < addr_count; i++, loc_addr_item++) {
+			int j, addr_exists = 0;		
+			struct in6_addr *iter_addr = &loc_addr_item->address;
+			for(j = 0; j < spi_in->addresses_n; j++){
+				struct hip_locator_info_addr_item *spi_addr_item = (struct hip_locator_info_addr_item *) spi_in->addresses + j;				
+				if(ipv6_addr_cmp(&spi_addr_item->address, iter_addr)){
+					loc_addr_item->state = spi_addr_item->state; 				
+					addr_exists = 1;
+				}
+			}	
+			if(!addr_exists){
+					loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
+			}
+		}
+	}	
+	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
+	if (err) {
+		HIP_ERROR("addr list copy failed\n");
+		goto out_err;
+	}
+	/* todo: 5. The system SHOULD start a timer whose timeout value
+  should be ..*/
 	goto out;
 
  out_err:

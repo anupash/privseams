@@ -436,6 +436,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
 
+#define ADDR_STATE_ACTIVE 1
+#define ADDR_STATE_WAITING_ECHO_REQ 2
+
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
 #define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
@@ -775,6 +778,11 @@ struct hip_locator_info_addr_item {
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
 	struct in6_addr address;
+	int state; /*State of our addresses,
+		     possible states are:
+		     WAITING_ECHO_REQUEST, ACTIVE
+		   */
+
 }  __attribute__ ((packed));
 
 #if 0
