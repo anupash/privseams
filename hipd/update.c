@@ -39,6 +39,27 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 	return err;
 }
 
+int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
+					      struct hip_peer_addr_list_item *list_item,
+					      struct hip_spi_out_item *spi_out,
+					      void *opaq),
+				  hip_ha_t *entry,
+				  struct hip_spi_out_item *spi_out,
+				  void *opaq) {
+	struct hip_peer_addr_list_item *addr, *tmp;
+	int i = 0, err = 0;
+
+	HIP_IFE(!func, -EINVAL);
+
+	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
+	    HIP_IFE(func(entry, addr, spi_out, opaq), -1);
+	}
+
+ out_err:
+	return err;
+}
+
+
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
  * @keymat_offset_new: value-result parameter for keymat index used
@@ -768,72 +789,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
-
-/**
- * hip_update_send_addr_verify - send address verification UPDATE
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address to use in the UPDATE to be sent out
- * @spi: outbound SPI in host byte order
- *
- * @entry must be is locked when this function is called.
- *
- * Returns: 0 if successful, otherwise < 0.
- */
-int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
-				struct in6_addr *src_ip, uint32_t spi)
-{
-	int err = 0;
-	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
-	struct hip_spi_out_item *spi_out;
-	struct hip_peer_addr_list_item *addr, *tmp;
-	struct hip_common *update_packet = NULL;
-	uint16_t mask = 0;
-
-	HIP_DEBUG("SPI=0x%x\n", spi);
-	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
-		 "SPI 0x%x not in SPI list\n");
-
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
-		 "Update_packet alloc failed\n");
-
-	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
-		HIP_DEBUG_HIT("new addr to check", &addr->address);
-		HIP_DEBUG("address state=%d\n", addr->address_state);
-
-		if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
-			HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
-			continue;
-		}
-
-		if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
-
-			HIP_DEBUG("Verifying already active address. Setting as deprecated\n"); 
-			addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			if (addr->is_preferred) {
-				HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
-				hip_hadb_set_default_out_addr(entry, spi_out,
-							      &addr->address); //CHECK: Is this the correct function? -Bagri
-			}
-			//continue;
-		}
-		HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, hits, hitr),
-			       	-1, "Building Verification Packet failed\n");
-		/* test: send all addr check from same address */
-		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
-							      &addr->address,
-							      0, 0, update_packet,
-							      entry, 0), -1,
-			 "csum_send failed\n");
-	}
-
- out_err:
-	if (update_packet)
-		HIP_FREE(update_packet);
-	HIP_DEBUG("end, err=%d\n", err);
-	return err;
-}
-
 int hip_build_verification_pkt(hip_ha_t *entry,
 			       struct hip_common *update_packet, 
 			       struct hip_peer_addr_list_item *addr,
@@ -878,6 +833,86 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 
 
 }
+
+int hip_update_send_addr_verify_packet(hip_ha_t *entry,
+				       struct hip_peer_addr_list_item *addr,
+				       struct hip_spi_out_item *spi_out,
+				       struct in6_addr *src_ip)
+{
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+	struct in6_addr *hits = &entry->hit_our, *hitr = &entry->hit_peer;
+
+	HIP_DEBUG_HIT("new addr to check", &addr->address);
+	HIP_DEBUG("address state=%d\n", addr->address_state);
+
+	if (addr->address_state == PEER_ADDR_STATE_DEPRECATED) {
+		HIP_DEBUG("addr state is DEPRECATED, not verifying\n");
+		goto out_err;
+	}
+
+	if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
+		
+		HIP_DEBUG("Verifying already active address. Setting as deprecated\n"); 
+		addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+		if (addr->is_preferred) {
+			HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
+			hip_hadb_set_default_out_addr(entry, spi_out,
+						      &addr->address); //CHECK: Is this the correct function? -Bagri
+		}
+		//continue;
+	}
+
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
+
+	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, hits,
+					    hitr),
+		 -1, "Building Verification Packet failed\n");
+
+	/* test: send all addr check from same address */
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
+						      &addr->address,
+						      0, 0, update_packet,
+						      entry, 0), -1,
+		 "csum_send failed\n");
+
+ out_err:
+	if (update_packet)
+		HIP_FREE(update_packet);
+	return err;
+}
+
+/**
+ * hip_update_send_addr_verify - send address verification UPDATE
+ * @entry: hadb entry corresponding to the peer
+ * @msg: the HIP packet
+ * @src_ip: source IPv6 address to use in the UPDATE to be sent out
+ * @spi: outbound SPI in host byte order
+ *
+ * @entry must be is locked when this function is called.
+ *
+ * Returns: 0 if successful, otherwise < 0.
+ */
+int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
+				struct in6_addr *src_ip, uint32_t spi)
+{
+	int err = 0;
+	struct hip_spi_out_item *spi_out;
+	uint16_t mask = 0;
+
+	HIP_DEBUG("SPI=0x%x\n", spi);
+	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
+		 "SPI 0x%x not in SPI list\n");
+
+	hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
+				      entry, spi_out, src_ip);
+	
+ out_err:
+	HIP_DEBUG("end, err=%d\n", err);
+	return err;
+}
+
 /** hip_handle_update_plain_locator - handle UPDATE(LOCATOR, SEQ)
  * @entry: hadb entry corresponding to the peer
  * @msg: the HIP packet
