@@ -235,6 +235,14 @@ int hip_update_depracate_unlisted(hip_ha_t *entry,
 	return err;
 }
 
+int hip_update_set_preferred(hip_ha_t *entry,
+			      struct hip_peer_addr_list_item *list_item,
+			      struct hip_spi_out_item *spi_out,
+			      int preferred) {
+	list_item->is_preferred = preferred;
+	return 0;
+}
+
 /** hip_update_handle_locator_parameter - Process locator parameters in the UPDATE
  * @entry: corresponding hadb entry of the peer
  * @locator: the locator parameter in the packet
@@ -262,9 +270,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
 		 "Bug: outbound SPI 0x%x does not exist\n", spi);
 
-	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
-		a->is_preferred = 0;
-	}
+	/* Set all peer addresses to unpreferred */
+	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
+					       entry, spi_out, 0), -1);
 
 	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
 					    entry, locator, &spi), -1,
