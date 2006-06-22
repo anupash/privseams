@@ -59,6 +59,24 @@ int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
 	return err;
 }
 
+int hip_update_for_each_local_addr(int (*func)(hip_ha_t *entry,
+					      struct hip_spi_in_item *spi_in,
+					      void *opaq),
+				  hip_ha_t *entry,
+				  void *opaq) {
+	struct hip_spi_in_item *item, *tmp;
+	int i = 0, err = 0;
+
+	HIP_IFE(!func, -EINVAL);
+
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+	    HIP_IFE(func(entry, item, opaq), -1);
+	}
+
+ out_err:
+	return err;
+}
+
 
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
  * @entry: corresponding hadb entry of the peer
@@ -701,6 +719,28 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	return err;
 }
 
+int hip_update_do_finish_rekey(hip_ha_t *entry,
+			       struct hip_spi_in_item *item,
+			       struct hip_common *msg)
+{
+	int err = 0;
+
+	_HIP_DEBUG("test item: spi_in=0x%x seq=%u updflags=0x%x\n",
+		   item->spi, item->seq_update_id, item->update_state_flags);
+
+	if (item->update_state_flags != 0x3)
+		goto out_err;
+
+	HIP_IFEL(hip_update_finish_rekeying(msg, entry,
+					    &item->stored_received_esp_info),
+		 -1, "Finish rekeying failed\n");
+
+ out_err:
+
+	HIP_DEBUG("update_finish handling ret err=%d\n", err);
+	return err;
+}
+
 /**
  * hip_handle_update_rekeying - handle incoming UPDATE packet received in REKEYING state
  * @entry: hadb entry corresponding to the peer
@@ -765,20 +805,9 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 //		hip_update_handle_esp_info(entry, puid); /* kludge */
 
 	/* finish SAs if we have received ACK and ESP_INFO */
-	{
-		struct hip_spi_in_item *item, *tmp;
-
-		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-			_HIP_DEBUG("test item: spi_in=0x%x seq=%u updflags=0x%x\n",
-				  item->spi, item->seq_update_id, item->update_state_flags);
-			if (item->update_state_flags == 0x3) {
-				err = hip_update_finish_rekeying(msg, entry,
-								 &item->stored_received_esp_info);
-				HIP_DEBUG("update_finish handling ret err=%d\n", err);
-			}
-		}
-		err = 0;
-	}
+	HIP_IFEL(hip_update_for_each_local_addr(hip_update_do_finish_rekey,
+						entry, msg),
+		 -1, "Rekeying failure\n");
 
 	HIP_IFEL(!update_packet, 0, "UPDATE packet NULL\n");
 
