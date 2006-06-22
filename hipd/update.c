@@ -212,6 +212,28 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 	return err;
 }
 
+int hip_update_depracate_unlisted(hip_ha_t *entry,
+				  struct hip_peer_addr_list_item *list_item,
+				  struct hip_spi_out_item *spi_out,
+				  struct hip_locator *locator) {
+	int err = 0;
+
+	if (!hip_update_locator_contains_item(locator, list_item)) {
+		HIP_DEBUG_HIT("deprecating address", &list_item->address);
+		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+		if(ipv6_addr_cmp(&entry->preferred_address, 
+				 &list_item->address)){
+			// TODO: Handle this: Choose a random address from
+			// amongst the active addresses? -Bagri
+			HIP_DEBUG_HIT("Preferred Address deprecated",
+				      &list_item->address);
+		}
+		
+	}
+
+ out_err:
+	return err;
+}
 
 /** hip_update_handle_locator_parameter - Process locator parameters in the UPDATE
  * @entry: corresponding hadb entry of the peer
@@ -250,18 +272,16 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 	/* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
 	   parameter as DEPRECATED. */
+#if 0
 	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
-		if (!hip_update_locator_contains_item(locator, a)) {
-			HIP_DEBUG_HIT("deprecating address", &a->address);
-			a->address_state = PEER_ADDR_STATE_DEPRECATED;
-			if(ipv6_addr_cmp(&entry->preferred_address, 
-						&a->address)){
-				//TODO: Handle this:Choose a random address from amongst the active addresses? -Bagri
-				HIP_DEBUG_HIT("Preferred Address deprecated", &a->address);
-			}
-						
-		}
 	}
+#endif
+
+	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_depracate_unlisted,
+					       entry, spi_out, locator), -1,
+		 "Depracating a peer address failed\n");
+
+
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
 		(void)hip_hadb_relookup_default_out(entry);
@@ -905,8 +925,9 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
 		 "SPI 0x%x not in SPI list\n");
 
-	hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
-				      entry, spi_out, src_ip);
+	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
+					       entry, spi_out, src_ip), -1,
+		 "Sending addr verify failed\n");
 	
  out_err:
 	HIP_DEBUG("end, err=%d\n", err);
