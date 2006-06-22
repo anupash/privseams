@@ -179,13 +179,14 @@ int hip_update_test_locator_addr(struct in6_addr *addr)
 
 int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		       struct hip_locator_info_addr_item *locator_address_item,
-		       uint32_t *spi)
+		       void *_spi)
 {
 	struct in6_addr *locator_address =
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
 	int is_preferred = ntohl(locator_address_item->reserved) == 1 << 31;
 	int err = 0, i;
+	uint32_t spi = *((uint32_t *) _spi);
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
 	HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
@@ -203,7 +204,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	
 	/* 3. check if the address is already bound to the SPI +
 	   add/update address */
-	HIP_IFE(hip_hadb_add_addr_to_spi(entry, *spi, locator_address,
+	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
 					 0,
 					 lifetime, is_preferred), -1);
 
@@ -213,7 +214,8 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 
 int hip_update_locator_match(hip_ha_t *unused,
 			     struct hip_locator_info_addr_item *item1,
-			     struct hip_locator_info_addr_item *item2) {
+			     void *_item2) {
+	struct hip_locator_info_addr_item *item2 = _item2;
 	if (ipv6_addr_cmp(&item1->address, &item2->address))
 		return 0;
 	else
@@ -233,8 +235,9 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 int hip_update_depracate_unlisted(hip_ha_t *entry,
 				  struct hip_peer_addr_list_item *list_item,
 				  struct hip_spi_out_item *spi_out,
-				  struct hip_locator *locator) {
+				  void *_locator) {
 	int err = 0;
+	struct hip_locator *locator = (void *) _locator;
 
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
@@ -256,8 +259,8 @@ int hip_update_depracate_unlisted(hip_ha_t *entry,
 int hip_update_set_preferred(hip_ha_t *entry,
 			      struct hip_peer_addr_list_item *list_item,
 			      struct hip_spi_out_item *spi_out,
-			      int preferred) {
-	list_item->is_preferred = preferred;
+			      void *preferred) {
+	list_item->is_preferred = *((int *) preferred);
 	return 0;
 }
 
@@ -721,8 +724,9 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 
 int hip_update_do_finish_rekey(hip_ha_t *entry,
 			       struct hip_spi_in_item *item,
-			       struct hip_common *msg)
+			       void *_msg)
 {
+	struct hip_common *msg = _msg;
 	int err = 0;
 
 	_HIP_DEBUG("test item: spi_in=0x%x seq=%u updflags=0x%x\n",
