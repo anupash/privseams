@@ -272,11 +272,6 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 	/* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
 	   parameter as DEPRECATED. */
-#if 0
-	list_for_each_entry_safe(a, tmp, &spi_out->peer_addr_list, list) {
-	}
-#endif
-
 	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_depracate_unlisted,
 					       entry, spi_out, locator), -1,
 		 "Depracating a peer address failed\n");
