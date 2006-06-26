@@ -193,8 +193,8 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	
 	case ID_TOOLBAR_TOGGLETOOLWINDOW:
 		HIP_DEBUG("Toolbar: Toggle toolwindow visibility.\n");
-		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(gui_get_toolwindow());
-		else gtk_widget_hide(gui_get_toolwindow());
+		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(widget(ID_TOOLWND));
+		else gtk_widget_hide(widget(ID_TOOLWND));
 		break;
 	
 	case ID_TOOLBAR_NEWGROUP:

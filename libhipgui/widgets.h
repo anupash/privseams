@@ -16,9 +16,9 @@ enum WIDGET_IDS
 	/* Windows. */
 	ID_MAINWND = 0,
 	ID_TOOLWND,
-	ID_ACCEPTDLG,
+	ID_NHDLG,
 	ID_EXECDLG,
-	ID_CREATEDLG,
+	ID_NGDLG,
 
 	/* Main window IDs. */
 	ID_RLISTMODEL,

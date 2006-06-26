@@ -68,7 +68,7 @@ int tw_create_content(void)
 	gtk_entry_set_text(w, "NewHIT");
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_NAME, w);
+	widget_set(ID_TWR_NAME, w);
 
 	w = gtk_label_new("URL:");
 	gtk_label_set_justify(GTK_LABEL(w), GTK_JUSTIFY_LEFT);
@@ -78,7 +78,7 @@ int tw_create_content(void)
 	gtk_entry_set_text(w, "https://www.nordea.fi <not implemented>");
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_URL, w);
+	widget_set(ID_TWR_URL, w);
 
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "80 <not implemented>");
@@ -87,7 +87,7 @@ int tw_create_content(void)
 	w = gtk_label_new("Port:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_PORT, w);
+	widget_set(ID_TWR_PORT, w);
 
 	w = gtk_combo_box_new_text();
 	gtk_combo_box_append_text(w, "Accept");
@@ -95,7 +95,7 @@ int tw_create_content(void)
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_TYPE1, w);
+	widget_set(ID_TWR_TYPE1, w);
 	w = gtk_label_new("Type:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -106,26 +106,26 @@ int tw_create_content(void)
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_TYPE2, w);
+	widget_set(ID_TWR_TYPE2, w);
 	w = gtk_label_new("Lightweight:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 
 	w = gtk_combo_box_new_text();
-	widget_set(ID_TOOLLHITS, w);
+	widget_set(ID_TWLOCAL, w);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_LOCAL, w);
+	widget_set(ID_TWR_LOCAL, w);
 	w = gtk_label_new("Local HIT:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 
 	w = gtk_combo_box_new_text();
-	widget_set(ID_TOOLRGROUPS, w);
+	widget_set(ID_TWRGROUP, w);
 	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_CB_RGROUPS);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	widget_set(ID_TWL_GROUP, w);
+	widget_set(ID_TWR_RGROUP, w);
 	w = gtk_label_new("Group:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -159,7 +159,7 @@ int tw_create_content(void)
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_widget_show(frame);
-	widget_set(ID_TWGROUP, frame);
+	widget_set(ID_TWRGROUP, frame);
 	g_object_ref(frame);
 
 	/* Set default mode and hide the toolwindow. */

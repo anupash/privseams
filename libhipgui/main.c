@@ -56,7 +56,7 @@ int gui_init(void)
 	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
 	                                "Accept", GTK_RESPONSE_YES,
 	                                "Deny", GTK_RESPONSE_NO, NULL);
-	widget_set(ID_ACCEPTDLG, w);
+	widget_set(ID_NHDLG, w);
 	gtk_widget_hide(w);
 
 	/* Create execute-dialog. */
@@ -66,14 +66,14 @@ int gui_init(void)
 
 	/* Create create-dialog. */
 	w = gtk_dialog_new_with_buttons("Create new remote group", NULL, GTK_DIALOG_MODAL, NULL);
-	widget_set(ID_CREATEDLG, w);
+	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
 	
 	/* Create window content for all windows. */
 	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
-	HIP_IFEL(acceptdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
-	HIP_IFEL(rundlg_create_content(), -1, "Failed to create run-dialog contents.\n");
-	HIP_IFEL(createdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
+//	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
+	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");
+	HIP_IFEL(ngdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
 	HIP_IFEL(main_create_content(), -1, "Failed to create main-window contents.\n");
 
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
@@ -101,6 +101,8 @@ int gui_main(void)
 	/* Variables. */
 	GtkWidget *w;
 	
+	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
+	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
 /*	HIP_DEBUG("Appending remote groups to tool window...\n");
 	w = widget(ID_TWRGROUPS);
 //	hit_db_enum_rgroups(tooldlg_add_rgroups, w);

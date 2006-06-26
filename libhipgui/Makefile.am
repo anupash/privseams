@@ -9,19 +9,10 @@ GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
 include_HEADERS = 
 
-#if HIP_AGENT
+ifdef HIP_AGENT
 
 noinst_LIBRARIES = libhipgui.a
-libhipgui_a_SOURCES = \
-	main.c \
-	events.c \
-	manage.c \
-	widgets.c \
-	exec.c \
-	tools.c \
-	terminal.c \
-	tw_manage.c \
-	main_create.c
+libhipgui_a_SOURCES = main.c events.c manage.c widgets.c exec.c tools.c terminal.c tw_create.c tw_manage.c main_create.c create.c
 
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
@@ -31,7 +22,7 @@ INCLUDES = $(hipl_common_include_paths)
 #INCLUDES += -I$(HIPL_AGENT) @GTK_CFLAGS@
 INCLUDES += -I$(HIPL_AGENT) $(GTKCFLAGS)
 
-#endif
+endif
 
 tags:
 	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
