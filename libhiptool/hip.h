@@ -298,11 +298,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_UPDATE_STATE_REKEYING   1      /* XX TODO: REMOVE */
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
@@ -1061,6 +1062,7 @@ struct hip_hadb_state
 
 	hip_hastate_t        hastate;
 	int                  state;
+	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */

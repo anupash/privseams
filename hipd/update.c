@@ -496,7 +496,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
-	entry->state = HIP_STATE_REKEYING;
+	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						      src_ip, update_info->src_port,
@@ -1207,7 +1207,7 @@ int hip_receive_update(struct hip_common *msg,
 		       hip_ha_t *entry,
 		       struct hip_stateless_info *sinfo)
 {
-	int err = 0, /*update_state = 0,*/  handle_upd = 0, state = 0;
+	int err = 0, update_state = 0, handle_upd = 0, state = 0;
 	struct in6_addr *hits;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
@@ -1238,13 +1238,16 @@ int hip_receive_update(struct hip_common *msg,
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
 
 	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
-	 * process from ESTABLISHED state */
+	 * process from ESTABLISHED state
+	 *
+	 * CHK: Is it too eqarly to do this?
+	 *                           -Bagri */
 	if (state == HIP_STATE_R2_SENT) {
 		state = entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
 
-	if (! (state == HIP_STATE_ESTABLISHED || state == HIP_STATE_REKEYING)) {
+	if (! (state == HIP_STATE_ESTABLISHED) ) {
 		HIP_DEBUG("Received UPDATE in illegal state %s. Dropping\n",
 			  hip_state_str(state));
 		err = -EINVAL;
@@ -1274,54 +1277,10 @@ int hip_receive_update(struct hip_common *msg,
 	if (echo_response)
 		HIP_DEBUG("ECHO_RESPONSE found\n");
 
-	/* 8.11 Processing UPDATE packets checks */
-	if (seq && esp_info) {
-		HIP_DEBUG("UPDATE has both SEQ and ESP_INFO, peer host is rekeying, MUST process this UPDATE\n");
-		handle_upd = 1;
-	}
-
-
-
-	if (!handle_upd && /*update_*/state == /*HIP_UPDATE_*/HIP_STATE_REKEYING && ack && !echo) {
-		HIP_DEBUG("in REKEYING state and ACK and not ECHO_REQUEST, MUST process this UPDATE\n");
-		handle_upd = 1;
-	}
-	
-	/* UPDATE tests */
-	if (!handle_upd && locator && seq && esp_info) {
-		HIP_DEBUG("have LOCATOR and SEQ but no ESP_INFO, process this UPDATE\n");
-//		handle_upd = 2;
-	}
-
-	if (!handle_upd && /* SPI && */ seq && !esp_info && echo) {
-		/* ACK might have been in a separate packet */
-		HIP_DEBUG("have SEQ,ECHO_REQUEST but no ESP_INFO, process this UPDATE\n");
-//		handle_upd = 3;
-	}
-	if (!handle_upd && ack && echo) {
-		HIP_DEBUG("have ACK and ECHO_REQUEST, process this UPDATE\n");
-//		handle_upd = 4;
-	}
-
-	if (!handle_upd && ack) {
-		HIP_DEBUG("have only ACK, process this UPDATE\n");
-//		handle_upd = 5;
-	}
-
-/*	if (!handle_upd) {
-		HIP_ERROR("NOT processing UPDATE packet\n");
-		HIP_DEBUG("This could be a NAT Keep alive packet !!\n");
-		goto out_err;
-	}
-*/
-
-
-	//update_id_in = entry->update_id_in;
-	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
-	if (seq)
+		if (seq)
 		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
 	
-	
+          	
 	/* If the received UPDATE contains a Diffie-Hellman
 	   parameter, the received Keymat Index MUST be zero. If this
 	   test fails, the packet SHOULD be dropped and the system
