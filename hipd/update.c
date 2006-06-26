@@ -1228,6 +1228,60 @@ int hip_set_rekeying_state(hip_ha_t *entry,
  	return entry->update_state;		
 		
 }	
+
+int hip_handle_rekeying(struct hip_common *msg, 
+		        hip_ha_t *entry){	
+	
+
+	int err = 0, keying_state = 0;
+	struct hip_esp_info *esp_info;
+	uint16_t keymat_index = 0;
+	struct hip_dh_fixed *dh;
+	
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	keymat_index = ntohs(esp_info->keymat_index);
+	
+	keying_state = hip_set_rekeying_state(entry, esp_info);	
+
+        HIP_IFEL(keying_state, -1, "Invalid Keying state");   	
+
+	switch(keying_state){
+		case HIP_UPDATE_STATE_REKEYING:
+			//rekeying stuff goes here
+			break;
+		case HIP_UPDATE_STATE_DEPRECATING:
+			break;
+	}
+	
+	/* esp-02 6.9 1. If the received UPDATE contains a
+	 * Diffie-Hellman parameter, the received Keymat 
+	 * Index MUST be zero. If this test fails, the packet
+	 *  SHOULD be dropped and the system SHOULD log an 
+	 *  error message. */
+
+	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
+	if (dh) {
+		HIP_DEBUG("packet contains DH\n");
+		HIP_IFEL(!esp_info, -1, "Packet contains DH but not ESP_INFO\n");
+		HIP_IFEL(keymat_index != 0, -EINVAL,
+			 "UPDATE contains Diffie-Hellman parameter with non-zero"
+			 "keymat value %u in ESP_INFO. Dropping\n", keymat_index);
+	}
+	/* esp-02 6.9 2. if no outstanding request, process as in sec 6.9.1
+	 */	
+        // TODO:Check for outstanding rekeying request
+	/* esp-02 6.9 3. If there is an outstanding rekeying request,
+	 * UPDATE must be acked, save ESP_INFO, DH params, continue 
+	 * processing as stated in 6.10
+	 */
+	
+
+
+out_err: 
+	if(err)
+		HIP_DEBUG("Error while processing Rekeying for update packet err=%d", err);
+	return err;
+}
 /**
  * hip_receive_update - receive UPDATE packet
  * @msg: buffer where the HIP packet is in
@@ -1247,7 +1301,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct hip_stateless_info *sinfo)
 {
 	int err = 0, update_state = 0, handle_upd = 0, state = 0;
-	int updating_addresses = 0, keying_state = 0;
+	int updating_addresses = 0;
 	struct in6_addr *hits;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
@@ -1255,8 +1309,6 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_locator *locator = NULL;
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
-	uint16_t keymat_index = 0;
-	struct hip_dh_fixed *dh;
 	struct in6_addr *src_ip, *dst_ip;
 
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
@@ -1301,13 +1353,6 @@ int hip_receive_update(struct hip_common *msg,
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
 
-	if (esp_info) {
-		HIP_DEBUG("UPDATE contains (at least one) ESP_INFO parameter\n");
-		keymat_index = ntohs(esp_info->keymat_index);
-		HIP_DEBUG("ESP_INFO: Keymaterial Index: %u\n", keymat_index);
-		HIP_DEBUG("ESP_INFO: Old SPI: 0x%x New SPI: 0x%x\n",
-			  ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
-	}
 	if (ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
 	if (esp_info)
@@ -1338,38 +1383,11 @@ int hip_receive_update(struct hip_common *msg,
 	if(locator || echo || echo_response)
 		updating_addresses = 1;
 
-	keying_state = hip_set_rekeying_state(entry, esp_info);	
-
-        HIP_IFEL(keying_state, -1, "Invalid Keying state");   	
-
-	switch(keying_state){
-		case HIP_UPDATE_STATE_REKEYING:
-			//rekeying stuff goes here
-			break;
-		case HIP_UPDATE_STATE_DEPRECATING:
-			break;
-	}
+	
 	
 	//mm stuff after this
-	/* If the received UPDATE contains a Diffie-Hellman
-	   parameter, the received Keymat Index MUST be zero. If this
-	   test fails, the packet SHOULD be dropped and the system
-	   SHOULD log an error message. */
-	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
-	if (dh) {
-		HIP_DEBUG("packet contains DH\n");
-		HIP_IFEL(!esp_info, -1, "Packet contains DH but not ESP_INFO\n");
-		HIP_IFEL(keymat_index != 0, -EINVAL,
-			 "UPDATE contains Diffie-Hellman parameter with non-zero"
-			 "keymat value %u in ESP_INFO. Dropping\n", keymat_index);
-	}
+	
 
-        //Check: Is there an outstanding keying request?
-
-		/**********************/
-	HIP_DEBUG_IN6ADDR("entry->localaddress \n", &entry->local_address);
-	HIP_DEBUG_IN6ADDR("src_ip \n", src_ip);
-	HIP_DEBUG_IN6ADDR("dst_ip \n", dst_ip);
 	if(locator && esp_info){
 		HIP_IFEL(hip_update_handle_locator(entry, esp_info, locator, src_ip),-1,"Error in processing locator Info\n");
 	}	
