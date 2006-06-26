@@ -7,16 +7,17 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
 #include "manage.h"
 
 
 /******************************************************************************/
 /* EXTERNS */
 extern GtkTreeIter local_top, remote_top, process_top;
+
+
+/******************************************************************************/
+/* VARIABLES */
+int tw_cur_mode = -1;
 
 
 /******************************************************************************/
@@ -339,45 +340,83 @@ int askdlg_add_lhits(HIT_Item *hit, void *p)
 
 
 /******************************************************************************/
-/** Set tool window mode to no info. */
-void info_mode_none(void)
+/** Set tool window mode to no given. */
+void tw_set_mode(int mode)
 {
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
+	/* Variables. */
+	GtkWidget *window = (GtkWidget *)gui_get_toolwindow();
+	
+	/* First hide current. */
+	switch (tw_cur_mode)
+	{
+		case TWMODE_NONE:
+			break;
+	
+		case TWMODE_LOCAL:
+			gtk_container_remove(GTK_CONTAINER(window), widget(ID_TWLOCAL));
+			break;
+		
+		case TWMODE_REMOTE:
+			gtk_container_remove(GTK_CONTAINER(window), widget(ID_TWREMOTE));
+			break;
+	
+		case TWMODE_GROUP:
+			gtk_container_remove(GTK_CONTAINER(window), widget(ID_TWGROUP));
+			break;
+	}
+	
+	/* Then show selected mode. */
+	switch (mode)
+	{
+	case TWMODE_NONE:
+		break;
+	
+	case TWMODE_LOCAL:
+		gtk_container_add(GTK_CONTAINER(window), widget(ID_TWLOCAL));
+		gtk_widget_show(widget(ID_TWLOCAL));
+		break;
+		
+	case TWMODE_REMOTE:
+		gtk_container_add(GTK_CONTAINER(window), widget(ID_TWREMOTE));
+		gtk_widget_show(widget(ID_TWREMOTE));
+		break;
+	
+	case TWMODE_GROUP:
+		gtk_container_add(GTK_CONTAINER(window), widget(ID_TWGROUP));
+		gtk_widget_show(widget(ID_TWGROUP));
+		break;
+	}
+	
+	tw_cur_mode = mode;
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** Set tool window mode to local HIT info. */
-void info_mode_local(void)
+/**
+	Set remote HIT info to toolwindow.
+	
+	@param hit_name Name of remote HIT.
+ */
+void tw_set_remote_info(char *hit_name)
 {
-	gtk_widget_show(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to remote HIT info. */
-void info_mode_remote(void)
-{
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_show(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to group info. */
-void info_mode_rgroup(void)
-{
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_show(widget(ID_INFOGROUP));
+	/* Variables. */
+	GtkWidget *w;
+	HIT_Item *hit;
+	char str[320];
+	
+	hit = hit_db_search(NULL, hit_name, NULL, NULL, NULL,
+	                    0, HIT_DB_TYPE_ALL, 1, 0);
+	
+	if (hit)
+	{
+		gtk_entry_set_text(widget(ID_TWL_NAME), hit->name);
+		gtk_entry_set_text(widget(ID_TWL_URL), hit->url);
+		sprintf(str, "%d", hit->port);
+		gtk_entry_set_text(widget(ID_TWL_PORT), str);
+		
+		free(hit);
+	}
 }
 /* END OF FUNCTION */
 

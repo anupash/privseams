@@ -20,6 +20,7 @@
 #include "exec.h"
 #include "tools.h"
 #include "terminal.h"
+#include "widgets.h"
 
 
 /******************************************************************************/
@@ -39,6 +40,9 @@ enum BUTTON_IDS
 	IDB_SEND,
 	IDB_CB_RGROUPS,
 
+	IDB_TWAPPLY,
+	IDB_TWCANCEL,
+
 	BUTTON_IDS_N
 };
 
@@ -51,9 +55,7 @@ gboolean accept_delete_event(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
 void tool_destroy(GtkWidget *, gpointer);
 void accept_destroy(GtkWidget *, gpointer);
-gboolean select_list(GtkTreeSelection *, GtkTreeModel *, GtkTreePath *,
-                     gboolean, gpointer);
-gboolean select_rlist(GtkTreeSelection *, gboolean, gpointer);
+gboolean select_list(GtkTreeSelection *, gpointer);
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 

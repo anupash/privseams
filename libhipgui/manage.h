@@ -15,6 +15,16 @@
 #include "hit_db.h"
 #include "widgets.h"
 
+/******************************************************************************/
+/* DEFINES */
+enum TOOLWINDOW_MODES
+{
+	TWMODE_NONE = 0,
+	TWMODE_LOCAL,
+	TWMODE_REMOTE,
+	TWMODE_GROUP
+};
+
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
@@ -38,10 +48,8 @@ int tooldlg_add_lhits(HIT_Item *, void *);
 int askdlg_add_rgroups(HIT_Group *, void *);
 int askdlg_add_lhits(HIT_Item *, void *);
 
-void info_mode_none(void);
-void info_mode_local(void);
-void info_mode_remote(void);
-void info_mode_rgroup(void);
+void tw_set_mode(int);
+void tw_set_remote_info(char *);
 
 char *create_remote_group(void);
 

@@ -66,7 +66,7 @@ int main(int argn, char *argv[])
 		If connection to daemon failed, assume that daemon
 		is not running and try to fork it.
 	*/
-	if (err != 0)
+	if (err != 0 && 0)
 	{
 		err = fork();
 		

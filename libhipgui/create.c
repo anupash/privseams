@@ -76,6 +76,8 @@ int main_create_content(void)
 	                               "Private", iconw,
 	                               GTK_SIGNAL_FUNC(toolbar_event),
 	                               ID_TOOLBAR_TOGGLETOOLWINDOW);
+	widget_set(ID_TB_TW, w);
+
 	gtk_toolbar_append_space(toolbar);
 	iconw = gtk_image_new_from_file("run.xpm");
 	w = gtk_toolbar_append_item(toolbar, "New group",
@@ -142,7 +144,7 @@ int main_create_content(void)
 	gtk_widget_show(chat);
 
 	/***************************************
-	/* Remote HITs. */
+	/* HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -164,8 +166,7 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-//	g_signal_connect(G_OBJECT(select), "select-cursor-row", G_CALLBACK(select_rlist), (gpointer)"hit list");
-//	gtk_tree_selection_set_select_function(select, select_list, NULL, NULL);
+	g_signal_connect(G_OBJECT(select), "changed", G_CALLBACK(select_list), (gpointer)"hit list");
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
@@ -295,27 +296,14 @@ int tooldlg_create_content(void)
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
 
-	/* Create main widget for adding subwidgets to tool window. */
-/*	fixed = gtk_fixed_new();
-	gtk_container_add(GTK_CONTAINER(window), fixed);
-	gtk_widget_show(fixed);
-
-	/* Create local HIT info. */
-/*	w = gtk_label_new("Local HIT:");
-	gtk_fixed_put(GTK_FIXED(fixed), w, 0, 0);
-	gtk_widget_show(w);
-	widget_set(ID_INFOLOCAL, w);
-*/
-
-
 	/* Create remote HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_container_add(GTK_CONTAINER(window), frame);
 	gtk_frame_set_label(GTK_FRAME(frame), "Remote HIT information:");
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_widget_show(frame);
-	widget_set(ID_INFOREMOTE, frame);
+	widget_set(ID_TWREMOTE, frame);
+	g_object_ref(frame);
 
 	vb = gtk_vbox_new(FALSE, 1);
 	gtk_container_add(GTK_CONTAINER(frame), vb);
@@ -345,6 +333,7 @@ int tooldlg_create_content(void)
 	gtk_entry_set_text(w, "NewHIT");
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_NAME, w);
 
 	w = gtk_label_new("URL:");
 	gtk_label_set_justify(GTK_LABEL(w), GTK_JUSTIFY_LEFT);
@@ -354,6 +343,7 @@ int tooldlg_create_content(void)
 	gtk_entry_set_text(w, "https://www.nordea.fi <not implemented>");
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_URL, w);
 
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "80 <not implemented>");
@@ -362,6 +352,7 @@ int tooldlg_create_content(void)
 	w = gtk_label_new("Port:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_PORT, w);
 
 	w = gtk_combo_box_new_text();
 	gtk_combo_box_append_text(w, "Accept");
@@ -369,6 +360,7 @@ int tooldlg_create_content(void)
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_TYPE1, w);
 	w = gtk_label_new("Type:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -379,6 +371,7 @@ int tooldlg_create_content(void)
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_TYPE2, w);
 	w = gtk_label_new("Lightweight:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -387,6 +380,7 @@ int tooldlg_create_content(void)
 	widget_set(ID_TOOLLHITS, w);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_LOCAL, w);
 	w = gtk_label_new("Local HIT:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -396,6 +390,7 @@ int tooldlg_create_content(void)
 	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_CB_RGROUPS);
 	gtk_box_pack_start(vb2, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
+	widget_set(ID_TWL_GROUP, w);
 	w = gtk_label_new("Group:");
 	gtk_box_pack_start(vb1, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
@@ -406,20 +401,35 @@ int tooldlg_create_content(void)
 
 	w = gtk_button_new_with_label("Apply");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWAPPLY);
 	gtk_widget_show(w);
 	w = gtk_button_new_with_label("Cancel");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWCANCEL);
+	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 
-	/* Create remote group info. */
-/*	w = gtk_label_new("Remote group:");
-	gtk_fixed_put(GTK_FIXED(fixed), w, 0, 0);
-	gtk_widget_show(w);
-	widget_set(ID_INFOGROUP, w);*/
+	/* Create local HIT info. */
+	frame = gtk_frame_new(NULL);
+	gtk_frame_set_label(GTK_FRAME(frame), "Local HIT information:");
+	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
+	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
+	gtk_widget_show(frame);
+	widget_set(ID_TWLOCAL, frame);
+	g_object_ref(frame);
 
+	/* Create remote group HIT info. */
+	frame = gtk_frame_new(NULL);
+	gtk_frame_set_label(GTK_FRAME(frame), "Remote group information:");
+	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
+	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
+	gtk_widget_show(frame);
+	widget_set(ID_TWGROUP, frame);
+	g_object_ref(frame);
+
+	/* Set default mode and hide the toolwindow. */
+ 	tw_set_mode(TWMODE_NONE);
 	gtk_widget_hide(window);
-
- //	info_mode_none();
 
 	return (0);
 }
