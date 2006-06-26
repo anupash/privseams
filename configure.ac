@@ -237,6 +237,6 @@ AC_CONFIG_FILES([ Makefile
                   hipd/Makefile
                   test/Makefile
                   firewall/Makefile
-                  libhipgui-old/Makefile
+                  libhipgui/Makefile
                   agent/Makefile])
 AC_OUTPUT

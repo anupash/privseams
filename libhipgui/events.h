@@ -5,8 +5,8 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef GUI_EVENT_H
-#define GUI_EVENT_H
+#ifndef GUI_EVENTS_H
+#define GUI_EVENTS_H
 
 /******************************************************************************/
 /* INCLUDES */
@@ -49,12 +49,11 @@ enum BUTTON_IDS
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-gboolean delete_event(GtkWidget *, GdkEvent *, gpointer);
-gboolean tool_delete_event(GtkWidget *, GdkEvent *, gpointer);
-gboolean accept_delete_event(GtkWidget *, GdkEvent *, gpointer);
+gboolean main_delete(GtkWidget *, GdkEvent *, gpointer);
+gboolean tw_delete(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
-void tool_destroy(GtkWidget *, gpointer);
-void accept_destroy(GtkWidget *, gpointer);
+void tw_destroy(GtkWidget *, gpointer);
+
 gboolean select_list(GtkTreeSelection *, gpointer);
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);

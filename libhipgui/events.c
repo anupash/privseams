@@ -7,11 +7,7 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
-#include "event.h"
+#include "events.h"
 
 
 /******************************************************************************/
@@ -23,7 +19,7 @@
 	
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+gboolean main_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	return (FALSE);
 }
@@ -36,23 +32,9 @@ gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 	
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean tool_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+gboolean tw_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_toggle_button_set_active(widget(ID_TB_TW), FALSE);
-	gtk_widget_hide(w);
-	return (TRUE);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	What to do when user example tries to close the tool window?
-	
-	@return TRUE if don't close or FALSE if close.
-*/
-gboolean accept_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
-{
 	gtk_widget_hide(w);
 	return (TRUE);
 }
@@ -70,16 +52,7 @@ void main_destroy(GtkWidget *w, gpointer data)
 
 /******************************************************************************/
 /** On tool window destroy. */
-void tool_destroy(GtkWidget *widget, gpointer data)
-{
-	gtk_widget_hide(widget);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** On accept window destroy. */
-void accept_destroy(GtkWidget *widget, gpointer data)
+void tw_destroy(GtkWidget *widget, gpointer data)
 {
 	gtk_widget_hide(widget);
 }
@@ -148,7 +121,7 @@ gboolean select_list(GtkTreeSelection *selection, gpointer data)
 
 
 /******************************************************************************/
-/** When button was pressed. */
+/** When button is pressed. */
 void button_event(GtkWidget *warg, gpointer data)
 {
 	/* Variables. */

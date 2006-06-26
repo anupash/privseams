@@ -10,7 +10,7 @@ EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool tools hipd test firewall libhipgui-old agent
+SUBDIRS = libinet6 libhiptool tools hipd test firewall libhipgui agent
 
 rpm:
 	test/packaging/create-rpm.sh

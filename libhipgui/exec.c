@@ -76,7 +76,7 @@ void exec_application(void)
 	int err, cpid;
 	char *ps, *ps2, *ps3;
 
-	dialog = gui_get_rundialog();
+	dialog = widget(ID_EXECDLG);
 	gtk_widget_show(dialog);
 	gtk_widget_grab_focus(widget(ID_RUN_COMMAND));
 
