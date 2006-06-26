@@ -303,7 +303,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
-#define HIP_UPDATE_STATE_REKEYING   1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 

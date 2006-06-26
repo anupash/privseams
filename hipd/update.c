@@ -1101,7 +1101,8 @@ int hip_handle_update_seq(hip_ha_t *entry,
 	_HIP_DEBUG("previous incoming update id=%u\n", update_id_in);
 	
 	/* 1. If the SEQ parameter is present, and the Update ID in the
-	   received SEQ is smaller than the stored Update ID for the host,		 the packet MUST BE dropped. */
+	   received SEQ is smaller than the stored Update ID for the host,		 
+	   the packet MUST BE dropped. */
 	if (pkt_update_id < update_id_in) {
 			HIP_DEBUG("SEQ param present and received UPDATE ID (%u) < stored incoming UPDATE ID (%u). Dropping\n", 
 		        pkt_update_id, update_id_in);
@@ -1121,18 +1122,20 @@ int hip_handle_update_seq(hip_ha_t *entry,
 	hmac = hip_get_param(msg, HIP_PARAM_HMAC);
 	HIP_IFEL(hmac == NULL, -1, "HMAC not found. Dropping packet\n");
 	
-	/* 3. The system MUST verify the HMAC in the UPDATE packet.
-	   If the verification fails, the packet MUST be dropped. */
-	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
-		 "HMAC validation on UPDATE failed\n");
+	/* 
+	 * 3. The system MUST verify the HMAC in the UPDATE packet.
+	 * If the verification fails, the packet MUST be dropped. 
+	 * **Moved to receive_update due to commonality with ack processing**
+	 *
+	 *
+	 * 4. The system MAY verify the SIGNATURE in the UPDATE
+	 * packet. If the verification fails, the packet SHOULD be
+	 * dropped and an error message logged. 
+	 * **Moved to receive_update due to commonality with ack processing**
+	 *
+	*/
 
-	/* 5. The system MAY verify the SIGNATURE in the UPDATE
-	   packet. If the verification fails, the packet SHOULD be
-	   dropped and an error message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
-		 "Verification of UPDATE signature failed\n");
-
-	/* 6.  If a new SEQ parameter is being processed, 
+	/* 5.  If a new SEQ parameter is being processed, 
 	   the system MUST record the Update ID in the 
 	   received SEQ parameter, for replay protection. */
 	if (seq && !is_retransmission) {
@@ -1189,6 +1192,42 @@ int hip_update_handle_locator(hip_ha_t *entry,
 	}
 	return 0;
 }
+
+int hip_set_rekeying_state(hip_ha_t *entry,
+			   struct hip_esp_info *esp_info){
+	int err = 0;
+	uint32_t old_spi, new_spi;
+
+	old_spi = esp_info->old_spi;
+       	new_spi = esp_info->new_spi; 
+
+       	if(hip_update_exists_spi(entry, ntohl(old_spi),
+		                 HIP_SPI_DIRECTION_OUT, 0) || 
+			         old_spi == 0){ 
+        	/* old SPI is the existing SPI  or is zero*/
+		if(old_spi == new_spi)
+			/* mm-04 5.3 1. old SPI is equal to new SPI
+			 */
+			entry->update_state = 0 ; //no rekeying
+			//FFT: Do we need a sanity check that both old_spi and new_spi cant be zero
+		else if(new_spi != 0){
+			/* mm-04 5.3 2. Old SPI is existing SPI and new SPI is non-zero
+			 *           3. Old SPI is zero and new SPI is non-zero
+			 */
+			entry->update_state = HIP_UPDATE_STATE_REKEYING;
+		}
+		else {
+			/* mm-04 5.3 4. Old SPI is existing, new SPI is zero
+			 */
+			entry->update_state = HIP_UPDATE_STATE_DEPRECATING;	
+		}
+
+	
+	}
+
+ 	return entry->update_state;		
+		
+}	
 /**
  * hip_receive_update - receive UPDATE packet
  * @msg: buffer where the HIP packet is in
@@ -1208,6 +1247,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct hip_stateless_info *sinfo)
 {
 	int err = 0, update_state = 0, handle_upd = 0, state = 0;
+	int updating_addresses = 0, keying_state = 0;
 	struct in6_addr *hits;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
@@ -1277,10 +1317,40 @@ int hip_receive_update(struct hip_common *msg,
 	if (echo_response)
 		HIP_DEBUG("ECHO_RESPONSE found\n");
 
-		if (seq)
+	if (ack)
+		//process ack;
+	if (seq)
 		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
 	
-          	
+        /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
+	 * HMAC in the UPDATE packet.If the verification fails, 
+	 * the packet MUST be dropped. */
+	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
+		 "HMAC validation on UPDATE failed\n");
+
+	/* base-05 Sec 6.12.1.3 6.12.2.3. The system MAY verify 
+	 * the SIGNATURE in the UPDATE packet. If the verification fails, 
+	 * the packet SHOULD be dropped and an error message logged. */
+	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
+		 "Verification of UPDATE signature failed\n");
+ 	
+	
+	if(locator || echo || echo_response)
+		updating_addresses = 1;
+
+	keying_state = hip_set_rekeying_state(entry, esp_info);	
+
+        HIP_IFEL(keying_state, -1, "Invalid Keying state");   	
+
+	switch(keying_state){
+		case HIP_UPDATE_STATE_REKEYING:
+			//rekeying stuff goes here
+			break;
+		case HIP_UPDATE_STATE_DEPRECATING:
+			break;
+	}
+	
+	//mm stuff after this
 	/* If the received UPDATE contains a Diffie-Hellman
 	   parameter, the received Keymat Index MUST be zero. If this
 	   test fails, the packet SHOULD be dropped and the system
@@ -1296,15 +1366,7 @@ int hip_receive_update(struct hip_common *msg,
 
         //Check: Is there an outstanding keying request?
 
-	/* check that Old SPI value exists */
-	HIP_IFEL(esp_info &&
-		 (esp_info->old_spi != esp_info->new_spi) && /* mm check */
-		 !hip_update_exists_spi(entry, ntohl(esp_info->old_spi),
-					HIP_SPI_DIRECTION_OUT, 0), -1,
-		 "Old SPI value 0x%x in ESP_INFO parameter does not belong to the current list of outbound SPIs in HA\n",
-		 ntohl(esp_info->old_spi));
-
-	/**********************/
+		/**********************/
 	HIP_DEBUG_IN6ADDR("entry->localaddress \n", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("src_ip \n", src_ip);
 	HIP_DEBUG_IN6ADDR("dst_ip \n", dst_ip);
