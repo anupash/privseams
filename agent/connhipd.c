@@ -136,13 +136,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 				lhit = hip_get_param_contents_direct(param);
 				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
 				print_hit_to_buffer(chit, lhit);
-				phit = hit_db_search(NULL, NULL, lhit, lhit, NULL, 0, HIT_DB_TYPE_LOCAL, 1, 0);
-				if (phit == NULL) hit_db_add(chit, lhit, lhit, "0", 0, HIT_DB_TYPE_LOCAL, "", 0, 0);
-				else
-				{
-					HIP_DEBUG("Cancelling local HIT add, already in database.\n");
-					free(phit);
-				}
+				hit_db_add_local(chit, lhit);
 				n++;
 			}
 		}
@@ -155,8 +149,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 		strcpy(hit.name, "NewHIT");
 		strcpy(hit.url, "<notset>");
 		hit.port = 0;
-		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
-		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));
+		memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
 		ret = check_hit(&hit);
 
 		if (ret == 0)

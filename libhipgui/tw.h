@@ -32,10 +32,16 @@ enum TOOLWINDOW_MODES
 
 /* file: tw_create.c */
 int tw_create_content(void);
+int tw_create_remote(void);
+int tw_create_local(void);
+int tw_create_rgroup(void);
 
 /* file: tw_manage.c */
 void tw_set_mode(int);
 void tw_set_remote_info(char *);
+void tw_set_local_info(char *);
+void tw_set_rgroup_info(char *);
+int tw_add_local(HIT_Item *, void *);
 
 
 #endif /* END OF HEADER FILE */

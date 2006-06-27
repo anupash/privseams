@@ -5,31 +5,25 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef GUI_MAIN_H
-#define GUI_MAIN_H
+#ifndef GUI_NH_H
+#define GUI_NH_H
 
 /******************************************************************************/
 /* INCLUDES */
 #include <gtk/gtk.h>
 
 #include "events.h"
-#include "nh.h"
-#include "tw.h"
 #include "widgets.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 
-/* file: main.c */
-int gui_init(void);
-int gui_main(void);
-void gui_quit(void);
-void gui_set_info(const char *, ...);
-void gui_terminate(void);
+/* file: nh_create.c */
+int nhdlg_create_content(void);
 
-/* file: main_create.c */
-int main_create_content(void);
+/* file: nh_manage.c */
+int nh_add_local(HIT_Item *, void *);
 
 
 #endif /* END OF HEADER FILE */

@@ -37,6 +37,7 @@ enum WIDGET_IDS
 	ID_TB_TW,
 
 	/* Tool dialog IDs. */
+	ID_TW_CONTAINER,
 	ID_TWLOCAL,
 	ID_TWREMOTE,
 	ID_TWRGROUP,
@@ -47,6 +48,8 @@ enum WIDGET_IDS
 	ID_TWR_TYPE2,
 	ID_TWR_LOCAL,
 	ID_TWR_RGROUP,
+	ID_TWG_NAME,
+	ID_TWL_NAME,
 	
 	/* New hit dialog IDs. */
 	ID_NH_NEWHIT,

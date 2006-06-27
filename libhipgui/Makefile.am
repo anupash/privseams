@@ -12,7 +12,7 @@ include_HEADERS =
 ifdef HIP_AGENT
 
 noinst_LIBRARIES = libhipgui.a
-libhipgui_a_SOURCES = main.c events.c manage.c widgets.c exec.c tools.c terminal.c tw_create.c tw_manage.c main_create.c create.c
+libhipgui_a_SOURCES = main.c events.c manage.c widgets.c exec.c tools.c terminal.c tw_create.c tw_manage.c main_create.c nh_create.c create.c nh_manage.c
 
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@

@@ -36,6 +36,46 @@ void set_nick(char *newnick)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/**
+	Find index of given named item from combo box.
+	
+	@param name Name of item to search.
+	@param warg Pointer to GtkWidget type combo box.
+	@return Index of item, or -1 if not found.
+*/
+int find_from_cb(char *name, GtkWidget *warg)
+{
+	/* Variables. */
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	char *str = NULL;
+	int err = -1, i = 0;
+
+	model = gtk_combo_box_get_model(warg);
+	HIP_IFE(gtk_tree_model_get_iter_first(model, &iter) == FALSE, -1);
+
+	do
+	{
+		gtk_tree_model_get(model, &iter, 0, &str, -1);
+		if (strcmp(name, str) == 0)
+		{
+			err = i;
+			break;
+		}
+		g_free(str);
+		str = NULL;
+		i++;
+	} while (gtk_tree_model_iter_next(model, &iter) == TRUE);
+	
+out_err:
+	if (str) g_free(str);
+	if (err < 0) HIP_DEBUG("Didn't find item from combo box: %s\n", name);
+	return (err);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

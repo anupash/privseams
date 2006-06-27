@@ -33,12 +33,16 @@
 HIT_Item *hit_db = NULL;
 /** All groups in database are stored in here. */
 HIT_Group *group_db = NULL, *group_db_last = NULL;
+/** All local HITs in database are stored in here. */
+HIT_Local *local_db = NULL, *local_db_last = NULL;
 /** Counts items in database. */
 int hit_db_n = 0;
 /** Counts amount of allocated items. */
 int hit_db_ni = 0;
 /** Count groups in database. */
 int group_db_n = 0;
+/** Count local HITs in database. */
+int local_db_n = 0;
 
 /** Almost atomic lock. */
 int hit_db_lock = 1;
@@ -155,9 +159,7 @@ int hit_db_clear(void)
 */
 int hit_db_add_hit(HIT_Item *hit, int nolock)
 {
-	return (hit_db_add(hit->name, &hit->lhit, &hit->rhit,
-	                   hit->url, hit->port, hit->type,
-	                   hit->group, hit->lightweight, nolock));
+	return (hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->group, nolock));
 }
 /* END OF FUNCTION */
 
@@ -172,19 +174,15 @@ int hit_db_add_hit(HIT_Item *hit, int nolock)
 	@param port Port, which is connected to this item, can be 0 if not needed.
 	@param type HIT type, accept or deny.
 	@param group HIT group.
-	@param lightweight Whether HIT is used as lightweight or not.
 	@param nolock Set to one if no database lock is needed.
 
 	@return 0 on success, -1 on errors.
 */
 int hit_db_add(char *name,
-               struct in6_addr *lhit,
-               struct in6_addr *rhit,
+               struct in6_addr *hit,
                char *url,
                int port,
-               int type,
                char *group,
-               int lightweight,
                int nolock)
 {
 	/* Variables. */
@@ -207,29 +205,15 @@ int hit_db_add(char *name,
 	HIP_DEBUG("New item has index #%d...\n", n);
 	strncpy(hit_db[n].name, name, 64);
 	hit_db[n].name[64] = '\0';
-	memcpy(&hit_db[n].lhit, lhit, sizeof(struct in6_addr));
-	memcpy(&hit_db[n].rhit, rhit, sizeof(struct in6_addr));
+	memcpy(&hit_db[n].hit, hit, sizeof(struct in6_addr));
 	hit_db[n].port = port;
-	hit_db[n].type = type;
-	hit_db[n].index = n;
 	strcpy(hit_db[n].url, url);
 	strcpy(hit_db[n].group, group);
-	hit_db[n].lightweight = lightweight;
 	
-	if (type != HIT_DB_TYPE_LOCAL)
-	{
-		/* Try to add possibly new group and call GUI to show it. */
-		if (hit_db_add_rgroup(group) == NULL)
-		{
-			HIP_DEBUG("Something failed when searching/adding new remote group?\n");
-		}
-	}
-
 	/* Then call GUI to show new HIT. */
 	HIP_DEBUG("Calling GUI to show new HIT...\n");
-	print_hit_to_buffer(hitb, &hit_db[n].rhit);
-	if (hit_db[n].type == HIT_DB_TYPE_LOCAL) gui_add_hit(name);
-	else gui_add_remote_hit(name, hit_db[n].group);
+	print_hit_to_buffer(hitb, &hit_db[n].hit);
+	gui_add_remote_hit(name, hit_db[n].group);
 	HIP_DEBUG("Add succesfull.\n");
 
 	hit_db_n++; /* Count to next free item. */
@@ -263,7 +247,7 @@ out:
 	@param nolock If no database locking is needed.
 	@return 0 if hit removed, -1 on errors.
 */
-int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
+int hit_db_del(struct in6_addr *hit, int nolock)
 {
 	/* Variables. */
 	HIT_Item *fhit, temp_hit;
@@ -272,14 +256,7 @@ int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
 	if (!nolock) HIT_DB_LOCK();
 
 	/* Search for given HIT pair. */
-	fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, HIT_DB_TYPE_ALL, 1, 0);
-	if (!fhit)
-	{
-		memcpy(&temp_hit, lhit, sizeof(struct in6_addr));
-		memcpy(lhit, rhit, sizeof(struct in6_addr));
-		memcpy(rhit, &temp_hit, sizeof(struct in6_addr));
-		fhit = hit_db_search(&ndx, NULL, lhit, rhit, NULL, 0, HIT_DB_TYPE_ALL, 1, 0);
-	}
+/*	fhit = hit_db_search(NULL, NULL, hit, NULL, 0, NULL, 1, 0);
 
 	if (!fhit)
 	{
@@ -287,10 +264,8 @@ int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
 		goto out_err;
 	}
 
-	ndx = fhit->index;
-
 	/* Remove from list. */
-	if ((ndx + 1) >= hit_db_n);
+/*	if ((ndx + 1) >= hit_db_n);
 	else if (hit_db_n > 1)
 	{
 		memmove(&hit_db[ndx], &hit_db[ndx + 1], sizeof(HIT_Item));
@@ -298,14 +273,14 @@ int hit_db_del(struct in6_addr *lhit, struct in6_addr *rhit, int nolock)
 	hit_db_n--;
 
 	/* If there is too much empty space in list, shrink it. */
-	if ((hit_db_ni - hit_db_n) > HIT_DB_ITEMS_REALLOC)
+/*	if ((hit_db_ni - hit_db_n) > HIT_DB_ITEMS_REALLOC)
 	{
 		hit_db_ni -= HIT_DB_ITEMS_REALLOC;
 		hit_db = (HIT_Item *)realloc(hit_db, sizeof(HIT_Item) * hit_db_ni);
 	}
 	
 	/* Go trough the list and reset indexes. */
-	for (i = 0; i < hit_db_n; i++)
+/*	for (i = 0; i < hit_db_n; i++)
 	{
 		hit_db[i].index = i;
 	}
@@ -341,11 +316,10 @@ out:
 */
 HIT_Item *hit_db_search(int *number,
 			            char *name,
-			            struct in6_addr *lhit,
-			            struct in6_addr *rhit,
+			            struct in6_addr *hit,
 			            char *url,
 			            int port,
-			            int type,
+			            char *group,
 			            int max_find,
 			            int nolock)
 {
@@ -365,8 +339,7 @@ HIT_Item *hit_db_search(int *number,
 	}
 
 	/* If whole database should be returned? */
-	if (!name && !lhit && !rhit && !url && port == 0 &&
-	    type == HIT_DB_TYPE_ALL)
+	if (!name && !hit && !url && port == 0 && !group)
 	{
 		memcpy(hits, hit_db, sizeof(HIT_Item) * hit_db_n);
 		if (number) *number = hit_db_n;
@@ -380,15 +353,6 @@ HIT_Item *hit_db_search(int *number,
 		fh1 = NULL;
 		fh2 = NULL;
 		err = 0;
-
-		/* Match type first. */
-		err = 1;
-		if (hit_db[n].type & type)
-		{
-			fh2 = &hit_db[n];
-			err = 0;
-		}
-		if (err != 0) continue;
 		
 		/* If name is not NULL, compare name. */
 		if (name != NULL)
@@ -403,28 +367,26 @@ HIT_Item *hit_db_search(int *number,
 		}
 		if (err != 0) continue;
 
-		/* If hit is not NULL... */
-		if (lhit != NULL)
+		/* If group is not NULL, compare group. */
+		if (group != NULL)
 		{
 			err = 1;
-			if (memcmp(&hit_db[n].lhit, lhit, sizeof(struct in6_addr)) == 0)
+			/* Compare group. */
+			if (strcmp(hit_db[n].group, group) == 0)
 			{
-				print_hit_to_buffer(buffer1, lhit);
-				print_hit_to_buffer(buffer2, &hit_db[n].lhit);
-				HIP_DEBUG("Found match for local hit:\n %s==%s\n", buffer1, buffer2);
 				fh2 = &hit_db[n];
 				err = 0;
 			}
 		}
 		if (err != 0) continue;
 
-		if (rhit != NULL)
+		if (hit != NULL)
 		{
 			err = 1;
-			if (memcmp(&hit_db[n].rhit, rhit, sizeof(struct in6_addr)) == 0)
+			if (memcmp(&hit_db[n].hit, hit, sizeof(struct in6_addr)) == 0)
 			{
-				print_hit_to_buffer(buffer1, rhit);
-				print_hit_to_buffer(buffer2, &hit_db[n].rhit);
+				print_hit_to_buffer(buffer1, hit);
+				print_hit_to_buffer(buffer2, &hit_db[n].hit);
 				HIP_DEBUG("Found match for remote hit:\n %s==%s\n", buffer1, buffer2);
 				fh2 = &hit_db[n];
 				err = 0;
@@ -490,7 +452,7 @@ int hit_db_save_to_file(char *file)
 	HIT_Item *items = NULL;
 	FILE *f = NULL;
 	int err = -1, i;
-	char lhit[128], rhit[128], type[128], chtype;
+	char hit[128];
 	
 	HIT_DB_LOCK();
 	
@@ -501,32 +463,14 @@ int hit_db_save_to_file(char *file)
 
 	/* Write all remote groups to file. */
 	hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f);
+	hit_db_enum_locals(hit_db_save_local_to_file, f);
 
 	/* Write all HITs to file. */
 	for (i = 0; i < hit_db_n; i++)
 	{
-		chtype = 'r';
-		print_hit_to_buffer(lhit, &hit_db[i].lhit);
-		print_hit_to_buffer(rhit, &hit_db[i].rhit);
-		if (hit_db[i].type == HIT_DB_TYPE_ACCEPT) strcpy(type, "accept");
-		if (hit_db[i].type == HIT_DB_TYPE_DENY) strcpy(type, "deny");
-		if (hit_db[i].type == HIT_DB_TYPE_LOCAL)
-		{
-			chtype = 'l';
-			strcpy(type, "local");
-		}
-		
-		if (strlen(hit_db[i].group) < 1)
-		{
-			fprintf(f, "%c %s %s %s %s %d %s\n", chtype, lhit, rhit,
-			        hit_db[i].name, hit_db[i].url, hit_db[i].port, type);
-		}
-		else
-		{
-			fprintf(f, "%c %s %s %s %s %d %s %s\n", chtype, lhit, rhit,
-			        hit_db[i].name, hit_db[i].url, hit_db[i].port, type,
-			        hit_db[i].group);
-		}
+		print_hit_to_buffer(hit, &hit_db[i].hit);
+		fprintf(f, "r %s %s %s %d %s\n", hit, hit_db[i].name,
+		        hit_db[i].url, hit_db[i].port, hit_db[i].group);
 	}
 	
 	err = 0;
@@ -548,8 +492,29 @@ int hit_db_save_rgroup_to_file(HIT_Group *group, void *p)
 {
 	/* Variables. */
 	FILE *f = (FILE *)p;
+	char hit[128];
 	
-	fprintf(f, "g %s\n", group->name);
+	print_hit_to_buffer(hit, &group->lhit);
+	fprintf(f, "g %s %s %d %d\n", group->name, hit, group->type, group->lightweight);
+	
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Write local HIT to agent database -file.
+	This is a enumeration callback function used by hit_db_enum_locals().
+*/
+int hit_db_save_local_to_file(HIT_Local *local, void *p)
+{
+	/* Variables. */
+	FILE *f = (FILE *)p;
+	char hit[128];
+	
+	print_hit_to_buffer(hit, &local->lhit);
+	fprintf(f, "l %s %s\n", local->name, hit);
 	
 	return (0);
 }
@@ -569,6 +534,7 @@ int hit_db_load_from_file(char *file)
 	FILE *f = NULL;
 	char buf[1024], ch;
 	int err = 0, i, n;
+	struct in6_addr hit;
 
 	hit_db_clear();
 	HIT_DB_LOCK();
@@ -609,7 +575,8 @@ int hit_db_load_from_file(char *file)
 			if (strlen(buf) < 3) goto loop_end;
 			if (buf[0] == '#') goto loop_end;
 		
-			if (buf[0] == 'r' || buf[0] == 'l') hit_db_parse_hit(&buf[2]);
+			if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
+			else if (buf[0] == 'l') hit_db_parse_local(&buf[2]);
 			else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
 		
 		loop_end:
@@ -621,7 +588,8 @@ int hit_db_load_from_file(char *file)
 	if (group_db_n < 1)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
-		hit_db_add_rgroup("default");
+		memset(&hit, 0, sizeof(struct in6_addr));
+		hit_db_add_rgroup("default", &hit, HIT_DB_TYPE_ACCEPT, 0);
 	}
 
 	goto out;
@@ -655,25 +623,18 @@ int hit_db_parse_hit(char *buf)
 	HIT_Item item;
 	struct in6_addr slhit, srhit;
 	int err = 0, n, port;
-	char type[128], lhit[128], rhit[128];
+	char type[128], lhit[128];
 
 	/* Parse values from current line. */
-	n = sscanf(buf, "%s %s %s %s %d %s %s",
-	           lhit, rhit, item.name, item.url, &item.port, type, item.group);
+	n = sscanf(buf, "%s %s %s %d %s",
+	           lhit, item.name, item.url, &item.port, item.group);
 		
-	HIP_IFEL(n != 6 && n != 7, -1, "Broken line in database file: %s\n", buf);
+	HIP_IFEL(n != 5, -1, "Broken line in database file: %s\n", buf);
+		
+	HIP_DEBUG("Scanned HIT line with values: %s %s %s %d %s\n",
+	          lhit, item.name, item.url, item.port, item.group);
 
-	if (n == 6) memset(item.group, '\0', sizeof(item.group));
-		
-	HIP_DEBUG("Scanned HIT line with values: %s %s %s %s %d %s %s\n",
-	          lhit, rhit, item.name, item.url, item.port, type, item.group);
-		
-	if (strstr(type, "accept") != NULL) item.type = HIT_DB_TYPE_ACCEPT;
-	if (strstr(type, "local") != NULL) item.type = HIT_DB_TYPE_LOCAL;
-	else item.type = HIT_DB_TYPE_DENY;
-
-	read_hit_from_buffer(&item.lhit, lhit);
-	read_hit_from_buffer(&item.rhit, rhit);
+	read_hit_from_buffer(&item.hit, lhit);
 		
 	hit_db_add_hit(&item, 1);
 
@@ -694,13 +655,43 @@ int hit_db_parse_rgroup(char *buf)
 {
 	/* Variables. */
 	int err = 0, n;
-	char name[64 + 1];
+	char name[64 + 1], hit[128];
+	struct in6_addr lhit;
+	int type, lightweight;
 	
 	/* Parse values from current line. */
-	n = sscanf(buf, "%s", name);
-	HIP_IFEL(n != 1, -1, "Broken line in database file: %s\n", buf);
+	n = sscanf(buf, "%s %s %d %d", name, hit, &type, &lightweight);
+	HIP_IFEL(n != 4, -1, "Broken line in database file: %s\n", buf);
 	HIP_DEBUG("Scanned remote group line with values: %s\n", name);
-	hit_db_add_rgroup(name);
+	read_hit_from_buffer(&lhit, hit);
+	hit_db_add_rgroup(name, &lhit, type, lightweight);
+
+out_err:	
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Load one local HIT from given string.
+	
+	@param buf String containing local HIT information.
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_parse_local(char *buf)
+{
+	/* Variables. */
+	int err = 0, n;
+	char name[64 + 1], hit[128];
+	struct in6_addr lhit;
+	
+	/* Parse values from current line. */
+	n = sscanf(buf, "%s %s", name, hit);
+	HIP_IFEL(n != 2, -1, "Broken line in database file: %s\n", buf);
+	HIP_DEBUG("Scanned remote group line with values: %s %s\n", name, hit);
+	read_hit_from_buffer(&lhit, hit);
+	hit_db_add_local(name, &lhit);
 
 out_err:	
 	return (err);
@@ -716,7 +707,8 @@ out_err:
 	@return Returns pointer to new group or if group already existed, pointer
 	        to old one. Returns NULL on errors.
 */
-HIT_Group *hit_db_add_rgroup(char *name)
+HIT_Group *hit_db_add_rgroup(char *name, struct in6_addr *lhit,
+                             int type, int lightweight)
 {
 	/* Variables. */
 	HIT_Group *g, *err = NULL;
@@ -736,6 +728,9 @@ HIT_Group *hit_db_add_rgroup(char *name)
 	/* Setup remote group item. */
 	memset(g, 0, sizeof(HIT_Group));
 	strncpy(g->name, name, 64);
+	memcpy(&g->lhit, lhit, sizeof(struct in6_addr));
+	g->type = type;
+	g->lightweight = lightweight;
 
 	/* Add remote group item to database. */
 	if (group_db == NULL) group_db = g;
@@ -834,6 +829,99 @@ int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
 
 /******************************************************************************/
 /**
+	Add new local HIT database. Notice that this function don't
+	lock the database!
+	
+	@return Returns pointer to new HIT or if HIT already existed, pointer
+	        to old one. Returns NULL on errors.
+*/
+HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
+{
+	/* Variables. */
+	HIT_Local *h, *err = NULL;
+
+	/* Check HIT name length. */
+	HIP_IFEL(strlen(name) < 1, NULL, "Local HIT name too short.\n");
+ 
+	/* Check database for HIT already with same name. */
+	h = hit_db_find_local(name);
+	HIP_IFEL(h != NULL, h, "Local HIT already found from database, returning it."
+	                       " (This is not an actual error)\n");
+
+	/* Allocate new remote group item. */
+	h = (HIT_Local *)malloc(sizeof(HIT_Local));
+	HIP_IFEL(h == NULL, NULL, "Failed to allocate new local HIT.\n");
+	
+	/* Setup local HIT. */
+	memset(h, 0, sizeof(HIT_Local));
+	strncpy(h->name, name, 64);
+	memcpy(&h->lhit, hit, sizeof(struct in6_addr));
+
+	/* Add local HIT to database. */
+	if (local_db == NULL) local_db = h;
+	else local_db_last->next = (void *)h;
+
+	local_db_last = h;
+	local_db_n++;
+
+	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
+
+	/* Tell GUI to show local HIT. */
+	gui_add_local_hit(h);
+	err = h;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Delete local HIT from database.
+
+	@return 0 on success, -1 on errors.
+*/
+int hit_db_del_local(char *name)
+{
+	/* Variables. */
+	int err = -1;
+
+	/* XX TODO: Implement! */
+	HIP_DEBUG("Local HIT delete not implemented yet!!!\n");
+	
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Find a local HIT from database.
+	
+	@param hit Name of HIT to be searched.
+	@return Pointer to HIT found, or NULL if none found.
+*/
+HIT_Local *hit_db_find_local(char *name)
+{
+	/* Variables. */
+	HIT_Local *h;
+	
+	h = local_db;
+	while (h != NULL)
+	{
+		if (strncmp(h->name, name, 64) == 0) break;
+		h = (HIT_Local *)h->next;
+	}
+	
+	return (h);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Enumerate all local HITs in database. This function locks the database.
 	
 	@param f Function to call for every local HIT in database. This function
@@ -842,20 +930,21 @@ int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
 	@param p Pointer to user data.
 	@return Number of HITs enumerated.
 */
-int hit_db_enum_locals(int (*f)(HIT_Item *, void *), void *p)
+int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 {
 	/* Variables. */
-	HIT_Item *hits;
-	int err = 0, n, i;
+	HIT_Local *h;
+	int err = 0, n = 0;
 	
-	hits = hit_db_search(&n, NULL, NULL, NULL, NULL, 0, HIT_DB_TYPE_LOCAL, 0, 1);
-	for (i = 0; i < n && err == 0; i++)
+	h = local_db;
+	while (h != NULL && err == 0)
 	{
-		err = f(&hits[i], p);
+		err = f(h, p);
+		n++;
+		h = (HIT_Local *)h->next;
 	}
-	free(hits);
 
-	HIP_DEBUG("Enumerated %d local HITs.\n", i);
+	HIP_DEBUG("Enumerated %d local HITs.\n", n);
 	
 	return (n);
 }

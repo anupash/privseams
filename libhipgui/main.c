@@ -37,17 +37,17 @@ int gui_init(void)
 	widget_set(ID_MAINWND, w);
 	gtk_widget_show(w);
 	gtk_window_set_title(w, "HIP Config");
-	gtk_widget_set_size_request(w, 400, 300);
+//	gtk_widget_set_size_request(w, 400, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
-	/* Create tool-dialog. */
+	/* Create toolwindow. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
 	gtk_window_set_title(w, "HIP tool window");
-	gtk_widget_set_size_request(w, 450, 300);
+//	gtk_widget_set_size_request(w, 450, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(tw_destroy), NULL);
@@ -71,7 +71,7 @@ int gui_init(void)
 	
 	/* Create window content for all windows. */
 	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
-//	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
+	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
 	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");
 	HIP_IFEL(ngdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
 	HIP_IFEL(main_create_content(), -1, "Failed to create main-window contents.\n");
@@ -103,6 +103,14 @@ int gui_main(void)
 	
 	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
 	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
+
+	hit_db_enum_locals(nh_add_local, NULL);
+	gtk_combo_box_set_active(widget(ID_NH_LOCAL), 0);
+
+	hit_db_enum_locals(tw_add_local, NULL);
+	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
+
+
 /*	HIP_DEBUG("Appending remote groups to tool window...\n");
 	w = widget(ID_TWRGROUPS);
 //	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
@@ -121,9 +129,7 @@ int gui_main(void)
 	gtk_combo_box_set_active(w, 0);
 	
 	HIP_DEBUG("Appending local HITs to ask window...\n");
-	w = widget(ID_AD_LHITS);
-	hit_db_enum_locals(askdlg_add_lhits, w);
-	gtk_combo_box_set_active(w, 0);*/
+*/
 	
 	gtk_main();
 }

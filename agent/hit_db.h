@@ -31,26 +31,21 @@
 #define HIT_DB_TYPE_NONE				0
 #define HIT_DB_TYPE_ACCEPT				1
 #define HIT_DB_TYPE_DENY				2
-#define HIT_DB_TYPE_LOCAL				4
 #define HIT_DB_TYPE_ALL					0xffffffff
 
 
 /******************************************************************************/
 /* STRUCT DEFINITIONS */
-/** This structure stores one HIT and information needed for it. */
+/** This structure stores one remote HIT and information needed for it. */
 typedef struct
 {
-	/** Index of this item. Stored for GUI usage. */
-	int index;
 	/**
 		Stores HIT item 'human' identifier, it's name.
 		Maximum length for this is 64 + null.
 	*/
 	char name[64 + 1];
-	/** Stores local HIT of this item. */
-	struct in6_addr lhit;
-	/** Stores remote HIT of this item. */
-	struct in6_addr rhit;
+	/** Stores HIT of this item. */
+	struct in6_addr hit;
 	/**
 		Stores url of this item.
 		Used for accepting connections for this HIT.
@@ -61,12 +56,8 @@ typedef struct
 		Used for accepting connections for this HIT.
 	*/
 	int port;
-	/** What is the type of the HIT. */
-	int type;
 	/** Remote HIT group. */
 	char group[64 + 1];
-	/** Is HIT lightweight or not. */
-	int lightweight;
 } HIT_Item;
 
 /** This structure stores one group information. */
@@ -74,9 +65,26 @@ typedef struct
 {
 	/* Group name. */
 	char name[64 + 1];
+	/** Stores local HIT with which this group is associated. */
+	struct in6_addr lhit;
+	/** What is the type of the group. */
+	int type;
+	/** Is group lightweight or not. */
+	int lightweight;
 	/* Next group item. */
 	void *next;
 } HIT_Group;
+
+/** This structure stores one local HIT and information needed for it. */
+typedef struct
+{
+	/* Local HIT name. */
+	char name[64 + 1];
+	/** HIT. */
+	struct in6_addr lhit;
+	/* Next group item. */
+	void *next;
+} HIT_Local;
 
 
 /******************************************************************************/
@@ -94,25 +102,30 @@ void hit_db_quit(char *);
 int hit_db_clear(void);
 
 int hit_db_add_hit(HIT_Item *, int);
-int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
-               char *, int, int, char *, int, int);
-int hit_db_del(struct in6_addr *, struct in6_addr *, int);
+int hit_db_add(char *, struct in6_addr *, char *, int, char *, int);
+int hit_db_del(struct in6_addr *, int);
 
-HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
-			            char *, int, int, int, int);
+HIT_Item *hit_db_search(int *, char *, struct in6_addr *,
+			            char *, int, char *, int, int);
 
 int hit_db_save_to_file(char *);
 int hit_db_save_rgroup_to_file(HIT_Group *, void *);
+int hit_db_save_local_to_file(HIT_Local *, void *);
 int hit_db_load_from_file(char *);
 
 int hit_db_parse_hit(char *);
 int hit_db_parse_rgroup(char *);
+int hit_db_parse_local(char *);
 
-HIT_Group *hit_db_add_rgroup(char *);
+HIT_Group *hit_db_add_rgroup(char *, struct in6_addr *, int, int);
 int hit_db_del_rgroup(char *);
 HIT_Group *hit_db_find_rgroup(char *);
 int hit_db_enum_rgroups(int (*)(HIT_Group *, void *), void *);
-int hit_db_enum_locals(int (*)(HIT_Item *, void *), void *);
+
+HIT_Local *hit_db_add_local(char *, struct in6_addr *);
+int hit_db_del_local(char *);
+HIT_Local *hit_db_find_local(char *);
+int hit_db_enum_locals(int (*)(HIT_Local *, void *), void *);
 
 
 /******************************************************************************/

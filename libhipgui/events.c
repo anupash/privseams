@@ -97,11 +97,13 @@ gboolean select_list(GtkTreeSelection *selection, gpointer data)
 			{
 				HIP_DEBUG("You selected a local HIT called: %s.\n", str);
 				tw_set_mode(TWMODE_LOCAL);
+				tw_set_local_info(str);
 			}
 			if (indices[0] == 1)
 			{
 				HIP_DEBUG("You selected remote HIT(s) group called: %s.\n", str);
 				tw_set_mode(TWMODE_GROUP);
+				tw_set_rgroup_info(str);
 			}
 		}
 		else if (depth == 3 && indices[0] == 1)

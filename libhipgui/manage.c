@@ -24,12 +24,12 @@ extern GtkTreeIter local_top, remote_top, process_top;
 
 	@param New hit to add.
 */
-void gui_add_hit(char *hit)
+void gui_add_local_hit(HIT_Local *hit)
 {
 	/* Variables. */
 	GtkWidget *w;
 	GtkTreeIter iter;
-	gchar *msg = g_strdup_printf(hit);
+	gchar *msg = g_strdup_printf(hit->name);
 
 	w = widget(ID_RLISTMODEL);
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &local_top);
@@ -152,7 +152,7 @@ int gui_ask_new_hit(HIT_Item *hit)
 
 	gdk_threads_enter();
 	gtk_widget_show(dialog);
-	print_hit_to_buffer(phit, &hit->rhit);
+	print_hit_to_buffer(phit, &hit->hit);
 	gtk_label_set_text(widget(ID_NH_NEWHIT), phit);
 	gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
 	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
@@ -169,9 +169,6 @@ int gui_ask_new_hit(HIT_Item *hit)
 		err = 0;
 		break;
 	}
-	
-	if (err = 1) hit->type = HIT_DB_TYPE_ACCEPT;
-	else hit->type = HIT_DB_TYPE_DENY;
 
 	ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
 	strcpy(hit->group, ps);
@@ -190,42 +187,6 @@ int gui_ask_new_hit(HIT_Item *hit)
 
 /******************************************************************************/
 /**
-	Add remote groups to ask dialog.
-	This is a enumeration callback function.
-*/
-int askdlg_add_rgroups(HIT_Group *group, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-	
-//	HIP_DEBUG("Appending new remote group \"%s\" to ask window list.\n", group->name);
-	gtk_combo_box_insert_text(w, 0, group->name);
-	
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Add local HITs to ask dialog.
-	This is a enumeration callback function.
-*/
-int askdlg_add_lhits(HIT_Item *hit, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-
-//	HIP_DEBUG("Appending new local HIT \"%s\" to ask window list.\n", hit->name);
-	gtk_combo_box_append_text(w, hit->name);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
 	Create new remote group.
 	
 	@return Name of new remote group.
@@ -234,7 +195,7 @@ char *create_remote_group(void)
 {
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
-	HIT_Group group;
+	HIT_Group *g;
 	int err = -1;
 	char *ps = NULL;
 	pthread_t pt;
@@ -249,7 +210,13 @@ char *create_remote_group(void)
 		ps = gtk_entry_get_text(widget(ID_CREATE_NAME));
 		if (strlen(ps) > 0)
 		{
-			pthread_create(&pt, NULL, hit_db_add_rgroup, ps);
+			g = (HIT_Group *)malloc(sizeof(HIT_Group));
+			memset(g, 0, sizeof(HIT_Group));
+			strncpy(g->name, ps, 64);
+			g->type = HIT_DB_TYPE_ACCEPT;
+			g->lightweight = 0;
+
+			pthread_create(&pt, NULL, create_remote_group_thread, g);
 		}
 		else ps = NULL;
 	}
@@ -257,6 +224,20 @@ char *create_remote_group(void)
 out_err:
 	gtk_widget_hide(dialog);
 	return (ps);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Thread function for adding new remote group. */
+void *create_remote_group_thread(void *data)
+{
+	/* Variables. */
+	HIT_Group *g = (HIT_Group *)data;
+	
+	hit_db_add_rgroup(g->name, &g->lhit, g->type, g->lightweight);
+
+	return (NULL);
 }
 /* END OF FUNCTION */
 

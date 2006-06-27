@@ -18,7 +18,7 @@
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-void gui_add_hit(char *);
+void gui_add_local_hit(HIT_Local *);
 void gui_add_rgroup(HIT_Group *);
 void gui_add_remote_hit(char *, char *);
 void gui_add_process(int, char *, int, int);
@@ -31,6 +31,7 @@ int askdlg_add_rgroups(HIT_Group *, void *);
 int askdlg_add_lhits(HIT_Item *, void *);
 
 char *create_remote_group(void);
+void *create_remote_group_thread(void *);
 
 
 #endif /* END OF HEADER FILE */
