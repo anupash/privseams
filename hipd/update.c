@@ -1151,7 +1151,7 @@ int hip_handle_update_seq(hip_ha_t *entry,
 
 }
 
-int hip_update_handle_locator(hip_ha_t *entry,
+/*int hip_update_handle_locator(hip_ha_t *entry,
 		          struct hip_esp_info *esp_info,
 			  struct hip_locator *locator,
 		          struct in6_addr *src_ip)
@@ -1173,11 +1173,11 @@ int hip_update_handle_locator(hip_ha_t *entry,
 			  i+1, is_preferred ? "yes" : "no",
 			  ntohl(locator_address_item->reserved),lifetime);
 		/* 2. check that the address is a legal unicast or anycast
-		   address */
+		   address 
 		if (!hip_update_test_locator_addr(locator_address))
 			continue;
 		if (i > 0) {
-		/* preferred address allowed only for the first address */
+		/* preferred address allowed only for the first address 
 			if (is_preferred)
 				HIP_ERROR("bug, preferred flag set to other than the first address\n");
 				is_preferred = 0;
@@ -1191,7 +1191,7 @@ int hip_update_handle_locator(hip_ha_t *entry,
 		} 
 	}
 	return 0;
-}
+}%%%%%%%%%%%%%%%%%%%%%*/
 
 int hip_set_rekeying_state(hip_ha_t *entry,
 			   struct hip_esp_info *esp_info){
@@ -1229,7 +1229,7 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 		
 }	
 
-int hip_handle_rekeying(struct hip_common *msg, 
+int hip_handle_esp_info(struct hip_common *msg, 
 		        hip_ha_t *entry){	
 	
 
@@ -1243,7 +1243,7 @@ int hip_handle_rekeying(struct hip_common *msg,
 	
 	keying_state = hip_set_rekeying_state(entry, esp_info);	
 
-        HIP_IFEL(keying_state, -1, "Invalid Keying state");   	
+        HIP_IFEL(keying_state, -1, "Protocol Error: mm-04 Sec 5.3");   	
 
 	switch(keying_state){
 		case HIP_UPDATE_STATE_REKEYING:
@@ -1310,7 +1310,6 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct in6_addr *src_ip, *dst_ip;
-
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
 	HIP_DEBUG("enter\n");
@@ -1322,10 +1321,6 @@ int hip_receive_update(struct hip_common *msg,
 	HIP_IFEL(!entry, -1, "Entry not found\n");
 	HIP_LOCK_HA(entry);
 	state = entry->state;
-	/*update_state = entry->update_state; 
-
-
-	HIP_DEBUG("Received UPDATE in update_state %s\n", hip_update_state_str(update_state));*/
 
 	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
 
@@ -1339,7 +1334,7 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
 	}
 
-	if (! (state == HIP_STATE_ESTABLISHED) ) {
+	if (!(state == HIP_STATE_ESTABLISHED) ) {
 		HIP_DEBUG("Received UPDATE in illegal state %s. Dropping\n",
 			  hip_state_str(state));
 		err = -EINVAL;
@@ -1353,7 +1348,7 @@ int hip_receive_update(struct hip_common *msg,
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
 
-	if (ack)
+	if(ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
 	if (esp_info)
 		HIP_DEBUG("LOCATOR: SPI new 0x%x\n", ntohl(esp_info->new_spi));
@@ -1380,59 +1375,37 @@ int hip_receive_update(struct hip_common *msg,
 		 "Verification of UPDATE signature failed\n");
  	
 	
-	if(locator || echo || echo_response)
-		updating_addresses = 1;
-
-	
+	if(esp_info)
+		HIP_IFEL(hip_handle_esp_info(msg, entry), -1, "Error in processing esp_info\n");
 	
 	//mm stuff after this
-	
+	if(locator)
+		//handle locator parameter
+		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
+	else if(echo){
+		//handle echo_request
+	}
+	else if(echo_response){
+		//handle echo response;
+	}
 
-	if(locator && esp_info){
-		HIP_IFEL(hip_update_handle_locator(entry, esp_info, locator, src_ip),-1,"Error in processing locator Info\n");
-	}	
-	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0)
-	{
+	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
 		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
 		entry->nat = 0;
 		entry->peer_udp_port = 0;
 	}
-	else
-	{
+	else{
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
 		/*Somehow the addresses in the entry doesnt get updated for mobility behind nat case.
 			The else would be called only when the client moves from behind nat to behind nat.
 			updating the entry addresses here.
 			Miika: Is it the correct place to be done? -- Abi
+			Error was because of multiple locator parameter, code shifted to after setting of
+			preferred address by the mm logic          -- Bagri
+
 		*/	
 	}
-	
-	if (!handle_upd && locator && seq && esp_info) {
-		/* LOCATOR, SEQ */
-		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
-	} else if (seq && !esp_info && echo) {
-		/* SPI, SEQ, ACK, ECHO_REQUEST */
-		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
-	} else if (ack && !echo) {
-		/* ACK, ECHO_RESPONSE */
-		entry->hadb_update_func->hip_update_handle_ack(entry, ack, 0, echo_response);
-	} else {
-		/* base draft cases 7-8: */
-		if (state == HIP_STATE_ESTABLISHED) {
-			if (esp_info && seq) {
-				HIP_DEBUG("case 7: in ESTABLISHED and has ESP_INFO and SEQ\n");
-				err = entry->hadb_update_func->hip_handle_update_established(entry, msg, src_ip, dst_ip, sinfo);
-			} else {
-				HIP_ERROR("in ESTABLISHED but no both ESP_INFO and SEQ\n");
-				err = -EINVAL;
-			}
-		} else {
-			HIP_DEBUG("case 8: in REKEYING\n");
-			err = entry->hadb_update_func->hip_handle_update_rekeying(entry, msg, src_ip);
-		}
-	}
-
  out_err:
 	if (err)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
