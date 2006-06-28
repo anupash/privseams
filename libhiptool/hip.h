@@ -1075,6 +1075,8 @@ struct hip_hadb_state
 	size_t               dh_shared_key_len;
 
 	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
+	uint16_t	     blind;  /*1, if hadb_state uses blind protocol*/
+
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
 

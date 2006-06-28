@@ -20,7 +20,7 @@ int hip_nat_sock_udp = 0;	/* For NAT traversal of IPv4 packets for base exchange
 int hip_nat_sock_udp_data = 0;  /* For NAT traversal of IPv4 packets for Data traffic */
 
 int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
-
+int hip_blind_status = 0; /*Blind status*/
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;

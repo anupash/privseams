@@ -490,6 +490,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
+#ifdef CONFIG_HIP_BLIND
+	case SO_HIP_SET_BLIND_ON:
+		HIP_DEBUG("Blind on!!\n");
+		err = hip_blind_on(msg);
+		break;
+	case SO_HIP_SET_BLIND_OFF:
+		HIP_DEBUG("Blind off!!\n");
+		err = hip_blind_off(msg);
+		break;
+#endif
 	default:
 	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		 err = -ESOCKTNOSUPPORT;

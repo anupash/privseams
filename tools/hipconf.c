@@ -42,7 +42,7 @@ const char *usage = "new|add hi default\n"
 #endif
 
 #ifdef CONFIG_HIP_BLIND
-        "set blind on|off\n"
+        "hip blind on|off\n"
 #endif
 ;
 
@@ -147,6 +147,8 @@ int get_type(char *text) {
 		ret = TYPE_BOS;
 	else if (!strcmp("nat", text))
 		ret = TYPE_NAT;
+	else if (!strcmp("blind", text))
+		ret = TYPE_BLIND;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;
 #ifdef CONFIG_HIP_OPPORTUNISTIC

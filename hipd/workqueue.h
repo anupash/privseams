@@ -10,6 +10,7 @@
 #include "timer.h"
 #include "bos.h"
 #include "close.h"
+#include "blind.h"
 
 #if 0	//AG generates a warning, not used currently
 /* Remove when not necessary, taken from linux/ipv6.h */
