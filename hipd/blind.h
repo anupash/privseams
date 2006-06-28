@@ -12,4 +12,6 @@ int hip_blind_off(struct hip_common *msg);
 int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used);
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used);
 
+int hip_get_blind(void);
+
 #endif

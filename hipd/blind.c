@@ -49,3 +49,7 @@ int hip_blind_off(struct hip_common *msg)
         return err;
 }
 
+int hip_get_blind(void)
+{
+	return hip_blind_on;
+}
