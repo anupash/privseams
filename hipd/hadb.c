@@ -292,6 +292,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	/* Set the nat status here */
 	if(hip_nat_status)
 		entry->nat = 1;
+
+	if(hip_blind_status)
+		entry->blind = 1;
 	
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */

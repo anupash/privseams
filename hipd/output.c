@@ -36,10 +36,27 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 
+
+#ifdef CONFIG_HIP_BLIND
+        if (entry->blind)
+                mask |= HIP_CONTROL_BLIND;
+	
+	get_random_bytes(&entry->blind_nonce_i, sizeof(hip_blind_nonce_t));
+	HIP_IFEL(hip_plain_to_blind_hit(entry->hit_our,entry->hit_our_blind), 
+	-1, "Unable to convert our Plain HIT to Blinded HIT\n");
+	
+HIP_IFEL(hip_plain_to_blind_hit(entry->hit_peer,entry->hit_peer_blind),
+	-1, "Unable to convert peer's Plain HIT to Blinded HIT");
+	
+#endif
+
 	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
 						     HIP_I1,
-						     mask, &entry->hit_our,
-						     dst_hit);
+						     mask,
+                  (entry->blind ? &entry->hit_our_blind : &entry->hit_our),
+                  (entry->blind ? &entry->hit_peer_blind : dst_hit)
+						     );
+
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
@@ -56,6 +73,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
+
+#ifdef CONFIG_HIP_BLIND
+if(entry->blind)
+{
+HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
+-1,"Unable to attach nonce to the message. \n");
+}
+#endif
 	
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,0,0, 

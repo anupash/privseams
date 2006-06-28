@@ -2458,3 +2458,16 @@ int hip_build_netlink_dummy_header(struct hip_common *msg)
 {
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
 }
+
+int hip_build_param_blind_nonce(struct hip_common *msg, hip_blind_nonce_t opaque)
+{
+	struct hip_blind_nonce param;
+	int err = 0;
+
+	param.nonce = opaque;
+	hip_set_param_type(&param, HIP_PARAM_BLIND_NONCE);
+	hip_calc_generic_param_len(&param, sizeof(param), 0);
+	err = hip_build_param(msg, &param);
+
+	return err;
+}

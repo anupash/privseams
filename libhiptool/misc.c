@@ -38,6 +38,19 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 }
 #endif //CONFIG_HIP_OPPORTUNISTIC
 
+int hip_plain_to_blind_hit(hip_hit_t *plain, hip_hit_t *blind,
+			   hip_blind_nonce_t *nonce, int hash_algo)
+{
+	return -1;
+}
+
+int hip_blind_to_plain_hit(hip_hit_t *plain, hip_hit_t *blind,
+	                   hip_blind_nonce_t *nonce, int hash_algo)
+{
+	return -1;
+}
+
+
 /** hip_timeval_diff - calculate difference between two timevalues
  * @t1: timevalue 1
  * @t2: timevalue 2

@@ -272,6 +272,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PSEUDO_CONTROL_REQ_RVS  0x8000
 //#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
 #define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
+#define HIP_CONTROL_BLIND	    0x0004   /*3rd bit from right says 
+						whether blind or not*/
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
 //#define HIP_CONTROL_CERTIFICATES    0x0002   /* Certificate packets follow */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
@@ -333,6 +335,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_NOTIFY               832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
+#define HIP_PARAM_BLIND_NONCE	       963
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
@@ -485,6 +488,8 @@ typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
+typedef uint16_t hip_blind_nonce_t;
+
 
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
@@ -864,6 +869,13 @@ struct hip_echo_response {
 	/* opaque */
 } __attribute__ ((packed));
 
+struct hip_blind_nonce {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	hip_blind_nonce_t nonce;
+} __attribute__ ((packed));
+
+
 /* Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -1075,7 +1087,11 @@ struct hip_hadb_state
 	size_t               dh_shared_key_len;
 
 	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
+
 	uint16_t	     blind;  /*1, if hadb_state uses blind protocol*/
+	hip_hit_t            hit_our_blind;  /* The HIT we use with this host */
+	hip_hit_t            hit_peer_blind; /* Peer's HIT */
+	hip_blind_nonce_t    blind_nonce_i;
 
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
