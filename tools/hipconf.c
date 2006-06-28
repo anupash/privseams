@@ -41,7 +41,11 @@ const char *usage = "new|add hi default\n"
         "set opp on|off\n"
 #endif
 
+#ifdef CONFIG_HIP_BLIND
+        "set blind on|off\n"
+#endif
 ;
+
 /* hip nat on|off|peer_hit is currently specified. 
  * For peer_hit we should 'on' the nat mapping only when the 
  * communication takes place with specified peer_hit --Abi */
@@ -60,7 +64,8 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_bos,
 	handle_puzzle,
 	handle_nat,
-	handle_opp
+	handle_opp,
+	handle_blind
 };
 
 /**
@@ -634,6 +639,61 @@ int handle_opp(struct hip_common *msg, int action,
 	return err;
 }
 
+int handle_blind(struct hip_common *msg, int action,
+               const char *opt[], int optc)
+{
+	int err;
+	int status = 0;
+	int ret;
+	struct in6_addr hit;
+	
+	HIP_DEBUG("Blind setting. Options:%s\n", opt[0]);
+
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (!strcmp("on",opt[0])) {
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_BLIND_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		memset(&hit,0,sizeof(struct in6_addr));
+                status = SO_HIP_SET_BLIND_OFF;
+	} else {
+		ret = inet_pton(AF_INET6, opt[0], &hit);
+		if (ret < 0 && errno == EAFNOSUPPORT) {
+			HIP_PERROR("inet_pton: not a valid address family\n");
+			err = -EAFNOSUPPORT;
+			goto out;
+		} else if (ret == 0) {
+			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+			err = -EINVAL;
+			goto out;
+		}
+		status = SO_HIP_SET_BLIND_ON;
+	}
+
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, status, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+
+}
+
+
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
  */
@@ -717,4 +777,6 @@ out:
 	
 	return err;
 }
+
+
 #endif /* HIP_UNITTEST_MODE */

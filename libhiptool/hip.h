@@ -243,6 +243,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_ADD_DB_HI			35
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_SET_BLIND_ON			38
+#define SO_HIP_SET_BLIND_OFF			39
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

@@ -52,7 +52,8 @@
 #define TYPE_PUZZLE 6
 #define TYPE_NAT    7
 #define TYPE_OPP    8
-#define TYPE_MAX    9 /* exclusive */
+#define TYPE_BLIND    9
+#define TYPE_MAX    10 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -68,6 +69,8 @@ int handle_del(struct hip_common *, int type, const char **opt, int optc);
 int handle_nat(struct hip_common *, int type, const char **opt, int optc);
 int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
 int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_blind(struct hip_common *, int type, const char **opt, int optc);
+
 int get_action(char *action);
 int get_type(char *type);
 
