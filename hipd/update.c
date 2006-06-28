@@ -1164,47 +1164,6 @@ int hip_handle_update_seq(hip_ha_t *entry,
 
 }
 
-/*int hip_update_handle_locator(hip_ha_t *entry,
-		          struct hip_esp_info *esp_info,
-			  struct hip_locator *locator,
-		          struct in6_addr *src_ip)
-{ 
-	
-	struct hip_locator_info_addr_item *locator_address_item;
-	int i, n_addrs;
-	uint32_t spi = 0;
-	n_addrs = hip_get_locator_addr_item_count(locator);
-	spi = ntohl(esp_info->new_spi);
-	locator_address_item =	hip_get_locator_first_addr_item(locator);
-	for(i = 0; i < n_addrs; i++, locator_address_item++) {
-		struct in6_addr *locator_address = &locator_address_item->address;
-		uint32_t lifetime = ntohl(locator_address_item->lifetime);
-		int is_preferred =
-			ntohl(locator_address_item->reserved) == 1 << 31;
-		HIP_DEBUG_HIT("REA address", locator_address);
-		HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n",
-			  i+1, is_preferred ? "yes" : "no",
-			  ntohl(locator_address_item->reserved),lifetime);
-		/* 2. check that the address is a legal unicast or anycast
-		   address 
-		if (!hip_update_test_locator_addr(locator_address))
-			continue;
-		if (i > 0) {
-		/* preferred address allowed only for the first address 
-			if (is_preferred)
-				HIP_ERROR("bug, preferred flag set to other than the first address\n");
-				is_preferred = 0;
-		}
-		if (is_preferred && memcmp(src_ip, &entry->preferred_address,
-		   sizeof(struct in6_addr)) && spi) {
-			hip_delete_sa(spi, &entry->preferred_address,
-		  		      AF_INET6, 0, entry->peer_udp_port);
-			ipv6_addr_copy(&entry->preferred_address,
-					       locator_address);
-		} 
-	}
-	return 0;
-}%%%%%%%%%%%%%%%%%%%%%*/
 
 int hip_set_rekeying_state(hip_ha_t *entry,
 			   struct hip_esp_info *esp_info){
@@ -1249,47 +1208,7 @@ int hip_handle_esp_info(struct hip_common *msg,
 	int err = 0, keying_state = 0;
 	struct hip_esp_info *esp_info;
 	uint16_t keymat_index = 0;
-	struct hip_dh_fixed *dh;
-	
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	keymat_index = ntohs(esp_info->keymat_index);
-	
-	keying_state = hip_set_rekeying_state(entry, esp_info);	
 
-        HIP_IFEL(keying_state, -1, "Protocol Error: mm-04 Sec 5.3");   	
-
-	switch(keying_state){
-		case HIP_UPDATE_STATE_REKEYING:
-			//rekeying stuff goes here
-			break;
-		case HIP_UPDATE_STATE_DEPRECATING:
-			break;
-		default:
-			// No rekeying
-			return 0;
-	}
-	
-	/* esp-02 6.9 1. If the received UPDATE contains a
-	 * Diffie-Hellman parameter, the received Keymat 
-	 * Index MUST be zero. If this test fails, the packet
-	 *  SHOULD be dropped and the system SHOULD log an 
-	 *  error message. */
-
-	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
-	if (dh) {
-		HIP_DEBUG("packet contains DH\n");
-		HIP_IFEL(!esp_info, -1, "Packet contains DH but not ESP_INFO\n");
-		HIP_IFEL(keymat_index != 0, -EINVAL,
-			 "UPDATE contains Diffie-Hellman parameter with non-zero"
-			 "keymat value %u in ESP_INFO. Dropping\n", keymat_index);
-	}
-	/* esp-02 6.9 2. if no outstanding request, process as in sec 6.9.1
-	 */	
-        // TODO:Check for outstanding rekeying request
-	/* esp-02 6.9 3. If there is an outstanding rekeying request,
-	 * UPDATE must be acked, save ESP_INFO, DH params, continue 
-	 * processing as stated in 6.10
-	 */
 	
 
 
