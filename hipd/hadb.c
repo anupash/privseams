@@ -1247,9 +1247,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 }
 
 /* have_esp_info is 1, if there is ESP_INFO in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info,
-			   struct hip_echo_response *echo_resp)
-{
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info){
 	size_t n, i;
 	uint32_t *peer_update_id;
 
@@ -1273,7 +1271,6 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
 		struct hip_spi_in_item *in_item, *in_tmp;
-		struct hip_spi_out_item *out_item, *out_tmp;
 		uint32_t puid = ntohl(*peer_update_id);
 
 		_HIP_DEBUG("peer Update ID=%u\n", puid);
@@ -1290,46 +1287,12 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 			}
 		}
 
-		/* see if the ACK was response to address verification */
-		if (echo_resp) {
-			list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
-				struct hip_peer_addr_list_item *addr, *addr_tmp;
-
-				list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
-					_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-					if (addr->seq_update_id == puid) {
-						if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
-							HIP_ERROR("echo data len mismatch\n");
-							continue;
-						}
-						if (memcmp(addr->echo_data,
-							   (void *)echo_resp+sizeof(struct hip_tlv_common),
-							   sizeof(addr->echo_data)) != 0) {
-							HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
-							continue;
-						}
-						_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
-						addr->address_state = PEER_ADDR_STATE_ACTIVE;
-						do_gettimeofday(&addr->modified_time);
-
-						if (addr->is_preferred) {
-							/* maybe we should do this default address selection
-							   after handling the REA .. */
-							hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
-						} else
-							HIP_DEBUG("address was not set as preferred address in REA\n");
-					}
-				}
-			}
-			//entry->skbtest = 1;
-			_HIP_DEBUG("set skbtest to 1\n");
-		} else {
-			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
-		}
 	}
  out_err:
 	return;
 }
+
+
 
 void hip_update_handle_esp_info(hip_ha_t *entry, uint32_t peer_update_id)
 {

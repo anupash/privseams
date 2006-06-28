@@ -193,8 +193,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
-
-	/* 2. check that the address is a legal unicast or anycast
+	/* Check that the address is a legal unicast or anycast
 	   address */
 	if (!hip_update_test_locator_addr(locator_address)) {
 		err = -1;
@@ -202,7 +201,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		goto out_err;
 	}
 	
-	/* 3. check if the address is already bound to the SPI +
+	/* Check if the address is already bound to the SPI +
 	   add/update address */
 	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
 					 0,
@@ -243,7 +242,7 @@ int hip_update_depracate_unlisted(hip_ha_t *entry,
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
 		if(ipv6_addr_cmp(&entry->preferred_address, 
-				 &list_item->address)){
+ 				 &list_item->address)){
 			// TODO: Handle this: Choose a random address from
 			// amongst the active addresses? -Bagri
 			HIP_DEBUG_HIT("Preferred Address deprecated",
@@ -1251,6 +1250,9 @@ int hip_handle_esp_info(struct hip_common *msg,
 			break;
 		case HIP_UPDATE_STATE_DEPRECATING:
 			break;
+		default:
+			// No rekeying
+			return 0;
 	}
 	
 	/* esp-02 6.9 1. If the received UPDATE contains a
@@ -1282,6 +1284,41 @@ out_err:
 		HIP_DEBUG("Error while processing Rekeying for update packet err=%d", err);
 	return err;
 }
+
+void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
+
+	struct hip_spi_out_item *out_item, *out_tmp;
+	list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
+		struct hip_spi_out_item *out_item, *out_tmp;
+		struct hip_peer_addr_list_item *addr, *addr_tmp;
+		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
+			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
+			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr))) {
+				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
+					HIP_ERROR("echo data len mismatch\n");
+					continue;
+				}
+				if (memcmp(addr->echo_data,
+					  (void *)echo_resp+sizeof(struct hip_tlv_common),
+				   	  sizeof(addr->echo_data)) != 0) {
+					HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
+					continue;
+				}	
+				_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
+				addr->address_state = PEER_ADDR_STATE_ACTIVE;
+				do_gettimeofday(&addr->modified_time);
+				if (addr->is_preferred) {
+				/* maybe we should do this default address selection
+				   after handling the REA .. */
+					hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
+				} else
+					HIP_DEBUG("address was not set as preferred address in REA\n");
+			}
+		}
+	}
+
+}
+
 /**
  * hip_receive_update - receive UPDATE packet
  * @msg: buffer where the HIP packet is in
@@ -1300,7 +1337,7 @@ int hip_receive_update(struct hip_common *msg,
 		       hip_ha_t *entry,
 		       struct hip_stateless_info *sinfo)
 {
-	int err = 0, update_state = 0, handle_upd = 0, state = 0;
+	int err = 0, state = 0, has_esp_info = 0;
 	int updating_addresses = 0;
 	struct in6_addr *hits;
 	struct hip_esp_info *esp_info = NULL;
@@ -1350,15 +1387,18 @@ int hip_receive_update(struct hip_common *msg,
 
 	if(ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
-	if (esp_info)
+	if (esp_info){
 		HIP_DEBUG("LOCATOR: SPI new 0x%x\n", ntohl(esp_info->new_spi));
+		has_esp_info = 1;
+	}
 	if (echo)
 		HIP_DEBUG("ECHO_REQUEST found\n");
 	if (echo_response)
 		HIP_DEBUG("ECHO_RESPONSE found\n");
 
 	if (ack)
-		//process ack;
+		//process ack
+		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
 	if (seq)
 		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
 	
@@ -1384,11 +1424,13 @@ int hip_receive_update(struct hip_common *msg,
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
 	else if(echo){
 		//handle echo_request
+		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
 	}
 	else if(echo_response){
-		//handle echo response;
+		//handle echo response
+		hip_update_handle_ack_response(entry, echo_response, src_ip);
 	}
-
+	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
 		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
 		entry->nat = 0;
