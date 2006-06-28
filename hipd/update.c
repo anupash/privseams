@@ -258,8 +258,8 @@ int hip_update_depracate_unlisted(hip_ha_t *entry,
 int hip_update_set_preferred(hip_ha_t *entry,
 			      struct hip_peer_addr_list_item *list_item,
 			      struct hip_spi_out_item *spi_out,
-			      void *preferred) {
-	list_item->is_preferred = *((int *) preferred);
+			      int preferred) {
+	list_item->is_preferred =  preferred;
 	return 0;
 }
 
@@ -920,15 +920,19 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 		goto out_err;
 	}
 
-	if ((addr->address_state == PEER_ADDR_STATE_ACTIVE) && verify_active_addresses){
+	if ((addr->address_state == PEER_ADDR_STATE_ACTIVE)){
 		
-		HIP_DEBUG("Verifying already active address. Setting as unverified\n"); 
-		addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-		if (addr->is_preferred) {
-			HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
-			hip_hadb_set_default_out_addr(entry, spi_out,
-						      &addr->address); //CHECK: Is this the correct function? -Bagri
+		if(verify_active_addresses){
+			HIP_DEBUG("Verifying already active address. Setting as unverified\n"); 
+			addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+			if (addr->is_preferred) {
+				HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
+				hip_hadb_set_default_out_addr(entry, spi_out,
+							      &addr->address); //CHECK: Is this the correct function? -Bagri
+			}
 		}
+		else
+			goto out_err;
 		//continue;
 	}
 
@@ -947,8 +951,6 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 		 "csum_send failed\n");
 
  out_err:
-	if (update_packet)
-		HIP_FREE(update_packet);
 	return err;
 }
 
@@ -1208,7 +1210,46 @@ int hip_handle_esp_info(struct hip_common *msg,
 	int err = 0, keying_state = 0;
 	struct hip_esp_info *esp_info;
 	uint16_t keymat_index = 0;
+	struct hip_dh_fixed *dh;
+	
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
+	keymat_index = ntohs(esp_info->keymat_index);
+	
+	keying_state = hip_set_rekeying_state(entry, esp_info);	
+        HIP_IFEL(keying_state, -1, "Protocol Error: mm-04 Sec 5.3");   	
+ 
+	switch(keying_state){
+		case HIP_UPDATE_STATE_REKEYING:
+			//rekeying stuff goes here
+			break;
+		case HIP_UPDATE_STATE_DEPRECATING:
+			break;
+		default:
+			// No rekeying
+			return 0;
+	}
+	
+	/* esp-02 6.9 1. If the received UPDATE contains a
+	 * Diffie-Hellman parameter, the received Keymat 
+	 * Index MUST be zero. If this test fails, the packet
+	 *  SHOULD be dropped and the system SHOULD log an 
+	 *  error message. */
 
+	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
+	if (dh) {
+		HIP_DEBUG("packet contains DH\n");
+		HIP_IFEL(!esp_info, -1, "Packet contains DH but not ESP_INFO\n");
+		HIP_IFEL(keymat_index != 0, -EINVAL,
+			 "UPDATE contains Diffie-Hellman parameter with non-zero"
+			 "keymat value %u in ESP_INFO. Dropping\n", keymat_index);
+	}
+	/* esp-02 6.9 2. if no outstanding request, process as in sec 6.9.1
+	 */	
+        // TODO:Check for outstanding rekeying request
+	/* esp-02 6.9 3. If there is an outstanding rekeying request,
+	 * UPDATE must be acked, save ESP_INFO, DH params, continue 
+	 * processing as stated in 6.10
+	 */
 	
 
 
