@@ -22,7 +22,7 @@ extern GtkTreeIter local_top, remote_top, process_top;
 /**
 	Tell GUI to add new local HIT into list.
 
-	@param New hit to add.
+	@param New HIT to add.
 */
 void gui_add_local_hit(HIT_Local *hit)
 {
@@ -32,8 +32,8 @@ void gui_add_local_hit(HIT_Local *hit)
 	gchar *msg = g_strdup_printf(hit->name);
 
 	w = widget(ID_RLISTMODEL);
-	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &local_top);
-	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
+	gtk_tree_store_append(w, &iter, &local_top);
+	gtk_tree_store_set(w, &iter, 0, msg, -1);
 	g_free(msg);
 }
 /* END OF FUNCTION */
@@ -134,16 +134,75 @@ void gui_add_process(int pid, char *name, int time, int msgs)
 
 /******************************************************************************/
 /**
+	Tell GUI to update value from tree store.
+*/
+gboolean gui_update_tree_value(GtkTreeModel *model, GtkTreePath *path,
+                               GtkTreeIter *iter, gpointer data)
+{
+	/* Variables. */
+	Update_data *ud = (Update_data *)data;
+	char *str;
+	int *indices, depth;
+	
+	gtk_tree_model_get(model, iter, 0, &str, -1);
+	indices = gtk_tree_path_get_indices(path);
+	depth = gtk_tree_path_get_depth(path);
+	
+	if ((indices[0] != ud->indices_first || depth != ud->depth)
+	    && ud->indices_first >= 0 && ud->depth >= 0);
+	else if (strcmp(ud->old_name, str) == 0)
+	{
+		gtk_tree_store_set(model, iter, 0, ud->new_name, -1);
+		return (TRUE);
+	}
+	
+	return (FALSE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Tell GUI to update value from list store (eg. combo box).
+*/
+gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
+                               GtkTreeIter *iter, gpointer data)
+{
+	/* Variables. */
+	Update_data *ud = (Update_data *)data;
+	char *str;
+	int *indices, depth;
+	
+	gtk_tree_model_get(model, iter, 0, &str, -1);
+	indices = gtk_tree_path_get_indices(path);
+	depth = gtk_tree_path_get_depth(path);
+	
+	if ((indices[0] != ud->indices_first || depth != ud->depth)
+	    && ud->indices_first >= 0 && ud->depth >= 0);
+	else if (strcmp(ud->old_name, str) == 0)
+	{
+		gtk_list_store_set(model, iter, 0, ud->new_name, -1);
+		return (TRUE);
+	}
+	
+	return (FALSE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Ask for new HIT from user.
 	
 	@param hit Information of HIT to be accepted.
 	@return Returns 1 on accept, 0 on deny.
 */
-int gui_ask_new_hit(HIT_Item *hit)
+int gui_ask_new_hit(HIT_Remote *hit)
 {
 	/* Variables. */
 	static int in_use = 0;
 	GtkDialog *dialog = (GtkDialog *)widget(ID_NHDLG);
+	HIT_Group *group;
 	char phit[128], *ps;
 	int err = 0;
 	
@@ -153,10 +212,9 @@ int gui_ask_new_hit(HIT_Item *hit)
 	gdk_threads_enter();
 	gtk_widget_show(dialog);
 	print_hit_to_buffer(phit, &hit->hit);
-	gtk_label_set_text(widget(ID_NH_NEWHIT), phit);
+	gtk_label_set_text(widget(ID_NH_HIT), phit);
 	gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
 	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
-	gtk_combo_box_set_active(widget(ID_NH_LOCAL), 0);
 	
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch (err)
@@ -171,10 +229,15 @@ int gui_ask_new_hit(HIT_Item *hit)
 	}
 
 	ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
-	strcpy(hit->group, ps);
+	group = hit_db_find_rgroup(ps);
+	hit->g = group;
 	ps = gtk_entry_get_text(widget(ID_NH_NAME));
-	strcpy(hit->name, ps);
-	HIP_DEBUG("New hit with parameters: %s, %s.\n", hit->name, hit->group);
+	strncpy(hit->name, ps, 64);
+	ps = gtk_entry_get_text(widget(ID_NH_URL));
+	strncpy(hit->url, ps, 1024);
+	ps = gtk_entry_get_text(widget(ID_NH_PORT));
+	hit->port = atoi(ps);
+	HIP_DEBUG("New hit with parameters: %s, %s.\n", hit->name, hit->g->name);
 
 	gtk_widget_hide(dialog);
 	gdk_threads_leave();
@@ -196,34 +259,47 @@ char *create_remote_group(void)
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
 	HIT_Group *g;
+	HIT_Local *l;
 	int err = -1;
-	char *ps = NULL;
+	char *psn, *psl;
 	pthread_t pt;
 
 	gtk_widget_show(dialog);
-	gtk_widget_grab_focus(widget(ID_CREATE_NAME));
-	gtk_entry_set_text(widget(ID_CREATE_NAME), "");
+	gtk_widget_grab_focus(widget(ID_NG_NAME));
+	gtk_entry_set_text(widget(ID_NG_NAME), "");
 
 	err = gtk_dialog_run(dialog);
 	if (err == GTK_RESPONSE_OK)
 	{
-		ps = gtk_entry_get_text(widget(ID_CREATE_NAME));
-		if (strlen(ps) > 0)
+		psn = gtk_entry_get_text(widget(ID_NG_NAME));
+		psl = gtk_combo_box_get_active_text(widget(ID_NG_LOCAL));
+		l = NULL;
+		if (strlen(psl) > 0)
+		{
+			l = hit_db_find_local(psl);
+		}
+		if (l == NULL)
+		{
+			HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
+			psn = NULL;
+		}
+		else if (strlen(psn) > 0)
 		{
 			g = (HIT_Group *)malloc(sizeof(HIT_Group));
 			memset(g, 0, sizeof(HIT_Group));
-			strncpy(g->name, ps, 64);
+			strncpy(g->name, psn, 64);
+			g->l = l;
 			g->type = HIT_DB_TYPE_ACCEPT;
 			g->lightweight = 0;
 
 			pthread_create(&pt, NULL, create_remote_group_thread, g);
 		}
-		else ps = NULL;
+		else psn = NULL;
 	}
 
 out_err:
 	gtk_widget_hide(dialog);
-	return (ps);
+	return (psn);
 }
 /* END OF FUNCTION */
 
@@ -235,9 +311,60 @@ void *create_remote_group_thread(void *data)
 	/* Variables. */
 	HIT_Group *g = (HIT_Group *)data;
 	
-	hit_db_add_rgroup(g->name, &g->lhit, g->type, g->lightweight);
+	hit_db_add_rgroup(g->name, g->l, g->type, g->lightweight);
 
 	return (NULL);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add local HITs to all combo boxes and such.
+	This is a enumeration callback function.
+*/
+int all_add_local(HIT_Remote *hit, void *p)
+{
+	gtk_combo_box_append_text(widget(ID_TWR_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_TWG_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_NG_LOCAL), hit->name);
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Update local HITs to all combo boxes and such.
+	This is a enumeration callback function.
+*/
+void all_update_local(char *old_name, char *new_name)
+{
+	/* Variables. */
+	GtkTreeModel *model;
+	Update_data ud;
+	
+	ud.depth = -1;
+	ud.indices_first = -1;
+	
+	model = gtk_combo_box_get_model(widget(ID_TWR_LOCAL));
+	strncpy(ud.old_name, old_name, 64);
+	strncpy(ud.new_name, new_name, 64);
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_TWG_LOCAL));
+	strncpy(ud.old_name, old_name, 64);
+	strncpy(ud.new_name, new_name, 64);
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_NG_LOCAL));
+	strncpy(ud.old_name, old_name, 64);
+	strncpy(ud.new_name, new_name, 64);
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+/*	gtk_combo_box_append_text(widget(ID_TWR_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_TWG_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_NG_LOCAL), hit->name);*/
 }
 /* END OF FUNCTION */
 

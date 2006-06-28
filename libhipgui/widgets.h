@@ -48,23 +48,32 @@ enum WIDGET_IDS
 	ID_TWR_TYPE2,
 	ID_TWR_LOCAL,
 	ID_TWR_RGROUP,
+	ID_TWR_REMOTE,
 	ID_TWG_NAME,
+	ID_TWG_LOCAL,
+	ID_TWG_TYPE,
+	ID_TWG_LW,
 	ID_TWL_NAME,
-	
+	ID_TWL_LOCAL,
+	ID_TW_APPLY,
+	ID_TW_CANCEL,
+
 	/* New hit dialog IDs. */
-	ID_NH_NEWHIT,
+	ID_NH_HIT,
 	ID_NH_RGROUP,
-	ID_NH_LOCAL,
 	ID_NH_NAME,
+	ID_NH_URL,
+	ID_NH_PORT,
 
 	/* Run dialog IDs. */
 	ID_RUN_COMMAND,
 	ID_RUN_LDPRELOAD,
 	ID_RUN_LDLIBRARYPATH,
 
-	/* Create dialog IDs. */
-	ID_CREATE_NAME,
-
+	/* New group dialog IDs. */
+	ID_NG_NAME,
+	ID_NG_LOCAL,
+	
 	WIDGET_IDS_N
 };
 

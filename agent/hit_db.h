@@ -36,6 +36,33 @@
 
 /******************************************************************************/
 /* STRUCT DEFINITIONS */
+
+/** This structure stores one local HIT and information needed for it. */
+typedef struct
+{
+	/* Local HIT name. */
+	char name[64 + 1];
+	/** HIT. */
+	struct in6_addr lhit;
+	/* Next group item. */
+	void *next;
+} HIT_Local;
+
+/** This structure stores one group information. */
+typedef struct
+{
+	/* Group name. */
+	char name[64 + 1];
+	/** Stores pointer to local HIT with which this group is associated. */
+	HIT_Local *l;
+	/** What is the type of the group. */
+	int type;
+	/** Is group lightweight or not. */
+	int lightweight;
+	/* Next group item. */
+	void *next;
+} HIT_Group;
+
 /** This structure stores one remote HIT and information needed for it. */
 typedef struct
 {
@@ -57,34 +84,8 @@ typedef struct
 	*/
 	int port;
 	/** Remote HIT group. */
-	char group[64 + 1];
-} HIT_Item;
-
-/** This structure stores one group information. */
-typedef struct
-{
-	/* Group name. */
-	char name[64 + 1];
-	/** Stores local HIT with which this group is associated. */
-	struct in6_addr lhit;
-	/** What is the type of the group. */
-	int type;
-	/** Is group lightweight or not. */
-	int lightweight;
-	/* Next group item. */
-	void *next;
-} HIT_Group;
-
-/** This structure stores one local HIT and information needed for it. */
-typedef struct
-{
-	/* Local HIT name. */
-	char name[64 + 1];
-	/** HIT. */
-	struct in6_addr lhit;
-	/* Next group item. */
-	void *next;
-} HIT_Local;
+	HIT_Group *g;
+} HIT_Remote;
 
 
 /******************************************************************************/
@@ -101,12 +102,12 @@ int hit_db_init(char *);
 void hit_db_quit(char *);
 int hit_db_clear(void);
 
-int hit_db_add_hit(HIT_Item *, int);
-int hit_db_add(char *, struct in6_addr *, char *, int, char *, int);
+int hit_db_add_hit(HIT_Remote *, int);
+int hit_db_add(char *, struct in6_addr *, char *, int, HIT_Group *, int);
 int hit_db_del(struct in6_addr *, int);
 
-HIT_Item *hit_db_search(int *, char *, struct in6_addr *,
-			            char *, int, char *, int, int);
+HIT_Remote *hit_db_search(int *, char *, struct in6_addr *,
+			              char *, int, char *, int, int);
 
 int hit_db_save_to_file(char *);
 int hit_db_save_rgroup_to_file(HIT_Group *, void *);
@@ -117,7 +118,7 @@ int hit_db_parse_hit(char *);
 int hit_db_parse_rgroup(char *);
 int hit_db_parse_local(char *);
 
-HIT_Group *hit_db_add_rgroup(char *, struct in6_addr *, int, int);
+HIT_Group *hit_db_add_rgroup(char *, HIT_Local *, int, int);
 int hit_db_del_rgroup(char *);
 HIT_Group *hit_db_find_rgroup(char *);
 int hit_db_enum_rgroups(int (*)(HIT_Group *, void *), void *);

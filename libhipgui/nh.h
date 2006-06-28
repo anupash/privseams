@@ -23,7 +23,6 @@
 int nhdlg_create_content(void);
 
 /* file: nh_manage.c */
-int nh_add_local(HIT_Item *, void *);
 
 
 #endif /* END OF HEADER FILE */

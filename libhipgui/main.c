@@ -104,11 +104,10 @@ int gui_main(void)
 	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
 	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
 
-	hit_db_enum_locals(nh_add_local, NULL);
-	gtk_combo_box_set_active(widget(ID_NH_LOCAL), 0);
-
-	hit_db_enum_locals(tw_add_local, NULL);
+	hit_db_enum_locals(all_add_local, NULL);
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
+	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
+	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
 
 /*	HIP_DEBUG("Appending remote groups to tool window...\n");

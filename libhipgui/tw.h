@@ -23,7 +23,7 @@ enum TOOLWINDOW_MODES
 	TWMODE_NONE = 0,
 	TWMODE_LOCAL,
 	TWMODE_REMOTE,
-	TWMODE_GROUP
+	TWMODE_RGROUP
 };
 
 
@@ -41,7 +41,8 @@ void tw_set_mode(int);
 void tw_set_remote_info(char *);
 void tw_set_local_info(char *);
 void tw_set_rgroup_info(char *);
-int tw_add_local(HIT_Item *, void *);
+void tw_apply(void);
+void tw_cancel(void);
 
 
 #endif /* END OF HEADER FILE */

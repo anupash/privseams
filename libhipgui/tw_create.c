@@ -44,13 +44,16 @@ int tw_create_content(void)
 	
 	w = gtk_button_new_with_label("Apply");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWAPPLY);
-	gtk_widget_show(w);
-	w = gtk_button_new_with_label("Cancel");
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWCANCEL);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
+	widget_set(ID_TW_APPLY, w);
+	w = gtk_button_new_with_label("Cancel");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_CANCEL);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TW_CANCEL, w);
 	
 	/* Set default mode and hide the toolwindow. */
  	tw_set_mode(TWMODE_REMOTE);
@@ -144,6 +147,7 @@ int tw_create_remote(void)
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "<not implemented>");
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
+	gtk_widget_set_size_request(w, 70, -1);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_PORT, w);
 
@@ -174,6 +178,20 @@ int tw_create_remote(void)
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_TYPE2, w);
+
+	hb = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+
+	w = gtk_label_new("Remote HIT:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_entry_new();
+	gtk_entry_set_text(w, "0");
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TWR_REMOTE, w);
 
 	hb = gtk_hbox_new(FALSE, 1);
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
@@ -234,6 +252,20 @@ int tw_create_local(void)
 	gtk_widget_show(w);
 	widget_set(ID_TWL_NAME, w);
 
+	hb = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+
+	w = gtk_label_new("HIT:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_entry_new();
+	gtk_entry_set_text(w, "0");
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TWL_LOCAL, w);
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -248,7 +280,7 @@ int tw_create_local(void)
 int tw_create_rgroup(void)
 {
 	/* Variables. */
-	GtkWidget *frame, *w, *vb, *hb;
+	GtkWidget *frame, *w, *vb, *vb2, *hb, *exp;
 	
 	/* Create remote group HIT info. */
 	frame = gtk_frame_new(NULL);
@@ -278,6 +310,58 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_widget_show(w);
 	widget_set(ID_TWG_NAME, w);
+
+	/* Separator between basic and advanced. */
+	w = gtk_hseparator_new();
+	gtk_box_pack_start(vb, w, FALSE, FALSE, 2);
+	gtk_widget_show(w);
+
+	/* Advanced information. */
+	exp = gtk_expander_new("Advanced");
+	gtk_box_pack_start(vb, exp, FALSE, TRUE, 2);
+	gtk_widget_show(exp);
+	
+	vb2 = gtk_vbox_new(FALSE, 2);
+	gtk_container_add(exp, vb2);
+	gtk_widget_show(vb2);
+
+	hb = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+
+	w = gtk_label_new("Local HIT:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_combo_box_new_text();
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
+	gtk_widget_show(w);
+	widget_set(ID_TWG_LOCAL, w);
+
+	hb = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+	
+	w = gtk_label_new("Type:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(w, "accept");
+	gtk_combo_box_append_text(w, "deny");
+	gtk_combo_box_set_active(w, 0);
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
+	gtk_widget_show(w);
+	widget_set(ID_TWR_TYPE1, w);
+
+	w = gtk_label_new("Lightweight:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_combo_box_new_text();
+	gtk_combo_box_append_text(w, "normal");
+	gtk_combo_box_append_text(w, "lightweight");
+	gtk_combo_box_set_active(w, 0);
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
+	gtk_widget_show(w);
+	widget_set(ID_TWR_TYPE2, w);
 
 	return (0);
 }

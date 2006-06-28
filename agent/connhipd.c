@@ -109,7 +109,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
 	hip_hdr_type_t type;
-	HIT_Item hit, *phit;
+	HIT_Remote hit, *phit;
 	socklen_t alen;
 	struct in6_addr *lhit;
 	int err = 0, ret, n;

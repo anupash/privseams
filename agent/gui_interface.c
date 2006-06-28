@@ -20,10 +20,10 @@
 	@param hit Pointer to hit that should be accepted.
 	@return 0 if accept, -1 on other cases.
 */
-int check_hit(HIT_Item *hit)
+int check_hit(HIT_Remote *hit)
 {
 	/* Variables. */
-	HIT_Item *fhit = NULL;
+	HIT_Remote *fhit = NULL;
 	struct in6_addr temp_hit;
 	int err = 0, ndx;
 	char hits[128], hitr[128], msg[1024];
@@ -60,7 +60,7 @@ int check_hit(HIT_Item *hit)
 		HIP_DEBUG("Adding new remote HIT to database with type deny.\n");
 	}
 
-	hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->group, 0);
+	hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->g, 0);
 
 out_err:
 	/* Return. */

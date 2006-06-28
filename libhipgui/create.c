@@ -23,23 +23,40 @@ int ngdlg_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_NGDLG);
-	GtkWidget *hb = NULL;
-	GtkWidget *w = NULL;
+	GtkWidget *hb, *w, *vb;
 
 	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
 
-	/* Create main widget for adding subwidgets to window. */
-	hb = gtk_hbox_new(TRUE, 5);
-	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), hb, TRUE, TRUE, 3);
+	/* This box is for adding everything inside previous frame. */
+	vb = gtk_vbox_new(FALSE, 1);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), vb, TRUE, TRUE, 3);
+	gtk_widget_show(vb);
+	
+	hb = gtk_hbox_new(FALSE, 5);
+	gtk_box_pack_start(vb, hb, FALSE, FALSE, 5);
 	gtk_widget_show(hb);
 
-	/* Create group name input widget. */
-	w = gtk_entry_new();
-	widget_set(ID_CREATE_NAME, w);
-	gtk_entry_set_text(w, "");
-	gtk_box_pack_start(GTK_BOX(hb), w, TRUE, TRUE, 3);
+	w = gtk_label_new("Name:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
-	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+	w = gtk_entry_new();
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(w, TRUE);
+	widget_set(ID_NG_NAME, w);
+
+	hb = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+	
+	w = gtk_label_new("Local HIT:");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
+	gtk_widget_show(w);
+	w = gtk_combo_box_new_text();
+	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
+	gtk_widget_show(w);
+	widget_set(ID_NG_LOCAL, w);
 
 	/* Add buttons to dialog. */
 	w = gtk_dialog_add_button(window, "Create", GTK_RESPONSE_OK);

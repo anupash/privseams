@@ -102,7 +102,7 @@ gboolean select_list(GtkTreeSelection *selection, gpointer data)
 			if (indices[0] == 1)
 			{
 				HIP_DEBUG("You selected remote HIT(s) group called: %s.\n", str);
-				tw_set_mode(TWMODE_GROUP);
+				tw_set_mode(TWMODE_RGROUP);
 				tw_set_rgroup_info(str);
 			}
 		}
@@ -162,6 +162,14 @@ void button_event(GtkWidget *warg, gpointer data)
 			else gtk_combo_box_set_active(warg, 0);
 		}
 		break;
+	
+	case IDB_TW_APPLY:
+		tw_apply();
+		break;
+	
+	case IDB_TW_CANCEL:
+		tw_cancel();
+		break;
 	}
 }
 /* END OF FUNCTION */
@@ -172,7 +180,7 @@ void button_event(GtkWidget *warg, gpointer data)
 void toolbar_event(GtkWidget *warg, gpointer data)
 {
 	/* Variables. */
-	static HIT_Item hit;
+	static HIT_Remote hit;
 	GtkWidget *dialog;
 	int id = (int)data;
 	pthread_t pt;
@@ -188,7 +196,7 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 
 	case ID_TOOLBAR_NEWHIT:
 		HIP_DEBUG("Toolbar: Fake popup for new HIT.\n");
-		memset(&hit, 0, sizeof(HIT_Item));
+		memset(&hit, 0, sizeof(HIT_Remote));
 		strcpy(hit.name, "Fake hit popup");
 		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
 		break;
