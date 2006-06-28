@@ -803,7 +803,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 	   and (optional) DIFFIE_HELLMAN. */
 
 	if (ack) /* breaks if packet has no ack but esp_info exists ? */
-		hip_update_handle_ack(entry, ack, esp_info ? 1 : 0, NULL);
+		hip_update_handle_ack(entry, ack, esp_info ? 1 : 0);
 //	if (esp_info)
 //		hip_update_handle_esp_info(entry, puid); /* kludge */
 
@@ -888,11 +888,25 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 
 
 }
-
 int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_peer_addr_list_item *addr,
 				       struct hip_spi_out_item *spi_out,
-				       struct in6_addr *src_ip)
+				       struct in6_addr *src_ip){
+	/* TODO: Make this timer based:
+	 * 	 If its been too long before active addresses were verfied, 
+	 * 	 	verify them as well
+	 * 	 else 
+	 * 	 	verify only unverified addresses
+	 */
+	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out, src_ip, 0);
+
+}
+
+int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
+				       struct hip_peer_addr_list_item *addr,
+				       struct hip_spi_out_item *spi_out,
+				       struct in6_addr *src_ip,
+				       int verify_active_addresses)
 {
 	int err = 0;
 	struct hip_common *update_packet = NULL;
@@ -906,9 +920,9 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 		goto out_err;
 	}
 
-	if (addr->address_state == PEER_ADDR_STATE_ACTIVE) {
+	if ((addr->address_state == PEER_ADDR_STATE_ACTIVE) && verify_active_addresses){
 		
-		HIP_DEBUG("Verifying already active address. Setting as deprecated\n"); 
+		HIP_DEBUG("Verifying already active address. Setting as unverified\n"); 
 		addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 		if (addr->is_preferred) {
 			HIP_DEBUG("TEST (maybe should not do this yet?): setting already active address and set as preferred to default addr\n");
@@ -948,7 +962,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
  * @entry must be is locked when this function is called.
  *
  * Returns: 0 if successful, otherwise < 0.
- */
+ :*/
 int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi)
 {
@@ -1428,7 +1442,7 @@ int hip_receive_update(struct hip_common *msg,
 	}
 	else if(echo_response){
 		//handle echo response
-		hip_update_handle_ack_response(entry, echo_response, src_ip);
+		hip_update_handle_echo_response(entry, echo_response, src_ip);
 	}
 	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
