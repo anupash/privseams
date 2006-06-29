@@ -28,9 +28,11 @@
 
 /******************************************************************************/
 /* DEFINES */
-#define HIT_DB_TYPE_ACCEPT				0
-#define HIT_DB_TYPE_DENY				1
-#define HIT_DB_TYPE_LOCAL				2
+#define HIT_DB_TYPE_NONE				0
+#define HIT_DB_TYPE_ACCEPT				1
+#define HIT_DB_TYPE_DENY				2
+#define HIT_DB_TYPE_LOCAL				4
+#define HIT_DB_TYPE_ALL					0xffffffff
 
 
 /******************************************************************************/
@@ -63,7 +65,18 @@ typedef struct
 	int type;
 	/** Remote HIT group. */
 	char group[64 + 1];
+	/** Is HIT lightweight or not. */
+	int lightweight;
 } HIT_Item;
+
+/** This structure stores one group information. */
+typedef struct
+{
+	/* Group name. */
+	char name[64 + 1];
+	/* Next group item. */
+	void *next;
+} HIT_Group;
 
 
 /******************************************************************************/
@@ -82,14 +95,24 @@ int hit_db_clear(void);
 
 int hit_db_add_hit(HIT_Item *, int);
 int hit_db_add(char *, struct in6_addr *, struct in6_addr *,
-               char *, int, int, char *, int);
+               char *, int, int, char *, int, int);
 int hit_db_del(struct in6_addr *, struct in6_addr *, int);
 
 HIT_Item *hit_db_search(int *, char *, struct in6_addr *, struct in6_addr *,
-			            char *, int, int, int);
+			            char *, int, int, int, int);
 
 int hit_db_save_to_file(char *);
+int hit_db_save_rgroup_to_file(HIT_Group *, void *);
 int hit_db_load_from_file(char *);
+
+int hit_db_parse_hit(char *);
+int hit_db_parse_rgroup(char *);
+
+HIT_Group *hit_db_add_rgroup(char *);
+int hit_db_del_rgroup(char *);
+HIT_Group *hit_db_find_rgroup(char *);
+int hit_db_enum_rgroups(int (*)(HIT_Group *, void *), void *);
+int hit_db_enum_locals(int (*)(HIT_Item *, void *), void *);
 
 
 /******************************************************************************/

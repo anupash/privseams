@@ -717,7 +717,8 @@ int close(int fd)
     if(!entry){
       _HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!! should not happen, dumping socket db\n");
       hip_socketdb_dump();
-      assert(0);
+      goto out_err;
+      //assert(0);
     }
     if(entry){
 
@@ -743,6 +744,7 @@ int close(int fd)
   dlclose(dp);
   HIP_DEBUG("close_dlsym called with errno %d\n", errno);
 
+out_err:
   return errno;
 }
 
