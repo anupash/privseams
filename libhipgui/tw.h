@@ -39,10 +39,12 @@ int tw_create_rgroup(void);
 /* file: tw_manage.c */
 void tw_set_mode(int);
 void tw_set_remote_info(char *);
+void tw_set_remote_rgroup_info(HIT_Group *);
 void tw_set_local_info(char *);
 void tw_set_rgroup_info(char *);
 void tw_apply(void);
 void tw_cancel(void);
+void tw_delete(void);
 
 
 #endif /* END OF HEADER FILE */

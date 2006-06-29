@@ -22,8 +22,8 @@
 /** Structure for tree update function. */
 typedef struct
 {
-	char old_name[64 + 1];
-	char new_name[64 + 1];
+	char old_name[MAX_NAME_LEN + 1];
+	char new_name[MAX_NAME_LEN + 1];
 	int depth;
 	int indices_first;
 } Update_data;
@@ -33,7 +33,10 @@ typedef struct
 /* FUNCTION DEFINITIONS */
 void gui_add_local_hit(HIT_Local *);
 void gui_add_rgroup(HIT_Group *);
+
 void gui_add_remote_hit(char *, char *);
+void gui_delete_remote_hit(char *);
+
 void gui_add_process(int, char *, int, int);
 
 gboolean gui_update_tree_value(GtkTreeModel *, GtkTreePath *,
@@ -53,6 +56,7 @@ void *create_remote_group_thread(void *);
 
 int all_add_local(HIT_Remote *hit, void *p);
 void all_update_local(char *, char *);
+void all_update_rgroups(char *, char *);
 
 
 #endif /* END OF HEADER FILE */

@@ -47,12 +47,15 @@ int main(int argn, char *argv[])
 	signal(SIGINT, sig_catch_int);
 
 	/* Initialize GUI. */
+	HIP_DEBUG("##### 1. Initializing GUI...\n");
 	HIP_IFEL(gui_init(), -1, "Failed to initialize GUI!\n");
 
 	/* Initialize database. */
+	HIP_DEBUG("##### 2. Initializing database...\n");
 	HIP_IFEL(hit_db_init("/etc/hip/agentdb"), -1, "Failed to load agent database!\n");
 
 	/* Initialize connection to HIP daemon. */
+	HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
 #ifndef CONFIG_HIP_DEBUG
 	HIP_IFEL(connhipd_init(), -1, "Failed to open connection to HIP daemon!\n");
 #else
@@ -91,7 +94,9 @@ int main(int argn, char *argv[])
 	
 #endif
 
+	HIP_DEBUG("##### 4. Executing GUI main.\n");
 	gui_main();
+	
 	agent_exit();
 
 out_err:
@@ -99,6 +104,7 @@ out_err:
 	connhipd_quit();
 	hit_db_quit("/etc/hip/agentdb");
 	
+	HIP_DEBUG("##### X. Exiting application...\n");
 	return (err);
 }
 /* END OF FUNCTION */

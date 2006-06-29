@@ -16,6 +16,8 @@
 int hip_agent_sock = 0;
 /** This is just for waiting the connection thread to start properly. */
 int hip_agent_thread_started = 0;
+/** Connection pthread holder. */
+pthread_t connhipd_pthread;
 
 
 /******************************************************************************/
@@ -34,7 +36,6 @@ int connhipd_init(void)
 	struct sockaddr_un agent_addr;
 	struct hip_common *msg = NULL;
 	socklen_t alen;
-	pthread_t pt;
 
 	/* Allocate message. */
 	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
@@ -64,7 +65,7 @@ int connhipd_init(void)
 	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);
 
-	pthread_create(&pt, NULL, connhipd_thread, msg);
+	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
 	hip_agent_thread_started = 0;
 	while (hip_agent_thread_started == 0) usleep(100 * 1000);
@@ -146,8 +147,8 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 		HIP_DEBUG("Message received successfully from daemon with type"
 		          " SO_HIP_ADD_LOCAL_HI (%d).\n", type);
 
-		strcpy(hit.name, "NewHIT");
-		strcpy(hit.url, "<notset>");
+		NAMECPY(hit.name, "NewHIT");
+		URLCPY(hit.url, "<notset>");
 		hit.port = 0;
 		memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
 		ret = check_hit(&hit);
@@ -194,7 +195,7 @@ int connhipd_thread(void *data)
 
 	/* Start handling. */
 	hip_agent_thread_started = 1;
-	while (agent_exec())
+	while (hip_agent_thread_started)
 	{
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
@@ -273,8 +274,10 @@ out_err:
 */
 void connhipd_quit(void)
 {
-	/* Wait connection thread to exit. */
-	while (hip_agent_thread_started);
+	if (!hip_agent_thread_started) return;
+	HIP_DEBUG("Stopping connection thread...\n");
+	hip_agent_thread_started = 0;
+	pthread_join(connhipd_pthread, NULL);
 }
 /* END OF FUNCTION */
 

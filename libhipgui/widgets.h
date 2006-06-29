@@ -51,12 +51,14 @@ enum WIDGET_IDS
 	ID_TWR_REMOTE,
 	ID_TWG_NAME,
 	ID_TWG_LOCAL,
-	ID_TWG_TYPE,
+	ID_TWG_TYPE1,
+	ID_TWG_TYPE2,
 	ID_TWG_LW,
 	ID_TWL_NAME,
 	ID_TWL_LOCAL,
 	ID_TW_APPLY,
 	ID_TW_CANCEL,
+	ID_TW_DELETE,
 
 	/* New hit dialog IDs. */
 	ID_NH_HIT,
@@ -73,7 +75,9 @@ enum WIDGET_IDS
 	/* New group dialog IDs. */
 	ID_NG_NAME,
 	ID_NG_LOCAL,
-	
+	ID_NG_TYPE1,
+	ID_NG_TYPE2,
+
 	WIDGET_IDS_N
 };
 

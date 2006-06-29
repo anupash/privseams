@@ -64,6 +64,7 @@ int nhdlg_create_content(void)
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 3);
+	gtk_entry_set_max_length(w, MAX_NAME_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_NH_NAME, w);
 
@@ -71,7 +72,7 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 3);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_CB_RGROUPS);
+	g_signal_connect(w, "changed", G_CALLBACK(button_event), IDB_NH_RGROUPS);
 	widget_set(ID_NH_RGROUP, w);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 3);
 	gtk_widget_show(w);
@@ -98,8 +99,9 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "<not implemented>");
+	gtk_entry_set_text(w, "<notset>");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
+	gtk_entry_set_max_length(w, MAX_URL_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_NH_URL, w);
 
@@ -107,9 +109,10 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "<not implemented>");
+	gtk_entry_set_text(w, "0");
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
 	gtk_widget_set_size_request(w, 70, -1);
+	gtk_entry_set_max_length(w, 8);
 	gtk_widget_show(w);
 	widget_set(ID_NH_PORT, w);
 

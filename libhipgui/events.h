@@ -38,10 +38,12 @@ enum TOOLBAR_IDS
 enum BUTTON_IDS
 {
 	IDB_SEND,
-	IDB_CB_RGROUPS,
+	IDB_TW_RGROUPS,
+	IDB_NH_RGROUPS,
 
 	IDB_TW_APPLY,
 	IDB_TW_CANCEL,
+	IDB_TW_DELETE,
 
 	BUTTON_IDS_N
 };
@@ -49,8 +51,8 @@ enum BUTTON_IDS
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-gboolean main_delete(GtkWidget *, GdkEvent *, gpointer);
-gboolean tw_delete(GtkWidget *, GdkEvent *, gpointer);
+gboolean main_delete_event(GtkWidget *, GdkEvent *, gpointer);
+gboolean tw_delete_event(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
 void tw_destroy(GtkWidget *, gpointer);
 

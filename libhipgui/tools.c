@@ -12,7 +12,7 @@
 
 /******************************************************************************/
 /* VARIABLES */
-char nickname[32 + 1];
+char nickname[MAX_NAME_LEN + 1];
 
 
 /******************************************************************************/
@@ -31,7 +31,7 @@ char *get_nick(void)
 /** Set current nickname. */
 void set_nick(char *newnick)
 {
-	strncpy(nickname, newnick, 32);
+	NAMECPY(nickname, newnick);
 }
 /* END OF FUNCTION */
 

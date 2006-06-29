@@ -23,20 +23,17 @@
 int check_hit(HIT_Remote *hit)
 {
 	/* Variables. */
-	HIT_Remote *fhit = NULL;
-	struct in6_addr temp_hit;
-	int err = 0, ndx;
-	char hits[128], hitr[128], msg[1024];
+	HIT_Remote *fhit;
+	int err = 0;
 	
-	fhit = hit_db_search(&ndx, NULL, &hit->hit, hit->url, hit->port, NULL, 1, 1);
+	fhit = hit_db_find(NULL, &hit->hit);
 
 	if (fhit)
 	{
 		HIP_DEBUG("Found HIT from database.\n");
 
-		err = 0;
-		
-		free(fhit);
+		if (fhit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
+		else err = -1;
 
 		goto out_err;
 	}
@@ -45,22 +42,23 @@ int check_hit(HIT_Remote *hit)
 		HIP_DEBUG("Did not find HIT from database.\n");
 	}
 	
-	fprintf(stdout, "New HIT received, accept or not (y or n)?\n");
-	
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
 	err = gui_ask_new_hit(hit);
 
 	/* Add hit info to database, if answer was yes. */
-	if (err == 1)
-	{
-		HIP_DEBUG("Adding new remote HIT to database with type accept.\n");
-	}
 	if (err == 0)
 	{
-		HIP_DEBUG("Adding new remote HIT to database with type deny.\n");
+		HIP_DEBUG("Adding new remote HIT to database with type %s.\n",
+		          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
+		hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->g, 0);
+		if (hit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
+		else err = -1;
 	}
-
-	hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->g, 0);
+	else
+	{
+		HIP_DEBUG("User dropped new HIT, not adding to database, denie the packet.\n");
+		err = -1;
+	}
 
 out_err:
 	/* Return. */

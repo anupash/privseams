@@ -19,7 +19,7 @@
 	
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean main_delete(GtkWidget *w, GdkEvent *event, gpointer data)
+gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	return (FALSE);
 }
@@ -32,7 +32,7 @@ gboolean main_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 	
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean tw_delete(GtkWidget *w, GdkEvent *event, gpointer data)
+gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_toggle_button_set_active(widget(ID_TB_TW), FALSE);
 	gtk_widget_hide(w);
@@ -127,6 +127,7 @@ gboolean select_list(GtkTreeSelection *selection, gpointer data)
 void button_event(GtkWidget *warg, gpointer data)
 {
 	/* Variables. */
+	HIT_Group *g;
 	int id = (int)data;
 	char *ps, str[1024];
 	time_t rawtime;
@@ -152,7 +153,15 @@ void button_event(GtkWidget *warg, gpointer data)
 		gtk_entry_set_text(widget(ID_TERMINPUT), "");
 		break;
 	
-	case IDB_CB_RGROUPS:
+	case IDB_TW_RGROUPS:
+		ps = gtk_combo_box_get_active_text(warg);
+		g = hit_db_find_rgroup(ps);
+		if (g)
+		{
+			tw_set_remote_rgroup_info(g);
+		}
+		/* Must continue to next case, if no break before. */
+	case IDB_NH_RGROUPS:
 		ps = gtk_combo_box_get_active_text(warg);
 		if (strcmp("<create new...>", ps) == 0)
 		{
@@ -169,6 +178,10 @@ void button_event(GtkWidget *warg, gpointer data)
 	
 	case IDB_TW_CANCEL:
 		tw_cancel();
+		break;
+	
+	case IDB_TW_DELETE:
+		tw_delete();
 		break;
 	}
 }
@@ -197,7 +210,7 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	case ID_TOOLBAR_NEWHIT:
 		HIP_DEBUG("Toolbar: Fake popup for new HIT.\n");
 		memset(&hit, 0, sizeof(HIT_Remote));
-		strcpy(hit.name, "Fake hit popup");
+		NAMECPY(hit.name, "Fake hit popup");
 		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
 		break;
 	

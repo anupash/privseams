@@ -39,7 +39,7 @@ int gui_init(void)
 	gtk_window_set_title(w, "HIP Config");
 //	gtk_widget_set_size_request(w, 400, 300);
 
-	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete), NULL);
+	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
 	/* Create toolwindow. */
@@ -49,13 +49,12 @@ int gui_init(void)
 	gtk_window_set_title(w, "HIP tool window");
 //	gtk_widget_set_size_request(w, 450, 300);
 
-	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete), NULL);
+	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(tw_destroy), NULL);
 
 	/* Create accept-dialog. */
 	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
-	                                "Accept", GTK_RESPONSE_YES,
-	                                "Deny", GTK_RESPONSE_NO, NULL);
+	                                "Add", GTK_RESPONSE_YES, "Drop", GTK_RESPONSE_NO, NULL);
 	widget_set(ID_NHDLG, w);
 	gtk_widget_hide(w);
 
@@ -109,27 +108,6 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
-
-/*	HIP_DEBUG("Appending remote groups to tool window...\n");
-	w = widget(ID_TWRGROUPS);
-//	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
-	gtk_combo_box_append_text(w, "<create new...>");
-	gtk_combo_box_set_active(w, 0);
-
-	HIP_DEBUG("Appending local HITs to tool window...\n");
-	w = widget(ID_TWLHITS);
-	hit_db_enum_locals(tooldlg_add_lhits, w);
-	gtk_combo_box_set_active(w, 0);
-
-	HIP_DEBUG("Appending remote groups to ask window...\n");
-	w = widget(ID_AD_RGROUPS);
-//	hit_db_enum_rgroups(askdlg_add_rgroups, w);
-	gtk_combo_box_append_text(w, "<create new...>");
-	gtk_combo_box_set_active(w, 0);
-	
-	HIP_DEBUG("Appending local HITs to ask window...\n");
-*/
-	
 	gtk_main();
 }
 /* END OF FUNCTION */

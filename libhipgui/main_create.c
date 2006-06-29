@@ -89,11 +89,11 @@ int main_create_content(void)
 	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-	iconw = gtk_image_new_from_file("run.xpm");
+/*	iconw = gtk_image_new_from_file("run.xpm");
 	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
-	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);*/
 
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();
@@ -270,6 +270,7 @@ int main_create_content(void)
 	/* done with notebook tabs. */
 	/***************************************/
 
+	gtk_notebook_set_current_page(notebook, 0);
 	gtk_widget_show(notebook);
 	gtk_widget_show(window);
 
