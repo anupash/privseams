@@ -671,6 +671,12 @@ using getaddrinfo: ping, ping6, tla, svn.
       Notes:
     </para>
     <para>
+      &nbsp;* If the RVS won't relay the I1 packet, please make sure that the HIT
+      that the responder uses to register itself matches to the one the initiator
+      is connecting to. The HIT the responder chooses to register itself
+      to the RVS can be any one of the four defaults.
+    </para>
+    <para>
       &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 
       source and  destination IP addresses rewritten.
     </para>
