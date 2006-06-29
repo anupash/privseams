@@ -1263,7 +1263,6 @@ void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *
 
 	struct hip_spi_out_item *out_item, *out_tmp;
 	list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
-		struct hip_spi_out_item *out_item, *out_tmp;
 		struct hip_peer_addr_list_item *addr, *addr_tmp;
 		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
@@ -1518,7 +1517,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Start building UPDATE packet */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory.\n");
-
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
