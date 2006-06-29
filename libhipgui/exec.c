@@ -76,7 +76,7 @@ void exec_application(void)
 	int err, cpid;
 	char *ps, *ps2, *ps3;
 
-	dialog = gui_get_rundialog();
+	dialog = widget(ID_EXECDLG);
 	gtk_widget_show(dialog);
 	gtk_widget_grab_focus(widget(ID_RUN_COMMAND));
 
@@ -217,6 +217,69 @@ out_err:
 	HIP_DEBUG("Execute \"environment\" timer thread exiting.\n");
 	exec_timer_run = 0;
 	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Create execute-dialog contents.
+
+	@return 0 if success, -1 on errors.
+*/
+int execdlg_create_content(void)
+{
+	/* Variables. */
+	GtkWidget *window = (GtkWidget *)widget(ID_EXECDLG);
+	GtkWidget *box = NULL;
+	GtkWidget *w = NULL;
+
+	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
+
+	/* Create main widget for adding subwidgets to window. */
+	box = gtk_vbox_new(FALSE, 3);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), box, TRUE, TRUE, 3);
+	gtk_widget_show(box);
+
+	/* Create command-input widget. */
+	w = gtk_label_new("Command to execute:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_COMMAND, w);
+	gtk_entry_set_text(w, "xterm");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+
+	/* Create LD_PRELOAD-input widget. */
+	w = gtk_label_new("LD_PRELOAD:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_LDPRELOAD, w);
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+
+	/* Create LD_LIBRARY_PATH-input widget. */
+	w = gtk_label_new("LD_LIBRARY_PATH:");
+	gtk_widget_show(w);
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	w = gtk_entry_new();
+	widget_set(ID_RUN_LDLIBRARYPATH, w);
+	gtk_entry_set_text(w, "");
+	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_widget_show(w);
+	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
+
+	/* Add buttons to dialog. */
+	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
+	gtk_widget_grab_default(w);
+	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
+
+	return (0);
 }
 /* END OF FUNCTION */
 
