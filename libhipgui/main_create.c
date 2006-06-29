@@ -55,7 +55,7 @@ int main_create_content(void)
 	int i, err;
 
 
-	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
+	gtk_container_set_border_width(window, 3);
 
 	/* Create main pain. */
 	pane = gtk_vbox_new(FALSE, 1);
@@ -188,7 +188,6 @@ int main_create_content(void)
 	cell = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes("process", cell, "text", 1, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
-	cell = gtk_cell_renderer_text_new();
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);

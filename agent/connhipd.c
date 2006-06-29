@@ -111,6 +111,7 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 	struct hip_tlv_common *param = NULL;
 	hip_hdr_type_t type;
 	HIT_Remote hit, *phit;
+	HIT_Local *l;
 	socklen_t alen;
 	struct in6_addr *lhit;
 	int err = 0, ret, n;
@@ -150,9 +151,30 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 		NAMECPY(hit.name, "NewHIT");
 		URLCPY(hit.url, "<notset>");
 		hit.port = 0;
-		memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
-		ret = check_hit(&hit);
-
+		
+		/* Find out, which of the HITs in the message is local HIT. */
+		l = hit_db_find_local(NULL, &msg->hits);
+		if (!l)
+		{
+			l = hit_db_find_local(NULL, &msg->hitr);
+			if (l) memcpy(&hit.hit, &msg->hits, sizeof(struct in6_addr));
+		}
+		else memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
+		
+		/* Check the remote HIT from database. */
+		if (l) ret = check_hit(&hit);
+		/* If neither HIT in message was local HIT, then drop the packet! */
+		else
+		{
+			HIP_DEBUG("Failed to find local HIT from database for packet.\n"
+			          " Rejecting packet automatically.");
+			ret = -1;
+		}
+		
+		/*
+			Now either reject or accept the packet,
+			according to previous results.
+		*/
 		if (ret == 0)
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon.\n");
@@ -168,6 +190,10 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
 		}
+	}
+	else
+	{
+		HIP_DEBUG("Message with type %d received.\n", type);
 	}
 	
 out_err:
