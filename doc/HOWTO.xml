@@ -286,9 +286,8 @@
       &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
-      It is also possible to use DNS or OpenDHT for the mappings. Tip: if you
-      don't want to configure BIND and you are using virtual machines,
-      dnsmasq and /etc/hosts may do the trick...
+      It is also possible to use DNS or OpenDHT for the mappings. See the
+      relevant sections from this document.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -670,6 +669,12 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
       Notes:
+    </para>
+    <para>
+      &nbsp;* If the RVS won't relay the I1 packet, please make sure that the HIT
+      that the responder uses to register itself matches to the one the initiator
+      is connecting to. The HIT the responder chooses to register itself
+      to the RVS can be any one of the four defaults.
     </para>
     <para>
       &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 
