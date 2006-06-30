@@ -2020,7 +2020,19 @@ int hip_handle_i1(struct hip_common *i1,
 	HIP_DEBUG("hip_handle_i1\n");
 	dst = &i1->hits;
 	dstip = NULL;
-
+	
+#ifdef CONFIG_HIP_BLIND
+	if(entry->blind)
+	{
+		/*
+		 *should call hip_blind_to_plain_hit()
+		 *but confused against... where should be the plain hit kept...
+		 *i1_saddr and i1_daddr or i1->hits and i1->hitr
+		 *
+		 */ 	
+	}
+#endif
+	
 #ifdef CONFIG_HIP_RVS
 	from = hip_get_param(i1, HIP_PARAM_FROM);
 	if (from) {
