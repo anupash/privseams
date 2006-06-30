@@ -10,12 +10,14 @@ include_HEADERS =  beet.h hadb.h oppdb.h hipd.h netdev.h rvs.h workqueue.h
 include_HEADERS += bos.h input.h output.h spam.h xfrm.h
 include_HEADERS += close.h hi3.h keymat.h preinput.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h preoutput.h update.h
+include_HEADERS += escrow.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c oppdb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c spam.c
+hipd_SOURCES += escrow.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
@@ -61,4 +63,5 @@ netdev.c: netdev.h
 update.c: update.h
 rvs.c: rvs.h
 spam.c: spam.h
+escrow.c: escrow.h
 

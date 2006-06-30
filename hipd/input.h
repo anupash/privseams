@@ -5,6 +5,10 @@
 #  include "rvs.h"
 #endif
 
+#ifdef CONFIG_HIP_ESCROW
+#include "escrow.h"
+#endif // CONFIG_HIP_ESCROW
+
 #include "workqueue.h"
 #include "debug.h"
 #include "beet.h"

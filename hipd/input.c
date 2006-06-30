@@ -1404,6 +1404,27 @@ int hip_create_r2(struct hip_context *ctx,
 		HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	}
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	// TODO: Add escrow associations to database (if we are not going to send 
+	// r1 then this should be done somewhere else)
+	// <TEST> 
+	// Note: This is just a test, it isn't supposed to make any sense
+	HIP_DEBUG("*** Testing keadb ***");
+	HIP_KEA *kea;
+	//uint16_t length = 32;
+	kea = hip_kea_create(&entry->hit_our, &entry->hit_peer, entry->esp_transform,
+		entry->default_spi_out, HIP_MAX_KEY_LEN, &entry->esp_out, GFP_KERNEL);
+	HIP_DEBUG("1. Created kea entry with spi %d", kea->spi);
+	hip_keadb_add_entry(kea);
+	HIP_DEBUG("2. Added kea entry");
+	struct HIP_KEA *kea2;
+	kea2 = hip_kea_find_byhits(&entry->hit_our, &entry->hit_peer);
+	HIP_DEBUG("3. Found kea entry with spi %d", kea->spi);
+	// </TEST>
+	
+#endif //CONFIG_HIP_ESCROW
+
  out_err:
 	if (r2)
 		HIP_FREE(r2);
