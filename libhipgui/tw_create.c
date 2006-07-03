@@ -141,15 +141,15 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("URL:");
+	w = gtk_label_new("Remote HIT:");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "<notset>");
+	gtk_entry_set_text(w, "0");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
-	gtk_entry_set_max_length(w, MAX_URL_LEN);
+	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
-	widget_set(ID_TWR_URL, w);
+	widget_set(ID_TWR_REMOTE, w);
 
 	w = gtk_label_new("Port:");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
@@ -166,15 +166,15 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Remote HIT:");
+	w = gtk_label_new("URL:");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
-	gtk_widget_show(w);
+//	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "0");
+	gtk_entry_set_text(w, "<notset>");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_show(w);
-	widget_set(ID_TWR_REMOTE, w);
+	gtk_entry_set_max_length(w, MAX_URL_LEN);
+//	gtk_widget_show(w);
+	widget_set(ID_TWR_URL, w);
 
 	frame = gtk_frame_new(NULL);
 	gtk_frame_set_label(frame, "Group info:");

@@ -78,6 +78,13 @@ enum WIDGET_IDS
 	ID_NG_TYPE1,
 	ID_NG_TYPE2,
 
+	/* IDs for hipstart. */
+	ID_HS_MAIN,
+	ID_HS_MODEL,
+	ID_HS_VIEW,
+	ID_HS_EXECAGENT,
+	ID_HS_CLEARDB,
+
 	WIDGET_IDS_N
 };
 
