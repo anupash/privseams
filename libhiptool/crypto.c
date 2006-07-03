@@ -814,8 +814,6 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
 	if (hip_dh_group_type == 0) 
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
-	else if (hip_dh_group_type == HIP_DH_384)
-		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
 	else if (hip_dh_group_type > ARRAY_SIZE(dhprime_len))
 		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
 	else
