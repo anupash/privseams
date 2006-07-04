@@ -419,23 +419,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
-	case SO_HIP_GET_PSEUDO_HIT: // it won't be here anymore, since we ask real hit
-	  { 
-	    	err = hip_get_pseudo_hit(msg);
-		if(err){
-		  HIP_ERROR("get pseudo hit failed.\n");
-		  goto out_err;
-		}
-		// delay untile get r1 (moved to hip_receive_control_packet)	
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
-		_HIP_DEBUG("phit sent\n");
-	  }
-	  break;
 	case SO_HIP_GET_PEER_HIT: // we get try to get real hit instead of phit
 	  { 
 	    err = hip_get_peer_hit(msg, src);

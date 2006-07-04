@@ -42,7 +42,7 @@ libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c
 
 # HIP additions
-libinet6_la_SOURCES += getendpointinfo.c util.c wrap.c wrap_db.c
+libinet6_la_SOURCES += getendpointinfo.c util.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
@@ -50,8 +50,7 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-INCLUDES =
-INCLUDES += $(hipl_common_include_paths) -Iinclude_glibc
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses
