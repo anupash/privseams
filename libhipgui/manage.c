@@ -7,10 +7,6 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
 #include "manage.h"
 
 
@@ -26,18 +22,18 @@ extern GtkTreeIter local_top, remote_top, process_top;
 /**
 	Tell GUI to add new local HIT into list.
 
-	@param New hit to add.
+	@param New HIT to add.
 */
-void gui_add_hit(char *hit)
+void gui_add_local_hit(HIT_Local *hit)
 {
 	/* Variables. */
 	GtkWidget *w;
 	GtkTreeIter iter;
-	gchar *msg = g_strdup_printf(hit);
+	gchar *msg = g_strdup_printf(hit->name);
 
 	w = widget(ID_RLISTMODEL);
-	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &local_top);
-	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
+	gtk_tree_store_append(w, &iter, &local_top);
+	gtk_tree_store_set(w, &iter, 0, msg, -1);
 	g_free(msg);
 }
 /* END OF FUNCTION */
@@ -61,8 +57,8 @@ void gui_add_rgroup(HIT_Group *group)
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &remote_top);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
 	
-	tooldlg_add_rgroups(group, widget(ID_TOOLRGROUPS));
-	askdlg_add_rgroups(group, widget(ID_AD_RGROUPS));
+	gtk_combo_box_insert_text(widget(ID_TWR_RGROUP), 0, group);
+	gtk_combo_box_insert_text(widget(ID_NH_RGROUP), 0, group);
 	
 	g_free(msg);
 	gdk_threads_leave();
@@ -108,10 +104,28 @@ out_err:
 	if (err)
 	{
 		HIP_DEBUG("Did not find remote group \"%s\", could not show new HIT!\n", group);
-		//hit_db_add_rgroup(group);
-		//gui_add_remote_hit(hit, group);
 	}
 	return;
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Tell GUI to delete remote HIT from list.
+
+	@param name Name of HIT to be removed.
+*/
+void gui_delete_remote_hit(char *name)
+{
+	/* Variables. */
+	Update_data ud;
+	
+	NAMECPY(ud.old_name, name);
+	ud.new_name[0] = '\0';
+	ud.depth = 3;
+	ud.indices_first = 1;
+	gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 }
 /* END OF FUNCTION */
 
@@ -132,54 +146,74 @@ void gui_add_process(int pid, char *name, int time, int msgs)
 	GtkTreeIter iter;
 
 	w = widget(ID_PLISTMODEL);
-	gtk_tree_store_insert(GTK_TREE_STORE(w), &iter, NULL, MAX_EXEC_PIDS);
-	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, pid, 1, name, 2, time, 3, msgs, -1);
+	gtk_tree_store_insert(w, &iter, NULL, MAX_EXEC_PIDS);
+	gtk_tree_store_set(w, &iter, 0, pid, 1, name, -1);
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	Callback to go trough remote HITs.
+	Tell GUI to update value from tree store.
 */
-void gui_remote_hit_callback(GtkWidget *hit, gpointer data)
+gboolean gui_update_tree_value(GtkTreeModel *model, GtkTreePath *path,
+                               GtkTreeIter *iter, gpointer data)
 {
-	if (data == NULL) return;
+	/* Variables. */
+	Update_data *ud = (Update_data *)data;
+	char *str;
+	int *indices, depth;
 	
-/*	if (!strcmp((char *)data, "clear"))
+	gtk_tree_model_get(model, iter, 0, &str, -1);
+	indices = gtk_tree_path_get_indices(path);
+	depth = gtk_tree_path_get_depth(path);
+	
+	if ((indices[0] != ud->indices_first || depth != ud->depth)
+	    && ud->indices_first >= 0 && ud->depth >= 0);
+	else if (strcmp(ud->old_name, str) == 0)
 	{
-		gtk_container_remove(GTK_CONTAINER(remote_hits), hit);
-	}*/
+		/* If new name length is less than one, then delete item. */
+		if (strlen(ud->new_name) < 1)
+		{
+			gtk_tree_store_remove(model, iter);
+		}
+		else
+		{
+			gtk_tree_store_set(model, iter, 0, ud->new_name, -1);
+		}
+		return (TRUE);
+	}
+	
+	return (FALSE);
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	Tell GUI to clear remote hits list.
+	Tell GUI to update value from list store (eg. combo box).
 */
-void gui_clear_remote_hits(void)
+gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
+                               GtkTreeIter *iter, gpointer data)
 {
-//	gtk_container_foreach(GTK_CONTAINER(remote_hits), gui_remote_hit_callback, "clear");
-//	remote_hits_n = 0;
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Test function. */
-void gui_test_func(void)
-{
-	printf("Test func called.\n");
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Terminate GUI. */
-void gui_terminate(void)
-{
-	gtk_main_quit();
+	/* Variables. */
+	Update_data *ud = (Update_data *)data;
+	char *str;
+	int *indices, depth;
+	
+	gtk_tree_model_get(model, iter, 0, &str, -1);
+	indices = gtk_tree_path_get_indices(path);
+	depth = gtk_tree_path_get_depth(path);
+	
+	if ((indices[0] != ud->indices_first || depth != ud->depth)
+	    && ud->indices_first >= 0 && ud->depth >= 0);
+	else if (strcmp(ud->old_name, str) == 0)
+	{
+		gtk_list_store_set(model, iter, 0, ud->new_name, -1);
+		return (TRUE);
+	}
+	
+	return (FALSE);
 }
 /* END OF FUNCTION */
 
@@ -189,13 +223,14 @@ void gui_terminate(void)
 	Ask for new HIT from user.
 	
 	@param hit Information of HIT to be accepted.
-	@return Returns 1 on accept, 0 on deny.
+	@return Returns 0 on add, -1 on drop.
 */
-int gui_ask_new_hit(HIT_Item *hit)
+int gui_ask_new_hit(HIT_Remote *hit)
 {
 	/* Variables. */
 	static int in_use = 0;
-	GtkDialog *dialog = gui_get_acceptdialog();
+	GtkDialog *dialog = (GtkDialog *)widget(ID_NHDLG);
+	HIT_Group *group;
 	char phit[128], *ps;
 	int err = 0;
 	
@@ -204,180 +239,40 @@ int gui_ask_new_hit(HIT_Item *hit)
 
 	gdk_threads_enter();
 	gtk_widget_show(dialog);
-	print_hit_to_buffer(phit, &hit->rhit);
-	gtk_label_set_text(widget(ID_AD_NEWHIT), phit);
-	gtk_entry_set_text(widget(ID_AD_NAME), hit->name);
-	gtk_combo_box_set_active(widget(ID_AD_RGROUPS), 0);
-	gtk_combo_box_set_active(widget(ID_AD_LHITS), 0);
+	print_hit_to_buffer(phit, &hit->hit);
+	gtk_label_set_text(widget(ID_NH_HIT), phit);
+	gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
+	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
 	
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch (err)
 	{
 	case GTK_RESPONSE_YES:
-		err = 1;
+		err = 0;
 		break;
 	case GTK_RESPONSE_NO:
 	default:
-		err = 0;
+		err = -1;
 		break;
 	}
-	
-	if (err = 1) hit->type = HIT_DB_TYPE_ACCEPT;
-	else hit->type = HIT_DB_TYPE_DENY;
 
-	ps = gtk_combo_box_get_active_text(widget(ID_AD_RGROUPS));
-	strcpy(hit->group, ps);
-	ps = gtk_entry_get_text(widget(ID_AD_NAME));
-	strcpy(hit->name, ps);
-	HIP_DEBUG("New hit with parameters: %s, %s.\n", hit->name, hit->group);
+	ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
+	group = hit_db_find_rgroup(ps);
+	hit->g = group;
+	ps = gtk_entry_get_text(widget(ID_NH_NAME));
+	NAMECPY(hit->name, ps);
+	ps = gtk_entry_get_text(widget(ID_NH_URL));
+	URLCPY(hit->url, ps);
+	ps = gtk_entry_get_text(widget(ID_NH_PORT));
+	hit->port = atoi(ps);
+	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
+	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
 
 	gtk_widget_hide(dialog);
 	gdk_threads_leave();
 	in_use = 0;
 
 	return (err);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set status bar info text. */
-void gui_set_info(const char *string, ...)
-{
-	/* Variables. */
-	static int last = -1;
-	GtkWidget *w;
-	char *str[2048];
-	va_list args;
-	
-	/* Get args. */
-	va_start(args, string);
-
-	/* Set to status bar. */
-	vsprintf(str, string, args);
-	w = widget(ID_STATUSBAR);
-	if (last >= 0) gtk_statusbar_pop(w, last);
-	last = gtk_statusbar_get_context_id(w, "info");
-	gtk_statusbar_push(w, last, str);
-
-	/* End args. */
-	va_end(args);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Add remote groups to tool dialog.
-	This is a enumeration callback function.
-*/
-int tooldlg_add_rgroups(HIT_Group *group, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-	
-//	HIP_DEBUG("Appending new remote group \"%s\" to tool window list.\n", group->name);
-	gtk_combo_box_insert_text(w, 0, group->name);
-	
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Add local HITs to tool dialog.
-	This is a enumeration callback function.
-*/
-int tooldlg_add_lhits(HIT_Item *hit, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-
-//	HIP_DEBUG("Appending new local HIT \"%s\" to tool window list.\n", hit->name);
-	gtk_combo_box_append_text(w, hit->name);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Add remote groups to ask dialog.
-	This is a enumeration callback function.
-*/
-int askdlg_add_rgroups(HIT_Group *group, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-	
-//	HIP_DEBUG("Appending new remote group \"%s\" to ask window list.\n", group->name);
-	gtk_combo_box_insert_text(w, 0, group->name);
-	
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Add local HITs to ask dialog.
-	This is a enumeration callback function.
-*/
-int askdlg_add_lhits(HIT_Item *hit, void *p)
-{
-	/* Variables. */
-	GtkWidget *w = (GtkWidget *)p;
-
-//	HIP_DEBUG("Appending new local HIT \"%s\" to ask window list.\n", hit->name);
-	gtk_combo_box_append_text(w, hit->name);
-
-	return (0);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to no info. */
-void info_mode_none(void)
-{
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to local HIT info. */
-void info_mode_local(void)
-{
-	gtk_widget_show(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to remote HIT info. */
-void info_mode_remote(void)
-{
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_show(widget(ID_INFOREMOTE));
-	gtk_widget_hide(widget(ID_INFOGROUP));
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** Set tool window mode to group info. */
-void info_mode_rgroup(void)
-{
-	gtk_widget_hide(widget(ID_INFOLOCAL));
-	gtk_widget_hide(widget(ID_INFOREMOTE));
-	gtk_widget_show(widget(ID_INFOGROUP));
 }
 /* END OF FUNCTION */
 
@@ -391,30 +286,136 @@ void info_mode_rgroup(void)
 char *create_remote_group(void)
 {
 	/* Variables. */
-	GtkWidget *dialog = (GtkWidget *)widget(ID_CREATEDLG);
-	HIT_Group group;
-	int err = -1;
-	char *ps = NULL;
+	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
+	HIT_Group *g;
+	HIT_Local *l;
+	int err = -1, type, lw;
+	char *psn, *psl, *ps;
 	pthread_t pt;
 
 	gtk_widget_show(dialog);
-	gtk_widget_grab_focus(widget(ID_CREATE_NAME));
-	gtk_entry_set_text(widget(ID_CREATE_NAME), "");
+	gtk_widget_grab_focus(widget(ID_NG_NAME));
+	gtk_entry_set_text(widget(ID_NG_NAME), "");
 
-	err = gtk_dialog_run(GTK_DIALOG(dialog));
+	err = gtk_dialog_run(dialog);
 	if (err == GTK_RESPONSE_OK)
 	{
-		ps = gtk_entry_get_text(widget(ID_CREATE_NAME));
-		if (strlen(ps) > 0)
+		ps = gtk_combo_box_get_active_text(widget(ID_NG_TYPE1));
+		if (strcmp("accept", ps) == 0) type = HIT_DB_TYPE_ACCEPT;
+		else type = HIT_DB_TYPE_DENY;
+		ps = gtk_combo_box_get_active_text(widget(ID_NG_TYPE2));
+		if (strcmp("lightweight", ps) == 0) lw = 1;
+		else lw = 0;
+		
+		psn = gtk_entry_get_text(widget(ID_NG_NAME));
+		psl = gtk_combo_box_get_active_text(widget(ID_NG_LOCAL));
+		l = NULL;
+		if (strlen(psl) > 0)
 		{
-			pthread_create(&pt, NULL, hit_db_add_rgroup, ps);
+			l = hit_db_find_local(psl, NULL);
 		}
-		else ps = NULL;
+		if (l == NULL)
+		{
+			HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
+			psn = NULL;
+		}
+		else if (strlen(psn) > 0)
+		{
+			g = (HIT_Group *)malloc(sizeof(HIT_Group));
+			memset(g, 0, sizeof(HIT_Group));
+			NAMECPY(g->name, psn);
+			g->l = l;
+			g->type = type;
+			g->lightweight = lw;
+
+			pthread_create(&pt, NULL, create_remote_group_thread, g);
+		}
+		else psn = NULL;
 	}
 
 out_err:
 	gtk_widget_hide(dialog);
-	return (ps);
+	return (psn);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Thread function for adding new remote group. */
+void *create_remote_group_thread(void *data)
+{
+	/* Variables. */
+	HIT_Group *g = (HIT_Group *)data;
+	
+	hit_db_add_rgroup(g->name, g->l, g->type, g->lightweight);
+
+	return (NULL);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add local HITs to all combo boxes and such.
+	This is a enumeration callback function.
+*/
+int all_add_local(HIT_Remote *hit, void *p)
+{
+	gtk_combo_box_append_text(widget(ID_TWR_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_TWG_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_NG_LOCAL), hit->name);
+	return (0);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Update local HITs to all combo boxes and such.
+*/
+void all_update_local(char *old_name, char *new_name)
+{
+	/* Variables. */
+	GtkTreeModel *model;
+	Update_data ud;
+	
+	ud.depth = -1;
+	ud.indices_first = -1;
+	NAMECPY(ud.old_name, old_name);
+	NAMECPY(ud.new_name, new_name);
+	
+	model = gtk_combo_box_get_model(widget(ID_TWR_LOCAL));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_TWG_LOCAL));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_NG_LOCAL));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Update remote groups to all combo boxes and such.
+*/
+void all_update_rgroups(char *old_name, char *new_name)
+{
+	/* Variables. */
+	GtkTreeModel *model;
+	Update_data ud;
+	
+	ud.depth = -1;
+	ud.indices_first = -1;
+	NAMECPY(ud.old_name, old_name);
+	NAMECPY(ud.new_name, new_name);
+	
+	model = gtk_combo_box_get_model(widget(ID_TWR_RGROUP));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_NH_RGROUP));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 }
 /* END OF FUNCTION */
 

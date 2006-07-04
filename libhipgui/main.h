@@ -12,19 +12,24 @@
 /* INCLUDES */
 #include <gtk/gtk.h>
 
-#include "create.h"
-#include "event.h"
+#include "events.h"
+#include "nh.h"
+#include "tw.h"
+#include "widgets.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
+
+/* file: main.c */
 int gui_init(void);
 int gui_main(void);
 void gui_quit(void);
-void *gui_get_window(void);
-void *gui_get_toolwindow(void);
-void *gui_get_acceptdialog(void);
-void *gui_get_rundialog(void);
+void gui_set_info(const char *, ...);
+void gui_terminate(void);
+
+/* file: main_create.c */
+int main_create_content(void);
 
 
 #endif /* END OF HEADER FILE */

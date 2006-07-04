@@ -5,17 +5,24 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef TEST_MAIN_H
-#define TEST_MAIN_H
+#ifndef GUI_NH_H
+#define GUI_NH_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <stdlib.h>
-#include <stdio.h>
+#include <gtk/gtk.h>
+
+#include "events.h"
+#include "widgets.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
+
+/* file: nh_create.c */
+int nhdlg_create_content(void);
+
+/* file: nh_manage.c */
 
 
 #endif /* END OF HEADER FILE */
