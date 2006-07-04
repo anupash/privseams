@@ -2012,26 +2012,19 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
-	//int err;
+	int err = 0;
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
 #endif
-	struct in6_addr *dst, *dstip;
+	struct in6_addr *dst, *dstip, *src_hit, *dst_hit;
 	HIP_DEBUG("hip_handle_i1\n");
 	dst = &i1->hits;
+	dst_hit = &i1->hits;
+	src_hit = &i1->hitr;
 	dstip = NULL;
 	
-#ifdef CONFIG_HIP_BLIND
-	if(entry->blind)
-	{
-		/*
-		 *should call hip_blind_to_plain_hit()
-		 *but confused against... where should be the plain hit kept...
-		 *i1_saddr and i1_daddr or i1->hits and i1->hitr
-		 *
-		 */ 	
-	}
-#endif
+	struct hip_common *r1pkt = NULL;//incase of blind... to hold r1pkt.
+					//has to be declared here so as to catch any errors.
 	
 #ifdef CONFIG_HIP_RVS
 	from = hip_get_param(i1, HIP_PARAM_FROM);
@@ -2054,6 +2047,53 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
 #endif
+
+#ifdef CONFIG_HIP_BLIND
+	if (i1->control & HIP_CONTROL_BLIND) {
+		struct hip_blind_nonce *nonce = NULL;
+		HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
+		struct in6_addr hitr_plain;
+		int hashalgo;//just to send it in the function to follow;
+		//hashalgo = SHA1();
+		
+	        struct in6_addr *own_addr, *dst_addr;
+
+	        HIP_DEBUG("\n");
+	        own_addr = i1_daddr;
+	        dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
+		
+		HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,"Unable to unblind the responder HIT");
+		
+		// unblind responder HIT (see misc.c)
+
+        	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT,
+		                 "No precreated R1\n");
+
+	        if (dst_hit)
+		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
+		else
+		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
+		_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
+
+		/* set cookie state to used (more or less temporary solution ?) */
+		_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
+
+		
+		// get puzzle: hip_get_param(r1, HIP_PARAM_PUZZLE)
+		// create_r1: hip_create_r1()
+		// modify create_r1:
+		// * add int flags and set a bit for blinded mode
+		// * if (flag & BLIND_MODE) then skip HOST_ID building
+		// hip_xmit_
+		// REMEMBER TO DEALLOCATE MEMORY IN THE END
+	}
+#endif
+
+out_err:
+	if (r1pkt){
+        	HIP_FREE(r1pkt);
+                return err;
+	}										 
 	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
 }
 
@@ -2084,7 +2124,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
- 	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
+HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
 	
 	

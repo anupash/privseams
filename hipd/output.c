@@ -77,8 +77,8 @@ HIP_IFEL(hip_plain_to_blind_hit(entry->hit_peer,entry->hit_peer_blind),
 #ifdef CONFIG_HIP_BLIND
 if(entry->blind)
 {
-HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
--1,"Unable to attach nonce to the message. \n");
+	HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
+	-1,"Unable to attach nonce to the message. \n");
 }
 #endif
 	
