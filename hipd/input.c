@@ -2062,10 +2062,9 @@ int hip_handle_i1(struct hip_common *i1,
 	        own_addr = i1_daddr;
 	        dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
 		
-		HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,"Unable to unblind the responder HIT");
+		HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
+			"Unable to unblind the responder HIT");
 		
-		// unblind responder HIT (see misc.c)
-
         	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT,
 		                 "No precreated R1\n");
 
@@ -2078,8 +2077,12 @@ int hip_handle_i1(struct hip_common *i1,
 		/* set cookie state to used (more or less temporary solution ?) */
 		_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-		
+
 		// get puzzle: hip_get_param(r1, HIP_PARAM_PUZZLE)
+		struct hip_tlv_common *puzzle = NULL;
+		puzzle = (struct hip_tlv_common *)hip_get_param(i1, HIP_PARAM_PUZZLE);
+
+
 		// create_r1: hip_create_r1()
 		// modify create_r1:
 		// * add int flags and set a bit for blinded mode
