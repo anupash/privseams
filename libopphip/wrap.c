@@ -23,7 +23,7 @@
 #include "hashtable.h"
 #include "libinet6/util.h"
 
-#define SOFILE "/lib/libc.so.6" 
+#define SOFILE "libc.so.6" 
 
 extern hip_hit_t *get_local_hits_wrapper();
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
