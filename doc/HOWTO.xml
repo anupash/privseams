@@ -567,6 +567,8 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
     5. Use the opportunistic mode as described in section "opportunistic mode".
+    Remember that you need to link the application to libopphip and libhiptool
+    (in that particular order).
     </para>
     <para>
     6. Use HIP agent GUI to run the application. This is a new, not very well
