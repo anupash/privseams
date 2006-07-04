@@ -1476,7 +1476,48 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 
 	return 0;
 }
+/* update_preferred_address - change preferred address advertised to the peer for this connection
+ * 
+ * @entry: hadb entry corresponding to the peer
+ * @new_pref_addr: the new prefferred address
+ */
+int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_pref_addr, struct in6_addr *daddr){
+	int err = 0;
+	struct hip_spi_in_item *item, *tmp;
+	uint32_t *spi_in;
 
+	ipv6_addr_copy(&entry->local_address, new_pref_addr);
+	HIP_IFEL(hip_add_sa(new_pref_addr, daddr, 
+			    &entry->hit_our,
+			    &entry->hit_peer, 
+			    &entry->default_spi_out, entry->esp_transform,
+			    &entry->hip_enc_out, &entry->auth_out, 1, 
+	   		    HIP_SPI_DIRECTION_OUT, 1,  
+			    0, entry->peer_udp_port ), -1, 
+			   "Error while changing outbound security association for new preferred address\n");
+	
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+		if ( memcmp(&item->addresses->address, daddr,
+			     sizeof(struct in6_addr))){
+			spi_in = &item->spi;		
+		}
+	}
+
+	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
+	HIP_IFEL(hip_add_sa(daddr, new_pref_addr, 
+			    &entry->hit_peer, 
+			    &entry->hit_our,
+			    spi_in, entry->esp_transform,
+			    &entry->hip_enc_in, &entry->auth_in, 1, 
+	   		    HIP_SPI_DIRECTION_IN, 1,  
+			    entry->peer_udp_port, 0 ), -1, 
+			   "Error while changing inbound security association for new preferred address\n");
+
+
+out_err:
+	return err;
+		
+}
 /** hip_send_update - send initial UPDATE packet to the peer
  * @entry: hadb entry corresponding to the peer
  * @addr_list: if non-NULL, LOCATOR parameter is added to the UPDATE
@@ -1556,7 +1597,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer,
 							&entry->hit_our)), 
 			 -1, "Error while acquiring a SPI\n");
-		HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
+		HIP_DEBUG("Got SP :alue for the SA 0x%x\n", new_spi_in);
 
 		/* TODO: move to rekeying_finish */
 		if (!mapped_spi) {
@@ -1651,23 +1692,48 @@ int hip_send_update(struct hip_hadb_state *entry,
 	 */
 
 	   	
-	if (addr_list && memcmp(&entry->local_address, &addr_list->address,
-				sizeof(struct in6_addr))) {
+	if (addr_list /*&& memcmp(&entry->local_address, &addr_list->address,
+				sizeof(struct in6_addr))*/) {
 		struct hip_locator_info_addr_item *loc_addr_item = addr_list;
-		int i = 0;
-		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6,
-			      entry->peer_udp_port, 0);
+		int i = 0, preferred_address_found = 0;
+//		hip_delete_sa(spi_in->spi, &entry->local_address, AF_INET6,
+//			      entry->peer_udp_port, 0);
 //AB: Matching with only one addres.. isnt it supposed to be an address list??
 		/* XX FIXME: change daddr to an alternative peer address
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
 			struct in6_addr *saddr = &loc_addr_item->address;
-			ipv6_addr_copy(&entry->local_address, saddr);
-			if (IN6_IS_ADDR_V4MAPPED(saddr) == 
-			    IN6_IS_ADDR_V4MAPPED(&daddr)) {
-				/* Select the first match */
-				break;
+			if(memcmp(&entry->local_address, saddr, sizeof(struct in6_addr))){
+				loc_addr_item->reserved = ntohl(1 << 31);
+				preferred_address_found = 1;
+				if (IN6_IS_ADDR_V4MAPPED(saddr) == 
+				    IN6_IS_ADDR_V4MAPPED(&daddr)) {
+					/* Select the first match */
+					HIP_DEBUG("Preferred Address Found incorrect. Using Alternative address\n");
+					preferred_address_found = 0;
+					break;
+				}
+			}	
+		}
+		if(!preferred_address_found){
+			for(i = 0; i < addr_count; i++, loc_addr_item++) {
+				struct in6_addr *saddr = &loc_addr_item->address;
+				loc_addr_item->reserved = ntohl(1 << 31);
+				ipv6_addr_copy(&entry->local_address, saddr);
+				HIP_IFEL(update_preferred_address(entry, 
+							saddr, &daddr),
+					-1, "Setting New Preferred Address Failed\n");
+				if (IN6_IS_ADDR_V4MAPPED(saddr) == 
+			   	 	IN6_IS_ADDR_V4MAPPED(&daddr)) {
+				 	/* Select the first match */
+					preferred_address_found = 1;
+					break;
+				}
+					
 			}
+		}
+		if(!preferred_address_found){
+			HIP_DEBUG("Preferred address Not found !!");
 		}
 	}
 

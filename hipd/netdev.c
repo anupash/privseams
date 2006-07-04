@@ -533,8 +533,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].locator_length =
 						sizeof(struct in6_addr) / 4; 
 					/* For testing preferred address */
-					locators[i].reserved =
-						i == 0 ? htonl(1 << 31) : 0;
+				//	locators[i].reserved =
+				//		i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
  i++;
 				}

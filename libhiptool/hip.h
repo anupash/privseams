@@ -1075,7 +1075,6 @@ struct hip_hadb_state
 	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
         struct  in6_addr     local_address;   /* Our IP address */
-	struct  list_head    src_address_list;
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
