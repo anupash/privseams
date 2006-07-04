@@ -10,12 +10,16 @@ include_HEADERS += unittest.h conntest.h hipconf.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
-
 if HIP_OPPORTUNISTIC
-  LDADD += ../libopphip/.libs/libopphip.a
+  LDADD = ../libopphip/.libs/libopphip.a
+else
+  LDADD =
 endif
+
+# For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
+# Note: libhiptool needs to be the last library in LDADD!!
+#
+LDADD  += ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
  LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
