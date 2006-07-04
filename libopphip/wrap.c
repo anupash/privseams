@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
+#include "libinet6/util.h"
 
 #define SOFILE "/lib/libc.so.6" 
 
