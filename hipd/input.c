@@ -2048,14 +2048,20 @@ int hip_handle_i1(struct hip_common *i1,
 	}
 #endif
 
-#ifdef CONFIG_HIP_BLIND
+#ifdef CONFIG_HIP_BLIND 
+	/**
+	 * if blind we have to get the puzzle from the precreated r1 s and 
+	 * construct a new r1 which has to be sent...
+	 */
+	
 	if (i1->control & HIP_CONTROL_BLIND) {
 		struct hip_blind_nonce *nonce = NULL;
 		HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
 		struct in6_addr hitr_plain;
 		int hashalgo;//just to send it in the function to follow;
-		//hashalgo = SHA1();
-		
+		//hashalgo should be SHA1();
+	
+	//XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
 	        struct in6_addr *own_addr, *dst_addr;
 
 	        HIP_DEBUG("\n");
@@ -2087,7 +2093,7 @@ int hip_handle_i1(struct hip_common *i1,
 		// modify create_r1:
 		// * add int flags and set a bit for blinded mode
 		// * if (flag & BLIND_MODE) then skip HOST_ID building
-		// hip_xmit_
+//XX-- most of the work in this func hip_xmit_ has been done.. so.. wud just make hip_cum_send call
 		// REMEMBER TO DEALLOCATE MEMORY IN THE END
 	}
 #endif

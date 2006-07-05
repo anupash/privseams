@@ -143,17 +143,23 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
+
+#ifdef CONFIG_HIP_BLIND
+	mask |= HIP_CONTROL_BLIND;
+#endif
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
- 	/********** PUZZLE ************/
+if(!(mask & HIP_CONTROL_BLIND)){
+	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
 					0, 0),  -1, 
 		 "Cookies were burned. Bummer!\n");
+}// incase of blind, the puzzle is already created.
 
  	/********** Diffie-Hellman **********/
 	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
@@ -178,14 +184,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
-
+if(!(mask & HIP_CONTROL_BLIND)){
  	/********** Host_id **********/
 
 	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
 		   hip_get_param_host_id_hostname(host_id_pub));
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
-
+}
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
