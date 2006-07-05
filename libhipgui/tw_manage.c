@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -25,18 +25,18 @@ void *tw_current_item = NULL;
 /******************************************************************************/
 /**
 	Set tool window mode to no given.
-	
+
 	@param mode New mode for toolwindow.
 */
 void tw_set_mode(int mode)
 {
 	/* Variables. */
 	GtkWidget *container = widget(ID_TW_CONTAINER);
-	
+
 	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
-	
+
 	/* First hide current. */
 	switch (tw_current_mode)
 	{
@@ -46,7 +46,7 @@ void tw_set_mode(int mode)
 	case TWMODE_LOCAL:
 		gtk_container_remove(container, widget(ID_TWLOCAL));
 		break;
-	
+
 	case TWMODE_REMOTE:
 		gtk_container_remove(container, widget(ID_TWREMOTE));
 		break;
@@ -55,20 +55,20 @@ void tw_set_mode(int mode)
 		gtk_container_remove(container, widget(ID_TWRGROUP));
 		break;
 	}
-	
+
 	/* Then show selected mode. */
 	switch (mode)
 	{
 	case TWMODE_NONE:
 		break;
-	
+
 	case TWMODE_LOCAL:
 		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
 		gtk_container_add(container, widget(ID_TWLOCAL));
 		gtk_widget_show(widget(ID_TWLOCAL));
 		break;
-		
+
 	case TWMODE_REMOTE:
 		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
@@ -76,7 +76,7 @@ void tw_set_mode(int mode)
 		gtk_container_add(container, widget(ID_TWREMOTE));
 		gtk_widget_show(widget(ID_TWREMOTE));
 		break;
-	
+
 	case TWMODE_RGROUP:
 		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
@@ -84,7 +84,7 @@ void tw_set_mode(int mode)
 		gtk_widget_show(widget(ID_TWRGROUP));
 		break;
 	}
-	
+
 	tw_current_mode = mode;
 }
 /* END OF FUNCTION */
@@ -93,7 +93,7 @@ void tw_set_mode(int mode)
 /******************************************************************************/
 /**
 	Set remote HIT info to toolwindow from HIT with given name.
-	
+
 	@param hit_name Name of remote HIT.
  */
 void tw_set_remote_info(char *hit_name)
@@ -103,19 +103,19 @@ void tw_set_remote_info(char *hit_name)
 	HIT_Remote *hit;
 	char str[320], *ps;
 	int i;
-	
+
 	hit = hit_db_find(hit_name, NULL);
-	
+
 	if (hit)
 	{
 		gtk_entry_set_text(widget(ID_TWR_NAME), hit->name);
 		gtk_entry_set_text(widget(ID_TWR_URL), hit->url);
 		sprintf(str, "%d", hit->port);
 		gtk_entry_set_text(widget(ID_TWR_PORT), str);
-		
+
 		print_hit_to_buffer(str, &hit->hit);
 		gtk_entry_set_text(widget(ID_TWR_REMOTE), str);
-		
+
 		i = find_from_cb(hit->g->name, widget(ID_TWR_RGROUP));
 		gtk_combo_box_set_active(widget(ID_TWR_RGROUP), i);
 
@@ -130,8 +130,8 @@ void tw_set_remote_info(char *hit_name)
 /******************************************************************************/
 /**
 	Set remote HIT group info to toolwindow from given group.
-	
-	@param hit_name Name of remote HIT.
+
+	@param g Pointer to remote HIT.
  */
 void tw_set_remote_rgroup_info(HIT_Group *g)
 {
@@ -157,7 +157,7 @@ void tw_set_remote_rgroup_info(HIT_Group *g)
 /******************************************************************************/
 /**
 	Set remote HIT info to toolwindow from HIT with given name.
-	
+
 	@param hit_name Name of remote HIT.
  */
 void tw_set_local_info(char *hit_name)
@@ -167,9 +167,9 @@ void tw_set_local_info(char *hit_name)
 	HIT_Local *hit;
 	char str[320];
 	int i;
-	
+
 	hit = hit_db_find_local(hit_name, NULL);
-	
+
 	if (hit)
 	{
 		gtk_entry_set_text(widget(ID_TWL_NAME), hit->name);
@@ -184,7 +184,7 @@ void tw_set_local_info(char *hit_name)
 /******************************************************************************/
 /**
 	Set remote HIT info to toolwindow from HIT with given name.
-	
+
 	@param hit_name Name of remote HIT.
  */
 void tw_set_rgroup_info(char *group_name)
@@ -194,13 +194,13 @@ void tw_set_rgroup_info(char *group_name)
 	HIT_Group *group;
 	char str[320], *ps;
 	int i;
-	
+
 	group = hit_db_find_rgroup(group_name);
-	
+
 	if (group)
 	{
 		i = find_from_cb(group->l->name, widget(ID_TWG_LOCAL));
-		
+
 		if (i >= 0)
 		{
 			gtk_entry_set_text(widget(ID_TWG_NAME), group->name);
@@ -213,7 +213,7 @@ void tw_set_rgroup_info(char *group_name)
 			else ps = "normal";
 			i = find_from_cb(ps, widget(ID_TWG_TYPE2));
 			gtk_combo_box_set_active(widget(ID_TWG_TYPE2), i);
-	
+
 			tw_current_item = (void *)group;
 		}
 	}
@@ -225,7 +225,7 @@ void tw_set_rgroup_info(char *group_name)
 /**
 	Add remote group to combo box.
 	This is mostly used as enumeration callback function.
-	
+
 	@param group Pointer to HIT_Group struct.
 	@param p Pointer to combo box widget.
 */
@@ -233,9 +233,9 @@ int tw_add_rgroup(HIT_Group *group, void *p)
 {
 	/* Variables. */
 	GtkWidget *w = (GtkWidget *)p;
-	
+
 	gtk_combo_box_insert_text(w, 0, group->name);
-	
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -253,7 +253,7 @@ void tw_apply(void)
 	HIT_Group *g = (HIT_Group *)tw_current_item;
 	Update_data ud;
 	char *ps;
-	
+
 	switch (tw_current_mode)
 	{
 	case TWMODE_LOCAL:
@@ -270,7 +270,7 @@ void tw_apply(void)
 			all_update_local(ud.old_name, ud.new_name);
 		}
 		break;
-	
+
 	case TWMODE_REMOTE:
 		ps = gtk_entry_get_text(widget(ID_TWR_NAME));
 		if (strlen(ps) > 0)
@@ -282,7 +282,7 @@ void tw_apply(void)
 			URLCPY(r->url, ps);
 			ps = gtk_entry_get_text(widget(ID_TWR_PORT));
 			r->port = atoi(ps);
-			
+
 			ud.depth = 3;
 			ud.indices_first = 1;
 			HIP_DEBUG("Updating remote HIT %s -> %s.\n", ud.old_name, ud.new_name);
@@ -322,7 +322,7 @@ void tw_apply(void)
 		}
 		break;
 	}
-	
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -336,13 +336,13 @@ void tw_cancel(void)
 	HIT_Local *l = (HIT_Local *)tw_current_item;
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
-	
+
 	switch (tw_current_mode)
 	{
 	case TWMODE_LOCAL:
 		tw_set_local_info(l->name);
 		break;
-	
+
 	case TWMODE_REMOTE:
 		tw_set_remote_info(r->name);
 		break;
@@ -351,7 +351,7 @@ void tw_cancel(void)
 		tw_set_rgroup_info(g->name);
 		break;
 	}
-	
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -365,12 +365,12 @@ void tw_delete(void)
 	HIT_Local *l = (HIT_Local *)tw_current_item;
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
-	
+
 	switch (tw_current_mode)
 	{
 	case TWMODE_LOCAL:
 		break;
-	
+
 	case TWMODE_REMOTE:
 		if (hit_db_del(r->name) == 0) tw_set_mode(TWMODE_NONE);
 		break;
@@ -378,7 +378,7 @@ void tw_delete(void)
 	case TWMODE_RGROUP:
 		break;
 	}
-	
+
 	return (0);
 }
 /* END OF FUNCTION */

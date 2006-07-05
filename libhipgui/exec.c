@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -37,16 +37,16 @@ int exec_init(void)
 {
 	/* Variables. */
 	int err = 0, i;
-	
+
 	/* Clear globals. */
 	for (i = 0; i < MAX_EXEC_PIDS; i++) exec_pids[i] = -1;
 	exec_pids_lock = 0;
-	
+
 	/* Initialize timer. */
 	exec_timer_run = 1;
 	err = pthread_create(&exec_timer_pthread, NULL, exec_timer_thread, NULL);
 	HIP_IFEL(err, -1, "Failed to create execute timer thread!\n");
-	
+
 out_err:
 	return (err);
 }
@@ -65,7 +65,7 @@ void exec_quit(void)
 	}
 }
 /* END OF FUNCTION */
-	
+
 
 /******************************************************************************/
 /** Execute new application. */
@@ -74,7 +74,7 @@ void exec_application(void)
 	/* Variables. */
 	GtkWidget *dialog;
 	int err, cpid;
-	char *ps, *ps2, *ps3;
+	char *ps;
 
 	dialog = widget(ID_EXECDLG);
 	gtk_widget_show(dialog);
@@ -93,15 +93,11 @@ void exec_application(void)
 			EXEC_UNLOCK_PIDS();
 			goto out_err;
 		}
-		
+
 		ps = gtk_entry_get_text(widget(ID_RUN_COMMAND));
 		if (strlen(ps) > 0) err = fork();
 		else err = -1;
-		
-		/* Get environment variables. */
-		ps2 = gtk_entry_get_text(widget(ID_RUN_LDPRELOAD));
-		ps3 = gtk_entry_get_text(widget(ID_RUN_LDLIBRARYPATH));
-		
+
 		if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
 		else if (err > 0)
 		{
@@ -112,16 +108,8 @@ void exec_application(void)
 		{
 			HIP_DEBUG("Exec new application.\n");
 			/* Set environment variables for new process. */
-			if (strlen(ps2) > 0)
-			{
-				setenv("LD_PRELOAD", ps2, 1);
-				HIP_DEBUG("Set LD_PRELOAD=%s\n", ps2);
-			}
-			if (strlen(ps3) > 0)
-			{
-				setenv("LD_LIBRARY_PATH", ps3, 1);
-				HIP_DEBUG("Set LD_LIBRARY_PATH=%s\n", ps3);
-			}
+			setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so", 1);
+			HIP_DEBUG("Set LD_PRELOAD=%s\n", "/usr/local/lib/libinet6.so");
 			err = execlp(ps, "", (char *)0);
 			if (err != 0)
 			{
@@ -155,7 +143,7 @@ int exec_empty_pid(void)
 			break;
 		}
 	}
-	
+
 	return (err);
 }
 /* END OF FUNCTION */
@@ -191,7 +179,7 @@ void *exec_timer_thread(void *data)
 				HIP_DEBUG("Warning: did not find PID from process list!\n");
 				continue;
 			}
-			
+
 			err = wait4(exec_pids[i], NULL, WNOHANG, &ru);
 			if (err == 0)
 			{
@@ -209,10 +197,10 @@ void *exec_timer_thread(void *data)
 				gtk_tree_store_remove(w, &iter);
 			}
 		}
-		
+
 		usleep(500 * 1000);
 	}
-	
+
 out_err:
 	HIP_DEBUG("Execute \"environment\" timer thread exiting.\n");
 	exec_timer_run = 0;
@@ -248,28 +236,6 @@ int execdlg_create_content(void)
 	w = gtk_entry_new();
 	widget_set(ID_RUN_COMMAND, w);
 	gtk_entry_set_text(w, "xterm");
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
-	gtk_widget_show(w);
-	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-
-	/* Create LD_PRELOAD-input widget. */
-	w = gtk_label_new("LD_PRELOAD:");
-	gtk_widget_show(w);
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
-	w = gtk_entry_new();
-	widget_set(ID_RUN_LDPRELOAD, w);
-	gtk_entry_set_text(w, "");
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
-	gtk_widget_show(w);
-	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
-
-	/* Create LD_LIBRARY_PATH-input widget. */
-	w = gtk_label_new("LD_LIBRARY_PATH:");
-	gtk_widget_show(w);
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
-	w = gtk_entry_new();
-	widget_set(ID_RUN_LDLIBRARYPATH, w);
-	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
 	gtk_widget_show(w);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);

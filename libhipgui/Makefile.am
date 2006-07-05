@@ -7,7 +7,8 @@ GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
 GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
-include_HEADERS = 
+include_HEADERS =
+INCLUDES = $(hipl_common_include_paths)
 
 if HIP_AGENT
 
@@ -24,8 +25,6 @@ hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
 
-INCLUDES = $(hipl_common_include_paths)
-#INCLUDES += -I$(HIPL_AGENT) @GTK_CFLAGS@
 INCLUDES += -I$(HIPL_AGENT) $(GTKCFLAGS)
 
 endif

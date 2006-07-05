@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -66,11 +66,12 @@ enum WIDGET_IDS
 	ID_NH_NAME,
 	ID_NH_URL,
 	ID_NH_PORT,
+	ID_NH_LOCAL,
+	ID_NH_TYPE1,
+	ID_NH_TYPE2,
 
-	/* Run dialog IDs. */
+	/* Exec dialog IDs. */
 	ID_RUN_COMMAND,
-	ID_RUN_LDPRELOAD,
-	ID_RUN_LDLIBRARYPATH,
 
 	/* New group dialog IDs. */
 	ID_NG_NAME,

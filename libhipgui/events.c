@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -16,7 +16,7 @@
 /******************************************************************************/
 /**
 	What to do when user example tries to close the application?
-	
+
 	@return TRUE if don't close or FALSE if close.
 */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
@@ -29,7 +29,7 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 /******************************************************************************/
 /**
 	What to do when user example tries to close the tool window?
-	
+
 	@return TRUE if don't close or FALSE if close.
 */
 gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
@@ -60,8 +60,8 @@ void tw_destroy(GtkWidget *widget, gpointer data)
 
 
 /******************************************************************************/
-/** On HIT list select. */
-gboolean select_list(GtkTreeSelection *selection, gpointer data)
+/** On HIT list click. */
+gboolean list_click(GtkTreeSelection *selection, gpointer data)
 {
 	/* Variables. */
 	GtkTreeIter iter;
@@ -111,8 +111,18 @@ gboolean select_list(GtkTreeSelection *selection, gpointer data)
 		gtk_tree_path_free(path);
 		g_free(str);
 	}
-	
+
 	return (TRUE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** On HIT list double click. */
+gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
+						   GtkTreeViewColumn *column, gpointer data)
+{
+	gtk_widget_show(widget(ID_TOOLWND));
 }
 /* END OF FUNCTION */
 
@@ -134,7 +144,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		ps = gtk_entry_get_text(widget(ID_TERMINPUT));
 		if (strlen(ps) < 1) break;
 		if (strlen(ps) > (1024 - 128)) ps[1024 - 128] = '\0';
-		
+
 		if (ps[0] == '/' && strlen(ps) < 2);
 		else if (ps[0] == '/') term_exec_command(&ps[1]);
 		else
@@ -147,7 +157,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		}
 		gtk_entry_set_text(widget(ID_TERMINPUT), "");
 		break;
-	
+
 	case IDB_TW_RGROUPS:
 		ps = gtk_combo_box_get_active_text(warg);
 		g = hit_db_find_rgroup(ps);
@@ -155,10 +165,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			tw_set_remote_rgroup_info(g);
 		}
-		/* Must continue to next case, if no break before. */
-	case IDB_NH_RGROUPS:
-		ps = gtk_combo_box_get_active_text(warg);
-		if (strcmp("<create new...>", ps) == 0)
+		else if (strcmp("<create new...>", ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
 			ps = create_remote_group();
@@ -166,15 +173,31 @@ void button_event(GtkWidget *warg, gpointer data)
 			else gtk_combo_box_set_active(warg, 0);
 		}
 		break;
-	
+
+	case IDB_NH_RGROUPS:
+		ps = gtk_combo_box_get_active_text(warg);
+		g = hit_db_find_rgroup(ps);
+		if (g)
+		{
+			nh_set_remote_rgroup_info(g);
+		}
+		else if (strcmp("<create new...>", ps) == 0)
+		{
+			HIP_DEBUG("Create new group.\n");
+			ps = create_remote_group();
+			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
+			else gtk_combo_box_set_active(warg, 0);
+		}
+		break;
+
 	case IDB_TW_APPLY:
 		tw_apply();
 		break;
-	
+
 	case IDB_TW_CANCEL:
 		tw_cancel();
 		break;
-	
+
 	case IDB_TW_DELETE:
 		tw_delete();
 		break;
@@ -208,13 +231,13 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 		NAMECPY(hit.name, "Fake hit popup");
 		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
 		break;
-	
+
 	case ID_TOOLBAR_TOGGLETOOLWINDOW:
 		HIP_DEBUG("Toolbar: Toggle toolwindow visibility.\n");
 		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(widget(ID_TOOLWND));
 		else gtk_widget_hide(widget(ID_TOOLWND));
 		break;
-	
+
 	case ID_TOOLBAR_NEWGROUP:
 		HIP_DEBUG("Toolbar: Create remote group.\n");
 		create_remote_group();

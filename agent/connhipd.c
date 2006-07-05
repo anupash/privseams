@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -43,7 +43,7 @@ int connhipd_init(void)
 	/* Create and bind daemon socket. */
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, -1, "Failed to create socket.\n");
-	
+
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
 	strcpy(agent_addr.sun_path, tmpnam(NULL));
@@ -60,7 +60,7 @@ int connhipd_init(void)
 	n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), 0,
 	             (struct sockaddr *)&agent_addr, &alen);
 	HIP_IFEL(n < 0, -1,  "Did not receive ping reply from daemon.\n");
-	
+
 	/* Start thread for connection handling. */
 	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);
@@ -89,7 +89,7 @@ int connhipd_sendto_hipd(char *msg, size_t len)
 	/* Variables. */
 	struct sockaddr_un agent_addr;
 	int n, alen;
-	
+
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
 	strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH);
@@ -119,7 +119,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 	char chit[128], *type_s;
 
 	type = hip_get_msg_type(msg);
-	
+
 	if (type == SO_HIP_ADD_DB_HI)
 	{
 		HIP_DEBUG("Message received successfully from daemon with type"
@@ -143,7 +143,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		NAMECPY(hit.name, "NewHIT");
 		URLCPY(hit.url, "<notset>");
 		hit.port = 0;
-		
+
 		/* Find out, which of the HITs in the message is local HIT. */
 		l = hit_db_find_local(NULL, &msg->hits);
 		if (!l)
@@ -160,12 +160,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 			memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
 			tr = CONNHIPD_OUT;
 		}
-		
+
 		HIP_DEBUG("Received %s I1 from daemon.\n",
 		          tr == CONNHIPD_IN ? "incoming" : "outgoing");
 
 		/* Check the remote HIT from database. */
-		if (l) ret = check_hit(&hit);
+		if (l) ret = check_hit(&hit, tr);
 		/* If neither HIT in message was local HIT, then drop the packet! */
 		else
 		{
@@ -173,7 +173,10 @@ int connhipd_handle_msg(struct hip_common *msg,
 			          " Rejecting packet automatically.");
 			ret = -1;
 		}
-		
+
+		/* Reset local HIT, if outgoing I1. */
+		if (tr == CONNHIPD_OUT) memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
+
 		/*
 			Now either reject or accept the packet,
 			according to previous results.
@@ -213,7 +216,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			check = 0;
 			break;
 		}
-		
+
 		if (check)
 		{
 			/* Find out, which of the HITs in the message is local HIT. */
@@ -232,10 +235,10 @@ int connhipd_handle_msg(struct hip_common *msg,
 				memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
 				tr = CONNHIPD_OUT;
 			}
-			
+
 			HIP_DEBUG("Received %s %s from daemon (type code %d).\n",
 					  tr == CONNHIPD_IN ? "incoming" : "outgoing", type_s, type);
-		
+
 			/* Check the remote HIT from database. */
 			if (l) r = hit_db_find(NULL, &hit.hit);
 			/* If neither HIT in message was local HIT, then drop the packet! */
@@ -245,7 +248,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 						  " Rejecting packet automatically.");
 				ret = -1;
 			}
-			
+
 			if (r) ret = (r->g->type == HIT_DB_TYPE_ACCEPT) ? 0 : -1;
 			else ret = -1;
 		}
@@ -271,7 +274,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_DEBUG("Rejection sent successfully\n");
 		}
 	}
-	
+
 out_err:
 	HIP_DEBUG("Message handled.\n");
 	return (err);
@@ -312,12 +315,12 @@ int connhipd_thread(void *data)
 			err = -1;
 			goto out_err;
 		}
-		
+
 		if (!FD_ISSET(hip_agent_sock, &read_fdset))
 		{
 			continue;
 		}
-		
+
 		bzero(&agent_addr, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
@@ -345,7 +348,7 @@ int connhipd_thread(void *data)
 		}
 
 		HIP_ASSERT(n == len);
-		
+
 		connhipd_handle_msg(msg, &agent_addr);
 	}
 
@@ -355,13 +358,13 @@ out_err:
 	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
 	n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
-	
+
 	if (hip_agent_sock) close(hip_agent_sock);
 	if (msg != NULL) HIP_FREE(msg);
 
 	hip_agent_thread_started = 0;
 	agent_exit();
-	
+
 	HIP_DEBUG("Connection thread exit.\n");
 
 	return (err);

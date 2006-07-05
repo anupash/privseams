@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -56,7 +56,10 @@ gboolean tw_delete_event(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
 void tw_destroy(GtkWidget *, gpointer);
 
-gboolean select_list(GtkTreeSelection *, gpointer);
+gboolean list_click(GtkTreeSelection *, gpointer);
+gboolean list_double_click(GtkTreeSelection *, GtkTreePath *,
+						   GtkTreeViewColumn *, gpointer);
+
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 
