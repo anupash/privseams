@@ -73,8 +73,8 @@ void exec_application(void)
 {
 	/* Variables. */
 	GtkWidget *dialog;
-	int err, cpid, opp;
-	char *ps;
+	int err, cpid, opp, n, i;
+	char *ps, *ps2, *vargs[32 + 1];
 
 	dialog = widget(ID_EXECDLG);
 	gtk_widget_show(dialog);
@@ -114,7 +114,24 @@ void exec_application(void)
 			else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so", 1);
 
 			HIP_DEBUG("Set LD_PRELOAD=%s\n", opp == FALSE ? "/usr/local/lib/libinet6.so" : "/usr/local/lib/libopphip.so");
-			err = execlp(ps, "", (char *)0);
+			
+			memset(vargs, 0, sizeof(char *) * 33);
+			ps2 = strpbrk(ps, " ");
+			vargs[0] = ps;
+			n = 1;
+			while (ps2 != NULL)
+			{
+				if (ps2[1] == '\0') break;
+				if (ps2[1] != ' ')
+				{
+					vargs[n] = &ps2[1];
+					n++;
+				}
+				ps2[0] = '\0';
+				ps2 = strpbrk(&ps2[1], " ");
+			}
+
+			err = execvp(vargs[0], vargs);
 			if (err != 0)
 			{
 				HIP_DEBUG("Executing new application failed!\n");

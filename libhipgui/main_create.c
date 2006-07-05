@@ -90,10 +90,10 @@ int main_create_content(void)
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
 	iconw = gtk_image_new_from_file("run.xpm");
-	w = gtk_toolbar_append_item(toolbar, "New HIT",
+/*	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
-	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);*/
 
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();
