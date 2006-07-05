@@ -165,6 +165,16 @@ if test x"$ac_cv_use_spam" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_SPAM, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(cert,
+             AC_HELP_STRING([--enable-cert],
+                            [Samu's cert extensions (default is NO)]),
+             [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
+AC_CACHE_CHECK([whether to use cert extensions],
+               [ac_cv_use_cert], [ac_cv_use_cert=no])
+if test x"$ac_cv_use_cert" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_CERT, AC_PREREQ(2.53))
+fi
+
 AC_ARG_ENABLE(rvs,
              AC_HELP_STRING([--enable-rvs],
                             [HIP Rendezvous Extensions (default is NO)]),
