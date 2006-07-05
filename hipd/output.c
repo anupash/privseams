@@ -107,7 +107,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
 				 const struct hip_host_id *host_id_pub,
-				 int cookie_k)
+				 int cookie_k,
+				 struct hip_puzzle *puzzle)
 {
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
@@ -143,23 +144,23 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
-
-#ifdef CONFIG_HIP_BLIND
-	mask |= HIP_CONTROL_BLIND;
-#endif
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
-if(!(mask & HIP_CONTROL_BLIND)){
-	/********** PUZZLE ************/
-	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
-					42 /* 2^(42-32) sec lifetime */, 
-					0, 0),  -1, 
-		 "Cookies were burned. Bummer!\n");
-}// incase of blind, the puzzle is already created.
+ 	/********** PUZZLE ************/
+	if (puzzle) {
+		/* If a puzzle was passed, let's use it */
+		HIP_IFEL(hip_build_param(msg, puzzle), -1,
+			 "Appending the given puzzle failed\n");
+	} else {
+		HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
+						42 /* 2^(42-32) sec lifetime */, 
+						0, 0),  -1, 
+			 "Cookies were burned. Bummer!\n");
+	}
 
  	/********** Diffie-Hellman **********/
 	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
