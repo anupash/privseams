@@ -34,6 +34,7 @@ int check_hit(HIT_Remote *hit, int inout)
 
 		if (fhit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
 		else err = -1;
+		memcpy(hit, fhit, sizeof(HIT_Remote));
 
 		goto out_err;
 	}

@@ -71,7 +71,8 @@ enum WIDGET_IDS
 	ID_NH_TYPE2,
 
 	/* Exec dialog IDs. */
-	ID_RUN_COMMAND,
+	ID_EXEC_COMMAND,
+	ID_EXEC_OPP,
 
 	/* New group dialog IDs. */
 	ID_NG_NAME,

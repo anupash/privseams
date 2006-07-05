@@ -73,12 +73,12 @@ void exec_application(void)
 {
 	/* Variables. */
 	GtkWidget *dialog;
-	int err, cpid;
+	int err, cpid, opp;
 	char *ps;
 
 	dialog = widget(ID_EXECDLG);
 	gtk_widget_show(dialog);
-	gtk_widget_grab_focus(widget(ID_RUN_COMMAND));
+	gtk_widget_grab_focus(widget(ID_EXEC_COMMAND));
 
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	if (err == GTK_RESPONSE_OK)
@@ -94,10 +94,12 @@ void exec_application(void)
 			goto out_err;
 		}
 
-		ps = gtk_entry_get_text(widget(ID_RUN_COMMAND));
+		opp = gtk_toggle_button_get_active(widget(ID_EXEC_OPP));
+		
+		ps = gtk_entry_get_text(widget(ID_EXEC_COMMAND));
 		if (strlen(ps) > 0) err = fork();
 		else err = -1;
-
+		
 		if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
 		else if (err > 0)
 		{
@@ -108,8 +110,10 @@ void exec_application(void)
 		{
 			HIP_DEBUG("Exec new application.\n");
 			/* Set environment variables for new process. */
-			setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so", 1);
-			HIP_DEBUG("Set LD_PRELOAD=%s\n", "/usr/local/lib/libinet6.so");
+			if (opp == FALSE) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so", 1);
+			else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so", 1);
+
+			HIP_DEBUG("Set LD_PRELOAD=%s\n", opp == FALSE ? "/usr/local/lib/libinet6.so" : "/usr/local/lib/libopphip.so");
 			err = execlp(ps, "", (char *)0);
 			if (err != 0)
 			{
@@ -232,14 +236,21 @@ int execdlg_create_content(void)
 	/* Create command-input widget. */
 	w = gtk_label_new("Command to execute:");
 	gtk_widget_show(w);
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_box_pack_start(box, w, FALSE, TRUE, 1);
 	w = gtk_entry_new();
-	widget_set(ID_RUN_COMMAND, w);
+	widget_set(ID_EXEC_COMMAND, w);
 	gtk_entry_set_text(w, "xterm");
-	gtk_box_pack_start(GTK_BOX(box), w, FALSE, TRUE, 1);
+	gtk_box_pack_start(box, w, FALSE, TRUE, 1);
 	gtk_widget_show(w);
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
 
+	/* Create opportunistic environment option. */
+	w = gtk_check_button_new_with_label("Use opportunistic mode");
+	gtk_box_pack_start(box, w, FALSE, FALSE, 1);
+	gtk_toggle_button_set_active(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_EXEC_OPP, w);
+	
 	/* Add buttons to dialog. */
 	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
 	gtk_widget_grab_default(w);

@@ -176,7 +176,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 
 		/* Reset local HIT, if outgoing I1. */
 		if (tr == CONNHIPD_OUT) memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
-
+		
 		/*
 			Now either reject or accept the packet,
 			according to previous results.
