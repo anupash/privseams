@@ -941,6 +941,9 @@ using getaddrinfo: ping, ping6, tla, svn.
 		HIT database is saved and loaded on agent startup as default from
 		'/etc/hip/agentdb'-file.
       </para>
+      <para>The agent executable is called "hipagent". You should run it using
+            normal user (non-root) priviledges.
+      </para>
   </chapter>
   <chapter>
     <title>HIP socket handler kernel module</title>
