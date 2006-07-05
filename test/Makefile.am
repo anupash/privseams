@@ -10,10 +10,11 @@ include_HEADERS += unittest.h conntest.h hipconf.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
+LDADD =
+
 if HIP_OPPORTUNISTIC
-  LDADD = ../libopphip/.libs/libopphip.a
-else
-  LDADD =
+  # currently opp. library does not work with conntest-client-gai
+  conntest_client_LDADD = ../libopphip/.libs/libopphip.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
