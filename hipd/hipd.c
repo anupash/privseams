@@ -450,6 +450,7 @@ void hip_exit(int signal) {
 
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
+	hip_uninit_kea_endpoints();
 #endif
 
 	// hip_uninit_host_id_dbs();
@@ -907,6 +908,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
+	hip_init_kea_endpoints();
 #endif
 
 	/* Workqueue relies on an open netlink connection */

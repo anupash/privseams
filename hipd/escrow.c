@@ -11,17 +11,17 @@
 
 HIP_HASHTABLE kea_table;
 
-static struct list_head keadb[HIP_KEA_SIZE];
+HIP_HASHTABLE kea_endpoints;
 
+static struct list_head keadb[HIP_KEA_SIZE];
+static struct list_head kea_endpointdb[HIP_KEA_EP_SIZE];
 
 static void *hip_keadb_get_key(void *entry)
 {
-	// TODO: return hashkey	
-	return (void *)&(((HIP_KEA *)entry)->hash_key);
+	return (void *)&(((HIP_KEA *)entry)->client_hit);
 }
 
 /** 
- * TODO: Add other method to access data (< dst_IP, SPI> ?)
  * Initializes the database 
  */
 void hip_init_keadb(void)
@@ -94,9 +94,7 @@ HIP_KEA *hip_kea_allocate(int gfpmask)
 /**
  * Creates a new key escrow association with the given values.
  */
-HIP_KEA *hip_kea_create(struct in6_addr *hit1, struct in6_addr *hit2, 
-						int esp_transform, uint32_t spi, uint16_t key_len, 
-						struct hip_crypto_key *key, int gfpmask)
+HIP_KEA *hip_kea_create(struct in6_addr *client_hit, int gfpmask)
 {
 	HIP_KEA *kea;
 	kea = hip_kea_allocate(gfpmask);
@@ -105,13 +103,7 @@ HIP_KEA *hip_kea_create(struct in6_addr *hit1, struct in6_addr *hit2,
 	
 	hip_hold_kea(kea); // Add reference
 	
-	ipv6_addr_copy(&kea->hit1, hit1);
-	ipv6_addr_copy(&kea->hit2, hit2);
-	kea->esp_transform = esp_transform;
-	kea->key_len = key_len;
-	kea->spi = spi;
-	
-	memcpy(&kea->esp_key, key, sizeof(kea->esp_key));
+	ipv6_addr_copy(&kea->client_hit, client_hit);
 	kea->keastate = HIP_KEASTATE_VALID;
 	
 	return kea;	
@@ -126,14 +118,11 @@ int hip_keadb_add_entry(HIP_KEA *kea)
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&kea->refcnt) <= 1); 
 
-	HIP_IFEL(ipv6_addr_any(&kea->hit1), -EINVAL,
-		 "Cannot insert KEA entry with NULL hit1\n");
-	HIP_IFEL(ipv6_addr_any(&kea->hit2), -EINVAL,
-		 "Cannot insert KEA entry with NULL hit2\n");
+	HIP_IFEL(ipv6_addr_any(&kea->client_hit), -EINVAL,
+		 "Cannot insert KEA entry with NULL client_hit\n");
 		 
-	hip_xor_hits(&kea->hash_key, &kea->hit1, &kea->hit2);
 	// Do we allow duplicates?	 
-	temp = hip_ht_find(&kea_table, &kea->hash_key); // Adds reference
+	temp = hip_ht_find(&kea_table, &kea->client_hit); // Adds reference
 	
 	if (temp) {
 		hip_put_kea(temp); // remove reference
@@ -169,15 +158,193 @@ void hip_keadb_delete_entry(HIP_KEA *kea)
 	HIP_FREE(kea);
 }
 
-HIP_KEA *hip_kea_find_byhits(struct in6_addr *hit1, struct in6_addr *hit2)
+HIP_KEA *hip_kea_find(struct in6_addr *hit)
 {
-	// XOR the HITs to get the key
-	hip_hit_t key;
-   	hip_xor_hits(&key, hit1, hit2);
-	//HIP_HEXDUMP("hit is: ", hit, 16);
-	//HIP_HEXDUMP("hit2 is: ", hit2, 16);
-	//HIP_HEXDUMP("the computed key is: ", &key, 16);
-	
-	return hip_ht_find(&kea_table, &key);
+	return hip_ht_find(&kea_table, hit);
 }
+
+
+
+/**********************************************/
+
+
+
+void hip_kea_hold_ep(void *entry) //TODO: remove?
+{
+	HIP_KEA_EP *kea_ep = entry;
+
+	HIP_ASSERT(entry);
+	atomic_inc(&kea_ep->refcnt);
+	HIP_DEBUG("KEA EP: %p, refcnt incremented to: %d\n", kea_ep, 
+		atomic_read(&kea_ep->refcnt));
+}
+
+void hip_kea_put_ep(void *entry) //TODO: remove?
+{
+	HIP_KEA_EP *kea_ep = entry;
+
+	HIP_ASSERT(entry);
+	if (atomic_dec_and_test(&kea_ep->refcnt)) {
+    	HIP_DEBUG("KEA EP: %p, refcnt reached zero. Deleting...\n",kea_ep);
+		hip_kea_delete_endpoint(kea_ep);
+	} else {
+    	HIP_DEBUG("KEA EP: %p, refcnt decremented to: %d\n", kea_ep, 
+    		atomic_read(&kea_ep->refcnt));
+	}
+}
+
+
+static void *hip_kea_endpoints_get_key(void *entry)
+{
+	return (void *)&(((HIP_KEA_EP *)entry)->ep_id);
+}
+
+void hip_init_kea_endpoints(void)
+{
+	memset(&kea_endpoints, 0, sizeof(kea_endpoints));
+
+	kea_endpoints.head = kea_endpointdb;
+	kea_endpoints.hashsize = HIP_KEA_EP_SIZE;
+	kea_endpoints.offset = offsetof(HIP_KEA_EP, list_hit);
+	kea_endpoints.hash = hip_kea_ep_hash;
+	kea_endpoints.compare = hip_kea_ep_match;
+	kea_endpoints.hold = hip_kea_hold_ep;
+	kea_endpoints.put = hip_kea_put_ep;
+	kea_endpoints.get_key = hip_kea_endpoints_get_key;
+
+	strncpy(kea_endpoints.name, "KEA ENDPOINTS", 15);
+	kea_endpoints.name[15] = 0;
+
+	hip_ht_init(&kea_endpoints);
+}
+
+
+void hip_uninit_kea_endpoints(void)
+{
+	//TODO:
+}
+
+int hip_kea_ep_hash(const void * key, int range)
+{
+	HIP_KEA_EP_ID * id = (HIP_KEA_EP_ID *) key; 
+	// TODO: Is the key random enough?
+	return (id->value[2] ^ id->value[3] ^ id->value[4]) % range;
+}
+
+
+int hip_kea_ep_match(const void * ep1, const void * ep2)
+{	
+	return !memcmp((const void *) ep1, (const void *) ep2, 18);
+}
+
+HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask)
+{
+	HIP_KEA_EP *kea_ep;
+
+	kea_ep = HIP_MALLOC(sizeof(*kea_ep), gfpmask);
+	
+	if (!kea_ep)
+		return NULL;
+
+	atomic_set(&kea_ep->refcnt, 0);
+	HIP_LOCK_INIT(kea_ep);
+
+	return kea_ep;
+
+}
+
+HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, int esp_transform, 
+									uint32_t spi, uint16_t key_len, 
+									struct hip_crypto_key * key, int gfpmask)
+{
+	HIP_KEA_EP *kea_ep;
+	kea_ep = hip_kea_ep_allocate(gfpmask);
+	if (!kea_ep)
+		return NULL;
+	
+	hip_hold_kea(kea_ep); // Add reference
+	
+	ipv6_addr_copy(&kea_ep->hit, hit);
+	kea_ep->esp_transform = esp_transform;
+	kea_ep->key_len = key_len;
+	kea_ep->spi = spi;
+	
+	memcpy(&kea_ep->esp_key, key, sizeof(kea_ep->esp_key));
+	
+	return kea_ep;	
+}
+
+int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
+{
+	int err = 0;
+	HIP_KEA_EP * temp;
+
+	/* if assertation holds, then we don't need locking */
+	HIP_ASSERT(atomic_read(&kea_ep->refcnt) <= 1); 
+
+	HIP_IFEL(ipv6_addr_any(&kea_ep->hit), -EINVAL,
+		 "Cannot insert KEA_EP entry with NULL hit\n");
+		 
+	// Create key
+	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.in6_u.u6_addr32, 
+		   sizeof(struct in6_addr));
+	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
+	
+	HIP_HEXDUMP("KEA endpoint hit:", &kea_ep->hit, 16);
+	HIP_HEXDUMP("KEA endpoint spi:", &kea_ep->spi, 2);
+	HIP_HEXDUMP("KEA endpoint id:", &kea_ep->ep_id, 18);
+	
+	temp = hip_ht_find(&kea_endpoints, &kea_ep->ep_id); // Adds reference
+	
+	if (temp) {
+		hip_put_kea_ep(temp); // remove reference
+		HIP_ERROR("Failed to add kea endpoint hash table entry\n");
+	} else {
+		hip_ht_add(&kea_endpoints, kea_ep);
+		// set state if needed
+	}
+	
+ out_err:
+	return err;
+}
+
+
+void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
+{
+	HIP_ASSERT(kea_ep);
+
+	HIP_LOCK_HA(kea_ep); // refcnt should be more than 1
+	//if (!(kea_ep->keastate & HIP_EP_KEASTATE_VALID)) { //check state
+	//	HIP_DEBUG("KEA not in kea hashtable or state corrupted\n");
+	//	return;
+	//}
+	
+	hip_ht_delete(&kea_endpoints, kea_ep); // refcnt decremented
+	HIP_UNLOCK_HA(kea_ep); 
+	
+}
+
+
+void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
+{
+	HIP_FREE(kea_ep);
+}
+
+
+HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
+{
+
+	HIP_KEA_EP_ID *key;
+	
+	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
+	
+	memcpy(&key->value, &hit->in6_u.u6_addr32, sizeof(struct in6_addr));
+	memcpy(&key->value[4], &spi, sizeof(int));
+
+	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);
+		
+	return hip_ht_find(&kea_endpoints, key);
+}
+
+
 

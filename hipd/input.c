@@ -1412,15 +1412,31 @@ int hip_create_r2(struct hip_context *ctx,
 	// Note: This is just a test, it isn't supposed to make any sense
 	HIP_DEBUG("*** Testing keadb ***");
 	HIP_KEA *kea;
-	//uint16_t length = 32;
-	kea = hip_kea_create(&entry->hit_our, &entry->hit_peer, entry->esp_transform,
+	HIP_KEA_EP *kea_ep;
+
+	kea = hip_kea_create(&entry->hit_our, GFP_KERNEL);
+	HIP_HEXDUMP("1. Created kea entry with hit: ", &entry->hit_our, 16);
+	kea_ep = hip_kea_ep_create(&entry->hit_our, entry->esp_transform,
 		entry->default_spi_out, HIP_MAX_KEY_LEN, &entry->esp_out, GFP_KERNEL);
-	HIP_DEBUG("1. Created kea entry with spi %d", kea->spi);
+	HIP_DEBUG("2. Created kea ep entry with spi %d", kea_ep->spi);
 	hip_keadb_add_entry(kea);
-	HIP_DEBUG("2. Added kea entry");
-	struct HIP_KEA *kea2;
-	kea2 = hip_kea_find_byhits(&entry->hit_our, &entry->hit_peer);
-	HIP_DEBUG("3. Found kea entry with spi %d", kea->spi);
+	HIP_DEBUG("3. Added kea entry");
+	hip_kea_add_endpoint(kea_ep);
+	HIP_DEBUG("4. Added kea ep entry");
+	
+	HIP_KEA *kea2;
+	HIP_KEA_EP *kea_ep2;
+	kea2 = hip_kea_find(&entry->hit_our);
+	if (kea)
+		HIP_HEXDUMP("5. Found kea entry with hit: ", &kea2->client_hit, 16);
+	else
+		HIP_DEBUG("Could not find kea");	
+	kea_ep2 = hip_kea_ep_find(&entry->hit_our, entry->default_spi_out);
+	if (kea_ep2)
+		HIP_DEBUG("6. Found kea ep entry with spi %d", kea_ep2->spi);
+	else
+		HIP_DEBUG("Could not find kea ep");	
+	
 	// </TEST>
 	
 #endif //CONFIG_HIP_ESCROW
