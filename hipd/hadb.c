@@ -1441,11 +1441,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
  		case PEER_ADDR_STATE_ACTIVE:
 			HIP_DEBUG("address state stays in ACTIVE\n");
 			break;
-		case PEER_ADDR_STATE_UNVERIFIED:
-			HIP_DEBUG("address state stays in UNVERIFIED\n");
-		//	entry->hadb_update_func->hip_update_send_addr_verify(entry, new);
-
-			break;
 		default:
 			// Does this mean that unverified cant be here? Why?
 			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");

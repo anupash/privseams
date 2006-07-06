@@ -1390,6 +1390,7 @@ struct hip_eid_db_entry {
 /* Some default settings for HIPL */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+#define GOTO_OUT -3
 
 #define HIP_IFE(func, eval) \
 { \
