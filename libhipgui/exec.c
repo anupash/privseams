@@ -110,10 +110,10 @@ void exec_application(void)
 		{
 			HIP_DEBUG("Exec new application.\n");
 			/* Set environment variables for new process. */
-			if (opp == FALSE) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so", 1);
-			else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so", 1);
+			if (opp == FALSE) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
+			else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so:/usr/local/lib/libhiptool.so", 1);
 
-			HIP_DEBUG("Set LD_PRELOAD=%s\n", opp == FALSE ? "/usr/local/lib/libinet6.so" : "/usr/local/lib/libopphip.so");
+			HIP_DEBUG("Set LD_PRELOAD=%s\n", opp == FALSE ? "libinet6.so:libhiptool.so" : "libopphip.so:libhiptool.so");
 			
 			memset(vargs, 0, sizeof(char *) * 33);
 			ps2 = strpbrk(ps, " ");

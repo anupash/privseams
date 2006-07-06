@@ -175,7 +175,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 		}
 
 		/* Reset local HIT, if outgoing I1. */
-		if (tr == CONNHIPD_OUT) memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
+		if (tr == CONNHIPD_OUT)
+		{
+			HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
+			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
+			memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
+		}
 		
 		/*
 			Now either reject or accept the packet,
