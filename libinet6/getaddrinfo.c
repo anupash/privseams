@@ -588,89 +588,6 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
   }  
 }
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-int
-request_hipd_pseudo_hit(struct gaih_addrtuple *orig_at, struct in6_addr *hit )
-{
-  struct hip_common *msg = NULL;
-  struct gaih_addrtuple *at_hit = NULL;
-  struct in6_addr ip;
-  struct in6_addr *hit_recv = NULL;
-  int err = 0;
-  int ret = 0;
-
-  bzero(&ip, sizeof(ip));
-  HIP_ASSERT((ipv6_addr_any(&ip)));
-
-  get_ip_from_gaih_addrtuple(orig_at, &ip );
-
-  if(!ipv6_addr_any(&ip)) {
-    msg = malloc(HIP_MAX_PACKET);
-    if (!msg){
-      HIP_ERROR("malloc failed\n");
-      goto out_err;
-    }	
-    hip_msg_init(msg);
-    
-    err = hip_build_param_contents(msg, (void *)(&ip), HIP_PARAM_IPV6_ADDR,
-				   sizeof(struct in6_addr));
-    if (err) {
-      HIP_ERROR("build param request_hipd_seudo_hit failed: %s\n", strerror(err));
-      goto out_err;
-    }
-    
-    /* Build the message header */
-    err = hip_build_user_hdr(msg, SO_HIP_GET_PSEUDO_HIT, 0);
-    if (err) {
-      HIP_ERROR("build hdr failed: %s\n", strerror(err));
-      goto out_err;
-    }
-    
-    /* send and receive msg to/from hipd */
-    err = hip_send_recv_daemon_info(msg);
-    if (err) {
-      HIP_ERROR("send_recv msg failed\n");
-      goto out_err;
-    }
-    HIP_DEBUG("send_recv msg succeed\n");
-    
-    /* getsockopt wrote the corresponding EID into the message, use it */
-    err = hip_get_msg_err(msg);
-    if (err) {
-      goto out_err;
-    }
-    
-    hit_recv = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
-    if(hit_recv)
-      memcpy(hit, hit_recv, sizeof(*hit));
-    if(hit){
-      if(hit_is_opportunistic_hashed_hit(hit)){
-	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){ //;
-	  if(at_hit->next == NULL){
-	    at_hit->next = malloc (sizeof (struct gaih_addrtuple));
-	    at_hit = at_hit->next;
-	    at_hit->family = AF_INET6;
-	    at_hit->scopeid = 0;
-	    at_hit->next = NULL;
-	    memcpy (at_hit->addr, hit, sizeof (struct in6_addr));
-	    _HIP_DEBUG_HIT("memcpy hit=", at_hit->addr);
-	    break;
-	  }
-	}
-	// DO: test if the hit is added
-	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next){
-	  _HIP_DEBUG_HIT("hit=", at_hit->addr);
-	}
-      }// end of if (hit_is_opportunistic_hashed_hit)
-    }// end of if(hit)
-  } // end of  if(!ipv6_addr_any(&ip))
- out_err:
-  if(msg)
-    free(msg);
-  return err;
-}
-#endif // CONFIG_HIP_OPPORTUNISTIC
-
 int 
 gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st, 
     const struct addrinfo *req, struct addrinfo **pai)
@@ -1040,23 +957,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 AG: now the loop also takes in IPv4 addresses */
       if (found_hits) 
 	send_hipd_addr(*at);
-      else if(0){// we will get pseudo hit in wrap.c, not here
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	struct in6_addr hit;
-	int err = request_hipd_pseudo_hit(*at, &hit);
-	if(err){
-	  HIP_ERROR("failed to get pseudo hit with err=%d\n", err);
-	  return err;
-	}
-	if(hit_is_opportunistic_hashed_hit(&hit)){
-	  HIP_DEBUG_HIT("got pseudo hit=", &hit);
-	  found_hits++;
-	  send_hipd_addr(*at);
-	} else{
-	  _HIP_DEBUG("cannot get phit \n");
-	}
-#endif
-      }
+
       if (no_data != 0 && no_inet6_data != 0)
 	{
 	  _HIP_DEBUG("nodata\n");

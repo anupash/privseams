@@ -402,10 +402,15 @@ by typing adduser my_username src
 * cd linux-2.6.xx
 * Patch the kernel with the hip patches you can find under hipl/patches directory
 * cp /boot/config-something .config
-* fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_image
+
+In order to build the binary package type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
+
+Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source
 
 After the kernel has been successfully compiled, you will find the
-debian package in the top directory.
+debian packages in the top directory.
 
 To install it type:
 dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
@@ -463,8 +468,8 @@ This is what I did:
   * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
     patches:
 
-     # 1.211 -> 1.2111
-     %define release %(R="$Revision: 1.2111 $"; RR="${R##: }"; echo ${RR%%?})_FC5%{rhbsys}
+     %define rhbsys .beet
+
      # HIPL patches
      Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
      Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
@@ -477,4 +482,4 @@ This is what I did:
      %patch193 -p1
 
    * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.spec
+   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
