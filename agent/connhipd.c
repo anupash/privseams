@@ -175,13 +175,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 		}
 
 		/* Reset local HIT, if outgoing I1. */
-		if (tr == CONNHIPD_OUT)
-		{
-			HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
-			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
-			memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
-		}
-		
+		HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
+		HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
+		HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
+		HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
+		if (tr == CONNHIPD_OUT) memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
+	   
 		/*
 			Now either reject or accept the packet,
 			according to previous results.
@@ -253,6 +252,9 @@ int connhipd_handle_msg(struct hip_common *msg,
 						  " Rejecting packet automatically.");
 				ret = -1;
 			}
+
+			HIP_HEXDUMP("Source HIT: ", &msg->hits, 16);
+			HIP_HEXDUMP("Destination HIT: ", &msg->hitr, 16);
 
 			if (r) ret = (r->g->type == HIT_DB_TYPE_ACCEPT) ? 0 : -1;
 			else ret = -1;
