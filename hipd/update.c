@@ -1455,7 +1455,7 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 	}
 
 	if (src) {
-		p = HIP_MALLOC(s, GFP_ATOMIC);
+	p = HIP_MALLOC(s, GFP_ATOMIC);
 		if (!p) {
 			HIP_ERROR("kmalloc failed\n");
 			return -ENOMEM;
@@ -1575,10 +1575,10 @@ int update_src_address_list(struct hip_hadb_state *entry,
 		   if no suitable saddr was found (interfamily handover) */
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
 			struct in6_addr *saddr = &loc_addr_item->address;
-			if(memcmp(&entry->local_address, saddr, sizeof(struct in6_addr))){
+			if(memcmp(&entry->local_address, saddr, sizeof(struct in6_addr)) == 0){
 				loc_addr_item->reserved = ntohl(1 << 31);
 				preferred_address_found = 1;
-				if (IN6_IS_ADDR_V4MAPPED(saddr) == 
+				if (IN6_IS_ADDR_V4MAPPED(saddr) != 
 				    IN6_IS_ADDR_V4MAPPED(&daddr)) {
 					/* Select the first match */
 					HIP_DEBUG("Preferred Address Found incorrect. Using Alternative address\n");
@@ -1770,7 +1770,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	err = update_src_address_list(entry, addr_list, daddr, addr_count, esp_info_old_spi);
 	if(err == GOTO_OUT)
 		goto out;
-	else if(!err)
+	else if(err)
 		goto out_err;
 
 	if (add_locator) {
