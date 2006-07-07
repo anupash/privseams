@@ -94,7 +94,13 @@ int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_daddr,
 		  hip_ha_t *entry,
 	           struct hip_stateless_info *);
-		  
+
+int hip_handle_i1_blind(struct hip_common *i1,
+			struct in6_addr *i1_saddr,
+			struct in6_addr *i1_daddr,
+			hip_ha_t *entry,
+			struct hip_stateless_info *);
+
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,

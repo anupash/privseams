@@ -184,6 +184,14 @@ int hip_add_host_id(struct hip_db_struct *db,
 				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
 
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_on()) {
+	  HIP_IFEL(!hip_precreate_blinded_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
+					     (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+					     id_entry->host_id, pubkey), -ENOENT, "Unable to precreate blinded R1s.\n");
+	}
+#endif
+
 	/* Called while the database is locked, perhaps not the best
            option but HIs are not added often */
 	if (insert) 

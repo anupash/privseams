@@ -282,7 +282,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 		cookie_k = hip_get_cookie_difficulty(NULL);
 
 		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
-					      cookie_k, NULL);
+					      cookie_k);
 		if (!r1table[i].r1) {
 			HIP_ERROR("Unable to precreate R1s\n");
 			goto err_out;
@@ -343,7 +343,13 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
 		 0, "Requested source HIT not (any more) available.\n");
+
 	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_on() && hdr->control & HIP_CONTROL_BLIND)
+		result = &hid->blind_r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+#endif
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");

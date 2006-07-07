@@ -35,6 +35,9 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 #ifdef CONFIG_HIP_RVS
 			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
 #endif
+#ifdef CONFIG_HIP_BLIND
+			      | HIP_CONTROL_BLIND
+#endif
 		)) | legal) == legal;
 }
 
@@ -615,6 +618,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	_HIP_HEXDUMP("dumping packet", msg,  40);
 	// XX FIXME: CHECK PACKET CSUM
 
+#ifdef CONFIG_HIP_BLIND
+	// XX TODO KARTHIK: UNBLIND THE HITS (if control & blind) AND FEED TO HADB_FIND
+#endif
+
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -1162,6 +1169,10 @@ int hip_handle_r1(struct hip_common *r1,
 		solved_puzzle = entry->puzzle_solution;
 	}
 
+#ifdef CONFIG_HIP_BLIND
+	// XX TODO KARTHIK: if msg->control & BLIND then r1.hitr should be converted to plain hit
+#endif
+
 	/* calculate shared secret and create keying material */
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
@@ -1179,6 +1190,9 @@ int hip_handle_r1(struct hip_common *r1,
 			  str, len, hip_get_param_host_id_hostname(peer_host_id));
 	}
 
+#ifdef CONFIG_HIP_BLIND
+	// XX TODO KARTHIK: if msg->control & BLIND then r1.hitr should be converted back to blinded hit???
+#endif
 	entry->peer_controls = ntohs(r1->control);
  	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
 		 "Creation of I2 failed\n");
@@ -1354,6 +1368,13 @@ int hip_create_r2(struct hip_context *ctx,
  	}
  next_hmac:
 #endif
+
+#if CONFIG_HIP_BLIND
+	if (entry->blind) {
+		// XX TODO KARTHIK: create_i2
+	}
+#endif
+
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
@@ -1474,12 +1495,19 @@ int hip_handle_i2(struct hip_common *i2,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc 
+
+#ifdef CONFIG_HIP_BLIND
+	// XX TODO KARTHIK: if entry->blind then r1.hitr should be converted to plain hit
+#endif
 	   
 	   TH: I'm not sure if this could be replaced with a function pointer
 	   which is set from hadb. Usually you shouldn'y have state here, right?*/
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
+#ifdef CONFIG_HIP_BLIND
+	// XX TODO KARTHIK: if (entry->blind) then r1.hitr should be converted back to blinded hit
+#endif
 	/* verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
 		 "HMAC validation on i2 failed\n");
@@ -1598,6 +1626,11 @@ int hip_handle_i2(struct hip_common *i2,
 		_HIP_DEBUG("HA entry created.");
 	}
 	
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_on() && i2->control & HIP_CONTROL_BLIND)
+		entry->blind = 1;
+#endif
+
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
 	
@@ -2016,18 +2049,13 @@ int hip_handle_i1(struct hip_common *i1,
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
 #endif
+	
 	struct in6_addr *dst, *dstip, *src_hit, *dst_hit;
 	HIP_DEBUG("hip_handle_i1\n");
 	dst = &i1->hits;
-	dst_hit = &i1->hits;
-	src_hit = &i1->hitr;
 	dstip = NULL;
-	
-	struct hip_common *r1pkt = NULL;//incase of blind... to hold r1pkt.
-					//has to be declared here so as to catch any errors.
-	
-#ifdef CONFIG_HIP_RVS
-	from = hip_get_param(i1, HIP_PARAM_FROM);
+
+#ifdef CONFIG_HIP_RVS	
 	if (from) {
 		HIP_DEBUG("Found FROM parameter in I1\n");
 		dstip = (struct in6_addr *)&from->address;
@@ -2047,65 +2075,70 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
 #endif
-
-#ifdef CONFIG_HIP_BLIND 
-	/**
-	 * if blind we have to get the puzzle from the precreated r1 s and 
-	 * construct a new r1 which has to be sent...
-	 */
-	
-	if (i1->control & HIP_CONTROL_BLIND) {
-		struct hip_blind_nonce *nonce = NULL;
-		HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
-		struct in6_addr hitr_plain;
-		int hashalgo;//just to send it in the function to follow;
-		//hashalgo should be SHA1();
-	
-	//XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
-	        struct in6_addr *own_addr, *dst_addr;
-
-	        HIP_DEBUG("\n");
-	        own_addr = i1_daddr;
-	        dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
-		
-		HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
-			"Unable to unblind the responder HIT");
-		
-        	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT,
-		                 "No precreated R1\n");
-
-	        if (dst_hit)
-		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
-		else
-		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
-		_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
-
-		/* set cookie state to used (more or less temporary solution ?) */
-		_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
-
-
-		// get puzzle: hip_get_param(r1, HIP_PARAM_PUZZLE)
-		struct hip_tlv_common *puzzle = NULL;
-		puzzle = (struct hip_tlv_common *)hip_get_param(i1, HIP_PARAM_PUZZLE);
-
-
-		// create_r1: hip_create_r1()
-		// modify create_r1:
-		// * add int flags and set a bit for blinded mode
-		// * if (flag & BLIND_MODE) then skip HOST_ID building
-//XX-- most of the work in this func hip_xmit_ has been done.. so.. wud just make hip_cum_send call
-		// REMEMBER TO DEALLOCATE MEMORY IN THE END
+#ifdef CONFIG_HIP_BLIND
+	if(i1->control & HIP_CONTROL_BLIND){
+		HIP_IFEL(hip_handle_i1_blind(i1, i1_saddr, i1_daddr, entry, i1_info), -1,
+				"blind i1 couldnot be handled\n");
 	}
 #endif
 
 out_err:
-	if (r1pkt){
-        	HIP_FREE(r1pkt);
-                return err;
-	}										 
 	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
 }
 
+int hip_handle_i1_blind(struct hip_common *i1,
+	                struct in6_addr *i1_saddr,
+			struct in6_addr *i1_daddr,
+			hip_ha_t *entry,
+			struct hip_stateless_info *i1_info)
+{
+        int err = 0;
+        struct in6_addr *dst, *dstip, *src_hit, *dst_hit;
+        HIP_DEBUG("hip_handle_i1\n");
+        dst = &i1->hits;
+        dst_hit = &i1->hits;
+        src_hit = &i1->hitr;
+        dstip = NULL;
+	const int use_dsa = 0;
+								
+	struct hip_common *r1pkt = NULL;
+
+	struct hip_blind_nonce *nonce = NULL;
+        HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
+        struct in6_addr hitr_plain;
+        int hashalgo;//just to send it in the function to follow;
+              //hashalgo should be SHA1();
+	//
+        //XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
+        struct in6_addr *own_addr, *dst_addr;
+
+        HIP_DEBUG("\n");
+        own_addr = i1_daddr;
+        dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
+									//
+        HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
+                 "Unable to unblind the responder HIT");
+
+	HIP_IFEL(!(r1pkt = hip_get_r1_blinded(dst_addr, own_addr, &hitr_plain, dst_hit)), -ENOENT,
+                   "No precreated R1\n");
+
+	if (dst_hit)
+	        ipv6_addr_copy(&r1pkt->hitr, dst_hit);
+	else
+		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
+		
+	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
+	
+	/* set cookie state to used (more or less temporary solution ?) */
+	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
+									//
+out_err:
+        if (r1pkt){
+                HIP_FREE(r1pkt);
+                return err;
+        }
+        return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
+}
 
 /**
  * hip_receive_i1 - receive I1 packet

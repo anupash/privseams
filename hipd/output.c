@@ -45,7 +45,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_plain_to_blind_hit(entry->hit_our,entry->hit_our_blind), 
 	-1, "Unable to convert our Plain HIT to Blinded HIT\n");
 	
-HIP_IFEL(hip_plain_to_blind_hit(entry->hit_peer,entry->hit_peer_blind),
+	HIP_IFEL(hip_plain_to_blind_hit(entry->hit_peer,entry->hit_peer_blind),
 	-1, "Unable to convert peer's Plain HIT to Blinded HIT");
 	
 #endif
@@ -107,8 +107,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
 				 const struct hip_host_id *host_id_pub,
-				 int cookie_k,
-				 struct hip_puzzle *puzzle)
+				 int cookie_k)
 {
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
@@ -151,16 +150,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/********** R1_COUNTER (OPTIONAL) *********/
 
  	/********** PUZZLE ************/
-	if (puzzle) {
-		/* If a puzzle was passed, let's use it */
-		HIP_IFEL(hip_build_param(msg, puzzle), -1,
-			 "Appending the given puzzle failed\n");
-	} else {
-		HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
-						42 /* 2^(42-32) sec lifetime */, 
-						0, 0),  -1, 
-			 "Cookies were burned. Bummer!\n");
-	}
+	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
+					42 /* 2^(42-32) sec lifetime */, 
+					0, 0),  -1, 
+		 "Cookies were burned. Bummer!\n");
 
  	/********** Diffie-Hellman **********/
 	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
