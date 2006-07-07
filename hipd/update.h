@@ -41,8 +41,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry,
 					
 void hip_update_handle_ack(hip_ha_t *entry,
 				struct hip_ack *ack,
-				int have_nes,
-				struct hip_echo_response *echo_esp);
+				int have_nes);
 				
 int hip_handle_update_established(hip_ha_t *entry,
 				  struct hip_common *msg,

@@ -1247,9 +1247,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 }
 
 /* have_esp_info is 1, if there is ESP_INFO in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info,
-			   struct hip_echo_response *echo_resp)
-{
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info){
 	size_t n, i;
 	uint32_t *peer_update_id;
 
@@ -1273,7 +1271,6 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
 		struct hip_spi_in_item *in_item, *in_tmp;
-		struct hip_spi_out_item *out_item, *out_tmp;
 		uint32_t puid = ntohl(*peer_update_id);
 
 		_HIP_DEBUG("peer Update ID=%u\n", puid);
@@ -1290,46 +1287,12 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 			}
 		}
 
-		/* see if the ACK was response to address verification */
-		if (echo_resp) {
-			list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
-				struct hip_peer_addr_list_item *addr, *addr_tmp;
-
-				list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
-					_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-					if (addr->seq_update_id == puid) {
-						if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
-							HIP_ERROR("echo data len mismatch\n");
-							continue;
-						}
-						if (memcmp(addr->echo_data,
-							   (void *)echo_resp+sizeof(struct hip_tlv_common),
-							   sizeof(addr->echo_data)) != 0) {
-							HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
-							continue;
-						}
-						_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
-						addr->address_state = PEER_ADDR_STATE_ACTIVE;
-						do_gettimeofday(&addr->modified_time);
-
-						if (addr->is_preferred) {
-							/* maybe we should do this default address selection
-							   after handling the REA .. */
-							hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
-						} else
-							HIP_DEBUG("address was not set as preferred address in REA\n");
-					}
-				}
-			}
-			//entry->skbtest = 1;
-			_HIP_DEBUG("set skbtest to 1\n");
-		} else {
-			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
-		}
 	}
  out_err:
 	return;
 }
+
+
 
 void hip_update_handle_esp_info(hip_ha_t *entry, uint32_t peer_update_id)
 {
@@ -1360,6 +1323,34 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 		}
 	}
 	return 0;
+}
+
+int hip_update_send_echo(hip_ha_t *entry,
+			 uint32_t spi_out,
+			 struct hip_peer_addr_list_item *addr){
+	
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+
+	HIP_DEBUG_HIT("new addr to check", &addr->address);
+	
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
+
+	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, 
+					    &entry->hit_peer, &entry->hit_our),
+		 -1, "Building Echo  Packet failed\n");
+
+	/* test: send all addr check from same address */
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						      &addr->address,
+						      0, 0, update_packet,
+						      entry, 0), -1,
+		 "csum_send failed\n");
+
+ out_err:
+	return err;
+
 }
 
 /* todo: use jiffies instead of timestamp */
@@ -1426,7 +1417,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	struct hip_spi_out_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
 	struct hip_peer_addr_list_item *a, *tmp;
-
+	struct in6_addr *preferred_address; 
 	/* Assumes already locked entry */
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
@@ -1440,6 +1431,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	/* Check if addr already exists. If yes, then just update values. */
 	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
 		if (!ipv6_addr_cmp(&a->address, addr)) {
+			// Do we send a verification if state is unverified?
+			// The address should be awaiting verifivation already
 			new_addr = a;
 			new = 0;
 			break;
@@ -1477,6 +1470,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address state stays in ACTIVE\n");
 			break;
 		default:
+			// Does this mean that unverified cant be here? Why?
 			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
 			break;
 		}
@@ -1490,13 +1484,15 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			_HIP_DEBUG("set initial address state UNVERIFIED\n");
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 		}
 	}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
-
+	if(is_preferred_addr){
+		ipv6_addr_copy(&entry->preferred_address,&new_addr->address);
+	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
@@ -1808,7 +1804,7 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
-	
+	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 	/* xmit function set */
 	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
 
