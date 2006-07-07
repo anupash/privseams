@@ -378,7 +378,8 @@
     <para>
       HIPL software bundle includes also a java wrapper library to the HIP
       enabled libinet6 resolver library. The library is called "jip" and it
-      is located in "path-to-hipl/jip".
+      is located in "path-to-hipl/jip". The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
       </para>
     <para>
       You need to have either Blackdown or Sun java jdk 1.4.x or later to
