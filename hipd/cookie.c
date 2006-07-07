@@ -404,7 +404,7 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 	int err = 0, len;
 
 	/* Store private key and lhi, delete the host id entry and readd.
-	   Addition recreates also R1s as a side effect. */
+	   Addition recreates also R1s as a side effect.*/ 
 
 	len = hip_get_param_total_len(entry->host_id);
 	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
@@ -424,7 +424,6 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 	if (private)
 		free(private);
 	return err;
-
 }
 
 int hip_recreate_all_precreated_r1_packets()

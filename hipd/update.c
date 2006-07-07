@@ -1275,11 +1275,23 @@ out_err:
 	return err;
 }
 
-void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
 
+int hip_update_peer_preferred_address(hip_ha_t *entry, struct ip_peer_addr_list_item *addr){
+
+	
+	return 0;
+
+}
+
+int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
+
+	int err = 0;
 	struct hip_spi_out_item *out_item, *out_tmp;
+
 	list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
+
 		struct hip_peer_addr_list_item *addr, *addr_tmp;
+
 		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
 			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0) {
@@ -1295,6 +1307,10 @@ void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *
 				}	
 				HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 				addr->address_state = PEER_ADDR_STATE_ACTIVE;
+				HIP_DEBUG("Changing Security Associations for the new peer address\n");
+				
+				HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
+					       "Error while changing SAs for mobility\n");	
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred) {
 				/* maybe we should do this default address selection
@@ -1306,6 +1322,8 @@ void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *
 		}
 	}
 
+out_err:
+	return err;
 }
 
 /**
