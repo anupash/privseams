@@ -1332,7 +1332,7 @@ int hip_update_send_echo(hip_ha_t *entry,
 	int err = 0;
 	struct hip_common *update_packet = NULL;
 
-	HIP_DEBUG_HIT("new addr to check", addr);
+	HIP_DEBUG_HIT("new addr to check", &addr->address);
 	
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Update_packet alloc failed\n");
@@ -1484,7 +1484,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			err = entry->hadb_update_func->hip_update_send_echo(entry, new_addr, spi);
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 		}
 	}
 

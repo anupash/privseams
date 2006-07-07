@@ -1025,6 +1025,14 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
+int set_address_state(hip_ha_t *entry, struct in6_addr *src_ip){
+	int err = 0;
+	/*
+	 struct hip_spi_in_item *spi_in = NULL;
+ 	spi_in = hip_hadb_get_spi_in_list(entry, esp_info_old_spi);*/
+//	For setting status of src_addresses to ACTIVE after echo req is obtained
+	return err;
+}
 
 /** hip_handle_update_addr_verify - handle address verification UPDATE
  * @entry: hadb entry corresponding to the peer
@@ -1058,6 +1066,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory\n");
 
+
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, hitr, hits);
 
@@ -1077,6 +1086,12 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	/* ECHO_RESPONSE (no sign) */
 	HIP_DEBUG("echo opaque data len=%d\n",
 		   hip_get_param_contents_len(echo));
+
+	HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
+			     (void *)echo +
+		     	     sizeof(struct hip_tlv_common),
+			     hip_get_param_contents_len(echo));
+
 	HIP_IFEL(hip_build_param_echo(update_packet,
 				      (void *)echo +
 				      sizeof(struct hip_tlv_common),
@@ -1087,6 +1102,8 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
 						      update_packet, entry, 0),
 		 -1, "csum_send failed\n");
+
+	HIP_IFEL(set_address_state(entry, src_ip), -1, "Setting Own address status to ACTIVE failed\n");
 
  out_err:
 	if (update_packet)
@@ -1265,7 +1282,7 @@ void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *
 		struct hip_peer_addr_list_item *addr, *addr_tmp;
 		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr))) {
+			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0) {
 				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
 					HIP_ERROR("echo data len mismatch\n");
 					continue;
@@ -1276,7 +1293,7 @@ void hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *
 					HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 					continue;
 				}	
-				_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
+				HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 				addr->address_state = PEER_ADDR_STATE_ACTIVE;
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred) {
