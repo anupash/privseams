@@ -1325,6 +1325,34 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 	return 0;
 }
 
+int hip_update_send_echo(hip_ha_t *entry,
+			 uint32_t spi_out,
+			 struct hip_peer_addr_list_item *addr){
+	
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+
+	HIP_DEBUG_HIT("new addr to check", addr);
+	
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
+
+	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, 
+					    &entry->hit_peer, &entry->hit_our),
+		 -1, "Building Echo  Packet failed\n");
+
+	/* test: send all addr check from same address */
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						      &addr->address,
+						      0, 0, update_packet,
+						      entry, 0), -1,
+		 "csum_send failed\n");
+
+ out_err:
+	return err;
+
+}
+
 /* todo: use jiffies instead of timestamp */
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 {
@@ -1456,7 +1484,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			_HIP_DEBUG("set initial address state UNVERIFIED\n");
+			err = entry->hadb_update_func->hip_update_send_echo(entry, new_addr, spi);
 		}
 	}
 
@@ -1776,7 +1804,7 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
-	
+	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 	/* xmit function set */
 	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
 

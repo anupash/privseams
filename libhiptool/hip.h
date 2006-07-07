@@ -1276,6 +1276,10 @@ struct hip_hadb_update_func_set{
 					   struct hip_common *msg,
 					   struct in6_addr *src_ip,
 					   uint32_t spi);
+
+	int (*hip_update_send_echo)(hip_ha_t *entry,
+				    struct hip_peer_addr_list_item *addr,
+			            uint32_t spi);	    
 };
 
 struct hip_hadb_misc_func_set{ 
