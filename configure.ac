@@ -194,6 +194,7 @@ AC_CACHE_CHECK([whether to use opportunistic],
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
+AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
@@ -230,11 +231,18 @@ AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
 AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
 AC_SUBST(HIPL_LIBINET6_LIB_DYNAMIC, "$HIPL_LIBINET6_LIB/libinet6.so")
 AC_SUBST(HIPL_LIBINET6_INCLUDE, "$HIPL_LIBINET6/include")
+AC_SUBST(HIPL_LIBOPPHIP, "$HIPL/libopphip")
+AC_SUBST(HIPL_LIBOPPHIP_LIB, "$HIPL_LIBOPPHIP/.libs")
+AC_SUBST(HIPL_LIBOPPHIP_LIB_STATIC, "$HIPL_LIBOPPHIP_LIB/libinet6.a")
+AC_SUBST(HIPL_LIBOPPHIP_LIB_DYNAMIC, "$HIPL_LIBOPPHIP_LIB/libinet6.so")
 AC_SUBST(HIPL_LIBHIPTOOL, "$HIPL/libhiptool")
+AC_SUBST(HIPL_LIBHIPTOOL_LIB, "$HIPL_LIBHIPTOOL/.libs")
+AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
+AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_TOOLS")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
 
 AC_CONFIG_FILES([ Makefile
@@ -243,6 +251,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc21/Makefile
                   libinet6/include_glibc22/Makefile
                   libinet6/include_glibc23/Makefile
+                  libopphip/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile

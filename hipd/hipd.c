@@ -201,7 +201,7 @@ int hip_agent_filter(struct hip_common *msg)
 	int err = 0;
 	int n, sendn;
 	socklen_t alen;
-       
+
 	if (!hip_agent_is_alive())
 	{
 		return (-ENOENT);

@@ -286,9 +286,8 @@
       &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
-      It is also possible to use DNS or OpenDHT for the mappings. Tip: if you
-      don't want to configure BIND and you are using virtual machines,
-      dnsmasq and /etc/hosts may do the trick...
+      It is also possible to use DNS or OpenDHT for the mappings. See the
+      relevant sections from this document.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -379,7 +378,8 @@
     <para>
       HIPL software bundle includes also a java wrapper library to the HIP
       enabled libinet6 resolver library. The library is called "jip" and it
-      is located in "path-to-hipl/jip".
+      is located in "path-to-hipl/jip". The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
       </para>
     <para>
       You need to have either Blackdown or Sun java jdk 1.4.x or later to
@@ -568,6 +568,14 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
     5. Use the opportunistic mode as described in section "opportunistic mode".
+    Remember that you need to link the application to libopphip and libhiptool
+    (in that particular order).
+    </para>
+    <para>
+    6. Use HIP agent GUI to run the application. This is a new, not very well
+       tested feature, but it should work. You can execute applications
+       with GUI and edit their library-path as you like. Also you should be
+       able to see list of processes you have executed from GUI.
     </para>
   </chapter>
   <chapter>
@@ -664,6 +672,12 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
       Notes:
+    </para>
+    <para>
+      &nbsp;* If the RVS won't relay the I1 packet, please make sure that the HIT
+      that the responder uses to register itself matches to the one the initiator
+      is connecting to. The HIT the responder chooses to register itself
+      to the RVS can be any one of the four defaults.
     </para>
     <para>
       &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 

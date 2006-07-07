@@ -5,32 +5,26 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
+#ifndef GUI_NH_H
+#define GUI_NH_H
+
 /******************************************************************************/
 /* INCLUDES */
+#include <gtk/gtk.h>
 
-/* STANDARD */
-
-/* THIS */
-#include "test_main.h"
+#include "events.h"
+#include "widgets.h"
 
 
 /******************************************************************************/
-/* FUNCTIONS */
+/* FUNCTION DEFINITIONS */
 
-/******************************************************************************/
-/** Main. */
-int main(void)
-{
-	gui_init();
+/* file: nh_create.c */
+int nhdlg_create_content(void);
 
-	gui_main();
-
-	/* Return. */
-	return (0);
-}
-/* END OF FUNCTION */
+/* file: nh_manage.c */
 
 
-/* END OF SOURCE FILE */
+#endif /* END OF HEADER FILE */
 /******************************************************************************/
 

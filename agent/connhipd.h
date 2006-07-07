@@ -32,6 +32,12 @@
 
 
 /******************************************************************************/
+/* DEFINES */
+#define CONNHIPD_IN		0
+#define CONNHIPD_OUT	1
+
+
+/******************************************************************************/
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +49,7 @@ extern "C" {
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
 int connhipd_sendto_hipd(char *, size_t);
+int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
 int connhipd_thread(void *);
 void connhipd_quit(void);
 

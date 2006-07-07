@@ -16,6 +16,8 @@
 int hip_agent_sock = 0;
 /** This is just for waiting the connection thread to start properly. */
 int hip_agent_thread_started = 0;
+/** Connection pthread holder. */
+pthread_t connhipd_pthread;
 
 
 /******************************************************************************/
@@ -34,7 +36,6 @@ int connhipd_init(void)
 	struct sockaddr_un agent_addr;
 	struct hip_common *msg = NULL;
 	socklen_t alen;
-	pthread_t pt;
 
 	/* Allocate message. */
 	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
@@ -64,7 +65,7 @@ int connhipd_init(void)
 	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);
 
-	pthread_create(&pt, NULL, connhipd_thread, msg);
+	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
 	hip_agent_thread_started = 0;
 	while (hip_agent_thread_started == 0) usleep(100 * 1000);
@@ -104,24 +105,20 @@ int connhipd_sendto_hipd(char *msg, size_t len)
 /**
 	Handle message from agent socket.
 */
-int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
+int connhipd_handle_msg(struct hip_common *msg,
+                        struct sockaddr_un *addr)
 {
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
 	hip_hdr_type_t type;
-	HIT_Item hit, *phit;
+	HIT_Remote hit, *r;
+	HIT_Local *l;
 	socklen_t alen;
 	struct in6_addr *lhit;
-	int err = 0, ret, n;
-	char chit[128];
+	int err = 0, ret, n, tr, check;
+	char chit[128], *type_s;
 
 	type = hip_get_msg_type(msg);
-
-	/* XX TODO:
-		Handle atleast following message types someday:
-			SO_HIP_DEL_LOCAL_HI
-			
-	*/
 	
 	if (type == SO_HIP_ADD_DB_HI)
 	{
@@ -136,29 +133,128 @@ int connhipd_handle_msg(struct hip_common *msg, struct sockaddr_un *addr)
 				lhit = hip_get_param_contents_direct(param);
 				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
 				print_hit_to_buffer(chit, lhit);
-				phit = hit_db_search(NULL, NULL, lhit, lhit, NULL, 0, 1, 0);
-				if (phit == NULL) hit_db_add(chit, lhit, lhit, "0", 0, HIT_DB_TYPE_LOCAL, "", 0);
-				else
-				{
-					HIP_DEBUG("Cancelling local HIT add, already in database.\n");
-					free(phit);
-				}
+				hit_db_add_local(chit, lhit);
 				n++;
 			}
 		}
 	}
-	else if (type == SO_HIP_ADD_LOCAL_HI)
+	else if (type == HIP_I1)
 	{
-		HIP_DEBUG("Message received successfully from daemon with type"
-		          " SO_HIP_ADD_LOCAL_HI (%d).\n", type);
-
-		strcpy(hit.name, "NewHIT");
-		strcpy(hit.url, "<notset>");
+		NAMECPY(hit.name, "NewHIT");
+		URLCPY(hit.url, "<notset>");
 		hit.port = 0;
-		memcpy(&hit.lhit, &msg->hits, sizeof(struct in6_addr));
-		memcpy(&hit.rhit, &msg->hitr, sizeof(struct in6_addr));
-		ret = check_hit(&hit);
+		
+		/* Find out, which of the HITs in the message is local HIT. */
+		l = hit_db_find_local(NULL, &msg->hits);
+		if (!l)
+		{
+			l = hit_db_find_local(NULL, &msg->hitr);
+			if (l)
+			{
+				memcpy(&hit.hit, &msg->hits, sizeof(struct in6_addr));
+				tr = CONNHIPD_IN;
+			}
+		}
+		else
+		{
+			memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
+			tr = CONNHIPD_OUT;
+		}
+		
+		HIP_DEBUG("Received %s I1 from daemon.\n",
+		          tr == CONNHIPD_IN ? "incoming" : "outgoing");
 
+		/* Check the remote HIT from database. */
+		if (l) ret = check_hit(&hit);
+		/* If neither HIT in message was local HIT, then drop the packet! */
+		else
+		{
+			HIP_DEBUG("Failed to find local HIT from database for packet.\n"
+			          " Rejecting packet automatically.");
+			ret = -1;
+		}
+		
+		/*
+			Now either reject or accept the packet,
+			according to previous results.
+		*/
+		if (ret == 0)
+		{
+			HIP_DEBUG("Message accepted, sending back to daemon.\n");
+			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
+			                   " (%d: %s).\n", errno, strerror(errno));
+			HIP_DEBUG("Reply sent successfully\n");
+		}
+		else
+		{
+			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
+			n = connhipd_sendto_hipd("no", 2);
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
+			HIP_DEBUG("Rejection sent successfully\n");
+		}
+	}
+	else
+	{
+		check = 1;
+		switch (type)
+		{
+		case HIP_R1:
+			type_s = "R1";
+			break;
+		case HIP_I2:
+			type_s = "I2";
+			break;
+		case HIP_R2:
+			type_s = "R2";
+			break;
+		default:
+			type_s = "packet";
+			check = 0;
+			break;
+		}
+		
+		if (check)
+		{
+			/* Find out, which of the HITs in the message is local HIT. */
+			l = hit_db_find_local(NULL, &msg->hits);
+			if (!l)
+			{
+				l = hit_db_find_local(NULL, &msg->hitr);
+				if (l)
+				{
+					memcpy(&hit.hit, &msg->hits, sizeof(struct in6_addr));
+					tr = CONNHIPD_IN;
+				}
+			}
+			else
+			{
+				memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
+				tr = CONNHIPD_OUT;
+			}
+			
+			HIP_DEBUG("Received %s %s from daemon (type code %d).\n",
+					  tr == CONNHIPD_IN ? "incoming" : "outgoing", type_s, type);
+		
+			/* Check the remote HIT from database. */
+			if (l) r = hit_db_find(NULL, &hit.hit);
+			/* If neither HIT in message was local HIT, then drop the packet! */
+			else
+			{
+				HIP_DEBUG("Failed to find local HIT from database for packet.\n"
+						  " Rejecting packet automatically.");
+				ret = -1;
+			}
+			
+			if (r) ret = (r->g->type == HIT_DB_TYPE_ACCEPT) ? 0 : -1;
+			else ret = -1;
+		}
+		else ret = 0;
+
+		/*
+			Now either reject or accept the packet,
+			according to previous results.
+		*/
 		if (ret == 0)
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon.\n");
@@ -201,7 +297,7 @@ int connhipd_thread(void *data)
 
 	/* Start handling. */
 	hip_agent_thread_started = 1;
-	while (agent_exec())
+	while (hip_agent_thread_started)
 	{
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
@@ -280,8 +376,10 @@ out_err:
 */
 void connhipd_quit(void)
 {
-	/* Wait connection thread to exit. */
-	while (hip_agent_thread_started);
+	if (!hip_agent_thread_started) return;
+	HIP_DEBUG("Stopping connection thread...\n");
+	hip_agent_thread_started = 0;
+	pthread_join(connhipd_pthread, NULL);
 }
 /* END OF FUNCTION */
 

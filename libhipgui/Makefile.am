@@ -11,9 +11,15 @@ include_HEADERS =
 
 if HIP_AGENT
 
+sbin_PROGRAMS = hipstart
 noinst_LIBRARIES = libhipgui.a
 
-libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c
+hipstart_SOURCES = hipstart.c widgets.c
+libhipgui_a_SOURCES = main.c events.c manage.c widgets.c exec.c tools.c terminal.c tw_create.c tw_manage.c main_create.c nh_create.c create.c nh_manage.c
+
+
+hipstart_LDFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
+hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
