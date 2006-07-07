@@ -151,13 +151,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 			l = hit_db_find_local(NULL, &msg->hitr);
 			if (l)
 			{
-				memcpy(&hit.hit, &msg->hits, sizeof(struct in6_addr));
+				memcpy(&hit.hit, &msg->hits, sizeof(hit.hit));
 				tr = CONNHIPD_IN;
 			}
 		}
 		else
 		{
-			memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
+			memcpy(&hit.hit, &msg->hitr, sizeof(hit.hit));
 			tr = CONNHIPD_OUT;
 		}
 
@@ -179,8 +179,11 @@ int connhipd_handle_msg(struct hip_common *msg,
 		HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
 		HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
 		HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
-		if (tr == CONNHIPD_OUT) memcpy(&msg->hits, &hit.g->l->lhit, sizeof(struct in6_addr));
-	   
+		if (tr == CONNHIPD_OUT)
+		{
+		//	memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
+		}
+		
 		/*
 			Now either reject or accept the packet,
 			according to previous results.
@@ -230,13 +233,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 				l = hit_db_find_local(NULL, &msg->hitr);
 				if (l)
 				{
-					memcpy(&hit.hit, &msg->hits, sizeof(struct in6_addr));
+					memcpy(&hit.hit, &msg->hits, sizeof(hit.hit));
 					tr = CONNHIPD_IN;
 				}
 			}
 			else
 			{
-				memcpy(&hit.hit, &msg->hitr, sizeof(struct in6_addr));
+				memcpy(&hit.hit, &msg->hitr, sizeof(hit.hit));
 				tr = CONNHIPD_OUT;
 			}
 
