@@ -41,6 +41,9 @@ const char *usage = "new|add hi default\n"
         "set opp on|off\n"
 #endif
 
+#ifdef CONFIG_HIP_ESCROW
+	"add|del escrow hit\n"
+#endif
 ;
 /* hip nat on|off|peer_hit is currently specified. 
  * For peer_hit we should 'on' the nat mapping only when the 
@@ -60,7 +63,8 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_bos,
 	handle_puzzle,
 	handle_nat,
-	handle_opp
+	handle_opp,
+	handle_escrow
 };
 
 /**
@@ -88,7 +92,7 @@ int get_action(char *text) {
 	else if (!strcmp("dec", text))
 		ret = ACTION_DEC;
 	else if (!strcmp("hip", text))
-		ret = ACTION_HIP;
+		ret = ACTION_HIP;	
 	return ret;
 }
 
@@ -143,11 +147,16 @@ int get_type(char *text) {
 	else if (!strcmp("nat", text))
 		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
-		ret = TYPE_PUZZLE;
+		ret = TYPE_PUZZLE;	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
                 ret = TYPE_OPP; 
 #endif
+#ifdef CONFIG_HIP_ESCROW
+	else if (!strcmp("escrow", text))
+		ret = TYPE_ESCROW;
+#endif		
+
 	return ret;
 }
 
@@ -633,6 +642,42 @@ int handle_opp(struct hip_common *msg, int action,
  out:
 	return err;
 }
+
+
+int handle_escrow(struct hip_common *msg, int action, const char *opt[], 
+					int optc)
+{
+	HIP_DEBUG("hipconf: using escrow");
+	
+	struct in6_addr hit;
+	struct in6_addr ip;
+	
+	int err = 0;
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip), -1,
+		 "string to address conversion failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
+		 "build hdr failed\n");
+out_err:
+	return err;
+	
+}
+
 
 /* Parse command line arguments and send the appropiate message to
  * the kernel module

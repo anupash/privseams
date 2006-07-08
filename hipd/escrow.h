@@ -8,8 +8,8 @@
 #define HIP_KEA_SIZE 10
 #define HIP_KEA_EP_SIZE 10
 
-typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_INITIALIZED=1, 
-		HIP_KEASTATE_VALID=1 } hip_keastate_t;
+typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_REGISTERING=1, 
+		HIP_KEASTATE_VALID=2 } hip_keastate_t;
 
 
 
@@ -21,14 +21,17 @@ struct hip_key_escrow_association
 	atomic_t				refcnt;
 	spinlock_t            	lock;
 
+	struct in6_addr			hit; /* if we are the server, this is client hit,
+									if we are the client, this is our own hit */
 	// TODO: Find better key. Client HIT used for now.  
-	struct in6_addr       	client_hit; 
-	struct in6_addr       	hit2; //? 
+	//struct in6_addr       	client_hit; 
+	//struct in6_addr       	peer_hit; //? 
+	struct in6_addr			server_hit;
+	
+	uint32_t 				client_spi;//?
+	uint32_t				peer_spi;//?
 	
 	hip_keastate_t			keastate;
-	
-	//struct hip_kea_endpoint	*endpoint1;
-	//struct hip_kea_endpoint	*endpoint2;
 };
 
 // Contains endpoint HIT and SPI
@@ -83,6 +86,7 @@ HIP_KEA *hip_kea_find(struct in6_addr *hit);
 void hip_keadb_hold_entry(void *entry);
 void hip_keadb_put_entry(void *entry);
 
+void hip_kea_set_state_registering(HIP_KEA *kea);
 
 /*********** KEA_EP ********************/
 

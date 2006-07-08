@@ -473,6 +473,40 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
+#ifdef CONFIG_HIP_ESCROW
+// TODO: - create kea with own hit (params: server_hit, rules)
+// 		 - send i1 
+// hip_add_peer_map
+	case SO_HIP_ADD_ESCROW:
+		HIP_DEBUG("handling escrow user message");
+	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+						       HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+						       HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		
+		HIP_KEA *kea;
+
+		HIP_IFE(!(kea = hip_kea_create(&entry->hit_our, GFP_KERNEL)), -1);
+		HIP_HEXDUMP("Created kea base entry with own hit: ", &entry->hit_our, 16);
+		HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+			"Error while inserting KEA to keatable");
+		HIP_DEBUG("Added kea base entry");
+		ipv6_addr_copy(&kea->server_hit, dst_hit);
+		
+		// TODO: how to know later that we want to do registration? with kea state?
+		kea->keastate = HIP_KEASTATE_REGISTERING;
+		
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+	
+		break;
+	
+#endif
 	default:
 	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		 err = -ESOCKTNOSUPPORT;

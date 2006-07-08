@@ -18,7 +18,7 @@ static struct list_head kea_endpointdb[HIP_KEA_EP_SIZE];
 
 static void *hip_keadb_get_key(void *entry)
 {
-	return (void *)&(((HIP_KEA *)entry)->client_hit);
+	return (void *)&(((HIP_KEA *)entry)->hit);
 }
 
 /** 
@@ -94,16 +94,17 @@ HIP_KEA *hip_kea_allocate(int gfpmask)
 /**
  * Creates a new key escrow association with the given values.
  */
-HIP_KEA *hip_kea_create(struct in6_addr *client_hit, int gfpmask)
+HIP_KEA *hip_kea_create(struct in6_addr *hit, int gfpmask)
 {
 	HIP_KEA *kea;
+	_HIP_DEBUG("Creating kea entry");
 	kea = hip_kea_allocate(gfpmask);
 	if (!kea)
 		return NULL;
 	
 	hip_hold_kea(kea); // Add reference
 	
-	ipv6_addr_copy(&kea->client_hit, client_hit);
+	ipv6_addr_copy(&kea->hit, hit);
 	kea->keastate = HIP_KEASTATE_VALID;
 	
 	return kea;	
@@ -115,14 +116,16 @@ int hip_keadb_add_entry(HIP_KEA *kea)
 	int err = 0;
 	HIP_KEA * temp;
 
+	_HIP_DEBUG("Adding kea entry");
+
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&kea->refcnt) <= 1); 
 
-	HIP_IFEL(ipv6_addr_any(&kea->client_hit), -EINVAL,
-		 "Cannot insert KEA entry with NULL client_hit\n");
+	HIP_IFEL(ipv6_addr_any(&kea->hit), -EINVAL,
+		 "Cannot insert KEA entry with NULL hit\n");
 		 
 	// Do we allow duplicates?	 
-	temp = hip_ht_find(&kea_table, &kea->client_hit); // Adds reference
+	temp = hip_ht_find(&kea_table, &kea->hit); // Adds reference
 	
 	if (temp) {
 		hip_put_kea(temp); // remove reference
@@ -149,7 +152,6 @@ void hip_keadb_remove_entry(HIP_KEA *kea)
 	
 	hip_ht_delete(&kea_table, kea); // refcnt decremented
 	HIP_UNLOCK_HA(kea); 
-
 }
 
 
@@ -163,7 +165,11 @@ HIP_KEA *hip_kea_find(struct in6_addr *hit)
 	return hip_ht_find(&kea_table, hit);
 }
 
+void hip_kea_set_state_registering(HIP_KEA *kea)
+{
+	kea->keastate = HIP_KEASTATE_REGISTERING;
 
+}
 
 /**********************************************/
 

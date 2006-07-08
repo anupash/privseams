@@ -1389,8 +1389,8 @@ int hip_create_r2(struct hip_context *ctx,
 	// r1 then this should be done somewhere else)
 	// <TEST> 
 	// Note: This is just a test, it isn't supposed to make any sense
-	HIP_DEBUG("*** Testing keadb ***");
-	HIP_KEA *kea;
+	//HIP_DEBUG("*** Testing keadb ***");
+	/*HIP_KEA *kea;
 	HIP_KEA_EP *kea_ep;
 
 	kea = hip_kea_create(&entry->hit_our, GFP_KERNEL);
@@ -1403,19 +1403,42 @@ int hip_create_r2(struct hip_context *ctx,
 	hip_kea_add_endpoint(kea_ep);
 	HIP_DEBUG("4. Added kea ep entry");
 	
-	HIP_KEA *kea2;
-	HIP_KEA_EP *kea_ep2;
+	HIP_KEA *kea2, *kea3;
+	HIP_KEA_EP *kea_ep2, *kea_ep3;*/
+	/*HIP_KEA *kea2;
 	kea2 = hip_kea_find(&entry->hit_our);
 	if (kea)
-		HIP_HEXDUMP("5. Found kea entry with hit: ", &kea2->client_hit, 16);
+		HIP_HEXDUMP("Found kea entry with hit: ", &kea2->hit, 16);
 	else
-		HIP_DEBUG("Could not find kea");	
-	kea_ep2 = hip_kea_ep_find(&entry->hit_our, entry->default_spi_out);
+		HIP_DEBUG("Could not find kea");	*/
+	/*kea_ep2 = hip_kea_ep_find(&entry->hit_our, entry->default_spi_out);
 	if (kea_ep2)
 		HIP_DEBUG("6. Found kea ep entry with spi %d", kea_ep2->spi);
 	else
 		HIP_DEBUG("Could not find kea ep");	
 	
+	hip_kea_put_ep(kea_ep);
+	kea_ep = NULL;
+	
+	hip_kea_remove_endpoint(kea_ep2);
+	HIP_DEBUG("7. Removed kea ep entry");
+	kea_ep3 = hip_kea_ep_find(&entry->hit_our, entry->default_spi_out);
+	if (kea_ep3)
+		HIP_DEBUG("Found kea ep entry with spi %d", kea_ep3->spi);
+	else
+		HIP_DEBUG("Could not find kea ep");	
+	
+	hip_keadb_put_entry(kea);
+	kea = NULL;
+	
+	hip_keadb_remove_entry(kea2);
+	HIP_DEBUG("8. Removed kea entry");
+	kea3 = hip_kea_find(&entry->hit_our);
+	if (kea3)
+		HIP_HEXDUMP("Found kea entry with hit: ", &kea3->hit, 16);
+	else
+		HIP_DEBUG("Could not find kea");	
+	*/
 	// </TEST>
 	
 #endif //CONFIG_HIP_ESCROW

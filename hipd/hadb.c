@@ -293,6 +293,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	if(hip_nat_status)
 		entry->nat = 1;
 	
+#ifdef CONFIG_HIP_ESCROW
+// TODO: check if kea is used for the entry and set escrow-value accordingly
+#endif	
+		
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */
 	

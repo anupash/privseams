@@ -243,6 +243,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_ADD_DB_HI			35
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_ADD_ESCROW			38
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -348,6 +349,10 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
+#define HIP_PARAM_REG_INFO				32781 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_REQUEST			32782 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_RESPONSE			32783 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_FAILED			32784 /* TODO: move somewhere else*/
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -935,18 +940,58 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
+
+/******** ESCROW *********/
+
+struct hip_reg_info {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       min_lifetime;
+	uint8_t       max_lifetime;
+} __attribute__ ((packed));
+
+
+struct hip_reg_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       lifetime;
+} __attribute__ ((packed));
+
+struct hip_reg_failed {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       failure_type;
+} __attribute__ ((packed));
+
+
 struct hip_keys {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	struct hip_crypto_key enc;	
-	struct hip_crypto_key auth;       
-	uint32_t spi;
-	int alg;
-	int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
-			 This flag is used in order to differentiate the addition of an SA,
-			 meaning either adding or updating --- it was in the KERNEL_STUB */
-	int direction;
+	uint8_t address1[16];
+	uint8_t hit1[16];
+	uint32_t spi1;
+	uint32_t spi_old1;
+	uint16_t alg_id1;
+	uint16_t key_len1;
+	struct hip_crypto_key enc1;
+	uint8_t address2[16];
+	uint8_t hit2[16];
+	uint32_t spi2;
+	uint32_t spi_old2;
+	uint16_t alg_id2;
+	uint16_t key_len2;
+	struct hip_crypto_key enc2;
+		
+	//struct hip_crypto_key auth;       
+	//int alg;
+	//int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
+			 //This flag is used in order to differentiate the addition of an SA,
+			 //meaning either adding or updating --- it was in the KERNEL_STUB */
+	//int direction; // ?
 } __attribute__ ((packed));
+
+
+
 
 struct hip_context
 {
@@ -1086,6 +1131,7 @@ struct hip_hadb_state
 	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
+	int					escrow_used;
 
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
