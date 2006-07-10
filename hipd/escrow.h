@@ -112,6 +112,14 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi);
 void hip_kea_hold_ep(void *entry);
 void hip_kea_put_ep(void *entry);
 
+
+/************* utils ******************/
+
+// TODO: put this somewhere else (e.g. own file for registration stuff?)
+int hip_get_service_types(uint8_t *list);
+
+int hip_select_service_types(struct hip_reg_request *rreq, int *type_list, int len);
+
 /************* macros *****************/
 
 #define hip_hold_kea(entry) do { \

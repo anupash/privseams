@@ -439,6 +439,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
+#define HIP_ESCROW_SERVICE			  7
+
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3

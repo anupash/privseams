@@ -161,6 +161,17 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
 
+#ifdef CONFIG_HIP_ESCROW
+	/********** REG_INFO **********/
+	// TODO: get service-list from some function which lists all services offered by this system
+	uint8_t list[1] = { HIP_ESCROW_SERVICE }; 
+	HIP_DEBUG("Adding REG_INFO parameter");
+	// TODO: Fix values
+	HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, 1), -1, 
+		 "Building of reg_info failed\n");	
+
+#endif //CONFIG_HIP_ESCROW	
+
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));

@@ -353,4 +353,44 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 }
 
 
+/******************************/
 
+int hip_get_service_types(uint8_t * list)
+{
+	// Check for services that we are offering (at this point only escrow)
+	// TODO
+}
+
+int hip_select_service_types(struct hip_reg_request *rreq, int *type_list, int len)
+{
+	/*HIP_IFEL(!(reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO)), -ENOENT,
+		 "No REG_INFO found in R1: no services available \n");
+		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
+		int typecnt = hip_get_param_contents_len(reg_info);
+		int accept = 0;
+		int i;
+		if (typecnt >= 2) { 
+		for (i = 2; i < typecnt; i++) {
+			HIP_DEBUG("Service type: %d", types[i]);
+			if (types[i] == HIP_ESCROW_SERVICE)
+				accept = 1;
+		}
+		}
+	
+
+	uint8_t *types = (uint8_t *)(rreq + 1);
+	int typecnt, i, j;
+
+	typecnt = hip_get_param_contents_len(rreq) - sizeof(uint8_t);
+	int accept = 0
+	int i;
+	for(i = 0, j = 0; i < typecnt && j < llen; i++) {
+		if (types[i] == HIP_ESCROW_SERVICE) {
+			accept = 1; 
+		}
+	}
+
+ out_of_loop:
+	return j;
+*/
+}

@@ -1696,15 +1696,14 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	int i;
 	struct hip_reg_info rinfo;
 
+	uint8_t list[1] = { 7 }; 
+
 	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
 	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
 				   cnt * sizeof(uint8_t));
 
-	for(i=0;i<cnt;i++)
-		type_list[i] = htons(type_list[i]);
-
-	rinfo.min_lifetime = htonl(min_lifetime);
-	rinfo.max_lifetime = htonl(max_lifetime);
+	rinfo.min_lifetime = min_lifetime;
+	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)type_list);
 	return err;
@@ -1732,10 +1731,7 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
 				   cnt * sizeof(uint8_t));
 
-	for(i=0;i<cnt;i++)
-		type_list[i] = htons(type_list[i]);
-
-	rreq.lifetime = htonl(lifetime);
+	rreq.lifetime = lifetime;
 	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
 				      (void *)type_list);
 	return err;
@@ -1762,10 +1758,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
 				   cnt * sizeof(uint8_t));
 
-	for(i=0;i<cnt;i++)
-		type_list[i] = htons(type_list[i]);
-
-	rfail.failure_type = htonl(failure_type);
+	rfail.failure_type = failure_type;
 	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
 				      (void *)type_list);
 	return err;
@@ -2111,18 +2104,18 @@ int hip_build_param_keys(struct hip_common *msg, struct in6_addr *addr1,
 	
 	memcpy((struct in6_addr *)&keys.address1, addr1, 16);
 	memcpy((struct in6_addr *)&keys.hit1, hit1, 16);		
-	keys.spi1 = spi1;
-	keys.spi_old1 = spi_old1;
-	keys.alg_id1 = alg_id1;	
-	keys.key_len1 = key_len1;
+	keys.spi1 = htons(spi1);
+	keys.spi_old1 = htons(spi_old1);
+	keys.alg_id1 = htons(alg_id1);	
+	keys.key_len1 = htons(key_len1);
 	memcpy(&keys.enc1, enc1, sizeof(struct hip_crypto_key));
 	
 	memcpy((struct in6_addr *)&keys.address2, addr2, 16);
 	memcpy((struct in6_addr *)&keys.hit2, hit2, 16);		
-	keys.spi2 = spi2;
-	keys.spi_old2 = spi_old2;
-	keys.alg_id2 = alg_id2;	
-	keys.key_len2 = key_len2;
+	keys.spi2 = htons(spi2);
+	keys.spi_old2 = htons(spi_old2);
+	keys.alg_id2 = htons(alg_id2);	
+	keys.key_len2 = htons(key_len2);
 	memcpy(&keys.enc2, enc2, sizeof(struct hip_crypto_key));
 	
 		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
