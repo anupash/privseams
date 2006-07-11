@@ -241,6 +241,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+	        hip_delete_sa(entry, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
 		if(ipv6_addr_cmp(&entry->preferred_address, 
  				 &list_item->address) == 0){
 			// TODO: Handle this: Choose a random address from
@@ -881,7 +882,7 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	HIP_DEBUG("sending addr verify pkt\n");
 
  out_err:
-	if (update_packet)
+	if (update_packet && err)
 		HIP_FREE(update_packet);
 	HIP_DEBUG("end, err=%d\n", err);
 	return err;
@@ -1284,8 +1285,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
 
 
-	hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
-			      (int)entry->peer_udp_port);
+	//hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
+ 	//				      (int)entry->peer_udp_port);
 
 	HIP_IFEL(hip_add_sa(&entry->local_address, &addr->address, 
 			    &entry->hit_our,
