@@ -236,12 +236,37 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 				  struct hip_spi_out_item *spi_out,
 				  void *_locator) {
 	int err = 0;
+	uint32_t spi_in;
 	struct hip_locator *locator = (void *) _locator;
+	struct hip_spi_in_item *item, *tmp;
 
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-	        hip_delete_sa(entry, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
+	       	
+		/* If this is not the preferred address then the next line will fail
+		 * FIXME: This line needs to be either inside the next loop or 
+		 * deprecataing to update peer addr item code*/
+		
+		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
+		
+		
+		list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
+			if(item->addresses){
+				if ( memcmp(&item->addresses->address, &list_item->address,
+					     sizeof(struct in6_addr))){
+					spi_in = item->spi;	// new_spi??	
+				}
+			}
+			else{
+				HIP_DEBUG("No address associated with spi 0x%x\n");
+			}
+		}
+
+		
+		hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+			      (int)entry->peer_udp_port, 0);
+
 		if(ipv6_addr_cmp(&entry->preferred_address, 
  				 &list_item->address) == 0){
 			// TODO: Handle this: Choose a random address from
@@ -1280,8 +1305,8 @@ out_err:
 int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
 
 	int err = 0;
-	struct hip_spi_in_item *item, *tmp;
 	uint32_t spi_in;
+	struct hip_spi_in_item *item, *tmp;
 	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
 
 
@@ -1298,16 +1323,18 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if ( memcmp(&item->addresses->address, &addr->address,
-			     sizeof(struct in6_addr))){
-			spi_in = item->spi;	// new_spi??	
+		if(item->addresses){
+			if ( memcmp(&item->addresses->address, &addr->address,
+				     sizeof(struct in6_addr))){
+				spi_in = item->spi;	// new_spi??	
+			}
+		}
+		else{
+			HIP_DEBUG("No address associated with spi 0x%x\n");
 		}
 	}
 
-		
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
-
+	
 	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 	HIP_IFEL(hip_add_sa(&entry->local_address,&addr->address, 
 			    &entry->hit_peer, 
