@@ -248,6 +248,11 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 		 * FIXME: This line needs to be either inside the next loop or 
 		 * deprecataing to update peer addr item code*/
 		
+
+		hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+
+		hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+		
 		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
 		
 		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
@@ -1304,6 +1309,11 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 
 	//hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
  	//				      (int)entry->peer_udp_port);
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+				       &entry->local_address, &addr->address,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
 
 	HIP_IFEL(hip_add_sa(&entry->local_address, &addr->address, 
 			    &entry->hit_our,
@@ -1317,6 +1327,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 	
 	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+				       &addr->address, &entry->local_address,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
 	HIP_IFEL(hip_add_sa(&addr->address, &entry->local_address, 
 			    &entry->hit_peer, 
 			    &entry->hit_our,
@@ -1571,8 +1587,17 @@ int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_
 	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
 
 
+
+	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+
 	hip_delete_sa(entry->default_spi_out, daddr, AF_INET6,0,
 			      (int)entry->peer_udp_port);
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+				       new_pref_addr, daddr,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
 
 	HIP_IFEL(hip_add_sa(new_pref_addr, daddr, 
 			    &entry->hit_our,
@@ -1583,18 +1608,19 @@ int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
-/*	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if ( memcmp(&item->addresses->address, daddr,
-			     sizeof(struct in6_addr))){
-			spi_in = &item->spi;		
-		}
-	}
-*/
-		
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+
 	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
+				       daddr, new_pref_addr,
+				       IPPROTO_ESP, 1, 0), -1,
+		 			"Setting up SP pair failed\n");
+
+
 	HIP_IFEL(hip_add_sa(daddr, new_pref_addr, 
 			    &entry->hit_peer, 
 			    &entry->hit_our,
