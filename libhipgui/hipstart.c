@@ -224,7 +224,7 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 		/* Execute daemon. */
 		err = exec_application("konsole", "konsole", "-T", "HIP daemon", "-e", "hipd", NULL);
 		/* Wait for daemon to start properly. */
-		sleep(1);
+		sleep(3);
 		
 		/* Execute agent as server, client or plain. */
 		if (b == TRUE && host_items[n].server)

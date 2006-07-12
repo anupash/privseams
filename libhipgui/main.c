@@ -109,8 +109,16 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
 	/* Initialize terminal server. */
-	if (term_get_mode() == TERM_MODE_SERVER) term_server_init();
-	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_init();
+	if (term_get_mode() == TERM_MODE_SERVER)
+	{
+		set_nick("server");
+		term_server_init();
+	}
+	else if (term_get_mode() == TERM_MODE_CLIENT)
+	{
+		set_nick("client");
+		term_client_init();
+	}
 
 	gtk_main();
 }

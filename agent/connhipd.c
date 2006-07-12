@@ -165,23 +165,28 @@ int connhipd_handle_msg(struct hip_common *msg,
 		          tr == CONNHIPD_IN ? "incoming" : "outgoing");
 
 		/* Check the remote HIT from database. */
-		if (l) ret = check_hit(&hit, tr);
+		if (l) 
+		{
+			ret = check_hit(&hit, tr);
+			
+			/* Reset local HIT, if outgoing I1. */
+			HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
+			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
+			HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
+			HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
+			if (tr == CONNHIPD_OUT)
+			{
+			//	memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
+			}
+		}
 		/* If neither HIT in message was local HIT, then drop the packet! */
 		else
 		{
-			HIP_DEBUG("Failed to find local HIT from database for packet.\n"
-			          " Rejecting packet automatically.");
+			HIP_DEBUG("Failed to find local HIT from database for packet."
+			          " Rejecting packet automatically.\n");
+			HIP_HEXDUMP("msg->hits: ", &msg->hits, 16);
+			HIP_HEXDUMP("msg->hitr: ", &msg->hits, 16);
 			ret = -1;
-		}
-
-		/* Reset local HIT, if outgoing I1. */
-		HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
-		HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
-		HIP_HEXDUMP("Old remote HIT: ", &msg->hitr, 16);
-		HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
-		if (tr == CONNHIPD_OUT)
-		{
-		//	memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
 		}
 		
 		/*

@@ -63,7 +63,8 @@ void cmd_exec(char *x)
 /** Create server. */
 void cmd_server(char *x)
 {
-//	if (strlen(x) > 0) set_nick(x);
+	if (strlen(x) > 0) set_nick(x);
+	term_mode = TERM_MODE_SERVER;
 	term_server_init();
 }
 /* END OF FUNCTION */
@@ -86,10 +87,15 @@ void cmd_connect(char *x)
 	nick = strpbrk(x, " ");
 	if (nick)
 	{
-		while (strlen(nick) > 0 && *nick == ' ') nick = &nick[1];
+		while (strlen(nick) > 0 && nick[0] == ' ')
+		{
+			nick[0] = '\0';
+			nick = &nick[1];
+		}
 		if (strlen(nick) > 0) set_nick(nick);
 	}
 	
+	term_mode = TERM_MODE_CLIENT;
 	term_set_server_addr(server);
 	term_client_init();
 }
