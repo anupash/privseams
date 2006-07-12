@@ -2087,13 +2087,10 @@ int hip_build_param_locator(struct hip_common *msg,
 			 uint32_t spi, int alg, 
 			 int already_acquired, int direction) */
 			 
-int hip_build_param_keys(struct hip_common *msg, struct in6_addr *addr1,
-						struct in6_addr *hit1, uint32_t spi1, uint32_t spi_old1,
-						uint16_t alg_id1, uint16_t key_len1, 
-						struct hip_crypto_key *enc1, struct in6_addr *addr2,
-						struct in6_addr *hit2, uint32_t spi2, uint32_t spi_old2,
-						uint16_t alg_id2, uint16_t key_len2, 
-						struct hip_crypto_key *enc2)
+int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc)
 {
 	int err = 0;
 	struct hip_keys keys;
@@ -2102,21 +2099,14 @@ int hip_build_param_keys(struct hip_common *msg, struct in6_addr *addr1,
 	hip_calc_generic_param_len(&keys, sizeof(struct hip_keys), 0);
 	
 	
-	memcpy((struct in6_addr *)&keys.address1, addr1, 16);
-	memcpy((struct in6_addr *)&keys.hit1, hit1, 16);		
-	keys.spi1 = htons(spi1);
-	keys.spi_old1 = htons(spi_old1);
-	keys.alg_id1 = htons(alg_id1);	
-	keys.key_len1 = htons(key_len1);
-	memcpy(&keys.enc1, enc1, sizeof(struct hip_crypto_key));
-	
-	memcpy((struct in6_addr *)&keys.address2, addr2, 16);
-	memcpy((struct in6_addr *)&keys.hit2, hit2, 16);		
-	keys.spi2 = htons(spi2);
-	keys.spi_old2 = htons(spi_old2);
-	keys.alg_id2 = htons(alg_id2);	
-	keys.key_len2 = htons(key_len2);
-	memcpy(&keys.enc2, enc2, sizeof(struct hip_crypto_key));
+	memcpy((struct in6_addr *)&keys.address, addr, 16);
+	memcpy((struct in6_addr *)&keys.hit, hit, 16);		
+	keys.operation = htons(operation_id);
+	keys.alg_id = htons(alg_id);	
+	keys.spi = htons(spi);
+	keys.spi_old = htons(spi_old);
+	keys.key_len = htons(key_len);
+	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
 	
 		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
 		//keys.acquired = already_acquired;

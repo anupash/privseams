@@ -967,28 +967,16 @@ struct hip_reg_failed {
 
 
 struct hip_keys {
-	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	uint8_t address1[16];
-	uint8_t hit1[16];
-	uint32_t spi1;
-	uint32_t spi_old1;
-	uint16_t alg_id1;
-	uint16_t key_len1;
-	struct hip_crypto_key enc1;
-	uint8_t address2[16];
-	uint8_t hit2[16];
-	uint32_t spi2;
-	uint32_t spi_old2;
-	uint16_t alg_id2;
-	uint16_t key_len2;
-	struct hip_crypto_key enc2;
-		
-	//struct hip_crypto_key auth;       
-	//int alg;
-	//int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
-			 //This flag is used in order to differentiate the addition of an SA,
-			 //meaning either adding or updating --- it was in the KERNEL_STUB */
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	uint16_t 		operation;
+	uint16_t 		alg_id;
+	uint8_t 		address[16];
+	uint8_t 		hit[16];
+	uint32_t 		spi;
+	uint32_t 		spi_old;
+	uint16_t 		key_len;
+	struct hip_crypto_key enc;
 	//int direction; // ?
 } __attribute__ ((packed));
 
@@ -1134,7 +1122,7 @@ struct hip_hadb_state
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
 	int					escrow_used;
-
+	struct in6_addr		escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.

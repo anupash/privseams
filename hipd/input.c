@@ -1083,6 +1083,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
+	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
 								r1_info->dst_port, i2,
 						     entry, 0), -1);
@@ -1405,7 +1406,8 @@ int hip_create_r2(struct hip_context *ctx,
 #endif
 
 #ifdef CONFIG_HIP_ESCROW
-	
+// TODO: KEA should be created before sending reg_response, so that failure can
+// be reported	
 	{	
 		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
 		struct hip_reg_request *rrequest;

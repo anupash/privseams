@@ -491,15 +491,36 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		HIP_KEA *kea;
 
-		HIP_IFE(!(kea = hip_kea_create(&entry->hit_our, GFP_KERNEL)), -1);
-		HIP_HEXDUMP("Created kea base entry with own hit: ", &entry->hit_our, 16);
+		/*HIP_IFE(!(kea = hip_kea_create(&entry->hit_our, GFP_KERNEL)), -1);
+		HIP_DEBUG_HIT("Created kea base entry with own hit: ", &entry->hit_our);
+		HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+			"Error while inserting KEA to keatable");*/
+		//HIP_IFEL(!(kea = hip_kea_create_base_entry(&entry->hit_our, dst_hit)), 
+		//	-1, "Error while creating kea base entry");	
+		
+		
+		/*HIP_IFE(!(kea = hip_kea_create(0, GFP_KERNEL)), -1);
+		HIP_DEBUG("Created kea base entry with hit 0");
 		HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
 			"Error while inserting KEA to keatable");
+		
+		*/
+		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
+	         "for_each_hi err.\n");	
+		
+		
 		HIP_DEBUG("Added kea base entry");
-		ipv6_addr_copy(&kea->server_hit, dst_hit);
+		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
 		// TODO: how to know later that we want to do registration? with kea state?
-		kea->keastate = HIP_KEASTATE_REGISTERING;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea) {
+			HIP_DEBUG("Found kea base entry");
+			kea->keastate = HIP_KEASTATE_REGISTERING;
+		}
+		else {
+			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!");
+		}
 		
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");

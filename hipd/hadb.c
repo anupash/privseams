@@ -251,6 +251,25 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		}
 	}
 
+#ifdef CONFIG_HIP_ESCROW
+	{
+		HIP_KEA *kea;
+		kea = hip_kea_find(&ha->hit_our);
+		if (kea) {
+			/* TODO: check conditions for escrow associations here 
+			 (for now, there are none)*/
+			HIP_DEBUG("Escrow used for this entry: Initializing ha_state escrow fields");
+			ha->escrow_used = 1;
+			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
+			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
+			hip_keadb_put_entry(kea);
+		}
+		else {
+			HIP_DEBUG("Escrow not in use");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
 	ha->hastate = st;
 	return st;
 }
@@ -291,11 +310,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	
 	/* Set the nat status here */
 	if(hip_nat_status)
-		entry->nat = 1;
-	
-#ifdef CONFIG_HIP_ESCROW
-// TODO: check if kea is used for the entry and set escrow-value accordingly
-#endif	
+		entry->nat = 1;	
 		
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */

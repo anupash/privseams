@@ -92,13 +92,10 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 			 struct hip_crypto_key *auth, uint32_t spi, int alg, 
 			 int already_acquired, int direction);*/
 
-int hip_build_param_keys(struct hip_common *msg, struct in6_addr *addr1,
-						struct in6_addr *hit1, uint32_t spi1, uint32_t spi_old1,
-						uint16_t alg_id1, uint16_t key_len1, 
-						struct hip_crypto_key *enc1, struct in6_addr *addr2,
-						struct in6_addr *hit2, uint32_t spi2, uint32_t spi_old2,
-						uint16_t alg_id2, uint16_t key_len2, 
-						struct hip_crypto_key *enc2);
+int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc);
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,

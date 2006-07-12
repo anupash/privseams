@@ -66,8 +66,20 @@ typedef struct hip_key_escrow_association HIP_KEA;
 typedef struct hip_kea_endpoint HIP_KEA_EP;
 
 
+/***************************************/
+
+int hip_send_escrow_update(hip_ha_t *entry, int operation, 
+	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
+	int ealg, uint16_t key_len, struct hip_crypto_key * enc);
+
 
 /****** KEA ****************************/
+
+
+HIP_KEA *hip_kea_get_base_entry(void);
+
+int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
+	void *server_hit);
 
 void hip_init_keadb(void);
 void hip_uninit_keadb(void);

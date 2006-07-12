@@ -73,6 +73,32 @@ void hip_uninit_keadb(void)
 	//TODO
 }
 
+// ?
+HIP_KEA *hip_kea_get_base_entry(void)
+{
+	/*HIP_KEA *kea = &kea_base;
+	if (kea_base == NULL)
+		return 0;
+	return 1;*/
+	return NULL;
+}
+
+// hit_our is not really needed now
+int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
+	void *server_hit_void)
+{
+	int err = 0;
+	HIP_KEA *kea;
+	struct in6_addr *server_hit = server_hit_void; 	
+	kea = hip_kea_create(&entry->lhi.hit, GFP_KERNEL);
+	if (!kea) 
+		return -1;	
+	ipv6_addr_copy(&kea->server_hit, server_hit);	
+	HIP_DEBUG_HIT("Created kea base entry with hit: ", &entry->lhi.hit);
+	return err;
+}
+
+
 HIP_KEA *hip_kea_allocate(int gfpmask)
 {
 	HIP_KEA *kea;
@@ -352,6 +378,91 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 	return hip_ht_find(&kea_endpoints, key);
 }
 
+
+/******************************/
+
+
+int hip_send_escrow_update(hip_ha_t *entry, int operation, 
+	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
+	int ealg, uint16_t key_len, struct hip_crypto_key * enc)
+{
+
+	int err = 0;
+	//, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
+	uint32_t update_id_out = 0;
+	//uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
+	//uint32_t new_spi_in = 0;
+	struct hip_common *update_packet = NULL;
+	struct in6_addr saddr = { 0 }, daddr = { 0 };
+	//uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
+	uint16_t mask = 0;
+	//struct hip_own_addr_list_item *own_address_item, *tmp;
+	
+	hip_hadb_get_peer_addr(entry, &daddr);
+	
+	/* Start building UPDATE packet */
+	
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Out of memory.\n");
+	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+						     mask, &entry->hit_our,
+						     &entry->hit_peer);
+			
+	entry->update_id_out++;
+	update_id_out = entry->update_id_out;
+	_HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+	/* todo: handle this case */
+	HIP_IFEL(!update_id_out, -EINVAL,
+		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
+		 "Building of SEQ param failed\n");
+
+	
+	/* Add hip_keys */
+	HIP_DEBUG("Adding hip_keys parameter (escrow data)");
+	
+	HIP_IFEL(hip_build_param_keys(update_packet, (uint16_t)operation, 
+		(uint16_t)ealg, addr, hit, spi, old_spi, key_len, enc), -1, 
+		 "Building of hip_keys param (escrow data) failed\n");
+	
+	HIP_DEBUG("Built escrow data");
+	
+	
+	/* Add HMAC */
+	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+					       &entry->hip_hmac_out), -1,
+		 "Building of HMAC failed\n");
+
+	/* Add SIGNATURE */
+	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+	 	 "Could not sign UPDATE. Failing\n");
+
+	/* Send UPDATE */
+	//hip_set_spi_update_status(entry, esp_info_old_spi, 1);
+
+
+	memcpy(&saddr, &entry->local_address, sizeof(saddr));
+        HIP_DEBUG("Sending UPDATE packet with escrow data\n");
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
+						      update_packet, entry, 1),
+		 -1, "csum_send failed\n");
+
+	
+	goto out;
+
+ out_err:
+	entry->state = HIP_STATE_ESTABLISHED;
+	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
+	
+ out:
+
+	HIP_UNLOCK_HA(entry);
+	if (update_packet)
+		HIP_FREE(update_packet);
+	return err;
+	
+}
 
 /******************************/
 
