@@ -928,7 +928,6 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	}
 
  out:
-
 	return err;
 }
 
@@ -2084,16 +2083,19 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 {
 	int err = 0;
 	struct hip_esp_info esp_info;
-
+	_HIP_DEBUG("Add SPI old: 0x%x (nwbo: 0x%x), new: 0x%x (nwbo: 0x%x)\n", 
+		old_spi, htonl(old_spi), new_spi, htonl(new_spi));
 	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
 	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
 	esp_info.reserved = htonl(0);
 	esp_info.keymat_index = htons(keymat_index);
 	esp_info.old_spi = htonl(old_spi);
 	esp_info.new_spi = htonl(new_spi);
+	_HIP_DEBUG("esp param old: 0x%x , new: 0x%x \n",
+		  esp_info.old_spi, esp_info.new_spi); 
 
-	HIP_DEBUG("keymat index = %d\n", keymat_index);
-
+	_HIP_DEBUG("keymat index = %d\n", keymat_index);
+	_HIP_HEXDUMP("esp_info:", &esp_info, sizeof(struct hip_esp_info));
 	err = hip_build_param(msg, &esp_info);
 	return err;
 }

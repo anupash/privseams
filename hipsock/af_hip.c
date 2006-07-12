@@ -229,7 +229,7 @@ int hip_socket_bind(struct socket *sock,
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct sock *sk = sock->sk;
-	struct ipv6_pinfo *pinfo = inet6_sk(sk);
+	//struct ipv6_pinfo *pinfo = inet6_sk(sk); TH: removed because unused
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
@@ -256,6 +256,7 @@ int hip_socket_bind(struct socket *sock,
 	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
+	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	
 	/* XX FIX: check access permissions from eid_owner_info */
 

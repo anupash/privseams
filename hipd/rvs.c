@@ -61,10 +61,8 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 
-//	if (!ipv6_addr_any(&ha->bex_address)) {
 	if (!ipv6_addr_any(&ha->preferred_address)) {
 		HIP_DEBUG("copying bex address\n");
-		//			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->bex_address);
 		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
 		ipcnt++;
 		if (ipcnt >= HIP_RVA_MAX_IPS)
@@ -239,14 +237,19 @@ int hip_rva_insert(HIP_RVA *rva)
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
 
+	HIP_DEBUG_HIT("rva->hit", &rva->hit);
+
 	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
 		 "Cannot insert RVA entry with NULL hit\n");
 	HIP_IFEL(hip_ht_find(&rva_table, &rva->hit), -EEXIST,
 		 "Duplicate RVA entry. Not adding to RVA table\n");
 	
 	err = hip_ht_add(&rva_table, rva);
-	if (!err)
+	if (err) {
+		HIP_ERROR("Failed to add rva hash table entry\n");
+	} else {
 		rva->rvastate |= HIP_RVASTATE_VALID;
+	}
  out_err:
 	return err;
 }
@@ -374,7 +377,7 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 }
 
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		 struct in6_addr *i1_daddr, HIP_RVA *rva)
+		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
 {
 	struct in6_addr *final_dst = NULL, *original_src;
 	struct hip_common *old_i1, *new_i1;
@@ -413,7 +416,8 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, 0, 0, new_i1, NULL, 0); //Currenlty NULLing the stateless info --Abi
+	err = hip_csum_send(NULL, final_dst, i1_info->src_port, i1_info->dst_port, new_i1, NULL, 0); 
+		//Sending the port info from the I1 from initiator behind NAT to the server --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {
@@ -427,17 +431,19 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
-void hip_rvs_set_request_flag(struct in6_addr *src_hit,
-			      struct in6_addr *dst_hit)
+int hip_rvs_set_request_flag(hip_hit_t *src_hit,
+			      hip_hit_t *dst_hit)
 {
+	int err = 0;
 	hip_ha_t *entry;
 
-	entry = hip_hadb_find_byhits(&src_hit, &dst_hit);
-	if (!entry) {
-		HIP_ERROR("Could not set RVS request bit\n");
-		return;
-	}
+
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
+		 -1, "Could not set RVS request bit\n");
 
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);
+
+ out_err:
+	return err;
 }

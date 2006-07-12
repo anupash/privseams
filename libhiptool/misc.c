@@ -5,11 +5,38 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
 #include "misc.h"
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hit, int hit_type)
+{
+  int err = 0;
+  u8 digest[HIP_AH_SHA_LEN];
+  char *key = (char *) (ip);
 
+  unsigned int key_len = sizeof(struct in6_addr);
 
+  HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+  _HIP_HEXDUMP("key", key, key_len);
+  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err, 
+	   "Building of digest failed\n");
+  
+  memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
+	 sizeof(struct in6_addr));
+  
+  hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
+  hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
+
+  // set the first 8 bits after hit prefix to null  
+  hit->in6_u.u6_addr8[1] = 0x00; 
+  
+ out_err:
+  
+       return err;
+}
+#endif //CONFIG_HIP_OPPORTUNISTIC
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @t1: timevalue 1
@@ -435,6 +462,36 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 }
 
 #ifndef __KERNEL__
+
+int convert_string_to_address(const char *str, struct in6_addr *ip6) {
+	int ret = 0, err = 0;
+	struct in_addr ip4;
+
+	ret = inet_pton(AF_INET6, str, ip6);
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
+		 err = -1,
+		 "inet_pton: not a valid address family\n");
+	if (ret > 0) {
+                /* IPv6 address conversion was ok */
+		HIP_DEBUG_IN6ADDR("id", ip6);
+		goto out_err;
+	}
+
+	/* Might be an ipv4 address (ret == 0). Lets catch it here. */
+		
+	ret = inet_pton(AF_INET, str, &ip4);
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret == 0), -1,
+		 "inet_pton: %s: not a valid network address\n", str);
+		
+	IPV4_TO_IPV6_MAP(&ip4, ip6);
+	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
+
+ out_err:
+	return err;
+}
 
 void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
 		int src_len) {

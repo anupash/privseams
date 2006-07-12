@@ -83,6 +83,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto.h"
 #include "libinet6/util.h"
 
+//#include <ifaddrs.h>
+
 int convert_port_string_to_number(const char *servname, in_port_t *port)
 {
   int err = 0;
@@ -242,13 +244,15 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   /*Laura*********************/
   //hip_send_daemon_info(msg_HIT); // for app. specified HIs
-  
+  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
     err = -1;
     goto out_err;
   }
+  else
+  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
 
   len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &len);
@@ -296,7 +300,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
 	       const struct endpoint *endpoint,
 	       const struct addrinfo *addrinfo)
 {
-  int err = 0;
+  int err = 0, len = 0;
   struct hip_common *msg = NULL, *msg_mapping;
   struct addrinfo *addr;
   struct sockaddr_eid *sa_eid;
@@ -421,7 +425,6 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   
   msg_len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &msg_len);
- 
   if(err) {
     HIP_ERROR("getsockopt failed\n");
     close(socket_fd);
@@ -476,6 +479,8 @@ int load_hip_endpoint_pem(const char *filename,
     err = -ENOMEM;
     goto out_err;
   }
+  else 
+    HIP_DEBUG("open key file %s for reading\n", filename);
   fgets(first_key_line,30,fp);  //read first line. 
   _HIP_DEBUG("1st key line: %s", first_key_line);
   fclose(fp);
@@ -729,7 +734,7 @@ int get_localhost_endpointinfo(const char *basename,
     goto out_err;
   }
   
-#if CONFIG_HIP_DEBUG
+#ifdef CONFIG_HIP_DEBUG
   {
     struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
     HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
@@ -797,7 +802,7 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
 {
   int err = 0;
   struct hip_common *msg = NULL;
-  unsigned int *count, *acount;
+  unsigned int *count, *acount; 
   struct hip_host_id *host_id;
   hip_hit_t *hit;
   struct in6_addr *addr;
@@ -1502,6 +1507,195 @@ const char *gepi_strerror(int errcode)
   return "HIP native resolver failed"; /* XX FIXME */
 }
 
+
+int get_localhost_endpoint_no_setmyeid(const char *basename,
+				       const char *servname,
+				       struct endpointinfo *hints,
+				       struct endpointinfo **res,
+				       struct hip_lhi *lhi)
+{
+  int err = 0, algo = 0;
+  DSA *dsa = NULL;
+  RSA *rsa = NULL;
+  unsigned char *key_rr = NULL;
+  int key_rr_len = 0;
+  struct endpoint_hip *endpoint_hip = NULL;
+  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  struct if_nameindex *ifaces = NULL;
+  char first_key_line[30];
+  FILE* fp;
+  const char *pub_suffix = "_pub";
+  
+  *res = NULL;
+  
+  _HIP_DEBUG("get_localhost_endpoint()\n");
+  HIP_ASSERT(hints);
+
+  // XX TODO: check flags?
+  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+  err = gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+  if (err) {
+    HIP_ERROR("gethostname failed (%d)\n", err);
+    err = EEI_NONAME;
+    goto out_err;
+  }
+  
+  /* System specific HIs should be added into the kernel with the
+     HIP_HI_REUSE_ANY flag set, because this way we make the HIs
+     readable by all processes. This function calls setmyeid() internally.. */
+  hints->ei_flags |= HIP_HI_REUSE_ANY;
+  
+  /* select between anonymous/public HI based on the file name */
+  if(!findsubstring(basename, pub_suffix))
+    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+  
+  /* check the algorithm from PEM format key */
+  /* Bing, replace the following code:
+     fp = fopen(basename, "rb");
+     if (!fp) {
+     HIP_ERROR("Couldn't open key file %s for reading\n", basename);
+     err = -ENOMEM;
+     goto out_err;
+     }
+     fgets(first_key_line,30,fp);  //read first line.
+     _HIP_DEBUG("1st key line: %s",first_key_line);
+     fclose(fp);
+     
+     if(findsubstring(first_key_line, "RSA"))
+    algo = HIP_HI_RSA;
+    else if(findsubstring(first_key_line, "DSA"))
+    algo = HIP_HI_DSA;
+    else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+    }
+  */
+  /*Bing, the following code is used instead of the above code*/
+  if(findsubstring(basename, "rsa"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(basename, "dsa"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+  
+  
+  
+
+  if(algo == HIP_HI_RSA)
+    //modified according Laura's suggestion
+    //    err = load_rsa_private_key(basename, &rsa);
+    err = load_rsa_public_key(basename, &rsa);
+  else
+    //err = load_dsa_private_key(basename, &dsa);
+    err = load_dsa_public_key(basename, &dsa);
+  if (err) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Loading of private key %s failed\n", basename);
+    goto out_err;
+  }
+  
+  if(algo == HIP_HI_RSA)
+    err = rsa_to_hip_endpoint(rsa, &endpoint_hip, hints->ei_flags, hostname);
+  else
+    err = dsa_to_hip_endpoint(dsa, &endpoint_hip, hints->ei_flags, hostname);
+  if (err) {
+    HIP_ERROR("Failed to allocate and build endpoint.\n");
+    err = EEI_SYSTEM;
+    goto out_err;
+  }
+  
+  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+	      hip_get_param_total_len(&endpoint_hip->id.host_id));
+
+
+  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+
+  if(algo == HIP_HI_RSA) {
+    key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
+    if (key_rr_len <= 0) {
+      HIP_ERROR("rsa_key_rr_len <= 0\n");
+      err = -EFAULT;
+      goto out_err;
+    }
+    //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    if (err) {
+      HIP_ERROR("Conversion from RSA to HIT failed\n");
+      goto out_err;
+    }
+    _HIP_HEXDUMP("Calculated RSA HIT: ", &lhi->hit,
+		 sizeof(struct in6_addr));
+  } else {
+    key_rr_len = dsa_to_dns_key_rr(dsa, &key_rr);
+    if (key_rr_len <= 0) {
+      HIP_ERROR("dsa_key_rr_len <= 0\n");
+      err = -EFAULT;
+      goto out_err;
+    }
+    //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    if (err) {
+      HIP_ERROR("Conversion from DSA to HIT failed\n");
+      goto out_err;
+    }
+    _HIP_HEXDUMP("Calculated DSA HIT: ", &lhi->hit,
+		sizeof(struct in6_addr));
+  }
+
+#if 0 /* XX FIXME */
+  ifaces = if_nameindex();
+  if (ifaces == NULL || (ifaces->if_index == 0)) {
+    HIP_ERROR("%s\n", (ifaces == NULL) ? "Iface error" : "No ifaces.");
+    err = 1;
+    goto out_err;
+  }
+#endif
+  
+  *res = calloc(1, sizeof(struct endpointinfo));
+  if (!*res) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+  
+  (*res)->ei_endpoint = malloc(sizeof(struct sockaddr_eid));
+  if (!(*res)->ei_endpoint) {
+    err = EEI_MEMORY;
+    goto out_err;
+  }
+  
+  if (hints->ei_flags & EI_CANONNAME) {
+    int len = strlen(hostname) + 1;
+    if (len > 1) {
+      (*res)->ei_canonname = malloc(len);
+      if (!((*res)->ei_canonname)) {
+	err = EEI_MEMORY;
+	goto out_err;
+      }
+      memcpy((*res)->ei_canonname, hostname, len);
+    }
+  }
+ out_err:
+
+  if (rsa)
+    RSA_free(rsa);
+  
+  if (dsa)
+    DSA_free(dsa);
+  
+  if (endpoint_hip)
+    free(endpoint_hip);
+  
+  if (ifaces)
+    if_freenameindex(ifaces);
+  
+  return err;
+}
+
+
 int get_localhost_endpoint(const char *basename,
 			    const char *servname,
 			    struct endpointinfo *hints,
@@ -1544,6 +1738,7 @@ int get_localhost_endpoint(const char *basename,
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
 
   /* check the algorithm from PEM format key */
+  /* Bing, replace the following code:
   fp = fopen(basename, "rb");
   if (!fp) {
     HIP_ERROR("Couldn't open key file %s for reading\n", basename);
@@ -1563,11 +1758,28 @@ int get_localhost_endpoint(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
+  */
+  /*Bing, the following code is used instead of the above code*/
+  if(findsubstring(basename, "rsa"))
+    algo = HIP_HI_RSA;
+  else if(findsubstring(basename, "dsa"))
+    algo = HIP_HI_DSA;
+  else {
+    HIP_ERROR("Wrong kind of key file: %s\n",basename);
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  
+
 
   if(algo == HIP_HI_RSA)
-    err = load_rsa_private_key(basename, &rsa);
+    //modified according Laura's suggestion
+    //    err = load_rsa_private_key(basename, &rsa);
+    err = load_rsa_public_key(basename, &rsa);
   else
-    err = load_dsa_private_key(basename, &dsa);
+    //err = load_dsa_private_key(basename, &dsa);
+    err = load_dsa_public_key(basename, &dsa);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Loading of private key %s failed\n", basename);
@@ -1584,11 +1796,11 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
 
-  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
@@ -1597,7 +1809,8 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1611,7 +1824,8 @@ int get_localhost_endpoint(const char *basename,
       err = -EFAULT;
       goto out_err;
     }
-    err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
@@ -1661,7 +1875,7 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
   
-#if CONFIG_HIP_DEBUG
+#ifdef CONFIG_HIP_DEBUG
   {
     struct sockaddr_eid *eid = (struct sockaddr_eid *) (*res)->ei_endpoint;
     _HIP_DEBUG("eid family=%d value=%d\n", eid->eid_family,
@@ -1713,6 +1927,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
 
   initlist(&list);
   /* find key files from /etc/hosts */
+  /* or */
+  /* find key files from /etc/hip */
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
   for(i=0; i<length(&list); i++) {
@@ -1734,10 +1950,13 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
       goto err_out;
     }
     
-    get_localhost_endpoint(filenamebase, servname,
-			   &modified_hints, &new, &hit);
-    _HIP_HEXDUMP("Got HIT: ", &hit.hit, sizeof(struct in6_addr));
+    //    get_localhost_endpoint(filenamebase, servname,
+    //		   &modified_hints, &new, &hit);
+    get_localhost_endpoint_no_setmyeid(filenamebase, servname,
+				       &modified_hints, &new, &hit);
 
+    _HIP_DEBUG_HIT("Got HIT: ", &hit.hit);
+    
     if (*adr == NULL) {
       *adr = malloc(sizeof(struct gaih_addrtuple));
       (*adr)->scopeid = 0;
@@ -1745,9 +1964,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    adr = &((*adr)->next);
-    
-    
+    //adr = &((*adr)->next);
   }
  err_out:
   if(filenamebase_len)

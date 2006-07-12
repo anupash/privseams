@@ -12,6 +12,18 @@
 #include "hip.h"
 #include "hipd.h"
 
+#ifndef  SOL_NETLINK
+#  define  SOL_NETLINK 270
+#endif
+
+#ifndef  NETLINK_ADD_MEMBERSHIP
+#  define  NETLINK_ADD_MEMBERSHIP 1
+#endif
+
+#ifndef  NETLINK_DROP_MEMBERSHIP
+#  define  NETLINK_DROP_MEMBERSHIP 2
+#endif
+
 #define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
         (void*)&((struct sockaddr_in*)x)->sin_addr : \
         (void*)&((struct sockaddr_in6*)x)->sin6_addr

@@ -31,7 +31,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 			_HIP_DEBUG("entry=0x%p key=0x%p\n", entry,
 				   key_to_be_matched);
 			if (ht->compare(key, key_to_be_matched)) {
-				ht->hold(entry);
+			  	ht->hold(entry);
 				HIP_UNLOCK_HT(ht);
 				return entry;
 			}

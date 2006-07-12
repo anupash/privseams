@@ -116,7 +116,7 @@ void hip_hadb_put_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-	return (uint32_t)key_1 == (uint32_t)key_2;
+	return (uint32_t) key_1 == (uint32_t) key_2;
 }
 
 void hip_init_hadb(void);
@@ -191,8 +191,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry);
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
                                    struct in6_addr *addr);
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info,
-			   struct hip_echo_response *echo_esp);
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info);
 void hip_update_handle_(hip_ha_t *entry, uint32_t peer_update_id);
 int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t spi);
 

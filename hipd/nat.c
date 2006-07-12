@@ -2,16 +2,29 @@
 
 int hip_nat_on(struct hip_common *msg)
 {
+	int err = 0;
+
 	hip_nat_status = 1;
+	HIP_IFEL(hip_for_each_ha(hip_set_nat_on_sa, NULL), 0,
+                         "for_each_ha err.\n");
+
 	// Extend it to handle peer_hit case for "hipconf hip nat peer_hit"
-	return 0;
+	// This would be helpful in multihoming case --Abi
+ out_err:
+	return err;
 }
 
 
 int hip_nat_off(struct hip_common *msg)
 {
+	int err = 0;
+
 	hip_nat_status = 0;
-	return 0;
+	HIP_IFEL(hip_for_each_ha(hip_set_nat_off_sa, NULL), 0,
+                         "for_each_ha err.\n");
+
+ out_err:
+	return err;
 }
 
 int hip_receive_control_packet_udp(struct hip_common *msg,
@@ -39,7 +52,13 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		HIP_DEBUG("entry found src port %d\n",
 			  entry->peer_udp_port);
 	}
+#ifndef CONFIG_HIP_RVS
 
+	/* The ip of RVS is taken to be ip of the peer while using RVS server to relay R1.
+	 * Hence have removed this part for RVS --Abi
+	 */
+
+	
 	if (entry && (type == HIP_R1 || type == HIP_R2)) {
 		/* When the responder equals to the NAT host, it can
 		   reply from the private address instead of the public
@@ -52,7 +71,7 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 		   other way; let's make sure that they are the same. */
 		src_addr = &entry->preferred_address;
 	}
-
+#endif
 	HIP_IFEL(hip_receive_control_packet(msg,
 					    src_addr,
 					    dst_addr,
@@ -77,6 +96,7 @@ int hip_send_udp(struct in6_addr *my_addr,
 	struct in6_addr local_addr;
         int sockfd = 0, n, len = 0 , err = 0;
 	int type = 0;
+	int i = 0;
 
 	len = hip_get_msg_total_len(msg);
 
@@ -139,7 +159,10 @@ int hip_send_udp(struct in6_addr *my_addr,
 		}
 		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
 		src.sin_port = htons(HIP_NAT_UDP_PORT);
-		dst.sin_port = htons(entry->peer_udp_port);
+		if(dst_port)
+			dst.sin_port = htons(dst_port);
+		else
+			dst.sin_port = htons(entry->peer_udp_port);
 		break;
 	 default:
                 HIP_ERROR("Unhandled packet type %d\n", type);
@@ -161,8 +184,18 @@ int hip_send_udp(struct in6_addr *my_addr,
 
 	HIP_DEBUG("sending with src port=%d, dst port=%d\n", src.sin_port,
 		  dst.sin_port);
-        n = sendto( hip_nat_sock_udp, msg, len, 0,
-		    (struct sockaddr *) &dst, sizeof(dst));
+	for(i = 0; i < HIP_NAT_NUM_RETRANSMISSION; i++)
+	{
+        	n = sendto( hip_nat_sock_udp, msg, len, 0,
+			    (struct sockaddr *) &dst, sizeof(dst));
+		if(n<0)
+		{
+			HIP_DEBUG("Some problem in sending packet ! Check route - Sleeping 2 seconds\n");
+			sleep(2);
+		}
+		else
+			break;
+	}
 	HIP_IFEL(( n < 0), -1, "Error in sending packet to server %d\n",n);
         HIP_DEBUG("Packet sent successfully over UDP n=%d d=%d\n",
 				n, len);
@@ -172,3 +205,90 @@ int hip_send_udp(struct in6_addr *my_addr,
 	return err;
 }
 
+int hip_nat_keep_alive()
+{
+	int err = 0 ;
+	if(hip_nat_status == 1)
+	{
+		HIP_DEBUG("Sending keepalives\n");
+		HIP_IFEL(hip_for_each_ha(hip_handle_keep_alive, NULL), 0,
+        	         "for_each_ha err.\n");
+	}
+	
+ out_err:
+	return err;
+}
+
+int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+	int n = 0, len, mask = 0;
+	struct hip_common *update_packet;
+	
+	if(entry->state != HIP_STATE_ESTABLISHED)
+		goto out_err;
+	//Create an empty update packet and send to all the peer of the hip association;
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+        	         "Out of memory.\n");
+
+	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+                                                     mask, &entry->hit_our,
+                                                     &entry->hit_peer);
+
+	/* Add HMAC */
+        HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+                                               &entry->hip_hmac_out), -1,
+                 "Building of HMAC failed\n");
+
+        /* Add SIGNATURE */
+        //HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+          //       "Could not sign UPDATE. Failing\n");
+
+
+	//Initialize sockets
+
+//#if 0
+	n = hip_send_udp(&entry->local_address, 
+                  		&entry->preferred_address,
+                  		HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,	//Sending keepalives on 50500 !! --Abi
+                  		update_packet,
+        			entry, 0);
+
+//#endif
+	//n = hip_send_update(entry, NULL, 0,0, 0 );
+	//HIP_DEBUG("Keep alive status %d\n", n);
+	//HIP_DEBUG_IN6ADDR("Peer address \n", &entry->preferred_address);
+	//Send the packet
+	//len = hip_get_msg_total_len(msg);
+	//n = sendto(hip_nat_sock_udp, msg, len, 0,
+	//		(struct sockaddr *) &dst, sizeof(dst)); 
+		
+
+ out_err:
+	return err;
+}
+int hip_set_nat_on_sa(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->nat = 1;
+	}
+ out_err:
+	return err;
+}
+int hip_set_nat_off_sa(hip_ha_t *entry, void *not_used)
+{
+	int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = 0;
+		entry->nat = 0;
+		HIP_DEBUG("****************Setting nat off nat: %d\n", entry->nat);
+	}
+ out_err:
+	return err;
+}

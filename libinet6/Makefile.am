@@ -50,27 +50,28 @@ CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 
 # HIP additions to the flags.
-INCLUDES =
-INCLUDES += $(hipl_common_include_paths) -Iinclude_glibc
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc
 CFLAGS += $(hipl_common_cflags)
+# Enable the following option if you want to compile HIP enabled apps without
+# no changes to code using the legacy HIP API (assuming that the code uses
+# only getaddrinfo).
+CFLAGS += -DHIP_TRANSPARENT_API
 
 # HIP library added
-LDADD  = ../libhiptool/.libs/libhiptool.a
+LDADD  = #../libhiptool/.libs/libhiptool.a
 
 include_HEADERS = libc-compat.h util.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 if HIP_OPENDHT
-	INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
-	LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
+ INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+ LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
 endif
 
-# Enable the following option if you want to compile HIP enabled apps without
-# no changes to code using the legacy HIP API (assuming that the code uses
-# only getendpointinfo).
-#
-#libinet6_la_CFLAGS = -DHIP_TRANSPARENT_API
+if HIP_HI3
+ INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+endif
 
 getendpointinfo.c: include/netdb.h
 

@@ -22,14 +22,12 @@ struct hip_ht_common {
 typedef struct hip_ht_common HIP_HASHTABLE;
 
 /************ primitives *************/
-
 int hip_ht_init(HIP_HASHTABLE *ht);
 void hip_ht_uninit(HIP_HASHTABLE *ht);
 
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry);
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
-
 
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)

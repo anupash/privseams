@@ -94,6 +94,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
 		 NULL, "Requested source HIT no more available.\n");
+	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
 	hip_r1table = hid->r1;
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
@@ -403,7 +404,7 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 	int err = 0, len;
 
 	/* Store private key and lhi, delete the host id entry and readd.
-	   Addition recreates also R1s as a side effect. */
+	   Addition recreates also R1s as a side effect.*/ 
 
 	len = hip_get_param_total_len(entry->host_id);
 	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
@@ -423,7 +424,6 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 	if (private)
 		free(private);
 	return err;
-
 }
 
 int hip_recreate_all_precreated_r1_packets()

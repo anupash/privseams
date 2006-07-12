@@ -2,7 +2,6 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
-
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
@@ -165,7 +164,6 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
-#if 0
 /**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
@@ -180,6 +178,9 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  *
  * NOTE: This way of finding HA entries doesn't work properly if we have 
  * multiple entries with the same peer_hit.
+ *
+ * NOTE: DON'T USE THIS FUNCTION BECAUSE IT DOES NOT DEAL PROPERLY
+ * WITH MULTIPLE SOURCE HITS. PREFER hip_hadb_find_byhits FUNCTION.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 {
@@ -201,7 +202,6 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
         }
         return NULL;
 }
-#endif
 
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
@@ -284,6 +284,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 	
 	_HIP_DEBUG("created a new sdb entry\n");
+	//ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
@@ -303,7 +304,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		err = -2;
 		goto out_err;
 	}
-		
+
 	/*
 	 * Create a security policy for triggering base exchange.
 	 *
@@ -347,7 +348,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
-
+	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! add_peer_info=", peer_hit);
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 
@@ -386,6 +387,8 @@ int hip_add_peer_map(const struct hip_common *input)
 	}
 
 	err = hip_hadb_add_peer_info(hit, ip);
+	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
+	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;
@@ -756,7 +759,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 	}
 
 	if (!ipv6_addr_any(addr)) {
-		hip_hadb_delete_inbound_spi(ha, 0);
+	  	hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
 		hip_hadb_remove_state_hit(ha);
 		/* by now, if everything is according to plans, the refcnt
@@ -1129,9 +1132,9 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 			if (set_flags & 0x2)
 				item->update_state_flags |= update_flags_or;
 			if (esp_info && (set_flags & 0x4)) {
-				item->stored_received_esp_info.old_spi = ntohl(esp_info->old_spi);
-				item->stored_received_esp_info.new_spi = ntohl(esp_info->new_spi);
-				item->stored_received_esp_info.keymat_index = ntohs(esp_info->keymat_index);
+				item->stored_received_esp_info.old_spi = esp_info->old_spi;
+				item->stored_received_esp_info.new_spi = esp_info->new_spi;
+				item->stored_received_esp_info.keymat_index = esp_info->keymat_index;
 			}
 			if (set_flags & 0x8)
 				item->keymat_index = keymat_index;
@@ -1244,9 +1247,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 }
 
 /* have_esp_info is 1, if there is ESP_INFO in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info,
-			   struct hip_echo_response *echo_resp)
-{
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info){
 	size_t n, i;
 	uint32_t *peer_update_id;
 
@@ -1270,7 +1271,6 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
 	for (i = 0; i < n; i++, peer_update_id++) {
 		struct hip_spi_in_item *in_item, *in_tmp;
-		struct hip_spi_out_item *out_item, *out_tmp;
 		uint32_t puid = ntohl(*peer_update_id);
 
 		_HIP_DEBUG("peer Update ID=%u\n", puid);
@@ -1287,46 +1287,12 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 			}
 		}
 
-		/* see if the ACK was response to address verification */
-		if (echo_resp) {
-			list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
-				struct hip_peer_addr_list_item *addr, *addr_tmp;
-
-				list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
-					_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-					if (addr->seq_update_id == puid) {
-						if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
-							HIP_ERROR("echo data len mismatch\n");
-							continue;
-						}
-						if (memcmp(addr->echo_data,
-							   (void *)echo_resp+sizeof(struct hip_tlv_common),
-							   sizeof(addr->echo_data)) != 0) {
-							HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
-							continue;
-						}
-						_HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
-						addr->address_state = PEER_ADDR_STATE_ACTIVE;
-						do_gettimeofday(&addr->modified_time);
-
-						if (addr->is_preferred) {
-							/* maybe we should do this default address selection
-							   after handling the REA .. */
-							hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
-						} else
-							HIP_DEBUG("address was not set as preferred address in REA\n");
-					}
-				}
-			}
-			//entry->skbtest = 1;
-			_HIP_DEBUG("set skbtest to 1\n");
-		} else {
-			HIP_DEBUG("no ECHO_RESPONSE in same packet with ACK\n");
-		}
 	}
  out_err:
 	return;
 }
+
+
 
 void hip_update_handle_esp_info(hip_ha_t *entry, uint32_t peer_update_id)
 {
@@ -1359,6 +1325,34 @@ int hip_update_get_spi_keymat_index(hip_ha_t *entry, uint32_t peer_update_id)
 	return 0;
 }
 
+int hip_update_send_echo(hip_ha_t *entry,
+			 uint32_t spi_out,
+			 struct hip_peer_addr_list_item *addr){
+	
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+
+	HIP_DEBUG_HIT("new addr to check", &addr->address);
+	
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "Update_packet alloc failed\n");
+
+	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, 
+					    &entry->hit_peer, &entry->hit_our),
+		 -1, "Building Echo  Packet failed\n");
+
+	/* test: send all addr check from same address */
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
+						      &addr->address,
+						      0, 0, update_packet,
+						      entry, 0), -1,
+		 "csum_send failed\n");
+
+ out_err:
+	return err;
+
+}
+
 /* todo: use jiffies instead of timestamp */
 uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 {
@@ -1388,9 +1382,10 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes already locked entry */
 
-	_HIP_DEBUG("SPI=0x%x\n", spi);
+	_HIP_DEBUG("Search spi list for SPI=0x%x\n", spi);
         list_for_each_entry_safe(item, tmp, &entry->spis_out, list) {
-		if (item->spi == spi)
+	_HIP_DEBUG("search: 0x%x ?= 0x%x\n", item->spi, spi);	
+	if (item->spi == spi)
 			return item;
         }
 	return NULL;
@@ -1422,7 +1417,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	struct hip_spi_out_item *spi_list;
 	struct hip_peer_addr_list_item *new_addr = NULL;
 	struct hip_peer_addr_list_item *a, *tmp;
-
+	struct in6_addr *preferred_address; 
 	/* Assumes already locked entry */
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
@@ -1436,6 +1431,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	/* Check if addr already exists. If yes, then just update values. */
 	list_for_each_entry_safe(a, tmp, &spi_list->peer_addr_list, list) {
 		if (!ipv6_addr_cmp(&a->address, addr)) {
+			// Do we send a verification if state is unverified?
+			// The address should be awaiting verifivation already
 			new_addr = a;
 			new = 0;
 			break;
@@ -1473,6 +1470,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address state stays in ACTIVE\n");
 			break;
 		default:
+			// Does this mean that unverified cant be here? Why?
 			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
 			break;
 		}
@@ -1486,13 +1484,15 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new_addr->seq_update_id = 0;
 		} else {
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			_HIP_DEBUG("set initial address state UNVERIFIED\n");
+			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 		}
 	}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
-
+	if(is_preferred_addr){
+		ipv6_addr_copy(&entry->preferred_address,&new_addr->address);
+	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
@@ -1804,7 +1804,7 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
-	
+	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 	/* xmit function set */
 	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
 
@@ -1999,11 +1999,11 @@ void hip_delete_all_sp()
 
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
-				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->local_address, AF_INET6, ha->peer_udp_port, 0);
 			}
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_out, list) {
-				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, 0);
+				hip_delete_sa(item->spi, &ha->preferred_address, AF_INET6, 0, ha->peer_udp_port);
 			}
 		}
 	}
@@ -2173,22 +2173,27 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 
 	/* assumes locked entry */
 	HIP_DEBUG("SPI=0x%x\n", spi);
-        list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if (!spi || item->spi == spi) {
-			HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
- 				  "inbound list, item=0x%p addresses=0x%p\n",
- 				  item->spi, item->new_spi, item, item->addresses);
-			HIP_ERROR("remove SPI from HIT-SPI HT\n");
+	int counter = 0;
+
+
+	list_for_each_entry_safe(item, tmp, &entry->spis_in, list){ 
+	  	if (!spi || item->spi == spi) {
+		  	HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
+				  "inbound list, item=0x%p addresses=0x%p\n",
+				  item->spi, item->new_spi, item, item->addresses);
+		  	HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			hip_hadb_remove_hs(item->spi);
 			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
 			hip_delete_sa(item->spi, &entry->local_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, entry->peer_udp_port, 0);
+				      //AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
 			//for(i = 0; i < item->addresses_n; i++)
 			//  hip_delete_sa(item->spi,
 			//    &item->addresses->address + i, AF_INET6);
  			if (item->spi != item->new_spi)
- 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 0, 0);
+ 				hip_delete_sa(item->new_spi, &entry->hit_our, AF_INET6, 
+					entry->peer_udp_port, 0);
  			if (item->addresses) {
  				HIP_DEBUG("deleting stored addrlist 0x%p\n",
  					  item->addresses);
@@ -2197,6 +2202,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			list_del(&item->list);
 			HIP_FREE(item);
 			break;
+			
 		}
         }
 }
@@ -2215,9 +2221,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  item->spi, item->new_spi, item);
 			hip_delete_sa(item->spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			hip_delete_sa(item->new_spi, &entry->preferred_address,
-				      AF_INET6, 0, 0);
+				      AF_INET6, 0, entry->peer_udp_port);
 			/* delete peer's addresses */
 			list_for_each_entry_safe(addr_item, addr_tmp, &item->peer_addr_list, list) {
 				list_del(&addr_item->list);
@@ -2277,7 +2283,7 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 	HIP_LOCK_HT(&hadb_hit);
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
-		//HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
+		_HIP_DEBUG("The %d list is empty? %d\n", i, list_empty(&hadb_byhit[i]));
 		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
 		{
 			_HIP_DEBUG("List_for_each_entry_safe\n");

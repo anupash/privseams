@@ -13,7 +13,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
 	       sizeof(struct in6_addr));
 	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
-
+	time(&entry->hip_msg_retrans.last_transmit);
  out_err:
 	return err;
 }
@@ -38,6 +38,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if(entry) HIP_DEBUG("**********NAT status %d\n", entry->nat);
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
 		((entry && entry->nat) ||
 		 (src_port != 0 || dst_port != 0))))//Temporary fix 
@@ -150,7 +151,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		}
 	}
 	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
-
+	HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet was lost (simulation)\n");
 		goto out_err;
@@ -160,7 +161,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	   do not seem to work properly. Thus, we use just sendto() */
 	
 	len = hip_get_msg_total_len(msg);
-	HIP_HEXDUMP("Dumping packet ", msg, len);
+	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		sent = sendto(hip_raw_sock, msg, len, 0,
@@ -169,7 +170,6 @@ int hip_csum_send(struct in6_addr *local_addr,
 			 "Could not send the all requested data (%d/%d)\n",
 			 sent, len);
 	}
-
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 

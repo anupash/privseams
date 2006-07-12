@@ -57,6 +57,62 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+
+#include <sys/un.h> // for sockaddr_un
+struct hip_opp_blocking_request_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+
+  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
+  struct in6_addr       peer_real_hit;
+  struct sockaddr_un    caller;
+};
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+
+#define SET_NULL_HIT(hit)                      \
+        { memset(hit, 0, sizeof(hip_hit_t));        \
+          (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
+
+inline static ipv6_addr_is_null(struct in6_addr *ip){
+  return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
+	   ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
+  /*  return ((ip->s6_addr32[0] == 0) &&          
+	  (ip->s6_addr32[1] == 0) &&          
+	  (ip->s6_addr32[2] == 0) &&          
+	  (ip->s6_addr32[3] == 0));
+  */
+}
+
+static inline int create_new_socket(int type, int protocol)
+{
+  return socket(AF_INET6, type, protocol);
+}
+
+static inline int hit_is_real_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] != 0x00));
+}
+
+static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr32[1] == 0) &&
+	  (hit->s6_addr32[2] == 0) &&
+	  (hit->s6_addr32[3] == 0));
+}
+
+static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] == 0x00));
+
+}
+static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
+	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
 	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
@@ -92,22 +148,31 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
 
-#define HIP_SELECT_TIMEOUT          1
+#define HIP_SELECT_TIMEOUT      1
 #define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 10 /* seconds */
+#define HIP_RETRANSMIT_INTERVAL 1 /* seconds */
+/* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+/* wait about n seconds before retransmitting.
+   the actual time is between n and n + RETRANSMIT_INIT seconds */
+#define HIP_RETRANSMIT_WAIT 5 
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INIT \
+           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
 #define HIP_SIMULATE_PACKET_LOSS             0
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+
+#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -168,11 +233,21 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_CONF_PUZZLE_DEC                  25
 #define SO_HIP_SET_NAT_ON			26
 #define SO_HIP_SET_NAT_OFF			27
-#define SO_HIP_ADD_DB_HI			28
+#define SO_HIP_SET_OPPORTUNISTIC_MODE           28 /*Bing, trial */
+#define SO_HIP_QUERY_OPPORTUNISTIC_MODE         29
+#define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  30
+#define SO_HIP_GET_PSEUDO_HIT                   31 
+#define SO_HIP_SET_PSEUDO_HIT                   32 
+#define SO_HIP_QUERY_IP_HIT_MAPPING		33 
+#define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	34
+#define SO_HIP_ADD_DB_HI			35
+#define SO_HIP_GET_PEER_HIT			36
+#define SO_HIP_SET_PEER_HIT			37
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
- 
+#define HIP_USERADDR_PATH                     "/tmp/hip_useraddr_path.tmp"
+
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
 #define HIP_ENDPOINT_FLAG_HIT              1
@@ -223,11 +298,13 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
@@ -269,7 +346,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
-#define HIP_PARAM_KEYS                  32779 
+#define HIP_PARAM_KEYS                  32779
+#define HIP_PSEUDO_HIT                  32780 
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -359,6 +437,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
+
+#define ADDR_STATE_ACTIVE 1
+#define ADDR_STATE_WAITING_ECHO_REQ 2
 
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
@@ -699,6 +780,11 @@ struct hip_locator_info_addr_item {
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
 	struct in6_addr address;
+	int state; /*State of our addresses,
+		     possible states are:
+		     WAITING_ECHO_REQUEST, ACTIVE
+		   */
+
 }  __attribute__ ((packed));
 
 #if 0
@@ -977,6 +1063,7 @@ struct hip_hadb_state
 
 	hip_hastate_t        hastate;
 	int                  state;
+	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
@@ -987,7 +1074,7 @@ struct hip_hadb_state
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
-        struct in6_addr      local_address;   /* Our IP address */
+        struct  in6_addr     local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
@@ -1037,6 +1124,7 @@ struct hip_hadb_state
 
 	struct {
 		int count;
+		time_t last_transmit;
 		struct in6_addr saddr, daddr;
 		struct hip_common *buf;
 	} hip_msg_retrans;
@@ -1173,8 +1261,7 @@ struct hip_hadb_update_func_set{
 
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
 				      struct hip_ack *ack,
-				      int have_nes,
-				      struct hip_echo_response *echo_esp);
+				      int have_nes);				      
 
 	int (*hip_handle_update_established)(hip_ha_t *entry,
 					     struct hip_common *msg,
@@ -1189,6 +1276,10 @@ struct hip_hadb_update_func_set{
 					   struct hip_common *msg,
 					   struct in6_addr *src_ip,
 					   uint32_t spi);
+
+	int (*hip_update_send_echo)(hip_ha_t *entry,
+				    struct hip_peer_addr_list_item *addr,
+			            uint32_t spi);	    
 };
 
 struct hip_hadb_misc_func_set{ 
@@ -1303,6 +1394,7 @@ struct hip_eid_db_entry {
 /* Some default settings for HIPL */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+#define GOTO_OUT -3
 
 #define HIP_IFE(func, eval) \
 { \
