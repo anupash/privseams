@@ -1015,15 +1015,6 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
   return 0;
 }
 
-hip_hit_t *get_local_hits_wrapper()
-{
-  struct gaih_addrtuple *at = NULL;
-  struct gaih_addrtuple **pat = &at;
-  
-  get_local_hits(NULL, pat);
-  return (hip_hit_t *)(&at->addr);
-}
-
 static int
 gaih_inet (const char *name, const struct gaih_service *service,
 	   const struct addrinfo *req, struct addrinfo **pai,
