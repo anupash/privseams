@@ -138,6 +138,12 @@ int gui_init(void)
 	gtk_toggle_button_set_active(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_HS_CLEARDB, w);
+	/* Create server/client execute option. */
+	w = gtk_check_button_new_with_label("run server/client in agent");
+	gtk_box_pack_start(box, w, FALSE, FALSE, 1);
+	gtk_toggle_button_set_active(w, TRUE);
+	gtk_widget_show(w);
+	widget_set(ID_HS_EXECSERVER, w);
 
 	/* Create host list. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -181,7 +187,7 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 	GtkTreeSelection *selection;
 	FILE *f;
 	char str[2048];
-	int b, err, *indices, n, i;
+	int b, s, err, *indices, n, i;
 
 	selection = gtk_tree_view_get_selection(w1);
 
@@ -199,6 +205,8 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 			f = fopen("/etc/hip/agentdb", "w");
 			fclose(f);
 		}
+		
+		s = gtk_toggle_button_get_active(widget(ID_HS_EXECSERVER));
 
 		/* Copy right identity files to /etc/hip. */
 		sprintf(str, "cp -f %s/hip_host_* /etc/hip/", host_items[n].path);
@@ -214,11 +222,17 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 		system(str);
 
 		/* Execute daemon. */
-		err = exec_application("xterm", "xterm", "-T", "HIP daemon", "-e", "hipd", NULL);
+		err = exec_application("konsole", "konsole", "-T", "HIP daemon", "-e", "hipd", NULL);
 		/* Wait for daemon to start properly. */
 		sleep(1);
-		/* Execute agent. */
-		if (b == TRUE) exec_application("hipagent", "hipagent", NULL);
+		
+		/* Execute agent as server, client or plain. */
+		if (b == TRUE && host_items[n].server)
+		{
+			if (s == TRUE) exec_application("hipagent", "hipagent", "-server", NULL);
+			else exec_application("hipagent", "hipagent", "-client hip3", NULL);
+		}
+		else exec_application("hipagent", "hipagent", NULL);
 
 		/* Quit application. */
 		gtk_main_quit();
@@ -250,7 +264,7 @@ int settings_read(char *file)
 {
 	/* Variables. */
 	FILE *f;
-	char str[2048];
+	char str[2048], server;
 	char name[MAX_NAME_LEN + 1], path[MAX_URL_LEN + 1], addr[MAX_URL_LEN + 1];
 	int err = 0, i, n;
 
@@ -262,11 +276,12 @@ int settings_read(char *file)
 	n = 0;
 	while (fgets(str, 2048, f) && n < MAX_HOST_ITEMS)
 	{
-		i = sscanf(str, "\"%64[^\"]\" %64s %1024s", name, addr, path);
-		if (i != 3) continue;
+		i = sscanf(str, "\"%64[^\"]\" %64s %1024s %c", name, addr, path, &server);
+		if (i != 4) continue;
 		NAMECPY(host_items[n].name, name);
 		NAMECPY(host_items[n].addr, addr);
 		URLCPY(host_items[n].path, path);
+		host_items[n].server = (server == 's') ? 1 : 0;
 		host_add(name);
 		n++;
 	}

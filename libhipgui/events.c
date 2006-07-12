@@ -153,7 +153,8 @@ void button_event(GtkWidget *warg, gpointer data)
 			tinfo = localtime(&rawtime);
 			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,
 			        tinfo->tm_min, get_nick(), ps);
-			gtk_text_buffer_insert_at_cursor(widget(ID_TERMBUFFER), str, -1);
+			if (term_get_mode() == TERM_MODE_CLIENT) term_client_send_string(str);
+			if (term_get_mode() == TERM_MODE_SERVER) term_server_send_string(str);
 		}
 		gtk_entry_set_text(widget(ID_TERMINPUT), "");
 		break;

@@ -195,6 +195,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                   " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully\n");
+			term_print("* I1: %s\n", (tr == CONNHIPD_OUT) ? "sent" : "received");
 		}
 		else
 		{
@@ -202,6 +203,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			n = connhipd_sendto_hipd("no", 2);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
+			term_print("* I1: %s, rejected\n", (tr == CONNHIPD_OUT) ? "outgoing" : "incoming");
 		}
 	}
 	else
@@ -275,6 +277,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                   " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully\n");
+			term_print("* %s: %s\n", type_s, (tr == CONNHIPD_OUT) ? "sent" : "received");
 		}
 		else
 		{
@@ -282,6 +285,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			n = connhipd_sendto_hipd("no", 2);
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
+			term_print("* %s: %s, rejected\n", type_s, (tr == CONNHIPD_OUT) ? "outgoing" : "incoming");
 		}
 	}
 

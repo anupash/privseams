@@ -108,6 +108,10 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
+	/* Initialize terminal server. */
+	if (term_get_mode() == TERM_MODE_SERVER) term_server_init();
+	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_init();
+
 	gtk_main();
 }
 /* END OF FUNCTION */
@@ -119,6 +123,8 @@ int gui_main(void)
 */
 void gui_quit(void)
 {
+	if (term_get_mode() == TERM_MODE_SERVER) term_server_quit();
+	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_quit();
 	exec_quit();
 	widget_quit();
 }
