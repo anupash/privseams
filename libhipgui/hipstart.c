@@ -222,7 +222,7 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 		system(str);
 
 		/* Execute daemon. */
-		err = exec_application("konsole", "konsole", "-T", "HIP daemon", "-e", "hipd", NULL);
+		err = exec_application("xterm", "xterm", "-T", "HIP daemon", "-e", "hipd", NULL);
 		/* Wait for daemon to start properly. */
 		sleep(3);
 		
@@ -230,7 +230,7 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 		if (b == TRUE && host_items[n].server)
 		{
 			if (s == TRUE) exec_application("hipagent", "hipagent", "-server", NULL);
-			else exec_application("hipagent", "hipagent", "-client hip3", NULL);
+			else exec_application("hipagent", "hipagent", "-client", "hip3", NULL);
 		}
 		else exec_application("hipagent", "hipagent", NULL);
 

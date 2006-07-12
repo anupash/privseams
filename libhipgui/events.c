@@ -137,6 +137,7 @@ void button_event(GtkWidget *warg, gpointer data)
 	char *ps, str[1024];
 	time_t rawtime;
 	struct tm *tinfo;
+	pthread_t pt;
 
 	switch (id)
 	{
@@ -153,10 +154,19 @@ void button_event(GtkWidget *warg, gpointer data)
 			tinfo = localtime(&rawtime);
 			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,
 			        tinfo->tm_min, get_nick(), ps);
-			if (term_get_mode() == TERM_MODE_CLIENT) term_client_send_string(str);
-			if (term_get_mode() == TERM_MODE_SERVER) term_server_send_string(str);
+			if (term_get_mode() == TERM_MODE_CLIENT)
+			{
+				pthread_create(&pt, NULL, term_client_send_string, str);
+			}
+			if (term_get_mode() == TERM_MODE_SERVER)
+			{
+				pthread_create(&pt, NULL, term_server_send_string, str);
+			}
 		}
 		gtk_entry_set_text(widget(ID_TERMINPUT), "");
+		gtk_widget_grab_default(widget(ID_TERMSEND));
+		gtk_entry_set_activates_default(widget(ID_TERMINPUT), TRUE);
+		gtk_widget_grab_focus(widget(ID_TERMINPUT));
 		break;
 
 	case IDB_TW_RGROUPS:

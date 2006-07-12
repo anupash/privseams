@@ -266,6 +266,7 @@ int main_create_content(void)
 	gtk_widget_grab_default(w);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_SEND);
 	gtk_widget_show(w);
+	widget_set(ID_TERMSEND, w);
 
 	/* done with notebook tabs. */
 	/***************************************/
