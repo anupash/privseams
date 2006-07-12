@@ -30,8 +30,8 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
 	for(i = 0; i < n_addrs; i++, locator_address_item++) {
-		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
-			 "Called locator handler function returned error\n");
+		if(func(entry, locator_address_item, opaque))
+			HIP_ERROR("Called locator handler function returned error\n");
 	}
 	
  out_err:
@@ -236,11 +236,30 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 				  struct hip_spi_out_item *spi_out,
 				  void *_locator) {
 	int err = 0;
+	uint32_t spi_in;
 	struct hip_locator *locator = (void *) _locator;
+	struct hip_spi_in_item *item, *tmp;
 
 	if (!hip_update_locator_contains_item(locator, list_item)) {
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+	       	
+		/* If this is not the preferred address then the next line will fail
+		 * FIXME: This line needs to be either inside the next loop or 
+		 * deprecataing to update peer addr item code*/
+		
+
+		hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+
+		hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+		
+		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
+		
+		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+
+		hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+			      (int)entry->peer_udp_port, 0);
+
 		if(ipv6_addr_cmp(&entry->preferred_address, 
  				 &list_item->address) == 0){
 			// TODO: Handle this: Choose a random address from
@@ -851,6 +870,7 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	       		       struct in6_addr *hitr){
 
 	int err = 0;
+	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
 	uint16_t mask = 0;
 	HIP_DEBUG("building verification packet\n");
 	hip_msg_init(update_packet);
@@ -859,6 +879,9 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 						     hitr, hits);
 	entry->update_id_out++;
 	addr->seq_update_id = entry->update_id_out;
+
+
+
 	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
@@ -881,7 +904,7 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	HIP_DEBUG("sending addr verify pkt\n");
 
  out_err:
-	if (update_packet)
+	if (update_packet && err)
 		HIP_FREE(update_packet);
 	HIP_DEBUG("end, err=%d\n", err);
 	return err;
@@ -1279,13 +1302,18 @@ out_err:
 int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
 
 	int err = 0;
-	struct hip_spi_in_item *item, *tmp;
 	uint32_t spi_in;
+	struct hip_spi_in_item *item, *tmp;
 	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
 
 
-	hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
-			      (int)entry->peer_udp_port);
+	//hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
+ 	//				      (int)entry->peer_udp_port);
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+				       &entry->local_address, &addr->address,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
 
 	HIP_IFEL(hip_add_sa(&entry->local_address, &addr->address, 
 			    &entry->hit_our,
@@ -1296,19 +1324,16 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if ( memcmp(&item->addresses->address, &addr->address,
-			     sizeof(struct in6_addr))){
-			spi_in = item->spi;	// new_spi??	
-		}
-	}
-
-		
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
-
+	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	
 	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
-	HIP_IFEL(hip_add_sa(&entry->local_address,&addr->address, 
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+				       &addr->address, &entry->local_address,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
+	HIP_IFEL(hip_add_sa(&addr->address, &entry->local_address, 
 			    &entry->hit_peer, 
 			    &entry->hit_our,
 			    &spi_in, entry->esp_transform,
@@ -1562,8 +1587,17 @@ int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_
 	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
 
 
+
+	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+
 	hip_delete_sa(entry->default_spi_out, daddr, AF_INET6,0,
 			      (int)entry->peer_udp_port);
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+				       new_pref_addr, daddr,
+				       IPPROTO_ESP, 1, 0), -1,
+		 "Setting up SP pair failed\n");
+
 
 	HIP_IFEL(hip_add_sa(new_pref_addr, daddr, 
 			    &entry->hit_our,
@@ -1574,18 +1608,19 @@ int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
-/*	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		if ( memcmp(&item->addresses->address, daddr,
-			     sizeof(struct in6_addr))){
-			spi_in = &item->spi;		
-		}
-	}
-*/
-		
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+
 	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
+
+	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
+				       daddr, new_pref_addr,
+				       IPPROTO_ESP, 1, 0), -1,
+		 			"Setting up SP pair failed\n");
+
+
 	HIP_IFEL(hip_add_sa(daddr, new_pref_addr, 
 			    &entry->hit_peer, 
 			    &entry->hit_our,
@@ -1666,7 +1701,6 @@ int update_src_address_list(struct hip_hadb_state *entry,
 			   	 	IN6_IS_ADDR_V4MAPPED(daddr)) {
 
 					loc_addr_item->reserved = ntohl(1 << 31);
-					ipv6_addr_copy(&entry->local_address, saddr);
 					HIP_IFEL(update_preferred_address(
 							entry,saddr,
 							daddr, 
