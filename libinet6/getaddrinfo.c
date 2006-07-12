@@ -1196,6 +1196,7 @@ getaddrinfo (const char *name, const char *service,
     _HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   }
 
+  printf("flags: %x\n", hints->ai_flags);
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
 			  AI_HIP_NATIVE|AI_KERNEL_LIST))
