@@ -30,8 +30,8 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
 	for(i = 0; i < n_addrs; i++, locator_address_item++) {
-		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
-			 "Called locator handler function returned error\n");
+		if(func(entry, locator_address_item, opaque))
+			HIP_ERROR("Called locator handler function returned error\n");
 	}
 	
  out_err:
