@@ -78,6 +78,7 @@ int gui_init(void)
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
+	cmd_help("");
 	term_print("* HIP GUI started.\n");
 
 	/* Create some random nickname. */

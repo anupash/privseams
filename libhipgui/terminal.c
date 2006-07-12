@@ -37,7 +37,7 @@ char term_server_addr[MAX_URL_LEN + 1];
 void cmd_help(char *x)
 {
 	term_print("\n"
-	           "* HIP GUI chat help:\n"
+	           "* HIP GUI terminal help:\n"
 	           "*  help          - Prints this help.\n"
 	           "*  exec          - Show application execute dialog.\n"
 	           "*  server [nick] - Create new server. Close old server/client\n"
