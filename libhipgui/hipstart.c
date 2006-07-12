@@ -227,12 +227,15 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 		sleep(3);
 		
 		/* Execute agent as server, client or plain. */
-		if (b == TRUE && host_items[n].server)
+		if (b == TRUE)
 		{
-			if (s == TRUE) exec_application("hipagent", "hipagent", "-server", NULL);
-			else exec_application("hipagent", "hipagent", "-client", "hip3", NULL);
+			if (s == TRUE)
+			{
+				if (host_items[n].server) exec_application("hipagent", "hipagent", "-server", NULL);
+				else exec_application("hipagent", "hipagent", "-client", "hip3", NULL);
+			}
+			else exec_application("hipagent", "hipagent", NULL);
 		}
-		else exec_application("hipagent", "hipagent", NULL);
 
 		/* Quit application. */
 		gtk_main_quit();

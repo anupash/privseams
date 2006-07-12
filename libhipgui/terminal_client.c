@@ -147,37 +147,37 @@ out_err:
 int term_client_init(void)
 {
 	/* Variables. */
-	struct sockaddr_in6 *addr6;
-	struct addrinfo hints, *ai_list = NULL;
-	int i, err = 0;
+	struct sockaddr_in6 *addr6;
+	struct addrinfo hints, *ai_list = NULL;
+	int i, err = 0;
 	char port_string[32];
 
 	/* Close client/server just for sure. */
 	term_server_quit();
 	term_client_quit();
 	
-	/* Clear struct. */
-	memset(&hints, 0, sizeof(struct addrinfo));
-
-	/* Set up struct. */
+	/* Clear struct. */
+	memset(&hints, 0, sizeof(hints));
+
+	/* Set up struct. */
 	hints.ai_flags = AI_HIP;
-	hints.ai_family = AF_UNSPEC;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 	sprintf(port_string, "%d", TERM_SERVER_PORT);
 
-	/* Get the host info. */
+	/* Get the host info. */
 	err = getaddrinfo(term_get_server_addr(), port_string, &hints, &ai_list);
 	HIP_IFEL(err, -1, "getaddrinfo() failed!\n");
 		
-	/* Convert address. */
-	addr6 = (struct sockaddr_in6 *)ai_list->ai_addr;
-
-	/* Create socket. */
+	/* Convert address. */
+	addr6 = (struct sockaddr_in6 *)ai_list->ai_addr;
+
+	/* Create socket. */
 	client_sockfd = socket(PF_INET6, SOCK_STREAM, 0);
 	HIP_IFEL(client_sockfd == -1, -1, "socket() failed!\n");
 
-	/* Try to connect to resolved address. */
+	/* Try to connect to resolved address. */
 	err = connect(client_sockfd, (struct sockaddr *)addr6, sizeof(struct sockaddr_in6));
 	HIP_IFEL(err, -1, "connect() failed!\n");
 	

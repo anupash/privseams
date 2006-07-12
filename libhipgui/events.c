@@ -134,7 +134,8 @@ void button_event(GtkWidget *warg, gpointer data)
 	/* Variables. */
 	HIT_Group *g;
 	int id = (int)data;
-	char *ps, str[1024];
+	char *ps;
+	static str[1024];
 	time_t rawtime;
 	struct tm *tinfo;
 	pthread_t pt;
@@ -150,6 +151,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (ps[0] == '/') term_exec_command(&ps[1]);
 		else
 		{
+			HIP_DEBUG("nick is: %s\n", get_nick());
 			time(&rawtime);
 			tinfo = localtime(&rawtime);
 			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,

@@ -81,9 +81,8 @@ int gui_init(void)
 	cmd_help("");
 	term_print("* HIP GUI started.\n");
 
-	/* Create some random nickname. */
-	sprintf(str, "user%0.3d", rand() % 1000);
-	set_nick(str);
+	/* Default nickname. */
+	set_nick("user");
 
 out_err:
 	return (err);
