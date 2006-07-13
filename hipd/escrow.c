@@ -286,9 +286,9 @@ HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask)
 
 }
 
-HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, int esp_transform, 
-									uint32_t spi, uint16_t key_len, 
-									struct hip_crypto_key * key, int gfpmask)
+HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, 
+							  int esp_transform, uint32_t spi, uint16_t key_len, 
+							  struct hip_crypto_key * key, int gfpmask)
 {
 	HIP_KEA_EP *kea_ep;
 	kea_ep = hip_kea_ep_allocate(gfpmask);
@@ -298,6 +298,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, int esp_transform,
 	hip_hold_kea(kea_ep); // Add reference
 	
 	ipv6_addr_copy(&kea_ep->hit, hit);
+	ipv6_addr_copy(&kea_ep->ip, ip);
 	kea_ep->esp_transform = esp_transform;
 	kea_ep->key_len = key_len;
 	kea_ep->spi = spi;
@@ -309,6 +310,8 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, int esp_transform,
 
 int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 {
+	HIP_DEBUG("Adding kea endpoint");
+	
 	int err = 0;
 	HIP_KEA_EP * temp;
 
@@ -323,9 +326,9 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
-	HIP_HEXDUMP("KEA endpoint hit:", &kea_ep->hit, 16);
-	HIP_HEXDUMP("KEA endpoint spi:", &kea_ep->spi, 2);
-	HIP_HEXDUMP("KEA endpoint id:", &kea_ep->ep_id, 18);
+	HIP_DEBUG_HIT("KEA endpoint hit:", &kea_ep->hit);
+	HIP_DEBUG("KEA endpoint spi: %d", &kea_ep->spi);
+	//HIP_HEXDUMP("KEA endpoint id:", &kea_ep->ep_id, 18);
 	
 	temp = hip_ht_find(&kea_endpoints, &kea_ep->ep_id); // Adds reference
 	
@@ -344,6 +347,8 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 
 void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 {
+	HIP_DEBUG("Removing kea endpoint");
+	
 	HIP_ASSERT(kea_ep);
 
 	HIP_LOCK_HA(kea_ep); // refcnt should be more than 1
@@ -399,6 +404,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	uint16_t mask = 0;
 	//struct hip_own_addr_list_item *own_address_item, *tmp;
 	
+	
 	hip_hadb_get_peer_addr(entry, &daddr);
 	
 	/* Start building UPDATE packet */
@@ -406,6 +412,12 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory.\n");
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
+
+	HIP_DEBUG_HIT("escrow data hit:", hit);
+	HIP_DEBUG("escrow data spi: %d", spi);
+	HIP_DEBUG("escrow data old spi: %d", old_spi);
+
+
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
 						     &entry->hit_peer);

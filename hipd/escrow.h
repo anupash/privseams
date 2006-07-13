@@ -28,8 +28,8 @@ struct hip_key_escrow_association
 	//struct in6_addr       	peer_hit; //? 
 	struct in6_addr			server_hit;
 	
-	uint32_t 				client_spi;//?
-	uint32_t				peer_spi;//?
+	uint32_t 				spi_in;//?
+	uint32_t				spi_out;//?
 	
 	hip_keastate_t			keastate;
 };
@@ -111,7 +111,7 @@ int hip_kea_ep_match(const void * ep1, const void * ep2);
 
 HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask);
 
-HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, int esp_transform, 
+HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, int esp_transform, 
 							  uint32_t spi, uint16_t key_len, 
 							  struct hip_crypto_key * key, int gfpmask);
 

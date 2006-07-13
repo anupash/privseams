@@ -461,6 +461,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SEND_UPDATE_ESP_INFO (1 << 0)
 #define SEND_UPDATE_LOCATOR (1 << 1)
 
+
+#define HIP_ESCROW_OPERATION_ADD	1
+#define HIP_ESCROW_OPERATION_MODIFY	2
+#define HIP_ESCROW_OPERATION_DELETE	3
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))

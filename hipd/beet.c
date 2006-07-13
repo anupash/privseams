@@ -393,6 +393,43 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
 
+#ifdef CONFIG_HIP_ESCROW
+	{
+		HIP_KEA *kea;
+		hip_ha_t *entry = hip_hadb_try_to_find_by_peer_hit(peer_addr);	
+		if (entry) {
+			if (entry->escrow_used) {
+				hip_ha_t *server_entry = 
+					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
+				kea = hip_kea_find(&server_entry->hit_our);	
+				if (server_entry && kea) {
+					int err;
+					// TODO: check correctness
+					if (spi == kea->spi_out)		
+						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
+							peer_addr, &entry->hit_peer, 0, spi, 0, 0, 0);
+					else
+						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
+							&entry->local_address, &entry->hit_our, 0, spi, 0, 0, 0);
+						
+				}
+				else {
+					HIP_DEBUG("No server entry or kea base found");
+					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
+				}
+			}
+			else {
+				HIP_DEBUG("Escrow not in use - not sending update");
+			}
+		}
+		else {
+			HIP_DEBUG("Could not find ha_state entry");
+		}
+	} 		
+
+#endif //CONFIG_HIP_ESCROW
+	
+
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
@@ -419,6 +456,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 	HIP_DEBUG_HIT("Adding sa with src ", saddr);
 	HIP_DEBUG_HIT("... and with dst ", daddr);
+	HIP_DEBUG("... with spi %d", *spi);
+	
 
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
@@ -447,6 +486,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 #ifdef CONFIG_HIP_ESCROW
 	{
+		HIP_KEA *kea;
 		hip_ha_t *entry = hip_hadb_find_byhits(src_hit, dst_hit);	
 		if (entry) {
 			if (entry->escrow_used) {
@@ -454,19 +494,19 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
 				if (server_entry) {
 					int err;
-					/* TODO: Direction can not be relied on yet, but it seems 
-					 * that dst and src are delivered in logical order */
 					
-					//if (direction == HIP_SPI_DIRECTION_OUT) {
-						// TODO; Fix values
-						err = hip_send_escrow_update(server_entry, 1, daddr, 
-							dst_hit, *spi, 0, ealg, (uint16_t)enckey_len, enckey);
-					//}
-					//else {
-						// TODO; Fix values
-						//err = hip_send_escrow_update(server_entry, 1, saddr, 
-						//	src_hit, *spi, 0, ealg, (uint16_t)enckey_len, enckey);
-					//}
+						// TODO: Fix values. Spi usage needs to be checked. 
+						// direction should propably be checked
+					err = hip_send_escrow_update(server_entry, 
+						(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
+						daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
+					
+					
+					kea = hip_kea_find(&server_entry->hit_our);
+					if (ipv6_addr_cmp(&kea->hit, dst_hit))
+						kea->spi_in = *spi;
+					else 
+						kea->spi_out = *spi;		
 				}
 				else {
 					HIP_DEBUG("No server entry found");
