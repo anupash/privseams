@@ -25,6 +25,8 @@
 #include "linux/netlink.h"
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
+
+#include "agent.h"
 #include "debug.h"
 #include "agent_tools.h"
 #include "hit_db.h"

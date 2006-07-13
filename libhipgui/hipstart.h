@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -32,6 +32,8 @@ typedef struct
 {
 	char name[MAX_NAME_LEN + 1];
 	char path[MAX_URL_LEN + 1];
+	char addr[MAX_NAME_LEN + 1];
+	int server;
 } Host_item;
 
 

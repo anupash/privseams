@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -44,7 +44,7 @@ gboolean gui_update_tree_value(GtkTreeModel *, GtkTreePath *,
 gboolean gui_update_list_value(GtkTreeModel *, GtkTreePath *,
                                GtkTreeIter *, gpointer);
 
-int gui_ask_new_hit(HIT_Remote *);
+int gui_ask_new_hit(HIT_Remote *, int);
 
 int tooldlg_add_rgroups(HIT_Group *, void *);
 int tooldlg_add_lhits(HIT_Remote *, void *);

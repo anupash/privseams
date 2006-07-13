@@ -201,7 +201,9 @@ int hip_agent_filter(struct hip_common *msg)
 	int err = 0;
 	int n, sendn;
 	socklen_t alen;
-
+	hip_ha_t *ha_entry;
+	struct in6_addr hits;
+	
 	if (!hip_agent_is_alive())
 	{
 		return (-ENOENT);
@@ -210,7 +212,9 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Filtering hip control message trough agent,"
 	          " message body size is %d bytes.\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-	
+	HIP_HEXDUMP("contents start: ", msg, sizeof(struct hip_common));
+	memcpy(&hits, &msg->hits, sizeof(hits));
+
 	alen = sizeof(hip_agent_addr);                      
 	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
 	           0, (struct sockaddr *)&hip_agent_addr, alen);
@@ -227,15 +231,37 @@ int hip_agent_filter(struct hip_common *msg)
 	sendn = n;
 	n = recvfrom(hip_agent_sock, msg, n, 0,
 	             (struct sockaddr *)&hip_agent_addr, &alen);
-	if (n < 0) {
+	if (n < 0)
+	{
 		HIP_ERROR("Recvfrom() failed.\n");
 		err = -1;
 		goto out_err;
 	}
 	/* This happens, if agent rejected the packet. */
-	else if (sendn != n) {
+	else if (sendn != n)
+	{
 		err = 1;
 	}
+	
+	if (hip_get_msg_type(msg) == HIP_I1 &&
+	    memcmp(&msg->hits, &hits, sizeof(msg->hits)) != 0)
+	{
+		HIP_DEBUG("Updating selected local HIT state in hadb to I1_SENT...\n");
+		ha_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+		if (ha_entry)
+		{
+			HIP_DEBUG("1. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_I1_SENT);
+			ha_entry->state = HIP_STATE_I1_SENT;
+		}
+		ha_entry = hip_hadb_find_byhits(&hits, &msg->hitr);
+		if (ha_entry)
+		{
+			HIP_DEBUG("2. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_UNASSOCIATED);
+			ha_entry->state = HIP_STATE_UNASSOCIATED;
+		}
+	}
+
+	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));
 
 out_err:
        return (err);

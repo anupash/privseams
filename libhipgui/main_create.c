@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -89,8 +89,8 @@ int main_create_content(void)
 	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-/*	iconw = gtk_image_new_from_file("run.xpm");
-	w = gtk_toolbar_append_item(toolbar, "New HIT",
+	iconw = gtk_image_new_from_file("run.xpm");
+/*	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);*/
@@ -155,6 +155,7 @@ int main_create_content(void)
 	gtk_tree_store_set(model, &remote_top, 0, "Remote HIT groups", -1);
 
 	list = gtk_tree_view_new();
+	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
 	widget_set(ID_RLISTVIEW, list);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
@@ -166,7 +167,7 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-	g_signal_connect(G_OBJECT(select), "changed", G_CALLBACK(select_list), (gpointer)"hit list");
+	g_signal_connect(select, "changed", G_CALLBACK(list_click), (gpointer)"clicked");
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
@@ -265,6 +266,7 @@ int main_create_content(void)
 	gtk_widget_grab_default(w);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_SEND);
 	gtk_widget_show(w);
+	widget_set(ID_TERMSEND, w);
 
 	/* done with notebook tabs. */
 	/***************************************/
