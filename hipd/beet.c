@@ -417,6 +417,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			// struct hip_stateless_info *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
+	HIP_DEBUG_HIT("Adding sa with src ", saddr);
+	HIP_DEBUG_HIT("... and with dst ", daddr);
+
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -451,21 +454,27 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
 				if (server_entry) {
 					int err;
-					if (direction == HIP_SPI_DIRECTION_OUT) {
+					/* TODO: Direction can not be relied on yet, but it seems 
+					 * that dst and src are delivered in logical order */
+					
+					//if (direction == HIP_SPI_DIRECTION_OUT) {
 						// TODO; Fix values
 						err = hip_send_escrow_update(server_entry, 1, daddr, 
 							dst_hit, *spi, 0, ealg, (uint16_t)enckey_len, enckey);
-					}
-					else {
+					//}
+					//else {
 						// TODO; Fix values
-						err = hip_send_escrow_update(server_entry, 1, saddr, 
-							src_hit, *spi, 0, ealg, (uint16_t)enckey_len, enckey);
-					}
+						//err = hip_send_escrow_update(server_entry, 1, saddr, 
+						//	src_hit, *spi, 0, ealg, (uint16_t)enckey_len, enckey);
+					//}
 				}
 				else {
 					HIP_DEBUG("No server entry found");
 					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
 				}
+			}
+			else {
+				HIP_DEBUG("Escrow not in use - not sending update");
 			}
 		}
 		else {

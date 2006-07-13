@@ -94,6 +94,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 	if (!kea) 
 		return -1;	
 	ipv6_addr_copy(&kea->server_hit, server_hit);	
+	err = hip_keadb_add_entry(kea);
 	HIP_DEBUG_HIT("Created kea base entry with hit: ", &entry->lhi.hit);
 	return err;
 }
