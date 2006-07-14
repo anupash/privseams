@@ -35,7 +35,7 @@ typedef uint32_t hip_closest_prefix_type_t;
 
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
 #define HIP_HIT_TYPE_MASK_100   0x20010070
-#define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
+#define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
 #define HIP_HIT_PREFIX_LEN      28     /* bits */
@@ -70,12 +70,21 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *hit)
 	return (hit_begin & HIP_HIT_PREFIX);
 }
 
-static inline void set_hit_prefix(const struct in6_addr *hit)
+static inline void set_hit_prefix(struct in6_addr *hit)
 {
-	hip_closest_prefix_type_t *hit_begin = (hip_closest_prefix_type_t *) hit;
-	*hit_begin &= HIP_HIT_TYPE_MASK_CLEAR;
-	*hit_begin |= HIP_HIT_PREFIX;
-	*hit_begin = htonl(*hit_begin);
+	hip_closest_prefix_type_t hit_begin;
+	//printf("*************** %x\n", *hit);
+	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+	//printf("*************** %x\n", hit_begin);
+	hit_begin &= HIP_HIT_TYPE_MASK_CLEAR;
+	//printf("*************** %x\n", hit_begin);
+	hit_begin = htonl(hit_begin);
+	hit_begin |= HIP_HIT_PREFIX;
+	//printf("*************** %x\n", hit_begin);
+	hit_begin = htonl(hit_begin);
+	//printf("*************** %x\n", hit_begin);
+	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
+	//printf("*************** %x\n", *hit);
 }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC

@@ -505,7 +505,7 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
 		  "BN_bn2bin_safe\n");
 
-	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
+	HIP_HEXDUMP("encoded: ", encoded, len);
 
  out_err:
 	if(bn)
@@ -528,9 +528,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        int khi_data_len = key_rr_len + sizeof(khi_context_id);
        int khi_index = 0;
 
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
        HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        /* Hash Input :=  Context ID | Input */
        khi_data = HIP_MALLOC(khi_data_len, 0);
@@ -556,9 +556,10 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   ((u8 *) hit) + 3,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
 		-1, "encoding failed\n");
-       set_hit_prefix(hit);
 
-       HIP_DEBUG_HIT("calculated HIT: ", hit);
+       HIP_DEBUG_HIT("HIT before prefix: ", hit);
+       set_hit_prefix(hit);
+       HIP_DEBUG_HIT("HIT after prefix: ", hit);
 
  out_err:
        if (khi_data)
