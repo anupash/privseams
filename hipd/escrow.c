@@ -295,6 +295,10 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	if (!kea_ep)
 		return NULL;
 	
+	HIP_DEBUG("Creating kea endpoint");
+	HIP_DEBUG_HIT("ep hit:", hit);
+	HIP_DEBUG("ep spi: %d", spi);
+	
 	hip_hold_kea(kea_ep); // Add reference
 	
 	ipv6_addr_copy(&kea_ep->hit, hit);
@@ -325,10 +329,6 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.in6_u.u6_addr32, 
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
-	
-	HIP_DEBUG_HIT("KEA endpoint hit:", &kea_ep->hit);
-	HIP_DEBUG("KEA endpoint spi: %d", &kea_ep->spi);
-	//HIP_HEXDUMP("KEA endpoint id:", &kea_ep->ep_id, 18);
 	
 	temp = hip_ht_find(&kea_endpoints, &kea_ep->ep_id); // Adds reference
 	
@@ -416,7 +416,8 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG_HIT("escrow data hit:", hit);
 	HIP_DEBUG("escrow data spi: %d", spi);
 	HIP_DEBUG("escrow data old spi: %d", old_spi);
-
+	HIP_DEBUG("escrow data ealg: %d", ealg);
+	HIP_DEBUG("escrow data key length: %d",key_len);
 
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,

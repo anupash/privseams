@@ -2103,8 +2103,8 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 	memcpy((struct in6_addr *)&keys.hit, hit, 16);		
 	keys.operation = htons(operation_id);
 	keys.alg_id = htons(alg_id);	
-	keys.spi = htons(spi);
-	keys.spi_old = htons(spi_old);
+	keys.spi = htonl(spi);
+	keys.spi_old = htonl(spi_old);
 	keys.key_len = htons(key_len);
 	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
 	

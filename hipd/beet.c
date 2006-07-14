@@ -454,11 +454,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			// struct hip_stateless_info *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
-	HIP_DEBUG_HIT("Adding sa with src ", saddr);
-	HIP_DEBUG_HIT("... and with dst ", daddr);
-	HIP_DEBUG("... with spi %d", *spi);
-	
-
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;

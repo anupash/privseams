@@ -1304,7 +1304,8 @@ out_err:
 int hip_handle_escrow_parameter(hip_ha_t *entry, 
 	struct hip_keys *keys)
 {
-	uint32_t op, spi, spi_old, len, alg;
+	uint32_t spi, spi_old;
+	uint16_t op, len, alg;
 	int err = 0;
 	HIP_KEA *kea; 
 	HIP_KEA_EP *ep;
@@ -1315,14 +1316,14 @@ int hip_handle_escrow_parameter(hip_ha_t *entry,
 	 hit = (struct in6_addr *)&keys->hit;
 	 ip = (struct in6_addr *)&keys->address;		
 	 
+	 HIP_DEBUG_HIT("handle escrow param hit:", hit);
+	 
 	 op = ntohs(keys->operation);
-	 spi = ntohs(keys->spi);
-	 spi_old = ntohs(keys->spi_old);
+	 spi = ntohl(keys->spi);
+	 spi_old = ntohl(keys->spi_old);
 	 len = ntohs(keys->key_len);
 	 alg = ntohs(keys->alg_id);
-	 
-	 HIP_DEBUG("Update: received spi %d, transformed %d", keys->spi, spi);
-	 
+
 	 switch (op) {
 	 	
 	 	case HIP_ESCROW_OPERATION_ADD:
