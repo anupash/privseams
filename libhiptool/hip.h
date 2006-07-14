@@ -31,12 +31,16 @@
 #  include "kerncompat.h"
 #endif
 
-#define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_120   0x11
-#define HIP_HIT_PREFIX          0x1100
-#define HIP_HIT_PREFIX_LEN      8     /* bits */
+typedef uint32_t hip_closest_prefix_type_t;
+
+#define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
+#define HIP_HIT_TYPE_MASK_100   0x20010070
+#define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
+#define HIP_HIT_TYPE_MASK_INV   0xfffffff0
+#define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
+#define HIP_HIT_PREFIX_LEN      28     /* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
-#define HIP_HIT_PREFIX_STR      "/8"
+#define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -57,66 +61,68 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+static inline int ipv6_addr_is_hit(const struct in6_addr *hit)
+{
+	hip_closest_prefix_type_t hit_begin;
+	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+	hit_begin = ntohl(hit_begin);
+	hit_begin &= HIP_HIT_TYPE_MASK_INV;
+	return (hit_begin & HIP_HIT_PREFIX);
+}
+
+static inline void set_hit_prefix(const struct in6_addr *hit)
+{
+	hip_closest_prefix_type_t *hit_begin = (hip_closest_prefix_type_t *) hit;
+	*hit_begin &= HIP_HIT_TYPE_MASK_CLEAR;
+	*hit_begin |= HIP_HIT_PREFIX;
+	*hit_begin = htonl(*hit_begin);
+}
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 
 #include <sys/un.h> // for sockaddr_un
 struct hip_opp_blocking_request_entry {
-  struct list_head     	next_entry;
-  spinlock_t           	lock;
-  atomic_t             	refcnt;
-
-  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
-  struct in6_addr       peer_real_hit;
-  struct sockaddr_un    caller;
+	struct list_head     	next_entry;
+	spinlock_t           	lock;
+	atomic_t             	refcnt;
+	
+	struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
+	struct in6_addr       peer_real_hit;
+	struct sockaddr_un    caller;
 };
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
-#define SET_NULL_HIT(hit)                      \
+#define SET_NULL_HIT(hit)                           \
         { memset(hit, 0, sizeof(hip_hit_t));        \
-          (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
+          *((hip_closest_prefix_type_t *) hit) |= HIP_HIT_PREFIX; }
 
 inline static ipv6_addr_is_null(struct in6_addr *ip){
-  return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
-	   ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
-  /*  return ((ip->s6_addr32[0] == 0) &&          
-	  (ip->s6_addr32[1] == 0) &&          
-	  (ip->s6_addr32[2] == 0) &&          
-	  (ip->s6_addr32[3] == 0));
-  */
+	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
+		 ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
 }
 
 static inline int create_new_socket(int type, int protocol)
 {
-  return socket(AF_INET6, type, protocol);
+	return socket(AF_INET6, type, protocol);
 }
 
-static inline int hit_is_real_hit(const struct in6_addr *hit){
-  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
-	  (hit->s6_addr[1] != 0x00));
+static inline int hit_is_real_hit(const struct in6_addr *hit) {
+	return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
 }
 
 static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
-  return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
-	  (hit->s6_addr32[1] == 0) &&
-	  (hit->s6_addr32[2] == 0) &&
-	  (hit->s6_addr32[3] == 0));
+	return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] == 0);
 }
 
 static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
-  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
-	  (hit->s6_addr[1] == 0x00));
-
+	return hit_is_opportunistic_hit(hit);
 }
 static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+	// return hit_is_opportunistic_hit(hit);
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
 	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
-
-static inline int ipv6_addr_is_hit(const struct in6_addr *a)
-{
-	return (a->s6_addr[0] == HIP_HIT_TYPE_MASK_120);
-}
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
          {(in6_addr_to)->s6_addr32[0] = 0;                                \
@@ -180,8 +186,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
-//#define HIP_HIT_TYPE_HASH126    1
-#define HIP_HIT_TYPE_HASH120    1
+#define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
 #define HIP_I1         1
@@ -628,6 +633,7 @@ struct hip_diffie_hellman {
 	hip_tlv_len_t     length;
 
 	uint8_t           group_id;  
+	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
 } __attribute__ ((packed));

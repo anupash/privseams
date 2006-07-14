@@ -192,6 +192,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
 	uint16_t esp_keymat_index, esp_default_keymat_index;
+	struct hip_diffie_hellman * dhf;
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
@@ -258,14 +259,17 @@ int hip_produce_keying_material(struct hip_common *msg,
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
 	
-	struct hip_diffie_hellman * dhf;
 	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
+
+	HIP_IFEL((htons(dhf->pub_len) != hip_get_diffie_hellman_param_public_value_len(dhf)), -1,
+		 "Bad DHF len or multiple DHF not supported\n");
 	
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
 							      dhf->group_id,
-							      hip_get_param_contents_len(dhf) - 1, 
-							      dh_shared_key, dh_shared_len)) < 0,
+							      ntohs(dhf->pub_len), 
+							      dh_shared_key,
+							      dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	_HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));

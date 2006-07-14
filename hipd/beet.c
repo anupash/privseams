@@ -262,10 +262,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
-			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
-			   0,0, AF_INET6), -1);
-			   //preferred_family), -1);
+			   0, 0, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -487,8 +484,8 @@ void hip_delete_default_prefix_sp_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* See the comment in hip_setup_sp_prefix_pair() */
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
 	hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0, 0);
 }
@@ -501,9 +498,8 @@ int hip_setup_default_sp_prefix_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
-
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
 	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
 		-1);
