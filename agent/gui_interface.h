@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -27,7 +27,7 @@ extern "C" {
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int check_hit(HIT_Remote *);
+int check_hit(HIT_Remote *, int);
 
 
 /******************************************************************************/

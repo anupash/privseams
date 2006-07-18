@@ -378,7 +378,8 @@
     <para>
       HIPL software bundle includes also a java wrapper library to the HIP
       enabled libinet6 resolver library. The library is called "jip" and it
-      is located in "path-to-hipl/jip".
+      is located in "path-to-hipl/jip". The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
       </para>
     <para>
       You need to have either Blackdown or Sun java jdk 1.4.x or later to
@@ -538,10 +539,12 @@
     </para>
     <para>
 	E.g. "env 
-LD_PRELOAD=/home/gurtov/hipl--main--2.6/libinet6/.libs/libinet6.so:/home/gurtov/hipl--main--2.6/libhiptool/.libs/libhiptool.so 
+LD_PRELOAD=~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so 
  firefox hipserver.infrahip.net"
         Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so and 
-LD_LIBRARY_PATH=/home/gurtov/hipl--main--2.6/libhiptool/.libs/:/home/gurtov/hipl--main--2.6/libinet6/.libs/
+LD_LIBRARY_PATH=~/hipl--main--2.6/libhiptool/.libs/:~/hipl--main--2.6/libinet6/.libs/
+    </para>
+    <para>If you have installed the library using make install, you should reference /usr/lib instead of your home directory.
     </para>
     <para>
 Make sure that libinet6 is compiled with 
@@ -567,8 +570,12 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>
     5. Use the opportunistic mode as described in section "opportunistic mode".
-    Remember that you need to link the application to libopphip and libhiptool
-    (in that particular order).
+    Remember that you need to link the application to libopphip, libinet6 and
+    libhiptool (in that particular order). Use /usr/lib prefix for the libs or
+    as follows (in case you did not make install):
+    </para>
+    <para>
+export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
     </para>
     <para>
     6. Use HIP agent GUI to run the application. This is a new, not very well
@@ -940,6 +947,9 @@ using getaddrinfo: ping, ping6, tla, svn.
       <para>
 		HIT database is saved and loaded on agent startup as default from
 		'/etc/hip/agentdb'-file.
+      </para>
+      <para>The agent executable is called "hipagent". You should run it using
+            normal user (non-root) priviledges.
       </para>
   </chapter>
   <chapter>

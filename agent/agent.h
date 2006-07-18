@@ -24,8 +24,10 @@
 #include "linux/netlink.h"
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
+
 #include "agent_tools.h"
 #include "gui_interface.h"
+#include "terminal.h"
 
 
 /******************************************************************************/

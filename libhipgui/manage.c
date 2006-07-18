@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -56,10 +56,10 @@ void gui_add_rgroup(HIT_Group *group)
 	w = widget(ID_RLISTMODEL);
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &remote_top);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
-	
+
 	gtk_combo_box_insert_text(widget(ID_TWR_RGROUP), 0, group);
 	gtk_combo_box_insert_text(widget(ID_NH_RGROUP), 0, group);
-	
+
 	g_free(msg);
 	gdk_threads_leave();
 }
@@ -99,7 +99,7 @@ void gui_add_remote_hit(char *hit, char *group)
 			break;
 		}
 	} while (gtk_tree_model_iter_next(w, &gtop) != FALSE);
-	
+
 out_err:
 	if (err)
 	{
@@ -120,7 +120,7 @@ void gui_delete_remote_hit(char *name)
 {
 	/* Variables. */
 	Update_data ud;
-	
+
 	NAMECPY(ud.old_name, name);
 	ud.new_name[0] = '\0';
 	ud.depth = 3;
@@ -163,11 +163,11 @@ gboolean gui_update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 	Update_data *ud = (Update_data *)data;
 	char *str;
 	int *indices, depth;
-	
+
 	gtk_tree_model_get(model, iter, 0, &str, -1);
 	indices = gtk_tree_path_get_indices(path);
 	depth = gtk_tree_path_get_depth(path);
-	
+
 	if ((indices[0] != ud->indices_first || depth != ud->depth)
 	    && ud->indices_first >= 0 && ud->depth >= 0);
 	else if (strcmp(ud->old_name, str) == 0)
@@ -183,7 +183,7 @@ gboolean gui_update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 		}
 		return (TRUE);
 	}
-	
+
 	return (FALSE);
 }
 /* END OF FUNCTION */
@@ -200,11 +200,11 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 	Update_data *ud = (Update_data *)data;
 	char *str;
 	int *indices, depth;
-	
+
 	gtk_tree_model_get(model, iter, 0, &str, -1);
 	indices = gtk_tree_path_get_indices(path);
 	depth = gtk_tree_path_get_depth(path);
-	
+
 	if ((indices[0] != ud->indices_first || depth != ud->depth)
 	    && ud->indices_first >= 0 && ud->depth >= 0);
 	else if (strcmp(ud->old_name, str) == 0)
@@ -212,7 +212,7 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 		gtk_list_store_set(model, iter, 0, ud->new_name, -1);
 		return (TRUE);
 	}
-	
+
 	return (FALSE);
 }
 /* END OF FUNCTION */
@@ -221,11 +221,12 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 /******************************************************************************/
 /**
 	Ask for new HIT from user.
-	
+
 	@param hit Information of HIT to be accepted.
+	@param Whether in or outgoing packet.
 	@return Returns 0 on add, -1 on drop.
 */
-int gui_ask_new_hit(HIT_Remote *hit)
+int gui_ask_new_hit(HIT_Remote *hit, int inout)
 {
 	/* Variables. */
 	static int in_use = 0;
@@ -233,7 +234,7 @@ int gui_ask_new_hit(HIT_Remote *hit)
 	HIT_Group *group;
 	char phit[128], *ps;
 	int err = 0;
-	
+
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
@@ -242,8 +243,9 @@ int gui_ask_new_hit(HIT_Remote *hit)
 	print_hit_to_buffer(phit, &hit->hit);
 	gtk_label_set_text(widget(ID_NH_HIT), phit);
 	gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
+//	delete_all_items_from_cb(widget(ID_NH_RGROUP));
 	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
-	
+
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	switch (err)
 	{
@@ -280,7 +282,7 @@ int gui_ask_new_hit(HIT_Remote *hit)
 /******************************************************************************/
 /**
 	Create new remote group.
-	
+
 	@return Name of new remote group.
 */
 char *create_remote_group(void)
@@ -306,7 +308,7 @@ char *create_remote_group(void)
 		ps = gtk_combo_box_get_active_text(widget(ID_NG_TYPE2));
 		if (strcmp("lightweight", ps) == 0) lw = 1;
 		else lw = 0;
-		
+
 		psn = gtk_entry_get_text(widget(ID_NG_NAME));
 		psl = gtk_combo_box_get_active_text(widget(ID_NG_LOCAL));
 		l = NULL;
@@ -346,7 +348,7 @@ void *create_remote_group_thread(void *data)
 {
 	/* Variables. */
 	HIT_Group *g = (HIT_Group *)data;
-	
+
 	hit_db_add_rgroup(g->name, g->l, g->type, g->lightweight);
 
 	return (NULL);
@@ -364,6 +366,7 @@ int all_add_local(HIT_Remote *hit, void *p)
 	gtk_combo_box_append_text(widget(ID_TWR_LOCAL), hit->name);
 	gtk_combo_box_append_text(widget(ID_TWG_LOCAL), hit->name);
 	gtk_combo_box_append_text(widget(ID_NG_LOCAL), hit->name);
+	gtk_combo_box_append_text(widget(ID_NH_LOCAL), hit->name);
 	return (0);
 }
 /* END OF FUNCTION */
@@ -378,12 +381,12 @@ void all_update_local(char *old_name, char *new_name)
 	/* Variables. */
 	GtkTreeModel *model;
 	Update_data ud;
-	
+
 	ud.depth = -1;
 	ud.indices_first = -1;
 	NAMECPY(ud.old_name, old_name);
 	NAMECPY(ud.new_name, new_name);
-	
+
 	model = gtk_combo_box_get_model(widget(ID_TWR_LOCAL));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 
@@ -391,6 +394,9 @@ void all_update_local(char *old_name, char *new_name)
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 
 	model = gtk_combo_box_get_model(widget(ID_NG_LOCAL));
+	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+
+	model = gtk_combo_box_get_model(widget(ID_NH_LOCAL));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 }
 /* END OF FUNCTION */
@@ -405,12 +411,12 @@ void all_update_rgroups(char *old_name, char *new_name)
 	/* Variables. */
 	GtkTreeModel *model;
 	Update_data ud;
-	
+
 	ud.depth = -1;
 	ud.indices_first = -1;
 	NAMECPY(ud.old_name, old_name);
 	NAMECPY(ud.new_name, new_name);
-	
+
 	model = gtk_combo_box_get_model(widget(ID_TWR_RGROUP));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 

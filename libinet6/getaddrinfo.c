@@ -1015,15 +1015,6 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
   return 0;
 }
 
-hip_hit_t *get_local_hits_wrapper()
-{
-  struct gaih_addrtuple *at = NULL;
-  struct gaih_addrtuple **pat = &at;
-  
-  get_local_hits(NULL, pat);
-  return (hip_hit_t *)(&at->addr);
-}
-
 static int
 gaih_inet (const char *name, const struct gaih_service *service,
 	   const struct addrinfo *req, struct addrinfo **pai,
@@ -1205,6 +1196,7 @@ getaddrinfo (const char *name, const char *service,
     _HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   }
 
+  printf("flags: %x\n", hints->ai_flags);
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
 			  AI_HIP_NATIVE|AI_KERNEL_LIST))
