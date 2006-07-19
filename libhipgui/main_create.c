@@ -41,19 +41,17 @@ int main_create_content(void)
 	GtkTreeViewColumn *column;
 	GtkTreeSelection *select;
 	GtkTreeIter top, child;
-	/* XX TODO:
-		When GTK-2.10+ version is released,
-		add support for "system tray" status icon.
-
-		GtkStatusIcon *status_icon;
-		status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
-		gtk_status_icon_set_visible(status_icon, TRUE);
-		err = gtk_status_icon_is_embedded(status_icon);
-		HIP_DEBUG("Status icon %s.\n", (err ? "is visible", "could not be shown"));
-	*/
 	char str[320];
 	int i, err;
-
+	
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	GtkStatusIcon *status_icon;
+		
+	status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
+	gtk_status_icon_set_visible(status_icon, TRUE);
+	err = gtk_status_icon_is_embedded(status_icon);
+	HIP_DEBUG("Status icon %s.\n", (err ? "is visible" : "could not be shown"));
+#endif
 
 	gtk_container_set_border_width(window, 3);
 

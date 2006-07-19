@@ -400,42 +400,32 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
-#if 0
-int hip_del_peer_map(const struct hip_common *input)
+int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
+				void *peer_hit)
 {
-	struct in6_addr *hit, *ip;
+	hip_hit_t *hit = peer_hit;
 	int err = 0;
 
-	hit = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("handle async map: no hit\n");
-		err = -ENODATA;
-		goto out;
+	if (memcpy(hit, &entry->hit_peer, sizeof(hip_hit_t)) == 0)
+	{
+		hip_hadb_delete_state(entry);
 	}
 
-	ip = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
-	if (!ip) {
-		HIP_ERROR("handle async map: no ipv6 address\n");
-		err = -ENODATA;
-		goto out;
-	}
-
-	HIP_DEBUG_HIT("hit", hit);
-	HIP_DEBUG_IN6ADDR("ip", ip);
-
-	err = hip_del_peer_info(xx, hit, ip);
-	if (err) {
-		HIP_ERROR("Failed to delete mapping\n");
-		goto out;
-	}
-	  
- out:
-
+ out_err:
 	return err;
 }
-#endif
+
+int hip_hadb_del_peer_map(const hip_hit_t *hit)
+{
+	int err = 0;
+	hip_ha_t *entry;
+
+	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), 0,
+	         "for_each_hi err.\n");	
+	
+ out_err:
+	return err;
+}
 
 /*
  * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.

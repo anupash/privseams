@@ -10,6 +10,8 @@
 
 /* STANDARD */
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 /* THIS */
 #include "hit_db.h"
@@ -473,15 +475,15 @@ int hit_db_load_from_file(char *file)
 	HIP_DEBUG("Loading HIT database from %s.\n", file);
 
 	f = fopen(file, "r");
-	HIP_IFEL(!f, -1, "Failed to open HIT database file \"%s\" for reading!\n", file);
-	
+	HIP_IFEL(!f, 0, "Failed to open HIT database file \"%s\" for reading.\n", file);
+
 	/* Start parsing. */
 	memset(buf, '\0', sizeof(buf)); i = 0; n = -1;
 	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
 	{
 		/* Remove whitespaces from line start. */
 		if (i == 0 && (ch == ' ' || ch == '\t')) continue;
-		
+
 		/* Find end of line. */
 		if (ch != '\n')
 		{

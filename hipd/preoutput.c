@@ -22,7 +22,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
 		  uint32_t src_port, uint32_t dst_port,
 		  struct hip_common *msg,
-		  hip_ha_t *entry,
+		  hip_ha_t *_entry,
 		  int retransmit)
 {
 	int err = 0, sa_size, sent, len, dupl, try_bind_again;
@@ -32,6 +32,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
 	int hip_raw_sock = 0; /* Points either to v4 or v6 raw sock */
+	hip_ha_t *entry = _entry;
 
 	if (local_addr)
 		HIP_DEBUG_IN6ADDR("local_addr", local_addr);
@@ -120,12 +121,25 @@ int hip_csum_send(struct in6_addr *local_addr,
 	else
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
 
-	if (err == -ENOENT) {
+	if (err == -ENOENT)
+	{
 		HIP_DEBUG("No agent running, continuing\n");
 		err = 0;
-        } else if (err == 0) {
+    }
+    else if (err == 0)
+    {
 		HIP_DEBUG("Agent accepted packet\n");
-	} else if (err) {
+	}
+	else if (err == 1)
+	{
+		struct in6_addr addr;
+		memcpy(&addr, &entry->preferred_address, sizeof(addr));
+		HIP_IFEL(hip_hadb_del_peer_map(entry->hit_peer), -1, "hip_del_peer_map failed!\n");
+		HIP_IFEL(hip_hadb_add_peer_info(&msg->hits, &addr), -1, "hip_hadb_add_peer_info failed!\n");
+		HIP_IFEL(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr), -1, "hip_hadb_find_byhits failed!\n");
+	}
+	else if (err)
+	{
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
 	}	
