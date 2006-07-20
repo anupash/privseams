@@ -214,6 +214,17 @@ void button_event(GtkWidget *warg, gpointer data)
 	case IDB_TW_DELETE:
 		tw_delete();
 		break;
+		
+	case IDB_SYSTRAY:
+/*		if (GTK_WIDGET(widget(ID_MAINWND)) == TRUE)
+		{
+			gtk_widget_hide(widget(ID_MAINWND));
+		}
+		else
+		{
+			gtk_widget_show(widget(ID_MAINWND));
+		}*/
+		break;
 	}
 }
 /* END OF FUNCTION */
@@ -256,6 +267,17 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 		create_remote_group();
 		break;
 	}
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** When systray is activated. */
+void systray_event(void *warg, guint bid, guint atime, gpointer data)
+{
+	/* Variables. */
+	
+	HIP_DEBUG("systray popup.\n");
 }
 /* END OF FUNCTION */
 

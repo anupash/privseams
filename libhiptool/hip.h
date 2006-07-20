@@ -243,6 +243,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_ADD_DB_HI			35
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_I1_REJECT			38
+
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -303,6 +305,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_STATE_FILTERING			10
+
 #define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
 

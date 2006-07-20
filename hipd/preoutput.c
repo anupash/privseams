@@ -116,25 +116,34 @@ int hip_csum_send(struct in6_addr *local_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	if (entry)
+	if (!retransmit)
+		err = -ENOENT;
+	else if (entry)
+	{
 		err = entry->hadb_output_filter_func->hip_output_filter(msg);
+	}
 	else
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
 
 	if (err == -ENOENT)
 	{
-		HIP_DEBUG("No agent running, continuing\n");
 		err = 0;
     }
     else if (err == 0)
     {
-		HIP_DEBUG("Agent accepted packet\n");
+    	HIP_DEBUG("Agent accepted the packet.\n");
+    }
+    else if (err == 1)
+    {
+		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
+		entry->state = HIP_STATE_FILTERING;
 	}
-	else if (err == 1)
+	else if (err == 2)
 	{
+		HIP_DEBUG("Recreating entries, because agent changed local HIT.\n");
 		struct in6_addr addr;
 		memcpy(&addr, &entry->preferred_address, sizeof(addr));
-		HIP_IFEL(hip_hadb_del_peer_map(entry->hit_peer), -1, "hip_del_peer_map failed!\n");
+		HIP_IFEL(hip_hadb_del_peer_map(&entry->hit_peer), -1, "hip_del_peer_map failed!\n");
 		HIP_IFEL(hip_hadb_add_peer_info(&msg->hits, &addr), -1, "hip_hadb_add_peer_info failed!\n");
 		HIP_IFEL(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr), -1, "hip_hadb_find_byhits failed!\n");
 	}

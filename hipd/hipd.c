@@ -76,6 +76,13 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 	if (!entry->hip_msg_retrans.buf)
 		goto out_err;
+	
+	if (entry->state == HIP_STATE_FILTERING)
+	{
+		HIP_DEBUG("Waiting reply from agent...\n");
+		goto out_err;
+	}
+	
 	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
  		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
 		   entry->hip_msg_retrans.count, entry->state);
@@ -212,8 +219,8 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Filtering hip control message trough agent,"
 	          " message body size is %d bytes.\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-	HIP_HEXDUMP("contents start: ", msg, sizeof(struct hip_common));
-	memcpy(&hits, &msg->hits, sizeof(hits));
+/*	HIP_HEXDUMP("contents start: ", msg, sizeof(struct hip_common));
+	memcpy(&hits, &msg->hits, sizeof(hits));*/
 
 	alen = sizeof(hip_agent_addr);                      
 	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
@@ -226,6 +233,12 @@ int hip_agent_filter(struct hip_common *msg)
 	}
 	
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
+	
+	/*
+		If message is type I1, then user action might be needed to filter the packet.
+		Not receiving the packet directly from agent.
+	*/
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1)
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
@@ -243,7 +256,7 @@ int hip_agent_filter(struct hip_common *msg)
 		err = 1;
 	}
 	
-	if (hip_get_msg_type(msg) == HIP_I1 &&
+/*	if (hip_get_msg_type(msg) == HIP_I1 &&
 	    memcmp(&msg->hits, &hits, sizeof(msg->hits)) != 0)
 	{
 		HIP_DEBUG("Updating selected local HIT state in hadb to I1_SENT...\n");
@@ -259,9 +272,10 @@ int hip_agent_filter(struct hip_common *msg)
 			HIP_DEBUG("2. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_UNASSOCIATED);
 			ha_entry->state = HIP_STATE_UNASSOCIATED;
 		}
+		err = 1;
 	}
 
-	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));
+	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));*/
 
 out_err:
        return (err);
@@ -1145,7 +1159,7 @@ int main(int argc, char *argv[]) {
 			err = 0;
 			hip_hdr_type_t msg_type;
 			
-			HIP_DEBUG("Receiving user message(?).\n");
+			HIP_DEBUG("Receiving message from agent(?).\n");
 			
 			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 			alen = sizeof(hip_agent_addr);
@@ -1188,6 +1202,27 @@ int main(int argc, char *argv[]) {
 			{
 				HIP_DEBUG("Agent quit.\n");
 				hip_agent_status = 0;
+			}
+			else if (msg_type == HIP_I1)
+			{
+				hip_ha_t *ha;
+ 				ha = hip_hadb_find_byhits(&hip_msg->hits, &hip_msg->hitr);
+				if (ha)
+				{
+					ha->state = HIP_STATE_UNASSOCIATED;
+					HIP_DEBUG("Agent accepted I1.\n");
+				}
+			}
+			else if (msg_type == SO_HIP_I1_REJECT)
+			{
+				hip_ha_t *ha;
+				ha = hip_hadb_find_byhits(&hip_msg->hits, &hip_msg->hitr);
+				if (ha)
+				{
+					ha->state = HIP_STATE_UNASSOCIATED;
+					ha->hip_msg_retrans.count = 0;
+					HIP_DEBUG("Agent rejected I1.\n");
+				}
 			}
 		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,

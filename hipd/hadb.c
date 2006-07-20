@@ -406,7 +406,7 @@ int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
 	hip_hit_t *hit = peer_hit;
 	int err = 0;
 
-	if (memcpy(hit, &entry->hit_peer, sizeof(hip_hit_t)) == 0)
+	if (memcmp(hit, &entry->hit_peer, sizeof(hip_hit_t)) == 0)
 	{
 		hip_hadb_delete_state(entry);
 	}
@@ -418,7 +418,6 @@ int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
 int hip_hadb_del_peer_map(const hip_hit_t *hit)
 {
 	int err = 0;
-	hip_ha_t *entry;
 
 	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), 0,
 	         "for_each_hi err.\n");	

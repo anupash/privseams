@@ -192,6 +192,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	HIP_IFEL(r == NULL, NULL, "Failed to allocate new remote HIT.\n");
 
 	/* Copy info. */
+	memset(r, 0, sizeof(HIT_Remote));
 	NAMECPY(r->name, name);
 	memcpy(&r->hit, hit, sizeof(struct in6_addr));
 	r->port = port;
