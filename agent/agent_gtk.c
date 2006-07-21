@@ -134,7 +134,6 @@ int main(int argn, char *argv[])
 	agent_exit();
 
 out_err:
-	gui_terminate();
 	connhipd_quit();
 	hit_db_quit(db_path);
 
