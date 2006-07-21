@@ -244,6 +244,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
 #define SO_HIP_ADD_ESCROW			38
+#define SO_HIP_OFFER_ESCROW			39
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

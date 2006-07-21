@@ -491,20 +491,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		HIP_KEA *kea;
 
-		/*HIP_IFE(!(kea = hip_kea_create(&entry->hit_our, GFP_KERNEL)), -1);
-		HIP_DEBUG_HIT("Created kea base entry with own hit: ", &entry->hit_our);
-		HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
-			"Error while inserting KEA to keatable");*/
-		//HIP_IFEL(!(kea = hip_kea_create_base_entry(&entry->hit_our, dst_hit)), 
-		//	-1, "Error while creating kea base entry");	
-		
-		
-		/*HIP_IFE(!(kea = hip_kea_create(0, GFP_KERNEL)), -1);
-		HIP_DEBUG("Created kea base entry with hit 0");
-		HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
-			"Error while inserting KEA to keatable");
-		
-		*/
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
 		
@@ -526,6 +512,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 			 -1, "sending i1 failed\n");
 	
 		break;
+	
+	case SO_HIP_OFFER_ESCROW:
+		HIP_DEBUG("Handling escrow service user message");
+		
+		hip_services_add(HIP_ESCROW_SERVICE);
+	
+		hip_services_set_active(HIP_ESCROW_SERVICE);
+		if (hip_services_is_active(HIP_ESCROW_SERVICE))
+			HIP_DEBUG("Escrow service active");
+		err = hip_recreate_all_precreated_r1_packets();	
+		break;	
 	
 #endif
 	default:

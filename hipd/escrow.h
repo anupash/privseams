@@ -73,6 +73,8 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc);
 
 
+int hip_handle_escrow_registration(struct in6_addr *hit);
+
 /****** KEA ****************************/
 
 
@@ -125,12 +127,6 @@ void hip_kea_hold_ep(void *entry);
 void hip_kea_put_ep(void *entry);
 
 
-/************* utils ******************/
-
-// TODO: put this somewhere else (e.g. own file for registration stuff?)
-int hip_get_service_types(uint8_t *list);
-
-int hip_select_service_types(struct hip_reg_request *rreq, int *type_list, int len);
 
 /************* macros *****************/
 

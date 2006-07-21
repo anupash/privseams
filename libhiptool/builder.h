@@ -18,6 +18,7 @@
 
 #include "hip.h"
 
+
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -166,13 +167,13 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 			int *type_list, int cnt, int request);
 
 int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
-			uint8_t max_lifetime, uint8_t *type_list, int cnt);
+			uint8_t max_lifetime, int *type_list, int cnt);
 
 int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
-			uint8_t *type_list, int cnt, int request);
+			int *type_list, int cnt, int request);
 
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
-			uint8_t *type_list, int cnt);
+			int *type_list, int cnt);
 
 
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,

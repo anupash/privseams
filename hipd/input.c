@@ -1014,6 +1014,29 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  next_echo_resp:
 
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	
+	/********* REG_REQUEST *********/
+	{
+		int type[1] = { 0 };
+		// Check if we want to register to a service	
+		//   - escrow
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			type[0] = HIP_ESCROW_SERVICE;
+		}
+				
+		if (type[0] != 0) {
+			HIP_DEBUG("Adding reg_request parameter");
+			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
+			 "Could not build REG_REQUEST parameter\n");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
+
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -1049,21 +1072,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	
-#ifdef CONFIG_HIP_ESCROW
-	
-	/********* REG_REQUEST *********/
-	{
-		HIP_KEA *kea;
-		uint8_t type = HIP_ESCROW_SERVICE;
-		struct hip_reg_info *reg_info;
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-			HIP_DEBUG("Adding reg_request parameter");
-			HIP_IFEL(hip_build_param_reg_request(i2, 0, &type, 1, 1), -1, 
-			 "Could not build REG_REQUEST parameter\n");
-		}
-	}
-#endif //CONFIG_HIP_ESCROW
+
 
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
@@ -1147,32 +1156,45 @@ int hip_handle_r1(struct hip_common *r1,
 		 "Verification of R1 signature failed\n");
 
 #ifdef CONFIG_HIP_ESCROW
-	HIP_KEA *kea;
+
+	// Check if there is a reg_info parameter and extract service types
 	struct hip_reg_info *reg_info;
-	kea = hip_kea_find(&entry->hit_our);
-	if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-		HIP_DEBUG("Registering to escrow service");
-		HIP_IFEL(!(reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO)), -ENOENT,
-		 "No REG_INFO found in R1: no services available \n");
+	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	if (reg_info) {
+		 
 		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
 		int typecnt = hip_get_param_contents_len(reg_info);
-		int accept = 0;
-		int i;
-		if (typecnt >= 2) { 
-		for (i = 2; i < typecnt; i++) {
-			HIP_DEBUG("Service type: %d", types[i]);
-			if (types[i] == HIP_ESCROW_SERVICE)
-				accept = 1;
+		HIP_DEBUG("The responder offers %d services", typecnt);
+
+		// Functionality regarding escrow service		
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			HIP_DEBUG("Registering to escrow service");
+		
+			int accept = 0;
+			int i;
+			if (typecnt >= 2) { 
+				for (i = 2; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE)
+						accept = 1;
+				}
+			}
+			if (!accept)
+				kea->keastate = HIP_KEASTATE_INVALID;
+			else
+				HIP_DEBUG("Escrow service available!");		 
+		} 
+		else {
+			HIP_DEBUG("Not doing escrow registration");
 		}
-		}
-		if (!accept)
-			kea->keastate = HIP_KEASTATE_INVALID;
-		else
-			HIP_DEBUG("Escrow service available!");		 
-	} 
-	else {
-		HIP_DEBUG("Not doing escrow registration");
+		
 	}
+	else {
+		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+	}
+	
 #endif //CONFIG_HIP_ESCROW
 
 	/* R1 generation check */
@@ -1406,37 +1428,43 @@ int hip_create_r2(struct hip_context *ctx,
 #endif
 
 #ifdef CONFIG_HIP_ESCROW
-// TODO: KEA should be created before sending reg_response, so that failure can
-// be reported	
+
 	{	
 		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
 		struct hip_reg_request *rrequest;
-		uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
+	
 		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
 		uint8_t lifetime;
-		if (!rrequest) {
-		 	HIP_DEBUG("No REG_REQUEST found in I2");
-			goto next_hmac_2;	
+
+		if (rrequest) {
+ 	
+			HIP_DEBUG("Found REG_REQUEST");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+			
+			int *accepted_requests, *rejected_requests;
+			int request_count, accepted_count, rejected_count;
+		
+			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
+			accepted_count = hip_check_service_requests(&entry->hit_our, 
+				(types + 1), request_count, &accepted_requests, &rejected_requests);
+			rejected_count = request_count - accepted_count;
+			
+			if (accepted_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_RESPONSE parameter");
+				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
+					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			}
+			if (rejected_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_FAILED parameter");
+				HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
+					rejected_count), -1, "Building of REG_FAILED failed\n");
+			}
 		}
-		HIP_DEBUG("Found REG_REQUEST");
-		uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
-		int typecnt = hip_get_param_contents_len(rrequest);
-		int accept = 0;
-		int i;
-		if (typecnt >= 1) { 
-			for (i = 1; i < typecnt; i++) {
-				HIP_DEBUG("Service type: %d", types[i]);
-				if (types[i] == HIP_ESCROW_SERVICE) {
-					accept = 1;
-					create_kea = 1;
-				}
-			}	
+		else {
+			HIP_DEBUG("No REG_REQUEST found in I2");
 		}
-		lifetime = rrequest->lifetime;
-		HIP_DEBUG("Building REG_RESPONSE parameter");
-		HIP_IFEL(hip_build_param_reg_request(r2, lifetime, reg_types, 1, 0), -1, 
-			 "Building of REG_RESPONSE failed\n");
- 		
 	}	
  next_hmac_2:
 #endif //CONFIG_HIP_ESCROW

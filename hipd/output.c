@@ -164,11 +164,30 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef CONFIG_HIP_ESCROW
 	/********** REG_INFO **********/
 	// TODO: get service-list from some function which lists all services offered by this system
-	uint8_t list[1] = { HIP_ESCROW_SERVICE }; 
-	HIP_DEBUG("Adding REG_INFO parameter");
-	// TODO: Fix values
-	HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, 1), -1, 
-		 "Building of reg_info failed\n");	
+	
+	int *list;
+	
+	int tmp = 0;
+	int count = 0;
+	//count = hip_get_service_count();
+	
+	//list = HIP_MALLOC((count * sizeof(int)), GFP_KERNEL);
+	
+	count = hip_get_services_list(&list);
+	
+	HIP_DEBUG("Amount of services is %d", count);
+	
+	int i;
+	for (i = 0; i < count; i++) {
+		HIP_DEBUG("Service is %d", list[i]);
+	}
+	
+	if (count > 0) {
+		HIP_DEBUG("Adding REG_INFO parameter");
+		// TODO: Fix values
+		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
+		 	"Building of reg_info failed\n");	
+	}
 
 #endif //CONFIG_HIP_ESCROW	
 

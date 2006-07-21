@@ -31,6 +31,7 @@ const char *usage = "new|add hi default\n"
         "add rvs hit ipv6\n"
         "hip bos\n"
 	"hip nat on|off|peer_hit\n"
+		"add|del service service_type"
 #ifdef CONFIG_HIP_SPAM
         "get|set|inc|dec|new puzzle all|hit\n"
 #else
@@ -64,7 +65,8 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_puzzle,
 	handle_nat,
 	handle_opp,
-	handle_escrow
+	handle_escrow,
+	handle_service
 };
 
 /**
@@ -148,6 +150,8 @@ int get_type(char *text) {
 		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
+	else if (!strcmp("service", text))
+		ret = TYPE_SERVICE;	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
                 ret = TYPE_OPP; 
@@ -673,6 +677,28 @@ int handle_escrow(struct hip_common *msg, int action, const char *opt[],
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
 		 "build hdr failed\n");
+out_err:
+	return err;
+	
+}
+
+
+int handle_service(struct hip_common *msg, int action, const char *opt[], 
+					int optc)
+{
+	HIP_DEBUG("hipconf: handling service");
+	
+	int err = 0;
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+	
+	if (strcmp(opt[0], "escrow") == 0) {
+		HIP_DEBUG("Adding escrow service");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
+		 "build hdr failed\n");
+	}
+	
 out_err:
 	return err;
 	
