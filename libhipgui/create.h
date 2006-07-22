@@ -5,32 +5,20 @@
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
+#ifndef GUI_CREATE_H
+#define GUI_CREATE_H
+
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
-#include "test_main.h"
+#include <gtk/gtk.h>
+#include "widgets.h"
 
 
 /******************************************************************************/
-/* FUNCTIONS */
-
-/******************************************************************************/
-/** Main. */
-int main(void)
-{
-	gui_init();
-
-	gui_main();
-
-	/* Return. */
-	return (0);
-}
-/* END OF FUNCTION */
+/* FUNCTION DEFINITIONS */
+int ngdlg_create_content(void);
 
 
-/* END OF SOURCE FILE */
+#endif /* END OF HEADER FILE */
 /******************************************************************************/
 

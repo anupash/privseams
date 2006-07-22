@@ -21,8 +21,9 @@
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
+#include "libinet6/util.h"
 
-#define SOFILE "/lib/libc.so.6" 
+#define SOFILE "libc.so.6" 
 
 extern hip_hit_t *get_local_hits_wrapper();
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
@@ -62,6 +63,15 @@ ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags,
 ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
 
 int (*close_dlsym)(int fd);
+
+hip_hit_t *get_local_hits_wrapper()
+{
+  struct gaih_addrtuple *at = NULL;
+  struct gaih_addrtuple **pat = &at;
+  
+  get_local_hits(NULL, pat);
+  return (hip_hit_t *)(&at->addr);
+}
 
 inline int domain_is_PF_INET_INET6(int domain)
 {
@@ -717,7 +727,8 @@ int close(int fd)
     if(!entry){
       _HIP_DEBUG("!!!!!!!!!!!!!!!!!!!!! should not happen, dumping socket db\n");
       hip_socketdb_dump();
-      assert(0);
+      goto out_err;
+      //assert(0);
     }
     if(entry){
 
@@ -743,6 +754,7 @@ int close(int fd)
   dlclose(dp);
   HIP_DEBUG("close_dlsym called with errno %d\n", errno);
 
+out_err:
   return errno;
 }
 

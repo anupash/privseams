@@ -1,28 +1,28 @@
 /*
-    HIP Agent
-    
+    DNET - Duge's Networking Library
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef GUI_MAIN_H
-#define GUI_MAIN_H
+#ifndef TOOLS_H
+#define TOOLS_H
 
 /******************************************************************************/
 /* INCLUDES */
+#include <stdlib.h>
 #include <gtk/gtk.h>
 
-#include "gui_event.h"
+#include "debug.h"
+#include "hit_db.h"
 
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-int gui_init(void);
-int gui_main(void);
-void gui_quit(void);
-void *gui_get_window(void);
-void *gui_get_toolwindow(void);
-void *gui_get_acceptdialog(void);
+char *get_nick(void);
+void set_nick(char *);
+int find_from_cb(char *, GtkWidget *);
+void delete_all_items_from_cb(GtkWidget *);
 
 
 #endif /* END OF HEADER FILE */
