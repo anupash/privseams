@@ -44,6 +44,8 @@ enum BUTTON_IDS
 	IDB_TW_APPLY,
 	IDB_TW_CANCEL,
 	IDB_TW_DELETE,
+	
+	IDB_SYSTRAY,
 
 	BUTTON_IDS_N
 };
@@ -62,6 +64,7 @@ gboolean list_double_click(GtkTreeSelection *, GtkTreePath *,
 
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
+void systray_event(void *, guint, guint, gpointer);
 
 
 #endif /* END OF HEADER FILE */

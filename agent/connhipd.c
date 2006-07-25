@@ -176,7 +176,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
 			if (tr == CONNHIPD_OUT)
 			{
-			//	memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
+				memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
 			}
 		}
 		/* If neither HIT in message was local HIT, then drop the packet! */
@@ -205,7 +205,8 @@ int connhipd_handle_msg(struct hip_common *msg,
 		else
 		{
 			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
-			n = connhipd_sendto_hipd("no", 2);
+			hip_set_msg_type(msg, SO_HIP_I1_REJECT);
+			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
 			term_print("* I1: %s, rejected\n", (tr == CONNHIPD_OUT) ? "outgoing" : "incoming");

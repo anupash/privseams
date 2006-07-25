@@ -39,6 +39,10 @@ int main(int argn, char *argv[])
 {
 	/* Variables. */
 	int err = 0;
+	char db_path[1024];
+
+	/* Create database path. */
+	sprintf(db_path, "%s/%s", getenv("HOME"), ".hipagentdb");
 
 	/* Check command line options. */
 	term_set_mode(TERM_MODE_NONE);
@@ -82,7 +86,7 @@ int main(int argn, char *argv[])
 
 	/* Initialize database. */
 	HIP_DEBUG("##### 2. Initializing database...\n");
-	HIP_IFEL(hit_db_init("/etc/hip/agentdb"), -1, "Failed to load agent database!\n");
+	HIP_IFEL(hit_db_init(db_path), -1, "Failed to load agent database!\n");
 
 	/* Initialize connection to HIP daemon. */
 	HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
@@ -121,19 +125,18 @@ int main(int argn, char *argv[])
 			}
 		}
 	}
-	
+
 #endif
 
 	HIP_DEBUG("##### 4. Executing GUI main.\n");
 	gui_main();
-	
+
 	agent_exit();
 
 out_err:
-	gui_terminate();
 	connhipd_quit();
-	hit_db_quit("/etc/hip/agentdb");
-	
+	hit_db_quit(db_path);
+
 	HIP_DEBUG("##### X. Exiting application...\n");
 	return (err);
 }
