@@ -26,6 +26,12 @@ int gui_init(void)
 	int err = 0;
 	char str[320];
 
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	HIP_DEBUG("GTK version is greater or equal to 2.10, status icon should be shown.\n");
+#else
+	HIP_DEBUG("GTK version is less than 2.10, status icon not shown.\n");
+#endif
+
 	/* Initialize libraries. */
 	g_thread_init(NULL);
 	gdk_threads_init();

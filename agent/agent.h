@@ -15,6 +15,9 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "hip.h"
 #ifndef __u32
