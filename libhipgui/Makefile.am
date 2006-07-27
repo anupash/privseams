@@ -9,6 +9,7 @@ GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 CFLAGS = $(hipl_common_cflags)
 
 include_HEADERS =
+INCLUDES =
 
 if HIP_AGENT
 
