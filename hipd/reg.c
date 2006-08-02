@@ -9,14 +9,11 @@
 
 #include "reg.h"
 
-//HIP_SERVICE *services;
-
 static struct list_head services;
 
 void hip_init_services(void)
 {
 	INIT_LIST_HEAD(&services);
-	//services = NULL;
 }
 
 void hip_uninit_services(void)
