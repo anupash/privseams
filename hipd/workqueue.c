@@ -503,6 +503,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		if (kea) {
 			HIP_DEBUG("Found kea base entry");
 			kea->keastate = HIP_KEASTATE_REGISTERING;
+			hip_keadb_put_entry(kea);
 		}
 		else {
 			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!");

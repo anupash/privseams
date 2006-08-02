@@ -99,6 +99,29 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 	return err;
 }
 
+int hip_kea_remove(struct hip_host_id_entry *entry, 
+	void *hit) 
+{
+	int err = 0;
+	HIP_KEA *kea;
+	HIP_IFE(!(kea = hip_kea_find((struct in6_addr *)&entry->lhi.hit)), -1);
+	HIP_DEBUG("Found kea base entry");
+	hip_keadb_remove_entry(kea);
+	hip_keadb_put_entry(kea); 
+	hip_keadb_delete_entry(kea);	
+
+out_err:
+	return err;	
+}
+
+int hip_kea_remove_base_entries(struct in6_addr *hit)
+{
+
+	HIP_DEBUG("Removing base entries");
+	// Removing keas
+	return hip_for_each_hi(hip_kea_remove, hit);
+}
+
 
 HIP_KEA *hip_kea_allocate(int gfpmask)
 {
@@ -298,6 +321,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	HIP_DEBUG("Creating kea endpoint");
 	HIP_DEBUG_HIT("ep hit:", hit);
 	HIP_DEBUG("ep spi: %d", spi);
+	//HIP_HEXDUMP("spi: ", spi, sizeof(uint32_t));
 	
 	hip_hold_kea(kea_ep); // Add reference
 	
@@ -309,6 +333,24 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	
 	memcpy(&kea_ep->esp_key, key, sizeof(kea_ep->esp_key));
 	
+	
+	/* PRINTING VALUES*/
+	
+	HIP_DEBUG("KEA EP VALUES: ");
+	if (esp_transform == HIP_ESP_3DES_SHA1 || esp_transform == HIP_ESP_3DES_MD5)
+		HIP_DEBUG("Algorithm: 3des");
+	else if (esp_transform == HIP_ESP_BLOWFISH_SHA1)
+		HIP_DEBUG("Algorithm: blowfish");
+	else if (esp_transform == HIP_ESP_AES_SHA1)
+		HIP_DEBUG("Algorithm: aes");
+	else 
+		HIP_DEBUG("Algorithm: undefined %d", esp_transform);
+	
+	HIP_DEBUG("Key length: %d", key_len);	
+	HIP_DEBUG_KEY("Key: ", key, key_len);
+	HIP_HEXDUMP("Keyhex: ", key->key, key_len);
+		
+				
 	return kea_ep;	
 }
 

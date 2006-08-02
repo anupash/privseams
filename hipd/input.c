@@ -1027,7 +1027,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
 			type[0] = HIP_ESCROW_SERVICE;
 		}
-				
+		if (kea)
+			hip_keadb_put_entry(kea);		
 		if (type[0] != 0) {
 			HIP_DEBUG("Adding reg_request parameter");
 			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
@@ -1192,7 +1193,13 @@ int hip_handle_r1(struct hip_common *r1,
 		
 	}
 	else {
+		// No reg_info found. Cancelling registration attempt.
 		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea)
+			kea->keastate = HIP_KEASTATE_INVALID;
+		
 	}
 	
 #endif //CONFIG_HIP_ESCROW
@@ -2136,6 +2143,11 @@ int hip_handle_r2(struct hip_common *r2,
 			}	
 			else 
 				HIP_DEBUG("Server not responding to registration attempt");
+			
+			// TODO: Should the base entry be removed when registration fails?
+			// Registration unsuccessful - removing base keas
+			//hip_kea_remove_base_entries();
+					
 		}
 		else {
 			HIP_DEBUG("Found REG_RESPONSE");

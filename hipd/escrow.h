@@ -83,6 +83,10 @@ HIP_KEA *hip_kea_get_base_entry(void);
 int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
 	void *server_hit);
 
+int hip_kea_remove(struct hip_host_id_entry *entry, void *hit); 
+
+int hip_kea_remove_base_entries(struct in6_addr *hit);
+
 void hip_init_keadb(void);
 void hip_uninit_keadb(void);
 

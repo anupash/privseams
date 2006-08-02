@@ -489,19 +489,22 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
 				if (server_entry) {
 					int err;
-					
+					kea = hip_kea_find(&server_entry->hit_our);
+					if (kea->keastate == HIP_KEASTATE_VALID) {
 						// TODO: Fix values. Spi usage needs to be checked. 
 						// direction should propably be checked
-					err = hip_send_escrow_update(server_entry, 
-						(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
-						daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
+						err = hip_send_escrow_update(server_entry, 
+							(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
+							daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
 					
-					
-					kea = hip_kea_find(&server_entry->hit_our);
-					if (ipv6_addr_cmp(&kea->hit, dst_hit))
-						kea->spi_in = *spi;
-					else 
-						kea->spi_out = *spi;		
+						if (ipv6_addr_cmp(&kea->hit, dst_hit))
+							kea->spi_in = *spi;
+						else 
+							kea->spi_out = *spi;		
+					}
+					else {
+						HIP_DEBUG("keastate not valid - not sending update");
+					}
 				}
 				else {
 					HIP_DEBUG("No server entry found");
