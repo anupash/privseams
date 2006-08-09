@@ -22,6 +22,7 @@
 char *get_nick(void);
 void set_nick(char *);
 int find_from_cb(char *, GtkWidget *);
+void delete_all_items_from_cb(GtkWidget *);
 
 
 #endif /* END OF HEADER FILE */

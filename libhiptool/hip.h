@@ -257,6 +257,8 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 #define SO_HIP_ADD_DB_HI			35
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_I1_REJECT			38
+
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -317,6 +319,8 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_STATE_FILTERING			10
+
 #define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
 
@@ -507,7 +511,7 @@ typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 /*
- * Use accessor functions defined in hip_build.h, do not access members
+ * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
 struct hip_common {

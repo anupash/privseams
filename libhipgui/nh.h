@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -23,6 +23,7 @@
 int nhdlg_create_content(void);
 
 /* file: nh_manage.c */
+void nh_set_remote_rgroup_info(HIT_Group *);
 
 
 #endif /* END OF HEADER FILE */

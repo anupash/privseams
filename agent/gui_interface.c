@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -20,12 +20,12 @@
 	@param hit Pointer to hit that should be accepted.
 	@return 0 if accept, -1 on other cases.
 */
-int check_hit(HIT_Remote *hit)
+int check_hit(HIT_Remote *hit, int inout)
 {
 	/* Variables. */
 	HIT_Remote *fhit;
 	int err = 0;
-	
+
 	fhit = hit_db_find(NULL, &hit->hit);
 
 	if (fhit)
@@ -34,6 +34,7 @@ int check_hit(HIT_Remote *hit)
 
 		if (fhit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
 		else err = -1;
+		memcpy(hit, fhit, sizeof(HIT_Remote));
 
 		goto out_err;
 	}
@@ -41,9 +42,9 @@ int check_hit(HIT_Remote *hit)
 	{
 		HIP_DEBUG("Did not find HIT from database.\n");
 	}
-	
+
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
-	err = gui_ask_new_hit(hit);
+	err = gui_ask_new_hit(hit, inout);
 
 	/* Add hit info to database, if answer was yes. */
 	if (err == 0)

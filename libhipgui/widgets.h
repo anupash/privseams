@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -32,6 +32,7 @@ enum WIDGET_IDS
 	ID_TERMSCREEN,
 	ID_TERMINPUT,
 	ID_TERMBUFFER,
+	ID_TERMSEND,
 	ID_USERVIEW,
 	ID_USERMODEL,
 	ID_TB_TW,
@@ -66,11 +67,13 @@ enum WIDGET_IDS
 	ID_NH_NAME,
 	ID_NH_URL,
 	ID_NH_PORT,
+	ID_NH_LOCAL,
+	ID_NH_TYPE1,
+	ID_NH_TYPE2,
 
-	/* Run dialog IDs. */
-	ID_RUN_COMMAND,
-	ID_RUN_LDPRELOAD,
-	ID_RUN_LDLIBRARYPATH,
+	/* Exec dialog IDs. */
+	ID_EXEC_COMMAND,
+	ID_EXEC_OPP,
 
 	/* New group dialog IDs. */
 	ID_NG_NAME,
@@ -83,6 +86,7 @@ enum WIDGET_IDS
 	ID_HS_MODEL,
 	ID_HS_VIEW,
 	ID_HS_EXECAGENT,
+	ID_HS_EXECSERVER,
 	ID_HS_CLEARDB,
 
 	WIDGET_IDS_N

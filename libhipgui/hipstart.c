@@ -1,6 +1,6 @@
 /*
     HIP Agent
-    
+
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
@@ -22,6 +22,7 @@ const char *start_info =
 	"HIP daemon and agent/GUI if selected.";
 
 Host_item host_items[MAX_HOST_ITEMS];
+int host_items_n = 0;
 
 
 /******************************************************************************/
@@ -30,7 +31,7 @@ Host_item host_items[MAX_HOST_ITEMS];
 /******************************************************************************/
 /**
 	Execute new application.
-	
+
 	@param exe Executable name.
 	@param args Arguments for executable.
 	@return Return 0 on success, -1 on errors.
@@ -43,7 +44,7 @@ int exec_application(char *exe, ...)
 
 	if (strlen(exe) > 0) err = fork();
 	else err = -1;
-	
+
 	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
 	else if (err > 0) err = 0;
 	else if(err == 0)
@@ -67,7 +68,7 @@ out_err:
 /******************************************************************************/
 /**
 	What to do when user example tries to close the application?
-	
+
 	@return TRUE if don't close or FALSE if close.
 */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
@@ -101,11 +102,11 @@ int gui_init(void)
 	/* Initialize libraries. */
 	gtk_init(NULL, NULL);
 	widget_init();
-	
+
 	/* Initialize libraries. */
 	gtk_init(NULL, NULL);
 	widget_init();
-	
+
 	/* Create main GUI window. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_HS_MAIN, window);
@@ -125,7 +126,7 @@ int gui_init(void)
 	gtk_label_set_line_wrap(w, TRUE);
 	gtk_box_pack_start(box, w, FALSE, FALSE, 1);
 	gtk_widget_show(w);
-	
+
 	/* Create agent execute option. */
 	w = gtk_check_button_new_with_label("execute agent/GUI");
 	gtk_box_pack_start(box, w, FALSE, FALSE, 1);
@@ -137,6 +138,12 @@ int gui_init(void)
 	gtk_toggle_button_set_active(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_HS_CLEARDB, w);
+	/* Create server/client execute option. */
+	w = gtk_check_button_new_with_label("run server/client in agent");
+	gtk_box_pack_start(box, w, FALSE, FALSE, 1);
+	gtk_toggle_button_set_active(w, TRUE);
+	gtk_widget_show(w);
+	widget_set(ID_HS_EXECSERVER, w);
 
 	/* Create host list. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -146,7 +153,7 @@ int gui_init(void)
 
 
 	list = gtk_tree_view_new();
-	g_signal_connect(select, "row-activated", G_CALLBACK(list_select), (gpointer)"list");
+	g_signal_connect(list, "row-activated", G_CALLBACK(list_select), (gpointer)"list");
 	widget_set(ID_HS_VIEW, list);
 	gtk_tree_view_set_model(list, model);
 	cell = gtk_cell_renderer_text_new();
@@ -180,18 +187,18 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 	GtkTreeSelection *selection;
 	FILE *f;
 	char str[2048];
-	int b, err, *indices, n;
+	int b, s, err, *indices, n, i;
 
 	selection = gtk_tree_view_get_selection(w1);
-	
+
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
 		/* Get values for the path. */
 		indices = gtk_tree_path_get_indices(w2);
 		n = indices[0];
-		
+
 		HIP_DEBUG("Selected host: \"%s\"\n", host_items[n].name);
-		
+
 		b = gtk_toggle_button_get_active(widget(ID_HS_EXECAGENT));
 		if (b == TRUE && gtk_toggle_button_get_active(widget(ID_HS_CLEARDB)) == TRUE)
 		{
@@ -199,21 +206,41 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 			fclose(f);
 		}
 		
-		/* Copy right identiy files to /etc/hip. */
+		s = gtk_toggle_button_get_active(widget(ID_HS_EXECSERVER));
+
+		/* Copy right identity files to /etc/hip. */
 		sprintf(str, "cp -f %s/hip_host_* /etc/hip/", host_items[n].path);
 		system(str);
-		
+
+		/* Change right inet6 address to eth0. */
+		for (i = 0; i < host_items_n; i++)
+		{
+			sprintf(str, "ifconfig eth0 inet6 del %s", host_items[i].addr);
+			system(str);
+		}
+		sprintf(str, "ifconfig eth0 inet6 add %s", host_items[n].addr);
+		system(str);
+
 		/* Execute daemon. */
 		err = exec_application("xterm", "xterm", "-T", "HIP daemon", "-e", "hipd", NULL);
 		/* Wait for daemon to start properly. */
-		sleep(1);
-		/* Execute agent. */
-		if (b == TRUE) exec_application("hipagent", "hipagent", NULL);
+		sleep(3);
 		
+		/* Execute agent as server, client or plain. */
+		if (b == TRUE)
+		{
+			if (s == TRUE)
+			{
+				if (host_items[n].server) exec_application("hipagent", "hipagent", "-server", NULL);
+				else exec_application("hipagent", "hipagent", "-client", "hip3", NULL);
+			}
+			else exec_application("hipagent", "hipagent", NULL);
+		}
+
 		/* Quit application. */
 		gtk_main_quit();
 	}
-	
+
 	return (TRUE);
 }
 /* END OF FUNCTION */
@@ -240,9 +267,10 @@ int settings_read(char *file)
 {
 	/* Variables. */
 	FILE *f;
-	char str[2048], name[MAX_NAME_LEN + 1], path[MAX_URL_LEN + 1];
+	char str[2048], server;
+	char name[MAX_NAME_LEN + 1], path[MAX_URL_LEN + 1], addr[MAX_URL_LEN + 1];
 	int err = 0, i, n;
-	
+
 	HIP_DEBUG("Loading settings from %s.\n", file);
 
 	f = fopen(file, "r");
@@ -251,15 +279,18 @@ int settings_read(char *file)
 	n = 0;
 	while (fgets(str, 2048, f) && n < MAX_HOST_ITEMS)
 	{
-		i = sscanf(str, "\"%64[^\"]\" %1024s", name, path);
-		if (i != 2) continue;
+		i = sscanf(str, "\"%64[^\"]\" %64s %1024s %c", name, addr, path, &server);
+		if (i != 4) continue;
 		NAMECPY(host_items[n].name, name);
+		NAMECPY(host_items[n].addr, addr);
 		URLCPY(host_items[n].path, path);
+		host_items[n].server = (server == 's') ? 1 : 0;
 		host_add(name);
 		n++;
 	}
-	
+
 	HIP_IFEL(n < 1, -1, "Settings file is empty!\n");
+	host_items_n = n;
 
 out_err:
 	return (err);
@@ -273,10 +304,10 @@ int main(void)
 {
 	/* Variables. */
 	int err = 0;
-	
+
 	HIP_IFEL(gui_init() < 0, -1, "Failed to initialize GUI!\n");
 	HIP_IFE(settings_read("/etc/hip/hipstart"), -1);
-	
+
 	gtk_main();
 
 out_err:
