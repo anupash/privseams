@@ -497,14 +497,18 @@
 	# make
     </para>
     <para>
-	
+       Before actually using the telnet, you should build and "insmod"
+       the HIP kernel module. It is needed for telnet because it uses
+       the native API (and not the legacy APIs). After that, you can
+       experiment with telnet as follows:
+    </para>
+    <para>
 	oops  # telnetd/telnetd -debug 12345
       </para>
     <para>
 	crash # telnet/telnet -l username oops 12345
     </para>
     <para>
-	
       Note: the username must be non-root.
     </para>
   </chapter>
