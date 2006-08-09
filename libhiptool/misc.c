@@ -26,7 +26,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
   memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	 sizeof(struct in6_addr));
   
-  set_hip_prefix(hit);
+  set_hit_prefix(hit);
   
  out_err:
   

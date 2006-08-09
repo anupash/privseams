@@ -473,7 +473,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 	int err = 0;
 	
 	HIP_DEBUG_HIT("src_addr=", src_addr);
-	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
+	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH100);
 	if(err){
 	  HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
 	  goto out_err;

@@ -662,7 +662,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
   memcpy(&dst_ip, ptr, sizeof(dst_ip));
   HIP_DEBUG_HIT("dst_ip=", &dst_ip);
   
-  err = hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH120);
+  err = hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH100);
   if(err){
     goto out_err;
   }
@@ -738,7 +738,7 @@ int hip_get_pseudo_hit(struct hip_common *msg)
     memcpy(&ip, ptr, sizeof(ip));
     HIP_DEBUG_HIT("dst ip=", &ip);
     
-    err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH120);
+    err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH100);
     if(err){
       goto out_err;
     }
