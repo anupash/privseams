@@ -24,7 +24,7 @@ hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD) ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
-INCLUDES += $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) $(GTKCFLAGS)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) $(GTKCFLAGS)
 
 endif
 
