@@ -172,7 +172,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
+#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -243,6 +243,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_ADD_DB_HI			35
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_I1_REJECT			38
+
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -298,11 +300,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_STATE_FILTERING			10
+
+#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
@@ -436,6 +442,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
 
+#define ADDR_STATE_ACTIVE 1
+#define ADDR_STATE_WAITING_ECHO_REQ 2
+
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
 #define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
@@ -488,7 +497,7 @@ typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 /*
- * Use accessor functions defined in hip_build.h, do not access members
+ * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
 struct hip_common {
@@ -775,6 +784,11 @@ struct hip_locator_info_addr_item {
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
 	struct in6_addr address;
+	int state; /*State of our addresses,
+		     possible states are:
+		     WAITING_ECHO_REQUEST, ACTIVE
+		   */
+
 }  __attribute__ ((packed));
 
 #if 0
@@ -1053,6 +1067,7 @@ struct hip_hadb_state
 
 	hip_hastate_t        hastate;
 	int                  state;
+	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
@@ -1063,7 +1078,7 @@ struct hip_hadb_state
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
-        struct in6_addr      local_address;   /* Our IP address */
+        struct  in6_addr     local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
@@ -1250,8 +1265,7 @@ struct hip_hadb_update_func_set{
 
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
 				      struct hip_ack *ack,
-				      int have_nes,
-				      struct hip_echo_response *echo_esp);
+				      int have_nes);				      
 
 	int (*hip_handle_update_established)(hip_ha_t *entry,
 					     struct hip_common *msg,
@@ -1266,6 +1280,10 @@ struct hip_hadb_update_func_set{
 					   struct hip_common *msg,
 					   struct in6_addr *src_ip,
 					   uint32_t spi);
+
+	int (*hip_update_send_echo)(hip_ha_t *entry,
+				    struct hip_peer_addr_list_item *addr,
+			            uint32_t spi);	    
 };
 
 struct hip_hadb_misc_func_set{ 
@@ -1380,6 +1398,7 @@ struct hip_eid_db_entry {
 /* Some default settings for HIPL */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+#define GOTO_OUT -3
 
 #define HIP_IFE(func, eval) \
 { \

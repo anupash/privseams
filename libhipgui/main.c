@@ -26,6 +26,12 @@ int gui_init(void)
 	int err = 0;
 	char str[320];
 
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	HIP_DEBUG("GTK version is greater or equal to 2.10, status icon should be shown.\n");
+#else
+	HIP_DEBUG("GTK version is less than 2.10, status icon not shown.\n");
+#endif
+
 	/* Initialize libraries. */
 	g_thread_init(NULL);
 	gdk_threads_init();
@@ -78,11 +84,11 @@ int gui_init(void)
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
+	cmd_help("");
 	term_print("* HIP GUI started.\n");
 
-	/* Create some random nickname. */
-	sprintf(str, "user%0.3d", rand() % 1000);
-	set_nick(str);
+	/* Default nickname. */
+	set_nick("user");
 
 out_err:
 	return (err);
@@ -108,6 +114,18 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
+	/* Initialize terminal server. */
+	if (term_get_mode() == TERM_MODE_SERVER)
+	{
+		set_nick("server");
+		term_server_init();
+	}
+	else if (term_get_mode() == TERM_MODE_CLIENT)
+	{
+		set_nick("client");
+		term_client_init();
+	}
+
 	gtk_main();
 }
 /* END OF FUNCTION */
@@ -119,6 +137,8 @@ int gui_main(void)
 */
 void gui_quit(void)
 {
+	if (term_get_mode() == TERM_MODE_SERVER) term_server_quit();
+	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_quit();
 	exec_quit();
 	widget_quit();
 }

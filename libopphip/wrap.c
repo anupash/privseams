@@ -64,6 +64,15 @@ ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
 
 int (*close_dlsym)(int fd);
 
+hip_hit_t *get_local_hits_wrapper()
+{
+  struct gaih_addrtuple *at = NULL;
+  struct gaih_addrtuple **pat = &at;
+  
+  get_local_hits(NULL, pat);
+  return (hip_hit_t *)(&at->addr);
+}
+
 inline int domain_is_PF_INET_INET6(int domain)
 {
   return (domain == PF_INET || domain == PF_INET6);
