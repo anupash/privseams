@@ -497,7 +497,7 @@ typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 /*
- * Use accessor functions defined in hip_build.h, do not access members
+ * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
 struct hip_common {
