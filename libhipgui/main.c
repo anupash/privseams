@@ -39,7 +39,7 @@ int gui_init(void)
 	widget_init();
 
 	/* Set default icon. */
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "infrahip.png");
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
 	gtk_window_set_default_icon_from_file(str, NULL);
 
 	/* Create main GUI window. */
