@@ -5,7 +5,7 @@
  * libnetlink functions.
  */
 
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
+int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen)
 {
 	int len = RTA_LENGTH(alen);
@@ -23,15 +23,15 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
-/* 
+/*
  * Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
- * returns. 
+ * returns.
 */
-int hip_netlink_receive(struct rtnl_handle *nl, 
+int hip_netlink_receive(struct rtnl_handle *nl,
 			hip_filter_t handler,
-			void *arg) 
+			void *arg)
 {
 	struct hip_work_order *result = NULL;
 	struct hip_work_order *hwo;
@@ -54,7 +54,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         nladdr.nl_pid = 0;
         nladdr.nl_groups = 0;
 	iov.iov_base = buf;
-	
+
 	while (1) {
                 iov.iov_len = sizeof(buf);
                 status = recvmsg(nl->fd, &msg, 0);
@@ -221,7 +221,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                         }
 
                         if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err = 
+                                struct nlmsgerr *err =
 					(struct nlmsgerr*)NLMSG_DATA(h);
                                 if (l < sizeof(struct nlmsgerr)) {
                                         HIP_ERROR("Truncated\n");
@@ -596,13 +596,13 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	HIP_DEBUG("\n");
 
 	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
-	
+
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
 		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
 		preferred_family = AF_INET;
 		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
                              INET6_ADDRSTRLEN)), -1,"inet_pton\n");
-	} else {	
+	} else {
 		HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
 				     INET6_ADDRSTRLEN)), -1,
 			 "inet_pton\n");
@@ -620,7 +620,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	req.r.rtm_src_len = 0;
 	req.r.rtm_dst_len = 0;
 	req.r.rtm_tos = 0;
-	
+
 	get_prefix(&addr, dst_str, req.r.rtm_family);
 	if (addr.bytelen)
 		addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
@@ -667,7 +667,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
         req.n.nlmsg_flags = NLM_F_REQUEST;
         req.n.nlmsg_type = cmd;
-        req.ifa.ifa_family = family; 
+        req.ifa.ifa_family = family;
 
         lcl_arg = ip;
 	HIP_DEBUG("IP got %s\n", ip);
@@ -747,7 +747,7 @@ int set_up_device(char *dev, int up)
 	int err = -1;
 	__u32 mask = 0;
 	__u32 flags = 0;
-	
+
 	if(up == 1){
 		mask |= IFF_UP;
 		flags |= IFF_UP;
@@ -755,10 +755,10 @@ int set_up_device(char *dev, int up)
 		mask |= IFF_UP;
 		flags &= ~IFF_UP;
 	}
-	
-	err = do_chflags(dev, flags, mask);			
+
+	err = do_chflags(dev, flags, mask);
 	HIP_DEBUG("setting %s done\n", dev);
-	return err;	 
+	return err;
 }
 
 /**
@@ -781,10 +781,10 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 	sel->dport = htons(dst_port);
         if (sel->dport)
         	sel->dport_mask = ~((__u16)0);
-	
+
 	return 0;
 
-	
+
 }
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
 {
@@ -825,7 +825,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	sel->prefixlen_s = hit_prefix;
 
 	//xfrm_selector_upspec(sel, src_port, dst_port);
-	
+
 	return 0;
 }
 
@@ -874,7 +874,7 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 		}
 		memcpy(alg->alg_key, key, key_len * 8);
 	}
-	
+
 	alg->alg_key_len = len * 8;
 
 	return 0;
@@ -958,7 +958,7 @@ int get_prefix(inet_prefix *dst, char *arg, int family)
         return 0;
 }
 
-int ll_remember_index(const struct sockaddr_nl *who, 
+int ll_remember_index(const struct sockaddr_nl *who,
                       struct nlmsghdr *n, void **arg)
 {
         int h;

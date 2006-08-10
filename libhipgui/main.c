@@ -7,19 +7,7 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-
-/* THIS */
 #include "main.h"
-
-
-/******************************************************************************/
-/* VARIABLES */
-GtkWidget *gtk_window = NULL;
-GtkWidget *gtk_toolwindow = NULL;
-GtkWidget *gtk_acceptdialog = NULL;
-GtkWidget *gtk_rundialog = NULL;
 
 
 /******************************************************************************/
@@ -38,70 +26,73 @@ int gui_init(void)
 	int err = 0;
 	char str[320];
 
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	HIP_DEBUG("GTK version is greater or equal to 2.10, status icon should be shown.\n");
+#else
+	HIP_DEBUG("GTK version is less than 2.10, status icon not shown.\n");
+#endif
+
 	/* Initialize libraries. */
 	g_thread_init(NULL);
 	gdk_threads_init();
 	gtk_init(NULL, NULL);
 	widget_init();
 
+	/* Set default icon. */
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
+	gtk_window_set_default_icon_from_file(str, NULL);
+
 	/* Create main GUI window. */
-	gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	widget_set(ID_MAINWND, gtk_window);
-	gtk_widget_show(gtk_window);
-	gtk_window_set_title(GTK_WINDOW(gtk_window), "HIP Config");
-	gtk_widget_set_size_request(gtk_window, 400, 300);
+	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	widget_set(ID_MAINWND, w);
+	gtk_widget_show(w);
+	gtk_window_set_title(w, "HIP Config");
+//	gtk_widget_set_size_request(w, 400, 300);
 
-	g_signal_connect(G_OBJECT(gtk_window), "delete_event",
-	                 G_CALLBACK(delete_event), NULL);
-	g_signal_connect(G_OBJECT(gtk_window), "destroy",
-	                 G_CALLBACK(main_destroy), NULL);
+	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
+	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
-	/* Create tool-dialog. */
-	gtk_toolwindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	widget_set(ID_TOOLDLG, gtk_toolwindow);
-	gtk_widget_show(gtk_toolwindow);
-	gtk_window_set_title(GTK_WINDOW(gtk_toolwindow), "HIP tool window");
-	gtk_widget_set_size_request(gtk_toolwindow, 450, 300);
+	/* Create toolwindow. */
+	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	widget_set(ID_TOOLWND, w);
+	gtk_widget_show(w);
+	gtk_window_set_title(w, "HIP tool window");
+//	gtk_widget_set_size_request(w, 450, 300);
 
-	g_signal_connect(G_OBJECT(gtk_toolwindow), "delete_event",
-	                 G_CALLBACK(tool_delete_event), NULL);
-	g_signal_connect(G_OBJECT(gtk_toolwindow), "destroy",
-	                 G_CALLBACK(tool_destroy), NULL);
+	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);
+	g_signal_connect(w, "destroy", G_CALLBACK(tw_destroy), NULL);
 
 	/* Create accept-dialog. */
-	gtk_acceptdialog = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
-	                                               "Accept", GTK_RESPONSE_YES,
-	                                               "Deny", GTK_RESPONSE_NO, NULL);
-	widget_set(ID_ACCEPTDLG, gtk_acceptdialog);
-	gtk_widget_hide(gtk_acceptdialog);
+	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
+	                                "Add", GTK_RESPONSE_YES, "Drop", GTK_RESPONSE_NO, NULL);
+	widget_set(ID_NHDLG, w);
+	gtk_widget_hide(w);
 
-	/* Create run-dialog. */
-	gtk_rundialog = gtk_dialog_new_with_buttons("Run application", NULL,
-	                                            GTK_DIALOG_MODAL, NULL);
-	widget_set(ID_RUNDLG, gtk_rundialog);
-	gtk_widget_hide(gtk_rundialog);
+	/* Create execute-dialog. */
+	w = gtk_dialog_new_with_buttons("Run application", NULL, GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_EXECDLG, w);
+	gtk_widget_hide(w);
 
 	/* Create create-dialog. */
-	w = gtk_dialog_new_with_buttons("Create new remote group", NULL,
-	                                GTK_DIALOG_MODAL, NULL);
-	widget_set(ID_CREATEDLG, w);
+	w = gtk_dialog_new_with_buttons("Create new remote group", NULL, GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
 	
 	/* Create window content for all windows. */
-	HIP_IFEL(tooldlg_create_content(), -1, "Failed to create tool-dialog contents.\n");
-	HIP_IFEL(acceptdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
-	HIP_IFEL(rundlg_create_content(), -1, "Failed to create run-dialog contents.\n");
-	HIP_IFEL(createdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
+	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
+	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
+	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");
+	HIP_IFEL(ngdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
 	HIP_IFEL(main_create_content(), -1, "Failed to create main-window contents.\n");
 
 	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
+	cmd_help("");
 	term_print("* HIP GUI started.\n");
 
-	/* Create some random nickname. */
-	sprintf(str, "user%0.3d", rand() % 1000);
-	set_nick(str);
+	/* Default nickname. */
+	set_nick("user");
 
 out_err:
 	return (err);
@@ -119,28 +110,26 @@ int gui_main(void)
 	/* Variables. */
 	GtkWidget *w;
 	
-	HIP_DEBUG("Appending remote groups to tool window...\n");
-	w = widget(ID_TOOLRGROUPS);
-//	hit_db_enum_rgroups(tooldlg_add_rgroups, w);
-	gtk_combo_box_append_text(w, "<create new...>");
-	gtk_combo_box_set_active(w, 0);
+	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
+	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
 
-	HIP_DEBUG("Appending local HITs to tool window...\n");
-	w = widget(ID_TOOLLHITS);
-	hit_db_enum_locals(tooldlg_add_lhits, w);
-	gtk_combo_box_set_active(w, 0);
+	hit_db_enum_locals(all_add_local, NULL);
+	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
+	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
+	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 
-	HIP_DEBUG("Appending remote groups to ask window...\n");
-	w = widget(ID_AD_RGROUPS);
-//	hit_db_enum_rgroups(askdlg_add_rgroups, w);
-	gtk_combo_box_append_text(w, "<create new...>");
-	gtk_combo_box_set_active(w, 0);
-	
-	HIP_DEBUG("Appending local HITs to ask window...\n");
-	w = widget(ID_AD_LHITS);
-	hit_db_enum_locals(askdlg_add_lhits, w);
-	gtk_combo_box_set_active(w, 0);
-	
+	/* Initialize terminal server. */
+	if (term_get_mode() == TERM_MODE_SERVER)
+	{
+		set_nick("server");
+		term_server_init();
+	}
+	else if (term_get_mode() == TERM_MODE_CLIENT)
+	{
+		set_nick("client");
+		term_client_init();
+	}
+
 	gtk_main();
 }
 /* END OF FUNCTION */
@@ -152,6 +141,8 @@ int gui_main(void)
 */
 void gui_quit(void)
 {
+	if (term_get_mode() == TERM_MODE_SERVER) term_server_quit();
+	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_quit();
 	exec_quit();
 	widget_quit();
 }
@@ -159,53 +150,36 @@ void gui_quit(void)
 
 
 /******************************************************************************/
-/**
-	Get pointer to window.
-	
-	@return Pointer to window.
-*/
-void *gui_get_window(void)
+/** Set status bar info text. */
+void gui_set_info(const char *string, ...)
 {
-	return ((void *)gtk_window);
+	/* Variables. */
+	static int last = -1;
+	GtkWidget *w;
+	char *str[2048];
+	va_list args;
+	
+	/* Get args. */
+	va_start(args, string);
+
+	/* Set to status bar. */
+	vsprintf(str, string, args);
+	w = widget(ID_STATUSBAR);
+	if (last >= 0) gtk_statusbar_pop(w, last);
+	last = gtk_statusbar_get_context_id(w, "info");
+	gtk_statusbar_push(w, last, str);
+
+	/* End args. */
+	va_end(args);
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
-/**
-	Get pointer to tool window.
-	
-	@return Pointer to tool window.
-*/
-void *gui_get_toolwindow(void)
+/** Terminate GUI. */
+void gui_terminate(void)
 {
-	return ((void *)gtk_toolwindow);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Get pointer to accept window.
-	
-	@return Pointer to accept window.
-*/
-void *gui_get_acceptdialog(void)
-{
-	return ((void *)gtk_acceptdialog);
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/**
-	Get pointer to run window.
-	
-	@return Pointer to run window.
-*/
-void *gui_get_rundialog(void)
-{
-	return ((void *)gtk_rundialog);
+	gtk_main_quit();
 }
 /* END OF FUNCTION */
 

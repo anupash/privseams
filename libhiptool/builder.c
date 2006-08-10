@@ -442,7 +442,11 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_FROM,
 			HIP_PARAM_TO,
 			HIP_PARAM_HMAC,
-			HIP_PARAM_VIA_RVS
+			HIP_PARAM_VIA_RVS,
+			HIP_PARAM_REG_INFO,
+			HIP_PARAM_REG_REQUEST,
+			HIP_PARAM_REG_RESPONSE,
+			HIP_PARAM_REG_FAILED
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -893,6 +897,10 @@ char* hip_param_type_name(uint16_t param_type){
 		case HIP_PARAM_TO: return "HIP_PARAM_TO";
 		case HIP_PARAM_RVA_HMAC: return "HIP_PARAM_RVA_HMAC";
 		case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
+		case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
+		case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
+		case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
+		case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
 	}
 	return "UNDEFINED";
 }
@@ -1702,6 +1710,122 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 }
 
 /**
+ * hip_build_param_reg_info - build HIP REG_INFO parameter
+ * @msg:       the message
+ * @min_lifetime:  minimum lifetime in seconds in host byte order
+ * @max_lifetime:  maximum lifetime in seconds in host byte order
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
+			uint8_t max_lifetime, int *type_list, int cnt)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_info rinfo;
+	uint8_t *array;
+
+	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
+	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
+				   cnt * sizeof(uint8_t));
+	
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+
+	uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
+
+	rinfo.min_lifetime = min_lifetime;
+	rinfo.max_lifetime = max_lifetime;
+	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
+				      (void *)array);
+	return err;
+
+}
+
+/**
+ * hip_build_param_reg_request - build HIP REG_REQUEST or REG_RESPONSE parameter
+ * @msg:       the message
+ * @lifetime:  lifetime in seconds in host byte order
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ * @request: true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
+			int *type_list, int cnt, int request)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_request rreq;
+	uint8_t *array;
+	
+
+	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
+	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
+				   cnt * sizeof(uint8_t));
+
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+	
+
+	rreq.lifetime = lifetime;
+	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
+				      (void *)array);
+	return err;
+
+}
+
+/**
+ * hip_build_param_reg_failed - build HIP REG_FAILED parameter
+ * @msg:       the message
+ * @failure_type:  reason for failure
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
+			int *type_list, int cnt)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_failed rfail;
+	uint8_t *array;
+
+	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
+	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
+				   cnt * sizeof(uint8_t));
+
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+	
+
+	rfail.failure_type = failure_type;
+	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
+				      (void *)array);
+	return err;
+}			
+
+
+/**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message
  * @msg:        the message where the puzzle is to be appended
  * @val_K:      the K value for the puzzle
@@ -2018,22 +2142,36 @@ int hip_build_param_locator(struct hip_common *msg,
  * 
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
+/*int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
 			 struct hip_crypto_key *auth,
 			 uint32_t spi, int alg, 
-			 int already_acquired, int direction) 
+			 int already_acquired, int direction) */
+			 
+int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc)
 {
 	int err = 0;
 	struct hip_keys keys;
 
 	hip_set_param_type(&keys, HIP_PARAM_KEYS);
 	hip_calc_generic_param_len(&keys, sizeof(struct hip_keys), 0);
+	
+	
+	memcpy((struct in6_addr *)&keys.address, addr, 16);
+	memcpy((struct in6_addr *)&keys.hit, hit, 16);		
+	keys.operation = htons(operation_id);
+	keys.alg_id = htons(alg_id);	
+	keys.spi = htonl(spi);
+	keys.spi_old = htonl(spi_old);
+	keys.key_len = htons(key_len);
 	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
-	memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
-	keys.spi = spi;
-	keys.alg = alg;
-	keys.acquired = already_acquired;
-	keys.direction = direction;
+	
+		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
+		//keys.acquired = already_acquired;
+		//keys.direction = direction;
+	
 	err = hip_build_param(msg, &keys);
 	return err;
 }

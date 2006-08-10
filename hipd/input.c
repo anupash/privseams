@@ -1020,6 +1020,30 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  next_echo_resp:
 
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	
+	/********* REG_REQUEST *********/
+	{
+		int type[1] = { 0 };
+		// Check if we want to register to a service	
+		//   - escrow
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			type[0] = HIP_ESCROW_SERVICE;
+		}
+		if (kea)
+			hip_keadb_put_entry(kea);		
+		if (type[0] != 0) {
+			HIP_DEBUG("Adding reg_request parameter");
+			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
+			 "Could not build REG_REQUEST parameter\n");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
+
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -1054,6 +1078,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
+	
+
+
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -1072,6 +1099,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
+	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
 								r1_info->dst_port, i2,
 						     entry, 0), -1);
@@ -1135,6 +1163,54 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
 	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
+
+#ifdef CONFIG_HIP_ESCROW
+
+	// Check if there is a reg_info parameter and extract service types
+	struct hip_reg_info *reg_info;
+	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	if (reg_info) {
+		 
+		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
+		int typecnt = hip_get_param_contents_len(reg_info);
+		HIP_DEBUG("The responder offers %d services", typecnt);
+
+		// Functionality regarding escrow service		
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			HIP_DEBUG("Registering to escrow service");
+		
+			int accept = 0;
+			int i;
+			if (typecnt >= 2) { 
+				for (i = 2; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE)
+						accept = 1;
+				}
+			}
+			if (!accept)
+				kea->keastate = HIP_KEASTATE_INVALID;
+			else
+				HIP_DEBUG("Escrow service available!");		 
+		} 
+		else {
+			HIP_DEBUG("Not doing escrow registration");
+		}
+		
+	}
+	else {
+		// No reg_info found. Cancelling registration attempt.
+		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea)
+			kea->keastate = HIP_KEASTATE_INVALID;
+		
+	}
+	
+#endif //CONFIG_HIP_ESCROW
 
 	/* R1 generation check */
 
@@ -1317,6 +1393,9 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+#ifdef CONFIG_HIP_ESCROW
+	int create_kea = 0;
+#endif //CONFIG_HIP_ESCROW
 
 	HIP_DEBUG("\n");
 
@@ -1364,6 +1443,49 @@ int hip_create_r2(struct hip_context *ctx,
  	}
  next_hmac:
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+
+	{	
+		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
+		struct hip_reg_request *rrequest;
+	
+		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
+		uint8_t lifetime;
+
+		if (rrequest) {
+ 	
+			HIP_DEBUG("Found REG_REQUEST");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+			
+			int *accepted_requests, *rejected_requests;
+			int request_count, accepted_count, rejected_count;
+		
+			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
+			accepted_count = hip_check_service_requests(&entry->hit_our, 
+				(types + 1), request_count, &accepted_requests, &rejected_requests);
+			rejected_count = request_count - accepted_count;
+			
+			if (accepted_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_RESPONSE parameter");
+				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
+					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			}
+			if (rejected_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_FAILED parameter");
+				HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
+					rejected_count), -1, "Building of REG_FAILED failed\n");
+			}
+		}
+		else {
+			HIP_DEBUG("No REG_REQUEST found in I2");
+		}
+	}	
+ next_hmac_2:
+#endif //CONFIG_HIP_ESCROW
+
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
@@ -1393,6 +1515,19 @@ int hip_create_r2(struct hip_context *ctx,
 		HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	}
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	// Add escrow association to database
+	HIP_KEA *kea;	
+	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
+	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
+	kea->keastate = HIP_KEASTATE_VALID;
+	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+		"Error while inserting KEA to keatable");
+	HIP_DEBUG("Added kea entry");
+	
+#endif //CONFIG_HIP_ESCROW
+
  out_err:
 	if (r2)
 		HIP_FREE(r2);
@@ -2003,6 +2138,55 @@ int hip_handle_r2(struct hip_common *r2,
 //	HIP_DEBUG("clearing the address used during the bex\n");
 //	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 
+
+#ifdef CONFIG_HIP_ESCROW
+	{
+		
+		HIP_DEBUG("Checking r2 for REG_RESPONSE parameter");
+		struct hip_reg_request *rresp;
+		uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
+		rresp = hip_get_param(r2, HIP_PARAM_REG_RESPONSE);
+		uint8_t lifetime;
+		if (!rresp) {
+		 	HIP_DEBUG("No REG_RESPONSE found in r2");
+			HIP_DEBUG("Checking r2 for REG_FAILED parameter");
+			rresp = hip_get_param(r2, HIP_PARAM_REG_FAILED);
+			if (rresp) {
+				HIP_DEBUG("Registration failed!");
+			}	
+			else 
+				HIP_DEBUG("Server not responding to registration attempt");
+			
+			// TODO: Should the base entry be removed when registration fails?
+			// Registration unsuccessful - removing base keas
+			//hip_kea_remove_base_entries();
+					
+		}
+		else {
+			HIP_DEBUG("Found REG_RESPONSE");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(r2, HIP_PARAM_REG_RESPONSE));
+			int typecnt = hip_get_param_contents_len(rresp);
+			int accept = 0;
+			int i;
+			if (typecnt >= 1) { 
+				for (i = 1; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE) {
+						accept = 1;
+					}
+				}	
+			}
+			if (accept) {
+				HIP_DEBUG("Registration to escrow service completed!");
+				HIP_KEA *kea;	
+				HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
+				HIP_DEBUG("Found kea base entry");
+				kea->keastate = HIP_KEASTATE_VALID;
+				hip_keadb_put_entry(kea); 
+			}
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
 	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */

@@ -25,10 +25,18 @@
 #include "linux/netlink.h"
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
+
+#include "agent.h"
 #include "debug.h"
 #include "agent_tools.h"
 #include "hit_db.h"
 #include "gui_interface.h"
+
+
+/******************************************************************************/
+/* DEFINES */
+#define CONNHIPD_IN		0
+#define CONNHIPD_OUT	1
 
 
 /******************************************************************************/
@@ -43,6 +51,7 @@ extern "C" {
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
 int connhipd_sendto_hipd(char *, size_t);
+int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
 int connhipd_thread(void *);
 void connhipd_quit(void);
 
