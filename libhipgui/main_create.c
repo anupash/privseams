@@ -48,7 +48,7 @@ int main_create_content(void)
 	{
 		GtkStatusIcon *status_icon;
 			
-		sprintf(str, "%s/%s", HIP_GUI_DATADIR, "infrahip.png");
+		sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
 //		status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
 		status_icon = gtk_status_icon_new_from_file(str);
 		gtk_status_icon_set_visible(status_icon, TRUE);

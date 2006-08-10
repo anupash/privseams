@@ -102,7 +102,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			/* Set entry state, if previous state was unassosiated and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
 			{
-				HIP_DEBUG("Send I1 succcesfully after agent acception.\n");
+				HIP_DEBUG("Send I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
