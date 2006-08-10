@@ -81,6 +81,10 @@ enum WIDGET_IDS
 	ID_NG_TYPE1,
 	ID_NG_TYPE2,
 
+	/* Some misc. */
+	ID_SYSTRAYMENU,
+	ID_RLISTMENU,
+
 	/* IDs for hipstart. */
 	ID_HS_MAIN,
 	ID_HS_MODEL,

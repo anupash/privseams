@@ -57,6 +57,26 @@ int main_create_content(void)
 		
 		g_signal_connect(status_icon, "popup-menu", G_CALLBACK(systray_event), (gpointer)"popup-menu");
 		g_signal_connect(status_icon, "activate", G_CALLBACK(button_event), (gpointer)IDB_SYSTRAY);
+		
+		/* Create menu for status icon. */
+		w = gtk_menu_new();
+		
+		label = gtk_menu_item_new_with_label("Show");
+		gtk_menu_shell_append(w, label);
+		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
+		gtk_widget_show(label);
+		
+		label = gtk_menu_item_new_with_label("Hide");
+		gtk_menu_shell_append(w, label);
+		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+		gtk_widget_show(label);
+		
+		label = gtk_menu_item_new_with_label("Exit");
+		gtk_menu_shell_append(w, label);
+		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXIT);
+		gtk_widget_show(label);
+		
+		widget_set(ID_SYSTRAYMENU, w);
 	}
 #endif
 
@@ -161,6 +181,8 @@ int main_create_content(void)
 
 	list = gtk_tree_view_new();
 	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
+	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)"clicked");
+	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)"pressed");
 	widget_set(ID_RLISTVIEW, list);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
@@ -172,7 +194,6 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-	g_signal_connect(select, "changed", G_CALLBACK(list_click), (gpointer)"clicked");
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);

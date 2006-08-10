@@ -81,8 +81,18 @@ out_err:
 int tw_create_remote(void)
 {
 	/* Variables. */
-	GtkWidget *frame, *w, *vb, *vb1, *vb2, *sw, *hb, *hp, *exp;
+	GtkWidget *frame, *w, *vb, *vb1, *vb2, *sw, *hb, *hp, *exp, *label;
 	
+	/* Create menu for right click popup. */
+	w = gtk_menu_new();
+	
+	label = gtk_menu_item_new_with_label("Delete");
+	gtk_menu_shell_append(w, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RLIST_DELETE);
+	gtk_widget_show(label);
+	
+	widget_set(ID_RLISTMENU, w);
+
 	/* Create remote HIT info. */
 	frame = gtk_frame_new(NULL);
 	gtk_frame_set_label(frame, "Remote HIT information:");
