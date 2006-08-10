@@ -348,7 +348,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PSEUDO_HIT                  32780 
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_FROM_SIGN       65100
+#define HIP_PARAM_FROM_SIGN       65100 /* REMOVE? No such type in draft-ietf-hip-rvs-05 */
 #define HIP_PARAM_TO_SIGN         65102
 #define HIP_PARAM_HMAC            61505
 #define HIP_PARAM_HMAC2           61569
@@ -356,10 +356,10 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_HIP_SIGNATURE   61697
 #define HIP_PARAM_ECHO_REQUEST    63661
 #define HIP_PARAM_ECHO_RESPONSE   63425
-#define HIP_PARAM_FROM            65300
+#define HIP_PARAM_FROM            65498 /* Updated from 65300, Lauri S. 08.08.2006 16:06 */
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320
-#define HIP_PARAM_VIA_RVS         65500
+#define HIP_PARAM_VIA_RVS         65502 /* Updated from 65500, Lauri S. 08.08.2006 16:06 */
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
 #define HIP_HIP_RESERVED                0
@@ -846,7 +846,7 @@ struct hip_to {
 struct hip_via_rvs {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t address[16];
+	uint8_t address[0];
 	/* the rest of the addresses */
 } __attribute__ ((packed));
 

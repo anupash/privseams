@@ -31,6 +31,7 @@ extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_inde
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
+	HIP_DEBUG("Lauri: hip_controls_sane() invoked.\n");
 	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
@@ -86,6 +87,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
+	HIP_DEBUG("Lauri: hip_verify_packet_hmac() invoked.\n");
 	int err = 0, len, orig_len;
 	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
@@ -136,6 +138,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 			    struct hip_crypto_key *crypto_key,
 			    struct hip_host_id *host_id)
 {
+	HIP_DEBUG("Lauri: hip_verify_packet_hmac2() invoked.\n");
 	int err = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
@@ -181,6 +184,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 				uint64_t I,
 				uint64_t J)
 {
+	HIP_DEBUG("Lauri: hip_produce_keying_material() invoked.\n");
 	char *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
@@ -257,11 +261,11 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
-	
+
 	struct hip_diffie_hellman * dhf;
 	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
-	
+
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
 							      dhf->group_id,
 							      hip_get_param_contents_len(dhf) - 1, 
@@ -605,6 +609,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr,
 	                       struct hip_stateless_info *msg_info)
 {
+	HIP_DEBUG("Lauri: hip_receive_control_packet() invoked.\n");
 	hip_ha_t tmp;
 	int err = 0, type, skip_sync = 0;
 
@@ -793,6 +798,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  hip_ha_t *entry,
 	          struct hip_stateless_info *r1_info)
 {
+	HIP_DEBUG("Lauri: hip_create_i2() invoked.\n");
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -1096,6 +1102,8 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r1_info)
 {
+	HIP_DEBUG("Lauri: hip_handle_r1() invoked.\n");
+	HIP_DUMP_MSG(r1); //Lauri
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
@@ -1213,6 +1221,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r1_info)
 {
+	HIP_DEBUG("Lauri: hip_receive_r1() invoked.\n");
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
 #ifdef CONFIG_HIP_RVS
@@ -1300,6 +1309,7 @@ int hip_create_r2(struct hip_context *ctx,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
+	HIP_DEBUG("Lauri: hip_create_r2() invoked.\n");
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
@@ -1410,6 +1420,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  hip_ha_t *ha,
 		  struct hip_stateless_info *i2_info)
 {
+	HIP_DEBUG("Lauri: hip_handle_i2() invoked.\n");
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
@@ -1810,6 +1821,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
+	HIP_DEBUG("Lauri: hip_receive_i2() invoked.\n");
 	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
@@ -1895,6 +1907,7 @@ int hip_handle_r2(struct hip_common *r2,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r2_info)
 {
+	HIP_DEBUG("Lauri: hip_handle_r2() invoked.\n");
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
  	struct hip_esp_info *esp_info = NULL;
@@ -2006,55 +2019,149 @@ int hip_handle_r2(struct hip_common *r2,
 	return err;
 }
 
+/**
+ * hip_handle_i1 - handle an incoming I1 packet.
+ * @i1        HIP packet common header with source and destination HITs.
+ * @i1_saddr: the source address from where the I1 packet was received.
+ * @i1_daddr: the destination address where the I1 packet was sent to (own address).
+ * @entry:    current host association database state.
+ * @i1_info:  the source and destination ports (when NAT is in use).
+ *
+ * Parses FROM and VIA_RVS parameters from the incoming I1 packet and
+ * passes them to "hip_xmit_r1()" as a single VIA_RVS parameter.
+ * 07.08.2006 20:17.
+ * 
+ * Returns: zero on success, or negative error value on error.
+ */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
-	//int err;
+	HIP_DEBUG("Lauri: hip_handle_i1() invoked.\n");
+	HIP_DUMP_MSG(i1);
+
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
+	struct hip_via_rvs *via_rvs;
+#endif
+#ifndef CONFIG_HIP_RVS
+	/* If rvs is not in use, pass NULL to hip_xmit_r1() as rvs_addresses. */
+	struct in6_addr *rvs_addresses = NULL;
 #endif
 	struct in6_addr *dst, *dstip;
-	HIP_DEBUG("hip_handle_i1\n");
+	int via_rvs_count = 0;
 	dst = &i1->hits;
 	dstip = NULL;
 
 #ifdef CONFIG_HIP_RVS
+	/* We have three cases:
+	   1. Only FROM parameter was found.
+	   2. Both FROM and VIA_RVS parameters were found.
+	   3. Neither FROM nor VIA_RVS parameter were found. */
+		
+	hip_tlv_len_t param_via_rvs_len = 0;
+	/* Inserting two debug rvs addresses into the received I1 packet to simulate
+	   multiple traversed rvses. Lauri Silvennoinen 07.08.2006 17:07 */
+	/*
+	  HIP_DEBUG("Inserting debug rvs addresses to I1.\n");
+	  struct in6_addr foobar[2];
+	  foobar[0].in6_u.u6_addr32[0] = htonl(0x12345678);
+	  foobar[0].in6_u.u6_addr32[1] = htonl(0x11111111);
+	  foobar[0].in6_u.u6_addr32[2] = htonl(0x22222222);
+	  foobar[0].in6_u.u6_addr32[3] = htonl(0x33333333);
+	  foobar[1].in6_u.u6_addr32[0] = htonl(0x12345678);
+	  foobar[1].in6_u.u6_addr32[1] = htonl(0x44444444);
+	  foobar[1].in6_u.u6_addr32[2] = htonl(0x55555555);
+	  foobar[1].in6_u.u6_addr32[3] = htonl(0x66666666);
+	  hip_build_param_via_rvs(i1, foobar, 2);
+	*/
+	/* End of debug addresses. */
+	
+	/* Check if the incoming I1 packet has a FROM parameter. */
 	from = hip_get_param(i1, HIP_PARAM_FROM);
 	if (from) {
-		HIP_DEBUG("Found FROM parameter in I1\n");
+		/* Case 1. */
+		HIP_DEBUG("Found FROM parameter in I1.\n");
 		dstip = (struct in6_addr *)&from->address;
 		if (entry) {
 			struct in6_addr daddr;
 			
-			/* The entry contains wrong address mapping...
+                        /* The entry contains wrong address mapping...
 			   instead of the real IP, it has RVS's IP.
 			   The RVS should probably be saved into the entry.
-			   We need the RVS's IP in double-jump case.
-			*/
+			   We need the RVS's IP in double-jump case. */
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, dst, 0, 0, PEER_ADDR_STATE_ACTIVE);
 		}
+		
+		/* Check if the incoming I1 packet has a VIA_RVS parameter. */
+		via_rvs = hip_get_param(i1, HIP_PARAM_VIA_RVS);
+		if (via_rvs) {
+			/* Case 2. */
+			HIP_DEBUG("Found VIA_RVS parameter in I1\n");
+			param_via_rvs_len = hip_get_param_contents_len(via_rvs);
+			via_rvs_count = hip_get_param_contents_len(via_rvs)/sizeof(struct in6_addr);
+			HIP_DEBUG("Number of addresses in VIA_RVS parameter %u\n", via_rvs_count);
+		} else {
+			HIP_DEBUG("Didn't find VIA_RVS parameter in I1.\n");
+		}
 	} else {
-		HIP_DEBUG("Didn't find FROM parameter in I1\n");
+		/* Case 3. */
+		HIP_DEBUG("Didn't find neither FROM nor VIA_RVS parameter in I1.\n");
+	}
+
+	/* Pass traversed rvsaddresses and own address to hip_xmit_r1()-function
+	   for building a new VIA_RVS parameter.
+	   TODO: This if-statement would be unnecessary if "rvs_addresses" was
+	   allocated dynamically from the heap. */
+	struct in6_addr rvs_addresses[via_rvs_count + 1];
+	if(from)
+	{
+		/* Cases 1 and 2. */
+		/* Copy rvs_addresses */
+		if(via_rvs)
+		{
+			memcpy(rvs_addresses, hip_get_param_contents_direct(via_rvs), param_via_rvs_len);
+		}
+		/* Append source IP address from I1 to RVS addresses... */
+		memcpy(&rvs_addresses[via_rvs_count], i1_saddr, sizeof(struct in6_addr));
+		/* ...and increment "via_rvs_count" */
+		via_rvs_count++;
 	}
 #endif
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
+	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
+			   dst, i1_info, &rvs_addresses, via_rvs_count);
+	/*struct in6_addr test[0];
+	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
+	dst, i1_info, NULL, 0);*/
 }
 
-
 /**
- * hip_receive_i1 - receive I1 packet
- * @skb: sk_buff where the HIP packet is in
+ * hip_receive_i1 - receive I1 packet.
+ * @hip_i1    HIP packet common header with source and destination HITs.
+ * @i1_saddr: the source address from where the I1 packet was received.
+ * @i1_daddr: the destination address where the I1 packet was sent to (own address).
+ * @entry:    current host association database state.
+ * @i1_info:  the source and destination ports (when NAT is in use).
  *
- * This is the initial function which is called when an I1 packet is
- * received. If we are in correct state we reply with an R1 packet.
+ * This function is called when a HIP control packet is received by
+ * hip_receive_control_packet()-function and the packet is detected to be
+ * an I1 packet. The operation of this function depends on whether the current
+ * machine is a rendezvous server or not.
+ * 
+ * If the current machine is NOT a rendezvous server and it is either in state
+ * HIP_STATE_NONE, HIP_STATE_I1_SENT or HIP_STATE_CLOSING, hip_handle_i1() is
+ * invoked. If the state is none of the previous, no action is taken. If the
+ * current machine IS a rendezvous server and a valid rendezvous association
+ * is found from the server's rva table, the I1 packet is relayed by invoking 
+ * hip_relay_i1(). In case no valid valid rendezvous association is found,
+ * hip_handle_i1() is invoked. 08.08.2006 13:56
  *
  * This function never writes into hip_sdb_state entries.
- *
+ * 
  * Returns: zero on success, or negative error value on error.
  */
 int hip_receive_i1(struct hip_common *hip_i1,
@@ -2063,7 +2170,8 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *i1_info)
 {
-	int err = 0, state, mask = 0;
+	HIP_DEBUG("Lauri: hip_receive_i1() invoked.\n");
+       	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -2084,6 +2192,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 #ifdef CONFIG_HIP_RVS
 		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
  		rva = hip_rva_find_valid(&hip_i1->hitr);
+		HIP_DEBUG("Valid rendezvous association found: %s \n", (rva ? "yes" : "no"));
  		if (rva) {
  			/* we should now relay the I1.
  			   We have two options: Rewrite destination address or
@@ -2092,7 +2201,6 @@ int hip_receive_i1(struct hip_common *hip_i1,
  			   same subnet, and we'll fall back to the latter in other
  			   cases.
  			*/
-
 			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva, i1_info);
 			if (err)
  				HIP_ERROR("Relaying I1 failed\n");
@@ -2154,6 +2262,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r2_info)
 {
+	HIP_DEBUG("Lauri: hip_receive_i2() invoked.\n");
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
 	uint16_t mask = 0;
@@ -2215,7 +2324,7 @@ int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notity_daddr,
 		       hip_ha_t* entry)
 {
-	
+	HIP_DEBUG("Lauri: hip_receive_notify() invoked.\n");
 	int err = 0;
 	struct hip_notify *notify_param;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
@@ -2263,6 +2372,7 @@ int hip_receive_bos(struct hip_common *bos,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *bos_info)
 {
+	HIP_DEBUG("Lauri: hip_receive_bos() invoked.\n");
 	int err = 0, state = 0;
 
 	HIP_DEBUG("\n");
@@ -2297,4 +2407,3 @@ int hip_receive_bos(struct hip_common *bos,
  out_err:
 	return err;
 }
-

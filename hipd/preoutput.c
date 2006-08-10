@@ -159,7 +159,6 @@ int hip_csum_send(struct in6_addr *local_addr,
 
 	/* For some reason, neither sendmsg or send (with bind+connect)
 	   do not seem to work properly. Thus, we use just sendto() */
-	
 	len = hip_get_msg_total_len(msg);
 	HIP_HEXDUMP("Dumping packet ", msg, len);
 

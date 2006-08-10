@@ -119,6 +119,7 @@ int hip_scan_retransmissions()
 
 int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 {
+	HIP_DEBUG("Lauri: hip_agent_add_lhit() invoked.\n");
 	int err = 0;
 
 	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit, HIP_PARAM_HIT,
@@ -168,6 +169,7 @@ int hip_agent_add_lhits(void)
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
 
 	alen = sizeof(hip_agent_addr);                      
+
 	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
 	           0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
@@ -198,6 +200,7 @@ int hip_agent_is_alive()
 
 int hip_agent_filter(struct hip_common *msg)
 {
+	HIP_DEBUG("Lauri: hip_agent_filter() invoked.\n");
 	int err = 0;
 	int n, sendn;
 	socklen_t alen;
@@ -243,6 +246,7 @@ out_err:
 
 
 int hip_init_host_ids() {
+	HIP_DEBUG("Lauri: hip_init_host_ids() invoked.\n");
 	int err = 0;
 	struct stat status;
 	struct hip_common *user_msg = NULL;
@@ -445,6 +449,7 @@ void hip_exit(int signal) {
 #endif
 	//hip_uninit_workqueue();
 #ifdef CONFIG_HIP_RVS
+	HIP_DEBUG("Lauri: RVS - hip_uninit_rvadb(); next.\n");
         hip_uninit_rvadb();
 #endif
 	// hip_uninit_host_id_dbs();
@@ -485,6 +490,7 @@ int init_random_seed()
 /* insert mapping for local host IP addresses to HITs to DHT */
 void register_to_dht ()
 {
+  HIP_DEBUG("Lauri: register_to_dht() invoked.\n");
 #ifdef CONFIG_HIP_OPENDHT
 
   struct netdev_address *n, *t;
@@ -559,6 +565,7 @@ int periodic_maintenance() {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_set_opportunistic_mode(const struct hip_common *msg)
 {
+  HIP_DEBUG("Lauri: hip_set_opportunistic_mode() invoked.\n");
   int err =  0;
   unsigned int *mode = NULL;
   
@@ -582,6 +589,7 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
 
 int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 {
+  HIP_DEBUG("Lauri: hip_get_peer_hit() invoked.\n");
   int n = 0;
   int err = 0;
   int alen = 0;
@@ -686,6 +694,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 
 int hip_get_pseudo_hit(struct hip_common *msg)
 {
+  HIP_DEBUG("Lauri: hip_get_pseudo_hit() invoked.\n");
   int err = 0;
   int alen = 0;
   
@@ -731,6 +740,7 @@ int hip_get_pseudo_hit(struct hip_common *msg)
 
 int hip_query_opportunistic_mode(struct hip_common *msg)
 {
+  HIP_DEBUG("Lauri: hip_query_opportunistic_mode() invoked.\n");
   int err = 0;
   unsigned int opp_mode = opportunistic_mode;
 
@@ -756,6 +766,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
 
 int hip_query_ip_hit_mapping(struct hip_common *msg)
 {
+  HIP_DEBUG("Lauri: hip_query_ip_hit_mapping() invoked.\n");
   int err = 0;
   unsigned int mapping = 0;
   struct in6_addr *hit = NULL;
@@ -790,6 +801,7 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+  HIP_DEBUG("Lauri: hip_sendto() invoked.\n");
   int n = 0;
 
   HIP_DEBUG("hip_sendto sending phit...\n");
@@ -800,6 +812,7 @@ int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
 }
 
 void hip_probe_kernel_modules() {
+	HIP_DEBUG("Lauri: hip_probe_kernel_modules() invoked.\n");
 	int count;
 	char cmd[40];
         /* update also this if you add more modules */
@@ -819,6 +832,7 @@ void hip_probe_kernel_modules() {
 }
 
 int main(int argc, char *argv[]) {
+	HIP_DEBUG("Lauri: main() invoked.\n");
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
@@ -897,6 +911,7 @@ int main(int argc, char *argv[]) {
 	hip_init_puzzle_defaults();
 
 #ifdef CONFIG_HIP_RVS
+	HIP_DEBUG("Lauri: RVS - hip_init_rvadb(); next.\n");
         hip_init_rvadb();
 #endif	
 
@@ -1198,4 +1213,3 @@ int main(int argc, char *argv[]) {
 
 	return err;
 }
-

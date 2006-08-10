@@ -1641,6 +1641,37 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 }
 
 /**
+ * hip_build_param_via_rvs - build VIA_RVS parameter
+ * @msg:           HIP packet common header with source and destination HITs.
+ * @rvs_addresses: list of RVS IPv6 or IPv4-in-IPv6 format IPv4 addresses.
+ * @address_count: number of addresses in "rvs_addresses".
+ *
+ * Builds the VIA_RVS parameter as described in draft-ietf-hip-rvs-04
+ * under section 4.2.3.
+ * author: Lauri Silvennoinen 25.07.2006
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_via_rvs(struct hip_common *msg,
+			    const struct in6_addr rvs_addresses[],
+			    const int address_count)
+{
+	HIP_DEBUG("Lauri: hip_build_param_rvs() invoked.\n");
+	int err = 0;
+	struct hip_via_rvs viarvs;
+	
+	/* Set the parameter type. (first field in the parameter.) */
+	hip_set_param_type(&viarvs, HIP_PARAM_VIA_RVS);
+	/* Calculate and set the parameter length (2nd field in the parameter.) */
+	hip_calc_generic_param_len(&viarvs, sizeof(struct hip_via_rvs),
+				   address_count * sizeof(struct in6_addr));
+	/* Build parameter viarvs and set it in the message. */
+	err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
+				      (void *)rvs_addresses);
+	return err;
+}
+
+/**
  * hip_build_param_rva - build HIP RVA parameter
  * @msg:       the message
  * @lifetime:  lifetime in seconds in host bute order
@@ -1668,7 +1699,6 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 	err = hip_build_generic_param(msg, &rrep, sizeof(struct hip_rva_reply),
 				      (void *)type_list);
 	return err;
-
 }
 
 /**

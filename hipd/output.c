@@ -57,9 +57,25 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 	
+	/* Debug stuff. */
+	/*
+	HIP_DEBUG("Lauri: SENDING I1.\n");
+	HIP_DUMP_MSG(&i1);
+	HIP_DEBUG_IN6ADDR("Lauri: Local address", &entry->local_address);
+	uint8_t lastnum = (&entry->local_address)->in6_u.u6_addr8[15];
+	HIP_DEBUG("Lauri: Last number local address: %u.\n", lastnum);
+	if(lastnum == 2) // The last number of initiator's IP.
+	{
+		HIP_DEBUG("Lauri: Adding debug FROM parameter.\n");
+		hip_build_param_from(&i1, &entry->local_address, 0);
+		HIP_DUMP_MSG(&i1);
+	}
+	*/
+	/* End of debug stuff. */
+
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,0,0, 
-				/* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
+						   /* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
 						   (struct hip_common*) &i1,
 						   entry, 1);
 	HIP_DEBUG("err = %d\n", err);
@@ -84,7 +100,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
- 	struct hip_common *msg;
+ 	HIP_DEBUG("\n\n\n*** Lauri: hip_create_r1() invoked. ***\n\n\n");
+	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
  	/* Supported HIP and ESP transforms. */
@@ -193,7 +210,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/************** Packet ready ***************/
 
-// 	if (host_id_pub)
+        // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
  	if (dh_data)
  		HIP_FREE(dh_data);
@@ -215,25 +232,40 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 /**
  * hip_xmit_r1 - transmit an R1 packet to the network
- * @dst_addr: the destination IPv6 address where the R1 should be sent
- * @dst_hit:  the destination HIT of peer
+ * @i1_saddr:      the source address from where the I1 packet was received.
+ * @i1_daddr:      the destination address where the I1 packet was sent to (own address).
+ * @src_hit:       the source HIT i.e. responder HIT (own HIT). 
+ * @dst_ip:        the destination IPv6 address where the R1 should be sent (peer ip).
+ * @dst_hit:       the destination HIT i.e. initiator HIT (peer HIT).
+ * @i1_info:       the source and destination ports (when NAT is in use).
+ * @traversed_rvs: the rvs addresses to be inserted into the VIA_RVS parameter.
+ * @rvs_count:     number of addresses in "traversed_rvs".
  *
  * Sends an R1 to the peer and stores the cookie information that was sent.
- *
+ * The packet is sent either to "i1_saddr" or "dst_ip" depending on the value of
+ * "dst_ip". If "dst_ip" is all zeroes (::/128) or NULL, R1 is sent to
+ * "i1_saddr"; otherwise it is sent to "dst_ip". In case the incoming I1 was
+ * relayed through a middlebox (e.g. rvs) "i1_saddr" should have the address of
+ * that middlebox. 07.08.2006 19:59.
+ * 
  * Returns: zero on success, or negative error value on error.
  */
-int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
+int hip_xmit_r1(struct in6_addr *i1_saddr,
+		struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, 
 		struct in6_addr *dst_ip, struct in6_addr *dst_hit, 
-		struct hip_stateless_info *i1_info)
+		struct hip_stateless_info *i1_info,
+		const struct in6_addr *traversed_rvs,
+		const int rvs_count)
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
 	int err = 0;
 
-	HIP_DEBUG("\n");
 	own_addr = i1_daddr;
-	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
+
+	/* Get the destination address. */
+	dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -241,10 +273,10 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	HIP_DEBUG_HIT("src_hit ", src_hit);
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
-	HIP_DEBUG_HIT("hip_xmit_r1:: src_hit", src_hit);
-	HIP_DEBUG_HIT("hip_xmit_r1:: dst_hit", dst_hit);
-	HIP_DEBUG_HIT("hip_xmit_r1:: own_addr", own_addr);
-	HIP_DEBUG_HIT("hip_xmit_r1:: dst_addr", dst_addr);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", own_addr);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Destination address", dst_addr);
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
 		 "No precreated R1\n");
 
@@ -252,14 +284,24 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
-	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
+	HIP_DEBUG_HIT("hip_xmit_r1(): ripkt->hitr", &r1pkt->hitr);
+	
+	/* Build VIA_RVS parameter if the I1 packet was relayed through a rvs. */
+#ifdef CONFIG_HIP_RVS
+	if(rvs_count > 0)
+	{
+		/*  TODO: Parameters should be in ascending order, should this
+		    be checked here? */
+		hip_build_param_via_rvs(r1pkt, traversed_rvs, rvs_count);
+	}
+#endif
+	HIP_DUMP_MSG(r1pkt);
 
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
-
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
 	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port, i1_info->src_port, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
-	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
 
  out_err:
 	if (r1pkt)

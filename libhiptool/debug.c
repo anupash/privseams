@@ -419,17 +419,21 @@ void hip_print_lsi(const char *str, const struct in_addr *lsi)
  */
 void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
-	char dst[INET6_ADDRSTRLEN];
-
-	if (IN6_IS_ADDR_V4MAPPED(hit)) {
-		struct in_addr in_addr;
-		IPV6_TO_IPV4_MAP(hit, &in_addr);
-		hip_print_lsi(str, &in_addr);
-	} else {
-		hip_in6_ntop(hit, dst);
-		HIP_DEBUG("%s: %s\n", str, dst);
+	if(!hit) { // Null check added by Lauri Silvennoinen 27.07.2006 18:47
+		HIP_DEBUG("%s: NULL\n", str);
+		return;
 	}
-
-	return;
+	else {
+		char dst[INET6_ADDRSTRLEN];
+		
+		if (IN6_IS_ADDR_V4MAPPED(hit)) {
+			struct in_addr in_addr;
+			IPV6_TO_IPV4_MAP(hit, &in_addr);
+			hip_print_lsi(str, &in_addr);
+		} else {
+			hip_in6_ntop(hit, dst);
+			HIP_DEBUG("%s: %s\n", str, dst);
+		}
+		return;
+	}
 }
-

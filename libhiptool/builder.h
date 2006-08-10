@@ -157,6 +157,10 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
+int hip_build_param_via_rvs(struct hip_common *msg,
+			    const struct in6_addr rvs_addresses[],
+			    const int address_count);
+
 int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 			int *type_list, int cnt, int request);
 

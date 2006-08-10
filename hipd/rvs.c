@@ -376,12 +376,42 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 	return j;
 }
 
+/**
+ * hip_relay_i1 - relay an incoming I1 packet.
+ * @i1        HIP packet common header with source and destination HITs.
+ * @i1_saddr: the source address from where the I1 packet was received.
+ * @i1_daddr: the destination address where the I1 packet was sent to (own address).
+ * @rva:      rendezvous association matching the HIT of next hop.
+ * @i1_info:  the source and destination ports (when NAT is in use).
+ *
+ * This function relays an incoming I1 packet to the next node on path
+ * to receiver and inserts a FROM parameter encapsulating the IP address
+ * of the initiator. Next node on path is typically the responder, but if
+ * the message is to travel multiple rendezvous servers en route to responder,
+ * next node can also be another rendezvous server. In this case a VIA_RVS
+ * parameter is also inserted (or modified) in the second (and later) rvses. 
+ * 09.08.2006 16:12
+ * 
+ * Returns: zero on success, or negative error value on error.
+ */
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
 {
+	HIP_DEBUG("Lauri: hip_relay_i1() invoked.\n");
+	HIP_DUMP_MSG(i1);
+	HIP_DEBUG_IN6ADDR("Lauri:  i1_saddr", i1_saddr);
+	HIP_DEBUG_IN6ADDR("Lauri: i1_daddr", i1_daddr);
+	HIP_DEBUG("Lauri: rva->rvastate: %s.\n", rva->rvastate ? "HIP_RVASTATE_VALID" : "HIP_RVASTATE_INVALID");
+	HIP_DEBUG_HIT("Lauri: rva->hit", &rva->hit);
+	int i = 0;
+	for(; i < HIP_RVA_MAX_IPS; i++)
+		HIP_DEBUG_IN6ADDR("Lauri: rva->ip_addrs", &rva->ip_addrs[i]);
+	HIP_DEBUG("Lauri: i1_info->src_port: %u.\n", i1_info->src_port);
+	HIP_DEBUG("Lauri: i1_info->dst_port: %u.\n", i1_info->dst_port);
+	
 	struct in6_addr *final_dst = NULL, *original_src;
 	struct hip_common *old_i1, *new_i1;
-	struct hip_tlv_common *tmp;
+	struct hip_tlv_common *current_param = NULL;
 	int err, from_added = 0;
 	char ipv6dst[128] = {0};
 
@@ -390,34 +420,136 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	old_i1 = i1;
 	original_src = i1_saddr;
 	
+	/* New I1 packet has to be created since the received has wrong network header. */
 	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");
 	
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
+	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate
+	   function pointer */
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits),
 			      &(old_i1->hitr));
-	/* we need to add FROM field */
-	while ((tmp = hip_get_next_param(old_i1, NULL))) {
-		if (from_added || ntohs(tmp->type) <= HIP_PARAM_FROM) {
-			/* copy */
-			hip_build_param(new_i1,tmp);
+
+	/* Adding FROM parameter. Loop through all the parameters in the
+	   received I1 packet, and insert a FROM parameter into right slot
+	   (ascending order of parameters).
+
+	   Notice that in most cases the incoming I1 has no paramaters at all,
+	   and this loop is skipped. If, however, there are parameters in the
+	   I1 packet the while loop is executed. Multiple rvses en route to
+	   responder is one (and only?) case when this takes place. */
+	while ((current_param = hip_get_next_param(old_i1, current_param)) != NULL)
+	{
+		HIP_DEBUG("Found parameter in I1.\n");
+		/* Copy while type is smaller than FROM and from has not yet been added. */
+		if (from_added || ntohs(current_param->type) < HIP_PARAM_FROM)
+		{
+			HIP_DEBUG("Parameter type is less than FROM - copied to relayed I1.\n");
+			hip_build_param(new_i1,current_param);
 			continue;
 		}
-
-		/* FROM parameter not added AND type > FROM... */
-		/* add FROM _AND_ copy the tmp parameter */
-		hip_build_param_from(new_i1, original_src, 0);
-		hip_build_param(new_i1, tmp);
-		from_added = 1;
+		/* Received I1 allready has a FROM parameter. Copy the existing
+		   FROM parameter and flag boolean indicating adding. */
+		else if (ntohs(current_param->type) == HIP_PARAM_FROM)
+		{
+			HIP_DEBUG("Parameter type is FROM - copied to relayed I1.\n");
+			hip_build_param(new_i1,current_param);
+			from_added = 1;
+			int via_rvs_added = 0;
+			/*If FROM parameter is found, a VIA_RVS parameter has to
+			  be appended into right slot. */
+			while ((current_param =
+				hip_get_next_param(old_i1, current_param)) != NULL)
+			{
+				HIP_DEBUG("Searching VIA_RVS from I1.\n");
+				/* Copy parameters whose type is between FROM and
+				   VIA_RVS. */
+				if (ntohs(current_param->type) < HIP_PARAM_VIA_RVS)
+				{
+					HIP_DEBUG("Parameter type is less than VIA_RVS - copied to relayed I1.\n");
+					hip_build_param(new_i1,current_param);
+					continue;
+				}
+				/* If VIA_RVS parameter is found (true if this
+				   is third or later rvs on path to responder),
+				   source IP is appended to the parameter. */ 
+				else if (ntohs(current_param->type) == HIP_PARAM_VIA_RVS)
+				{
+					HIP_DEBUG("Parameter type is VIA_RVS - "\
+						  "appended source IP and copied to relayed I1.\n");
+					/* Build new VIA_RVS from scratch. */
+					hip_tlv_len_t param_via_rvs_len = 
+						hip_get_param_contents_len(current_param);
+					int via_rvs_count =
+						hip_get_param_contents_len(current_param)/sizeof(struct in6_addr);
+					struct in6_addr rvs_addresses[via_rvs_count + 1];
+					memcpy(rvs_addresses, hip_get_param_contents_direct(current_param), param_via_rvs_len);
+					/* Append source IP address from I1 to RVS addresses... */
+					memcpy(&rvs_addresses[via_rvs_count], i1_saddr, sizeof(struct in6_addr));
+					/* ...and increment "via_rvs_count" */
+					via_rvs_count++;
+					hip_build_param_via_rvs(new_i1, rvs_addresses, via_rvs_count);
+					via_rvs_added = 1;
+					/* We're done adding FROM and VIA_RVS
+					   parameters, break inner while loop
+					   to copy parameters whose type is
+					   greater than VIA_RVS. */
+					break;
+				}
+				/* Parameter under inspections has greater type than
+				   VIA_RVS parameter: insert a new VIA_RVS parameter
+				   and copy "current_param". */
+				else
+				{
+					HIP_DEBUG("No VIA_RVS found - created new VIA_RVS and copied"\
+						  "current parameter to relayed I1.\n");
+					struct in6_addr rvs_addresses[1];
+					ipv6_addr_copy(rvs_addresses, i1_daddr);
+					hip_build_param_via_rvs(new_i1, rvs_addresses, 1);
+					via_rvs_added = 1;
+					hip_build_param(new_i1, current_param);
+					/* We're done adding FROM and VIA_RVS
+					   parameters, break inner while loop
+					   to copy parameters whose type is
+					   greater than "current_param". */
+					break;
+				}
+			}
+			if(!via_rvs_added)
+			{
+				HIP_DEBUG("I1 had no parameters after FROM, adding VIA_RVS.\n");
+				struct in6_addr rvs_addresses[1];
+				ipv6_addr_copy(rvs_addresses, i1_daddr);
+				hip_build_param_via_rvs(new_i1, rvs_addresses, 1);
+				via_rvs_added = 1;
+			}
+			HIP_DEBUG("Done searching VIA_RVS from I1.\n");
+			continue;
+		}
+		/* Parameter under inspections has greater type than FROM
+		   parameter: insert FROM parameter, copy "current_param"
+		   and flag a boolean to indicate that FROM parameter
+		   has been added. */
+		else
+		{
+			HIP_DEBUG("No FROM found - created new FROM and copied"\
+				  "current parameter to relayed I1.\n");
+			hip_build_param_from(new_i1, original_src, 0);
+			hip_build_param(new_i1, current_param);
+			from_added = 1;
+		}
 	}
 
-	if (!from_added) {
+	/* If the incoming I1 had no parameters, the FROM parameter is not
+	   added until here. */
+	if (!from_added)
+	{
+		HIP_DEBUG("I1 had no parameters, adding FROM.\n");
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
 	err = hip_csum_send(NULL, final_dst, i1_info->src_port, i1_info->dst_port, new_i1, NULL, 0); 
-		//Sending the port info from the I1 from initiator behind NAT to the server --Abi
+	//Sending the port info from the I1 from initiator behind NAT to the server --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {

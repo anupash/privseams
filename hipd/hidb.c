@@ -139,10 +139,10 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey = NULL;
 	unsigned long lf;
 
-	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
 	HIP_ASSERT(&lhi->hit != NULL);
-	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
+	_HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
 								      GFP_KERNEL)), -ENOMEM,
 		 "No memory available for host id\n");
@@ -176,7 +176,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	list_add(&id_entry->next, &db->db_head);
 
-	HIP_DEBUG("Generating a new R1 set.\n");
+	_HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
 	
 	pubkey = hip_get_public_key(pubkey);
