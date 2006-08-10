@@ -99,6 +99,13 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 									0,0, /*need to correct it*/
 								   entry->hip_msg_retrans.buf,
 								   entry, 0);
+			/* Set entry state, if previous state was unassosiated and type is I1. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
+			{
+				HIP_DEBUG("Send I1 succcesfully after acception.\n");
+				entry->state = HIP_STATE_I1_SENT;
+			}
+			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
@@ -255,7 +262,7 @@ int hip_agent_filter(struct hip_common *msg)
 	{
 		err = 1;
 	}
-	
+
 /*	if (hip_get_msg_type(msg) == HIP_I1 &&
 	    memcmp(&msg->hits, &hits, sizeof(msg->hits)) != 0)
 	{
@@ -1210,6 +1217,7 @@ int main(int argc, char *argv[]) {
 				if (ha)
 				{
 					ha->state = HIP_STATE_UNASSOCIATED;
+					HIP_HEXDUMP("HA: ", ha, 4);
 					HIP_DEBUG("Agent accepted I1.\n");
 				}
 			}

@@ -157,6 +157,7 @@ void term_exec_command(char *cmd)
 void term_print(const char *string, ...)
 {
 	/* Variables. */
+	GtkTextIter iter;
 	va_list args;
 	char str[1024];
 
@@ -165,7 +166,8 @@ void term_print(const char *string, ...)
 
 	/* Print to terminal. */
 	vsprintf(str, string, args);
-	gtk_text_buffer_insert_at_cursor(widget(ID_TERMBUFFER), str, -1);
+	gtk_text_buffer_get_end_iter(widget(ID_TERMBUFFER), &iter);
+	gtk_text_buffer_insert(widget(ID_TERMBUFFER), &iter, str, -1);
 	HIP_DEBUG(str);
 
 	/* End args. */

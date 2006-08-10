@@ -116,14 +116,19 @@ int hip_csum_send(struct in6_addr *local_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	if (!retransmit)
+	if (!retransmit && hip_get_msg_type(msg) == HIP_I1)
+	{
+		HIP_DEBUG("Retransmit of I1, no filtering required.\n");
 		err = -ENOENT;
+	}
 	else if (entry)
 	{
 		err = entry->hadb_output_filter_func->hip_output_filter(msg);
 	}
 	else
+	{
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
+	}
 
 	if (err == -ENOENT)
 	{
@@ -136,7 +141,12 @@ int hip_csum_send(struct in6_addr *local_addr,
     else if (err == 1)
     {
 		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
+		         msg, entry), -1, "queue failed\n");
+		err = 1;
 		entry->state = HIP_STATE_FILTERING;
+		HIP_HEXDUMP("HA: ", entry, 4);
+		goto out_err;
 	}
 	else if (err == 2)
 	{
