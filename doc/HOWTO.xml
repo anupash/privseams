@@ -8,7 +8,7 @@
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare or User Mode Linux is recommended for
+      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
       testing HIPL.
       </para>
     </chapter>
@@ -19,7 +19,8 @@
      As an alternative, you may download frozen, binary releases of the kernel
      from http://hipl.hiit.fi/hipl/release/. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
-     because the bug may already have been resolved upstream.
+     because the bug may already have been resolved upstream. There is also a
+     Knoppix based live cd available from the HIPL download pages.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -538,7 +539,13 @@
       relinking is required, no changes are needed in the application.
     </para>
     <para>
-      3. Override the getaddrinfo function from the command line:
+      3. Override the resolver library dynamically:
+    </para>
+    <para>
+      a. Give the binary as an argument to hipconf: "hipconf run normal &lt;EXECUTABLE&gt;"
+    </para>
+    <para>
+      b. Override the getaddrinfo function from the command line:
       http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
     </para>
     <para>
@@ -579,7 +586,10 @@ using getaddrinfo: ping, ping6, tla, svn.
     as follows (in case you did not make install):
     </para>
     <para>
-export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
+    a. hipconf run opp &lt;EXECUTABLE&gt;
+    </para>
+    <para>
+    b. export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
     </para>
     <para>
     6. Use HIP agent GUI to run the application. This is a new, not very well
