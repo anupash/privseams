@@ -494,6 +494,13 @@ void hip_exit(int signal) {
 #ifdef CONFIG_HIP_RVS
         hip_uninit_rvadb();
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	hip_uninit_keadb();
+	hip_uninit_kea_endpoints();
+	hip_uninit_services();
+#endif
+
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
 	// hip_uninit_beetdb();
@@ -946,6 +953,14 @@ int main(int argc, char *argv[]) {
 #ifdef CONFIG_HIP_RVS
         hip_init_rvadb();
 #endif	
+
+#ifdef CONFIG_HIP_ESCROW
+	hip_init_keadb();
+	hip_init_kea_endpoints();
+	
+	hip_init_services();
+	
+#endif
 
 	/* Workqueue relies on an open netlink connection */
 	hip_init_workqueue();

@@ -1299,6 +1299,72 @@ out_err:
 }
 
 
+#ifdef CONFIG_HIP_ESCROW
+
+int hip_handle_escrow_parameter(hip_ha_t *entry, 
+	struct hip_keys *keys)
+{
+	uint32_t spi, spi_old;
+	uint16_t op, len, alg;
+	int err = 0;
+	HIP_KEA *kea; 
+	HIP_KEA_EP *ep;
+	struct in6_addr *hit, *ip;
+	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_peer)), -1, 
+		"No KEA found: Could not add escrow endpoint info");
+	
+	 hit = (struct in6_addr *)&keys->hit;
+	 ip = (struct in6_addr *)&keys->address;		
+	 
+	 HIP_DEBUG_HIT("handle escrow param hit:", hit);
+	 
+	 op = ntohs(keys->operation);
+	 spi = ntohl(keys->spi);
+	 spi_old = ntohl(keys->spi_old);
+	 len = ntohs(keys->key_len);
+	 alg = ntohs(keys->alg_id);
+
+	 switch (op) {
+	 	
+	 	case HIP_ESCROW_OPERATION_ADD:
+	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
+				spi, len, &keys->enc, GFP_KERNEL)), -1,
+				"Error creating kea endpoint");
+	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
+	 			"Error while adding endpoint");
+	 		break;
+	 	
+	 	case HIP_ESCROW_OPERATION_MODIFY:
+	 		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1, 
+	 			"Could not find endpoint to be modified");
+	 		hip_kea_remove_endpoint(ep);
+	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
+				spi, len, &keys->enc, GFP_KERNEL)), -1,
+				"Error creating kea endpoint");
+	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
+	 			"Error while adding endpoint");	
+	 		break;
+	 	
+	 	case HIP_ESCROW_OPERATION_DELETE:
+	 		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1, 
+	 			"Could not find endpoint to be deleted");
+	 		hip_kea_remove_endpoint(ep);
+	 		break;
+	 	
+	 	default:	
+	 		HIP_ERROR("Unknown operation type in escrow parameter %d", 
+	 			op);	 
+	 }
+	 	
+out_err:
+	if (err)
+		HIP_DEBUG("Error while handlling escrow parameter");		
+	return err;
+}
+
+#endif //CONFIG_HIP_ESCROW
+
+
 int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
 
 	int err = 0;
@@ -1419,6 +1485,10 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct in6_addr *src_ip, *dst_ip;
+#ifdef CONFIG_HIP_ESCROW
+	struct hip_keys *keys;
+#endif //CONFIG_HIP_ESCROW	
+	
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
 	HIP_DEBUG("enter\n");
@@ -1456,6 +1526,12 @@ int hip_receive_update(struct hip_common *msg,
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+
+#ifdef CONFIG_HIP_ESCROW
+	keys = hip_get_param(msg, HIP_PARAM_KEYS);
+	if (keys)
+		HIP_DEBUG("ESCROW found");
+#endif //CONFIG_HIP_ESCROW
 
 	if(ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
@@ -1502,6 +1578,14 @@ int hip_receive_update(struct hip_common *msg,
 		//handle echo response
 		hip_update_handle_echo_response(entry, echo_response, src_ip);
 	}
+	
+#ifdef CONFIG_HIP_ESCROW
+	if (keys) {
+		//handle escrow parameter
+		hip_handle_escrow_parameter(entry, keys);
+	}
+#endif //CONFIG_HIP_ESCROW	
+	
 	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
 		HIP_DEBUG("NAT: UPDATE has come not on udp\n");

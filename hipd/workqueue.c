@@ -473,6 +473,59 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
+#ifdef CONFIG_HIP_ESCROW
+// TODO: - create kea with own hit (params: server_hit, rules)
+// 		 - send i1 
+// hip_add_peer_map
+	case SO_HIP_ADD_ESCROW:
+		HIP_DEBUG("handling escrow user message");
+	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+						       HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+						       HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		
+		HIP_KEA *kea;
+
+		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
+	         "for_each_hi err.\n");	
+		
+		
+		HIP_DEBUG("Added kea base entry");
+		//ipv6_addr_copy(&kea->server_hit, dst_hit);
+		
+		// TODO: how to know later that we want to do registration? with kea state?
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea) {
+			HIP_DEBUG("Found kea base entry");
+			kea->keastate = HIP_KEASTATE_REGISTERING;
+			hip_keadb_put_entry(kea);
+		}
+		else {
+			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!");
+		}
+		
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+	
+		break;
+	
+	case SO_HIP_OFFER_ESCROW:
+		HIP_DEBUG("Handling escrow service user message");
+		
+		hip_services_add(HIP_ESCROW_SERVICE);
+	
+		hip_services_set_active(HIP_ESCROW_SERVICE);
+		if (hip_services_is_active(HIP_ESCROW_SERVICE))
+			HIP_DEBUG("Escrow service active");
+		err = hip_recreate_all_precreated_r1_packets();	
+		break;	
+	
+#endif
 	default:
 	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		 err = -ESOCKTNOSUPPORT;
