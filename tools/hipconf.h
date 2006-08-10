@@ -41,7 +41,9 @@
 #define ACTION_INC 6
 #define ACTION_DEC 7
 #define ACTION_GET 8
-#define ACTION_MAX 9 /* exclusive */
+#define ACTION_RUN 9
+
+#define ACTION_MAX 10 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI     1
@@ -54,7 +56,8 @@
 #define TYPE_OPP    8
 #define TYPE_ESCROW 9
 #define TYPE_SERVICE 10
-#define TYPE_MAX    11 /* exclusive */
+#define TYPE_RUN    11
+#define TYPE_MAX    12 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
