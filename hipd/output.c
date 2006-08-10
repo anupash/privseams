@@ -68,7 +68,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		entry->state = HIP_STATE_I1_SENT;
 		HIP_UNLOCK_HA(entry);
 	}
- out_err:
+	else if (err == 1) err = 0;
+
+out_err:
 	return err;
 }
 

@@ -176,7 +176,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_HEXDUMP("New remote HIT: ", &hit.hit, 16);
 			if (tr == CONNHIPD_OUT)
 			{
-				memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
+				//memcpy(&msg->hits, &hit.g->l->lhit, sizeof(msg->hits));
 			}
 		}
 		/* If neither HIT in message was local HIT, then drop the packet! */
