@@ -30,7 +30,7 @@ int main_create_content(void)
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
 	GtkWidget *pane, *pbox, *notebook, *w, *w2;
 	GtkWidget *button, *scroll, *chat, *div;
-	GtkWidget *label, *label2;
+	GtkWidget *label, *label2, *cframe, *menu_bar;
 	GtkTreeStore *model;
 	GtkWidget *list;
 	GtkWidget *toolbar;
@@ -87,12 +87,36 @@ int main_create_content(void)
 	gtk_container_add(GTK_CONTAINER(window), pane);
 	gtk_widget_show(pane);
 
+	/* Create menubar. */
+	menu_bar = gtk_menu_bar_new();
+	gtk_box_pack_start(pane, menu_bar, FALSE, FALSE, 0);
+	gtk_widget_show(menu_bar);
+	
+	w = gtk_menu_item_new_with_label("File");
+	gtk_widget_show(w);
+
+	/* File-menu. */
+	w2 = gtk_menu_new();
+	
+	label = gtk_menu_item_new_with_label("Run");
+	gtk_menu_shell_append(w2, label);
+//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	gtk_widget_show(label);
+	
+	label = gtk_menu_item_new_with_label("Exit");
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(main_destroy), (gpointer)"exit");
+	gtk_widget_show(label);
+
+	gtk_menu_item_set_submenu(w, w2);
+	gtk_menu_bar_append(menu_bar, w);
+
 	/* Create toolbar. */
 	toolbar = gtk_toolbar_new();
 	gtk_box_pack_start(pane, toolbar, FALSE, FALSE, 0);
 	gtk_widget_show(toolbar);
 	widget_set(ID_TOOLBAR, toolbar);
-	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_TEXT);
+	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_ICONS);
 
 	/* Create toolbar contents. */
 	iconw = gtk_image_new_from_file("run.xpm");
@@ -110,11 +134,13 @@ int main_create_content(void)
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
 	gtk_toolbar_append_space(toolbar);
-	iconw = gtk_image_new_from_file("run.xpm");
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "run.png");
+	HIP_DEBUG("%s\n", str);
+	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-	iconw = gtk_image_new_from_file("run.xpm");
+//	iconw = gtk_image_new_from_file("run.xpm");
 /*	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
@@ -138,7 +164,7 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pane, label);
 	gtk_widget_show(pane);
 
-	label = gtk_label_new("HITs in use");
+/*	label = gtk_label_new("HITs in use");
 	label2 = gtk_label_new("HITs in use");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
 	gtk_widget_show(label);
@@ -156,7 +182,12 @@ int main_create_content(void)
 	label = gtk_label_new("Lightweight");
 	label2 = gtk_label_new("Lightweight");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
-	gtk_widget_show(label);
+	gtk_widget_show(label);*/
+
+	cframe = gtk_frame_new("Configure HIP options");
+	label2 = gtk_label_new("Configuration");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
+	gtk_widget_show(cframe);
 
 	pbox = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Processes");
@@ -198,6 +229,30 @@ int main_create_content(void)
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
 
+	/***************************************
+	/* Configuration. */
+	//gtk_vbutton_box_set_layout_default(GTK_BUTTONBOX_START);
+	w = gtk_vbox_new(FALSE, 1);
+	gtk_container_add(cframe, w);
+	gtk_widget_show(w);
+	button = gtk_check_button_new_with_label("Enable opportunistic mode");
+	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
+	gtk_widget_show(button);
+	button = gtk_check_button_new_with_label("Enable HIP NAT Extensions");
+	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
+	gtk_widget_show(button);
+	gtk_widget_set_sensitive(button, FALSE);
+	
+	w2 = gtk_hbox_new(FALSE, 1);
+	gtk_box_pack_end(w, w2, FALSE, FALSE, 1);
+	gtk_widget_show(w2);
+	button = gtk_button_new_with_label("Apply");
+	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
+	gtk_widget_show(button);
+	button = gtk_button_new_with_label("Discard");
+	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
+	gtk_widget_show(button);
+	
 	/***************************************
 	/* Process list. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);

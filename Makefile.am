@@ -7,7 +7,7 @@ EXTRA_DIST += hipsock jip test/packaging
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += libhipgui/logo.png
+EXTRA_DIST += libhipgui/logo.png libhipgui/run.png
 
 # Note: libinet6 has to be the first one
 #

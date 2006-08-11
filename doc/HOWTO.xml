@@ -960,6 +960,7 @@ using getaddrinfo: ping, ping6, tla, svn.
 		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
            If you want to use 'system tray' icon, you need atleast 2.10.0 version
 		   of GTK.
+		4. Automake 1.9
       </para>
 	  <para>
 		  In order to the agent start properly with right window and system tray icon,
@@ -968,7 +969,7 @@ using getaddrinfo: ping, ping6, tla, svn.
 	  </para>
       <para>
 		HIT database is saved and loaded on agent startup as default from
-		'$HOMEDIR/.agentdb'-file.
+		'$HOMEDIR/.hipagentdb'-file.
       </para>
       <para>The agent executable is called "hipagent". You should run it using
             normal user (non-root) priviledges.
