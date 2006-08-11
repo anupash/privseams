@@ -9,7 +9,6 @@ GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 CFLAGS = $(hipl_common_cflags)
 
 include_HEADERS =
-INCLUDES =
 
 if HIP_AGENT
 
@@ -28,7 +27,7 @@ hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD) ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
 
-INCLUDES += $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) $(GTKCFLAGS)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) $(GTKCFLAGS)
 
 endif
 
