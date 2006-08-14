@@ -119,7 +119,8 @@ int main_create_content(void)
 	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_ICONS);
 
 	/* Create toolbar contents. */
-	iconw = gtk_image_new_from_file("run.xpm");
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "swtool.png");
+	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_element(toolbar, GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
 	                               NULL, "Toolwindow", "Show/hide toolwindow",
 	                               "Private", iconw,
@@ -128,14 +129,14 @@ int main_create_content(void)
 	widget_set(ID_TB_TW, w);
 
 	gtk_toolbar_append_space(toolbar);
-	iconw = gtk_image_new_from_file("run.xpm");
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newgroup.png");
+	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_item(toolbar, "New group",
 	                            "Create new remote group",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
 	gtk_toolbar_append_space(toolbar);
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "run.png");
-	HIP_DEBUG("%s\n", str);
 	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
