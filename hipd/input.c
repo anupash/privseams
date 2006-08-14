@@ -2211,9 +2211,10 @@ int hip_handle_r2(struct hip_common *r2,
  * @entry:    current host association database state.
  * @i1_info:  the source and destination ports (when NAT is in use).
  *
- * Parses FROM and VIA_RVS parameters from the incoming I1 packet and
- * passes them to "hip_xmit_r1()" as a single VIA_RVS parameter.
- * 07.08.2006 20:17.
+ * Parses FROM parameters from the incoming I1 packet and passes the
+ * IP addresses obtained from the parameters to "hip_xmit_r1()" as an array.
+ * In "hip_xmit_r1()" this array is used create a VIA_RVS parameter.
+ * 14.08.2006 11:30
  * 
  * Returns: zero on success, or negative error value on error.
  */
@@ -2228,7 +2229,6 @@ int hip_handle_i1(struct hip_common *i1,
 
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
-	struct hip_via_rvs *via_rvs;
 #endif
 #ifndef CONFIG_HIP_RVS
 	/* If rvs is not in use, pass NULL to hip_xmit_r1() as rvs_addresses. */
@@ -2241,33 +2241,16 @@ int hip_handle_i1(struct hip_common *i1,
 
 #ifdef CONFIG_HIP_RVS
 	/* We have three cases:
-	   1. Only FROM parameter was found.
-	   2. Both FROM and VIA_RVS parameters were found.
-	   3. Neither FROM nor VIA_RVS parameter were found. */
-		
-	hip_tlv_len_t param_via_rvs_len = 0;
-	/* Inserting two debug rvs addresses into the received I1 packet to simulate
-	   multiple traversed rvses. Lauri Silvennoinen 07.08.2006 17:07 */
-	/*
-	  HIP_DEBUG("Inserting debug rvs addresses to I1.\n");
-	  struct in6_addr foobar[2];
-	  foobar[0].in6_u.u6_addr32[0] = htonl(0x12345678);
-	  foobar[0].in6_u.u6_addr32[1] = htonl(0x11111111);
-	  foobar[0].in6_u.u6_addr32[2] = htonl(0x22222222);
-	  foobar[0].in6_u.u6_addr32[3] = htonl(0x33333333);
-	  foobar[1].in6_u.u6_addr32[0] = htonl(0x12345678);
-	  foobar[1].in6_u.u6_addr32[1] = htonl(0x44444444);
-	  foobar[1].in6_u.u6_addr32[2] = htonl(0x55555555);
-	  foobar[1].in6_u.u6_addr32[3] = htonl(0x66666666);
-	  hip_build_param_via_rvs(i1, foobar, 2);
-	*/
-	/* End of debug addresses. */
+	   1. One FROM parameter was found.
+	   2. Multiple FROM parameters were found.
+	   3. FROM parameter was not found. */
 	
 	/* Check if the incoming I1 packet has a FROM parameter. */
 	from = hip_get_param(i1, HIP_PARAM_FROM);
 	if (from) {
 		/* Case 1. */
 		HIP_DEBUG("Found FROM parameter in I1.\n");
+		/* First FROM parameter has the destination IP (Initiator). */
 		dstip = (struct in6_addr *)&from->address;
 		if (entry) {
 			struct in6_addr daddr;
@@ -2281,46 +2264,47 @@ int hip_handle_i1(struct hip_common *i1,
 			hip_hadb_add_peer_addr(entry, dst, 0, 0, PEER_ADDR_STATE_ACTIVE);
 		}
 		
-		/* Check if the incoming I1 packet has a VIA_RVS parameter. */
-		via_rvs = hip_get_param(i1, HIP_PARAM_VIA_RVS);
-		if (via_rvs) {
-			/* Case 2. */
-			HIP_DEBUG("Found VIA_RVS parameter in I1\n");
-			param_via_rvs_len = hip_get_param_contents_len(via_rvs);
-			via_rvs_count = hip_get_param_contents_len(via_rvs)/sizeof(struct in6_addr);
-			HIP_DEBUG("Number of addresses in VIA_RVS parameter %u\n", via_rvs_count);
-		} else {
-			HIP_DEBUG("Didn't find VIA_RVS parameter in I1.\n");
+		/* Check if there are multiple FROM parameters. Rest of the FROM
+		   parameters have the IP addresses of the traversed RVSes. */
+		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
+		while ((current_param = hip_get_next_param(i1, current_param)) != NULL){
+			if(ntohs(current_param->type) == HIP_PARAM_FROM){
+				/* Case 2. */
+				via_rvs_count++;
+				HIP_DEBUG("Found multiple FROM parameters in I1.\n");
+			}
+			else{
+				break;
+			}
 		}
 	} else {
 		/* Case 3. */
-		HIP_DEBUG("Didn't find neither FROM nor VIA_RVS parameter in I1.\n");
+		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
 	}
 
-	/* Pass traversed rvsaddresses and own address to hip_xmit_r1()-function
-	   for building a new VIA_RVS parameter.
-	   TODO: This if-statement would be unnecessary if "rvs_addresses" was
-	   allocated dynamically from the heap. */
+	/* Copy traversed rvsaddresses to an array. RVS addresses are
+	   the addresses in FROM parameters 2...N + source IP in the
+	   incoming I1 packet. */
 	struct in6_addr rvs_addresses[via_rvs_count + 1];
 	if(from)
 	{
-		/* Cases 1 and 2. */
-		/* Copy rvs_addresses */
-		if(via_rvs)
+		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
+		int i;
+		for(i = 0; i < via_rvs_count; i++)
 		{
-			memcpy(rvs_addresses, hip_get_param_contents_direct(via_rvs), param_via_rvs_len);
+			current_param = hip_get_next_param(i1, current_param);
+			memcpy(&rvs_addresses[i],
+			       hip_get_param_contents_direct(current_param),
+			       sizeof(struct in6_addr));
 		}
-		/* Append source IP address from I1 to RVS addresses... */
-		memcpy(&rvs_addresses[via_rvs_count], i1_saddr, sizeof(struct in6_addr));
-		/* ...and increment "via_rvs_count" */
+
+		/* Append source IP address from I1 to RVS addresses. */
+		memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
 		via_rvs_count++;
 	}
 #endif
 	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
 			   dst, i1_info, &rvs_addresses, via_rvs_count);
-	/*struct in6_addr test[0];
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-	dst, i1_info, NULL, 0);*/
 }
 
 /**

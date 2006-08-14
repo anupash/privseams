@@ -329,11 +329,11 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
-#define HIP_PARAM_RVA_REQUEST          100
-#define HIP_PARAM_RVA_REPLY            102
+#define HIP_PARAM_RVA_REQUEST          100 /* REMOVE? No such type in draft-ietf-hip-rvs-05 or draft-ietf-hip-registration-02 */
+#define HIP_PARAM_RVA_REPLY            102 /* REMOVE? No such type in draft-ietf-hip-rvs-05 or draft-ietf-hip-registration-02 */
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 // lhip hash chain. 221 is just temporary
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 // lhip hash chain anchors. 222 is just temporary
-#define HIP_PARAM_HASH_CHAIN_PSIG                 223 // lhip hash chain signature. 223 is just temporary
+#define HIP_PARAM_HASH_CHAIN_PSIG      223 // lhip hash chain signature. 223 is just temporary
 
 #define HIP_PARAM_NOTIFY               832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
@@ -353,23 +353,23 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO				32781 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_REQUEST			32782 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_RESPONSE			32783 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_FAILED			32784 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_INFO              32781 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_REQUEST           32782 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_RESPONSE          32783 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_FAILED            32784 /* TODO: move somewhere else*/
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_FROM_SIGN       65100 /* REMOVE? No such type in draft-ietf-hip-rvs-05 */
-#define HIP_PARAM_TO_SIGN         65102
 #define HIP_PARAM_HMAC            61505
 #define HIP_PARAM_HMAC2           61569
 #define HIP_PARAM_HIP_SIGNATURE2  61633
 #define HIP_PARAM_HIP_SIGNATURE   61697
-#define HIP_PARAM_ECHO_REQUEST    63661
 #define HIP_PARAM_ECHO_RESPONSE   63425
-#define HIP_PARAM_FROM            65498 /* Updated from 65300, Lauri S. 08.08.2006 16:06 */
+#define HIP_PARAM_ECHO_REQUEST    63661
+#define HIP_PARAM_FROM_SIGN       65100 /* REMOVE? No such type in draft-ietf-hip-rvs-05 */
+#define HIP_PARAM_TO_SIGN         65102
 #define HIP_PARAM_TO              65302
 #define HIP_PARAM_RVA_HMAC        65320
+#define HIP_PARAM_FROM            65498 /* Updated from 65300, Lauri S. 08.08.2006 16:06 */
 #define HIP_PARAM_VIA_RVS         65502 /* Updated from 65500, Lauri S. 08.08.2006 16:06 */
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
@@ -437,13 +437,13 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 /* Rendezvous types */
 #define HIP_RVA_RELAY_I1              1
-#define HIP_RVA_RELAY_I1R1            2
+#define HIP_RVA_RELAY_I1R1            2 /* There's only one rvs type in draft-ietf-hip-rvs-05 */
 #define HIP_RVA_RELAY_I1R1I2          3
 #define HIP_RVA_RELAY_I1R1I2R2        4
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
-#define HIP_ESCROW_SERVICE			  7
+#define HIP_ESCROW_SERVICE	      7
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2

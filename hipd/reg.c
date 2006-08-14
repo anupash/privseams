@@ -45,6 +45,7 @@ int hip_services_add(int service_type)
 		service->handle_registration = hip_handle_escrow_registration;
 		
 	}
+	// Lauri: Add reg to RVS here?
 	else if (service_type == HIP_RVA_RELAY_I1) {
 		//TODO: do something about this
 		service->service_type = 1;

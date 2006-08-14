@@ -51,28 +51,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
 	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
-	  ipv6_addr_copy(&i1.hitr, &in6addr_any);
-
+		ipv6_addr_copy(&i1.hitr, &in6addr_any);
+	
 	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 	
-	/* Debug stuff. */
-	/*
-	HIP_DEBUG("Lauri: SENDING I1.\n");
-	HIP_DUMP_MSG(&i1);
-	HIP_DEBUG_IN6ADDR("Lauri: Local address", &entry->local_address);
-	uint8_t lastnum = (&entry->local_address)->in6_u.u6_addr8[15];
-	HIP_DEBUG("Lauri: Last number local address: %u.\n", lastnum);
-	if(lastnum == 2) // The last number of initiator's IP.
-	{
-		HIP_DEBUG("Lauri: Adding debug FROM parameter.\n");
-		hip_build_param_from(&i1, &entry->local_address, 0);
-		HIP_DUMP_MSG(&i1);
-	}
-	*/
-	/* End of debug stuff. */
-
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
 						   &daddr,0,0, 
 						   /* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
@@ -290,6 +274,9 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 		const struct in6_addr *traversed_rvs,
 		const int rvs_count)
 {
+	HIP_DEBUG("Lauri: hip_xmit_r1() invoked.\n");
+	HIP_DEBUG("Lauri: rvs_count:%d.\n", rvs_count);
+
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
 	int err = 0;
