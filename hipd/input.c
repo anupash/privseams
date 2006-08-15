@@ -2253,6 +2253,7 @@ int hip_handle_i1(struct hip_common *i1,
 		/* First FROM parameter has the destination IP (Initiator). */
 		dstip = (struct in6_addr *)&from->address;
 		if (entry) {
+			HIP_DEBUG("Lauri: Entry was non NULL.\n");
 			struct in6_addr daddr;
 			
                         /* The entry contains wrong address mapping...

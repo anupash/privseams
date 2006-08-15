@@ -212,8 +212,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_DEL_PEER_MAP_HIT_IP              4
 #define SO_HIP_RUN_UNIT_TEST                    5
 #define SO_HIP_RST                              6
-#define SO_HIP_ADD_RVS                          7
-#define SO_HIP_DEL_RVS                          8
+#define SO_HIP_ADD_RVS                          7  /* Used with old RVS registeration. */
+#define SO_HIP_DEL_RVS                          8  /* Not used anywhere? */
 #define SO_HIP_GET_MY_EID                       9
 #define SO_HIP_SET_MY_EID                       10
 #define SO_HIP_GET_PEER_EID                     11
@@ -246,6 +246,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_I1_REJECT			38
 #define SO_HIP_ADD_ESCROW			39
 #define SO_HIP_OFFER_ESCROW			40
+#define SO_HIP_ADD_RENDEZVOUS			41 /* RVS registration draft-ietf-hip-registration-02 */
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -444,6 +445,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_RVA_REDIRECT_I1           6
 
 #define HIP_ESCROW_SERVICE	      7
+#define HIP_RENDEZVOUS	              8
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2

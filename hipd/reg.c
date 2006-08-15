@@ -40,21 +40,26 @@ int hip_services_add(int service_type)
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
 		service->service_type = 7;
-		HIP_DEBUG("Adding escrow service");
+		HIP_DEBUG("Adding escrow service.\n");
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		
 	}
-	// Lauri: Add reg to RVS here?
+	else if (service_type == HIP_RENDEZVOUS) {
+		service->service_type = HIP_RENDEZVOUS;
+		HIP_DEBUG("Adding rendezvous service.\n");
+		strncpy(service->name, "HIP_RENDEZVOUS", 20); 
+		service->handle_registration = hip_handle_registration;
+	}
+	/* HIP_RVA_RELAY_I1 outdated ? */
 	else if (service_type == HIP_RVA_RELAY_I1) {
-		//TODO: do something about this
 		service->service_type = 1;
-		HIP_DEBUG("Adding rvs service");
+		HIP_DEBUG("Adding rvs service.\n");
 		strncpy(service->name, "HIP_RVS_SERVICE", 20); 
 		service->handle_registration = hip_handle_registration;
 	}	
 	else {
-		HIP_DEBUG("Unknown service type");
+		HIP_DEBUG("Unknown service type.\n");
 		err = -1;
 		free(service);
 		goto out_err;

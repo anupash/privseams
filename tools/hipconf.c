@@ -30,6 +30,7 @@ const char *usage =
 	"add|del map hit ipv6\n"
 	"hip rst all|peer_hit\n"
 	"add rvs hit ipv6\n"
+        "add rvs_new hit ipv6\n"
 	"hip bos\n"
 	"hip nat on|off|peer_hit\n"
 	"add|del service service_type\n"
@@ -51,10 +52,8 @@ const char *usage =
  * For peer_hit we should 'on' the nat mapping only when the 
  * communication takes place with specified peer_hit --Abi */
 
-
-/*
- * Handler functions.
- */
+/* Function pointer array containing handler functions. Keep the elements
+ * in the same order as the TYPE values are defined in "hipconf.h". */
 int (*action_handler[])(struct hip_common *, int action,
 			const char *opt[], int optc) = {
 	NULL, /* reserved */
@@ -67,7 +66,8 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_nat,
 	handle_opp,
 	handle_escrow,
-	handle_service
+	handle_service,
+	handle_rvs_new
 };
 
 /**
@@ -168,7 +168,8 @@ int get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-
+	else if (!strcmp("rvs_new", text))
+		ret = TYPE_RVS_NEW;
 	return ret;
 }
 
@@ -193,10 +194,71 @@ int get_type_arg(int action) {
 }
 
 /**
- * handle_rvs - ...
- */
-
+ * handle_rvs - handle hipconf commands related to "rvs".
+ * @msg:    the buffer where the message for kernel will be written.
+ * @action: the action to be performed on the given mapping.
+ * @opt:    an array of pointers to the command line arguments after
+ *          the action and type, the HIT and the corresponding IPv6 address
+ * @optc:   the number of elements in the array (=2, HIT and IPv6 address)
+ * 
+ * Create message to the kernel module from the function parameters. Currently
+ * only action "add" is supported.
+ * 
+ * NOTE: This function is used with the outdated rvs registration.
+ * 15.08.2006 15:49
+ * 
+ * Returns: zero on success, or negative error value on error.
+ */ 
 int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
+	       int optc)
+{
+	struct in6_addr hit, ip6;
+	int err=0;
+	int ret;
+	
+	/* TODO: Print info to user that this is outdated. */
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+		 "string to address conversion failed\n");
+	
+	/* XX TODO: source HIT selection? */
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
+		 "build hdr failed\n");
+out_err:
+	return err;
+
+}
+
+/**
+ * handle_rvs - handle hipconf commands related to "rvs".
+ * @msg:    the buffer where the message for kernel will be written.
+ * @action: the action to be performed on the given mapping.
+ * @opt:    an array of pointers to the command line arguments after
+ *          the action and type, the HIT and the corresponding IPv6 address.
+ * @optc:   the number of elements in the array (=2, HIT and IPv6 address).
+ * 
+ * Create message to the kernel module from the function parameters. Currently
+ * only action "add" is supported.
+ * 
+ * author: Lauri Silvennoinen 15.08.2006 16:35
+ * 
+ * Returns: zero on success, or negative error value on error.
+ */ 
+int handle_rvs_new(struct hip_common *msg, int action, const char *opt[], 
 	       int optc)
 {
 	struct in6_addr hit, ip6;
@@ -804,6 +866,8 @@ int main(int argc, char *argv[]) {
 	}
 	hip_msg_init(msg);
 
+	/* Call handler function from the handler function pointer
+	   array at index "type" with given commandline arguments. */
         err = (*action_handler[type])(msg, action, (const char **) &argv[3],
                                               argc - 3);
 	if (err) {
