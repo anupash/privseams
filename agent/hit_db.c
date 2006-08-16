@@ -168,7 +168,7 @@ HIT_Remote *hit_db_add_hit(HIT_Remote *hit, int nolock)
 	@return Pointer to new remote HIT on success, NULL on errors.
 */
 HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
-                       int port, HIT_Group *group, int nolock)
+                       char *port, HIT_Group *group, int nolock)
 {
 	/* Variables. */
 	HIT_Remote *r, *err = NULL;
@@ -195,7 +195,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	memset(r, 0, sizeof(HIT_Remote));
 	NAMECPY(r->name, name);
 	memcpy(&r->hit, hit, sizeof(struct in6_addr));
-	r->port = port;
+	URLCPY(r->port, port);
 	URLCPY(r->url, url);
 	
 	/* Check that group is not NULL and set group. */
@@ -447,7 +447,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
 	char hit[128];
 	
 	print_hit_to_buffer(hit, &r->hit);
-	fprintf(f, "r %s \"%s\" \"%s\" %d \"%s\"\n", hit, r->name,
+	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
 	        r->url, r->port, r->g->name);
 
 	return (0);
@@ -534,16 +534,16 @@ int hit_db_parse_hit(char *buf)
 	/* Variables. */
 	HIT_Remote item;
 	struct in6_addr slhit, srhit;
-	int err = 0, n, port;
+	int err = 0, n;
 	char type[128], lhit[128], group[320];
 
 	/* Parse values from current line. */
-	n = sscanf(buf, "%s \"%64[^\"]\" \"%1024[^\"]\" %d \"%64[^\"]\"",
-	           lhit, item.name, item.url, &item.port, group);
+	n = sscanf(buf, "%s \"%64[^\"]\" \"%1024[^\"]\" \"%1024[^\"]\" \"%64[^\"]\"",
+	           lhit, item.name, item.url, item.port, group);
 
 	HIP_IFEL(n != 5, -1, "Broken line in database file: %s\n", buf);
 		
-	HIP_DEBUG("Scanned HIT line with values: %s %s %s %d %s\n",
+	HIP_DEBUG("Scanned HIT line with values: %s %s %s %s %s\n",
 	          lhit, item.name, item.url, item.port, group);
 
 	read_hit_from_buffer(&item.hit, lhit);

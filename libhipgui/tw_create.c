@@ -167,8 +167,8 @@ int tw_create_remote(void)
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "0");
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
-	gtk_widget_set_size_request(w, 70, -1);
-	gtk_entry_set_max_length(w, 8);
+	gtk_widget_set_size_request(w, 90, -1);
+	gtk_entry_set_max_length(w, MAX_URL_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_PORT, w);
 

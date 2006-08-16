@@ -110,8 +110,8 @@ void tw_set_remote_info(char *hit_name)
 	{
 		gtk_entry_set_text(widget(ID_TWR_NAME), hit->name);
 		gtk_entry_set_text(widget(ID_TWR_URL), hit->url);
-		sprintf(str, "%d", hit->port);
-		gtk_entry_set_text(widget(ID_TWR_PORT), str);
+		//sprintf(str, "%d", hit->port);
+		gtk_entry_set_text(widget(ID_TWR_PORT), hit->port);
 
 		print_hit_to_buffer(str, &hit->hit);
 		gtk_entry_set_text(widget(ID_TWR_REMOTE), str);
@@ -281,7 +281,7 @@ void tw_apply(void)
 			ps = gtk_entry_get_text(widget(ID_TWR_URL));
 			URLCPY(r->url, ps);
 			ps = gtk_entry_get_text(widget(ID_TWR_PORT));
-			r->port = atoi(ps);
+			URLCPY(r->port, ps);
 
 			ud.depth = 3;
 			ud.indices_first = 1;

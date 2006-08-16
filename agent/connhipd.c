@@ -142,7 +142,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 	{
 		NAMECPY(hit.name, "NewHIT");
 		URLCPY(hit.url, "<notset>");
-		hit.port = 0;
+		URLCPY(hit.port, "");
 
 		/* Find out, which of the HITs in the message is local HIT. */
 		l = hit_db_find_local(NULL, &msg->hits);

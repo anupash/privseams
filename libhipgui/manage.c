@@ -266,7 +266,7 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	ps = gtk_entry_get_text(widget(ID_NH_URL));
 	URLCPY(hit->url, ps);
 	ps = gtk_entry_get_text(widget(ID_NH_PORT));
-	hit->port = atoi(ps);
+	URLCPY(hit->port, ps);
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
 	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
 
