@@ -10,6 +10,7 @@
  *  - Mika Kousa <mkousa@cc.hut.fi>
  *  - Kristian Slavov <kslavov@hiit.fi>
  *  - Tobias Heer <tobi@tobibox.de>
+ *  - Abhinav Pathak <abhinav.pathak@hiit.fi>
  *
  *  TODO:
  *  - split this file into net/hip.h (packet structs etc) and linux/hip.h
@@ -24,25 +25,11 @@
  *
  */
 
-#include <netinet/in.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <stdint.h>
-
-
-typedef uint8_t   u8;
-typedef uint16_t  u16;
-typedef uint32_t  u32;
-typedef struct { volatile int counter; } atomic_t;
-typedef struct {
-	/* XX FIXME */
-} spinlock_t;
-
-#define spin_lock_init 
-
-struct list_head {
-	struct list_head *next, *prev;
-};
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
 
 #define HIP_HIT_TYPE_MASK_HAA   0x80
 #define HIP_HIT_TYPE_MASK_120   0x11
@@ -53,7 +40,14 @@ struct list_head {
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
-//#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+#define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
+#define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
+#define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
+#define UDP_ENCAP_ESPINUDP 2 
+#define UDP_ENCAP_ESPINUDP_NONIKE 1 
+
+
+#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
 #ifndef IPPROTO_HIP
 #define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
 #endif
@@ -63,23 +57,61 @@ struct list_head {
 #  define IPV6_2292PKTINFO 2
 #endif
 
-//#include "builder.h"
-#if 0
-#include "input.h"
-#include "builder.h"
-#include "hidb.h"
-#include "cookie.h"
-#include "misc.h"
-#include "output.h"
-#include "workqueue.h"
-#include "socket.h"
-#include "update.h"
-#include "hadb.h"
-#ifdef CONFIG_HIP_RVS
-#include "rvs.h"
-#endif
-#include "crypto.h"
-#endif //#if 0
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+
+#include <sys/un.h> // for sockaddr_un
+struct hip_opp_blocking_request_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+
+  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
+  struct in6_addr       peer_real_hit;
+  struct sockaddr_un    caller;
+};
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+
+#define SET_NULL_HIT(hit)                      \
+        { memset(hit, 0, sizeof(hip_hit_t));        \
+          (hit)->s6_addr32[0] = htons(HIP_HIT_PREFIX);}
+
+inline static ipv6_addr_is_null(struct in6_addr *ip){
+  return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
+	   ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
+  /*  return ((ip->s6_addr32[0] == 0) &&          
+	  (ip->s6_addr32[1] == 0) &&          
+	  (ip->s6_addr32[2] == 0) &&          
+	  (ip->s6_addr32[3] == 0));
+  */
+}
+
+static inline int create_new_socket(int type, int protocol)
+{
+  return socket(AF_INET6, type, protocol);
+}
+
+static inline int hit_is_real_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] != 0x00));
+}
+
+static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr32[1] == 0) &&
+	  (hit->s6_addr32[2] == 0) &&
+	  (hit->s6_addr32[3] == 0));
+}
+
+static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
+  return ((hit->s6_addr[0] == htons(HIP_HIT_PREFIX)) &&
+	  (hit->s6_addr[1] == 0x00));
+
+}
+static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
+  return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
+	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
 
 static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 {
@@ -116,22 +148,31 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_MAX_PACKET 2048
 #define HIP_MAX_NETLINK_PACKET 3072
 
-#define HIP_SELECT_TIMEOUT          1
+#define HIP_SELECT_TIMEOUT      1
 #define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 10 /* seconds */
+#define HIP_RETRANSMIT_INTERVAL 1 /* seconds */
+/* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+/* wait about n seconds before retransmitting.
+   the actual time is between n and n + RETRANSMIT_INIT seconds */
+#define HIP_RETRANSMIT_WAIT 5 
 #define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INIT \
+           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
 #define HIP_SIMULATE_PACKET_LOSS             0
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 20
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+
+#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -156,6 +197,8 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_BOS 11     /* removed from ietf-hip-base-01 */
 //#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
 //#define HIP_ACR 13     /* removed from ietf-hip-mm-00   */
+#define HIP_PSIG 20 /* lightweight HIP pre signature */
+#define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
 
 #define SO_HIP_GLOBAL_OPT 1
@@ -183,10 +226,31 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_AGENT_PING                       18
 #define SO_HIP_AGENT_PING_REPLY                 19
 #define SO_HIP_AGENT_QUIT                       20
+#define SO_HIP_CONF_PUZZLE_NEW                  21
+#define SO_HIP_CONF_PUZZLE_GET                  22
+#define SO_HIP_CONF_PUZZLE_SET                  23
+#define SO_HIP_CONF_PUZZLE_INC                  24
+#define SO_HIP_CONF_PUZZLE_DEC                  25
+#define SO_HIP_SET_NAT_ON			26
+#define SO_HIP_SET_NAT_OFF			27
+#define SO_HIP_SET_OPPORTUNISTIC_MODE           28 /*Bing, trial */
+#define SO_HIP_QUERY_OPPORTUNISTIC_MODE         29
+#define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  30
+#define SO_HIP_GET_PSEUDO_HIT                   31 
+#define SO_HIP_SET_PSEUDO_HIT                   32 
+#define SO_HIP_QUERY_IP_HIT_MAPPING		33 
+#define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	34
+#define SO_HIP_ADD_DB_HI			35
+#define SO_HIP_GET_PEER_HIT			36
+#define SO_HIP_SET_PEER_HIT			37
+#define SO_HIP_I1_REJECT			38
+#define SO_HIP_ADD_ESCROW			39
+#define SO_HIP_OFFER_ESCROW			40
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
- 
+#define HIP_USERADDR_PATH                     "/tmp/hip_useraddr_path.tmp"
+
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 
 #define HIP_ENDPOINT_FLAG_HIT              1
@@ -237,11 +301,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
+#define HIP_STATE_FILTERING			10
+
+#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define HIP_PARAM_MIN                 -1 /* exclusive */
 
@@ -263,6 +331,9 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_RVA_REQUEST          100
 #define HIP_PARAM_RVA_REPLY            102
+#define HIP_PARAM_HASH_CHAIN_VALUE     221 // lhip hash chain. 221 is just temporary
+#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 // lhip hash chain anchors. 222 is just temporary
+#define HIP_PARAM_HASH_CHAIN_PSIG                 223 // lhip hash chain signature. 223 is just temporary
 
 #define HIP_PARAM_NOTIFY               832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
@@ -280,7 +351,12 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
-#define HIP_PARAM_KEYS                  32779 
+#define HIP_PARAM_KEYS                  32779
+#define HIP_PSEUDO_HIT                  32780 
+#define HIP_PARAM_REG_INFO				32781 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_REQUEST			32782 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_RESPONSE			32783 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_FAILED			32784 /* TODO: move somewhere else*/
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -367,9 +443,14 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
+#define HIP_ESCROW_SERVICE			  7
+
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
+
+#define ADDR_STATE_ACTIVE 1
+#define ADDR_STATE_WAITING_ECHO_REQ 2
 
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
@@ -384,22 +465,14 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SEND_UPDATE_ESP_INFO (1 << 0)
 #define SEND_UPDATE_LOCATOR (1 << 1)
 
+
+#define HIP_ESCROW_OPERATION_ADD	1
+#define HIP_ESCROW_OPERATION_MODIFY	2
+#define HIP_ESCROW_OPERATION_DELETE	3
+
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-  #define hton64(i) (i)
-  #define ntoh64(i) (i)
-#else
-  #define hton64(i) ( ((__u64)(htonl((i) & 0xffffffff)) << 32) | htonl(((i) >> 32) & 0xffffffff ) )
-  #define ntoh64 hton64
-#endif
-
-#  define HIP_MALLOC(size, flags)  malloc(size)
-#  define HIP_FREE(obj)            free(obj)
-#  define GFP_ATOMIC               0
-#  define GFP_KERNEL               0
 
 #define HIP_AH_SHA_LEN                 20
 
@@ -412,8 +485,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 	 	HIP_ERROR("No state information found.\n");		\
 	 }
 	 								
-								\
-
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
@@ -438,7 +509,7 @@ typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 /*
- * Use accessor functions defined in hip_build.h, do not access members
+ * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
 struct hip_common {
@@ -454,6 +525,16 @@ struct hip_common {
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
 
+
+/*
+ * hip stateless info: Used to send parameters 
+ * across function calls carrying stateless info
+ */
+struct hip_stateless_info 
+{
+	uint32_t src_port;
+	uint32_t dst_port;
+};
 
 /*
  * Localhost Host Identity. Used only internally in the implementation.
@@ -715,6 +796,11 @@ struct hip_locator_info_addr_item {
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
 	struct in6_addr address;
+	int state; /*State of our addresses,
+		     possible states are:
+		     WAITING_ECHO_REQUEST, ACTIVE
+		   */
+
 }  __attribute__ ((packed));
 
 #if 0
@@ -826,7 +912,7 @@ struct endpoint_hip {
 
 struct sockaddr_eid {
 	unsigned short int eid_family;
-	in_port_t eid_port;
+	uint16_t eid_port;
 	sa_eid_t eid_val;
 } __attribute__ ((packed));
 
@@ -865,18 +951,46 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
-struct hip_keys {
+
+/******** ESCROW *********/
+
+struct hip_reg_info {
 	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	struct hip_crypto_key enc;	
-	struct hip_crypto_key auth;       
-	uint32_t spi;
-	int alg;
-	int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
-			 This flag is used in order to differentiate the addition of an SA,
-			 meaning either adding or updating --- it was in the KERNEL_STUB */
-	int direction;
+	hip_tlv_len_t  length;
+	uint8_t       min_lifetime;
+	uint8_t       max_lifetime;
 } __attribute__ ((packed));
+
+
+struct hip_reg_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       lifetime;
+} __attribute__ ((packed));
+
+struct hip_reg_failed {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       failure_type;
+} __attribute__ ((packed));
+
+
+struct hip_keys {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	uint16_t 		operation;
+	uint16_t 		alg_id;
+	uint8_t 		address[16];
+	uint8_t 		hit[16];
+	uint32_t 		spi;
+	uint32_t 		spi_old;
+	uint16_t 		key_len;
+	struct hip_crypto_key enc;
+	//int direction; // ?
+} __attribute__ ((packed));
+
+
+
 
 struct hip_context
 {
@@ -993,6 +1107,7 @@ struct hip_hadb_state
 
 	hip_hastate_t        hastate;
 	int                  state;
+	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
 	hip_hit_t            hit_our;        /* The HIT we use with this host */
@@ -1003,7 +1118,7 @@ struct hip_hadb_state
 	uint32_t             default_spi_out;
 	struct in6_addr      preferred_address; /* preferred peer address to use when
 						 * sending data to peer */
-        struct in6_addr      local_address;   /* Our IP address */
+        struct  in6_addr     local_address;   /* Our IP address */
   //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
@@ -1012,6 +1127,11 @@ struct hip_hadb_state
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
 
+	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
+	uint32_t	     peer_udp_port;    /* NAT mangled port */
+	//struct in6_addr      peer_udp_address; /* NAT address */
+	int					escrow_used;
+	struct in6_addr		escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
@@ -1049,6 +1169,7 @@ struct hip_hadb_state
 
 	struct {
 		int count;
+		time_t last_transmit;
 		struct in6_addr saddr, daddr;
 		struct hip_common *buf;
 	} hip_msg_retrans;
@@ -1082,14 +1203,16 @@ struct hip_hadb_state
 
 struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
-				 struct in6_addr *, 
-				 struct in6_addr *,
-				 hip_ha_t*);
+			      struct in6_addr *, 
+			      struct in6_addr *,
+			      hip_ha_t*,
+			      struct hip_stateless_info *);
 
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			      struct hip_stateless_info *);
 				 
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
@@ -1097,33 +1220,37 @@ struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i2)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 				 
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*);
+				 hip_ha_t*,
+			     struct hip_stateless_info *);
 				 
 	int (*hip_receive_update)(struct hip_common *,
-				     struct in6_addr *,
-				     struct in6_addr *,
-				     hip_ha_t*);
+				  struct in6_addr *,
+				  struct in6_addr *,
+				  hip_ha_t*,
+				  struct hip_stateless_info *);
 				     
 	int (*hip_receive_notify)(struct hip_common *,
-				     struct in6_addr *,
-				     struct in6_addr *,
-				     hip_ha_t*);
-				     
-	int (*hip_receive_bos)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*);
+  
+	int (*hip_receive_bos)(struct hip_common *,
+			       struct in6_addr *,
+			       struct in6_addr *,
+			       hip_ha_t*,
+			       struct hip_stateless_info *);
 				     
 	int (*hip_receive_close)(struct hip_common *,
-				    hip_ha_t*);
+				 hip_ha_t*);
 				       
 	int (*hip_receive_close_ack)(struct hip_common *,
-					hip_ha_t*);	 
+				     hip_ha_t*);	 
 	
 };
 
@@ -1131,12 +1258,14 @@ struct hip_hadb_handle_func_set{
 	int (*hip_handle_i1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *);
 
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *);
 			     
 	/* as there is possibly no state established when i2
 	   messages are received, the hip_handle_i2 function pointer
@@ -1144,50 +1273,58 @@ struct hip_hadb_handle_func_set{
 	int (*hip_handle_i2)(struct hip_common *i2,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
-			     hip_ha_t *ha);
+			     hip_ha_t *ha,
+			     struct hip_stateless_info *i2_info);
 			     
 	int (*hip_handle_r2)(struct hip_common *r2,
 			     struct in6_addr *r2_saddr,
 			     struct in6_addr *r2_daddr,
-			     hip_ha_t *ha);
+			     hip_ha_t *ha,
+			     struct hip_stateless_info *r2_info);
 	int (*hip_handle_bos)(struct hip_common *bos,
 			      struct in6_addr *r2_saddr,
 			      struct in6_addr *r2_daddr,
-			      hip_ha_t *ha);
+			      hip_ha_t *ha,
+			      struct hip_stateless_info *);
 	int (*hip_handle_close)(struct hip_common *close,
 				hip_ha_t *entry);
 	int (*hip_handle_close_ack)(struct hip_common *close_ack,
 				    hip_ha_t *entry);
-	/* TODO: add BOS here*/
-			     
 };
 
 struct hip_hadb_update_func_set{   
 	int (*hip_handle_update_plain_locator)(hip_ha_t *entry, 
-					struct hip_common *msg,
-					struct in6_addr *src_ip,
-					struct in6_addr *dst_ip,
-					struct hip_esp_info *esp_info);
+					       struct hip_common *msg,
+					       struct in6_addr *src_ip,
+					       struct in6_addr *dst_ip,
+					       struct hip_esp_info *esp_info);
+
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
-					  struct hip_common *msg,
-				  	  struct in6_addr *src_ip,
-					  struct in6_addr *dst_ip);
+					     struct hip_common *msg,
+					     struct in6_addr *src_ip,
+					     struct in6_addr *dst_ip);
+
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
-				   struct hip_ack *ack,
-				   int have_nes,
-				   struct hip_echo_response *echo_esp);
+				      struct hip_ack *ack,
+				      int have_nes);				      
+
 	int (*hip_handle_update_established)(hip_ha_t *entry,
-					  struct hip_common *msg,
-					  struct in6_addr *src_ip,
-					  struct in6_addr *dst_ip);
+					     struct hip_common *msg,
+					     struct in6_addr *src_ip,
+					     struct in6_addr *dst_ip,
+					     struct hip_stateless_info *);
 	int (*hip_handle_update_rekeying)(hip_ha_t *entry,
-				       struct hip_common *msg,
-				       struct in6_addr *src_ip);
+					  struct hip_common *msg,
+					  struct in6_addr *src_ip);
+
 	int (*hip_update_send_addr_verify)(hip_ha_t *entry,
-					struct hip_common *msg,
-					struct in6_addr *src_ip,
-					uint32_t spi);
-	
+					   struct hip_common *msg,
+					   struct in6_addr *src_ip,
+					   uint32_t spi);
+
+	int (*hip_update_send_echo)(hip_ha_t *entry,
+				    struct hip_peer_addr_list_item *addr,
+			            uint32_t spi);	    
 };
 
 struct hip_hadb_misc_func_set{ 
@@ -1201,11 +1338,13 @@ struct hip_hadb_misc_func_set{
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *);
 	int (*hip_create_r2)(struct hip_context *ctx,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
-			     hip_ha_t *entry);
+			     hip_ha_t *entry,
+			     struct hip_stateless_info *);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,
@@ -1215,6 +1354,7 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{ 
 	int  (*hip_csum_send)(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
+			      uint32_t src_port, uint32_t dst_port,
 			      struct hip_common* msg,
 			      hip_ha_t *entry,
 			      int retransmit);
@@ -1299,6 +1439,7 @@ struct hip_eid_db_entry {
 /* Some default settings for HIPL */
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+#define GOTO_OUT -3
 
 #define HIP_IFE(func, eval) \
 { \
@@ -1348,29 +1489,6 @@ struct hip_eid_db_entry {
                 finally;\
         }\
 }
-
-#define jiffies random()
-#include "list.h"
-
-#define atomic_inc(x) \
-         (++(*x).counter)
-
-#define atomic_read(x) \
-         ((*x).counter)
-
-#define atomic_dec_and_test(x) \
-         (--((*x).counter) == 0)
-
-#define atomic_set(x, v) \
-         ((*x).counter = v)
-
-/* XX FIX: implement the locking for userspace properly */
-#define read_lock_irqsave(a,b) do {} while(0)
-#define spin_unlock_irqrestore(a,b) do {} while(0)
-#define write_lock_irqsave(a,b) do {} while(0)
-#define write_unlock_irqrestore(a,b) do {} while(0)
-#define read_unlock_irqrestore(a,b) do {} while(0)
-
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
 #endif
@@ -1378,10 +1496,6 @@ struct hip_eid_db_entry {
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
-
-/* XX FIXME: implement with a userspace semaphore etc? */
-#define wmb() do {} while(0)
-#define barrier() do {} while(0)
 
 /* used by hip worker to announce completion of work order */
 #define KHIPD_OK                   0

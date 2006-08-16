@@ -7,17 +7,18 @@
  *          Mika Kousa <mkousa@cc.hut.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *          Anthony D. Joseph <adj@hiit.fi>
+ *          Bing Zhou <bingzhou@cc.hut.fi>
+ *	    Tobias Heer <heer@tobibox.de>
  *
  */
 #include "input.h"
-
+#include "util.h"
 
 extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-			struct in6_addr *i1_daddr, HIP_RVA *rva);
+			struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info);
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
-
 /**
  * hip_controls_sane - check for illegal controls
  * @controls: control value to be checked
@@ -256,10 +257,14 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
-
-	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
+	
+	struct hip_diffie_hellman * dhf;
+	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
-	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret((struct hip_diffie_hellman *) param, 
+	
+	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
+							      dhf->group_id,
+							      hip_get_param_contents_len(dhf) - 1, 
 							      dh_shared_key, dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
@@ -271,17 +276,10 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
-#define KEYMAT_DRAW_AND_COPY(dst, len)				\
-         {							\
-	   void *p = hip_keymat_draw(&km, len);		        \
-	   if (!p) {						\
-		 HIP_ERROR("Could not draw from keymat\n");	\
-		 err = -EINVAL;					\
-		 goto out_err;					\
-	   }							\
-	   memcpy(dst, p, len);					\
-        }
 
+#if 0
+	/* removed this because the cts is already set to 0 when it is
+	   created */
 	bzero(&ctx->hip_enc_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_enc_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->hip_hmac_in.key, sizeof(struct hip_crypto_key));
@@ -290,28 +288,28 @@ int hip_produce_keying_material(struct hip_common *msg,
 	bzero(&ctx->esp_out.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_in.key, sizeof(struct hip_crypto_key));
 	bzero(&ctx->auth_out.key, sizeof(struct hip_crypto_key));
-
+#endif
 	/* Draw keys: */
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
 	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
 	if (we_are_HITg) {
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
-		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_enc_out.key, &km,	hip_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_in.key, &km,	hmac_transf_length);
+		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
  	} else {
- 	 	KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_in.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_in.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_enc_out.key, hip_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->hip_hmac_out.key, hmac_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_in.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_in.key, auth_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->esp_out.key, esp_transf_length);
- 		KEYMAT_DRAW_AND_COPY(&ctx->auth_out.key, auth_transf_length);
+ 	 	hip_keymat_draw_and_copy(ctx->hip_enc_in.key, 	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_in.key,	&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_enc_out.key,	&km,	hip_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->hip_hmac_out.key,&km,	hmac_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_in.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_in.key, 	&km,	auth_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
+ 		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
  	}
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
@@ -455,16 +453,163 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 	return err;
 }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
+					struct in6_addr *src_addr,
+					struct in6_addr *dst_addr,
+					struct hip_stateless_info *msg_info,
+					hip_ha_t *entry){
+  
+  	hip_hit_t nullhit;
+	//hip_hit_t *peer_hit = NULL;
+	hip_ha_t *entry_tmp = NULL;
+	hip_ha_t *pEntry;
+	struct hip_common *message = NULL;
+	int n = 0;
+	int err = 0;
+	
+	HIP_DEBUG_HIT("src_addr=", src_addr);
+	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
+	if(err){
+	  HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
+	  goto out_err;
+	}
+
+
+	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
+	
+	entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
+	HIP_ASSERT(entry_tmp);
+	if (entry_tmp){
+	  // add new HA with real hit
+	  //err = hip_hadb_add_peer_info(&msg->hits, src_addr);
+	  
+	  HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	  HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	  HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	  HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+	  
+	  err = hip_hadb_add_peer_info_complete(&msg->hitr,
+						&msg->hits,
+						dst_addr,
+						src_addr);
+	  if (err) {
+	    HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+	    goto out_err;
+	  }
+	  
+	  // we should get entry by both real hits
+	  //	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	  pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	  HIP_ASSERT(pEntry);
+	  if(pEntry)
+	    memcpy(entry, pEntry, sizeof(hip_ha_t));
+
+	  if (entry){
+	    // Bing, we need entry->our_pub and our_priv, so init_us
+	    err= hip_init_us(entry, &entry->hit_our);
+	    if(err){
+	      HIP_ERROR("hip_init_us failed\n");
+	      goto out_err;
+	    }
+	    // old HA has state 2, new HA has state 1, so copy it
+	    entry->state = entry_tmp->state;
+	    
+	  }
+	  else {
+	    HIP_ERROR("Cannot find the added HA entry\n");
+	    goto out_err;
+	  }
+	  // delete nullhit HA
+	  entry_tmp = NULL;
+	  err = hip_del_peer_info(&msg->hitr, &nullhit, src_addr);
+	  if (err) {
+	    HIP_ERROR("Failed to delete mapping\n");
+	    goto out_err;
+	  }
+	} //  end if (entry_tmp)
+	else { 
+	  HIP_ERROR("Cannot find HA entry after receive r1\n");
+	  goto out_err;
+	}
+	
+	// hashtable=hip_opp_blocking_request_entry
+	// ent = find_opp_entry_from_hashtable(SRC_HIT, DST_PHIT)
+	// msg = REAL_DST_HIT
+	// memcpy(ent->real_peer_hit, real_dst_hit);
+	// sendto(entry->caller, msg);
+	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+	
+	hip_opp_block_t *block_entry = NULL;
+	block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
+	//HIP_ASSERT(entry);
+	message = malloc(HIP_MAX_PACKET);
+	if (!message){
+	  HIP_ERROR("malloc failed\n");
+	  goto out_err;
+	}	
+	
+	hip_msg_init(message);
+	err = hip_build_param_contents(message, (void *)(&msg->hits), HIP_PARAM_HIT,
+				       sizeof(struct in6_addr));
+	if (err) {
+	  HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+	  goto out_err;
+	}
+	err = hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0);
+	if (err) {
+	  HIP_ERROR("build user header failed: %s\n", strerror(err));
+	  goto out_err;
+	} 
+	memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
+	n = hip_sendto(message, &block_entry->caller);
+	free(message);
+	message = NULL;
+	if(n < 0){
+	  HIP_ERROR("hip_sendto() failed.\n");
+	  err = -1;
+	  goto out_err;
+	}
+	
+	// we should still get entry after delete old nullhit HA
+	pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	HIP_ASSERT(pEntry);
+	memcpy(entry, pEntry, sizeof(hip_ha_t));
+	
+	if (entry){
+	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	  if (err == -ENOENT) {
+	    HIP_DEBUG("No agent running, continuing\n");
+	    err = 0;
+	  } else if (err == 0) {
+	    HIP_DEBUG("Agent accepted packet\n");
+	  } else if (err) {
+	    HIP_ERROR("Agent reject packet\n");
+	  }
+	  if(err){
+	    //HIP_ERROR("hip_get_input_filter_default_func_set failed\n");
+	    //goto out_err;
+	  }
+	}
+	
+ out_err:
+	return err;
+}
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr)
+			       struct in6_addr *dst_addr,
+	                       struct hip_stateless_info *msg_info)
 {
 	hip_ha_t tmp;
-	
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
-
+	
 	HIP_DEBUG("Received packet type %d\n", type);
 	_HIP_DUMP_MSG(msg);
 	_HIP_HEXDUMP("dumping packet", msg,  40);
@@ -473,25 +618,56 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	
+
 	if (entry)
-		err = entry->hadb_input_filter_func->hip_input_filter(msg);
+	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
+	// XX TODO BING: ISOLATE TO A SEPARATE FUNCTION
+	else if(type == HIP_R1){ // check if it uses opportunistic mode
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	  hip_ha_t oppEntry;
+	  entry = &oppEntry;
+	  err = hip_check_hip_ri_opportunistic_mode(msg, src_addr, dst_addr, msg_info, entry);
+	  if(err){
+	    HIP_ERROR("hip_check_hip_ri_opportunistic_mode failed\n");
+	    HIP_ASSERT(0);
+	    goto out_err;
+	  }
+#endif	  
+	} // end else if(type == HIP_R1)
 	else
-		err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	
 	if (err == -ENOENT) {
-		HIP_DEBUG("No agent running, continuing\n");
-		err = 0;
+	  HIP_DEBUG("No agent running, continuing\n");
+	  err = 0;
 	} else if (err == 0) {
-		HIP_DEBUG("Agent accepted packet\n");
+	  HIP_DEBUG("Agent accepted packet\n");
 	} else if (err) {
-		HIP_ERROR("Agent reject packet\n");
+	  HIP_ERROR("Agent reject packet\n");
 	}
 	
 	switch(type) {
 	case HIP_I1:
-		// no state
-		err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr, dst_addr, entry);
-		break;
+	  // no state
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	  if(hit_is_opportunistic_null(&msg->hitr)){
+	    struct gaih_addrtuple *at = NULL;
+	    struct gaih_addrtuple **pat = &at;
+	    
+	    get_local_hits(NULL, pat);
+	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
+	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
+
+	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
+	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
+	  }
+#endif // CONFIG_HIP_OPPORTUNISTIC
+	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg,
+										       src_addr,
+										       dst_addr,
+										       entry,
+										       msg_info);
+	  break;
 		
 	case HIP_I2:
 		// possibly state
@@ -500,20 +676,24 @@ int hip_receive_control_packet(struct hip_common *msg,
 			err = entry->hadb_rcv_func->hip_receive_i2(msg,
 							src_addr,
 							dst_addr,
-							entry);
+							entry,
+							msg_info);
 		} else {
-			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry);
+			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
 		}
 		break;
 		
 	case HIP_R1:
-		// state
-		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
+	  	// state
+	  	HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
+		HIP_ASSERT(entry);
 		HIP_IFCS(entry,
 			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
+
 		//err = hip_receive_r1(msg, src_addr, dst_addr);
 		break;
 		
@@ -523,7 +703,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		//err = hip_receive_r2(msg, src_addr, dst_addr);
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
@@ -534,7 +715,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_update(msg,
 			 				src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		break;
 		
 	case HIP_NOTIFY:
@@ -553,7 +735,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
 							src_addr,
 							dst_addr,
-							entry))
+							entry,
+							msg_info))
 		/*In case of BOS the msg->hitr is null, therefore it is replaced
 		  with our own HIT, so that the beet state can also be
 		  synchronized */
@@ -607,7 +790,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+	          struct hip_stateless_info *r1_info)
 {
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
@@ -788,11 +972,17 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
+
+
 	/* let the setup routine give us a SPI. */
-	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr, &ctx->input->hits, &ctx->input->hitr,
+	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+			    &ctx->input->hits, &ctx->input->hitr,
 			    &spi_in, transform_esp_suite, 
 			    &ctx->esp_in, &ctx->auth_in, 0,
-			    HIP_SPI_DIRECTION_IN, 0), -1, 
+			    HIP_SPI_DIRECTION_IN, 0,
+			    r1_info->src_port, r1_info->dst_port), -1, 
 		 "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -824,6 +1014,30 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  next_echo_resp:
 
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	
+	/********* REG_REQUEST *********/
+	{
+		int type[1] = { 0 };
+		// Check if we want to register to a service	
+		//   - escrow
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			type[0] = HIP_ESCROW_SERVICE;
+		}
+		if (kea)
+			hip_keadb_put_entry(kea);		
+		if (type[0] != 0) {
+			HIP_DEBUG("Adding reg_request parameter");
+			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
+			 "Could not build REG_REQUEST parameter\n");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
+
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -858,6 +1072,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
+	
+
+
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -876,7 +1093,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, i2,
+	
+	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
+								r1_info->dst_port, i2,
 						     entry, 0), -1);
 
  out_err:
@@ -902,7 +1121,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r1_info)
 {
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
@@ -935,6 +1155,54 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
 	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
+
+#ifdef CONFIG_HIP_ESCROW
+
+	// Check if there is a reg_info parameter and extract service types
+	struct hip_reg_info *reg_info;
+	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	if (reg_info) {
+		 
+		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
+		int typecnt = hip_get_param_contents_len(reg_info);
+		HIP_DEBUG("The responder offers %d services", typecnt);
+
+		// Functionality regarding escrow service		
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			HIP_DEBUG("Registering to escrow service");
+		
+			int accept = 0;
+			int i;
+			if (typecnt >= 2) { 
+				for (i = 2; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE)
+						accept = 1;
+				}
+			}
+			if (!accept)
+				kea->keastate = HIP_KEASTATE_INVALID;
+			else
+				HIP_DEBUG("Escrow service available!");		 
+		} 
+		else {
+			HIP_DEBUG("Not doing escrow registration");
+		}
+		
+	}
+	else {
+		// No reg_info found. Cancelling registration attempt.
+		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea)
+			kea->keastate = HIP_KEASTATE_INVALID;
+		
+	}
+	
+#endif //CONFIG_HIP_ESCROW
 
 	/* R1 generation check */
 
@@ -988,7 +1256,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
- 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry), -1, 
+ 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
 		 "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT) {
@@ -1018,10 +1286,14 @@ int hip_handle_r1(struct hip_common *r1,
 int hip_receive_r1(struct hip_common *hip_common,
 		   struct in6_addr *r1_saddr,
 		   struct in6_addr *r1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *r1_info)
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
+#ifdef CONFIG_HIP_RVS
+	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
+#endif
 	if (ipv6_addr_any(&hip_common->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
@@ -1068,7 +1340,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
 		/* E1. The normal case. Process, send I2, goto E2. */
-		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_r1(hip_common, r1_saddr, r1_daddr, entry, r1_info);
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
@@ -1101,7 +1373,8 @@ int hip_receive_r1(struct hip_common *hip_common,
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
@@ -1110,6 +1383,9 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+#ifdef CONFIG_HIP_ESCROW
+	int create_kea = 0;
+#endif //CONFIG_HIP_ESCROW
 
 	HIP_DEBUG("\n");
 
@@ -1157,6 +1433,49 @@ int hip_create_r2(struct hip_context *ctx,
  	}
  next_hmac:
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+
+	{	
+		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
+		struct hip_reg_request *rrequest;
+	
+		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
+		uint8_t lifetime;
+
+		if (rrequest) {
+ 	
+			HIP_DEBUG("Found REG_REQUEST");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+			
+			int *accepted_requests, *rejected_requests;
+			int request_count, accepted_count, rejected_count;
+		
+			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
+			accepted_count = hip_check_service_requests(&entry->hit_our, 
+				(types + 1), request_count, &accepted_requests, &rejected_requests);
+			rejected_count = request_count - accepted_count;
+			
+			if (accepted_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_RESPONSE parameter");
+				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
+					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			}
+			if (rejected_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_FAILED parameter");
+				HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
+					rejected_count), -1, "Building of REG_FAILED failed\n");
+			}
+		}
+		else {
+			HIP_DEBUG("No REG_REQUEST found in I2");
+		}
+	}	
+ next_hmac_2:
+#endif //CONFIG_HIP_ESCROW
+
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
@@ -1172,9 +1491,11 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr,
+	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
+							i2_info->src_port,
 						      r2, entry, 0), -1,
 		 "Failed to send r2\n")
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
@@ -1184,6 +1505,19 @@ int hip_create_r2(struct hip_context *ctx,
 		HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	}
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	// Add escrow association to database
+	HIP_KEA *kea;	
+	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
+	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
+	kea->keastate = HIP_KEASTATE_VALID;
+	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+		"Error while inserting KEA to keatable");
+	HIP_DEBUG("Added kea entry");
+	
+#endif //CONFIG_HIP_ESCROW
+
  out_err:
 	if (r2)
 		HIP_FREE(r2);
@@ -1208,7 +1542,8 @@ int hip_create_r2(struct hip_context *ctx,
 int hip_handle_i2(struct hip_common *i2,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,		  
-		  hip_ha_t *ha)
+		  hip_ha_t *ha,
+		  struct hip_stateless_info *i2_info)
 {
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
@@ -1384,7 +1719,13 @@ int hip_handle_i2(struct hip_common *i2,
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
 		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		
+		/*FIXME : This is a temporary fix. Need to think on this a bit ! --Abi*/
+		//Add other info here
+		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
+		{
+			entry->nat = 1;
+			entry->peer_udp_port = i2_info->src_port;
+		}
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -1444,12 +1785,17 @@ int hip_handle_i2(struct hip_common *i2,
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 
+	
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0);
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
+				i2_info->dst_port);
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 //		if (err == -EEXIST)
@@ -1467,11 +1813,16 @@ int hip_handle_i2(struct hip_common *i2,
 
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
+
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+
+
 	err = hip_add_sa(i2_daddr, i2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_out, esp_tfm, 
 			 &ctx->esp_out, &ctx->auth_out,
-			 1, HIP_SPI_DIRECTION_OUT, 0);
+			 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 			  spi_out);
@@ -1520,7 +1871,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
-	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry), -1, 
+	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
 		 "Creation of R2 failed\n");
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
@@ -1591,7 +1942,8 @@ int hip_handle_i2(struct hip_common *i2,
 int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
 		   struct in6_addr *i2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *i2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
@@ -1617,31 +1969,31 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry); //as there is no state established function pointers can't be used here
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
 		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 		} else {
 			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
 		}
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry);
+		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
  		break;
  	case HIP_STATE_ESTABLISHED:
  		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 
  		break;
  	case HIP_STATE_CLOSING:
  	case HIP_STATE_CLOSED:
 		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
 		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry);
+							     i2_daddr, entry, i2_info);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
@@ -1675,7 +2027,8 @@ int hip_receive_i2(struct hip_common *i2,
 int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *r2_info)
 {
 	struct hip_context *ctx = NULL;
 	//struct in6_addr *sender;
@@ -1728,11 +2081,14 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
+	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
+
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
-			 HIP_SPI_DIRECTION_OUT, 0);
+			 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 //	if (err == -EEXIST) {
 //		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 //		HIP_DEBUG("TODO: what to do ? currently ignored\n");
@@ -1769,6 +2125,55 @@ int hip_handle_r2(struct hip_common *r2,
 //	HIP_DEBUG("clearing the address used during the bex\n");
 //	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 
+
+#ifdef CONFIG_HIP_ESCROW
+	{
+		
+		HIP_DEBUG("Checking r2 for REG_RESPONSE parameter");
+		struct hip_reg_request *rresp;
+		uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
+		rresp = hip_get_param(r2, HIP_PARAM_REG_RESPONSE);
+		uint8_t lifetime;
+		if (!rresp) {
+		 	HIP_DEBUG("No REG_RESPONSE found in r2");
+			HIP_DEBUG("Checking r2 for REG_FAILED parameter");
+			rresp = hip_get_param(r2, HIP_PARAM_REG_FAILED);
+			if (rresp) {
+				HIP_DEBUG("Registration failed!");
+			}	
+			else 
+				HIP_DEBUG("Server not responding to registration attempt");
+			
+			// TODO: Should the base entry be removed when registration fails?
+			// Registration unsuccessful - removing base keas
+			//hip_kea_remove_base_entries();
+					
+		}
+		else {
+			HIP_DEBUG("Found REG_RESPONSE");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(r2, HIP_PARAM_REG_RESPONSE));
+			int typecnt = hip_get_param_contents_len(rresp);
+			int accept = 0;
+			int i;
+			if (typecnt >= 1) { 
+				for (i = 1; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE) {
+						accept = 1;
+					}
+				}	
+			}
+			if (accept) {
+				HIP_DEBUG("Registration to escrow service completed!");
+				HIP_KEA *kea;	
+				HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
+				HIP_DEBUG("Found kea base entry");
+				kea->keastate = HIP_KEASTATE_VALID;
+				hip_keadb_put_entry(kea); 
+			}
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
 	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
@@ -1777,7 +2182,6 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
-
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
@@ -1789,7 +2193,8 @@ int hip_handle_r2(struct hip_common *r2,
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
-		  hip_ha_t *entry)
+		  hip_ha_t *entry,
+		  struct hip_stateless_info *i1_info)
 {
 	//int err;
 #ifdef CONFIG_HIP_RVS
@@ -1821,7 +2226,7 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1\n");
 	}
 #endif
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst);
+	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip, dst, i1_info);
 }
 
 
@@ -1839,11 +2244,13 @@ int hip_handle_i1(struct hip_common *i1,
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *i1_info)
 {
 	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
+	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 	HIP_IFEL(ipv6_addr_any(&hip_i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
@@ -1859,7 +2266,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		hip_put_ha(entry);
 	} else {
 #ifdef CONFIG_HIP_RVS
- 		HIP_DEBUG("Doing RVA check\n");
+		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
  		rva = hip_rva_find_valid(&hip_i1->hitr);
  		if (rva) {
  			/* we should now relay the I1.
@@ -1870,7 +2277,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
  			   cases.
  			*/
 
-			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva);
+			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva, i1_info);
 			if (err)
  				HIP_ERROR("Relaying I1 failed\n");
  			else
@@ -1887,12 +2294,12 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	switch(state) {
 	case HIP_STATE_NONE:
 		/* entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
                 if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		} else {
 			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -1901,10 +2308,9 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
-		break;
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	default:
 		/* should not happen */
@@ -1929,7 +2335,8 @@ int hip_receive_i1(struct hip_common *hip_i1,
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		   struct hip_stateless_info *r2_info)
 {
 	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
 	int err = 0, state;
@@ -1954,7 +2361,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry, r2_info);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
@@ -2037,7 +2444,8 @@ int hip_receive_notify(struct hip_common *hip_common,
 int hip_receive_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry)
+		   hip_ha_t *entry,
+		  struct hip_stateless_info *bos_info)
 {
 	int err = 0, state = 0;
 
@@ -2058,7 +2466,7 @@ int hip_receive_bos(struct hip_common *bos,
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_I2_SENT:
 		/* Possibly no state created yet */
-		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry);
+		err = entry->hadb_handle_func->hip_handle_bos(bos, bos_saddr, bos_daddr, entry, bos_info);
 		break;
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:

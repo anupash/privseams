@@ -20,7 +20,7 @@
  *
  * Returns: 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -33,11 +33,13 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 #endif
 
 	/* Assign a local private key, public key and HIT to HA */
-	HIP_IFEL(hip_init_us(entry, NULL), -EINVAL, "Could not assign a local host id\n");
+	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
+		 "Could not assign a local host id\n");
 
-	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-			      mask, &entry->hit_our,
-			      dsthit);
+	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
+						     HIP_I1,
+						     mask, &entry->hit_our,
+						     dst_hit);
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
@@ -46,9 +48,18 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	// if hitr is hashed null hit, send it as null on the wire
+	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
+	  ipv6_addr_copy(&i1.hitr, &in6addr_any);
 
+	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
+#endif // CONFIG_HIP_OPPORTUNISTIC
+	
 	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						   &daddr,
+						   &daddr,0,0, 
+				/* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
 						   (struct hip_common*) &i1,
 						   entry, 1);
 	HIP_DEBUG("err = %d\n", err);
@@ -57,7 +68,9 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 		entry->state = HIP_STATE_I1_SENT;
 		HIP_UNLOCK_HA(entry);
 	}
- out_err:
+	else if (err == 1) err = 0;
+
+out_err:
 	return err;
 }
 
@@ -70,7 +83,8 @@ int hip_send_i1(hip_hit_t *dsthit, hip_ha_t *entry)
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
-				 const struct hip_host_id *host_id_pub)
+				 const struct hip_host_id *host_id_pub,
+				 int cookie_k)
 {
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
@@ -82,8 +96,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_HIP_NULL_SHA1
 	};
  	hip_transform_suite_t transform_esp_suite[] = {
-		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
+		HIP_ESP_AES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
 	//	struct hip_host_id  *host_id_pub = NULL;
@@ -113,7 +127,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/********** R1_COUNTER (OPTIONAL) *********/
 
  	/********** PUZZLE ************/
-	HIP_IFEL(hip_build_param_puzzle(msg, HIP_DEFAULT_COOKIE_K,
+	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
 					0, 0),  -1, 
 		 "Cookies were burned. Bummer!\n");
@@ -148,6 +162,36 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		   hip_get_param_host_id_hostname(host_id_pub));
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
+
+#ifdef CONFIG_HIP_ESCROW
+	/********** REG_INFO **********/
+	// TODO: get service-list from some function which lists all services offered by this system
+	
+	int *list;
+	
+	int tmp = 0;
+	int count = 0;
+	//count = hip_get_service_count();
+	
+	//list = HIP_MALLOC((count * sizeof(int)), GFP_KERNEL);
+	
+	count = hip_get_services_list(&list);
+	
+	HIP_DEBUG("Amount of services is %d", count);
+	
+	int i;
+	for (i = 0; i < count; i++) {
+		HIP_DEBUG("Service is %d", list[i]);
+	}
+	
+	if (count > 0) {
+		HIP_DEBUG("Adding REG_INFO parameter");
+		// TODO: Fix values
+		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
+		 	"Building of reg_info failed\n");	
+	}
+
+#endif //CONFIG_HIP_ESCROW	
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
@@ -211,8 +255,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * Returns: zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit,  struct in6_addr *dst_ip,
-		struct in6_addr *dst_hit)
+		struct in6_addr *src_hit, 
+		struct in6_addr *dst_ip, struct in6_addr *dst_hit, 
+		struct hip_stateless_info *i1_info)
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
@@ -223,19 +268,31 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	dst_addr = ((!dst_ip || ipv6_addr_any(dst_ip)) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
-	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)),
-		 -ENOENT, "No precreated R1\n");
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	// it sould not be null hit, null hit has been replaced by real local hit
+	HIP_DEBUG_HIT("src_hit ", src_hit);
+	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
+#endif
+	HIP_DEBUG_HIT("hip_xmit_r1:: src_hit", src_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1:: dst_hit", dst_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1:: own_addr", own_addr);
+	HIP_DEBUG_HIT("hip_xmit_r1:: dst_addr", dst_addr);
+	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
+		 "No precreated R1\n");
 
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
+	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
 
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 
-	HIP_IFEL(hip_csum_send(own_addr, dst_addr, r1pkt, NULL, 0), -1, 
+	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port, i1_info->src_port, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
+	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
+
  out_err:
 	if (r1pkt)
 		HIP_FREE(r1pkt);
@@ -256,7 +313,7 @@ void hip_send_notify(hip_ha_t *entry)
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, notify_packet,
+	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, 0,0, notify_packet,
 					     entry, 0);
 
  out_err:

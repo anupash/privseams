@@ -433,3 +433,10 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 	return;
 }
 
+void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_len)
+{
+	char dst[key_len];
+	strncpy(dst, key->key, key_len);
+	HIP_DEBUG("%s: %s\n", str, dst);
+}
+

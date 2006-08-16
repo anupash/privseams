@@ -16,10 +16,14 @@
 #include "debug.h"
 #include "netdev.h"
 #include "hipconf.h"
+#include "nat.h"
 
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <sys/un.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
+
 
 #ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"
@@ -39,7 +43,6 @@
 #endif
 
 
-
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
@@ -48,6 +51,7 @@ int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
 #define IPV4_HDR_SIZE 20
+
 
 #define HIT_SIZE 16
 

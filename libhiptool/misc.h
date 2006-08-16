@@ -1,6 +1,13 @@
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
+
+#if 0
 #include "list.h" /* userspace list implementation */
 #include "hipd.h"
 #include "debug.h"
@@ -16,6 +23,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <openssl/bn.h>
+
+#endif
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
@@ -41,7 +50,10 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 	return ((a->s6_addr32[0] | a->s6_addr32[1] | 
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
-
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, 
+				  struct in6_addr *hit, int hit_type);
+#endif
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
 

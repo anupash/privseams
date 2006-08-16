@@ -23,23 +23,32 @@
 #define SYSLOG_OPT        (LOG_PID)
 #define SYSLOG_FACILITY   LOG_DAEMON
 
-#define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_INFO(...) hip_info(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_ERROR(...) hip_error(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
+#define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
+
+#ifdef CONFIG_HIP_DEBUG
+#define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) \
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, family, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
-#define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
-#define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
-
 //#define HIP_DEBUG(...) \
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...)\
 	hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-
+#else
+#define HIP_DEBUG(...) do {} while(0)
+#define HIP_HEXDUMP(prefix, str, len) do {} while(0)
+#define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) do {} while(0)
+#define HIP_DUMP_MSG(msg) do {} while(0)
+//#define HIP_DEBUG(...) \
+//	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+# define HIP_DEBUG_GL(debug_group, debug_level, ...) do {} while(0)
+#endif
 
 
 /* Debug groups define groups of debug messages which belong to the
@@ -67,16 +76,13 @@
 
 # define HIP_DEBUG_LEVEL HIP_DEBUG_LEVEL_ALL
 
-
-
-
-
 /* XX FIXME: implement! */
 //#define HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define HIP_DEBUG_HIT(str, hit)  hip_print_hit(str, hit)
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #define HIP_DEBUG_LSI(str, hit)  hip_print_lsi(str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(str, in)
+#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(str, key, key_len)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */

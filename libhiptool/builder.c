@@ -18,6 +18,7 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Tobias Heer <heer@tobibox.de>
  *
  * USAGE EXAMPLES:
  * - sender of "add mapping", i.e. the hip module in kernel
@@ -441,7 +442,11 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_FROM,
 			HIP_PARAM_TO,
 			HIP_PARAM_HMAC,
-			HIP_PARAM_VIA_RVS
+			HIP_PARAM_VIA_RVS,
+			HIP_PARAM_REG_INFO,
+			HIP_PARAM_REG_REQUEST,
+			HIP_PARAM_REG_RESPONSE,
+			HIP_PARAM_REG_FAILED
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -803,22 +808,103 @@ void hip_dump_msg(const struct hip_common *msg)
 {
 	struct hip_tlv_common *current_param = NULL;
 	void *contents = NULL;
-
-	HIP_DEBUG("msg: type=%d, len=%d, err=%d\n",
-		 hip_get_msg_type(msg), hip_get_msg_total_len(msg),
-		 hip_get_msg_err(msg));
-
+	HIP_DEBUG("--------------- MSG START-------------------\n");
+	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
+	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
+	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
+	
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		HIP_DEBUG("param: type=%d, len=%d\n",
+		HIP_DEBUG("Param: type:%s (%d), len=%d\n",
+			 hip_param_type_name(hip_get_param_type(current_param)),
 			 hip_get_param_type(current_param),
 			 hip_get_param_contents_len(current_param));
 		contents = hip_get_param_contents_direct(current_param);
-		HIP_HEXDUMP("contents", contents,
+		HIP_HEXDUMP("Contents:", contents,
 			    hip_get_param_contents_len(current_param));
 	}
-
+	HIP_DEBUG("---------------- MSG END --------------------\n");
 }
+
+/**
+ * hip_message_type_name - returns a string for a given parameter type number
+ * @msg_type message type number
+ * @return: name of the message type
+ **/
+char* hip_message_type_name(uint8_t msg_type){
+	switch (msg_type){
+		case HIP_I1: return "HIP_I1";
+		case HIP_R1: return "HIP_R1";
+		case HIP_I2: return "HIP_I2";
+		case HIP_CER: return "HIP_CER";
+		case HIP_UPDATE: return "HIP_UPDATE";
+		case HIP_NOTIFY: return "HIP_NOTIFY";
+		case HIP_CLOSE: return "HIP_CLOSE";
+		case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
+		case HIP_BOS: return "HIP_BOS";
+		case HIP_PSIG: return "HIP_PSIG";
+		case HIP_TRIG: return "HIP_TRIG";
+	}
+	return "UNDEFINED";
+}
+
+/**
+ * hip_message_type_name - returns a string for a given parameter type number
+ * @param_type parameter type number
+ * @return: name of the message type
+ **/
+char* hip_param_type_name(uint16_t param_type){
+	switch (param_type){
+		case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
+		case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
+		case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
+		case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
+		case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
+		case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
+		case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+		case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
+		case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
+		case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
+		case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
+		case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
+		case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
+		case HIP_PARAM_RVA_REQUEST: return "HIP_PARAM_RVA_REQUEST";
+		case HIP_PARAM_RVA_REPLY: return "HIP_PARAM_RVA_REPLY";
+		case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
+		case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
+		case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
+		case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
+		case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
+		case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
+		case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
+		case HIP_PARAM_HI: return "HIP_PARAM_HI";
+		case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
+		case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
+		case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
+		case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
+		case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
+		case HIP_PARAM_EID_ADDR: return "HIP_PARAM_EID_ADDR";
+		case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
+		case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
+		case HIP_PARAM_FROM_SIGN: return "HIP_PARAM_FROM_SIGN";
+		case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
+		case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
+		case HIP_PARAM_HIP_SIGNATURE2: return "HIP_PARAM_HIP_SIGNATURE2";
+		case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
+		case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
+		case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
+		case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
+		case HIP_PARAM_TO: return "HIP_PARAM_TO";
+		case HIP_PARAM_RVA_HMAC: return "HIP_PARAM_RVA_HMAC";
+		case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
+		case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
+		case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
+		case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
+		case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
+	}
+	return "UNDEFINED";
+}
+	
 
 /**
  * hip_check_userspace msg - check userspace message for integrity
@@ -1249,6 +1335,7 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 	ipv6_addr_copy(&msg->hitr, hit_receiver ? hit_receiver : &in6addr_any);
 }
 
+#ifndef __KERNEL__
 /**
  * hip_build_param_hmac_contents - build and append a HIP hmac parameter
  * @msg:  the message where the hmac parameter will be appended
@@ -1343,6 +1430,7 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	return err;
 }
+#endif /* __KERNEL__ */
 
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
@@ -1590,6 +1678,122 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 	return err;
 
 }
+
+/**
+ * hip_build_param_reg_info - build HIP REG_INFO parameter
+ * @msg:       the message
+ * @min_lifetime:  minimum lifetime in seconds in host byte order
+ * @max_lifetime:  maximum lifetime in seconds in host byte order
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
+			uint8_t max_lifetime, int *type_list, int cnt)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_info rinfo;
+	uint8_t *array;
+
+	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
+	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
+				   cnt * sizeof(uint8_t));
+	
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+
+	uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
+
+	rinfo.min_lifetime = min_lifetime;
+	rinfo.max_lifetime = max_lifetime;
+	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
+				      (void *)array);
+	return err;
+
+}
+
+/**
+ * hip_build_param_reg_request - build HIP REG_REQUEST or REG_RESPONSE parameter
+ * @msg:       the message
+ * @lifetime:  lifetime in seconds in host byte order
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ * @request: true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
+			int *type_list, int cnt, int request)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_request rreq;
+	uint8_t *array;
+	
+
+	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
+	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
+				   cnt * sizeof(uint8_t));
+
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+	
+
+	rreq.lifetime = lifetime;
+	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
+				      (void *)array);
+	return err;
+
+}
+
+/**
+ * hip_build_param_reg_failed - build HIP REG_FAILED parameter
+ * @msg:       the message
+ * @failure_type:  reason for failure
+ * @type_list: list of types to be appended
+ * @cnt:       number of addresses in @type_list
+ *
+ * Returns: zero for success, or non-zero on error
+ */
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
+			int *type_list, int cnt)
+{
+	int err = 0;
+	int i;
+	struct hip_reg_failed rfail;
+	uint8_t *array;
+
+	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
+	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
+				   cnt * sizeof(uint8_t));
+
+	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	memset(array, (sizeof(uint8_t) * cnt), 0);
+	for (i = 0; i < cnt; i++) {
+		int value = type_list[i];
+		uint8_t val = (uint8_t)type_list[i];
+		array[i] = val;
+	}
+	
+
+	rfail.failure_type = failure_type;
+	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
+				      (void *)array);
+	return err;
+}			
+
 
 /**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message
@@ -1908,22 +2112,36 @@ int hip_build_param_locator(struct hip_common *msg,
  * 
  * Returns: 0 on success, otherwise < 0.
  */
-int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
+/*int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
 			 struct hip_crypto_key *auth,
 			 uint32_t spi, int alg, 
-			 int already_acquired, int direction) 
+			 int already_acquired, int direction) */
+			 
+int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc)
 {
 	int err = 0;
 	struct hip_keys keys;
 
 	hip_set_param_type(&keys, HIP_PARAM_KEYS);
 	hip_calc_generic_param_len(&keys, sizeof(struct hip_keys), 0);
+	
+	
+	memcpy((struct in6_addr *)&keys.address, addr, 16);
+	memcpy((struct in6_addr *)&keys.hit, hit, 16);		
+	keys.operation = htons(operation_id);
+	keys.alg_id = htons(alg_id);	
+	keys.spi = htonl(spi);
+	keys.spi_old = htonl(spi_old);
+	keys.key_len = htons(key_len);
 	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
-	memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
-	keys.spi = spi;
-	keys.alg = alg;
-	keys.acquired = already_acquired;
-	keys.direction = direction;
+	
+		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
+		//keys.acquired = already_acquired;
+		//keys.direction = direction;
+	
 	err = hip_build_param(msg, &keys);
 	return err;
 }
@@ -2003,16 +2221,19 @@ int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 {
 	int err = 0;
 	struct hip_esp_info esp_info;
-
+	_HIP_DEBUG("Add SPI old: 0x%x (nwbo: 0x%x), new: 0x%x (nwbo: 0x%x)\n", 
+		old_spi, htonl(old_spi), new_spi, htonl(new_spi));
 	hip_set_param_type(&esp_info, HIP_PARAM_ESP_INFO);
 	hip_calc_generic_param_len(&esp_info, sizeof(struct hip_esp_info), 0);
 	esp_info.reserved = htonl(0);
 	esp_info.keymat_index = htons(keymat_index);
 	esp_info.old_spi = htonl(old_spi);
 	esp_info.new_spi = htonl(new_spi);
+	_HIP_DEBUG("esp param old: 0x%x , new: 0x%x \n",
+		  esp_info.old_spi, esp_info.new_spi); 
 
-	HIP_DEBUG("keymat index = %d\n", keymat_index);
-
+	_HIP_DEBUG("keymat index = %d\n", keymat_index);
+	_HIP_HEXDUMP("esp_info:", &esp_info, sizeof(struct hip_esp_info));
 	err = hip_build_param(msg, &esp_info);
 	return err;
 }

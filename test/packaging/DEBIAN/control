@@ -1,6 +1,11 @@
-Package: hipl-userspace
+Source: hipl
 Version: 1.0
-Architecture: i386
+Section: devel
+Priority: optional
 Maintainer: InfraHIP <infrahip@hiit.fi>
+Build-Depends: debhelper (>= 4.0.0), autotools-dev
+Standards-Version: 3.6.2
+Package: hipl
+Architecture: i386
 Description: This package contains the necessary tools, libraries and documents
- for the HIPL kernel.
+ for the HIP protocol.

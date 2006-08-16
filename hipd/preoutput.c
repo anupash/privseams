@@ -13,30 +13,43 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	memcpy(&entry->hip_msg_retrans.daddr, peer_addr,
 	       sizeof(struct in6_addr));
 	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
-
+	time(&entry->hip_msg_retrans.last_transmit);
  out_err:
 	return err;
 }
 
 int hip_csum_send(struct in6_addr *local_addr,
 		  struct in6_addr *peer_addr,
-		  struct hip_common* msg,
-		  hip_ha_t *entry,
+		  uint32_t src_port, uint32_t dst_port,
+		  struct hip_common *msg,
+		  hip_ha_t *_entry,
 		  int retransmit)
 {
-	int err = 0, sa_size, sent, len, dupl;
+	int err = 0, sa_size, sent, len, dupl, try_bind_again;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	struct sockaddr_in6 *src6, *dst6;
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
 	int hip_raw_sock = 0; /* Points either to v4 or v6 raw sock */
+	hip_ha_t *entry = _entry;
 
 	if (local_addr)
 		HIP_DEBUG_IN6ADDR("local_addr", local_addr);
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
+	if(entry) HIP_DEBUG("**********NAT status %d\n", entry->nat);
+	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
+		((entry && entry->nat) ||
+		 (src_port != 0 || dst_port != 0))))//Temporary fix 
+	//if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
+	{
+		return hip_send_udp(local_addr, peer_addr,
+				    src_port, dst_port, msg, entry, retransmit);
+
+	} 
+	
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be
@@ -103,17 +116,49 @@ int hip_csum_send(struct in6_addr *local_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	if (entry)
+	if (!retransmit && hip_get_msg_type(msg) == HIP_I1)
+	{
+		HIP_DEBUG("Retransmit of I1, no filtering required.\n");
+		err = -ENOENT;
+	}
+	else if (entry)
+	{
 		err = entry->hadb_output_filter_func->hip_output_filter(msg);
+	}
 	else
+	{
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
+	}
 
-	if (err == -ENOENT) {
-		HIP_DEBUG("No agent running, continuing\n");
+	if (err == -ENOENT)
+	{
 		err = 0;
-        } else if (err == 0) {
-		HIP_DEBUG("Agent accepted packet\n");
-	} else if (err) {
+    }
+    else if (err == 0)
+    {
+    	HIP_DEBUG("Agent accepted the packet.\n");
+    }
+    else if (err == 1)
+    {
+		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
+		         msg, entry), -1, "queue failed\n");
+		err = 1;
+		entry->state = HIP_STATE_FILTERING;
+		HIP_HEXDUMP("HA: ", entry, 4);
+		goto out_err;
+	}
+	else if (err == 2)
+	{
+		HIP_DEBUG("Recreating entries, because agent changed local HIT.\n");
+		struct in6_addr addr;
+		memcpy(&addr, &entry->preferred_address, sizeof(addr));
+		HIP_IFEL(hip_hadb_del_peer_map(&entry->hit_peer), -1, "hip_del_peer_map failed!\n");
+		HIP_IFEL(hip_hadb_add_peer_info(&msg->hits, &addr), -1, "hip_hadb_add_peer_info failed!\n");
+		HIP_IFEL(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr), -1, "hip_hadb_find_byhits failed!\n");
+	}
+	else if (err)
+	{
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
 	}	
@@ -128,9 +173,18 @@ int hip_csum_send(struct in6_addr *local_addr,
 
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
-	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &src, sa_size), -1,
-		 "Binding to raw sock failed\n");
-
+	for (try_bind_again = 0; try_bind_again < 2; try_bind_again++) {
+		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
+		if (err == EADDRNOTAVAIL) {
+			HIP_DEBUG("Binding failed 1st time, trying again\n");
+			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
+			sleep(4);
+		} else {
+			break;
+		}
+	}
+	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
+	HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet was lost (simulation)\n");
 		goto out_err;
@@ -140,7 +194,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	   do not seem to work properly. Thus, we use just sendto() */
 	
 	len = hip_get_msg_total_len(msg);
-	HIP_HEXDUMP("Dumping packet ", msg, len);
+	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		sent = sendto(hip_raw_sock, msg, len, 0,
@@ -149,7 +203,6 @@ int hip_csum_send(struct in6_addr *local_addr,
 			 "Could not send the all requested data (%d/%d)\n",
 			 sent, len);
 	}
-
 	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
 	HIP_DEBUG("Packet sent ok\n");
 
