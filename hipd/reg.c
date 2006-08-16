@@ -24,7 +24,7 @@ void hip_uninit_services(void)
 int hip_services_add(int service_type)
 {
 	
-	HIP_DEBUG("Adding service");
+	HIP_DEBUG("Adding service.\n");
 	int err = 0;
 	HIP_SERVICE *service;
 	service = HIP_MALLOC(sizeof(struct hip_reg_service), GFP_KERNEL);
@@ -81,7 +81,7 @@ int hip_services_set_active(int service)
 	HIP_SERVICE *s, *tmp;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Activating service");
+			HIP_DEBUG("Activating service.\n");
 			s->state = HIP_SERVICE_ACTIVE;
 		}
 	}
@@ -92,7 +92,7 @@ int hip_services_set_inactive(int service)
 	HIP_SERVICE *s, *tmp;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Inactivating service");
+			HIP_DEBUG("Inactivating service.\n");
 			s->state = HIP_SERVICE_INACTIVE;
 		}
 	}
@@ -104,7 +104,7 @@ int hip_services_remove(int service)
 	
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Removing service %d", service);
+			HIP_DEBUG("Removing service %d.\n", service);
 			list_del(&s->list);
 			HIP_FREE(s);
 		}

@@ -196,13 +196,13 @@ int get_type_arg(int action) {
 /**
  * handle_rvs - handle hipconf commands related to "rvs".
  * @msg:    the buffer where the message for kernel will be written.
- * @action: the action to be performed on the given mapping.
+ * @action: the action (add/del) to be performed on the given mapping.
  * @opt:    an array of pointers to the command line arguments after
  *          the action and type, the HIT and the corresponding IPv6 address
  * @optc:   the number of elements in the array (=2, HIT and IPv6 address)
  * 
- * Create message to the kernel module from the function parameters. Currently
- * only action "add" is supported.
+ * Create a message to the kernel module from the function parameters.
+ * Currently only action "add" is supported.
  * 
  * NOTE: This function is used with the outdated rvs registration.
  * 15.08.2006 15:49
@@ -236,7 +236,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
 		 "build hdr failed\n");
 out_err:
 	return err;
@@ -244,15 +244,15 @@ out_err:
 }
 
 /**
- * handle_rvs - handle hipconf commands related to "rvs".
+ * handle_rvs_new - handle hipconf commands related to "rvs".
  * @msg:    the buffer where the message for kernel will be written.
  * @action: the action to be performed on the given mapping.
  * @opt:    an array of pointers to the command line arguments after
  *          the action and type, the HIT and the corresponding IPv6 address.
  * @optc:   the number of elements in the array (=2, HIT and IPv6 address).
  * 
- * Create message to the kernel module from the function parameters. Currently
- * only action "add" is supported.
+ * Create a message to the kernel module from the function parameters.
+ * Currently only action "add" is supported.
  * 
  * author: Lauri Silvennoinen 15.08.2006 16:35
  * 
@@ -264,7 +264,7 @@ int handle_rvs_new(struct hip_common *msg, int action, const char *opt[],
 	struct in6_addr hit, ip6;
 	int err=0;
 	int ret;
-	
+	HIP_DEBUG("Lauri: handle_rvs_new() invoked.\n");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
@@ -284,7 +284,7 @@ int handle_rvs_new(struct hip_common *msg, int action, const char *opt[],
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
 		 "build hdr failed\n");
 out_err:
 	return err;
@@ -752,24 +752,46 @@ out_err:
 	
 }
 
-
+/**
+ * handle_service - handle hipconf commands related to "service".
+ * @msg:    the buffer where the message for kernel will be written.
+ * @action: the action to be performed on the given mapping.
+ * @opt:    an array of pointers to the command line arguments after
+ *          the action and type.
+ * @optc:   the number of elements in the array "opt".
+ * 
+ * Create a message to the kernel module from the function parameters.
+ * Currently only action "add" is supported. 16.08.2006 18:09.
+ * 
+ * Returns: zero on success, or negative error value on error.
+ */
 int handle_service(struct hip_common *msg, int action, const char *opt[], 
-					int optc)
+		   int optc)
 {
 	HIP_DEBUG("hipconf: handling service");
 	
 	int err = 0;
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+	HIP_IFEL((action != ACTION_ADD), -1, "Only action \"add\" is supported for \"service\".\n");
+	HIP_IFEL((optc < 1), -1, "Missing arguments\n");
+	HIP_IFEL((optc > 1), -1, "Too many arguments\n");
 	
 	if (strcmp(opt[0], "escrow") == 0) {
-		HIP_DEBUG("Adding escrow service");
+		HIP_INFO("Adding escrow service.\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-		 "build hdr failed\n");
+			 "build hdr failed\n");
 	}
-	
-out_err:
+	else if (strcmp(opt[0], "rvs") == 0) {
+		HIP_INFO("Adding rvs service.\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
+			 "build hdr failed\n");
+	}
+	else {
+		HIP_ERROR("Unknown service %s.\n", opt[0]);
+	}
+
+ out_err:
 	return err;
 	
 }

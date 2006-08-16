@@ -513,7 +513,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 			 -1, "sending i1 failed\n");
 	
 		break;
-	
+		
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling escrow service user message");
 		
@@ -523,7 +523,30 @@ int hip_handle_user_msg(struct hip_common *msg,
 		if (hip_services_is_active(HIP_ESCROW_SERVICE))
 			HIP_DEBUG("Escrow service active");
 		err = hip_recreate_all_precreated_r1_packets();	
-		break;	
+		break;
+	
+	/* draft-ietf-hip-registration-02 RVS registration.
+	   Rendezvous server handles this message received from hipconf. */
+	case SO_HIP_ADD_RENDEZVOUS:
+		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+		/* Add functionality here. */
+		break;
+	
+	/* draft-ietf-hip-registration-02 RVS registration.
+	   Rendezvous server handles this message. Message indicates that
+	   current machine is willing to offer rendezvous service. This message
+	   is received from hipconf. */
+	case SO_HIP_OFFER_RENDEZVOUS:
+		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
+		hip_services_add(HIP_RENDEZVOUS);
+		hip_services_set_active(HIP_RENDEZVOUS);
+		
+		if (hip_services_is_active(HIP_RENDEZVOUS)){
+			HIP_DEBUG("Rendezvous service active.\n");
+		}
+		
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
 	
 #endif
 	default:

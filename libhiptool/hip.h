@@ -247,6 +247,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_ADD_ESCROW			39
 #define SO_HIP_OFFER_ESCROW			40
 #define SO_HIP_ADD_RENDEZVOUS			41 /* RVS registration draft-ietf-hip-registration-02 */
+#define SO_HIP_OFFER_RENDEZVOUS			42 /* RVS registration draft-ietf-hip-registration-02 */
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"

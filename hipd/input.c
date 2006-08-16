@@ -2211,10 +2211,10 @@ int hip_handle_r2(struct hip_common *r2,
  * @entry:    current host association database state.
  * @i1_info:  the source and destination ports (when NAT is in use).
  *
- * Parses FROM parameters from the incoming I1 packet and passes the
- * IP addresses obtained from the parameters to "hip_xmit_r1()" as an array.
- * In "hip_xmit_r1()" this array is used create a VIA_RVS parameter.
- * 14.08.2006 11:30
+ * Handles an incoming I1 packet and parses FROM parameters from the packet.
+ * If FROM parameter(s) is(are) found, the IP addresses obtained from the parameters
+ * are passed to "hip_xmit_r1()" as an array. In "hip_xmit_r1()" this array is used
+ * create a VIA_RVS parameter. 16.08.2006 15:30
  * 
  * Returns: zero on success, or negative error value on error.
  */
