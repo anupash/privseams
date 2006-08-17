@@ -178,16 +178,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	
 	count = hip_get_services_list(&list);
 	
-	HIP_DEBUG("Amount of services is %d", count);
+	HIP_DEBUG("Amount of services is %d.\n", count);
 	
 	int i;
 	for (i = 0; i < count; i++) {
-		HIP_DEBUG("Service is %d", list[i]);
+		HIP_DEBUG("Service is %d.\n", list[i]);
 	}
 	
 	if (count > 0) {
-		HIP_DEBUG("Adding REG_INFO parameter");
-		// TODO: Fix values
+		HIP_DEBUG("Adding REG_INFO parameter.\n");
+		/* TODO: Min and max lifetime of registration. */
 		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
 		 	"Building of reg_info failed\n");	
 	}

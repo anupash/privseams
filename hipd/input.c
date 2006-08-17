@@ -1078,9 +1078,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
-	
-
-
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -1098,10 +1095,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
-
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
-								r1_info->dst_port, i2,
+						     r1_info->dst_port, i2,
 						     entry, 0), -1);
 
  out_err:
@@ -1166,48 +1162,75 @@ int hip_handle_r1(struct hip_common *r1,
 
 #ifdef CONFIG_HIP_ESCROW
 
-	// Check if there is a reg_info parameter and extract service types
+	HIP_DEBUG("Lauri: Incoming R1 is:.\n");
+	HIP_DUMP_MSG(r1);
+	// Check if there is a REG_INFO parameter and extract service types
 	struct hip_reg_info *reg_info;
+	/* Check if there incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 	if (reg_info) {
-		 
-		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
-		int typecnt = hip_get_param_contents_len(reg_info);
-		HIP_DEBUG("The responder offers %d services", typecnt);
+		
+		int i;
+		uint8_t current_reg_type = 0;
+		uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
+			+ sizeof(reg_info->max_lifetime);
 
-		// Functionality regarding escrow service		
-		HIP_KEA *kea;
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-			HIP_DEBUG("Registering to escrow service");
-		
-			int accept = 0;
-			int i;
-			if (typecnt >= 2) { 
-				for (i = 2; i < typecnt; i++) {
-					HIP_DEBUG("Service type: %d", types[i]);
-					if (types[i] == HIP_ESCROW_SERVICE)
-						accept = 1;
-				}
-			}
-			if (!accept)
-				kea->keastate = HIP_KEASTATE_INVALID;
-			else
-				HIP_DEBUG("Escrow service available!");		 
-		} 
-		else {
-			HIP_DEBUG("Not doing escrow registration");
+		/* Registration types begin after "Min Lifetime" and "Max Lifetime" fields. */
+		uint8_t *reg_types = (uint8_t *)
+			(hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
+
+		int typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
+
+		if(typecount == 0){
+			HIP_DEBUG("REG_INFO had no services listed.\n");
+			HIP_INFO("Responder is currently unable to provide "\
+				 "services due to transient conditions.\n");
 		}
-		
+
+		HIP_DEBUG("The responder offers %d %s.\n", typecount,
+			  (typecount == 1) ? "service" : "services");
+		HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
+
+		/* Loop through all the registration types found in REG_INFO parameter. */ 
+		for(i = 0; i < typecount; i++){
+			current_reg_type = reg_types[i];
+			
+			switch(current_reg_type){
+			case HIP_ESCROW_SERVICE:
+				HIP_INFO("Responder offers escrow service.\n");
+						
+				HIP_KEA *kea;
+				kea = hip_kea_find(&entry->hit_our);
+				if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+					HIP_DEBUG("Registering to escrow service.\n");
+				} 
+				else if(kea){
+					kea->keastate = HIP_KEASTATE_INVALID;
+					HIP_DEBUG("Not doing escrow registration, "\
+						  "invalid kea state.\n");
+				}
+				else{
+					HIP_DEBUG("Not doing escrow registration.\n");
+				}
+
+				break;
+			case HIP_RENDEZVOUS:
+				HIP_INFO("Responder offers rendezvous service.\n");
+				/* Check if we have requested for rendezvous service
+				   in I1 packet. */
+				break;
+			default:
+				HIP_INFO("Responder offers unsupported service.\n");
+			}
+		}
 	}
 	else {
-		// No reg_info found. Cancelling registration attempt.
+		/* No REG_INFO parameter found. Cancelling registration attempt. */
 		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
 		HIP_KEA *kea;
 		kea = hip_kea_find(&entry->hit_our);
 		if (kea)
 			kea->keastate = HIP_KEASTATE_INVALID;
-		
 	}
 	
 #endif //CONFIG_HIP_ESCROW

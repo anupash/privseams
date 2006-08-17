@@ -21,11 +21,31 @@ void hip_uninit_services(void)
 	
 }
 
+/**
+ * hip_services_add - Adds a service to supported services list.
+ * @service_type: The service type to add.
+ *  
+ * 17.08.2006
+ * 
+ * Returns: zero on success, or negative on error.
+ */ 
 int hip_services_add(int service_type)
 {
 	
 	HIP_DEBUG("Adding service.\n");
 	int err = 0;
+	
+	/* Check if the service is allready supported. */
+	HIP_SERVICE *tmp = hip_get_service(service_type);
+	if(tmp) {
+		HIP_ERROR("Trying to add duplicate service: %s. " \
+			  "Current service state is: %s\n", tmp->name,
+			  (tmp->state) ? "inactive" : "active");
+		err = -1;
+		goto out_err;
+	}
+	
+	
 	HIP_SERVICE *service;
 	service = HIP_MALLOC(sizeof(struct hip_reg_service), GFP_KERNEL);
 	
@@ -40,33 +60,30 @@ int hip_services_add(int service_type)
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
 		service->service_type = 7;
-		HIP_DEBUG("Adding escrow service.\n");
+		HIP_INFO("Adding escrow service.\n");
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		
 	}
 	else if (service_type == HIP_RENDEZVOUS) {
 		service->service_type = HIP_RENDEZVOUS;
-		HIP_DEBUG("Adding rendezvous service.\n");
+		HIP_INFO("Adding rendezvous service.\n");
 		strncpy(service->name, "HIP_RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
 	}
 	/* HIP_RVA_RELAY_I1 outdated ? */
 	else if (service_type == HIP_RVA_RELAY_I1) {
 		service->service_type = 1;
-		HIP_DEBUG("Adding rvs service.\n");
+		HIP_INFO("Adding rvs service.\n");
 		strncpy(service->name, "HIP_RVS_SERVICE", 20); 
 		service->handle_registration = hip_handle_registration;
 	}	
 	else {
-		HIP_DEBUG("Unknown service type.\n");
+		HIP_ERROR("Unknown service type.\n");
 		err = -1;
 		free(service);
 		goto out_err;
 	}
-	
-	
-	//TODO: check that this service isn't already listed
 	
 	list_add(&service->list, &services);
 	
@@ -191,25 +208,25 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	tmp_a = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
 	tmp_r = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
 
-	HIP_DEBUG("Service request count: %d", request_count);
+	HIP_DEBUG("Service request count: %d.\n", request_count);
 
 	for (i = 0; i < request_count; i++) {
 		s = hip_get_service((int)requests[i]);
 		if (s) {
 			if (s->state == HIP_SERVICE_ACTIVE) {
 				if (s->handle_registration(hit)) {	
-					HIP_DEBUG("Accepting service request %d", (int)requests[i]);	
+					HIP_DEBUG("Accepting service request %d.\n", (int)requests[i]);	
 					tmp_a[accept_count] = (int)requests[i];
 					accept_count++;
 				}
 				else {
-					HIP_DEBUG("Rejecting service request %d", (int)requests[i]);	
+					HIP_DEBUG("Rejecting service request %d.\n", (int)requests[i]);	
 					tmp_r[reject_count] = (int)requests[i];
 					reject_count++;
 				}
 			}
 			else {
-				HIP_DEBUG("Service inactive");
+				HIP_DEBUG("Service inactive.\n");
 			}
 		}
 	}
@@ -222,9 +239,9 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 		r_req[i] = tmp_r[i];
 	
 	if ((accept_count + reject_count) != request_count)
-		HIP_ERROR("Amount of rejected and accepted services does not match the requests");
+		HIP_ERROR("Amount of rejected and accepted services does not match the requests.\n");
 	else 
-		HIP_DEBUG("Accepted %d and rejected %d service requests", accept_count, reject_count);
+		HIP_DEBUG("Accepted %d and rejected %d service requests.\n", accept_count, reject_count);
 	
 	HIP_FREE(tmp_a);
 	HIP_FREE(tmp_r);

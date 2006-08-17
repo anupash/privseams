@@ -11,6 +11,7 @@
 #define HIP_RVA_MAX_IPS 2
 #define HIP_RVA_SIZE 7  /* small hash table = less wasted memory :) */
 
+/* Lauri: Add  HIP_RVASTATE_REGISTERING? */
 typedef enum { HIP_RVASTATE_INVALID=0, HIP_RVASTATE_VALID=1 } hip_rvastate_t;
 
 struct hip_rendezvous_association

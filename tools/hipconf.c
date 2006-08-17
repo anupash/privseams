@@ -768,7 +768,7 @@ out_err:
 int handle_service(struct hip_common *msg, int action, const char *opt[], 
 		   int optc)
 {
-	HIP_DEBUG("hipconf: handling service");
+	HIP_DEBUG("hipconf: handling service.\n");
 	
 	int err = 0;
 	HIP_INFO("action=%d optc=%d\n", action, optc);

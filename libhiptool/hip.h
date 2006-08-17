@@ -445,8 +445,13 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
-#define HIP_ESCROW_SERVICE	      7
-#define HIP_RENDEZVOUS	              8
+/* Registration types for registering to a service as specified in
+   draft-ietf-hip-registration-02. These are the registration types used in
+   REG_INFO, REG_REQUEST, REG_RESPONSE and REG_FAILED parameters.
+   Numbers 0-200 are reserved by IANA.
+   Numbers 201 - 255 are reserved by IANA for private use. */
+#define HIP_ESCROW_SERVICE	      7 /* Change to 201? */
+#define HIP_RENDEZVOUS	              8 /* Change to 1. */
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2

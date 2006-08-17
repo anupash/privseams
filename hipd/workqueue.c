@@ -373,10 +373,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_ADD_RVS:
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-						       HIP_PARAM_HIT)),
+							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-						       HIP_PARAM_IPV6_ADDR)),
+							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
 		HIP_IFEL(!(entry =
@@ -494,7 +494,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
 		
-		
 		HIP_DEBUG("Added kea base entry");
 		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
@@ -526,19 +525,35 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	
 	/* draft-ietf-hip-registration-02 RVS registration.
-	   Rendezvous server handles this message received from hipconf. */
+	   Responder (of I,RVS,R hierarchy) handles this message. Message
+	   indicates that the current machine wants to register to a rvs server.
+	   This message is received from hipconf. */
 	case SO_HIP_ADD_RENDEZVOUS:
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
-		/* Add functionality here. */
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+							    HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+							   HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		HIP_IFEL(!(entry =
+			   hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
+			 -1, "setting of rvs request flag failed\n");
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
 		break;
 	
 	/* draft-ietf-hip-registration-02 RVS registration.
-	   Rendezvous server handles this message. Message indicates that
+	   Rendezvous server handles this message. Message indicates that the
 	   current machine is willing to offer rendezvous service. This message
 	   is received from hipconf. */
 	case SO_HIP_OFFER_RENDEZVOUS:
 		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		hip_services_add(HIP_RENDEZVOUS);
+		/* TODO: Activate only if addition was succesful. */
 		hip_services_set_active(HIP_RENDEZVOUS);
 		
 		if (hip_services_is_active(HIP_RENDEZVOUS)){

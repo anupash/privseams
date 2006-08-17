@@ -121,7 +121,7 @@ HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
  * hip_rva_insert_ip_n - Insert/update/overwrite one IP in the RVA.
  * @rva: RVA
  * @ip: IP address to be written to the RVA's IP-list.
- * @n: Repalce n:th element in the IP-list. 0 <= n < HIP_RVA_MAX_IPS
+ * @n: Replace n:th element in the IP-list. 0 <= n < HIP_RVA_MAX_IPS
  *
  * The IP that is overwritten is the n:th in the list.
  *

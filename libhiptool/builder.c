@@ -1668,12 +1668,9 @@ int hip_build_param_via_rvs(struct hip_common *msg,
 	int err = 0;
 	struct hip_via_rvs viarvs;
 	
-	/* Set the parameter type. (first field in the parameter.) */
 	hip_set_param_type(&viarvs, HIP_PARAM_VIA_RVS);
-	/* Calculate and set the parameter length (2nd field in the parameter.) */
 	hip_calc_generic_param_len(&viarvs, sizeof(struct hip_via_rvs),
 				   address_count * sizeof(struct in6_addr));
-	/* Build parameter viarvs and set it in the message. */
 	err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
 				      (void *)rvs_addresses);
 	return err;
@@ -1739,14 +1736,11 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 		array[i] = val;
 	}
 
-	uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
-
 	rinfo.min_lifetime = min_lifetime;
 	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)array);
 	return err;
-
 }
 
 /**
@@ -1755,7 +1749,7 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
  * @lifetime:  lifetime in seconds in host byte order
  * @type_list: list of types to be appended
  * @cnt:       number of addresses in @type_list
- * @request: true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
+ * @request:   true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
  *
  * Returns: zero for success, or non-zero on error
  */
@@ -1767,7 +1761,6 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	struct hip_reg_request rreq;
 	uint8_t *array;
 	
-
 	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
 	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
 				   cnt * sizeof(uint8_t));
@@ -1779,13 +1772,11 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
-	
 
 	rreq.lifetime = lifetime;
 	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
 				      (void *)array);
 	return err;
-
 }
 
 /**
