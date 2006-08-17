@@ -1,11 +1,10 @@
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 
+#include "hidb.h"
 #include "hadb.h"
 #include "misc.h"
-#include "hip.h"
 #include "hadb.h"
-#include "hidb.h"
 #include "builder.h"
 #include "cookie.h"
 #include "builder.h"
@@ -14,7 +13,6 @@
 #include "close.h"
 #include "user.h"
 #include "string.h"
-#include "escrow.h"
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;

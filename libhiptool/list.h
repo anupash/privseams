@@ -2,7 +2,6 @@
 #define HIP_LIST_H
 
 #include "kerncompat.h"
-#include "hip.h"
 
 static inline void prefetch(const void *x) {;}
 

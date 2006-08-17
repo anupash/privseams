@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/stat.h> 
 
-#include "hip.h"
 #include "hipconf.h"
 
 

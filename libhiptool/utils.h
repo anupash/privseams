@@ -1,13 +1,13 @@
 #ifndef _HIP_UTILS
 #define _HIP_UTILS
 
+#include "protodefs.h"
+#include "sys/un.h"
+
 /*
  * HIP header and parameter related constants and structures.
  *
  */
-
-#include "hip.h"
-
 
 typedef uint32_t hip_closest_prefix_type_t;
 

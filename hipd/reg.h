@@ -2,7 +2,6 @@
 #define REG_H_
 
 #include "hadb.h"
-#include "hip.h"
 #include "misc.h"
 #include "hashtable.h"
 

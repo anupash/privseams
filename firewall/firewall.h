@@ -13,7 +13,6 @@
 #include <glib/glist.h>
 #include <string.h>
 
-#include "hip.h"
 #include "rule_management.h"
 #include "debug.h"
 #include "helpers.h"

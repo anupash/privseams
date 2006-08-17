@@ -3,7 +3,6 @@
 
 #include "hadb.h"
 #include "misc.h"
-#include "hip.h"
 #include "hadb.h"
 #include "hidb.h"
 #include "builder.h"

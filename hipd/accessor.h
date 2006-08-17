@@ -1,9 +1,7 @@
 #ifndef _HIPD_ACCESSOR
 #define _HIPD_ACCESSOR
 
-#include "hip.h"
 #include "hipd.h"
-
 
 int hip_agent_is_alive();
 int hip_set_opportunistic_mode(const struct hip_common *msg);

@@ -5,10 +5,6 @@
 #  include "rvs.h"
 #endif
 
-#ifdef CONFIG_HIP_ESCROW
-#include "escrow.h"
-#endif // CONFIG_HIP_ESCROW
-
 #include "user.h"
 #include "debug.h"
 #include "beet.h"
@@ -16,7 +12,6 @@
 #include "keymat.h"
 #include "crypto.h"
 #include "builder.h"
-#include "hip.h"
 #include "misc.h"
 #include "hidb.h"
 #include "cookie.h"

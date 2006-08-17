@@ -19,7 +19,6 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "hip.h"
 #include "hashtable.h"
 #include "hadb.h"
 #include "user.h"

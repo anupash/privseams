@@ -20,7 +20,6 @@
 #include "debug.h"
 
 #ifndef __cplusplus
-#include "hip.h"
 #else
 //#include <netinet/in6.h>
 #endif

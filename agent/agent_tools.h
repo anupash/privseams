@@ -13,9 +13,6 @@
 //#include <socket.h>
 #include <sys/types.h>
 
-#include "hip.h"
-
-
 /******************************************************************************/
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus

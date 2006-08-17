@@ -9,10 +9,8 @@
 #  include <sys/socket.h>
 #  include "kerncompat.h"
 #  include "list.h"
-#  include "hipd.h"
 #endif
 
-#include "hip.h"
 #include "debug.h"
 #include "timer.h"
 

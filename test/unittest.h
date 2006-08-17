@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 #include <asm/errno.h>
-#include "hip.h"
 
 #include "builder.h"
 #include "unit.h"

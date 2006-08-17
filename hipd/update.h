@@ -1,7 +1,6 @@
 #ifndef HIP_UPDATE_H
 #define HIP_UPDATE_H
 
-#include "hip.h"
 #include "builder.h"
 #include "hadb.h"
 

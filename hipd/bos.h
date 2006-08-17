@@ -5,7 +5,6 @@
 #include <netdb.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "debug.h"
 #include "beet.h"
 #include "hidb.h"

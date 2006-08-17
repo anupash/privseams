@@ -14,7 +14,7 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "hip.h"
+#include "hidb.h"
 #include "crypto.h"
 #include "cookie.h"
 #include "user.h"

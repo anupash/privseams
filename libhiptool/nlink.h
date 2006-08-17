@@ -9,7 +9,6 @@
 
 #include "builder.h"
 #include "debug.h"
-#include "hip.h"
 #include "hipd.h"
 
 #define HIP_MAX_NETLINK_PACKET 3072

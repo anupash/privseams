@@ -15,7 +15,6 @@
 #include <netinet/in.h>
 #include <string.h>
 
-#include "hip.h"
 #include "user.h"
 #include "debug.h"
 

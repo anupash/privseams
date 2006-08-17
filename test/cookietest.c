@@ -1,4 +1,3 @@
-#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include <sys/time.h>

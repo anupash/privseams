@@ -3,9 +3,8 @@
 
 #include <stdlib.h>
 
-#include "hip.h"
-#include "hipd.h"
 #include "hidb.h"
+#include "hipd.h"
 
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 int hip_scan_retransmissions();

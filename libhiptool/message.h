@@ -9,7 +9,6 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "hip.h"
 #include "icomm.h"
 
 #define HIP_DAEMON_PORT 3030
