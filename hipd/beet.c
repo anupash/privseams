@@ -4,14 +4,14 @@
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
- * @cmd: command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
- * @tmpl_saddr: source IP address
- * @tmpl_daddr: dst IP address
- * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param tmpl_saddr source IP address
+ * @param tmpl_daddr dst IP address
+ * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
