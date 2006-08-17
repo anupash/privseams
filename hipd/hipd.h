@@ -8,6 +8,11 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
+#include <linux/netlink.h>      /* get_my_addresses() support   */
+#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
+#include <sys/un.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
 
 #include "hip.h"
 #include "crypto.h"
@@ -20,13 +25,6 @@
 #include "init.h"
 #include "maintenance.h"
 #include "accessor.h"
-
-#include <linux/netlink.h>      /* get_my_addresses() support   */
-#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
-#include <sys/un.h>
-#include <netinet/udp.h>
-#include <sys/socket.h>
-
 
 #ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"
