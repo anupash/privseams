@@ -16,9 +16,6 @@
 #  include "misc.h"
 #endif
 
-#include "hip.h"
-
-
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

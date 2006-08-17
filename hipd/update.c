@@ -79,16 +79,16 @@ int hip_update_for_each_local_addr(int (*func)(hip_ha_t *entry,
 
 
 /** hip_update_get_sa_keys - Get keys needed by UPDATE
- * @entry: corresponding hadb entry of the peer
- * @keymat_offset_new: value-result parameter for keymat index used
- * @calc_index_new: value-result parameter for the one byte index used
- * @Kn_out: value-result parameter for keymat 
- * @espkey_gl: HIP-gl encryption key
- * @authkey_gl: HIP-gl integrity (HMAC)
- * @espkey_lg: HIP-lg encryption key
- * @authkey_lg: HIP-lg integrity (HMAC)
+ * @param entry corresponding hadb entry of the peer
+ * @param keymat_offset_new value-result parameter for keymat index used
+ * @param calc_index_new value-result parameter for the one byte index used
+ * @param Kn_out value-result parameter for keymat 
+ * @param espkey_gl HIP-gl encryption key
+ * @param authkey_gl HIP-gl integrity (HMAC)
+ * @param espkey_lg HIP-lg encryption key
+ * @param authkey_lg HIP-lg integrity (HMAC)
  *
- * Returns: 0 on success (all encryption and integrity keys are
+ * @return 0 on success (all encryption and integrity keys are
  * successfully stored and @keymat_offset_new, @calc_index_new, and
  * @Kn_out contain updated values). On error < 0 is returned.
  */
@@ -151,7 +151,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 }
 
 /** hip_update_test_locator_addr - test if IPv6 address is to be added into locator.
- * @addr: the IPv6 address to be tested
+ * @param addr the IPv6 address to be tested
  *
  * Currently the following address types are ignored: unspecified
  * (any), loopback, link local, site local, and other not unicast
@@ -275,20 +275,21 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 }
 
 int hip_update_set_preferred(hip_ha_t *entry,
-			      struct hip_peer_addr_list_item *list_item,
-			      struct hip_spi_out_item *spi_out,
-			      int preferred) {
-	list_item->is_preferred =  preferred;
+			     struct hip_peer_addr_list_item *list_item,
+			     struct hip_spi_out_item *spi_out,
+			     void *pref) {
+	int *preferred = pref;
+	list_item->is_preferred =  *preferred;
 	return 0;
 }
 
 /** hip_update_handle_locator_parameter - Process locator parameters in the UPDATE
- * @entry: corresponding hadb entry of the peer
- * @locator: the locator parameter in the packet
+ * @param entry corresponding hadb entry of the peer
+ * @param locator the locator parameter in the packet
  *
  * @entry must be is locked when this function is called.
  *
- * Returns: 0 if the locator parameter was processed successfully,
+ * @return 0 if the locator parameter was processed successfully,
  * otherwise < 0.
  */
 int hip_update_handle_locator_parameter(hip_ha_t *entry,
@@ -299,6 +300,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
+	int zero = 0;
 
 	spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
@@ -311,7 +313,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 	/* Set all peer addresses to unpreferred */
 	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
-					       entry, spi_out, 0), -1);
+					       entry, spi_out, &zero), -1);
 
 	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
 					    entry, locator, &spi), -1,
@@ -337,17 +339,17 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 /**
  * hip_handle_update_established - handle incoming UPDATE packet received in ESTABLISHED state
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address from where the UPDATE was sent
- * @dst_ip: destination IPv6 address where the UPDATE was received
+ * @param entry hadb entry corresponding to the peer
+ * @param msg the HIP packet
+ * @param src_ip source IPv6 address from where the UPDATE was sent
+ * @param dst_ip destination IPv6 address where the UPDATE was received
  *
  * This function handles case 7 in section 8.11 Processing UPDATE
  * packets in state ESTABLISHED of the base draft.
  *
  * @entry must be is locked when this function is called.
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  */
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip,
@@ -502,7 +504,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
 
-	/* TODO: hmac/signature to common functions */
+	/*! \todo hmac/signature to common functions */
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out),
@@ -538,9 +540,9 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 
 
 /** hip_update_finish_rekeying - finish handling of REKEYING state
- * @msg: the HIP packet
- * @entry: hadb entry corresponding to the peer
- * @esp_info: the ESP_INFO param to be handled in the received UPDATE
+ * @param msg the HIP packet
+ * @param entry hadb entry corresponding to the peer
+ * @param esp_info the ESP_INFO param to be handled in the received UPDATE
  * 
  * Performs items described in 8.11.3 Leaving REKEYING state of he
  * base draft-01.
@@ -551,7 +553,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
  * On success new IPsec SAs are created. Old SAs are deleted if the
  * UPDATE was not the multihoming case.
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  */
 int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			       struct hip_esp_info *esp_info)
@@ -765,16 +767,16 @@ int hip_update_do_finish_rekey(hip_ha_t *entry,
 
 /**
  * hip_handle_update_rekeying - handle incoming UPDATE packet received in REKEYING state
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address from where the UPDATE was sent
+ * @param entry hadb entry corresponding to the peer
+ * @param msg the HIP packet
+ * @param src_ip source IPv6 address from where the UPDATE was sent
  *
  * This function handles case 8 in section 8.11 Processing UPDATE
  * packets of the base draft.
  *
  * @entry must be is locked when this function is called.
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  */
 int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 			       struct in6_addr *src_ip)
@@ -835,7 +837,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 
 	/* Send ACK */
 
-	/* TODO: hmac/signature to common functions */
+	/*! \todo hmac/signature to common functions */
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out), -1,
@@ -915,8 +917,9 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_peer_addr_list_item *addr,
 				       struct hip_spi_out_item *spi_out,
-				       struct in6_addr *src_ip){
-	/* TODO: Make this timer based:
+				       void *saddr) {
+	struct in6_addr *src_ip = saddr;
+	/*! \todo Make this timer based:
 	 * 	 If its been too long before active addresses were verfied, 
 	 * 	 	verify them as well
 	 * 	 else 
@@ -981,14 +984,14 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 
 /**
  * hip_update_send_addr_verify - send address verification UPDATE
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address to use in the UPDATE to be sent out
- * @spi: outbound SPI in host byte order
+ * @param entry hadb entry corresponding to the peer
+ * @param msg the HIP packet
+ * @param src_ip source IPv6 address to use in the UPDATE to be sent out
+ * @param spi outbound SPI in host byte order
  *
  * @entry must be is locked when this function is called.
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  :*/
 int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi)
@@ -1011,17 +1014,17 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 }
 
 /** hip_handle_update_plain_locator - handle UPDATE(LOCATOR, SEQ)
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address to use in the UPDATE to be sent out
- * @dst_ip: destination IPv6 address to use in the UPDATE to be sent out
+ * @param entry hadb entry corresponding to the peer
+ * @param msg the HIP packet
+ * @param src_ip source IPv6 address to use in the UPDATE to be sent out
+ * @param dst_ip destination IPv6 address to use in the UPDATE to be sent out
  *
  * @entry must be is locked when this function is called.
  *
  * For each address in the LOCATOR, we reply with ACK and
  * UPDATE(SPI, SEQ, ACK, ECHO_REQUEST)
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  */
 int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 				    struct in6_addr *src_ip,
@@ -1058,17 +1061,17 @@ int set_address_state(hip_ha_t *entry, struct in6_addr *src_ip){
 }
 
 /** hip_handle_update_addr_verify - handle address verification UPDATE
- * @entry: hadb entry corresponding to the peer
- * @msg: the HIP packet
- * @src_ip: source IPv6 address to use in the UPDATE to be sent out
- * @dst_ip: destination IPv6 address to use in the UPDATE to be sent out
+ * @param entry hadb entry corresponding to the peer
+ * @param msg the HIP packet
+ * @param src_ip source IPv6 address to use in the UPDATE to be sent out
+ * @param dst_ip destination IPv6 address to use in the UPDATE to be sent out
  *
  * @entry must be is locked when this function is called.
  *
  * handle UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) or handle UPDATE(SPI,
  * SEQ, ECHO_REQUEST)
  *
- * Returns: 0 if successful, otherwise < 0.
+ * @return 0 if successful, otherwise < 0.
  */
 int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip,
@@ -1459,13 +1462,13 @@ out_err:
 
 /**
  * hip_receive_update - receive UPDATE packet
- * @msg: buffer where the HIP packet is in
+ * @param msg buffer where the HIP packet is in
  *
  * This is the initial function which is called when an UPDATE packet
  * is received. The validity of the packet is checked and then this
  * function acts according to whether this packet is a reply or not.
  *
- * Returns: 0 if successful (HMAC and signature (if needed) are
+ * @return 0 if successful (HMAC and signature (if needed) are
  * validated, and the rest of the packet is handled if current state
  * allows it), otherwise < 0.
  */
@@ -1616,14 +1619,14 @@ int hip_receive_update(struct hip_common *msg,
 }
 
 /** hip_copy_spi_in_addresses - copy addresses to the inbound SPI
- * @src: address list
- * @spi_in: the inbound SPI the addresses are copied to
- * @count: number of addresses in @src
+ * @param src address list
+ * @param spi_in the inbound SPI the addresses are copied to
+ * @param count number of addresses in @src
  *
  * A simple helper function to copy interface addresses to the inbound
  * SPI of. Caller must kfree the allocated memory.
  *
- * Returns: 0 on success, < 0 otherwise.
+ * @return 0 on success, < 0 otherwise.
  */
 int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 			      struct hip_spi_in_item *spi_in,
@@ -1661,8 +1664,8 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 }
 /* update_preferred_address - change preferred address advertised to the peer for this connection
  * 
- * @entry: hadb entry corresponding to the peer
- * @new_pref_addr: the new prefferred address
+ * @param entry hadb entry corresponding to the peer
+ * @param new_pref_addr the new prefferred address
  */
 int update_preferred_address(struct hip_hadb_state *entry, struct in6_addr *new_pref_addr, struct in6_addr *daddr, uint32_t *_spi_in){
 	int err = 0;
@@ -1828,13 +1831,13 @@ out_err:
 
 }	
 /** hip_send_update - send initial UPDATE packet to the peer
- * @entry: hadb entry corresponding to the peer
- * @addr_list: if non-NULL, LOCATOR parameter is added to the UPDATE
- * @addr_count: number of addresses in @addr_list
- * @ifindex: if non-zero, the ifindex value of the interface which caused the event
- * @flags: TODO comment
+ * @param entry hadb entry corresponding to the peer
+ * @param addr_list if non-NULL, LOCATOR parameter is added to the UPDATE
+ * @param addr_count number of addresses in @addr_list
+ * @param ifindex if non-zero, the ifindex value of the interface which caused the event
+ * @param flags TODO comment
  *
- * Returns: 0 if UPDATE was sent, otherwise < 0.
+ * @return 0 if UPDATE was sent, otherwise < 0.
  */
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
@@ -1907,7 +1910,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SP :alue for the SA 0x%x\n", new_spi_in);
 
-		/* TODO: move to rekeying_finish */
+		/*! \todo move to rekeying_finish */
 		if (!mapped_spi) {
 			struct hip_spi_in_item spi_in_data;
 
@@ -2067,10 +2070,10 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 
 /**
  * hip_send_update_all - send UPDATE packet to every peer
- * @addr_list: if non-NULL, LOCATOR parameter is added to the UPDATE
- * @addr_count: number of addresses in @addr_list
- * @ifindex: if non-zero, the ifindex value of the interface which caused the event
- * @flags: flags passed to @hip_send_update
+ * @param addr_list if non-NULL, LOCATOR parameter is added to the UPDATE
+ * @param addr_count number of addresses in @addr_list
+ * @param ifindex if non-zero, the ifindex value of the interface which caused the event
+ * @param flags flags passed to @hip_send_update
  *
  * UPDATE is sent to the peer only if the peer is in established
  * state.
@@ -2085,7 +2088,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
-	/* XX TODO: check UPDATE also with radvd (i.e. same address is added twice). */
+	/*! \todo check UPDATE also with radvd (i.e. same address is added twice). */
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {

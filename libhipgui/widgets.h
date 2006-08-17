@@ -8,6 +8,7 @@
 #ifndef GUI_WIDGETS_H
 #define GUI_WIDGETS_H
 
+#include "ife.h"
 
 /******************************************************************************/
 /* DEFINES */

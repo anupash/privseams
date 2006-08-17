@@ -764,11 +764,11 @@ int set_up_device(char *dev, int up)
 /**
  * xfrm_selector_ipspec - fill port info in the selector.
  * Selector is bound to HITs
- * @sel: pointer to xfrm_selector to be filled in
- * @src_port: Source port
- * @dst_port: Destination port
+ * @param sel pointer to xfrm_selector to be filled in
+ * @param src_port Source port
+ * @param dst_port Destination port
  *
- * Returns: 0
+ * @return 0
  */
 
 int xfrm_selector_upspec(struct xfrm_selector *sel,
@@ -799,11 +799,16 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
 /**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
- * @sel: pointer to xfrm_selector to be filled in
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
+ * @param sel pointer to xfrm_selector to be filled in
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param proto ?
+ * @param hit_prefix ?
+ * @param src_port ?
+ * @param dst_port ?
+ * @param preferred_family ?
  *
- * Returns: 0
+ * @return 0
  */
 int xfrm_fill_selector(struct xfrm_selector *sel,
 		       struct in6_addr *hit_our,
@@ -830,9 +835,9 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 }
 
 /** xfrm_init_lft - Initializes the lft
- * @lft: pointer to the lft struct to be initialized
+ * @param lft pointer to the lft struct to be initialized
  *
- * Returns: 0
+ * @return 0
  */
 int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 

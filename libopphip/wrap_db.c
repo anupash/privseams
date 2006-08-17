@@ -14,15 +14,7 @@
 #include <sys/socket.h>
 #include "hashtable.h"
 #include "hadb.h"
-//#include "hip.h"
-//#include "list.h"
-//#include "debug.h"
 
-//struct hip_opp_pid_socket_entry {
-//pid_t pid;
-//int old_socket;
-//int new_socket;
-//}
 struct hip_opp_socket_entry {
   struct list_head     	next_entry;
   spinlock_t           	lock;

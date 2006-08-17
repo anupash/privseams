@@ -80,8 +80,8 @@
       &nbsp;* netcat6
     </para>
     <para>
-      &nbsp;* latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
-      HIPL documentation)
+      &nbsp;* latex, dvips, dvipdf, fig2dev, doxygen (for building the
+      HIPL source code documentation)
     </para>
     <para>
       &nbsp;* java compiler for "jip" (java hip resolver) if you want to
@@ -106,14 +106,23 @@
   <chapter>
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+     Architectural documentation:
     </para>
     <para>
      &nbsp; % cd hipl/doc
     </para>
     <para>
-      &nbsp;% make design_choices.dvi design_choices.ps design_choices.pdf
+     &nbsp; % make design_choices.dvi design_choices.ps design_choices.pdf
     </para>
+	<para>
+	 Source code documentation:
+	</para>
+	<para>
+	 &nbsp; % cd hipl/doc
+	</para>
+	<para>
+	 &nbsp; % doxygen
+	</para>
   </chapter>
   <chapter>
     <title>Compiling the Kernel</title>

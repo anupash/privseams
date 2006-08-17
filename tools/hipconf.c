@@ -73,9 +73,9 @@ int (*action_handler[])(struct hip_common *, int action,
 /**
  * get_action - map symbolic hipconf action (=add/del) names into numeric
  *              action identifiers
- * @text: the action as a string
+ * @param text the action as a string
  *
- * Returns the numeric action id correspoding to the symbolic @text
+ * @return Returns the numeric action id correspoding to the symbolic text
  */
 int get_action(char *text) {
 	int ret = -1;
@@ -103,9 +103,9 @@ int get_action(char *text) {
 
 /**
  * check_action_argc - get minimum amount of arguments needed to be given to the action
- * @action: action type
+ * @param action action type
  *
- * Returns: how many arguments needs to be given at least
+ * @return how many arguments needs to be given at least
  */
 int check_action_argc(int action) {
 	int count = -1;
@@ -135,9 +135,9 @@ int check_action_argc(int action) {
 
 /**
  * get_type - map symbolic hipconf type (=lhi/map) names to numeric types
- * @text: the type as a string
+ * @param text the type as a string
  *
- * Returns: the numeric type id correspoding to the symbolic @text
+ * @return the numeric type id correspoding to the symbolic text
  */
 int get_type(char *text) {
 	int ret = -1;
@@ -212,7 +212,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 		 "string to address conversion failed\n");
 	
-	/* XX TODO: source HIT selection? */
+	/*! \todo source HIT selection? */
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
@@ -287,15 +287,15 @@ int handle_hi(struct hip_common *msg,
 
 /**
  * handle_map - handle all actions related to "mapping"
- * @msg:    the buffer where the message for kernel will be written
- * @action: the action (add/del) to performed on the given mapping
- * @opt:    an array of pointers to the command line arguments after
+ * @param msg the buffer where the message for kernel will be written
+ * @param action the action (add/del) to performed on the given mapping
+ * @param opt an array of pointers to the command line arguments after
  *          the action and type, the HIT and the corresponding IPv6 address
- * @optc:   the number of elements in the array (=2, HIT and IPv6 address)
+ * @param optc the number of elements in the array (=2, HIT and IPv6 address)
  *
  * Note: does not support "delete" action.
  *
- * Returns: zero on success, else non-zero.
+ * @return zero on success, else non-zero.
  */
 int handle_map(struct hip_common *msg, int action,
 	       const char *opt[], int optc) {
@@ -432,13 +432,13 @@ int handle_rst(struct hip_common *msg, int action,
 
 /**
  * handle_bos - generate a BOS message
- * @msg:    the buffer where the message for kernel will be written
- * @action: the action (add/del) to performed (should be empty)
- * @opt:    an array of pointers to the command line arguments after
+ * @param msg the buffer where the message for kernel will be written
+ * @param action the action (add/del) to performed (should be empty)
+ * @param opt an array of pointers to the command line arguments after
  *          the action and type (should be empty)
- * @optc:   the number of elements in the array (=0, no extra arguments)
+ * @param optc the number of elements in the array (=0, no extra arguments)
  *
- * Returns: zero on success, else non-zero.
+ * @return zero on success, else non-zero.
  */
 int handle_bos(struct hip_common *msg, int action,
 	       const char *opt[], int optc) 
@@ -465,13 +465,13 @@ int handle_bos(struct hip_common *msg, int action,
 
 /**
  * handle_nat - Sends a msg to daemon about NAT setting
- * @msg:    the buffer where the message for daemon will be written
- * @action: the action (add/del) to performed (should be empty)
- * @opt:    an array of pointers to the command line arguments after
+ * @param msg the buffer where the message for daemon will be written
+ * @param action the action (add/del) to performed (should be empty)
+ * @param opt an array of pointers to the command line arguments after
  *          the action and type (should be empty)
- * @optc:   the number of elements in the array (=0, no extra arguments)
+ * @param optc the number of elements in the array (=0, no extra arguments)
  *
- * Returns: zero on success, else non-zero.
+ * @return zero on success, else non-zero.
  */
 
 int handle_nat(struct hip_common *msg, int action,

@@ -3,9 +3,9 @@
 
 /**
  * create_socket - create a socket given the protocol
- * @proto: type of protocol
+ * @param proto type of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
 int create_socket(int proto) {
@@ -32,10 +32,10 @@ int create_socket(int proto) {
 /**
  * create_serversocket - given the port and the protocol
  * it binds the socket and listen to it
- * @proto: type of protocol
- * @port: the kind of protocol
+ * @param proto type of protocol
+ * @param port the kind of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
 int create_serversocket(int proto, int port) {
@@ -83,10 +83,10 @@ int create_serversocket(int proto, int port) {
 /**
  * main_server - given the port and the protocol
  * it handles the functionality of the responder
- * @proto: type of protocol
- * @port: the kind of protocol
+ * @param proto type of protocol
+ * @param port the kind of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
 int main_server(int proto, int port)
@@ -162,10 +162,11 @@ int main_server(int proto, int port)
 
 /**
  * hip_connect_func - allows to connect to the addresses specified by res
- * @proto: type of protocol
- * @res: list containing the peers addresses
+ * @param proto type of protocol
+ * @param res list containing the peers addresses
+ * @param filename ?
  *
- * Returns: 0 on error, the sockid on success
+ * @return 0 on error, the sockid on success
  */
 int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 {
@@ -287,12 +288,12 @@ out_err:
 
 /**
  * main_client_gai - it handles the functionality of the client-gai
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
 int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
 {
@@ -390,12 +391,12 @@ out_err:
 
 /**
  * main_client_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
 int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name)
 {
@@ -523,12 +524,10 @@ out:
 
 /**
  * main_server_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param socktype the type of socket
+ * @param port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
 int main_server_native(int socktype, char *port_name)
 {

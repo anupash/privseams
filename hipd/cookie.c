@@ -45,9 +45,9 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
 
 /**
  * hip_calc_cookie_idx - get an index
- * @ip_i: Initiator's IPv6 address
- * @ip_r: Responder's IPv6 address
- * @hit_i: Initiators HIT
+ * @param ip_i Initiator's IPv6 address
+ * @param ip_r Responder's IPv6 address
+ * @param hit_i Initiators HIT
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
@@ -74,8 +74,8 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
- * @ip_i: Initiator's IPv6
- * @ip_r: Responder's IPv6
+ * @param ip_i Initiator's IPv6
+ * @param ip_r Responder's IPv6
  *
  * Comments for the if 0 code are inlined below. 
  * 
@@ -149,9 +149,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 /**
  * hip_solve_puzzle - Solve puzzle.
- * @puzzle_or_solution: Either a pointer to hip_puzzle or hip_solution structure
- * @hdr: The incoming R1/I2 packet header.
- * @mode: Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
+ * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
+ * @param hdr The incoming R1/I2 packet header.
+ * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
  * The K and I is read from the @puzzle_or_solution. 
  *
@@ -320,10 +320,10 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 
 /**
  * hip_verify_cookie - Verify solution to the puzzle
- * @ip_i: Initiator's IPv6
- * @ip_r: Responder's IPv6
- * @hdr: Received HIP packet
- * @solution: Solution structure
+ * @param ip_i Initiator's IPv6
+ * @param ip_r Responder's IPv6
+ * @param hdr Received HIP packet
+ * @param solution Solution structure
  *
  * First we check that K and I are the same as in the puzzle we sent.
  * If not, then we check the previous ones (since the puzzle might just

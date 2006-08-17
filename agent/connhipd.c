@@ -51,7 +51,7 @@ int connhipd_init(void)
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
 
 	/* Test connection. */
-	hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
+	hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
 	n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
 	HIP_IFEL(n < 0, -1 , "Could not send ping to daemon.\n");
 
@@ -120,10 +120,10 @@ int connhipd_handle_msg(struct hip_common *msg,
 
 	type = hip_get_msg_type(msg);
 
-	if (type == SO_HIP_ADD_DB_HI)
+	if (type == HIP_ADD_DB_HI)
 	{
 		HIP_DEBUG("Message received successfully from daemon with type"
-		          " SO_HIP_ADD_DB_HI (%d).\n", type);
+		          " HIP_ADD_DB_HI (%d).\n", type);
 		n = 0;
 
 		while((param = hip_get_next_param(msg, param)))
@@ -205,7 +205,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		else
 		{
 			HIP_DEBUG("Message rejected, sending reply to daemon.\n");
-			hip_set_msg_type(msg, SO_HIP_I1_REJECT);
+			hip_set_msg_type(msg, HIP_I1_REJECT);
 			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
@@ -325,7 +325,7 @@ int connhipd_thread(void *data)
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
 		max_fd = hip_agent_sock;
-		tv.tv_sec = HIP_SELECT_TIMEOUT;
+		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
 		/* Wait for incoming packets. */
@@ -375,7 +375,7 @@ int connhipd_thread(void *data)
 
 out_err:
 	/* Send quit message to daemon. */
-	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
+	hip_build_user_hdr(msg, HIP_AGENT_QUIT, 0);
 	n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 

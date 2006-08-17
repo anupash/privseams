@@ -2,9 +2,9 @@
 #define REG_H_
 
 #include "hadb.h"
-#include "hip.h"
 #include "misc.h"
 #include "hashtable.h"
+#include "escrow.h"
 
 #define HIP_SERVICE_MAX_COUNT 2
 
