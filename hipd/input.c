@@ -149,8 +149,8 @@ out_err:
 
 /**
  * hip_controls_sane - check for illegal controls
- * @controls: control value to be checked
- * @legal: legal control values to check @controls against
+ * @param controls control value to be checked
+ * @param legal legal control values to check @controls against
  *
  * Controls are given in host byte order.
  *
@@ -168,12 +168,12 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 
 /**
  * hip_verify_hmac - verify HMAC
- * @buffer: the packet data used in HMAC calculation
- * @hmac: the HMAC to be verified
- * @hmac_key: integrity key used with HMAC
- * @hmac_type: type of the HMAC digest algorithm.
+ * @param buffer the packet data used in HMAC calculation
+ * @param hmac the HMAC to be verified
+ * @param hmac_key integrity key used with HMAC
+ * @param hmac_type type of the HMAC digest algorithm.
  *
- * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
+ * @return 0 if calculated HMAC is same as @hmac, otherwise < 0. On
  * error < 0 is returned.
  *
  * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
@@ -205,10 +205,10 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 /**
  * hip_verify_packet_hmac - verify packet HMAC
- * @msg: HIP packet
- * @entry: HA
+ * @param msg HIP packet
+ * @param entry HA
  *
- * Returns: 0 if HMAC was validated successfully, < 0 if HMAC could
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated.
  */
 int hip_verify_packet_hmac(struct hip_common *msg,
@@ -253,10 +253,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 
 /**
  * hip_verify_packet_hmac2 - verify packet HMAC
- * @msg: HIP packet
- * @entry: HA
+ * @param msg HIP packet
+ * @param entry HA
  *
- * Returns: 0 if HMAC was validated successfully, < 0 if HMAC could
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated. Assumes that the hmac includes only the header
  * and host id.
  */
@@ -296,8 +296,8 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 
 /**
  * hip_produce_keying_material - Create shared secret and produce keying material 
- * @msg: the HIP packet received from the peer
- * @ctx: context
+ * @param msg the HIP packet received from the peer
+ * @param ctx context
  *
  * The initial ESP keys are drawn out of the keying material.
  *
@@ -382,7 +382,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
-	/* TODO: 1024 -> hip_get_dh_size ? */
+	/*! \todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
@@ -913,11 +913,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 /**
  * hip_create_i2 - Create I2 packet and send it
- * @ctx: Context that includes the incoming R1 packet
- * @solved_puzzle: Value that solves the puzzle
- * @entry: HA
+ * @param ctx Context that includes the incoming R1 packet
+ * @param solved_puzzle Value that solves the puzzle
+ * @param entry HA
  *
- * Returns: zero on success, non-negative on error.
+ * @return zero on success, non-negative on error.
  */
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
@@ -1241,8 +1241,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 /**
  * hip_handle_r1 - handle incoming R1 packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of R1
  * is started and corresponding I2 is created.
@@ -1405,7 +1405,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 /**
  * hip_receive_r1 - receive an R1 packet
- * @skb: sk_buff that contains the HIP packet
+ * @param skb sk_buff that contains the HIP packet
  *
  * This is the initial function which is called when an R1 packet is
  * received. First we check if we have sent the corresponding I1. If
@@ -1497,10 +1497,10 @@ int hip_receive_r1(struct hip_common *hip_common,
 
 /**
  * hip_create_r2 - Creates and transmits R2 packet.
- * @ctx: Context of processed I2 packet.
- * @entry: HA
+ * @param ctx Context of processed I2 packet.
+ * @param entry HA
  *
- * Returns: 0 on success, < 0 on error.
+ * @return 0 on success, < 0 on error.
  */
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
@@ -1662,8 +1662,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 /**
  * hip_handle_i2 - handle incoming I2 packet
- * @skb: sk_buff where the HIP packet is in
- * @ha: HIP HA corresponding to the peer
+ * @param skb sk_buff where the HIP packet is in
+ * @param ha HIP HA corresponding to the peer
  *
  * This function is the actual point from where the processing of I2
  * is started and corresponding R2 is created.
@@ -2061,7 +2061,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 /**
  * hip_receive_i2 - receive I2 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an I2 packet is
  * received. If we are in correct state, the packet is handled to
@@ -2147,8 +2147,8 @@ int hip_receive_i2(struct hip_common *i2,
 
 /**
  * hip_handle_r2 - handle incoming R2 packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of R2
  * is started.
@@ -2364,14 +2364,14 @@ int hip_handle_i1(struct hip_common *i1,
 
 /**
  * hip_receive_i1 - receive I1 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an I1 packet is
  * received. If we are in correct state we reply with an R1 packet.
  *
  * This function never writes into hip_sdb_state entries.
  *
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
@@ -2456,13 +2456,13 @@ int hip_receive_i1(struct hip_common *hip_i1,
 
 /**
  * hip_receive_r2 - receive R2 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an R1 packet is
  * received. If we are in correct state, the packet is handled to
  * hip_handle_r2() for further processing.
  *
- * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
+ * @return 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
@@ -2519,12 +2519,12 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 /**
  * hip_receive_notify - receive NOTIFY packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an NOTIFY packet is
  * received.
  *
- * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
+ * @return 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notify_saddr,
@@ -2564,7 +2564,7 @@ int hip_receive_notify(struct hip_common *hip_common,
 
 /**
  * hip_receive_bos - receive BOS packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This function is called when a BOS packet is received. We add the
  * received HIT and HOST_ID to the database.
@@ -2590,7 +2590,7 @@ int hip_receive_bos(struct hip_common *bos,
 	HIP_DEBUG("Entered in hip_receive_bos...\n");
 	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
 
-	/* TODO: If received BOS packet from already known sender
+	/*! \todo If received BOS packet from already known sender
            should return right now */
 	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
  	switch(state) {

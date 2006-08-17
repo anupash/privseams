@@ -13,12 +13,12 @@
 
 /**
  * hip_send_i1 - send an I1 packet to the responder
- * @entry: the HIP database entry reserved for the peer
+ * @param entry the HIP database entry reserved for the peer
  *
  * Send an I1 packet to the responder if an IPv6 address for the peer
  * is known.
  *
- * Returns: 0 on success, otherwise < 0 on error.
+ * @return 0 on success, otherwise < 0 on error.
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
@@ -76,7 +76,7 @@ out_err:
 
 /**
  * hip_create_r1 - construct a new R1-payload
- * @src_hit: source HIT used in the packet
+ * @param src_hit source HIT used in the packet
  *
  * Returns 0 on success, or negative on error
  */
@@ -121,7 +121,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
 	HIP_DEBUG("mask=0x%x\n", mask);
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
+	/*! \todo TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
@@ -247,12 +247,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 /**
  * hip_xmit_r1 - transmit an R1 packet to the network
- * @dst_addr: the destination IPv6 address where the R1 should be sent
- * @dst_hit:  the destination HIT of peer
+ * @param dst_addr the destination IPv6 address where the R1 should be sent
+ * @param dst_hit the destination HIT of peer
  *
  * Sends an R1 to the peer and stores the cookie information that was sent.
  *
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, 

@@ -74,8 +74,8 @@ struct hip_work_order *hip_get_work_order(void)
 
 /**
  * hip_insert_work_order_cpu - Insert a work order on a particular CPU's workqueue
- * @hwo: Work order to be inserted
- * @cpu: Cpu number
+ * @param hwo Work order to be inserted
+ * @param cpu Cpu number
  *
  * Adds the work order into @cpu CPU's HIP workqueue. Mainly useful to send messages
  * to another kernel daemons from one kernel daemon or user thread (ioctl etc)
@@ -101,7 +101,7 @@ int hip_insert_work_order_cpu(struct hip_work_order *hwo, int cpu)
 
 /**
  * hip_insert_work_order - Insert work order into the HIP working queue.
- * @hwo: Work order
+ * @param hwo Work order
  *
  * Returns 1 if ok, < 0 if error
  */
@@ -149,7 +149,7 @@ void hip_uninit_workqueue()
 
 /**
  * hip_free_work_order - Free work order structure
- * @hwo: Work order to be freed
+ * @param hwo Work order to be freed
  *
  * Don't use @hwo after this function. The memory is freed.
  */
@@ -164,7 +164,7 @@ void hip_free_work_order(struct hip_work_order *hwo)
 
 /**
  * hip_init_job - Allocate and initialize work order
- * @gfp_mask: Mask for memory allocation
+ * @param gfp_mask Mask for memory allocation
  *
  * Returns work order struct, with all fields zeroed. Or %NULL in case
  * of error.

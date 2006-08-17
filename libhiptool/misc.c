@@ -36,16 +36,16 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 #endif //CONFIG_HIP_OPPORTUNISTIC
 
 /** hip_timeval_diff - calculate difference between two timevalues
- * @t1: timevalue 1
- * @t2: timevalue 2
- * @result: where the result is stored
+ * @param t1 timevalue 1
+ * @param t2 timevalue 2
+ * @param result where the result is stored
  *
  * ** CHECK comments **
  * @result = @t1 - @t2
  *
  * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
  *
- * Returns: 1 if @t1 is equal or later than @t2, else 0.
+ * @return 1 if @t1 is equal or later than @t2, else 0.
  */
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result)
@@ -122,10 +122,10 @@ int maxof(int num_args, ...)
 
 /**
  * hip_hit_is_bigger - compare two HITs
- * @hit1: the first HIT to be compared
- * @hit2: the second HIT to be compared
+ * @param hit1 the first HIT to be compared
+ * @param hit2 the second HIT to be compared
  *
- * Returns: 1 if @hit1 was bigger than @hit2, or else 0
+ * @return 1 if @hit1 was bigger than @hit2, or else 0
  */
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2)
@@ -169,8 +169,8 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
 
 /**
  * hip_hash_spi - calculate a hash from SPI value
- * @key: 32-bit SPI value
- * @range: range of the hash
+ * @param key 32-bit SPI value
+ * @param range range of the hash
  *
  * Returns value in range: 0 <= x < @range
  */
@@ -183,8 +183,8 @@ int hip_hash_spi(const void *key, int range)
 
 /**
  * hip_hash_hit - calculate a hash from a HIT
- * @key: pointer to a HIT
- * @range: range of the hash
+ * @param key pointer to a HIT
+ * @param range range of the hash
  *
  * Returns value in range: 0 <= x < range
  */
@@ -219,10 +219,10 @@ const char *hip_algorithm_to_string(int algo)
 
 /**
  * hip_birthday_success - compare two birthday counters
- * @old_bd: birthday counter
- * @new_bd: birthday counter used when comparing against @old_bd
+ * @param old_bd birthday counter
+ * @param new_bd birthday counter used when comparing against @old_bd
  *
- * Returns: 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
+ * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
  */
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
 {
@@ -232,9 +232,9 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
 
 /**
  * hip_enc_key_length - get encryption key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the encryption key length based on the chosen transform,
+ * @return the encryption key length based on the chosen transform,
  * otherwise < 0 on error.
  */
 int hip_enc_key_length(int tid)
@@ -285,9 +285,9 @@ int hip_hmac_key_length(int tid)
 
 /**
  * hip_transform_key_length - get transform key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the transform key length based on the chosen transform,
+ * @return the transform key length based on the chosen transform,
  * otherwise < 0 on error.
  */
 int hip_transform_key_length(int tid)
@@ -316,9 +316,9 @@ int hip_transform_key_length(int tid)
 
 /**
  * hip_auth_key_length_esp - get authentication key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the authentication key length based on the chosen transform.
+ * @return the authentication key length based on the chosen transform.
  * otherwise < 0 on error.
  */
 int hip_auth_key_length_esp(int tid)
@@ -347,9 +347,9 @@ int hip_auth_key_length_esp(int tid)
 
 /**
  * hip_select_hip_transform - select a HIP transform to use
- * @ht: HIP_TRANSFORM payload where the transform is selected from
+ * @param ht HIP_TRANSFORM payload where the transform is selected from
  *
- * Returns: the first acceptable Transform-ID, otherwise < 0 if no
+ * @return the first acceptable Transform-ID, otherwise < 0 if no
  * acceptable transform was found. The return value is in host byte order.
  */
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
@@ -400,9 +400,9 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 
 /**
  * hip_select_esp_transform - select an ESP transform to use
- * @ht: ESP_TRANSFORM payload where the transform is selected from
+ * @param ht ESP_TRANSFORM payload where the transform is selected from
  *
- * Returns: the first acceptable Suite-ID. otherwise < 0 if no
+ * @return the first acceptable Suite-ID. otherwise < 0 if no
  * acceptable Suite-ID was found.
  */
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
@@ -598,7 +598,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	contents_len = hip_get_param_contents_len(host_id);
 	total_len = hip_get_param_total_len(host_id);
 
-	/* XX TODO: add an extra check for the T val */
+	/*! \todo add an extra check for the T val */
 
 	if (contents_len <= 20) {
 		err = -EMSGSIZE;
@@ -707,10 +707,10 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 
 /**
  * check_and_create_dir - check and create a directory
- * @dirname: the name of the directory
- * @mode:    creation mode for the directory, if it does not exist
+ * @param dirname the name of the directory
+ * @param mode creation mode for the directory, if it does not exist
  *
- * Returns: 0 if successful, or negative on error.
+ * @return 0 if successful, or negative on error.
  */
 int check_and_create_dir(char *dirname, mode_t mode) {
 	int err = 0;

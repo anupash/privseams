@@ -2,6 +2,11 @@
 
 # Reads stdin and converts docbook comments to doxygen format
 
+# I converted the entire source code tree like this:
+# for i in */*.c; do cp $i /tmp/g1; test/docbook2doxygen.pl </tmp/g1 >/tmp/g2; mv /tmp/g2 $i; done
+# -miika
+
+
 use English;
 use strict;
 
