@@ -13,7 +13,6 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#include "hidb.h"
 #include "crypto.h"
 #include "cookie.h"
 #include "user.h"
@@ -22,6 +21,7 @@
 #include "hipconf.h"
 #include "nat.h"
 #include "init.h"
+#include "hidb.h"
 #include "maintenance.h"
 #include "accessor.h"
 
