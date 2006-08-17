@@ -23,24 +23,29 @@
 
 #include "hipconf.h"
 
-const char *usage = "new|add hi default\n"
+const char *usage =
+	"new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
 	"del hi <hit>\n"
-        "add|del map hit ipv6\n"
-        "hip rst all|peer_hit\n"
-        "add rvs hit ipv6\n"
-        "hip bos\n"
+	"add|del map hit ipv6\n"
+	"hip rst all|peer_hit\n"
+	"add rvs hit ipv6\n"
+	"hip bos\n"
 	"hip nat on|off|peer_hit\n"
+	"add|del service service_type\n"
+	"run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_SPAM
-        "get|set|inc|dec|new puzzle all|hit\n"
+	"get|set|inc|dec|new puzzle all|hit\n"
 #else
-        "get|set|inc|dec|new puzzle all\n"
+	"get|set|inc|dec|new puzzle all\n"
 #endif
 
+#ifdef CONFIG_HIP_ESCROW
+	"add|del escrow hit\n"
+#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-        "set opp on|off\n"
+	"set opp on|off\n"
 #endif
-
 ;
 /* hip nat on|off|peer_hit is currently specified. 
  * For peer_hit we should 'on' the nat mapping only when the 
@@ -60,7 +65,9 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_bos,
 	handle_puzzle,
 	handle_nat,
-	handle_opp
+	handle_opp,
+	handle_escrow,
+	handle_service
 };
 
 /**
@@ -89,6 +96,8 @@ int get_action(char *text) {
 		ret = ACTION_DEC;
 	else if (!strcmp("hip", text))
 		ret = ACTION_HIP;
+	else if (!strcmp("run", text))
+		ret = ACTION_RUN;
 	return ret;
 }
 
@@ -114,6 +123,9 @@ int check_action_argc(int action) {
 		count = 2;
 		break;
 	case ACTION_INC:
+		count = 2;
+		break;
+	case ACTION_RUN:
 		count = 2;
 		break;
 	}
@@ -143,11 +155,20 @@ int get_type(char *text) {
 	else if (!strcmp("nat", text))
 		ret = TYPE_NAT;
 	else if (!strcmp("puzzle", text))
-		ret = TYPE_PUZZLE;
+		ret = TYPE_PUZZLE;	
+	else if (!strcmp("service", text))
+		ret = TYPE_SERVICE;	
+	else if (!strcmp("normal", text))
+		ret = TYPE_RUN;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
-                ret = TYPE_OPP; 
+		ret = TYPE_OPP; 
 #endif
+#ifdef CONFIG_HIP_ESCROW
+	else if (!strcmp("escrow", text))
+		ret = TYPE_ESCROW;
+#endif		
+
 	return ret;
 }
 
@@ -163,6 +184,7 @@ int get_type_arg(int action) {
         case ACTION_DEC:
         case ACTION_SET:
         case ACTION_GET:
+        case ACTION_RUN:
                 type_arg = 2;
                 break;
         }
@@ -634,6 +656,94 @@ int handle_opp(struct hip_common *msg, int action,
 	return err;
 }
 
+int handle_escrow(struct hip_common *msg, int action, const char *opt[], 
+					int optc)
+{
+	HIP_DEBUG("hipconf: using escrow");
+	
+	struct in6_addr hit;
+	struct in6_addr ip;
+	
+	int err = 0;
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip), -1,
+		 "string to address conversion failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
+		 "build hdr failed\n");
+out_err:
+	return err;
+	
+}
+
+
+int handle_service(struct hip_common *msg, int action, const char *opt[], 
+					int optc)
+{
+	HIP_DEBUG("hipconf: handling service");
+	
+	int err = 0;
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+	
+	if (strcmp(opt[0], "escrow") == 0) {
+		HIP_DEBUG("Adding escrow service");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
+		 "build hdr failed\n");
+	}
+	
+out_err:
+	return err;
+	
+}
+
+/* Execute new application.
+ */
+int exec_application(int type, char *argv[], int argc)
+{
+	/* Variables. */
+	va_list args;
+	int err = 0;
+
+	err = fork();
+
+	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
+	else if (err > 0) err = 0;
+	else if(err == 0)
+	{
+		HIP_DEBUG("Exec new application.\n");
+		if (type == TYPE_RUN) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
+		else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so:/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
+
+		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");
+		err = execvp(argv[0], argv);
+		if (err != 0)
+		{
+			HIP_DEBUG("Executing new application failed!\n");
+			exit(1);
+		}
+	}
+
+out_err:
+	return (err);
+}
+
+
 /* Parse command line arguments and send the appropiate message to
  * the kernel module
  */
@@ -681,6 +791,12 @@ int main(int argc, char *argv[]) {
 	}
 	_HIP_INFO("type=%d\n", type);
 
+	if (action == ACTION_RUN)
+	{
+		exec_application(type, (const char **)&argv[3], argc - 3);
+		goto out;
+	}
+	
 	msg = malloc(HIP_MAX_PACKET);
 	if (!msg) {
 		HIP_ERROR("malloc failed\n");

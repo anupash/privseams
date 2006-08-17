@@ -18,6 +18,7 @@
 
 #include "hip.h"
 
+
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -88,9 +89,14 @@ int hip_build_param_contents(struct hip_common *msg, const void *contents,
 int hip_build_param(struct hip_common *msg, const void *tlv_common);
 int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 	hip_hdr_err_t err_val);
-int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
+/*int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
 			 struct hip_crypto_key *auth, uint32_t spi, int alg, 
-			 int already_acquired, int direction);
+			 int already_acquired, int direction);*/
+
+int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc);
 
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,
@@ -159,6 +165,16 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
 int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 			int *type_list, int cnt, int request);
+
+int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
+			uint8_t max_lifetime, int *type_list, int cnt);
+
+int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
+			int *type_list, int cnt, int request);
+
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
+			int *type_list, int cnt);
+
 
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request);

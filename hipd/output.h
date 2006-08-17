@@ -13,6 +13,8 @@
 #include "beet.h"
 #include "close.h"
 
+#include "escrow.h"
+
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *src_privkey,

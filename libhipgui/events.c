@@ -133,7 +133,7 @@ void button_event(GtkWidget *warg, gpointer data)
 {
 	/* Variables. */
 	HIT_Group *g;
-	int id = (int)data;
+	int id = (int)data, i;
 	char *ps;
 	static str[1024];
 	time_t rawtime;
@@ -216,14 +216,16 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 		
 	case IDB_SYSTRAY:
-/*		if (GTK_WIDGET(widget(ID_MAINWND)) == TRUE)
+		HIP_DEBUG("systray activate.\n");
+		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
+		if (i == TRUE)
 		{
 			gtk_widget_hide(widget(ID_MAINWND));
 		}
 		else
 		{
 			gtk_widget_show(widget(ID_MAINWND));
-		}*/
+		}
 		break;
 	}
 }

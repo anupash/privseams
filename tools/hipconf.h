@@ -41,7 +41,9 @@
 #define ACTION_INC 6
 #define ACTION_DEC 7
 #define ACTION_GET 8
-#define ACTION_MAX 9 /* exclusive */
+#define ACTION_RUN 9
+
+#define ACTION_MAX 10 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI     1
@@ -52,7 +54,10 @@
 #define TYPE_PUZZLE 6
 #define TYPE_NAT    7
 #define TYPE_OPP    8
-#define TYPE_MAX    9 /* exclusive */
+#define TYPE_ESCROW 9
+#define TYPE_SERVICE 10
+#define TYPE_RUN    11
+#define TYPE_MAX    12 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -68,6 +73,8 @@ int handle_del(struct hip_common *, int type, const char **opt, int optc);
 int handle_nat(struct hip_common *, int type, const char **opt, int optc);
 int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
 int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
 int get_action(char *action);
 int get_type(char *type);
 

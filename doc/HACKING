@@ -388,8 +388,8 @@ and can be found under directory test/packaging/hipl-1.0-deb-src/
 HOW TO CREATE KERNEL PACKAGES
 =============================
 
-Debian
-------
+Debian/Ubuntu
+-------------
 
 To create the package from vanilla sources for Debian distribution
 or any distributions based on Debian (e.g. Ubuntu Dapper Drake),

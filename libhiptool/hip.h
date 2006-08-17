@@ -258,7 +258,8 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 #define SO_HIP_GET_PEER_HIT			36
 #define SO_HIP_SET_PEER_HIT			37
 #define SO_HIP_I1_REJECT			38
-
+#define SO_HIP_ADD_ESCROW			39
+#define SO_HIP_OFFER_ESCROW			40
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
@@ -366,6 +367,10 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
+#define HIP_PARAM_REG_INFO				32781 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_REQUEST			32782 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_RESPONSE			32783 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_FAILED			32784 /* TODO: move somewhere else*/
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -452,6 +457,8 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 #define HIP_RVA_RELAY_ESP_I1          5
 #define HIP_RVA_REDIRECT_I1           6
 
+#define HIP_ESCROW_SERVICE			  7
+
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
 #define PEER_ADDR_STATE_DEPRECATED 3
@@ -471,6 +478,11 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 
 #define SEND_UPDATE_ESP_INFO (1 << 0)
 #define SEND_UPDATE_LOCATOR (1 << 1)
+
+
+#define HIP_ESCROW_OPERATION_ADD	1
+#define HIP_ESCROW_OPERATION_MODIFY	2
+#define HIP_ESCROW_OPERATION_DELETE	3
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
@@ -954,18 +966,46 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
-struct hip_keys {
+
+/******** ESCROW *********/
+
+struct hip_reg_info {
 	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	struct hip_crypto_key enc;	
-	struct hip_crypto_key auth;       
-	uint32_t spi;
-	int alg;
-	int acquired; /* true if @spi was already acquired, like in a retransmission of I2.
-			 This flag is used in order to differentiate the addition of an SA,
-			 meaning either adding or updating --- it was in the KERNEL_STUB */
-	int direction;
+	hip_tlv_len_t  length;
+	uint8_t       min_lifetime;
+	uint8_t       max_lifetime;
 } __attribute__ ((packed));
+
+
+struct hip_reg_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       lifetime;
+} __attribute__ ((packed));
+
+struct hip_reg_failed {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t       failure_type;
+} __attribute__ ((packed));
+
+
+struct hip_keys {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	uint16_t 		operation;
+	uint16_t 		alg_id;
+	uint8_t 		address[16];
+	uint8_t 		hit[16];
+	uint32_t 		spi;
+	uint32_t 		spi_old;
+	uint16_t 		key_len;
+	struct hip_crypto_key enc;
+	//int direction; // ?
+} __attribute__ ((packed));
+
+
+
 
 struct hip_context
 {
@@ -1105,7 +1145,8 @@ struct hip_hadb_state
 	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
-
+	int					escrow_used;
+	struct in6_addr		escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.
