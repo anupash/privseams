@@ -1,10 +1,10 @@
 #ifndef ESCROW_H_
 #define ESCROW_H_
 
+#include "hidb.h"
 #include "hadb.h"
 #include "hashtable.h"
 #include "misc.h"
-#include "hidb.h"
 
 #define HIP_KEA_SIZE 10
 #define HIP_KEA_EP_SIZE 10

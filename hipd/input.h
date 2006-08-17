@@ -181,8 +181,6 @@ int hip_handle_close(struct hip_common *close,
 int hip_handle_close_ack(struct hip_common *close_ack, 
 			 hip_ha_t *entry);	  
 					     
-void hip_hwo_input_destructor(struct hip_work_order *hwo);
-
 int hip_produce_keying_material(struct hip_common *msg,
 				struct hip_context *ctx,
 				uint64_t I,
