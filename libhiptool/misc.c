@@ -41,11 +41,11 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
  * @param result where the result is stored
  *
  * ** CHECK comments **
- * @result = @t1 - @t2
+ * result = t1 - t2
  *
  * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
  *
- * @return 1 if @t1 is equal or later than @t2, else 0.
+ * @return 1 if t1 is equal or later than t2, else 0.
  */
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result)
@@ -125,7 +125,7 @@ int maxof(int num_args, ...)
  * @param hit1 the first HIT to be compared
  * @param hit2 the second HIT to be compared
  *
- * @return 1 if @hit1 was bigger than @hit2, or else 0
+ * @return 1 if hit1 was bigger than hit2, or else 0
  */
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2)
@@ -172,7 +172,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  * @param key 32-bit SPI value
  * @param range range of the hash
  *
- * Returns value in range: 0 <= x < @range
+ * Returns value in range: 0 <= x < range
  */
 int hip_hash_spi(const void *key, int range)
 {
@@ -220,7 +220,7 @@ const char *hip_algorithm_to_string(int algo)
 /**
  * hip_birthday_success - compare two birthday counters
  * @param old_bd birthday counter
- * @param new_bd birthday counter used when comparing against @old_bd
+ * @param new_bd birthday counter used when comparing against old_bd
  *
  * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
  */

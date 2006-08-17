@@ -75,7 +75,7 @@ int (*action_handler[])(struct hip_common *, int action,
  *              action identifiers
  * @param text the action as a string
  *
- * Returns the numeric action id correspoding to the symbolic @text
+ * @return Returns the numeric action id correspoding to the symbolic text
  */
 int get_action(char *text) {
 	int ret = -1;
@@ -137,7 +137,7 @@ int check_action_argc(int action) {
  * get_type - map symbolic hipconf type (=lhi/map) names to numeric types
  * @param text the type as a string
  *
- * @return the numeric type id correspoding to the symbolic @text
+ * @return the numeric type id correspoding to the symbolic text
  */
 int get_type(char *text) {
 	int ret = -1;

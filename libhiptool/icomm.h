@@ -44,9 +44,6 @@
 #define SO_HIP_BOS                              115
 #define SO_HIP_GET_PEER_LIST                    116
 #define SO_HIP_NETLINK_DUMMY                    117
-#define SO_HIP_AGENT_PING                       118
-#define SO_HIP_AGENT_PING_REPLY                 119
-#define SO_HIP_AGENT_QUIT                       120
 #define SO_HIP_CONF_PUZZLE_NEW                  121
 #define SO_HIP_CONF_PUZZLE_GET                  122
 #define SO_HIP_CONF_PUZZLE_SET                  123
@@ -61,10 +58,8 @@
 #define SO_HIP_SET_PSEUDO_HIT                   132 
 #define SO_HIP_QUERY_IP_HIT_MAPPING				133 
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY		134
-#define SO_HIP_ADD_DB_HI						135
 #define SO_HIP_GET_PEER_HIT						136
 #define SO_HIP_SET_PEER_HIT						137
-#define SO_HIP_I1_REJECT						138
 #define SO_HIP_ADD_ESCROW						139
 #define SO_HIP_OFFER_ESCROW						140
 

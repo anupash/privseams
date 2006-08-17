@@ -171,9 +171,9 @@ out_err:
 
 /** hip_create_socket - create a new HIP socket
  * 
- *  @sock	function pointer to socket (used as return value)
- *  @protocol	protocol number
- *  @return 	returns .1 in case of an error, 0 otherwise
+ *  @param sock function pointer to socket (used as return value)
+ *  @param protocol protocol number
+ *  @return returns 1 in case of an error, 0 otherwise
  */ 
 int hip_create_socket(struct socket *sock, int protocol)
 {

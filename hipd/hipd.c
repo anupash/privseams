@@ -273,10 +273,10 @@ int main(int argc, char *argv[]) {
 			
 			msg_type = hip_get_msg_type(hip_msg);
 			
-			if (msg_type == SO_HIP_AGENT_PING)
+			if (msg_type == HIP_AGENT_PING)
 			{
 				memset(hip_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hip_msg, SO_HIP_AGENT_PING_REPLY, 0);
+				hip_build_user_hdr(hip_msg, HIP_AGENT_PING_REPLY, 0);
 				alen = sizeof(hip_agent_addr);                    
 				n = sendto(hip_agent_sock, hip_msg, sizeof(struct hip_common),
 				           0, (struct sockaddr *) &hip_agent_addr, alen);
@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
 					hip_agent_status = 1;
 				}
 			}
-			else if (msg_type == SO_HIP_AGENT_QUIT)
+			else if (msg_type == HIP_AGENT_QUIT)
 			{
 				HIP_DEBUG("Agent quit.\n");
 				hip_agent_status = 0;
@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 					HIP_DEBUG("Agent accepted I1.\n");
 				}
 			}
-			else if (msg_type == SO_HIP_I1_REJECT)
+			else if (msg_type == HIP_I1_REJECT)
 			{
 				hip_ha_t *ha;
 				ha = hip_hadb_find_byhits(&hip_msg->hits, &hip_msg->hitr);

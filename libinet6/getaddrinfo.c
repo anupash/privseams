@@ -1154,7 +1154,10 @@ static struct gaih gaih[] =
 
 /**
  * getaddrinfo - retrieves the info of the specified peer
- * @param msg message containing information about which unit tests to execute
+ * @param name ?
+ * @param service ?
+ * @param hints ?
+ * @param pai ?
  *
  * Process a request for the list of known peers
  *

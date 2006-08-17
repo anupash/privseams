@@ -25,6 +25,12 @@
 #define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
 
+#define HIP_AGENT_PING				70
+#define HIP_AGENT_PING_REPLY		71
+#define HIP_AGENT_QUIT				72
+#define HIP_ADD_DB_HI				73
+#define HIP_I1_REJECT				74
+
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika

@@ -572,7 +572,7 @@ void free_endpointinfo(struct endpointinfo *res)
  *
  * Only one identity at a time can be resolved with this function. If multiple
  * identities are needed, one needs to call this function multiple times
- * with different @basename arguments and link the results together.
+ * with different basename arguments and link the results together.
  *
  * XX FIX: LOCAL RESOLVER SHOULD RESOLVE PUBLIC KEYS, NOT
  * PRIVATE. CHECK THAT IT WORKS WITH THE USER-KEY TEST PROGRAM.

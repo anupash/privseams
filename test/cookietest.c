@@ -10,7 +10,7 @@
  * @param hdr The incoming R1/I2 packet header.
  * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
- * The K and I is read from the @puzzle_or_solution. 
+ * The K and I is read from the puzzle_or_solution. 
  *
  * The J that solves the puzzle is returned, or 0 to indicate an error.
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the

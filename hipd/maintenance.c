@@ -133,7 +133,7 @@ int hip_agent_add_lhits(void)
 	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
 	         "for_each_hi err.\n");
 
-	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
+	err = hip_build_user_hdr(msg, HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));

@@ -164,6 +164,7 @@ int main_server(int proto, int port)
  * hip_connect_func - allows to connect to the addresses specified by res
  * @param proto type of protocol
  * @param res list containing the peers addresses
+ * @param filename ?
  *
  * @return 0 on error, the sockid on success
  */
@@ -523,10 +524,8 @@ out:
 
 /**
  * main_server_native - it handles the functionality of the client-native
- * @param proto type of protocol
  * @param socktype the type of socket
- * @param peer_name the peer name
- * @param peer_port_name the prot number
+ * @param port_name the prot number
  *
  * @return 1 with success, 0 otherwise.
  */

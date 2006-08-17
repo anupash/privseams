@@ -802,6 +802,11 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
  * @param sel pointer to xfrm_selector to be filled in
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
+ * @param proto ?
+ * @param hit_prefix ?
+ * @param src_port ?
+ * @param dst_port ?
+ * @param preferred_family ?
  *
  * @return 0
  */

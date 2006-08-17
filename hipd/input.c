@@ -153,8 +153,7 @@ out_err:
  * @param legal legal control values to check @controls against
  *
  * Controls are given in host byte order.
- *
- * Returns 1 if there are no illegal control values in @controls,
+ *@return Returns 1 if there are no illegal control values in @controls,
  * otherwise 0.
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
