@@ -263,7 +263,7 @@ void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common)
  */
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
 {
-	return hip_get_param_contents_len(dh) - sizeof(uint8_t);
+	return hip_get_param_contents_len(dh) - sizeof(uint8_t) - sizeof(uint16_t);
 }
 
 
@@ -1881,6 +1881,8 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
  * @pubkey:   the public key part of the DH
  * 
  * Returns:   zero on success, or non-zero on error
+ *
+ * XX FIXME: should support multiple D-H values
  */
 int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      uint8_t group_id,
@@ -1892,13 +1894,14 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 
 	HIP_ASSERT(pubkey_len >= sizeof(struct hip_tlv_common));
 
-	HIP_ASSERT(sizeof(struct hip_diffie_hellman) == 5);
+	_HIP_ASSERT(sizeof(struct hip_diffie_hellman) == 5);
 
 	hip_set_param_type(&diffie_hellman, HIP_PARAM_DIFFIE_HELLMAN);
 	hip_calc_generic_param_len(&diffie_hellman,
 				   sizeof(struct hip_diffie_hellman),
 				   pubkey_len);
 	diffie_hellman.group_id = group_id; /* 1 byte, no htons() */
+	diffie_hellman.pub_len = htons(pubkey_len);
 
 	err = hip_build_generic_param(msg, &diffie_hellman,
 				      sizeof(struct hip_diffie_hellman),
