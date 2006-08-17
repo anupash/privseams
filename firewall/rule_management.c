@@ -812,7 +812,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     }
 
   //verify hi => hit
-  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH120);
+  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
   if(!ipv6_addr_cmp(&temp_hit, hit))
     _HIP_DEBUG("parse hi: hi-hit match\n");
   else

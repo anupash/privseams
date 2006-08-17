@@ -17,7 +17,7 @@ sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c preinput.c update.c beet.c hipd.c keymat.c
 hipd_SOURCES += workqueue.c preoutput.c hadb.c oppdb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c spam.c
-hipd_SOURCES += escrow.c reg.c
+hipd_SOURCES += escrow.c reg.c init.c maintenance.c accessor.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a

@@ -34,6 +34,15 @@ static inline int create_new_socket(int type, int protocol)
   return socket(AF_INET6, type, protocol);
 }
 
+static int ipv6_addr_is_hit(const struct in6_addr *hit)
+{
+	hip_closest_prefix_type_t hit_begin;
+	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+	hit_begin = ntohl(hit_begin);
+	hit_begin &= HIP_HIT_TYPE_MASK_INV;
+	return (hit_begin == HIP_HIT_PREFIX);
+}
+
 static inline int hit_is_real_hit(const struct in6_addr *hit) {
 	return ipv6_addr_is_hit(hit) && (hit->s6_addr32[3] != 0);
 }
@@ -51,15 +60,6 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
-
-static int ipv6_addr_is_hit(const struct in6_addr *hit)
-{
-	hip_closest_prefix_type_t hit_begin;
-	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
-	hit_begin = ntohl(hit_begin);
-	hit_begin &= HIP_HIT_TYPE_MASK_INV;
-	return (hit_begin == HIP_HIT_PREFIX);
-}
 
 static inline void set_hit_prefix(struct in6_addr *hit)
 {

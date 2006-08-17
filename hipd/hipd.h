@@ -17,6 +17,9 @@
 #include "netdev.h"
 #include "hipconf.h"
 #include "nat.h"
+#include "init.h"
+#include "maintenance.h"
+#include "accessor.h"
 
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
@@ -46,6 +49,15 @@
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
+
+extern int hip_raw_sock_v6;
+extern int hip_raw_sock_v4;
+extern int hip_nat_sock_udp;
+extern int hip_nat_sock_udp_data;
+
+extern int hip_user_sock;
+extern int hip_agent_sock, hip_agent_status;
+extern struct sockaddr_un hip_agent_addr;
 
 int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
