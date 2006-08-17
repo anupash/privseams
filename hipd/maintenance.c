@@ -20,7 +20,7 @@ int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 
 
-/*
+/**
  * Handle packet retransmissions.
  */
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
@@ -74,7 +74,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	return err;
 }
 
-/*
+/**
  * Find packets, that should be retransmitted.
  */
 int hip_scan_retransmissions()
@@ -88,7 +88,7 @@ int hip_scan_retransmissions()
 	return err;
 }
 
-/*
+/**
  * Send one local HIT to agent, enumerative function.
  */
 int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
@@ -107,7 +107,7 @@ out_err:
 	return (err);
 }
 
-/*
+/**
  * Send local HITs to agent.
  */
 int hip_agent_add_lhits(void)
@@ -161,7 +161,7 @@ out_err:
 	return (err);
 }
 
-/*
+/**
  * Filter packet trough agent.
  */
 int hip_agent_filter(struct hip_common *msg)
@@ -243,7 +243,7 @@ out_err:
 }
 
 
-/*
+/**
  * Insert mapping for local host IP addresses to HITs to DHT.
  */
 void register_to_dht ()
@@ -280,7 +280,7 @@ void register_to_dht ()
 #endif
 }
 
-/*
+/**
  * Some periodic maintenance (?).
  */
 int periodic_maintenance()

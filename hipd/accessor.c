@@ -22,7 +22,7 @@ extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer,
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 
-/*
+/**
  * Determines whether agent is alive, or not.
  *
  * @return non-zero, if agent is alive.
@@ -41,7 +41,7 @@ int hip_agent_is_alive()
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-/*
+/**
  * No description.
  */
 int hip_set_opportunistic_mode(const struct hip_common *msg)
@@ -67,7 +67,7 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
   return err;
 }
 
-/*
+/**
  * No description.
  */
 int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
@@ -174,7 +174,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
    return err;
 }
 
-/*
+/**
  * No description.
  */
 int hip_get_pseudo_hit(struct hip_common *msg)
@@ -222,7 +222,7 @@ int hip_get_pseudo_hit(struct hip_common *msg)
    return err;
 }
 
-/*
+/**
  * No description.
  */
 int hip_query_opportunistic_mode(struct hip_common *msg)
@@ -248,7 +248,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
   return err;
 }
 
-/*
+/**
  * No description.
  */
 int hip_query_ip_hit_mapping(struct hip_common *msg)

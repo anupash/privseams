@@ -14,7 +14,7 @@
 #include "init.h"
 
 
-/*
+/**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec)
@@ -146,7 +146,7 @@ out_err:
 	return err;
 }
 
-/*
+/**
  * Init host IDs.
  */
 int hip_init_host_ids()
@@ -200,7 +200,7 @@ int hip_init_host_ids()
 	return err;
 }
 
-/*
+/**
  * Init raw ipv6 socket.
  */
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
@@ -225,7 +225,7 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 	return err;
 }
 
-/*
+/**
  * Init raw ipv4 socket.
  */
 int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
@@ -252,7 +252,7 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	return err;
 }
 
-/*
+/**
  * Init udp socket for nat usage.
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
@@ -300,7 +300,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 
 }
 
-/*
+/**
  * Init udp socket for nat data usage.
  */
 int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
@@ -344,7 +344,7 @@ int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
 }
 
 
-/*
+/**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
  */
@@ -400,7 +400,7 @@ void hip_exit(int signal)
 	exit(signal);
 }
 
-/*
+/**
  * Initalize random seed.
  */
 int init_random_seed()
@@ -415,7 +415,7 @@ int init_random_seed()
 	return err;
 }
 
-/*
+/**
  * Probe kernel modules.
  */
 void hip_probe_kernel_modules()
