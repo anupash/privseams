@@ -6,13 +6,16 @@
  *
  */
 
+typedef uint32_t hip_closest_prefix_type_t;
 
-#define HIP_HIT_TYPE_MASK_HAA   0x80
-#define HIP_HIT_TYPE_MASK_120   0x11
-#define HIP_HIT_PREFIX          0x1100
-#define HIP_HIT_PREFIX_LEN      8     /* bits */
+#define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
+#define HIP_HIT_TYPE_MASK_100   0x20010070
+#define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000
+#define HIP_HIT_TYPE_MASK_INV   0xfffffff0
+#define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
+#define HIP_HIT_PREFIX_LEN      28     /* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
-#define HIP_HIT_PREFIX_STR      "/8"
+#define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -341,6 +344,7 @@ struct hip_diffie_hellman {
 	hip_tlv_len_t     length;
 
 	uint8_t           group_id;  
+	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
 } __attribute__ ((packed));

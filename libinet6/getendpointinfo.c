@@ -193,7 +193,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     HIP_DEBUG("Private key found from hip_host_id\n");
     
     err = hip_private_host_id_to_hit(host_identity, &ep_hip->id.hit, 
-				     HIP_HIT_TYPE_HASH120);
+				     HIP_HIT_TYPE_HASH100);
     if (err) {
       HIP_ERROR("Failed to calculate HIT from private HI.");
       goto out_err;
@@ -206,7 +206,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
     /*Generate HIT from the public HI */
     err = hip_host_id_to_hit(host_identity, &ep_hip->id.hit, 
-			     HIP_HIT_TYPE_HASH120);
+			     HIP_HIT_TYPE_HASH100);
     
     if (err) {
       HIP_ERROR("Failed to calculate HIT from public key.");
@@ -1581,9 +1581,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
-  
-  
-  
 
   if(algo == HIP_HI_RSA)
     //modified according Laura's suggestion
@@ -1622,7 +1619,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       goto out_err;
     }
     //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1637,7 +1634,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       goto out_err;
     }
     //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
@@ -1810,7 +1807,7 @@ int get_localhost_endpoint(const char *basename,
       goto out_err;
     }
     //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1825,7 +1822,7 @@ int get_localhost_endpoint(const char *basename,
       goto out_err;
     }
     //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;

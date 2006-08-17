@@ -938,11 +938,11 @@ int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
 						HIP_HI_DSA, hostname), -1,
 	     "alloc\n");
     if (is_public) {
-      HIP_IFEL(hip_dsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
+      HIP_IFEL(hip_dsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH100),
 	       -1, "conversion from host id to hit failed\n");
     } else {
       HIP_IFEL(hip_private_dsa_host_id_to_hit(host_id, hit,
-					      HIP_HIT_TYPE_HASH120),
+					      HIP_HIT_TYPE_HASH100),
 	       -1, "conversion from host id to hit failed\n");
     }
   } else /* rsa */ {
@@ -952,11 +952,11 @@ int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
 						HIP_HI_RSA, hostname), -1,
 	     "alloc\n");
     if (is_public) {
-      HIP_IFEL(hip_rsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
+      HIP_IFEL(hip_rsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH100),
 	       -1, "conversion from host id to hit failed\n");
     } else {
       HIP_IFEL(hip_private_rsa_host_id_to_hit(host_id, hit,
-					      HIP_HIT_TYPE_HASH120),
+					      HIP_HIT_TYPE_HASH100),
 	       -1, "conversion from host id to hit failed\n");
     }
   }

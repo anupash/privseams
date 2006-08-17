@@ -43,7 +43,6 @@
 #include "icomm.h"
 #include "ife.h"
 
-
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
 #define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
@@ -93,8 +92,7 @@
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
-//#define HIP_HIT_TYPE_HASH126    1
-#define HIP_HIT_TYPE_HASH120    1
+#define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 
 #define HIP_I1         1

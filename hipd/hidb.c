@@ -267,7 +267,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		       hip_get_param_total_len(host_identity));
 	  
 	  HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
-					      HIP_HIT_TYPE_HASH120),
+					      HIP_HIT_TYPE_HASH100),
 		   -EFAULT,
 		   "Host id to hit conversion failed\n");
 	  
@@ -626,7 +626,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	if (!res)
 		HIP_FREE(tmp);
 	else {
-		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH120);
+		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH100);
 		HIP_HEXDUMP("--->peer_hit:", &peer_hit, 16);
 	}
 	  
