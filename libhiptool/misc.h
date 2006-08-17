@@ -7,24 +7,7 @@
 #  include "kerncompat.h"
 #endif
 
-#if 0
-#include "list.h" /* userspace list implementation */
-#include "hipd.h"
-#include "debug.h"
-#include "hip.h"
-#include "crypto.h"
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <ifaddrs.h>
-//#include <net/if.h>  /* Excluded for RH/Fedora compilation */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <openssl/bn.h>
-
-#endif
+#include "utils.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
@@ -50,10 +33,8 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 	return ((a->s6_addr32[0] | a->s6_addr32[1] | 
 		 a->s6_addr32[2] | a->s6_addr32[3] ) == 0); 
 }
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, 
 				  struct in6_addr *hit, int hit_type);
-#endif
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
 
@@ -69,7 +50,6 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf);
 int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
-int hip_is_hit(const hip_hit_t *hit);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
 int hip_hit_is_bigger(const struct in6_addr *hit1,

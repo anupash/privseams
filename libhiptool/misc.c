@@ -167,13 +167,6 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
 	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
 }
 
-int hip_is_hit(const hip_hit_t *hit) 
-{
-	HIP_DEBUG_IN6ADDR("received hit", (struct in6_addr *)hit);
-	return ipv6_addr_is_hit((struct in6_addr *)hit);
-}
-
-
 /**
  * hip_hash_spi - calculate a hash from SPI value
  * @key: 32-bit SPI value

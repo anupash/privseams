@@ -6,8 +6,6 @@
  *
  */
 
-typedef uint32_t hip_closest_prefix_type_t;
-
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
 #define HIP_HIT_TYPE_MASK_100   0x20010070
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000

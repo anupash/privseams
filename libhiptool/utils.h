@@ -1,13 +1,16 @@
 #ifndef _HIP_UTILS
 #define _HIP_UTILS
 
+#include <sys/un.h>
+#include "protodefs.h"
+
 /*
  * HIP header and parameter related constants and structures.
  *
  */
 
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+typedef uint32_t hip_closest_prefix_type_t;
 
 struct hip_opp_blocking_request_entry {
   struct list_head     	next_entry;
@@ -18,11 +21,6 @@ struct hip_opp_blocking_request_entry {
   struct in6_addr       peer_real_hit;
   struct sockaddr_un    caller;
 };
-typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
-
-#define SET_NULL_HIT(hit)                           \
-        { memset(hit, 0, sizeof(hip_hit_t));        \
-          set_hit_prefix(hit) }
 
 inline static ipv6_addr_is_null(struct in6_addr *ip){
 	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
@@ -59,7 +57,6 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
 	   hit->s6_addr32[2] | (hit->s6_addr32[3]))  == 0);
 }
-#endif // CONFIG_HIP_OPPORTUNISTIC
 
 static inline void set_hit_prefix(struct in6_addr *hit)
 {
@@ -77,6 +74,10 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
 	//printf("*************** %x\n", *hit);
 }
+
+#define SET_NULL_HIT(hit)                           \
+        { memset(hit, 0, sizeof(hip_hit_t));        \
+          set_hit_prefix(hit) }
 
 #define IPV4_TO_IPV6_MAP(in_addr_from, in6_addr_to)                       \
          {(in6_addr_to)->s6_addr32[0] = 0;                                \
