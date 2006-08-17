@@ -48,9 +48,6 @@ int hipd_init(int flush_ipsec)
 	
 #endif
 
-	/* Workqueue relies on an open netlink connection */
-	hip_init_workqueue();
-
 #ifdef CONFIG_HIP_HI3
 	cl_init(i3_config);
 #endif
@@ -366,7 +363,7 @@ void hip_exit(int signal)
 #ifdef CONFIG_HIP_HI3
 	cl_exit();
 #endif
-	//hip_uninit_workqueue();
+
 #ifdef CONFIG_HIP_RVS
         hip_uninit_rvadb();
 #endif

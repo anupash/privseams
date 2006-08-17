@@ -22,7 +22,7 @@
 #include "hip.h"
 #include "hashtable.h"
 #include "hadb.h"
-#include "workqueue.h"
+#include "user.h"
 #include "misc.h"
 #include "xfrm.h"
 

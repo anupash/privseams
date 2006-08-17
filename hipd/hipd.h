@@ -12,7 +12,7 @@
 #include "hip.h"
 #include "crypto.h"
 #include "cookie.h"
-#include "workqueue.h"
+#include "user.h"
 #include "debug.h"
 #include "netdev.h"
 #include "hipconf.h"

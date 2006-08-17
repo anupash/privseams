@@ -12,7 +12,7 @@
 #include "output.h"
 #include "beet.h"
 #include "close.h"
-#include "workqueue.h"
+#include "user.h"
 #include "string.h"
 #include "escrow.h"
 

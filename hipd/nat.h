@@ -5,9 +5,6 @@
 #define HIP_NAT_KEEP_ALIVE_TIME 5
 #define HIP_NAT_NUM_RETRANSMISSION 2
 
-#include "hip.h"
-#include "workqueue.h"
-#include "debug.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +14,10 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+
+#include "hip.h"
+#include "user.h"
+#include "debug.h"
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
