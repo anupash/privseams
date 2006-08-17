@@ -1581,9 +1581,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
-  
-  
-  
 
   if(algo == HIP_HI_RSA)
     //modified according Laura's suggestion

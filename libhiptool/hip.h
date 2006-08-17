@@ -61,13 +61,13 @@ typedef uint32_t hip_closest_prefix_type_t;
 #  define IPV6_2292PKTINFO 2
 #endif
 
-static inline int ipv6_addr_is_hit(const struct in6_addr *hit)
+static int ipv6_addr_is_hit(const struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
 	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
 	hit_begin = ntohl(hit_begin);
 	hit_begin &= HIP_HIT_TYPE_MASK_INV;
-	return (hit_begin & HIP_HIT_PREFIX);
+	return (hit_begin == HIP_HIT_PREFIX);
 }
 
 static inline void set_hit_prefix(struct in6_addr *hit)
