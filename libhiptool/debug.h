@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <netinet/in.h>
 #include "protodefs.h"
+#include "utils.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64

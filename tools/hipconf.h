@@ -31,6 +31,7 @@
 #include "debug.h"
 #include "crypto.h"
 #include "builder.h"
+#include "hipd.h"
 
 /* 0 is reserved */
 #define ACTION_ADD 1
