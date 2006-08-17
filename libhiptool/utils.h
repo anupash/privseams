@@ -1,6 +1,12 @@
 #ifndef _HIP_UTILS
 #define _HIP_UTILS
 
+#ifdef __KERNEL__
+#  include "usercompat.h"
+#else
+#  include "kerncompat.h"
+#endif
+
 #include "protodefs.h"
 #include "sys/un.h"
 
