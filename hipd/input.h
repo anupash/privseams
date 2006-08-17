@@ -29,6 +29,7 @@
 #include "beet.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
+#include "oppdb.h"
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -70,9 +71,9 @@ int hip_verify_network_header(struct hip_common *hip_common,
 
 /**
  * Gets name for a message type
- * @type: the msg type
+ * @param type the msg type
  *
- * Returns: HIP message type as a string.
+ * @return HIP message type as a string.
  */
 static inline const char *hip_msg_type_str(int type) 
 {
@@ -89,8 +90,6 @@ static inline const char *hip_msg_type_str(int type)
 	return str;
 }
 
-extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer,
-					      const hip_hit_t *hit_our);
 int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 					struct in6_addr *src_addr,
 					struct in6_addr *dst_addr,
