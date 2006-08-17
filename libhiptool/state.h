@@ -167,6 +167,25 @@ struct hip_spi_out_item
 	struct in6_addr  preferred_address; /* check */
 };
 
+/* this struct is here instead of hidb.h to avoid some weird compilation
+   warnings */
+struct hip_host_id_entry {
+	/* this needs to be first (list_for_each_entry, list 
+	   head being of different type) */
+	struct list_head next; 
+
+	struct hip_lhi lhi;
+	hip_lsi_t lsi;
+	/* struct in6_addr ipv6_addr[MAXIP]; */
+	struct hip_host_id *host_id; /* allocated dynamically */
+	struct hip_r1entry *r1; /* precreated R1s */
+	/* Handler to call after insert with an argument, return 0 if OK*/
+	int (*insert)(struct hip_host_id_entry *, void **arg);
+	/* Handler to call before remove with an argument, return 0 if OK*/
+	int (*remove)(struct hip_host_id_entry *, void **arg);
+	void *arg;
+};
+
 struct hip_hadb_state
 {
 	struct list_head     next_hit;

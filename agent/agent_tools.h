@@ -12,7 +12,7 @@
 /* INCLUDES */
 //#include <socket.h>
 #include <sys/types.h>
-
+#include <netinet/ip6.h>
 /******************************************************************************/
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus

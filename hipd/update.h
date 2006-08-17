@@ -3,6 +3,7 @@
 
 #include "builder.h"
 #include "hadb.h"
+#include "escrow.h"
 
 /* FIXME: where to include these from in userspace? */
 #  define IPV6_ADDR_ANY           0x0000U

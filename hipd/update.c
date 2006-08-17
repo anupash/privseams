@@ -275,10 +275,11 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 }
 
 int hip_update_set_preferred(hip_ha_t *entry,
-			      struct hip_peer_addr_list_item *list_item,
-			      struct hip_spi_out_item *spi_out,
-			      int preferred) {
-	list_item->is_preferred =  preferred;
+			     struct hip_peer_addr_list_item *list_item,
+			     struct hip_spi_out_item *spi_out,
+			     void *pref) {
+	int *preferred = pref;
+	list_item->is_preferred =  *preferred;
 	return 0;
 }
 
@@ -299,6 +300,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
+	int zero = 0;
 
 	spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
@@ -311,7 +313,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 	/* Set all peer addresses to unpreferred */
 	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
-					       entry, spi_out, 0), -1);
+					       entry, spi_out, &zero), -1);
 
 	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
 					    entry, locator, &spi), -1,
@@ -915,7 +917,8 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_peer_addr_list_item *addr,
 				       struct hip_spi_out_item *spi_out,
-				       struct in6_addr *src_ip){
+				       void *saddr) {
+	struct in6_addr *src_ip = saddr;
 	/*! \todo Make this timer based:
 	 * 	 If its been too long before active addresses were verfied, 
 	 * 	 	verify them as well

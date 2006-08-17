@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
+#include "ife.h"
 
 #ifndef __cplusplus
 #else

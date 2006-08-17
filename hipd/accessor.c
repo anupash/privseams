@@ -163,7 +163,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
     
     goto out_err;
   } else {
-    err = hip_oppdb_add_entry(&phit, hit_our, src);
+    err = hip_oppdb_add_entry(&phit, &hit_our, src);
     if(err){
       HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
       goto out_err;

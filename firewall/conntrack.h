@@ -12,11 +12,10 @@
 #include <glib/gtypes.h>
 #include <glib/gthread.h>
 
-#include "firewall.h"
 #include "rule_management.h"
+#include "firewall.h"
 #include "debug.h"
 #include "firewall.h"
-#include "rule_management.h"
 #include "misc.h"
 #include "hadb.h"
 #include "pk.h"

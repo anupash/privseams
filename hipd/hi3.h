@@ -3,7 +3,8 @@
 #ifdef CONFIG_HIP_HI3
 
 #include "user.h"
-//#include "debug.h"
+#include "hipd.h"
+#include "protodefs.h"
 #include "i3_client_api.h"
 
 #endif /* CONFIG_HIP_HI3 */
