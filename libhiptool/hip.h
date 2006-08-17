@@ -103,7 +103,7 @@ typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
 #define SET_NULL_HIT(hit)                           \
         { memset(hit, 0, sizeof(hip_hit_t));        \
-          *((hip_closest_prefix_type_t *) hit) |= HIP_HIT_PREFIX; }
+          set_hit_prefix(hit) }
 
 inline static ipv6_addr_is_null(struct in6_addr *ip){
 	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 

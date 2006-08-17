@@ -15,7 +15,6 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
   int err = 0;
   u8 digest[HIP_AH_SHA_LEN];
   char *key = (char *) (ip);
-
   unsigned int key_len = sizeof(struct in6_addr);
 
   HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
@@ -25,7 +24,9 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
   
   memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	 sizeof(struct in6_addr));
-  
+
+  hit->s6_addr32[3] = 0; // this separates phit from normal hit
+
   set_hit_prefix(hit);
   
  out_err:

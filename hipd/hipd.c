@@ -666,6 +666,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
   if(err){
     goto out_err;
   }
+  HIP_DEBUG_HIT("phit", &phit);
   HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
   
   err = hip_hadb_add_peer_info(&phit, &dst_ip);
