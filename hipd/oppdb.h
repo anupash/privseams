@@ -27,6 +27,8 @@
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
 
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+
 void hip_init_opp_db();
 //void hip_uninit_opp_db();
 hip_opp_block_t *hip_create_opp_block_entry();
