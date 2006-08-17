@@ -47,6 +47,13 @@ struct ipv6hdr {
 		work_order_hdr.arg3 = hwo_arg3; \
 		} while(0)
 
+/* used by hip worker to announce completion of work order */
+#define KHIPD_OK                   0
+#define KHIPD_QUIT                -1
+#define KHIPD_ERROR               -2
+#define KHIPD_UNRECOVERABLE_ERROR -3
+#define HIP_MAX_SCATTERLISTS       5 // is this enough?
+
 #define HIP_WO_TYPE_INCOMING 1
 #define HIP_WO_TYPE_OUTGOING 2
 #define HIP_WO_TYPE_MSG      3

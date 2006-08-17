@@ -6,6 +6,59 @@
  *
  */
 
+#define HIP_HIT_KNOWN 1
+#define HIP_HIT_ANON  2
+
+#define HIP_ENDPOINT_FLAG_HIT              1
+#define HIP_ENDPOINT_FLAG_ANON             2
+#define HIP_HI_REUSE_UID                   4
+#define HIP_HI_REUSE_GID                   8
+#define HIP_HI_REUSE_ANY                  16
+/* Other flags: keep them to the power of two! */
+
+#define HIP_STATE_NONE              0      /* No state, structure unused */
+#define HIP_STATE_UNASSOCIATED      1      /* ex-E0 */
+#define HIP_STATE_I1_SENT           2      /* ex-E1 */
+#define HIP_STATE_I2_SENT           3      /* ex-E2 */
+#define HIP_STATE_R2_SENT           4
+#define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
+//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+/* when adding new states update debug.c hip_state_str */
+#define HIP_STATE_FAILED            7
+#define HIP_STATE_CLOSING           8
+#define HIP_STATE_CLOSED            9
+#define HIP_STATE_FILTERING			10
+
+#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING 2
+
+#define PEER_ADDR_STATE_UNVERIFIED 1
+#define PEER_ADDR_STATE_ACTIVE 2
+#define PEER_ADDR_STATE_DEPRECATED 3
+
+#define ADDR_STATE_ACTIVE 1
+#define ADDR_STATE_WAITING_ECHO_REQ 2
+
+#define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
+#define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
+#define HIP_LOCATOR_TRAFFIC_TYPE_DATA    2
+
+#define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+
+#define SEND_UPDATE_ESP_INFO (1 << 0)
+#define SEND_UPDATE_LOCATOR (1 << 1)
+
+#define HIP_SPI_DIRECTION_OUT 1
+#define HIP_SPI_DIRECTION_IN 2
+
+#define HIP_ESCROW_OPERATION_ADD	1
+#define HIP_ESCROW_OPERATION_MODIFY	2
+#define HIP_ESCROW_OPERATION_DELETE	3
+
+/* Some default settings for HIPL */
+#define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
+#define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 
 /* todo: remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
@@ -63,6 +116,55 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+};
+
+/* for HIT-SPI hashtable only */
+struct hip_hit_spi {
+	struct list_head list;
+	spinlock_t       lock;
+	atomic_t         refcnt;
+	hip_hit_t        hit_our;
+	hip_hit_t        hit_peer;
+	uint32_t         spi; /* this SPI spi belongs to the HIT hit */
+};
+
+struct hip_spi_in_item
+{
+	struct list_head list;
+	uint32_t         spi;
+	uint32_t         new_spi; /* SPI is changed to this when rekeying */
+        /* ifindex if the netdev to which this is related to */
+	int              ifindex;
+	unsigned long    timestamp; /* when SA was created */
+	int              updating; /* UPDATE is in progress */
+	uint32_t         esp_info_spi_out; /* UPDATE, the stored outbound
+					    * SPI related to the inbound
+					    * SPI we sent in reply (useless?)*/
+	uint16_t         keymat_index; /* advertised keymat index */
+	int              update_state_flags; /* 0x1=received ack for
+						sent SEQ, 0x2=received
+						peer's ESP_INFO,
+						both=0x3=can move back
+						to established */
+        /* the Update ID in SEQ parameter these SPI are related to */
+	uint32_t seq_update_id;
+        /* the corresponding esp_info of peer */
+	struct hip_esp_info stored_received_esp_info;
+        /* our addresses this SPI is related to, reuse struct to ease coding */
+	struct hip_locator_info_addr_item *addresses;
+	int addresses_n; /* number of addresses */
+};
+
+struct hip_spi_out_item
+{
+	struct list_head list;
+	uint32_t         spi;
+	uint32_t         new_spi;   /* spi is changed to this when rekeying */
+	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
+					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
+
+	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
+	struct in6_addr  preferred_address; /* check */
 };
 
 struct hip_hadb_state

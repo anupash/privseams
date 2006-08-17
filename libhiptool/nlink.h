@@ -12,6 +12,8 @@
 #include "hip.h"
 #include "hipd.h"
 
+#define HIP_MAX_NETLINK_PACKET 3072
+
 #ifndef  SOL_NETLINK
 #  define  SOL_NETLINK 270
 #endif
@@ -33,6 +35,21 @@
 
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+
+struct hip_work_order_hdr {
+	int type;
+	int subtype;
+	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
+	int arg1, arg2, arg3;
+};
+
+struct hip_work_order {
+	struct hip_work_order_hdr hdr;
+	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
+	uint32_t seq;
+	struct list_head queue;
+	void (*destructor)(struct hip_work_order *hwo);
+};
 
 struct netdev_address {
 	struct list_head next;

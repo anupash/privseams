@@ -6,6 +6,27 @@
  *
  */
 
+#define HIP_MAX_PACKET 2048
+
+#define HIP_I1         1
+#define HIP_R1         2
+#define HIP_I2         3
+#define HIP_R2         4
+#define HIP_CER        5
+#define HIP_UPDATE     16
+#define HIP_NOTIFY     17
+#define HIP_CLOSE      18
+#define HIP_CLOSE_ACK  19
+//#define HIP_REA 10     /* removed from ietf-hip-mm-00   */
+#define HIP_BOS 11     /* removed from ietf-hip-base-01 */
+//#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
+//#define HIP_ACR 13     /* removed from ietf-hip-mm-00   */
+#define HIP_PSIG 20 /* lightweight HIP pre signature */
+#define HIP_TRIG 21 /* lightweight HIP signature trigger*/
+#define HIP_PAYLOAD 64 /* xxx */
+
+#define HIP_HIT_TYPE_HASH100    1
+#define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
 #define HIP_HIT_TYPE_MASK_100   0x20010070
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000
@@ -91,6 +112,9 @@
 
 #define HIP_TRANSFORM_HIP_MAX           6
 #define HIP_TRANSFORM_ESP_MAX           6
+#define HIP_LOWER_TRANSFORM_TYPE 2048
+#define HIP_UPPER_TRANSFORM_TYPE 4095
+
 
 #define HIP_ESP_RESERVED                0
 #define HIP_ESP_AES_SHA1                1
@@ -135,6 +159,8 @@
    (1024 bits -> 128 bytes) */
 #define HIP_RSA_SIGNATURE_LEN       128
 
+#define HIP_AH_SHA_LEN                 20
+
 #define ENOTHIT                     666
 
 /* Domain Identifiers (to be used in HOST_ID TLV) */
@@ -142,12 +168,42 @@
 #define HIP_DI_FQDN                   1
 #define HIP_DI_NAI                    2
 
-#define HIP_AH_SHA_LEN                 20
+#define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
+#define HIP_HOST_ID_RR_DSA_MAX_T_VAL           8
+#define HIP_HOST_ID_RR_T_SIZE                  1
+#define HIP_HOST_ID_RR_Q_SIZE                  20
+#define HIP_HOST_ID_RR_P_BASE_SIZE             20
+#define HIP_HOST_ID_RR_G_BASE_SIZE             20
+#define HIP_HOST_ID_RR_Y_BASE_SIZE             20
+#define HIP_HOST_ID_RR_DSA_PRIV_KEY_SIZE       20
 
 /* Both for storing peer host ids and localhost host ids */
 #define HIP_HOST_ID_MAX                16
 #define HIP_MAX_KEY_LEN 32 /* max. draw: 256 bits! */
 
+#define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
+#define HIP_VER_MASK                0xF0
+#define HIP_RES_MASK                0x0F 
+
+#define HIP_PSEUDO_CONTROL_REQ_RVS  0x8000
+//#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
+#define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
+#define HIP_CONTROL_CONCEAL_IP               /* still undefined */
+#define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
+#define HIP_CONTROL_NONE            0x0000
+
+/* Rendezvous types */
+#define HIP_RVA_RELAY_I1              1
+#define HIP_RVA_RELAY_I1R1            2
+#define HIP_RVA_RELAY_I1R1I2          3
+#define HIP_RVA_RELAY_I1R1I2R2        4
+#define HIP_RVA_RELAY_ESP_I1          5
+#define HIP_RVA_REDIRECT_I1           6
+#define HIP_ESCROW_SERVICE			  7
+
+/* Returns length of TLV option (contents) with padding. */
+#define HIP_LEN_PAD(len) \
+    ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
 typedef struct in6_addr hip_hit_t;
 typedef struct in_addr hip_lsi_t;

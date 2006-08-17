@@ -7,6 +7,7 @@
  *
  */
 
+#define GOTO_OUT -3
 
 #define HIP_IFE(func, eval) \
 { \
@@ -57,6 +58,14 @@
         }\
 }
 
+/* HIP_IFCS takes a pointer and an command to execute.
+   it executes the command exec if cond != NULL */ 
+#define HIP_IFCS(condition, consequence)\
+	 if( condition ) {	\
+	 	consequence ; 						\
+	 } else {							\
+	 	HIP_ERROR("No state information found.\n");		\
+	 }
 
 #endif /* _HIP_IFE */
 

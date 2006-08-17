@@ -10,6 +10,7 @@
 #include "nlink.h"
 #include "debug.h"
 #include "hip.h"
+#include "icomm.h"
 
 #define HIP_DAEMON_PORT 3030
 int hip_send_recv_daemon_info(struct hip_common *msg);

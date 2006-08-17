@@ -12,6 +12,8 @@
 #include "unit.h"
 #include "debug.h"
 
+#define HIP_UNIT_ERR_LOG_MSG_MAX_LEN 200
+
 #define TEST_SPACE         0
 #define TEST_SUITE         1
 #define TEST_CASE          2
