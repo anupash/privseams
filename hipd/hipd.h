@@ -8,8 +8,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
-#include <linux/netlink.h>      /* get_my_addresses() support   */
-#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
+#include <stdint.h>
 #include <sys/un.h>
 #include <netinet/udp.h>
 #include <sys/socket.h>

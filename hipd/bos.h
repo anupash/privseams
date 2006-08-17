@@ -11,6 +11,7 @@
 #include "hadb.h"
 #include "list.h"
 #include "netdev.h"
+#include "state.h"
 
 int hip_send_bos(const struct hip_common *msg);
 int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_common *bos);

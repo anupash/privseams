@@ -1,15 +1,15 @@
 #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
-#include <sys/socket.h>
-#include <linux/types.h>
-#include <linux/netlink.h>
 #include <stdio.h>
 #include <stdint.h>
 
 #include "builder.h"
 #include "debug.h"
 #include "hipd.h"
+
+/* Keep this one as the last to avoid some weird compilation problems */
+#include <linux/netlink.h>
 
 #define HIP_MAX_NETLINK_PACKET 3072
 

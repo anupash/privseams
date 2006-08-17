@@ -13,6 +13,7 @@
 
 #include "debug.h"
 #include "timer.h"
+#include "cookie.h"
 
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \

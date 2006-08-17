@@ -2,9 +2,9 @@
 #define HIP_KEYMAT_H
 
 #include "list.h"
-
 #include "misc.h"
 #include "crypto.h"
+#include "state.h"
 
 void hip_make_keymat(char *kij, size_t kij_len,
 		     struct hip_keymat_keymat *keymat,
