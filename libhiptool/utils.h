@@ -6,6 +6,7 @@
  *
  */
 
+typedef uint32_t hip_closest_prefix_type_t;
 
 static int ipv6_addr_is_hit(const struct in6_addr *hit)
 {
