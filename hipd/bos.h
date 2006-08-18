@@ -5,13 +5,13 @@
 #include <netdb.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "debug.h"
 #include "beet.h"
 #include "hidb.h"
 #include "hadb.h"
 #include "list.h"
 #include "netdev.h"
+#include "state.h"
 
 int hip_send_bos(const struct hip_common *msg);
 int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_common *bos);

@@ -23,6 +23,12 @@
 #include "debug.h"
 #include "eid_db.h"
 
+#ifndef IPPROTO_HIP
+#  define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
+#endif
+
+#define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
+
 extern struct net_proto_family hip_family_ops;
 extern struct proto_ops inet_stream_ops;
 extern struct proto_ops inet_dgram_ops;

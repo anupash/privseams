@@ -5,9 +5,6 @@
 #define HIP_NAT_KEEP_ALIVE_TIME 5
 #define HIP_NAT_NUM_RETRANSMISSION 2
 
-#include "hip.h"
-#include "workqueue.h"
-#include "debug.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +14,15 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+
+#include "user.h"
+#include "debug.h"
+
+#define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
+#define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
+#define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
+#define UDP_ENCAP_ESPINUDP 2 
+#define UDP_ENCAP_ESPINUDP_NONIKE 1 
 
 extern int hip_nat_sock_udp;
 extern int hip_nat_status;

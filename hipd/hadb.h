@@ -3,7 +3,6 @@
 
 #include "keymat.h"
 #include "pk.h"
-#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
