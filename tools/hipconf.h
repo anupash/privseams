@@ -18,7 +18,6 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
-#include <hip.h>
 #include <sysexits.h>
 
 #include <assert.h>

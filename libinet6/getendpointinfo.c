@@ -77,11 +77,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 #include <ctype.h>
 #include <openssl/dsa.h>
-#include <hip.h>
 
 #include "builder.h"
 #include "crypto.h"
 #include "libinet6/util.h"
+#include "icomm.h"
 
 //#include <ifaddrs.h>
 
@@ -141,7 +141,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
   socklen_t msg_len;
   in_port_t port;
   int socket_fd = 0;
-  int len = 0;
+  unsigned int len = 0;
 
   if (ep_hip->family != PF_HIP) {
     HIP_ERROR("Only HIP endpoints are supported\n");
@@ -307,7 +307,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   in_port_t port = 0;
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
   int socket_fd = 0;
-  int msg_len = 0;
+  unsigned int msg_len = 0;
 
   HIP_DEBUG("\n");
 

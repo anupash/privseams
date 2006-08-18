@@ -14,6 +14,7 @@
 #  include "kerncompat.h"
 #  include "debug.h"
 #  include "misc.h"
+#  include "icomm.h"
 #endif
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
