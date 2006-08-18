@@ -17,6 +17,7 @@
 
 #include "user.h"
 #include "debug.h"
+#include "state.h"
 
 #define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
 #define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
