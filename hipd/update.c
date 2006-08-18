@@ -1395,7 +1395,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	
 	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 	
-	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
+	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				       &addr->address, &entry->local_address,

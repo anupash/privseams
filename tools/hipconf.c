@@ -793,7 +793,7 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
-		exec_application(type, (const char **)&argv[3], argc - 3);
+		exec_application(type, (char **)&argv[3], argc - 3);
 		goto out;
 	}
 	

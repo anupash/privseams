@@ -221,12 +221,12 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                         }
 
                         if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err =
+                                struct nlmsgerr *nl_err =
 					(struct nlmsgerr*)NLMSG_DATA(h);
                                 if (l < sizeof(struct nlmsgerr)) {
                                         HIP_ERROR("Truncated\n");
                                 } else {
-                                        errno = -err->error;
+                                        errno = -nl_err->error;
                                         if (errno == 0) {
                                                 if (answer)
                                                         memcpy(answer, h, h->nlmsg_len);

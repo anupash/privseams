@@ -419,8 +419,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
-int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
-				void *peer_hit)
+int hip_hadb_del_peer_info_wrapper(hip_ha_t *entry, void *peer_hit)
 {
 	hip_hit_t *hit = peer_hit;
 	int err = 0;
@@ -434,11 +433,11 @@ int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
 	return err;
 }
 
-int hip_hadb_del_peer_map(const hip_hit_t *hit)
+int hip_hadb_del_peer_map(hip_hit_t *hit)
 {
 	int err = 0;
 
-	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), 0,
+	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), -1,
 	         "for_each_hi err.\n");	
 	
  out_err:
