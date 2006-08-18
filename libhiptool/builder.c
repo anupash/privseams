@@ -1692,9 +1692,9 @@ int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
 int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
 			uint8_t max_lifetime, int *type_list, int cnt)
 {
-	int err = 0;
-	int i;
 	struct hip_reg_info rinfo;
+	//uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
+	int err = 0, i;
 	uint8_t *array;
 
 	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
@@ -1704,12 +1704,10 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		int value = type_list[i];
+		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
-
-	uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
 
 	rinfo.min_lifetime = min_lifetime;
 	rinfo.max_lifetime = max_lifetime;
@@ -1745,7 +1743,7 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		int value = type_list[i];
+		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
@@ -1782,7 +1780,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		int value = type_list[i];
+		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}

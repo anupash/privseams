@@ -65,6 +65,11 @@ ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
 
 int (*close_dlsym)(int fd);
 
+static inline int create_new_socket(int type, int protocol)
+{
+  return socket(AF_INET6, type, protocol);
+}
+
 hip_hit_t *get_local_hits_wrapper()
 {
   struct gaih_addrtuple *at = NULL;

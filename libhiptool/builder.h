@@ -10,6 +10,7 @@
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
+#  include "protodefs.h"
 #else
 #  include "kerncompat.h"
 #  include "debug.h"
