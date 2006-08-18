@@ -1008,14 +1008,18 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/************ RVA_REQUEST (OPTIONAL) ***************/
 	{
 		/* we've requested RVS, and the peer is rvs capable */
-		int type = HIP_RVA_RELAY_I1;
+		//int type = HIP_RVA_RELAY_I1;
 
-		if (!(entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) ||
-		    !(entry->peer_controls & HIP_CONTROL_RVS_CAPABLE))
-			goto next_echo_resp;
-
-		HIP_IFEL(hip_build_param_rva(i2, 0, &type, 1, 1), -1, 
-			 "Could not build RVA_REQUEST parameter\n");
+		/* Check that we have requested rvs service and that the 
+		   peer is rvs capable. */
+		/*
+		  if (!(entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) ||
+		  !(entry->peer_controls & HIP_CONTROL_RVS_CAPABLE))
+		  goto next_echo_resp;
+		  
+		  HIP_IFEL(hip_build_param_rva(i2, 0, &type, 1, 1), -1, 
+		"Could not build RVA_REQUEST parameter\n");
+		*/
 	}
  next_echo_resp:
 
@@ -1025,20 +1029,54 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 	/********* REG_REQUEST *********/
 	{
-		int type[1] = { 0 };
-		// Check if we want to register to a service	
-		//   - escrow
+		/* Add service types to which the current machine wishes to
+		   register into the outgoing I2 packet. Each service type
+		   should check here if the current machines hadb is in correct
+		   state regarding to registering. This state is set before
+		   sending the I1 packet to peer (registrar). */
+
+		/* This is just a temporary kludge until something more 
+		   elegant is build. TODO: Ratonalize this. */
+		int type_count = 0, request_rvs = 0, request_escrow = 0;
+	
+		/* RVS */
+		/* Check that we have requested rvs service and that the 
+		   peer is rvs capable. */
+		if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
+		    (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
+			request_rvs = 1;
+			type_count++;
+		}
+		
+		/* ESCROW */
 		HIP_KEA *kea;
 		kea = hip_kea_find(&entry->hit_our);
 		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-			type[0] = HIP_ESCROW_SERVICE;
+			request_escrow = 1;
+			type_count++;
 		}
-		if (kea)
-			hip_keadb_put_entry(kea);		
-		if (type[0] != 0) {
-			HIP_DEBUG("Adding reg_request parameter");
-			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
-			 "Could not build REG_REQUEST parameter\n");
+		if (kea) {
+			hip_keadb_put_entry(kea);
+		}
+		
+		int reg_type[type_count];
+
+		if(type_count == 2){
+			reg_type[0] = HIP_ESCROW_SERVICE;
+			reg_type[1] = HIP_RENDEZVOUS_SERVICE;
+		}
+		else if(request_escrow){
+			reg_type[0] = HIP_ESCROW_SERVICE;
+		}
+		else if(request_rvs){
+			reg_type[0] = HIP_RENDEZVOUS_SERVICE;
+		}
+		
+		if (type_count > 0) {
+			HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
+			HIP_IFEL(hip_build_param_reg_request(
+					 i2, 0, reg_type, type_count, 1),
+				 -1, "Could not build REG_REQUEST parameter\n");
 		}
 	}
 #endif //CONFIG_HIP_ESCROW
@@ -1162,12 +1200,9 @@ int hip_handle_r1(struct hip_common *r1,
 
 #ifdef CONFIG_HIP_ESCROW
 
-	HIP_DEBUG("Lauri: Incoming R1 is:.\n");
-	HIP_DUMP_MSG(r1);
-	// Check if there is a REG_INFO parameter and extract service types
-	struct hip_reg_info *reg_info;
-	/* Check if there incoming R1 has a REG_INFO parameter. */
-	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	/* Check if the incoming R1 has a REG_INFO parameter. */
+	struct hip_reg_info *reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+
 	if (reg_info) {
 		
 		int i;
@@ -1187,7 +1222,7 @@ int hip_handle_r1(struct hip_common *r1,
 				 "services due to transient conditions.\n");
 		}
 
-		HIP_DEBUG("The responder offers %d %s.\n", typecount,
+		HIP_DEBUG("Responder offers %d %s.\n", typecount,
 			  (typecount == 1) ? "service" : "services");
 		HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
 
@@ -1214,9 +1249,9 @@ int hip_handle_r1(struct hip_common *r1,
 				}
 
 				break;
-			case HIP_RENDEZVOUS:
+			case HIP_RENDEZVOUS_SERVICE:
 				HIP_INFO("Responder offers rendezvous service.\n");
-				/* Check if we have requested for rendezvous service
+				/* TODO: Check if we have requested for rendezvous service
 				   in I1 packet. */
 				break;
 			default:
@@ -1470,7 +1505,10 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_ESCROW
 
 	{	
-		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
+
+
+		HIP_DUMP_MSG(i2);
+		HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 		struct hip_reg_request *rrequest;
 	
 		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
@@ -1478,12 +1516,13 @@ int hip_create_r2(struct hip_context *ctx,
 
 		if (rrequest) {
  	
-			HIP_DEBUG("Found REG_REQUEST");
+			HIP_DEBUG("Found REG_REQUEST parameter.\n");
 			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
 			
 			int *accepted_requests, *rejected_requests;
 			int request_count, accepted_count, rejected_count;
-		
+			
+			/* - sizeof(rrequest->lifetime) perhaps...*/
 			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
 			accepted_count = hip_check_service_requests(&entry->hit_our, 
 				(types + 1), request_count, &accepted_requests, &rejected_requests);
@@ -1491,7 +1530,7 @@ int hip_create_r2(struct hip_context *ctx,
 			
 			if (accepted_count > 0) {
 				lifetime = rrequest->lifetime;
-				HIP_DEBUG("Building REG_RESPONSE parameter");
+				HIP_DEBUG("Building REG_RESPONSE parameter.\n");
 				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
 					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
 			}
@@ -1503,7 +1542,7 @@ int hip_create_r2(struct hip_context *ctx,
 			}
 		}
 		else {
-			HIP_DEBUG("No REG_REQUEST found in I2");
+			HIP_DEBUG("No REG_REQUEST found in I2.\n");
 		}
 	}	
  next_hmac_2:
@@ -1980,10 +2019,8 @@ int hip_receive_i2(struct hip_common *i2,
 		  struct hip_stateless_info *i2_info)
 {
 	HIP_DEBUG("Lauri: hip_receive_i2() invoked.\n");
-	HIP_DEBUG("\n-- hip_receive_i2 --\n\n");
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
-	HIP_DEBUG("hip_receive_i2\n");
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
 		 "Received NULL receiver HIT in I2. Dropping\n");
 
@@ -2067,9 +2104,7 @@ int hip_handle_r2(struct hip_common *r2,
 {
 	HIP_DEBUG("Lauri: hip_handle_r2() invoked.\n");
 	struct hip_context *ctx = NULL;
-	//struct in6_addr *sender;
  	struct hip_esp_info *esp_info = NULL;
- 	//struct hip_sig *sig = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
@@ -2083,20 +2118,16 @@ int hip_handle_r2(struct hip_common *r2,
 	}
 
 	/* assume already locked entry */
-	HIP_DEBUG("Entering handle_r2\n");
-
 	HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_ATOMIC)), -ENOMEM);
 	memset(ctx, 0, sizeof(struct hip_context));
         ctx->input = r2;
-
-	//	sender = &r2->hits;
 
         /* Verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in, entry->peer_pub), -1, 
 		 "HMAC validation on R2 failed\n");
 	_HIP_DUMP_MSG(r2);
 
-	//	/* Assign a local private key to HA */
+	/* Assign a local private key to HA */
 	//HIP_IFEL(hip_init_our_hi(entry), -EINVAL, "Could not assign a local host id\n");
 
 	/* Signature validation */
@@ -2125,10 +2156,13 @@ int hip_handle_r2(struct hip_common *r2,
 			 &spi_recvd, tfm,
 			 &ctx->esp_out, &ctx->auth_out, 1,
 			 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
-//	if (err == -EEXIST) {
-//		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
-//		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-//	} else 	if (err) {
+	/*
+	if (err == -EEXIST) {
+		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
+		HIP_DEBUG("TODO: what to do ? currently ignored\n");
+	} else 	if (err) {
+	*/
+
 	if (err) {
 		HIP_ERROR("hip_add_sa failed, peer:dst (err=%d)\n", err);
 		HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
@@ -2158,52 +2192,53 @@ int hip_handle_r2(struct hip_common *r2,
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = 0;
 
-//	HIP_DEBUG("clearing the address used during the bex\n");
-//	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
-
+	/*
+	  HIP_DEBUG("clearing the address used during the bex\n");
+	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
+	*/
 
 #ifdef CONFIG_HIP_ESCROW
 	{
 		
-		HIP_DEBUG("Checking r2 for REG_RESPONSE parameter");
+		HIP_DEBUG("Checking R2 for REG_RESPONSE parameter.\n");
 		struct hip_reg_request *rresp;
 		uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
 		rresp = hip_get_param(r2, HIP_PARAM_REG_RESPONSE);
 		uint8_t lifetime;
 		if (!rresp) {
-		 	HIP_DEBUG("No REG_RESPONSE found in r2");
-			HIP_DEBUG("Checking r2 for REG_FAILED parameter");
+		 	HIP_DEBUG("No REG_RESPONSE found in R2.\n");
+			HIP_DEBUG("Checking r2 for REG_FAILED parameter.\n");
 			rresp = hip_get_param(r2, HIP_PARAM_REG_FAILED);
 			if (rresp) {
-				HIP_DEBUG("Registration failed!");
+				HIP_DEBUG("Registration failed!.\n");
 			}	
 			else 
-				HIP_DEBUG("Server not responding to registration attempt");
+				HIP_DEBUG("Server not responding to registration attempt.\n");
 			
 			// TODO: Should the base entry be removed when registration fails?
 			// Registration unsuccessful - removing base keas
 			//hip_kea_remove_base_entries();
-					
+			
 		}
 		else {
-			HIP_DEBUG("Found REG_RESPONSE");
+			HIP_DEBUG("Found REG_RESPONSE parameter.\n");
 			uint8_t *types = (uint8_t *)(hip_get_param_contents(r2, HIP_PARAM_REG_RESPONSE));
 			int typecnt = hip_get_param_contents_len(rresp);
 			int accept = 0;
 			int i;
 			if (typecnt >= 1) { 
 				for (i = 1; i < typecnt; i++) {
-					HIP_DEBUG("Service type: %d", types[i]);
+					HIP_DEBUG("Service type: %d.\n", types[i]);
 					if (types[i] == HIP_ESCROW_SERVICE) {
 						accept = 1;
 					}
 				}	
 			}
 			if (accept) {
-				HIP_DEBUG("Registration to escrow service completed!");
+				HIP_DEBUG("Registration to escrow service completed!\n");
 				HIP_KEA *kea;	
 				HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
-				HIP_DEBUG("Found kea base entry");
+				HIP_DEBUG("Found kea base entry.\n");
 				kea->keastate = HIP_KEASTATE_VALID;
 				hip_keadb_put_entry(kea); 
 			}
@@ -2307,7 +2342,7 @@ int hip_handle_i1(struct hip_common *i1,
 	}
 
 	/* Copy traversed rvsaddresses to an array. RVS addresses are
-	   the addresses in FROM parameters 2...N + source IP in the
+	   the addresses in FROM parameters 2...n + source IP in the
 	   incoming I1 packet. */
 	struct in6_addr rvs_addresses[via_rvs_count + 1];
 	if(from)

@@ -25,7 +25,8 @@ void hip_uninit_services(void)
  * hip_services_add - Adds a service to supported services list.
  * @service_type: The service type to add.
  *  
- * 17.08.2006
+ * Each service can be added only once. Attempt to add a duplicate service
+ * results to a negative return value. 17.08.2006
  * 
  * Returns: zero on success, or negative on error.
  */ 
@@ -59,23 +60,23 @@ int hip_services_add(int service_type)
 	service->state = HIP_SERVICE_INACTIVE;
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
-		service->service_type = 7;
+		service->service_type = HIP_ESCROW_SERVICE;
 		HIP_INFO("Adding escrow service.\n");
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		
 	}
-	else if (service_type == HIP_RENDEZVOUS) {
-		service->service_type = HIP_RENDEZVOUS;
+	else if (service_type == HIP_RENDEZVOUS_SERVICE) {
+		service->service_type = HIP_RENDEZVOUS_SERVICE;
 		HIP_INFO("Adding rendezvous service.\n");
-		strncpy(service->name, "HIP_RENDEZVOUS", 20); 
+		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
 	}
 	/* HIP_RVA_RELAY_I1 outdated ? */
 	else if (service_type == HIP_RVA_RELAY_I1) {
 		service->service_type = 1;
 		HIP_INFO("Adding rvs service.\n");
-		strncpy(service->name, "HIP_RVS_SERVICE", 20); 
+		strncpy(service->name, "RVS", 20); 
 		service->handle_registration = hip_handle_registration;
 	}	
 	else {

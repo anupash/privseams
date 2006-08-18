@@ -364,10 +364,12 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 {
+	HIP_DEBUG_HIT("hip_hadb_add_peer_info(): peer_hit is: ", peer_hit);
+	HIP_DEBUG_IN6ADDR("hip_hadb_add_peer_info(): peer_addr is: ", peer_addr);
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
-	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! add_peer_info=", peer_hit);
+
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 
@@ -388,7 +390,7 @@ int hip_add_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
 	int err = 0;
-	//HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
+	_HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
@@ -407,7 +409,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 	err = hip_hadb_add_peer_info(hit, ip);
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
-	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;

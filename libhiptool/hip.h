@@ -451,7 +451,7 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
    Numbers 0-200 are reserved by IANA.
    Numbers 201 - 255 are reserved by IANA for private use. */
 #define HIP_ESCROW_SERVICE	      7 /* Change to 201? */
-#define HIP_RENDEZVOUS	              8 /* Change to 1. */
+#define HIP_RENDEZVOUS_SERVICE	      8 /* Change to 1. */
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
