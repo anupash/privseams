@@ -8,10 +8,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-//#include <sys/socket.h>
 #include <netinet/in.h>
-//#include <arpa/inet.h>
-#include "hip.h"
+#include "protodefs.h"
+#include "utils.h"
 
 /* includes filename, line number and max(debug_prefix[]) */
 #define DEBUG_PREFIX_MAX  64
@@ -82,6 +81,7 @@
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
 #define HIP_DEBUG_LSI(str, hit)  hip_print_lsi(str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(str, in)
+#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(str, key, key_len)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */

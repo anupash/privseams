@@ -687,7 +687,7 @@ int hit_db_del_rgroup(char *name)
 	/* Variables. */
 	int err = -1;
 
-	/* XX TODO: Implement! */
+	/*! \todo Implement! */
 	HIP_DEBUG("Group delete not implemented yet!!!\n");
 	
 out_err:
@@ -821,7 +821,7 @@ int hit_db_del_local(char *name)
 	/* Variables. */
 	int err = -1;
 
-	/* XX TODO: Implement! */
+	/*! \todo Implement! */
 	HIP_DEBUG("Local HIT delete not implemented yet!!!\n");
 	
 out_err:

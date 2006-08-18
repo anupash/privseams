@@ -18,9 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
+#include "ife.h"
 
 #ifndef __cplusplus
-#include "hip.h"
 #else
 //#include <netinet/in6.h>
 #endif

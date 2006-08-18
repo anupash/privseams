@@ -149,7 +149,7 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
-	/* XX TODO: required by the native HIP API */
+	/*! \todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
   	//hip_send_daemon_info(msg);
@@ -160,7 +160,8 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 			      struct sockaddr_un *saddr)
 {
-	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total, len;
+	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
+	unsigned int len;
 	
 	len = sizeof(*saddr);
 	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
@@ -200,13 +201,13 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
  * allocates memory for buffers and nested structs. Receives
  * a message from socket and fills the hip_common struct with the
  * values from this message.
- * @socket: socket to read from
- * @hip_common: is returned as filled struct
+ * @param socket socket to read from
+ * @param hip_common is returned as filled struct
  * @read addr:  flag whether the adresses should be read from the received packet
  *              1:read addresses, 0:don't read addresses
- * @saddr:      is used as return value for the sender address of the received message
+ * @param saddr is used as return value for the sender address of the received message
  *              (if read_addr is set to 1)
- * @daddr:      is used as return value for the destination address of the received message
+ * @param daddr is used as return value for the destination address of the received message
  *              (if read_addr is set to 1)
  *
  * Returns -1 in case of an error, >0 otherwise.

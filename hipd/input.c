@@ -19,14 +19,141 @@ extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
+/*
+ * function checksum_packet() 
+ *
+ * Calculates the checksum of a HIP packet with pseudo-header
+ * src and dst are IPv4 or IPv6 addresses in network byte order
+ *
+ * Checksumming is from Boeing's HIPD.
+ */
+u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
+{
+	u16 checksum = 0;
+	unsigned long sum = 0;
+	int count = 0, length = 0;
+	unsigned short *p = NULL; /* 16-bit */
+	struct pseudo_header pseudoh;
+	struct pseudo_header6 pseudoh6;
+	u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	struct hip_common *hiph = (struct hip_common *) data;
+	
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+		
+		memset(&pseudoh, 0, sizeof(struct pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = IPPROTO_HIP;
+		length = (hiph->payload_len + 1) * 8;
+		pseudoh.packet_length = htons(length);
+		
+		count = sizeof(struct pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+		
+		memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = (hiph->payload_len + 1) * 8;
+		pseudoh6.packet_length = htonl(length);
+		pseudoh6.next_hdr = IPPROTO_HIP;
+                
+		count = sizeof(struct pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+	
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+
+	/* one's complement sum 16-bit words of data */
+	HIP_DEBUG("checksumming %d bytes of data.\n", length);
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+	
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = ~sum;
+	
+	return(checksum);
+}
+
+int hip_verify_network_header(struct hip_common *hip_common,
+			      struct sockaddr *src, struct sockaddr *dst, int len)
+{
+	int err = 0;
+
+        /* Currently no support for piggybacking */
+        HIP_IFEL(len != hip_get_msg_total_len(hip_common), -EINVAL, 
+		 "Invalid HIP packet length. Dropping\n");
+        HIP_IFEL(hip_common->payload_proto != IPPROTO_NONE, -EOPNOTSUPP,
+		 "Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n",
+		 hip_common->payload_proto);
+	HIP_IFEL(hip_common->ver_res & HIP_VER_MASK != HIP_VER_RES, -EPROTOTYPE,
+		 "Invalid version in received packet. Dropping\n");
+	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hitr) && !ipv6_addr_any(&hip_common->hitr),
+		 -EAFNOSUPPORT, "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
+	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a NULL in HIT-sender. Dropping\n");
+
+        /*
+         * XX FIXME: handle the RVS case better
+         */
+        if (ipv6_addr_any(&hip_common->hitr)) {
+                /* Required for e.g. BOS */
+                HIP_DEBUG("Received opportunistic HIT\n");
+	} else {
+#ifdef CONFIG_HIP_RVS
+                HIP_DEBUG("Received HIT is ours or we are RVS\n");
+#else
+		HIP_IFEL(!hip_hadb_hit_is_our(&hip_common->hitr), -EFAULT,
+			 "Receiver HIT is not ours\n");
+#endif
+	}
+
+        HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
+		 "Dropping HIP packet. Loopback not supported.\n");
+
+        /* Check checksum. */
+	HIP_IFEL(checksum_packet((char*)hip_common, src, dst), -EBADMSG, 
+		 "HIP checksum failed.\n");
+	
+out_err:
+        return err;
+}
+
 /**
  * hip_controls_sane - check for illegal controls
- * @controls: control value to be checked
- * @legal: legal control values to check @controls against
+ * @param controls control value to be checked
+ * @param legal legal control values to check @controls against
  *
  * Controls are given in host byte order.
- *
- * Returns 1 if there are no illegal control values in @controls,
+ *@return Returns 1 if there are no illegal control values in @controls,
  * otherwise 0.
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
@@ -40,12 +167,12 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 
 /**
  * hip_verify_hmac - verify HMAC
- * @buffer: the packet data used in HMAC calculation
- * @hmac: the HMAC to be verified
- * @hmac_key: integrity key used with HMAC
- * @hmac_type: type of the HMAC digest algorithm.
+ * @param buffer the packet data used in HMAC calculation
+ * @param hmac the HMAC to be verified
+ * @param hmac_key integrity key used with HMAC
+ * @param hmac_type type of the HMAC digest algorithm.
  *
- * Returns: 0 if calculated HMAC is same as @hmac, otherwise < 0. On
+ * @return 0 if calculated HMAC is same as @hmac, otherwise < 0. On
  * error < 0 is returned.
  *
  * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
@@ -77,10 +204,10 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 /**
  * hip_verify_packet_hmac - verify packet HMAC
- * @msg: HIP packet
- * @entry: HA
+ * @param msg HIP packet
+ * @param entry HA
  *
- * Returns: 0 if HMAC was validated successfully, < 0 if HMAC could
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated.
  */
 int hip_verify_packet_hmac(struct hip_common *msg,
@@ -125,10 +252,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 
 /**
  * hip_verify_packet_hmac2 - verify packet HMAC
- * @msg: HIP packet
- * @entry: HA
+ * @param msg HIP packet
+ * @param entry HA
  *
- * Returns: 0 if HMAC was validated successfully, < 0 if HMAC could
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
  * not be validated. Assumes that the hmac includes only the header
  * and host id.
  */
@@ -168,8 +295,8 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 
 /**
  * hip_produce_keying_material - Create shared secret and produce keying material 
- * @msg: the HIP packet received from the peer
- * @ctx: context
+ * @param msg the HIP packet received from the peer
+ * @param ctx context
  *
  * The initial ESP keys are drawn out of the keying material.
  *
@@ -192,6 +319,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
 	uint16_t esp_keymat_index, esp_default_keymat_index;
+	struct hip_diffie_hellman * dhf;
 
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
@@ -253,19 +381,22 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
-	/* TODO: 1024 -> hip_get_dh_size ? */
+	/*! \todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
 	
-	struct hip_diffie_hellman * dhf;
 	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
+
+	HIP_IFEL((htons(dhf->pub_len) != hip_get_diffie_hellman_param_public_value_len(dhf)), -1,
+		 "Bad DHF len or multiple DHF not supported\n");
 	
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
 							      dhf->group_id,
-							      hip_get_param_contents_len(dhf) - 1, 
-							      dh_shared_key, dh_shared_len)) < 0,
+							      ntohs(dhf->pub_len), 
+							      dh_shared_key,
+							      dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	_HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
@@ -469,7 +600,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 	int err = 0;
 	
 	HIP_DEBUG_HIT("src_addr=", src_addr);
-	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH120);
+	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH100);
 	if(err){
 	  HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
 	  goto out_err;
@@ -781,11 +912,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 /**
  * hip_create_i2 - Create I2 packet and send it
- * @ctx: Context that includes the incoming R1 packet
- * @solved_puzzle: Value that solves the puzzle
- * @entry: HA
+ * @param ctx Context that includes the incoming R1 packet
+ * @param solved_puzzle Value that solves the puzzle
+ * @param entry HA
  *
- * Returns: zero on success, non-negative on error.
+ * @return zero on success, non-negative on error.
  */
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
@@ -1014,6 +1145,30 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  next_echo_resp:
 
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	
+	/********* REG_REQUEST *********/
+	{
+		int type[1] = { 0 };
+		// Check if we want to register to a service	
+		//   - escrow
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			type[0] = HIP_ESCROW_SERVICE;
+		}
+		if (kea)
+			hip_keadb_put_entry(kea);		
+		if (type[0] != 0) {
+			HIP_DEBUG("Adding reg_request parameter");
+			HIP_IFEL(hip_build_param_reg_request(i2, 0, type, 1, 1), -1, 
+			 "Could not build REG_REQUEST parameter\n");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
+
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -1048,6 +1203,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
+	
+
+
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -1066,6 +1224,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 
+	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
 								r1_info->dst_port, i2,
 						     entry, 0), -1);
@@ -1081,8 +1240,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 /**
  * hip_handle_r1 - handle incoming R1 packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of R1
  * is started and corresponding I2 is created.
@@ -1127,6 +1286,54 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
 	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
+
+#ifdef CONFIG_HIP_ESCROW
+
+	// Check if there is a reg_info parameter and extract service types
+	struct hip_reg_info *reg_info;
+	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	if (reg_info) {
+		 
+		uint8_t *types = (uint8_t *)(hip_get_param_contents(r1, HIP_PARAM_REG_INFO));
+		int typecnt = hip_get_param_contents_len(reg_info);
+		HIP_DEBUG("The responder offers %d services", typecnt);
+
+		// Functionality regarding escrow service		
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			HIP_DEBUG("Registering to escrow service");
+		
+			int accept = 0;
+			int i;
+			if (typecnt >= 2) { 
+				for (i = 2; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE)
+						accept = 1;
+				}
+			}
+			if (!accept)
+				kea->keastate = HIP_KEASTATE_INVALID;
+			else
+				HIP_DEBUG("Escrow service available!");		 
+		} 
+		else {
+			HIP_DEBUG("Not doing escrow registration");
+		}
+		
+	}
+	else {
+		// No reg_info found. Cancelling registration attempt.
+		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		if (kea)
+			kea->keastate = HIP_KEASTATE_INVALID;
+		
+	}
+	
+#endif //CONFIG_HIP_ESCROW
 
 	/* R1 generation check */
 
@@ -1197,7 +1404,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 /**
  * hip_receive_r1 - receive an R1 packet
- * @skb: sk_buff that contains the HIP packet
+ * @param skb sk_buff that contains the HIP packet
  *
  * This is the initial function which is called when an R1 packet is
  * received. First we check if we have sent the corresponding I1. If
@@ -1289,10 +1496,10 @@ int hip_receive_r1(struct hip_common *hip_common,
 
 /**
  * hip_create_r2 - Creates and transmits R2 packet.
- * @ctx: Context of processed I2 packet.
- * @entry: HA
+ * @param ctx Context of processed I2 packet.
+ * @param entry HA
  *
- * Returns: 0 on success, < 0 on error.
+ * @return 0 on success, < 0 on error.
  */
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
@@ -1307,6 +1514,9 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+#ifdef CONFIG_HIP_ESCROW
+	int create_kea = 0;
+#endif //CONFIG_HIP_ESCROW
 
 	HIP_DEBUG("\n");
 
@@ -1354,6 +1564,49 @@ int hip_create_r2(struct hip_context *ctx,
  	}
  next_hmac:
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+
+	{	
+		HIP_DEBUG("Checking i2 for REG_REQUEST parameter");
+		struct hip_reg_request *rrequest;
+	
+		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
+		uint8_t lifetime;
+
+		if (rrequest) {
+ 	
+			HIP_DEBUG("Found REG_REQUEST");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+			
+			int *accepted_requests, *rejected_requests;
+			int request_count, accepted_count, rejected_count;
+		
+			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
+			accepted_count = hip_check_service_requests(&entry->hit_our, 
+				(types + 1), request_count, &accepted_requests, &rejected_requests);
+			rejected_count = request_count - accepted_count;
+			
+			if (accepted_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_RESPONSE parameter");
+				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
+					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			}
+			if (rejected_count > 0) {
+				lifetime = rrequest->lifetime;
+				HIP_DEBUG("Building REG_FAILED parameter");
+				HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
+					rejected_count), -1, "Building of REG_FAILED failed\n");
+			}
+		}
+		else {
+			HIP_DEBUG("No REG_REQUEST found in I2");
+		}
+	}	
+ next_hmac_2:
+#endif //CONFIG_HIP_ESCROW
+
  	/*********** HMAC2 ************/
 	{
 		struct hip_crypto_key hmac;
@@ -1383,6 +1636,19 @@ int hip_create_r2(struct hip_context *ctx,
 		HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	}
 #endif
+
+#ifdef CONFIG_HIP_ESCROW
+	// Add escrow association to database
+	HIP_KEA *kea;	
+	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
+	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
+	kea->keastate = HIP_KEASTATE_VALID;
+	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+		"Error while inserting KEA to keatable");
+	HIP_DEBUG("Added kea entry");
+	
+#endif //CONFIG_HIP_ESCROW
+
  out_err:
 	if (r2)
 		HIP_FREE(r2);
@@ -1395,8 +1661,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 /**
  * hip_handle_i2 - handle incoming I2 packet
- * @skb: sk_buff where the HIP packet is in
- * @ha: HIP HA corresponding to the peer
+ * @param skb sk_buff where the HIP packet is in
+ * @param ha HIP HA corresponding to the peer
  *
  * This function is the actual point from where the processing of I2
  * is started and corresponding R2 is created.
@@ -1794,7 +2060,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 /**
  * hip_receive_i2 - receive I2 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an I2 packet is
  * received. If we are in correct state, the packet is handled to
@@ -1880,8 +2146,8 @@ int hip_receive_i2(struct hip_common *i2,
 
 /**
  * hip_handle_r2 - handle incoming R2 packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of R2
  * is started.
@@ -1990,6 +2256,55 @@ int hip_handle_r2(struct hip_common *r2,
 //	HIP_DEBUG("clearing the address used during the bex\n");
 //	ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 
+
+#ifdef CONFIG_HIP_ESCROW
+	{
+		
+		HIP_DEBUG("Checking r2 for REG_RESPONSE parameter");
+		struct hip_reg_request *rresp;
+		uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
+		rresp = hip_get_param(r2, HIP_PARAM_REG_RESPONSE);
+		uint8_t lifetime;
+		if (!rresp) {
+		 	HIP_DEBUG("No REG_RESPONSE found in r2");
+			HIP_DEBUG("Checking r2 for REG_FAILED parameter");
+			rresp = hip_get_param(r2, HIP_PARAM_REG_FAILED);
+			if (rresp) {
+				HIP_DEBUG("Registration failed!");
+			}	
+			else 
+				HIP_DEBUG("Server not responding to registration attempt");
+			
+			// TODO: Should the base entry be removed when registration fails?
+			// Registration unsuccessful - removing base keas
+			//hip_kea_remove_base_entries();
+					
+		}
+		else {
+			HIP_DEBUG("Found REG_RESPONSE");
+			uint8_t *types = (uint8_t *)(hip_get_param_contents(r2, HIP_PARAM_REG_RESPONSE));
+			int typecnt = hip_get_param_contents_len(rresp);
+			int accept = 0;
+			int i;
+			if (typecnt >= 1) { 
+				for (i = 1; i < typecnt; i++) {
+					HIP_DEBUG("Service type: %d", types[i]);
+					if (types[i] == HIP_ESCROW_SERVICE) {
+						accept = 1;
+					}
+				}	
+			}
+			if (accept) {
+				HIP_DEBUG("Registration to escrow service completed!");
+				HIP_KEA *kea;	
+				HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
+				HIP_DEBUG("Found kea base entry");
+				kea->keastate = HIP_KEASTATE_VALID;
+				hip_keadb_put_entry(kea); 
+			}
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
 	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
@@ -2048,14 +2363,14 @@ int hip_handle_i1(struct hip_common *i1,
 
 /**
  * hip_receive_i1 - receive I1 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an I1 packet is
  * received. If we are in correct state we reply with an R1 packet.
  *
  * This function never writes into hip_sdb_state entries.
  *
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_receive_i1(struct hip_common *hip_i1,
 		   struct in6_addr *i1_saddr,
@@ -2140,13 +2455,13 @@ int hip_receive_i1(struct hip_common *hip_i1,
 
 /**
  * hip_receive_r2 - receive R2 packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an R1 packet is
  * received. If we are in correct state, the packet is handled to
  * hip_handle_r2() for further processing.
  *
- * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
+ * @return 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
@@ -2203,12 +2518,12 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 /**
  * hip_receive_notify - receive NOTIFY packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This is the initial function which is called when an NOTIFY packet is
  * received.
  *
- * Returns: 0 if R2 was processed succesfully, < 0 otherwise.
+ * @return 0 if R2 was processed succesfully, < 0 otherwise.
  */
 int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notify_saddr,
@@ -2248,7 +2563,7 @@ int hip_receive_notify(struct hip_common *hip_common,
 
 /**
  * hip_receive_bos - receive BOS packet
- * @skb: sk_buff where the HIP packet is in
+ * @param skb sk_buff where the HIP packet is in
  *
  * This function is called when a BOS packet is received. We add the
  * received HIT and HOST_ID to the database.
@@ -2274,7 +2589,7 @@ int hip_receive_bos(struct hip_common *bos,
 	HIP_DEBUG("Entered in hip_receive_bos...\n");
 	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
 
-	/* TODO: If received BOS packet from already known sender
+	/*! \todo If received BOS packet from already known sender
            should return right now */
 	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
  	switch(state) {
