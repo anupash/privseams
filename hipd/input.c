@@ -978,7 +978,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
-	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
 
@@ -1036,7 +1035,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   sending the I1 packet to peer (registrar). */
 
 		/* This is just a temporary kludge until something more 
-		   elegant is build. TODO: Ratonalize this. */
+		   elegant is build. TODO: Rationalize this. */
 		int type_count = 0, request_rvs = 0, request_escrow = 0;
 	
 		/* RVS */
@@ -1059,6 +1058,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			hip_keadb_put_entry(kea);
 		}
 		
+		/* Building of the actual parameter. */
 		int reg_type[type_count];
 
 		if(type_count == 2){
@@ -1451,9 +1451,9 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
-#ifdef CONFIG_HIP_ESCROW
+/*#ifdef CONFIG_HIP_ESCROW
 	int create_kea = 0;
-#endif //CONFIG_HIP_ESCROW
+	#endif*/ //CONFIG_HIP_ESCROW
 
 	HIP_DEBUG("\n");
 
@@ -1478,6 +1478,7 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
  	/* Do the Rendezvous functionality */
  	{
+		/*
  		struct hip_rva_request *rreq;
  		int rva_types[4] = {0}, num;
  		uint32_t lifetime;
@@ -1498,47 +1499,54 @@ int hip_create_r2(struct hip_context *ctx,
  		HIP_IFEL(hip_build_param_rva(r2, lifetime, rva_types, num, 0), -1, 
 			 "Building of RVA_REPLY failed\n");
  		create_rva = 1;
+		*/
  	}
  next_hmac:
 #endif
 
 #ifdef CONFIG_HIP_ESCROW
-
 	{	
+		/* Check if the incoming I2 has a REG_REQUEST parameter. */
 
-
-		HIP_DUMP_MSG(i2);
 		HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
-		struct hip_reg_request *rrequest;
-	
-		rrequest = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
-		uint8_t lifetime;
+		HIP_DUMP_MSG(i2);
 
-		if (rrequest) {
- 	
+		uint8_t lifetime;
+		struct hip_reg_request *reg_request;
+		reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
+				
+		if (reg_request) {
 			HIP_DEBUG("Found REG_REQUEST parameter.\n");
+
+			int *accepted_requests, *rejected_requests;
+			int request_count, my_request_count, accepted_count, rejected_count;
 			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
 			
-			int *accepted_requests, *rejected_requests;
-			int request_count, accepted_count, rejected_count;
+			/* - sizeof(reg_request->lifetime) perhaps...*/
+			request_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
+			my_request_count = hip_get_param_contents_len(reg_request)
+				- sizeof(reg_request->lifetime); // leave out lifetime field
 			
-			/* - sizeof(rrequest->lifetime) perhaps...*/
-			request_count = hip_get_param_contents_len(rrequest) - 1; // leave out lifetime field
-			accepted_count = hip_check_service_requests(&entry->hit_our, 
-				(types + 1), request_count, &accepted_requests, &rejected_requests);
+			HIP_DEBUG("request_count: %d\n", request_count);
+			HIP_DEBUG("my_request_count: %d\n", my_request_count);
+
+			accepted_count = hip_check_service_requests(&entry->hit_our, (types + 1),
+								    request_count, &accepted_requests,
+								    &rejected_requests);
 			rejected_count = request_count - accepted_count;
 			
+			HIP_DEBUG("Accepted %d, rejected: %d\n", accepted_count, rejected_count);
 			if (accepted_count > 0) {
-				lifetime = rrequest->lifetime;
+				lifetime = reg_request->lifetime;
 				HIP_DEBUG("Building REG_RESPONSE parameter.\n");
 				HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
-					accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+								     accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
 			}
 			if (rejected_count > 0) {
-				lifetime = rrequest->lifetime;
+				lifetime = reg_request->lifetime;
 				HIP_DEBUG("Building REG_FAILED parameter");
 				HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
-					rejected_count), -1, "Building of REG_FAILED failed\n");
+								    rejected_count), -1, "Building of REG_FAILED failed\n");
 			}
 		}
 		else {
@@ -1571,11 +1579,11 @@ int hip_create_r2(struct hip_context *ctx,
 
 #ifdef CONFIG_HIP_RVS
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
-	if (create_rva) {
-		HIP_RVA *rva;
-		HIP_IFE(!(rva = hip_ha_to_rva(entry, GFP_KERNEL)), -ENOSYS);
-		HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
-	}
+	/*if (create_rva) {
+	  HIP_RVA *rva;
+	  HIP_IFE(!(rva = hip_ha_to_rva(entry, GFP_KERNEL)), -ENOSYS);
+	  HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	  }*/
 #endif
 
 #ifdef CONFIG_HIP_ESCROW
@@ -1587,7 +1595,15 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
 		"Error while inserting KEA to keatable");
 	HIP_DEBUG("Added kea entry");
-	
+
+	/* RVS */
+	/* Insert rendezvous association to rendezvous database. */
+	/* TODO: insert onky if REG_REQUEST parameter with Reg Type
+	   RENDEZVOUS was received. */
+	HIP_RVA *rva;
+	HIP_IFE(!(rva = hip_ha_to_rva(entry, GFP_KERNEL)), -ENOSYS);
+	HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+
 #endif //CONFIG_HIP_ESCROW
 
  out_err:
@@ -1857,9 +1873,6 @@ int hip_handle_i2(struct hip_common *i2,
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
-
-	
-	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
 	/* Set up IPsec associations */
@@ -1871,9 +1884,9 @@ int hip_handle_i2(struct hip_common *i2,
 				i2_info->dst_port);
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-//		if (err == -EEXIST)
-//			HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-//				  spi_in);
+		/* if (err == -EEXIST)
+		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+		   spi_in); */
 		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
@@ -1887,7 +1900,6 @@ int hip_handle_i2(struct hip_common *i2,
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
-	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
 
@@ -1900,11 +1912,12 @@ int hip_handle_i2(struct hip_common *i2,
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 			  spi_out);
 
-//		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
-//		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-//	} else if (err) {
-//		HIP_ERROR("Failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
-//		/* delete all IPsec related SPD/SA for this entry */
+         /* HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_out);
+	    HIP_DEBUG("TODO: what to do ? currently ignored\n");
+	    } else if (err) {
+	    HIP_ERROR("Failed to setup IPsec SPD/SA entries, peer:dst (err=%d)\n", err);
+	 */
+		/* delete all IPsec related SPD/SA for this entry*/
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
@@ -2363,7 +2376,7 @@ int hip_handle_i1(struct hip_common *i1,
 	}
 #endif
 	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-			   dst, i1_info, &rvs_addresses, via_rvs_count);
+			   dst, i1_info, rvs_addresses, via_rvs_count);
 }
 
 /**

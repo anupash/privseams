@@ -231,6 +231,7 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 			}
 		}
 	}
+	/* TODO: Where is this memory freed? */
 	a_req = HIP_MALLOC((sizeof(int) * accept_count), GFP_KERNEL);	
 	r_req = HIP_MALLOC((sizeof(int) * reject_count), GFP_KERNEL);	
 		
