@@ -2,13 +2,19 @@
 #define _HIP_UTILS
 
 #ifdef __KERNEL__
+#  include <linux/un.h>
+#  include <linux/in6.h>
 #  include "usercompat.h"
+#  include "protodefs.h"
+#  include "state.h"
+#  include "icomm.h"
+#  include "ife.h"
 #else
 #  include "kerncompat.h"
+#  include "sys/un.h"
+#  include "protodefs.h"
 #endif
 
-#include "protodefs.h"
-#include "sys/un.h"
 
 /*
  * HIP header and parameter related constants and structures.
@@ -36,14 +42,9 @@ struct hip_opp_blocking_request_entry {
   struct sockaddr_un    caller;
 };
 
-inline static ipv6_addr_is_null(struct in6_addr *ip){
+inline static int ipv6_addr_is_null(struct in6_addr *ip){
 	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
 		 ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
-}
-
-static inline int create_new_socket(int type, int protocol)
-{
-  return socket(AF_INET6, type, protocol);
 }
 
 static inline int hit_is_real_hit(const struct in6_addr *hit) {
