@@ -10,6 +10,11 @@
 
 #include "ife.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
+
 /******************************************************************************/
 /* DEFINES */
 enum WIDGET_IDS
@@ -113,6 +118,8 @@ void widget_quit(void);
 void widget_set(int, void *);
 void *widget(int);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

@@ -185,7 +185,7 @@ void tw_set_local_info(char *hit_name)
 /**
 	Set remote HIT info to toolwindow from HIT with given name.
 
-	@param hit_name Name of remote HIT.
+	@param group_name Name of group.
  */
 void tw_set_rgroup_info(char *group_name)
 {

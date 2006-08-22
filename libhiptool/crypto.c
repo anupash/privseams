@@ -299,7 +299,7 @@ unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
  * @param in_len the length of data to be digested in octets
  * @param out the digest
  *
- * @out should be long enough to hold the digest. This cannot be
+ * @param out should be long enough to hold the digest. This cannot be
  * checked!
  *
  * @return 0 on success, otherwise < 0.
@@ -373,16 +373,16 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 /**
  * hip_crypto_encrypted - encrypt/decrypt data
  * @param data data to be encrypted/decrypted
- * @param iv initialization vector
- * @param enc_alg encryption algorithm to use
- * @param enc_len length of @data
- * @param enc_key encryption/decryption key to use
+ * @param iv_orig initialization vector
+ * @param alg encryption algorithm to use
+ * @param len length of data
+ * @param key encryption/decryption key to use
  * @param direction flag for selecting encryption/decryption
  *
- * @direction is HIP_DIRECTION_ENCRYPT if @data is to be encrypted
- * or HIP_DIRECTION_DECRYPT if @data is to be decrypted.
+ * @param direction is HIP_DIRECTION_ENCRYPT if data is to be encrypted
+ * or HIP_DIRECTION_DECRYPT if data is to be decrypted.
  *
- * The result of the encryption/decryption of @data is overwritten to @data.
+ * The result of the encryption/decryption of data is overwritten to data.
  *
  * @return 0 is encryption/decryption was successful, otherwise < 0.
  */
@@ -1273,12 +1273,12 @@ int rsa_to_hit_old(RSA *rsa_key, unsigned char *rsa, int type,
  * @param dsa the DSA structure from where the KEY RR record is to be created
  * @param dsa_key_rr where the resultin KEY RR is stored
  *
- * Caller must free @dsa_key_rr when it is not used anymore.
+ * Caller must free dsa_key_rr when it is not used anymore.
  *
  * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
- * and sets @dsa_key_rr to NULL.
+ * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
+ * and sets dsa_key_rr to NULL.
  */
 int dsa_to_dns_key_rr_old(DSA *dsa, unsigned char **dsa_key_rr) {
   int err = 0;
@@ -1450,12 +1450,12 @@ int dsa_to_dns_key_rr_old(DSA *dsa, unsigned char **dsa_key_rr) {
  * @param dsa the DSA structure from where the KEY RR record is to be created
  * @param dsa_key_rr where the resultin KEY RR is stored
  *
- * Caller must free @dsa_key_rr when it is not used anymore.
+ * Caller must free dsa_key_rr when it is not used anymore.
  *
  * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
- * and sets @dsa_key_rr to NULL.
+ * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
+ * and sets dsa_key_rr to NULL.
  */
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   int err = 0;
@@ -1614,12 +1614,12 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
  * @param rsa the RSA structure from where the KEY RR record is to be created
  * @param rsa_key_rr where the resultin KEY RR is stored
  *
- * Caller must free @rsa_key_rr when it is not used anymore.
+ * Caller must free rsa_key_rr when it is not used anymore.
  *
  * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
- * and sets @rsa_key_rr to NULL.
+ * DNS KEY RR is stored at rsa_key_rr. On error function returns negative
+ * and sets rsa_key_rr to NULL.
  */
 int rsa_to_dns_key_rr_old(RSA *rsa, unsigned char **rsa_key_rr) {
   int err = 0, len;
@@ -1701,12 +1701,12 @@ int rsa_to_dns_key_rr_old(RSA *rsa, unsigned char **rsa_key_rr) {
  * @param rsa the RSA structure from where the KEY RR record is to be created
  * @param rsa_key_rr where the resultin KEY RR is stored
  *
- * Caller must free @rsa_key_rr when it is not used anymore.
+ * Caller must free rsa_key_rr when it is not used anymore.
  *
  * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
- * and sets @rsa_key_rr to NULL.
+ * DNS KEY RR is stored at rsa_key_rr. On error function returns negative
+ * and sets rsa_key_rr to NULL.
  */
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   int err = 0, len;
@@ -1786,9 +1786,9 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
  * @param filenamebase the filename base where DSA key should be saved
  * @param dsa the DSA key structure
  *
- * The DSA keys from @dsa are saved in PEM format, public key to file
- * filenamebase.pub, private key to file @filenamebase and DSA parameters to
- * file @filenamebase.params. If any of the files cannot be saved, all
+ * The DSA keys from dsa are saved in PEM format, public key to file
+ * filenamebase.pub, private key to file filenamebase and DSA parameters to
+ * file filenamebase.params. If any of the files cannot be saved, all
  * files are deleted.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
@@ -1877,9 +1877,9 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
  * @param filenamebase the filename base where RSA key should be saved
  * @param rsa the RSA key structure
  *
- * The RSA keys from @rsa are saved in PEM format, public key to file
- * filenamebase.pub, private key to file @filenamebase and RSA
- * parameters to file @filenamebase.params. If any of the files cannot
+ * The RSA keys from rsa are saved in PEM format, public key to file
+ * filenamebase.pub, private key to file filenamebase and RSA
+ * parameters to file filenamebase.params. If any of the files cannot
  * be saved, all files are deleted.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
@@ -1970,9 +1970,10 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
 /**
  * load_dsa_private_key - load host DSA private keys from disk
  * @param filenamebase the file name base of the host DSA key
+ * @param dsa Pointer to the DSA key structure.
  *
  * Loads DSA public and private keys from the given files, public key
- * from file @filenamebase.pub and private key from file @filenamebase. DSA
+ * from file filenamebase.pub and private key from file filenamebase. DSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
@@ -2034,9 +2035,10 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
 /**
  * load_rsa_private_key - load host RSA private keys from disk
  * @param filenamebase the file name base of the host RSA key
+ * @param rsa Pointer to the RSA key structure.
  *
  * Loads RSA public and private keys from the given files, public key
- * from file @filenamebase.pub and private key from file @filenamebase. RSA
+ * from file filenamebase.pub and private key from file filenamebase. RSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with RSA_free.
  *

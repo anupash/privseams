@@ -22,6 +22,10 @@
 #include "terminal.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -73,6 +77,8 @@ void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 void systray_event(void *, guint, guint, gpointer);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

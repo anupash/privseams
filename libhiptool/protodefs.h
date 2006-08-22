@@ -8,6 +8,10 @@
 
 #define HIP_MAX_PACKET 2048
 
+/*! \addtogroup hip_msg
+ * @{
+ */
+
 #define HIP_I1         1
 #define HIP_R1         2
 #define HIP_I2         3
@@ -25,11 +29,19 @@
 #define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
 
+/** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
+/** Daemon should reply to HIP_AGENT_PING with this one. */
 #define HIP_AGENT_PING_REPLY		71
+/** Agent send this one to daemon when exiting. */
 #define HIP_AGENT_QUIT				72
+/** Daemon sends local HITs to agent with this message. */
 #define HIP_ADD_DB_HI				73
+/** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
+
+/* @} addtogroup hip_msg */
+
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2

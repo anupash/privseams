@@ -11,7 +11,7 @@
  * @param ht hash table
  * @param key key
  *
- * Returns NULL, or the entry that matches the @key
+ * @return NULL, or the entry that matches the key
  */
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 {
