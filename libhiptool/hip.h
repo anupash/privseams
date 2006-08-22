@@ -436,22 +436,19 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define HIP_DI_FQDN                   1
 #define HIP_DI_NAI                    2
 
-
-/* Rendezvous types */
-#define HIP_RVA_RELAY_I1              1
-#define HIP_RVA_RELAY_I1R1            2 /* There's only one rvs type in draft-ietf-hip-rvs-05 */
-#define HIP_RVA_RELAY_I1R1I2          3
-#define HIP_RVA_RELAY_I1R1I2R2        4
-#define HIP_RVA_RELAY_ESP_I1          5
-#define HIP_RVA_REDIRECT_I1           6
-
 /* Registration types for registering to a service as specified in
    draft-ietf-hip-registration-02. These are the registration types used in
    REG_INFO, REG_REQUEST, REG_RESPONSE and REG_FAILED parameters.
    Numbers 0-200 are reserved by IANA.
    Numbers 201 - 255 are reserved by IANA for private use. */
-#define HIP_ESCROW_SERVICE	      7 /* Change to 201? */
-#define HIP_RENDEZVOUS_SERVICE	      8 /* Change to 1. */
+#define HIP_RENDEZVOUS_SERVICE	         1
+#define HIP_ESCROW_SERVICE	         201
+
+/* Registration failure types as specified in draft-ietf-hip-registration-02.
+   Numbers 0-200 are reserved by IANA.
+   Numbers 201 - 255 are reserved by IANA for private use. */
+#define HIP_REG_INSUFFICIENT_CREDENTIALS 0
+#define HIP_REG_TYPE_UNAVAILABLE         1
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
 #define PEER_ADDR_STATE_ACTIVE 2
@@ -472,7 +469,6 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 
 #define SEND_UPDATE_ESP_INFO (1 << 0)
 #define SEND_UPDATE_LOCATOR (1 << 1)
-
 
 #define HIP_ESCROW_OPERATION_ADD	1
 #define HIP_ESCROW_OPERATION_MODIFY	2
@@ -844,7 +840,7 @@ struct hip_cert {
 } __attribute__ ((packed));
 
 /************* RVS *******************/
-
+/* TODO: Remove outdated entries. */
 struct hip_rva_request {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
@@ -859,6 +855,7 @@ struct hip_rva_reply {
 	/* RVA types */
 } __attribute__ ((packed));
 
+/* Still valid. */
 struct hip_rva_hmac {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;

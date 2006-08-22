@@ -547,7 +547,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 		/* Create an rva assosiation and set state registering...
 		HIP_RVA *rendezvous_association;
-		rendezvous_association = hip_rva_find(&entry->hit_our);
+		rendezvous_association = hip_rva_get(&entry->hit_our);
 		if(rendezvous_association){
 			HIP_DEBUG("Found rendezvous_association.\n");
 		}

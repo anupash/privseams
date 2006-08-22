@@ -1,31 +1,46 @@
-/*
- * Rendezvous Server functionality for HIP.
- *
- * Authors:
- * - Kristian Slavov
- *
- * Licence: GNU/GPL
- */
-
+/**
+ * This file defines a rendezvous extension for the Host Identity Protocol
+ * (HIP). The rendezvous extension extends HIP and the HIP registration
+ * extension for initiating communication between HIP nodes via HIP
+ * rendezvous servers. The rendezvous server (RVS) serves as an initial contact
+ * point ("rendezvous point") for its clients.  The clients of an RVS are HIP
+ * nodes that use the HIP Registration Protocol [draft-ietf-hip-registration-02]
+ * to register their HIT->IP address mappings with the RVS. After this
+ * registration, other HIP nodes can initiate a base exchange using the IP
+ * address of the RVS instead of the current IP address of the node they attempt
+ * to contact.
+ * 
+ * A rendezvous server stores the HIT->IP address mappings of its clients into
+ * a hashtable as a rendezvous association data structure. A client can have
+ * a maximum number of HIP_RVA_MAX_IPS IP addresses mapped to a single HIT,
+ * and a RVS can have a maximum of HIP_RVA_SIZE clients.
+ * 
+ * author:  (version 1.0) Kristian Slavov 
+ * author:  (version 2.0) Lauri Silvennoinen 
+ * date:    22.08.2006
+ * draft:   draft-ietf-hip-rvs-05
+ * licence: GNU/GPL
+ */ 
 #include "rvs.h"
-HIP_HASHTABLE rva_table;
 
+HIP_HASHTABLE rva_table;
 static struct list_head rvadb[HIP_RVA_SIZE];
 
 /**
- * hip_rva_allocate - Allocate and initialize Rendezvous Association
- * @gfpmask: Mask for HIP_MALLOC() that is used to allocate  the memory.
+ * hip_rva_allocate - Allocate and initialize a rendezvous association.
+ * @gfpmask: Mask for HIP_MALLOC() that is used to allocate the memory.
  *
- * Returns NULL if failure, or a pointer to newly allocated and initialized
- * RVA atructure
+ * Returns: a pointer to a newly allocated and initialized rendezvous 
+ *          association structure or NULL if failed to allocate memory.
  */
 HIP_RVA *hip_rva_allocate(int gfpmask)
 {
 	HIP_RVA *res;
 
-	res = HIP_MALLOC(sizeof(*res), gfpmask);
-	if (!res)
+	if((res = HIP_MALLOC(sizeof(*res), gfpmask)) == NULL) {
+		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
+	}
 
 	atomic_set(&res->refcnt, 0);
 	HIP_LOCK_INIT(res);
@@ -34,24 +49,29 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 
 	return res;
 }
+
 /**
- * hip_ha_to_rva - Create a Rendezvous Association from Host Association
-  * @ha: HA
-  * @gfpmask: Mask for HIP_MALLOC(). Used to allocate memory for the RVA.
-  *
-  * Returns the newly created RVA, with information from HA copied to it.
-  * NULL if there was an error (out of memory).
-  */
-HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
+ * hip_rva_ha2rva - create a rendezvous association from a host association
+ * @ha:      a host association from where from to copy. 
+ * @gfpmask: memory allocation mask.
+ * 
+ * Allocates memory for a new rendezvous association and copies information
+ * from the parameter host association into it.
+ * 
+ * Returns: a pointer to a newly allocated rendezvous association or NULL if
+ *          failed to allocate memory.
+ */
+HIP_RVA *hip_rva_ha2rva(hip_ha_t *ha, int gfpmask)
 {
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
-	rva = hip_rva_allocate(gfpmask);
-	if (!rva)
+	if((rva = hip_rva_allocate(gfpmask)) == NULL) {
+		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
+	}
 
 	hip_hold_rva(rva);
 
@@ -60,9 +80,9 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
-
+	
 	if (!ipv6_addr_any(&ha->preferred_address)) {
-		HIP_DEBUG("copying bex address\n");
+		HIP_DEBUG("Copying bex address.\n");
 		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
 		ipcnt++;
 		if (ipcnt >= HIP_RVA_MAX_IPS)
@@ -84,32 +104,44 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 	}
  out:
 	HIP_UNLOCK_HA(ha);
-
 	return rva;
-
 }
 
 /**
- * hip_rva_find - Get RVA entry corresponding to the argument hit.
- * @hit: Key
+ * hip_rva_get - get a rendezvous association matching the argument hit.
+ * @hit: The HIT of the rendezvous association to get.
  * 
- * If a RVA is found, it is automatically holded (refcnt incremented).
+ * If a rendezvous association is found, it is automatically holded
+ * (refcnt incremented).
  *
- * Returns the RVA or NULL if RVA was not found.
+ * Returns: a pointer to a matching rendezvous association or NULL if
+ *          a matching rendezvous association was not found.
  */
-HIP_RVA *hip_rva_find(struct in6_addr *hit)
+HIP_RVA *hip_rva_get(struct in6_addr *hit)
 {
- 	return hip_ht_find(&rva_table, hit);
+ 	return (HIP_RVA*)hip_ht_find(&rva_table, hit);
 }
 
-HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
+/**
+ * hip_rva_get_valid - get a valid rendezvous association matching the argument hit.
+ * @hit: The HIT of the rendezvous association to get.
+ * 
+ * Finds a rendezvous association matching the argument hit and whose state is
+ * HIP_RVASTATE_VALID. If a valid rendezvous association is found, it is
+ * automatically holded (refcnt incremented).
+ *
+ * Returns: a pointer to a matching valid rendezvous association or NULL if
+ *          a matching valid rendezvous association was not found.
+ */
+HIP_RVA *hip_rva_get_valid(struct in6_addr *hit)
 {
 	HIP_RVA *rva;
 
  	rva = hip_ht_find(&rva_table, hit);
  	if (rva) {
  		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
-			HIP_ERROR("RVA state not valid\n");
+			HIP_ERROR("A matching rendezvous association was found, "\
+				  "but the state is not valid.\n");
  			hip_put_rva(rva);
  			rva = NULL;
  		}
@@ -118,135 +150,74 @@ HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
 }
 
 /**
- * hip_rva_insert_ip_n - Insert/update/overwrite one IP in the RVA.
- * @rva: RVA
- * @ip: IP address to be written to the RVA's IP-list.
- * @n: Replace n:th element in the IP-list. 0 <= n < HIP_RVA_MAX_IPS
- *
- * The IP that is overwritten is the n:th in the list.
- *
+ * hip_rva_put_ip - inserts or updates a rendezvous association IP address.
+ * @rva:   the rendezvous association whose IP address is to be modified. 
+ * @ip:    the IP address to insert.
+ * @index: the index of the IP address to be modified.
+ * 
+ * A rendezvous server client can register more than one of its IP addresses
+ * to a rendezvous server. In this case the rendezvous association has a maximum
+ * number of HIP_RVA_MAX_IPS IP addresses mapped to a single HIT. This function
+ * inserts one IP address to a rendezvous association. The index of the IP
+ * address to insert must be smaller than HIP_RVA_MAX_IPS. The existing IP at
+ * "index" is overwritten.
  */
-void hip_rva_insert_ip_n(HIP_RVA *rva, struct in6_addr *ip, unsigned int n)
+void hip_rva_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
 {
- 	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
+	HIP_ASSERT(rva);
+ 	HIP_ASSERT(index < HIP_RVA_MAX_IPS);
 
  	HIP_LOCK_HA(rva);
- 	ipv6_addr_copy(&rva->ip_addrs[n], ip);
+ 	ipv6_addr_copy(&rva->ip_addrs[index], ip);
  	HIP_UNLOCK_HA(rva);
 }
 
 /**
- * hip_rva_insert_ip - Insert/update/overwrite one IP in the RVA.
- * @rva: RVA
- * @ip: IP address to be written to the RVA's IP-list.
+ * hip_rva_get_ip - get an IP address from a rendezvous association.
+ * @rva:   the rendezvous association from where to get the IP address.
+ * @dst:   a pointer to a buffer where to put the IP address.
+ * @index: the index of the IP address to get.
  *
- * The IP that is overwritten is the first in the list. This can, and probably
- * will change as we create better algorithms to decide which address to
- * replace (LRU/MRU/etc).
- *
+ * Gets an IP address at "index" from a rendezvous association. Destination
+ * buffer "dst" must be allocated before calling this function and "index"
+ * must be smaller than HIP_RVA_MAX_IPS.
  */
-void hip_rva_insert_ip(HIP_RVA *rva, struct in6_addr *ip)
+void hip_rva_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
 {
-	hip_rva_insert_ip_n(rva, ip, 0);
-}
-
-/**
- * hip_rva_fetch_ip_n - Fetch Nth IP-address from the RVA to the destination buffer
- * @rva: Rendezvous Association
- * @dst: Target buffer (must be preallocated)
- * @n: The IP-address to fetch (0 <= n < HIP_RVA_MAX_IPS)
- *
- */
-void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n)
-{
+	HIP_ASSERT(rva);
 	HIP_ASSERT(dst);
-	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
+	HIP_ASSERT(index < HIP_RVA_MAX_IPS);
 
 	HIP_LOCK_HA(rva);
-	ipv6_addr_copy(dst, &rva->ip_addrs[n]);
+	ipv6_addr_copy(dst, &rva->ip_addrs[index]);
 	HIP_UNLOCK_HA(rva);
 }
 
 /**
- * hip_rva_fetch_ip - Fetch first IP-address from the RVA to the destination buffer
- * @rva: Rendezvous Association
- * @dst: Target buffer (must be preallocated)
+ * hip_rva_put_rva - insert a new rendezvous association into the hashtable.
+ * @rva: the rendezvous association to be added into the hashtable.
  *
+ * The rendezvous association is automatically holded (refcnt incremented).
+ *
+ * Returns: zero on success, or negative error value on error.
  */
-void hip_rva_fetch_ip(HIP_RVA *rva, struct in6_addr *dst)
-{
-	hip_rva_fetch_ip_n(rva, dst, 0);
-}
-
-/**
- * hip_rva_get_ip - Allocate memory and copy one IP from RVA's list.
- * @rva: RVA
- * @gfpmask: gfpmask
- *
- * Memory is allocated and the IP to copy is selected to be the first one
- * in to RVA's list. Later we might have a better algorithm selecting
- * a better IP. 
- *
- * Returns pointer to an IPv6 address that MUST be freed after use.
- */
-struct in6_addr *hip_rva_get_ip(HIP_RVA *rva,int gfpmask)
-{
-	return hip_rva_get_ip_n(rva,gfpmask,0);
-}
-
-/**
- * hip_rva_get_ip - Allocate memory and copy one IP from RVA's list.
- * @rva: RVA
- * @gfpmask: gfpmask
- * @n: Element ot get from the RVA's IP-list.
- *
- * Memory is allocated and the IP to copy is selected to be the first one
- * in to RVA's list. Later we might have a better algorithm selecting
- * a better IP. 
- *
- * Returns pointer to an IPv6 address that MUST be freed after use.
- * Or %NULL if failed.
- */
-struct in6_addr *hip_rva_get_ip_n(HIP_RVA *rva, int gfpmask, unsigned int n)
-{
-	struct in6_addr *hit;
-
-	HIP_ASSERT(n < HIP_RVA_MAX_IPS);
-
-	hit = HIP_MALLOC(sizeof(struct in6_addr), gfpmask);
-	if (!hit)
-		return NULL;
-
-	hip_rva_fetch_ip_n(rva, hit, n);
-	return hit;
-}
-
-/**
- * hip_rva_insert - Insert Rendezvous Association into the RVA hashtable
- * @rva: The RVA to be added to the hashtable.
- *
- * The RVA is automatically holded (refcnt incremented) as a side effect of
- * inserting it to the hashtable.
- *
- * Returns errno, or 0 if ok.
- */
-int hip_rva_insert(HIP_RVA *rva)
+int hip_rva_put_rva(HIP_RVA *rva)
 {
 	int err;
-
-	/* if assertation holds, then we don't need locking */
+	HIP_DEBUG_HIT("hip_rva_put_rva(): Inserting rendezvous association "\
+		      "with hit", &rva->hit);
+	
+	/* If assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
 
-	HIP_DEBUG_HIT("rva->hit", &rva->hit);
-
 	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
-		 "Cannot insert RVA entry with NULL hit\n");
+		 "Trying to insert rva entry with NULL hit.\n");
 	HIP_IFEL(hip_ht_find(&rva_table, &rva->hit), -EEXIST,
-		 "Duplicate RVA entry. Not adding to RVA table\n");
+		 "Duplicate rva entry. Not adding hit to rva table.\n");
 	
 	err = hip_ht_add(&rva_table, rva);
 	if (err) {
-		HIP_ERROR("Failed to add rva hash table entry\n");
+		HIP_ERROR("Failed to add rva hash table entry.\n");
 	} else {
 		rva->rvastate |= HIP_RVASTATE_VALID;
 	}
@@ -254,7 +225,14 @@ int hip_rva_insert(HIP_RVA *rva)
 	return err;
 }
 
-
+/**
+ * hip_rva_hold_entry - hold a rendezvous association hashtable entry. 
+ * @entry: the entry to be held.
+ * 
+ * A function used as the hold function of the rendezvous association hashtable.
+ * 
+ * Note: this is a static function and thus can't be used outside this file.
+ */
 static void hip_rva_hold_entry(void *entry)
 {
 	HIP_RVA *rva = entry;
@@ -264,6 +242,14 @@ static void hip_rva_hold_entry(void *entry)
 	HIP_DEBUG("RVA: %p, refcnt incremented to: %d\n", rva, atomic_read(&rva->refcnt));
 }
 
+/**
+ * hip_rva_put_entry - put a rendezvous association hashtable entry. 
+ * @entry: the entry to be put.
+ * 
+ * A function used as the put function of the rendezvous association hashtable.
+ * 
+ * Note: this is a static function and thus can't be used outside this file.
+ */
 static void hip_rva_put_entry(void *entry)
 {
 	HIP_RVA *rva = entry;
@@ -277,6 +263,16 @@ static void hip_rva_put_entry(void *entry)
 	}
 }
 
+/**
+ * hip_rva_get_key - get a key from rendezvous association hashtable. 
+ * @entry: the entry to be got.
+ * 
+ * A function used as the get_key function of the rendezvous association
+ * hashtable. Rendezvous association hashtable uses client HITs as keys.
+ * 
+ * Note:    this is a static function and thus can't be used outside this file.
+ * Returns: a pointer to the matching key or NULL if no match was found.
+ */
 static void *hip_rva_get_key(void *entry)
 {
 	return (void *)&(((HIP_RVA *)entry)->hit);
@@ -335,48 +331,6 @@ void hip_rva_remove(HIP_RVA *rva)
 }
 
 /**
- * hip_select_rva_types - Select RVA types that we accept
- * @rreq: The original request
- * @type_list: List that holds place for @llen 16-bit integers.
- * @llen: length of @type_list.
- *
- * Returns the amount of types that were accepted.
- */
-int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
-{
-	uint16_t *types = (uint16_t *)(rreq + 1);
-	int typecnt, i, j;
-
-	typecnt = hip_get_param_contents_len(rreq) - sizeof(uint32_t) / 2;
-	/* due to padding, the actual amount of types is either types or types-1 */
-
-	for(i=0,j=0;i<typecnt && j<llen; i++) {
-		switch(types[i]) {
-		case 0:
-			/* padding */
-			goto out_of_loop;
-			break;
-		case HIP_RVA_RELAY_I1:
-			type_list[j++] = types[i];
-			break;
-		case HIP_RVA_RELAY_I1R1:
-		case HIP_RVA_RELAY_I1R1I2:
-		case HIP_RVA_RELAY_I1R1I2R2:
-		case HIP_RVA_RELAY_ESP_I1:
-		case HIP_RVA_REDIRECT_I1:
-			break;
-		default:
-			/* was? */
-			HIP_ERROR("Don't come here, please\n");
-			return 0;
-		}
-	}
-
- out_of_loop:
-	return j;
-}
-
-/**
  * hip_relay_i1 - relay an incoming I1 packet.
  * @i1        HIP packet common header with source and destination HITs.
  * @i1_saddr: the source address from where the I1 packet was received.
@@ -391,7 +345,6 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
  * another rendezvous server. In this case the FROM parameter is appended after
  * the existing ones. Thus current RVS appends the address of previous RVS
  * and the final RVS (n) sends FROM:I, FROM:RVS1, ... , FROM:RVS(n-1).
- * 14.08.2006 14:30
  * 
  * Returns: zero on success, or negative error value on error.
  */
@@ -416,8 +369,10 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	int err, from_added = 0;
 	char ipv6dst[128] = {0};
 
-	HIP_IFEL(!(final_dst = hip_rva_get_ip(rva, GFP_KERNEL)), -ENOENT,
-		 "Did not find forwarding address\n");
+	final_dst = HIP_MALLOC(sizeof(*final_dst), gfpmask);
+	HIP_IFEL(!final_dst, -ENOENT, "Error allocating memory for destination address.\n");
+	hip_rva_get_ip(rva, final_dst, 0);
+
 	old_i1 = i1;
 	original_src = i1_saddr;
 	
@@ -478,7 +433,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_in6_ntop(final_dst, ipv6dst);
 		HIP_INFO("Relayed I1 to %s\n", ipv6dst);
 	}
-		
+
  out_err:
 	if (final_dst)
 		HIP_FREE(final_dst);

@@ -877,6 +877,9 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
+		/* TODO: Compiler warning;
+		    warning: passing argument 2 of 'exec_application' from
+		    incompatible pointer type.*/
 		exec_application(type, (const char **)&argv[3], argc - 3);
 		goto out;
 	}

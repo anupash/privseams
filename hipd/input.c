@@ -1003,27 +1003,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
-#ifdef CONFIG_HIP_RVS
-	/************ RVA_REQUEST (OPTIONAL) ***************/
-	{
-		/* we've requested RVS, and the peer is rvs capable */
-		//int type = HIP_RVA_RELAY_I1;
-
-		/* Check that we have requested rvs service and that the 
-		   peer is rvs capable. */
-		/*
-		  if (!(entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) ||
-		  !(entry->peer_controls & HIP_CONTROL_RVS_CAPABLE))
-		  goto next_echo_resp;
-		  
-		  HIP_IFEL(hip_build_param_rva(i2, 0, &type, 1, 1), -1, 
-		"Could not build RVA_REQUEST parameter\n");
-		*/
-	}
- next_echo_resp:
-
-#endif
-
 #ifdef CONFIG_HIP_ESCROW
 	
 	/********* REG_REQUEST *********/
@@ -1080,7 +1059,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 #endif //CONFIG_HIP_ESCROW
-
 
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
@@ -1475,35 +1453,6 @@ int hip_create_r2(struct hip_context *ctx,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
-#ifdef CONFIG_HIP_RVS
- 	/* Do the Rendezvous functionality */
- 	{
-		/*
- 		struct hip_rva_request *rreq;
- 		int rva_types[4] = {0}, num;
- 		uint32_t lifetime;
-
- 		rreq = hip_get_param(i2, HIP_PARAM_RVA_REQUEST);
- 		if (!rreq)
- 			goto next_hmac;
-
- 		num = hip_select_rva_types(rreq, rva_types, 4);
- 		if (!num) {
- 			HIP_ERROR("None of the RVA types were accepted. Abandoning connection\n");
- 			rva_types[0] = 0;
-			num = 1;
- 		}
-
- 		lifetime = ntohl(rreq->lifetime) > HIP_DEFAULT_RVA_LIFETIME ? 
-			HIP_DEFAULT_RVA_LIFETIME : ntohl(rreq->lifetime);
- 		HIP_IFEL(hip_build_param_rva(r2, lifetime, rva_types, num, 0), -1, 
-			 "Building of RVA_REPLY failed\n");
- 		create_rva = 1;
-		*/
- 	}
- next_hmac:
-#endif
-
 #ifdef CONFIG_HIP_ESCROW
 	{	
 		/* Check if the incoming I2 has a REG_REQUEST parameter. */
@@ -1581,8 +1530,8 @@ int hip_create_r2(struct hip_context *ctx,
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
 	/*if (create_rva) {
 	  HIP_RVA *rva;
-	  HIP_IFE(!(rva = hip_ha_to_rva(entry, GFP_KERNEL)), -ENOSYS);
-	  HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	  HIP_IFE(!(rva = hip_rva_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	  HIP_IFEBL(hip_rva_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	  }*/
 #endif
 
@@ -1601,8 +1550,8 @@ int hip_create_r2(struct hip_context *ctx,
 	/* TODO: insert onky if REG_REQUEST parameter with Reg Type
 	   RENDEZVOUS was received. */
 	HIP_RVA *rva;
-	HIP_IFE(!(rva = hip_ha_to_rva(entry, GFP_KERNEL)), -ENOSYS);
-	HIP_IFEBL(hip_rva_insert(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	HIP_IFE(!(rva = hip_rva_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	HIP_IFEBL(hip_rva_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 
 #endif //CONFIG_HIP_ESCROW
 
@@ -2431,7 +2380,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	} else {
 #ifdef CONFIG_HIP_RVS
 		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
- 		rva = hip_rva_find_valid(&hip_i1->hitr);
+ 		rva = hip_rva_get_valid(&hip_i1->hitr);
 		HIP_DEBUG("Valid rendezvous association found: %s \n", (rva ? "yes" : "no"));
  		if (rva) {
  			/* we should now relay the I1.

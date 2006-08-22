@@ -310,6 +310,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 		 "Bug: outbound SPI 0x%x does not exist\n", spi);
 
 	/* Set all peer addresses to unpreferred */
+	/* TODO: Compiler warning;
+		 warning: passing argument 1 of 'hip_update_for_each_peer_addr'
+		 from incompatible pointer type.*/
 	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
 					       entry, spi_out, 0), -1);
 
@@ -998,9 +1001,13 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	uint16_t mask = 0;
 
 	HIP_DEBUG("SPI=0x%x\n", spi);
+	
 	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
 		 "SPI 0x%x not in SPI list\n");
 
+	/* TODO: Compiler warning;
+		 warning: passing argument 1 of 'hip_update_for_each_peer_addr'
+		 from incompatible pointer type. */
 	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
 					       entry, spi_out, src_ip), -1,
 		 "Sending addr verify failed\n");
@@ -1391,7 +1398,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
 	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
-	
+	/* TODO: Compiler warning;
+	   warning: comparison between pointer and integer. */
 	HIP_IFEL(spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,

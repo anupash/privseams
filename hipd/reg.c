@@ -65,21 +65,12 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		
-	}
-	else if (service_type == HIP_RENDEZVOUS_SERVICE) {
+	} else if (service_type == HIP_RENDEZVOUS_SERVICE) {
 		service->service_type = HIP_RENDEZVOUS_SERVICE;
 		HIP_INFO("Adding rendezvous service.\n");
 		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
-	}
-	/* HIP_RVA_RELAY_I1 outdated ? */
-	else if (service_type == HIP_RVA_RELAY_I1) {
-		service->service_type = 1;
-		HIP_INFO("Adding rvs service.\n");
-		strncpy(service->name, "RVS", 20); 
-		service->handle_registration = hip_handle_registration;
-	}	
-	else {
+	} else {
 		HIP_ERROR("Unknown service type.\n");
 		err = -1;
 		free(service);
