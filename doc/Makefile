@@ -14,8 +14,6 @@ PDFLATEX = pdflatex
 XMLTO    = xmlto
 PERL     = perl
 
-LINUX      = ../linux
-
 FIGS = fig/collaboration.fig fig/hooks.fig fig/kernel_model.fig \
        fig/input.fig fig/output.fig fig/base_exchange.fig \
        fig/stack_model.fig fig/mm-update.fig fig/bind_diagram.fig \

@@ -28,9 +28,9 @@ static struct list_head rvadb[HIP_RVA_SIZE];
 
 /**
  * hip_rva_allocate - Allocate and initialize a rendezvous association.
- * @gfpmask: Mask for HIP_MALLOC() that is used to allocate the memory.
+ * @param gfpmask Mask for HIP_MALLOC() that is used to allocate the memory.
  *
- * Returns: a pointer to a newly allocated and initialized rendezvous 
+ * @return a pointer to a newly allocated and initialized rendezvous 
  *          association structure or NULL if failed to allocate memory.
  */
 HIP_RVA *hip_rva_allocate(int gfpmask)
@@ -51,14 +51,15 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 }
 
 /**
+<<<<<<< TREE
  * hip_rva_ha2rva - create a rendezvous association from a host association
- * @ha:      a host association from where from to copy. 
- * @gfpmask: memory allocation mask.
+ * @param ha      a host association from where from to copy. 
+ * @param gfpmask: memory allocation mask.
  * 
  * Allocates memory for a new rendezvous association and copies information
  * from the parameter host association into it.
  * 
- * Returns: a pointer to a newly allocated rendezvous association or NULL if
+ * @Returns a pointer to a newly allocated rendezvous association or NULL if
  *          failed to allocate memory.
  */
 HIP_RVA *hip_rva_ha2rva(hip_ha_t *ha, int gfpmask)
@@ -109,12 +110,12 @@ HIP_RVA *hip_rva_ha2rva(hip_ha_t *ha, int gfpmask)
 
 /**
  * hip_rva_get - get a rendezvous association matching the argument hit.
- * @hit: The HIT of the rendezvous association to get.
+ * @param hit The HIT of the rendezvous association to get.
  * 
  * If a rendezvous association is found, it is automatically holded
  * (refcnt incremented).
  *
- * Returns: a pointer to a matching rendezvous association or NULL if
+ * @Returns a pointer to a matching rendezvous association or NULL if
  *          a matching rendezvous association was not found.
  */
 HIP_RVA *hip_rva_get(struct in6_addr *hit)
@@ -130,7 +131,7 @@ HIP_RVA *hip_rva_get(struct in6_addr *hit)
  * HIP_RVASTATE_VALID. If a valid rendezvous association is found, it is
  * automatically holded (refcnt incremented).
  *
- * Returns: a pointer to a matching valid rendezvous association or NULL if
+ * @return a pointer to a matching valid rendezvous association or NULL if
  *          a matching valid rendezvous association was not found.
  */
 HIP_RVA *hip_rva_get_valid(struct in6_addr *hit)
@@ -151,9 +152,9 @@ HIP_RVA *hip_rva_get_valid(struct in6_addr *hit)
 
 /**
  * hip_rva_put_ip - inserts or updates a rendezvous association IP address.
- * @rva:   the rendezvous association whose IP address is to be modified. 
- * @ip:    the IP address to insert.
- * @index: the index of the IP address to be modified.
+ * @param rva   the rendezvous association whose IP address is to be modified. 
+ * @param ip    the IP address to insert.
+ * @param index the index of the IP address to be modified.
  * 
  * A rendezvous server client can register more than one of its IP addresses
  * to a rendezvous server. In this case the rendezvous association has a maximum
@@ -174,9 +175,9 @@ void hip_rva_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
 
 /**
  * hip_rva_get_ip - get an IP address from a rendezvous association.
- * @rva:   the rendezvous association from where to get the IP address.
- * @dst:   a pointer to a buffer where to put the IP address.
- * @index: the index of the IP address to get.
+ * @param rva   the rendezvous association from where to get the IP address.
+ * @param dst   a pointer to a buffer where to put the IP address.
+ * @param index the index of the IP address to get.
  *
  * Gets an IP address at "index" from a rendezvous association. Destination
  * buffer "dst" must be allocated before calling this function and "index"
@@ -195,11 +196,11 @@ void hip_rva_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
 
 /**
  * hip_rva_put_rva - insert a new rendezvous association into the hashtable.
- * @rva: the rendezvous association to be added into the hashtable.
+ * @param rva the rendezvous association to be added into the hashtable.
  *
  * The rendezvous association is automatically holded (refcnt incremented).
  *
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_rva_put_rva(HIP_RVA *rva)
 {
@@ -332,11 +333,11 @@ void hip_rva_remove(HIP_RVA *rva)
 
 /**
  * hip_relay_i1 - relay an incoming I1 packet.
- * @i1        HIP packet common header with source and destination HITs.
- * @i1_saddr: the source address from where the I1 packet was received.
- * @i1_daddr: the destination address where the I1 packet was sent to (own address).
- * @rva:      rendezvous association matching the HIT of next hop.
- * @i1_info:  the source and destination ports (when NAT is in use).
+ * @param i1        HIP packet common header with source and destination HITs.
+ * @param i1_saddr the source address from where the I1 packet was received.
+ * @param i1_daddr the destination address where the I1 packet was sent to (own address).
+ * @param rva      rendezvous association matching the HIT of next hop.
+ * @param i1_info  the source and destination ports (when NAT is in use).
  *
  * This function relays an incoming I1 packet to the next node on path
  * to receiver and inserts a FROM parameter encapsulating the source IP address.
@@ -346,7 +347,7 @@ void hip_rva_remove(HIP_RVA *rva)
  * the existing ones. Thus current RVS appends the address of previous RVS
  * and the final RVS (n) sends FROM:I, FROM:RVS1, ... , FROM:RVS(n-1).
  * 
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
@@ -381,7 +382,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");
 	
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate
+	/*! \todo : TH: hip_build_network_hdr has to be replaced with an appropriate
 	   function pointer */
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits), &(old_i1->hitr));

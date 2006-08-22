@@ -19,7 +19,7 @@
 #include "debug.h"
 #include "hit_db.h"
 #include "widgets.h"
-
+#include "ife.h"
 
 /******************************************************************************/
 /* DEFINES */

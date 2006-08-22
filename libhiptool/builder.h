@@ -10,14 +10,13 @@
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
+#  include "protodefs.h"
 #else
 #  include "kerncompat.h"
 #  include "debug.h"
 #  include "misc.h"
+#  include "icomm.h"
 #endif
-
-#include "hip.h"
-
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE

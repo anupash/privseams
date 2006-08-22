@@ -18,7 +18,6 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
-#include <hip.h>
 #include <sysexits.h>
 
 #include <assert.h>
@@ -31,6 +30,7 @@
 #include "debug.h"
 #include "crypto.h"
 #include "builder.h"
+#include "hipd.h"
 
 /* 0 is reserved */
 #define ACTION_ADD 1
