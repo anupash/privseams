@@ -7,26 +7,22 @@
  *
  */
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 #ifndef HIP_OPPDB_H
 #define HIP_OPPDB_H
 
-//#include "keymat.h"
-//#include "pk.h"
-#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
-//#include "input.h" 	// required for declaration of receive functions
-//#include "update.h"	// required for declaration of update function
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)
 #define HIP_LOCK_OPP(entry)  
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
+
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
 void hip_init_opp_db();
 //void hip_uninit_opp_db();
@@ -39,4 +35,3 @@ int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our);
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 
 #endif /* HIP_HADB_H */
-#endif /* CONFIG_HIP_OPPORTUNISTIC */

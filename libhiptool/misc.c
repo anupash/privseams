@@ -15,22 +15,19 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
   int err = 0;
   u8 digest[HIP_AH_SHA_LEN];
   char *key = (char *) (ip);
-
   unsigned int key_len = sizeof(struct in6_addr);
 
-  HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
+  HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
   _HIP_HEXDUMP("key", key, key_len);
   HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err, 
 	   "Building of digest failed\n");
   
   memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	 sizeof(struct in6_addr));
-  
-  hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
-  hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
 
-  // set the first 8 bits after hit prefix to null  
-  hit->in6_u.u6_addr8[1] = 0x00; 
+  hit->s6_addr32[3] = 0; // this separates phit from normal hit
+
+  set_hit_prefix(hit);
   
  out_err:
   
@@ -39,16 +36,16 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 #endif //CONFIG_HIP_OPPORTUNISTIC
 
 /** hip_timeval_diff - calculate difference between two timevalues
- * @t1: timevalue 1
- * @t2: timevalue 2
- * @result: where the result is stored
+ * @param t1 timevalue 1
+ * @param t2 timevalue 2
+ * @param result where the result is stored
  *
  * ** CHECK comments **
- * @result = @t1 - @t2
+ * result = t1 - t2
  *
  * Code taken from http://www.gnu.org/manual/glibc-2.2.5/html_node/Elapsed-Time.html
  *
- * Returns: 1 if @t1 is equal or later than @t2, else 0.
+ * @return 1 if t1 is equal or later than t2, else 0.
  */
 int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		     struct timeval *result)
@@ -125,10 +122,10 @@ int maxof(int num_args, ...)
 
 /**
  * hip_hit_is_bigger - compare two HITs
- * @hit1: the first HIT to be compared
- * @hit2: the second HIT to be compared
+ * @param hit1 the first HIT to be compared
+ * @param hit2 the second HIT to be compared
  *
- * Returns: 1 if @hit1 was bigger than @hit2, or else 0
+ * @return 1 if hit1 was bigger than hit2, or else 0
  */
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2)
@@ -170,19 +167,12 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
 	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
 }
 
-int hip_is_hit(const hip_hit_t *hit) 
-{
-	HIP_DEBUG_IN6ADDR("received hit", (struct in6_addr *)hit);
-	return ipv6_addr_is_hit((struct in6_addr *)hit);
-}
-
-
 /**
  * hip_hash_spi - calculate a hash from SPI value
- * @key: 32-bit SPI value
- * @range: range of the hash
+ * @param key 32-bit SPI value
+ * @param range range of the hash
  *
- * Returns value in range: 0 <= x < @range
+ * Returns value in range: 0 <= x < range
  */
 int hip_hash_spi(const void *key, int range)
 {
@@ -193,8 +183,8 @@ int hip_hash_spi(const void *key, int range)
 
 /**
  * hip_hash_hit - calculate a hash from a HIT
- * @key: pointer to a HIT
- * @range: range of the hash
+ * @param key pointer to a HIT
+ * @param range range of the hash
  *
  * Returns value in range: 0 <= x < range
  */
@@ -229,10 +219,10 @@ const char *hip_algorithm_to_string(int algo)
 
 /**
  * hip_birthday_success - compare two birthday counters
- * @old_bd: birthday counter
- * @new_bd: birthday counter used when comparing against @old_bd
+ * @param old_bd birthday counter
+ * @param new_bd birthday counter used when comparing against old_bd
  *
- * Returns: 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
+ * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
  */
 int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
 {
@@ -242,9 +232,9 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
 
 /**
  * hip_enc_key_length - get encryption key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the encryption key length based on the chosen transform,
+ * @return the encryption key length based on the chosen transform,
  * otherwise < 0 on error.
  */
 int hip_enc_key_length(int tid)
@@ -295,9 +285,9 @@ int hip_hmac_key_length(int tid)
 
 /**
  * hip_transform_key_length - get transform key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the transform key length based on the chosen transform,
+ * @return the transform key length based on the chosen transform,
  * otherwise < 0 on error.
  */
 int hip_transform_key_length(int tid)
@@ -326,9 +316,9 @@ int hip_transform_key_length(int tid)
 
 /**
  * hip_auth_key_length_esp - get authentication key length of a transform
- * @tid: transform
+ * @param tid transform
  *
- * Returns: the authentication key length based on the chosen transform.
+ * @return the authentication key length based on the chosen transform.
  * otherwise < 0 on error.
  */
 int hip_auth_key_length_esp(int tid)
@@ -357,9 +347,9 @@ int hip_auth_key_length_esp(int tid)
 
 /**
  * hip_select_hip_transform - select a HIP transform to use
- * @ht: HIP_TRANSFORM payload where the transform is selected from
+ * @param ht HIP_TRANSFORM payload where the transform is selected from
  *
- * Returns: the first acceptable Transform-ID, otherwise < 0 if no
+ * @return the first acceptable Transform-ID, otherwise < 0 if no
  * acceptable transform was found. The return value is in host byte order.
  */
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
@@ -410,9 +400,9 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
 
 /**
  * hip_select_esp_transform - select an ESP transform to use
- * @ht: ESP_TRANSFORM payload where the transform is selected from
+ * @param ht ESP_TRANSFORM payload where the transform is selected from
  *
- * Returns: the first acceptable Suite-ID. otherwise < 0 if no
+ * @return the first acceptable Suite-ID. otherwise < 0 if no
  * acceptable Suite-ID was found.
  */
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
@@ -493,27 +483,12 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	return err;
 }
 
-void khi_expand(unsigned char *dst, int *dst_index, unsigned char *src,
-		int src_len) {
-	int index; 
-
-	for (index = 0; index < src_len; ) {
-		if ((*dst_index % 16) > 11) {
-			dst[*dst_index] = 0;
-			(*dst_index)++;
-		} else {
-			dst[*dst_index] = src[index];
-			index++;
-			(*dst_index)++;
-		}
-	}
-}
-
 /* the lengths are in bits */
 int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	       int encoded_len) {
 	BIGNUM *bn = NULL;
-	int err = 0, shift = (orig_len - encoded_len) / 2, len;
+	int err = 0, shift = (orig_len - encoded_len) / 2,
+	  len = encoded_len / 8 + ((encoded_len % 8) ? 1 : 0);
 
 	HIP_IFEL((encoded_len > orig_len), -1, "len mismatch\n");
 	HIP_IFEL((!(bn = BN_bin2bn(orig, orig_len / 8, NULL))), -1,
@@ -521,11 +496,10 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	HIP_IFEL(!BN_rshift(bn, bn, shift), -1, "BN_lshift\n");
 	HIP_IFEL(!BN_mask_bits(bn, encoded_len), -1,
 		"BN_mask_bits\n");
-	HIP_IFEL((bn2bin_safe(bn, encoded, encoded_len / 8)
-		  != encoded_len / 8), -1,
+	HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
 		  "BN_bn2bin_safe\n");
 
-	HIP_HEXDUMP("encoded: ", encoded, encoded_len / 8);
+	HIP_HEXDUMP("encoded: ", encoded, len);
 
  out_err:
 	if(bn)
@@ -533,48 +507,8 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	return err;
 }
 
-/* draft-laganier-khi-00:
- *
- * A KHI is generated using the algorithm below, which takes as input a
- * bitstring and a context identifier:
- *   
- * Input      :=  any bitstring
- * Hash Input :=  Context ID | Input
- * Hash       :=  SHA1( Expand( Hash Input ) )
- * KHI        :=  Prefix | Encode_n( Hash )
- *
- * where:
- *   
- * | : Denotes concatenation of bitstrings
- *   
- * Input :      A bitstring unique or statistically unique within a
- *              given context intended to be associated with the
- *              to-be-created KHI in the given context.
- *   
- * Context ID : A randomly generated value defining the expected usage
- *              context the the particular KHI.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose sharing 
- *              the name space introduced for CGA Type Tags; see
- *              http://www.iana.org/assignments/cga-message-types
- *              and RFC 3972.
- *   
- * Expand( ) :  An expansion function designed to overcome recent
- *              attacks on SHA1.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose inserting
- *              four (4) zero (0) bytes after every twelve (12) bytes
- *              of the argument bitstring.
- *   
- * Encode_n( ): An extraction function which output is obtained by
- *              extracting an <n>-bits-long bitstring from the 
- *              argument bitstring.
- *   
- *              As a baseline (TO BE DISCUSSED), we propose taking
- *              <n> middlemost bits from the SHA1 output.
- */
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
+			   struct in6_addr *hit, int hit_type)
 {
        int err = 0, index;
        u8 digest[HIP_AH_SHA_LEN];
@@ -588,23 +522,17 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        int khi_data_len = key_rr_len + sizeof(khi_context_id);
        int khi_index = 0;
 
-       /* some extra space for the zeroes */
-       khi_data_len += (khi_data_len / 12) * 4;
-       
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
+       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        /* Hash Input :=  Context ID | Input */
        khi_data = HIP_MALLOC(khi_data_len, 0);
        khi_index = 0;
-
-       /* Expand( Hash Input ): As a baseline (TO BE DISCUSSED), we propose
-	  inserting four (4) zero (0) bytes after every twelve (12) bytes
-	  of the argument bitstring. */
-       khi_expand(khi_data, &khi_index, khi_context_id,
-		  sizeof(khi_context_id));
-       khi_expand(khi_data, &khi_index, key_rr, key_rr_len);
+       memcpy(khi_data + khi_index, khi_context_id, sizeof(khi_context_id));
+       khi_index += sizeof(khi_context_id);
+       memcpy(khi_data + khi_index, key_rr, key_rr_len);
+       khi_index += key_rr_len;
 
        HIP_ASSERT(khi_index == khi_data_len);
 
@@ -617,95 +545,19 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        HIP_HEXDUMP("digest", digest, sizeof(digest));
 
-       /* Encode_n( ): An extraction function which output is obtained by
-	  extracting an <n>-bits-long bitstring from the 
-	  argument bitstring. As a baseline (TO BE DISCUSSED), we propose
-	  taking <n> middlemost bits from the SHA1 output. */
-       HIP_ASSERT(HIP_HIT_PREFIX_LEN == 8);
+       bzero(hit, sizeof(hip_hit_t));
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
-			   ((u8 *) hit) + 1,
+			   ((u8 *) hit) + 3,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
 		-1, "encoding failed\n");
 
-       hit->in6_u.u6_addr8[0] = 0x00;
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
-
-       HIP_DEBUG_HIT("calculated HIT: ", hit);
+       HIP_DEBUG_HIT("HIT before prefix: ", hit);
+       set_hit_prefix(hit);
+       HIP_DEBUG_HIT("HIT after prefix: ", hit);
 
  out_err:
        if (khi_data)
 	       HIP_FREE(khi_data);
-
-       return err;
-}
-
-/*
- * XX TODO: HAA
- */
-int hip_dsa_host_id_to_hit_old(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
-{
-       int err = 0;
-       u8 digest[HIP_AH_SHA_LEN];
-       char *key_rr = (char *) (host_id + 1); /* skip the header */
-       /* hit excludes rdata but it is included in hi_length;
-	  subtract rdata */
-       unsigned int key_rr_len = ntohs(host_id->hi_length) -
- 	 sizeof(struct hip_host_id_key_rdata);
-
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
-		"Building of digest failed\n");
-
-       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
-
-       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-	      sizeof(struct in6_addr));
-
-       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
-
-       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
-
- out_err:
-
-       return err;
-}
-
-/*
- * XX TODO: HAA
- * XX TODO: which one to use: this or the function just below?
- */
-int hip_dsa_host_id_to_hit_old2(const struct hip_host_id *host_id,
-				struct in6_addr *hit, int hit_type)
-{
-       int err = 0;
-       u8 digest[HIP_AH_SHA_LEN];
-       char *key_rr = (char *) (host_id + 1); /* skip the header */
-       /* hit excludes rdata but it is included in hi_length;
-	  subtract rdata */
-       unsigned int key_rr_len = ntohs(host_id->hi_length) -
- 	 sizeof(struct hip_host_id_key_rdata);
-
-       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
-       HIP_IFE(hit_type != HIP_HIT_TYPE_HASH120, -ENOSYS);
-       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
-       HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_rr, key_rr_len, digest)), err, 
-		"Building of digest failed\n");
-
-       /* hit_120 := concatenate ( 01000000 , low_order_bits ( digest, 120 ) ) */
-
-       memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
-	      sizeof(struct in6_addr));
-
-       //hit->in6_u.u6_addr8[0] &= 0x3f; // clear the upmost bits
-
-       hit->in6_u.u6_addr8[0] = 0x00; // clear all the upmost bits - draft-ietf-hip-base-03
-       hit->in6_u.u6_addr8[0] |= HIP_HIT_TYPE_MASK_120;
-
- out_err:
 
        return err;
 }
@@ -746,7 +598,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	contents_len = hip_get_param_contents_len(host_id);
 	total_len = hip_get_param_total_len(host_id);
 
-	/* XX TODO: add an extra check for the T val */
+	/*! \todo add an extra check for the T val */
 
 	if (contents_len <= 20) {
 		err = -EMSGSIZE;
@@ -855,10 +707,10 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
 
 /**
  * check_and_create_dir - check and create a directory
- * @dirname: the name of the directory
- * @mode:    creation mode for the directory, if it does not exist
+ * @param dirname the name of the directory
+ * @param mode creation mode for the directory, if it does not exist
  *
- * Returns: 0 if successful, or negative on error.
+ * @return 0 if successful, or negative on error.
  */
 int check_and_create_dir(char *dirname, mode_t mode) {
 	int err = 0;
@@ -1288,7 +1140,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
 
-    err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH120,
+    err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH100,
 				 &dsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
@@ -1298,7 +1150,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
     err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
-				 HIP_HIT_TYPE_HASH120, 
+				 HIP_HIT_TYPE_HASH100, 
 				 &dsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
@@ -1306,7 +1158,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     }
     HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
     
-    err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH120,
+    err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH100,
 				 &rsa_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
@@ -1315,7 +1167,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     HIP_DEBUG_HIT("RSA HIT", &rsa_lhi.hit);
 
     err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
-				 HIP_HIT_TYPE_HASH120, 
+				 HIP_HIT_TYPE_HASH100, 
 				 &rsa_pub_lhi.hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");

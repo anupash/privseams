@@ -17,6 +17,10 @@
 #include "tw.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
@@ -31,6 +35,8 @@ void gui_terminate(void);
 /* file: main_create.c */
 int main_create_content(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

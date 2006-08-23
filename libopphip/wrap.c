@@ -22,6 +22,7 @@
 #include "hadb.h"
 #include "hashtable.h"
 #include "libinet6/util.h"
+#include "icomm.h"
 
 #define SOFILE "libc.so.6" 
 
@@ -63,6 +64,11 @@ ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags,
 ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
 
 int (*close_dlsym)(int fd);
+
+static inline int create_new_socket(int type, int protocol)
+{
+  return socket(AF_INET6, type, protocol);
+}
 
 hip_hit_t *get_local_hits_wrapper()
 {

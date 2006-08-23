@@ -19,12 +19,12 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "hip.h"
 #include "hashtable.h"
 #include "hadb.h"
-#include "workqueue.h"
+#include "user.h"
 #include "misc.h"
 #include "xfrm.h"
+#include "state.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
