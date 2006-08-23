@@ -22,14 +22,14 @@
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-//#define HIP_STATE_REKEYING          6      /* XX TODO: REMOVE */
+//#define HIP_STATE_REKEYING          6      /*! \todo REMOVE */
 /* when adding new states update debug.c hip_state_str */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
 #define HIP_STATE_FILTERING			10
 
-#define HIP_UPDATE_STATE_REKEYING    1      /* XX TODO: REMOVE */
+#define HIP_UPDATE_STATE_REKEYING    1      /*! \todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
@@ -60,7 +60,7 @@
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 
-/* todo: remove HIP_HASTATE_SPIOK */
+/*! \todo remove HIP_HASTATE_SPIOK */
 typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
 	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
 

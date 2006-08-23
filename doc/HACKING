@@ -261,8 +261,7 @@ Doxygen is now used for documenting HIPL. Manual for how to use doxygen
 documentation, is found from here:
 http://www.stack.nl/~dimitri/doxygen/manual.html
 
-To create doxygen documentation in HTML format, execute doxygen in
-doc-directory. Doxygen will create documentation under doc/doxy/html.
+To create doxygen documentation in HTML format, execute "make doxygen". Doxygen will create documentation under doc/doxy/html.
 
 Simple example, how to use some doxygen features:
 
