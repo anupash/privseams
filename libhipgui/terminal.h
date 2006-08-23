@@ -29,6 +29,10 @@
 #include "tools.h"
 #endif
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -92,6 +96,8 @@ void term_client_send_string(char *);
 int term_client_init(void);
 void term_client_quit(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

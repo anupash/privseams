@@ -26,6 +26,10 @@
 #define SO_HIP_SOCKET_OPT 2
 #define SO_HIP_GET_HIT_LIST 3
 
+/*! \addtogroup hip_so
+ * @{
+ */
+
 /* HIP socket options */
 #define SO_HIP_ADD_LOCAL_HI                     101
 #define SO_HIP_DEL_LOCAL_HI                     102
@@ -62,6 +66,8 @@
 #define SO_HIP_SET_PEER_HIT						137
 #define SO_HIP_ADD_ESCROW						139
 #define SO_HIP_OFFER_ESCROW						140
+
+/* @} addtogroup hip_so */
 
 
 #endif /* _HIP_ICOMM */

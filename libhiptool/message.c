@@ -88,8 +88,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	HIP_DEBUG("waiting to receive deamon info\n");
-	//recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
-	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	n = recvfrom(hip_user_sock, msg, hip_peek_recv_total_len(hip_user_sock, 0), 
 	     0,(struct sockaddr *)&daemon_addr, &alen);
 	
 	if (n < 0) {
@@ -201,22 +200,26 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
  * allocates memory for buffers and nested structs. Receives
  * a message from socket and fills the hip_common struct with the
  * values from this message.
+ *
  * @param socket socket to read from
- * @param hip_common is returned as filled struct
- * @read addr:  flag whether the adresses should be read from the received packet
- *              1:read addresses, 0:don't read addresses
+ * @param hip_msg is returned as filled struct
+ * @param read_addr flag whether the adresses should be read from the received packet
+ *                  1:read addresses, 0:don't read addresses
  * @param saddr is used as return value for the sender address of the received message
  *              (if read_addr is set to 1)
  * @param daddr is used as return value for the destination address of the received message
  *              (if read_addr is set to 1)
+ * @param msg_info No description.
+ * @param encap_hdr_size No description.
+ * @param is_ipv4 No description.
  *
- * Returns -1 in case of an error, >0 otherwise.
+ * @return -1 in case of an error, >0 otherwise.
  */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
-			    int read_addr, struct in6_addr *saddr,
-			    struct in6_addr *daddr,
-                            struct hip_stateless_info *msg_info,
-                            int encap_hdr_size, int is_ipv4)
+                             int read_addr, struct in6_addr *saddr,
+                             struct in6_addr *daddr,
+                             struct hip_stateless_info *msg_info,
+                             int encap_hdr_size, int is_ipv4)
 {
         struct sockaddr_storage addr_from;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);

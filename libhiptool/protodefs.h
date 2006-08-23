@@ -8,6 +8,10 @@
 
 #define HIP_MAX_PACKET 2048
 
+/*! \addtogroup hip_msg
+ * @{
+ */
+
 #define HIP_I1         1
 #define HIP_R1         2
 #define HIP_I2         3
@@ -25,11 +29,19 @@
 #define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
 
+/** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
+/** Daemon should reply to HIP_AGENT_PING with this one. */
 #define HIP_AGENT_PING_REPLY		71
+/** Agent send this one to daemon when exiting. */
 #define HIP_AGENT_QUIT				72
+/** Daemon sends local HITs to agent with this message. */
 #define HIP_ADD_DB_HI				73
+/** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
+
+/* @} addtogroup hip_msg */
+
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
@@ -75,7 +87,7 @@
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-#define HIP_PARAM_DSA_SIGN_DATA         32770 /* XX TODO: change to digest */
+#define HIP_PARAM_DSA_SIGN_DATA         32770 /*! \todo change to digest */
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
@@ -86,10 +98,10 @@
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO				32781 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_REQUEST			32782 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_RESPONSE			32783 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_FAILED			32784 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_INFO				32781 /*! \todo move somewhere else */
+#define HIP_PARAM_REG_REQUEST			32782 /*! \todo move somewhere else */
+#define HIP_PARAM_REG_RESPONSE			32783 /*! \todo move somewhere else */
+#define HIP_PARAM_REG_FAILED			32784 /*! \todo move somewhere else */
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_FROM_SIGN       65100
@@ -427,13 +439,11 @@ struct hip_esp_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
-/*
- * XX FIXME: HIP AND ESP TRANSFORM ARE NOT SYMMETRIC (RESERVED)
- */
+/*! \todo HIP AND ESP TRANSFORM ARE NOT SYMMETRIC (RESERVED) */
 struct hip_any_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-		/* XX TODO: replace with MAX(HIP, ESP) */
+		/*! \todo replace with MAX(HIP, ESP) */
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX +
 				       HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
