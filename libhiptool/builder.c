@@ -855,7 +855,7 @@ char* hip_message_type_name(uint8_t msg_type){
  * @return name of the message type
  **/
 char* hip_param_type_name(uint16_t param_type){
-	switch (f){
+	switch (param_type){
 		case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
 		case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
 		case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";

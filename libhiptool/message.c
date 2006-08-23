@@ -90,8 +90,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	HIP_DEBUG("waiting to receive deamon info\n");
-	//recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
-	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	n = recvfrom(hip_user_sock, msg, hip_peek_recv_total_len(hip_user_sock, 0), 
 	     0,(struct sockaddr *)&daemon_addr, &alen);
 	
 	if (n < 0) {
