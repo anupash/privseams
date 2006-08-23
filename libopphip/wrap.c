@@ -106,7 +106,7 @@ inline int check_msg_name(const struct msghdr *msg)
 inline int check_sin6_family_and_socket_type(const struct sockaddr  *to, int socket_type)
 {
   return ( (((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
-	    ((struct sockaddr_in6 *)to)->sin6_family == AF_INET) &&
+	    ((struct sockaddr_in *)to)->sin_family == AF_INET) &&
 	   socket_type != SOCK_RAW &&
 	   (socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM) );
 }
