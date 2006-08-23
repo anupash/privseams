@@ -288,10 +288,6 @@ int periodic_maintenance()
 {
 	int err = 0;
 	
-	err = hip_count_open_connections();
-	HIP_DEBUG("number of open connections: %d\n", err);
-	err = 0;
-	
 	if (hipd_get_state() == HIPD_STATE_CLOSING)
 	{
 		if (force_exit_counter > 0)
