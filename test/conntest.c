@@ -295,7 +295,7 @@ out_err:
  *
  * @return 1 with success, 0 otherwise.
  */
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name, int flags)
 {
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
@@ -306,7 +306,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	/* lookup host */
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = AI_HIP;
+	hints.ai_flags = flags;
 	/* If peer_name is not specified the destination is looked in the hadb */
 	if (!peer_name)
 		hints.ai_flags |= AI_KERNEL_LIST;
