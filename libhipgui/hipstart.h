@@ -21,6 +21,11 @@
 #include "widgets.h"
 #include "ife.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
+
 /******************************************************************************/
 /* DEFINES */
 #define MAX_HOST_ITEMS		16
@@ -45,6 +50,8 @@ void main_destroy(GtkWidget *, gpointer);
 gboolean list_select(void *, void *, void *, void *);
 int gui_init(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/
