@@ -193,4 +193,23 @@ int hip_create_r2(struct hip_context *ctx,
 	           struct hip_stateless_info *);
 
  
+/**
+ * hip_controls_sane - check for illegal controls
+ * @param controls control value to be checked
+ * @param legal legal control values to check @controls against
+ *
+ * Controls are given in host byte order.
+ *@return Returns 1 if there are no illegal control values in @controls,
+ * otherwise 0.
+ */
+static inline int hip_controls_sane(u16 controls, u16 legal)
+{
+	return ((controls & (   HIP_CONTROL_HIT_ANON
+#ifdef CONFIG_HIP_RVS
+			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
+#endif
+		)) | legal) == legal;
+}
+
+
 #endif /* HIP_INPUT_H */
