@@ -25,8 +25,8 @@ int hipd_init(int flush_ipsec)
 	hip_probe_kernel_modules();
 
 	/* Register signal handlers */
-	signal(SIGINT, hip_exit);
-	signal(SIGTERM, hip_exit);
+	signal(SIGINT, hip_close);
+	signal(SIGTERM, hip_close);
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -202,13 +202,14 @@ int hip_init_host_ids()
  */
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 {
-	int on = 1, err = 0;
+	int on = 1, off = 0, err = 0;
 
 	HIP_IFEL(((*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
 
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
 			    IPV6_2292PKTINFO, &on,
@@ -233,7 +234,8 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	HIP_IFEL(((*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
 	         IPPROTO_HIP)) <= 0), 1,
 	         "Raw socket v4 creation failed. Not root?\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off,
 	         sizeof(on)), -1, "setsockopt v4 recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
 	         sizeof(on)), -1,
@@ -267,7 +269,8 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
         }
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off,
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
                    sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
@@ -342,6 +345,36 @@ int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
 
 
 /**
+ * Start closing HIP daemon.
+ */
+void hip_close(int signal)
+{
+	static int terminate = 0;
+	
+	HIP_ERROR("Signal: %d\n", signal);
+	terminate++;
+	
+	/* Close SAs with all peers */
+	if (terminate == 1)
+	{
+		hip_send_close(NULL);
+		hipd_set_state(HIPD_STATE_CLOSING);
+		HIP_DEBUG("Starting to close HIP daemon...\n");
+	}
+	else if (terminate == 2)
+	{
+		HIP_DEBUG("Send still once this signal to force daemon exit...\n");
+	}
+	else if (terminate > 2)
+	{
+		HIP_DEBUG("Terminating daemon.\n");
+		hip_exit(signal);
+		exit(signal);
+	}
+}
+
+
+/**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
  */
@@ -352,7 +385,7 @@ void hip_exit(int signal)
 	//hip_delete_default_prefix_sp_pair();
 
 	/* Close SAs with all peers */
-	hip_send_close(NULL);
+//	hip_send_close(NULL);
 
 	hip_delete_all_sp();
 
@@ -393,8 +426,6 @@ void hip_exit(int signal)
 		rtnl_close(&hip_nl_route);
 	if (hip_agent_sock)
 		close(hip_agent_sock);
-
-	exit(signal);
 }
 
 /**

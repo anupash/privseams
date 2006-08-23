@@ -148,24 +148,6 @@ out_err:
 }
 
 /**
- * hip_controls_sane - check for illegal controls
- * @param controls control value to be checked
- * @param legal legal control values to check @controls against
- *
- * Controls are given in host byte order.
- *@return Returns 1 if there are no illegal control values in @controls,
- * otherwise 0.
- */
-static inline int hip_controls_sane(u16 controls, u16 legal)
-{
-	return ((controls & (   HIP_CONTROL_HIT_ANON
-#ifdef CONFIG_HIP_RVS
-			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
-#endif
-		)) | legal) == legal;
-}
-
-/**
  * hip_verify_hmac - verify HMAC
  * @param buffer the packet data used in HMAC calculation
  * @param hmac the HMAC to be verified
@@ -517,58 +499,6 @@ int hip_receive_close(struct hip_common *close,
  	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSING:
 		err = entry->hadb_handle_func->hip_handle_close(close, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
-
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
- out_err:
-	return err;
-}
-
-int hip_receive_close_ack(struct hip_common *close_ack,
-			  hip_ha_t *entry) 
-{
-	int state = 0;
-	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
-
-	/* XX FIX:  */
-
-	HIP_DEBUG("\n");
-
-	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
-
-	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-		       //HIP_CONTROL_RVS_CAPABLE
-		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
-		               )) {
-		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
-			  ntohs(close_ack->control));
-		goto out_err;
-	}
-	
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close ack\n");
-		goto out_err;
-	} else {
-		barrier();
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
-
- 	switch(state) {
-	case HIP_STATE_CLOSING:
-	case HIP_STATE_CLOSED:
-		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
 		break;
 	default:
 		HIP_ERROR("Internal state (%d) is incorrect\n", state);
