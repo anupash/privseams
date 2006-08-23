@@ -82,13 +82,15 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = ../
+INPUT                  = ../agent ../firewall ../hipd ../hipsock ../libhipgui \
+                         ../libhiptool ../libinet6 ../libopphip ../test \
+                         ../tools ../doc
 FILE_PATTERNS          = *.c \
                          *.h
 RECURSIVE              = YES
 EXCLUDE                = 
 EXCLUDE_SYMLINKS       = YES
-EXCLUDE_PATTERNS       = */{arch}/*
+EXCLUDE_PATTERNS       = */.arch-ids/* \
 EXAMPLE_PATH           = 
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO
