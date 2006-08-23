@@ -48,8 +48,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
 		if (a == INADDR_ANY ||
+                    a == INADDR_LOOPBACK ||
 		    a == INADDR_BROADCAST ||
-			IN_MULTICAST(a)||
+			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 			IS_LSI32(a))
 				return 0;
 		return 1;

@@ -8,7 +8,7 @@
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare or User Mode Linux is recommended for
+      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
       testing HIPL.
       </para>
     </chapter>
@@ -19,7 +19,8 @@
      As an alternative, you may download frozen, binary releases of the kernel
      from http://hipl.hiit.fi/hipl/release/. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
-     because the bug may already have been resolved upstream.
+     because the bug may already have been resolved upstream. There is also a
+     Knoppix based live cd available from the HIPL download pages.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -79,8 +80,8 @@
       &nbsp;* netcat6
     </para>
     <para>
-      &nbsp;* latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
-      HIPL documentation)
+      &nbsp;* latex, dvips, dvipdf, fig2dev, doxygen (for building the
+      HIPL source code documentation)
     </para>
     <para>
       &nbsp;* java compiler for "jip" (java hip resolver) if you want to
@@ -105,14 +106,23 @@
   <chapter>
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+     Architectural documentation:
     </para>
     <para>
      &nbsp; % cd hipl/doc
     </para>
     <para>
-      &nbsp;% make design_choices.dvi design_choices.ps design_choices.pdf
+     &nbsp; % make design_choices.dvi design_choices.ps design_choices.pdf
     </para>
+	<para>
+	 Source code documentation:
+	</para>
+	<para>
+	 &nbsp; % cd hipl/doc
+	</para>
+	<para>
+	 &nbsp; % doxygen
+	</para>
   </chapter>
   <chapter>
     <title>Compiling the Kernel</title>
@@ -538,7 +548,13 @@
       relinking is required, no changes are needed in the application.
     </para>
     <para>
-      3. Override the getaddrinfo function from the command line:
+      3. Override the resolver library dynamically:
+    </para>
+    <para>
+      a. Give the binary as an argument to hipconf: "hipconf run normal &lt;EXECUTABLE&gt;"
+    </para>
+    <para>
+      b. Override the getaddrinfo function from the command line:
       http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
     </para>
     <para>
@@ -579,7 +595,10 @@ using getaddrinfo: ping, ping6, tla, svn.
     as follows (in case you did not make install):
     </para>
     <para>
-export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
+    a. hipconf run opp &lt;EXECUTABLE&gt;
+    </para>
+    <para>
+    b. export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
     </para>
     <para>
     6. Use HIP agent GUI to run the application. This is a new, not very well
@@ -940,17 +959,26 @@ export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--
             trough agent, which asks user for accepting the HIT pair.
             Then HIT is saved into database and accept/reject is
             returned to daemon. User can also manage HITs trough graphical
-            user interface. The interface is very unfinished, and nothing
-            very usefull cannot actually be done yet.</para>
+            user interface. The interface is under development,
+			and is quite in alpha state yet.
+		</para>
       <para>
 		To compile agent and GUI atleast following packages are needed (asuming you have debian):
 		1. gcc and g++ compilers, both should be at least version 4.0.
 		2. Package: xbase-clients - miscellaneous X clients
 		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
+           If you want to use 'system tray' icon, you need atleast 2.10.0 version
+		   of GTK.
+		4. Automake 1.9
       </para>
+	  <para>
+		  In order to the agent start properly with right window and system tray icon,
+		  you must first do 'make install' to install the data files in right directory.
+		  System tray icon will not be shown at all, if you don't do this.
+	  </para>
       <para>
 		HIT database is saved and loaded on agent startup as default from
-		'/etc/hip/agentdb'-file.
+		'$HOMEDIR/.hipagentdb'-file.
       </para>
       <para>The agent executable is called "hipagent". You should run it using
             normal user (non-root) priviledges.

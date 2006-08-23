@@ -19,7 +19,12 @@
 #include "debug.h"
 #include "hit_db.h"
 #include "widgets.h"
+#include "ife.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -45,6 +50,8 @@ void main_destroy(GtkWidget *, gpointer);
 gboolean list_select(void *, void *, void *, void *);
 int gui_init(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

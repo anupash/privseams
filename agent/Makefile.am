@@ -13,7 +13,7 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_IN
 
 if HIP_AGENT
 
-sbin_PROGRAMS = hipagent
+bin_PROGRAMS = hipagent
 hipagent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below

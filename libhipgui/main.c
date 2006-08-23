@@ -38,6 +38,10 @@ int gui_init(void)
 	gtk_init(NULL, NULL);
 	widget_init();
 
+	/* Set default icon. */
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
+	gtk_window_set_default_icon_from_file(str, NULL);
+
 	/* Create main GUI window. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_MAINWND, w);
@@ -127,6 +131,8 @@ int gui_main(void)
 	}
 
 	gtk_main();
+
+	gui_quit();
 }
 /* END OF FUNCTION */
 

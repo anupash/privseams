@@ -68,7 +68,7 @@ static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
 
 /**
  * hip_hadb_rem_state_hit - Remove HA from HIT table
- * @entry: HA
+ * @param entry HA
  * HA must be locked.
  */
 static inline void hip_hadb_rem_state_hit(void *entry)
@@ -86,7 +86,7 @@ int hip_hadb_hit_is_our(const hip_hit_t *our) {
 
 /**
  * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
- * @ha: HA
+ * @param ha HA
  */
 static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 {
@@ -251,6 +251,25 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		}
 	}
 
+#ifdef CONFIG_HIP_ESCROW
+	{
+		HIP_KEA *kea;
+		kea = hip_kea_find(&ha->hit_our);
+		if (kea) {
+			/*! \todo check conditions for escrow associations here 
+			 (for now, there are none)*/
+			HIP_DEBUG("Escrow used for this entry: Initializing ha_state escrow fields");
+			ha->escrow_used = 1;
+			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
+			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
+			hip_keadb_put_entry(kea);
+		}
+		else {
+			HIP_DEBUG("Escrow not in use");
+		}
+	}
+#endif //CONFIG_HIP_ESCROW
+
 	ha->hastate = st;
 	return st;
 }
@@ -291,8 +310,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	
 	/* Set the nat status here */
 	if(hip_nat_status)
-		entry->nat = 1;
-	
+		entry->nat = 1;	
+		
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */
 	
@@ -400,8 +419,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
-int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
-				void *peer_hit)
+int hip_hadb_del_peer_info_wrapper(hip_ha_t *entry, void *peer_hit)
 {
 	hip_hit_t *hit = peer_hit;
 	int err = 0;
@@ -415,11 +433,11 @@ int hip_hadb_del_peer_info_wrapper(struct hip_hadb_state *entry,
 	return err;
 }
 
-int hip_hadb_del_peer_map(const hip_hit_t *hit)
+int hip_hadb_del_peer_map(hip_hit_t *hit)
 {
 	int err = 0;
 
-	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), 0,
+	HIP_IFEL(hip_for_each_ha(hip_hadb_del_peer_info_wrapper, hit), -1,
 	         "for_each_hi err.\n");	
 	
  out_err:
@@ -545,8 +563,8 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 
 /**
  * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
- * @entry: corresponding hadb entry of the peer
- * @addr: where the selected IPv6 address of the peer is copied to
+ * @param entry corresponding hadb entry of the peer
+ * @param addr where the selected IPv6 address of the peer is copied to
  *
  * Current destination address selection algorithm:
  * 1. use preferred address of the HA, if any (should be set)
@@ -558,7 +576,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
  * 3. select among the active addresses of the default outbound SPI
  * (select the address which was added/updated last)
  *
- * Returns: 0 if some of the addresses was copied successfully, else < 0.
+ * @return 0 if some of the addresses was copied successfully, else < 0.
  */
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 {
@@ -574,13 +592,13 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 /**
  * hip_hadb_get_peer_addr_info - get infomation on the given peer IPv6 address
- * @entry: corresponding hadb entry of the peer
- * @addr: the IPv6 address for which the information is to be retrieved
- * @spi: where the outbound SPI of @addr is copied to
- * @lifetime: where the lifetime of @addr is copied to
- * @modified_time: where the time when @addr was added or updated is copied to
+ * @param entry corresponding hadb entry of the peer
+ * @param addr the IPv6 address for which the information is to be retrieved
+ * @param spi where the outbound SPI of @addr is copied to
+ * @param lifetime where the lifetime of @addr is copied to
+ * @param modified_time where the time when @addr was added or updated is copied to
  *
- * Returns: if @entry has the address @addr in its peer address list
+ * @return if @entry has the address @addr in its peer address list
  * parameters @spi, @lifetime, and @modified_time are
  * assigned if they are non-NULL and 1 is returned, else @interface_id
  * and @lifetime are not assigned a value and 0 is returned.
@@ -619,13 +637,13 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 
 /**
  * hip_hadb_add_peer_addr - add a new peer IPv6 address to the entry's list of peer addresses
- * @entry: corresponding hadb entry of the peer
- * @new_addr: IPv6 address to be added
- * @spi: outbound SPI to which the @new_addr is related to
- * @lifetime: address lifetime of the address
- * @state: address state
+ * @param entry corresponding hadb entry of the peer
+ * @param new_addr IPv6 address to be added
+ * @param spi outbound SPI to which the @new_addr is related to
+ * @param lifetime address lifetime of the address
+ * @param state address state
  *
- * Returns: if @new_addr already exists, 0 is returned. If address was
+ * @return if @new_addr already exists, 0 is returned. If address was
  * added successfully 0 is returned, else < 0.
  *
 */
@@ -704,8 +722,8 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 /**
  * hip_hadb_delete_peer_address_list_one - delete IPv6 address from the entry's list 
  * of peer addresses
- * @entry: corresponding hadb entry of the peer
- * @addr: IPv6 address to be deleted
+ * @param entry corresponding hadb entry of the peer
+ * @param addr IPv6 address to be deleted
  */
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr) 
 {
@@ -1575,11 +1593,11 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry)
 
 /**
  * hip_store_base_exchange_keys - store the keys negotiated in base exchange
- * @ctx:             the context inside which the key data will copied around
- * @is_initiator:    true if the localhost is the initiator, or false if
+ * @param ctx the context inside which the key data will copied around
+ * @param is_initiator true if the localhost is the initiator, or false if
  *                   the localhost is the responder
  *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
+ * @return 0 if everything was stored successfully, otherwise < 0.
  */
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				  struct hip_context *ctx, int is_initiator)
@@ -1641,7 +1659,7 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	struct in6_addr hit;
 
 	/* Verify sender HIT */
- 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH120) ||
+ 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
 	//	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
@@ -1675,8 +1693,8 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	entry->our_pub = hip_get_public_key(entry->our_pub);
 
 	err = alg == HIP_HI_DSA ? 
-		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH120) :
-		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH120);
+		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100) :
+		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
 	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
 	
  out_err:
@@ -1833,14 +1851,14 @@ hip_update_func_set_t *hip_get_update_default_func_set() {
 /**
  * hip_hadb_set_rcv_function_set - set function pointer set for an hadb record.
  *				   Pointer values will not be copied!
- * @entry:          e pointer to the hadb record
- * @new_func_set:    pointer to the new function set
+ * @param entry e pointer to the hadb record
+ * @param new_func_set pointer to the new function set
  *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
+ * @return 0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
 				   hip_rcv_func_set_t * new_func_set){
-	/* TODO: add check whether all function pointers are set */
+	/*! \todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_rcv_func = new_func_set;
 		return 0;
@@ -1852,14 +1870,14 @@ int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
 /**
  * hip_hadb_set_handle_function_set - set function pointer set for an
  * hadb record. Pointer values will not be copied!
- * @entry:           pointer to the hadb record
- * @new_func_set:    pointer to the new function set
+ * @param entry pointer to the hadb record
+ * @param new_func_set pointer to the new function set
  *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
+ * @return 0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 				     hip_handle_func_set_t * new_func_set){
-	/* TODO: add check whether all function pointers are set */
+	/*! \todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
 		return 0;
@@ -1871,14 +1889,14 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 /**
  * hip_hadb_set_misc_function_set - set function pointer set for an hadb record.
  * Pointer values will not be copied!
- * @entry:           pointer to the hadb record
- * @new_func_set:    pointer to the new function set
+ * @param entry pointer to the hadb record
+ * @param new_func_set pointer to the new function set
  *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
+ * @return 0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 				   hip_misc_func_set_t * new_func_set){
-	/* TODO: add check whether all function pointers are set */
+	/*! \todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_misc_func = new_func_set;
 		return 0;
@@ -1916,14 +1934,14 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
 /**
  * hip_hadb_set_update_function_set - set function pointer set for an hadb record.
  * Pointer values will not be copied!
- * @entry:           pointer to the hadb record
- * @new_func_set:    pointer to the new function set
+ * @param entry pointer to the hadb record
+ * @param new_func_set pointer to the new function set
  *
- * Returns: 0 if everything was stored successfully, otherwise < 0.
+ * @return 0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
 				     hip_update_func_set_t * new_func_set){
-	/* TODO: add check whether all function pointers are set */
+	/*! \todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_update_func = new_func_set;
 		return 0;
@@ -2041,12 +2059,12 @@ int hip_list_peers_add(struct in6_addr *address,
 
 /**
  * hip_hadb_list_peers_func - private function to process a hadb entry
- * @entry: hadb table entry
- * @opaque: private data for the function (contains record keeping structure)
+ * @param entry hadb table entry
+ * @param opaque private data for the function (contains record keeping structure)
  *
  * Process a hadb entry, extracting the HOST ID, HIT, and IPv6 addresses.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
@@ -2226,7 +2244,7 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 
 /** 
  * hip_hadb_delete_state - Delete HA state (and deallocate memory)
- * @ha: HA
+ * @param ha HA
  *
  * Deletes all associates IPSEC SAs and frees the memory occupied
  * by the HA state.
@@ -2250,8 +2268,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 /**
  * hip_for_each_ha - Map function @func to every HA in HIT hash table
- * @func: Mapper function
- * @opaque: Opaque data for the mapper function.
+ * @param func Mapper function
+ * @param opaque Opaque data for the mapper function.
  *
  * The hash table is LOCKED while we process all the entries. This means
  * that the mapper function MUST be very short and _NOT_ do any operations
@@ -2288,3 +2306,30 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_UNLOCK_HT(&hadb_hit);
 	return fail;
 }
+
+
+/** Enumeration for hip_count_open_connections */
+int hip_count_one_entry(hip_ha_t *entry, int *counter)
+{
+	if (entry->state == HIP_STATE_CLOSING ||
+	    entry->state == HIP_STATE_ESTABLISHED ||
+	    entry->state == HIP_STATE_FILTERING)
+	{
+		(*counter)++;
+	}
+	return 0;
+}
+
+
+/**
+ * Return number of open connections by calculating hadb entrys.
+ */
+int hip_count_open_connections(void)
+{
+	int n = 0;
+	
+	hip_for_each_ha(hip_count_one_entry, &n);
+	
+	return n;
+}
+

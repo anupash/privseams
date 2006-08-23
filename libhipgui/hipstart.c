@@ -33,7 +33,6 @@ int host_items_n = 0;
 	Execute new application.
 
 	@param exe Executable name.
-	@param args Arguments for executable.
 	@return Return 0 on success, -1 on errors.
 */
 int exec_application(char *exe, ...)
