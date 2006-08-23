@@ -202,13 +202,14 @@ int hip_init_host_ids()
  */
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 {
-	int on = 1, err = 0;
+	int on = 1, off = 0, err = 0;
 
 	HIP_IFEL(((*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW,
 					 IPPROTO_HIP)) <= 0), 1,
 		 "Raw socket creation failed. Not root?\n");
 
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off,
 		   sizeof(on)), -1, "setsockopt recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
 			    IPV6_2292PKTINFO, &on,
@@ -233,7 +234,8 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	HIP_IFEL(((*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
 	         IPPROTO_HIP)) <= 0), 1,
 	         "Raw socket v4 creation failed. Not root?\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off,
 	         sizeof(on)), -1, "setsockopt v4 recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
 	         sizeof(on)), -1,
@@ -267,7 +269,8 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
         }
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on,
 		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &on,
+	/* see bug id 212 why RECV_ERR is off */
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off,
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
                    sizeof(encap_on)), -1, "setsockopt udp encap failed\n");

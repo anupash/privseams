@@ -34,6 +34,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 	
  out_err:
+
 	if (err)
 		bytes = -1;
 	if (msg)
