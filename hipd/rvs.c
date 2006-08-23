@@ -51,7 +51,6 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 }
 
 /**
-<<<<<<< TREE
  * hip_rva_ha2rva - create a rendezvous association from a host association
  * @param ha      a host association from where from to copy. 
  * @param gfpmask: memory allocation mask.

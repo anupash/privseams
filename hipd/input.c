@@ -2355,18 +2355,18 @@ int hip_handle_r2(struct hip_common *r2,
 
 /**
  * hip_handle_i1 - handle an incoming I1 packet.
- * @i1        HIP packet common header with source and destination HITs.
- * @i1_saddr: the source address from where the I1 packet was received.
- * @i1_daddr: the destination address where the I1 packet was sent to (own address).
- * @entry:    current host association database state.
- * @i1_info:  the source and destination ports (when NAT is in use).
+ * @param i1       HIP packet common header with source and destination HITs.
+ * @param i1_saddr the source address from where the I1 packet was received.
+ * @param i1_daddr the destination address where the I1 packet was sent to (own address).
+ * @param entry    current host association database state.
+ * @param i1_info  the source and destination ports (when NAT is in use).
  *
  * Handles an incoming I1 packet and parses FROM parameters from the packet.
  * If FROM parameter(s) is(are) found, the IP addresses obtained from the parameters
  * are passed to "hip_xmit_r1()" as an array. In "hip_xmit_r1()" this array is used
  * create a VIA_RVS parameter. 16.08.2006 15:30
  * 
- * Returns: zero on success, or negative error value on error.
+ * @return zero on success, or negative error value on error.
  */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,

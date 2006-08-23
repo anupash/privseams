@@ -310,7 +310,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 #ifdef CONFIG_HIP_RVS
 	if(rvs_count > 0)
 	{
-		/*  TODO: Parameters should be in ascending order, should this
+		/*  TODO: Parameters must be in ascending order, should this
 		    be checked here? */
 		hip_build_param_via_rvs(r1pkt, traversed_rvs, rvs_count);
 	}
