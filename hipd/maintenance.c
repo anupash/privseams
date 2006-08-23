@@ -18,6 +18,7 @@ float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
+int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 
 /**
@@ -286,7 +287,26 @@ void register_to_dht ()
 int periodic_maintenance()
 {
 	int err = 0;
-
+	
+	err = hip_count_open_connections();
+	HIP_DEBUG("number of open connections: %d\n", err);
+	err = 0;
+	
+	if (hipd_get_state() == HIPD_STATE_CLOSING)
+	{
+		if (force_exit_counter > 0)
+		{
+			err = hip_count_open_connections();
+			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
+		}
+		else
+		{
+			hip_exit(signal);
+			exit(signal);
+		}
+		force_exit_counter--;
+	}
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");
@@ -323,6 +343,4 @@ int periodic_maintenance()
 	
 	return err;
 }
-
-
 

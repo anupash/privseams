@@ -2306,3 +2306,30 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_UNLOCK_HT(&hadb_hit);
 	return fail;
 }
+
+
+/** Enumeration for hip_count_open_connections */
+int hip_count_one_entry(hip_ha_t *entry, int *counter)
+{
+	if (entry->state == HIP_STATE_CLOSING ||
+	    entry->state == HIP_STATE_ESTABLISHED ||
+	    entry->state == HIP_STATE_FILTERING)
+	{
+		(*counter)++;
+	}
+	return 0;
+}
+
+
+/**
+ * Return number of open connections by calculating hadb entrys.
+ */
+int hip_count_open_connections(void)
+{
+	int n = 0;
+	
+	hip_for_each_ha(hip_count_one_entry, &n);
+	
+	return n;
+}
+

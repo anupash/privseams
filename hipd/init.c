@@ -25,8 +25,8 @@ int hipd_init(int flush_ipsec)
 	hip_probe_kernel_modules();
 
 	/* Register signal handlers */
-	signal(SIGINT, hip_exit);
-	signal(SIGTERM, hip_exit);
+	signal(SIGINT, hip_close);
+	signal(SIGTERM, hip_close);
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -342,6 +342,36 @@ int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
 
 
 /**
+ * Start closing HIP daemon.
+ */
+void hip_close(int signal)
+{
+	static int terminate = 0;
+	
+	HIP_ERROR("Signal: %d\n", signal);
+	terminate++;
+	
+	/* Close SAs with all peers */
+	if (terminate == 1)
+	{
+		hip_send_close(NULL);
+		hipd_set_state(HIPD_STATE_CLOSING);
+		HIP_DEBUG("Starting to close HIP daemon...\n");
+	}
+	else if (terminate == 2)
+	{
+		HIP_DEBUG("Send still once this signal to force daemon exit...\n");
+	}
+	else if (terminate > 2)
+	{
+		HIP_DEBUG("Terminating daemon.\n");
+		hip_exit(signal);
+		exit(signal);
+	}
+}
+
+
+/**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
  */
@@ -352,7 +382,7 @@ void hip_exit(int signal)
 	//hip_delete_default_prefix_sp_pair();
 
 	/* Close SAs with all peers */
-	hip_send_close(NULL);
+//	hip_send_close(NULL);
 
 	hip_delete_all_sp();
 
@@ -393,8 +423,6 @@ void hip_exit(int signal)
 		rtnl_close(&hip_nl_route);
 	if (hip_agent_sock)
 		close(hip_agent_sock);
-
-	exit(signal);
 }
 
 /**

@@ -170,8 +170,8 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	   the hipd when you test the CLOSE. -miika */
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
-				   &entry->preferred_address), -1,
-		 "Deleting peer info failed\n");
+	         &entry->preferred_address), -1,
+	         "Deleting peer info failed\n");
 
 	//hip_hadb_remove_state(entry);
 	//hip_delete_esp(entry);
@@ -182,5 +182,58 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
  out_err:
 
+	return err;
+}
+
+
+int hip_receive_close_ack(struct hip_common *close_ack,
+			  hip_ha_t *entry) 
+{
+	int state = 0;
+	int err = 0;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
+
+	/* XX FIX:  */
+
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+	if (!hip_controls_sane(ntohs(close_ack->control), mask
+		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+		       //HIP_CONTROL_RVS_CAPABLE
+		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+			  ntohs(close_ack->control));
+		goto out_err;
+	}
+	
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close ack\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
+		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
 	return err;
 }

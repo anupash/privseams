@@ -149,7 +149,9 @@ int main(int argc, char *argv[]) {
 		     HIP_DEBUG_LEVEL_INFORMATIVE,
 		     "Hipd daemon running.\n"
 		     "Starting select loop.\n");
-	for (;;) {
+	hipd_set_state(HIPD_STATE_EXEC);
+	while (hipd_get_state() != HIPD_STATE_CLOSED)
+	{
 		struct hip_work_order *hwo;
 		
 		/* prepare file descriptor sets */
@@ -352,10 +354,10 @@ int main(int argc, char *argv[]) {
 
  out_err:
 
-	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
-
 	/* free allocated resources */
 	hip_exit(err);
+
+	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
 
 	return err;
 }
