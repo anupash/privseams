@@ -24,7 +24,7 @@ struct hip_key_escrow_association
 
 	struct in6_addr			hit; /* if we are the server, this is client hit,
 									if we are the client, this is our own hit */
-	// TODO: Find better key. Client HIT used for now.  
+	/*! \todo Find better key. Client HIT used for now. */
 	//struct in6_addr       	client_hit; 
 	//struct in6_addr       	peer_hit; //? 
 	struct in6_addr			server_hit;
@@ -93,7 +93,7 @@ void hip_uninit_keadb(void);
 
 HIP_KEA *hip_kea_allocate(int gfpmask);
 
-// TODO: Not ready!!
+/*! \todo Not ready!! */
 HIP_KEA *hip_kea_create(struct in6_addr *hit1, int gfpmask);
 
 int hip_keadb_add_entry(HIP_KEA *kea);

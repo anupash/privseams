@@ -8,15 +8,11 @@
  */
  
 /*!
- * \defgroup params TODOs for parameters
- */
-
-/*!
- * \defgroup libhipgui HIP GUI library
- */
-
-/*!
  * \defgroup ife Error handling macros
+ */
+
+/*!
+ * \defgroup params TODOs for parameters
  */
 
 /*!
@@ -26,5 +22,10 @@
 /*!
  * \defgroup hip_so HIP socket options
  */
+
+/*!
+ * \defgroup libhipgui HIP GUI library
+ */
+
 
 #endif /* _DOXYGEN_H */
