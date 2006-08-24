@@ -144,8 +144,9 @@ int util_func(int * const socket)
   return err;
 }
 
-int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id, 
-			    int * const socket, const hip_hit_t *local_hit)
+int util_func_with_sockaddr(const struct sockaddr *to,
+			    struct in6_addr *id, 
+			    int *const socket, const hip_hit_t *local_hit)
 {
   int err = 0;
   int pid = 0;
@@ -153,11 +154,18 @@ int util_func_with_sockaddr(const struct sockaddr *to, struct in6_addr *id,
   int mapping = 0;
   hip_hit_t peer_hit;
   hip_opp_socket_t *entry = NULL;
+  struct in6_addr mapped;
+
+  if (to->sa_family == AF_INET) {
+    IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) to)->sin_addr, &mapped);
+    id = &mapped;
+  } else {
+    id = (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr));
+  }
 
   // we are only interested in AF_INET and AFINET6
   pid = getpid();
   port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
-  id = (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr) );
   
   _HIP_DEBUG("connect sin_port=%d\n", port);
   HIP_DEBUG_HIT("sin6_addr id = ", id);
@@ -397,7 +405,6 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   hit_local = get_local_hits_wrapper();
   assert(hit_local);
   HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
-  
 
   HIP_DEBUG("!!!!!!!!!!! in wrap.c::connect() !!!!!!!!!!!!!!!\n");
   // we are only interested in AF_INET and AFINET6
