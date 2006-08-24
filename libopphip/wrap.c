@@ -103,12 +103,10 @@ inline int check_msg_name(const struct msghdr *msg)
 	     ((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == PF_INET6)));
 }
 
-inline int check_sin6_family_and_socket_type(const struct sockaddr  *to, int socket_type)
+inline int check_sin6_family_and_socket_type(int family, int type)
 {
-  return ( (((struct sockaddr_in6 *)to)->sin6_family == AF_INET6 || 
-	    ((struct sockaddr_in *)to)->sin_family == AF_INET) &&
-	   socket_type != SOCK_RAW &&
-	   (socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM) );
+  return !((family == AF_INET || family == AF_INET6) &&
+	   (type == SOCK_STREAM || type == SOCK_DGRAM));
 }
 
 void initialize_db_when_not_exist()
@@ -118,6 +116,21 @@ void initialize_db_when_not_exist()
     HIP_DEBUG("socketdb initialized\n");
     db_exist = 1;
   }
+}
+
+int any_sa_to_hit_sa(const struct sockaddr *from,
+		     const hip_hit_t *use_hit,
+		     struct sockaddr_in6 *to) {
+  to->sin6_family = AF_INET6;
+  ipv6_addr_copy(&to->sin6_addr, use_hit);
+  if (from->sa_family == AF_INET)
+    to->sin6_port = ((struct sockaddr_in *) from)->sin_family;
+  else if (from->sa_family == AF_INET6)
+    to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_family;
+  else
+    return -1;
+
+  return 0;
 }
 
 int util_func(int * const socket)
@@ -144,51 +157,49 @@ int util_func(int * const socket)
   return err;
 }
 
-int util_func_with_sockaddr(const struct sockaddr *to,
-			    struct in6_addr *id, 
-			    int *const socket, const hip_hit_t *local_hit)
+int util_func_with_sockaddr(int *const socket,
+			    const hip_hit_t *local_hit,
+			    struct in6_addr *peer_hit,
+			    const void *local_sockaddr_ip_unused,
+			    const struct sockaddr *peer_sockaddr_ip)
 {
-  int err = 0;
-  int pid = 0;
-  int port = 0;
-  int mapping = 0;
-  hip_hit_t peer_hit;
-  hip_opp_socket_t *entry = NULL;
-  struct in6_addr mapped;
+  int err = 0, pid = 0, port = 0, mapping = 0;
+   hip_opp_socket_t *entry = NULL;
+  struct in6_addr *peer_ip, mapped_addr;
 
-  if (to->sa_family == AF_INET) {
-    IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) to)->sin_addr, &mapped);
-    id = &mapped;
+  if (peer_sockaddr_ip->sa_family == AF_INET) {
+    IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) peer_sockaddr_ip)->sin_addr, &mapped_addr);
+    peer_ip = &mapped_addr;
   } else {
-    id = (struct in6_addr *)( &(((struct sockaddr_in6 *)to)->sin6_addr));
+    peer_ip = (struct in6_addr *)( &(((struct sockaddr_in6 *)peer_sockaddr_ip)->sin6_addr));
   }
 
   // we are only interested in AF_INET and AFINET6
   pid = getpid();
-  port = ntohs(((struct sockaddr_in6 *)to)->sin6_port);
+  port = ntohs(((struct sockaddr_in6 *)peer_sockaddr_ip)->sin6_port);
   
   _HIP_DEBUG("connect sin_port=%d\n", port);
-  HIP_DEBUG_HIT("sin6_addr id = ", id);
-  _HIP_HEXDUMP("connect HEXDUMP to\n", to, 110); //sizeof(struct sockaddr_in)
+  HIP_DEBUG_IN6ADDR("sin6_addr ip = ", peer_ip);
+  _HIP_HEXDUMP("connect HEXDUMP to\n", peer_sockaddr_ip, 110); //sizeof(struct sockaddr_in)
   
-  if(hit_is_real_hit(id)){
+  if(hit_is_real_hit(peer_ip)){
     HIP_DEBUG("!!!!!!!!!!!!!!!! real hit !!!!!!!!!!!!!!!\n");
     entry = hip_socketdb_find_entry(pid, *socket);
     assert(entry);
     hip_socketdb_add_new_socket(entry, *socket);
-    hip_socketdb_add_dst_hit(entry, id);
-  } else if(!hit_is_opportunistic_hashed_hit(id)){ // is ip
+    hip_socketdb_add_dst_hit(entry, peer_ip);
+  } else if(!hit_is_opportunistic_hashed_hit(peer_ip)){ // is ip
     HIP_DEBUG("!!!!!!!!!!!!!!!! ip !!!!!!!!!!!!!!!\n");
-    err = request_peer_hit_from_hipd(id, &peer_hit, local_hit);
-    if(err){
+    err = request_peer_hit_from_hipd(peer_ip, peer_hit, local_hit);
+    if(err) {
       HIP_ERROR("failed to get peer hit err=\n",  strerror(err));
       return err;
     }
     
-    HIP_DEBUG_HIT("!!!! id ", id);
-    HIP_DEBUG_HIT("!!!! peer_hit", &peer_hit);
+    HIP_DEBUG_HIT("!!!! peer_ip ", peer_ip);
+    HIP_DEBUG_HIT("!!!! peer_hit", peer_hit);
     
-    if(hit_is_real_hit(&peer_hit)){
+    if(hit_is_real_hit(peer_hit)){
       int type = 0;	
       int old_socket = 0;
       
@@ -210,18 +221,18 @@ int util_func_with_sockaddr(const struct sockaddr *to,
       }    
       
       hip_socketdb_add_new_socket(entry, *socket);
-      hip_socketdb_add_dst_ip(entry, id);
-      hip_socketdb_add_dst_hit(entry, &peer_hit);
+      hip_socketdb_add_dst_ip(entry, peer_ip);
+      hip_socketdb_add_dst_hit(entry, peer_hit);
       HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
       
       // modify sockaddr, id points to sockaddr's sin6_addr
-      memcpy(id, &peer_hit, sizeof(peer_hit));
-      HIP_DEBUG_HIT("opp mode enabled, peer hit: id=", id);
-    } else{ // not opp mode 
+      //memcpy(peer_ip, &peer_hit, sizeof(peer_hit));
+      HIP_DEBUG_HIT("opp mode enabled, peer hit: peer_ip=", peer_ip);
+    } else { // not opp mode 
       entry = hip_socketdb_find_entry(pid, *socket);
       assert(entry);
       hip_socketdb_add_new_socket(entry, *socket);
-      hip_socketdb_add_dst_ip(entry, id);
+      hip_socketdb_add_dst_ip(entry, peer_ip);
     }
   }
   
@@ -378,23 +389,21 @@ int socket(int domain, int type, int protocol)
   return socket_fd;
 }
 
-int connect(int a, const struct sockaddr * b, socklen_t c)
+int connect(int osock, const struct sockaddr *opeer_sa, socklen_t osock_len)
 {
-  int errno;
-  int socket = 0;
-  int pid = 0;
-  struct sockaddr bindhit;
-  hip_hit_t *hit_ptr = NULL;
-  int socket_type = 0;
-  void *dp = NULL;
-  char *error = NULL;
-  struct in6_addr *id = NULL;
-  hip_hit_t *hit_local = NULL;
-  char *name = "connect";
+  struct sockaddr_in6 local_sa_hit, peer_sa_hit;
+  struct sockaddr *local_sa_hit_ptr = (struct sockaddr *)&local_sa_hit,
+    *peer_sa_hit_ptr;
+  hip_hit_t *hit_ptr = NULL, local_hit, peer_hit;
+  int err, socket = 0, pid = 0, socket_type = 0;
   hip_opp_socket_t *entry = NULL;
+  void *dp = NULL;
+  char *error = NULL, *name = "connect";
+
+  HIP_DEBUG("\n");
 
   errno = 0;
-  socket = a;
+  socket = osock;
   initialize_db_when_not_exist();
 
   pid = getpid();
@@ -402,43 +411,45 @@ int connect(int a, const struct sockaddr * b, socklen_t c)
   assert(entry);
   socket_type = hip_socketdb_get_type(entry);
 
-  hit_local = get_local_hits_wrapper();
-  assert(hit_local);
-  HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
-
-  HIP_DEBUG("!!!!!!!!!!! in wrap.c::connect() !!!!!!!!!!!!!!!\n");
   // we are only interested in AF_INET and AFINET6
-  if( check_sin6_family_and_socket_type(b, socket_type)){
-    errno = util_func_with_sockaddr(b, id, &socket, hit_local);
-    if(errno)
-      goto out_err;
-
-    memcpy(&bindhit, b, sizeof(bindhit));
-    HIP_HEXDUMP("bindhit before ", &bindhit, 110);
-    hit_ptr = (struct in6_addr *)( &(((struct sockaddr_in6 *)&bindhit)->sin6_addr) );
-    HIP_DEBUG_HIT("hit_ptr", hit_ptr);
-    if(!hit_is_real_hit(hit_ptr)){
-      HIP_DEBUG_HIT("hit_ptr is not real hit", hit_ptr);
-      memcpy(hit_ptr, hit_local, sizeof(hip_hit_t));
-      HIP_HEXDUMP("bindhit after ", &bindhit, 110);
-      errno = bind(a, &bindhit, sizeof(bindhit));
-      if(errno){
-	HIP_DEBUG("!!!! bind failed\n");
-	assert(0);
-	goto out_err;
-      }
-    }
-    HIP_DEBUG_HIT("hit_ptr is real hit", hit_ptr);
+  if(check_sin6_family_and_socket_type(opeer_sa->sa_family, socket_type)){
+    HIP_DEBUG("Skipping the family\n");
+    peer_sa_hit_ptr = (struct sockaddr *) opeer_sa;
+    goto skip;
+  } else {
+    peer_sa_hit_ptr = (struct sockaddr *) &peer_sa_hit;
   }
-  HIP_DEBUG("11\n");
+
+  memcpy(&local_hit, get_local_hits_wrapper(), sizeof(local_hit));
+  HIP_DEBUG_HIT("The local HIT", &local_hit);
+  any_sa_to_hit_sa(opeer_sa, &local_hit,
+		   (struct sockaddr_in6 *) &local_sa_hit_ptr);
+
+  errno = util_func_with_sockaddr(&socket, &local_hit, &peer_hit, NULL, opeer_sa);
+  if(errno)
+    goto out_err;
+
+  HIP_DEBUG_HIT("local hit: ", &local_hit);
+  if(!hit_is_real_hit(&local_hit)){
+    HIP_DEBUG_HIT("binding to hit: ", &local_hit);
+    errno = bind(osock, local_sa_hit_ptr, sizeof(SALEN(peer_sa_hit_ptr)));
+    if(errno){
+      HIP_DEBUG("!!!! bind failed\n");
+      assert(0);
+      goto out_err;
+    }
+  }
+
+ skip:
+
+  any_sa_to_hit_sa(opeer_sa, &peer_hit,
+		   (struct sockaddr_in6 *) peer_sa_hit_ptr);
+  HIP_DEBUG_HIT("connecting to", SA2IP(peer_sa_hit_ptr));
+
   dp = dlopen(SOFILE, RTLD_LAZY);
-  HIP_DEBUG("22\n");
   dlsym_wrapper(name, dp, error);
-  HIP_DEBUG("33\n");
-  errno = connect_dlsym(socket, b, c);
-  HIP_DEBUG("44\n");
+  errno = connect_dlsym(socket, peer_sa_hit_ptr, SALEN(peer_sa_hit_ptr));
   dlclose(dp);
-  HIP_DEBUG("55\n");
   HIP_DEBUG("Called connect_dlsym with err=%d\n", errno);
   
  out_err:
@@ -492,7 +503,7 @@ ssize_t sendto(int a, const void * b, size_t c, int flags,
   void *dp = NULL;
   char *error = NULL;
   char *name = "sendto";
-  hip_hit_t *hit_local = NULL;
+  hip_hit_t *local_hit = NULL;
   struct sockaddr bindhit;
   hip_hit_t *hit_ptr = NULL;
   hip_opp_socket_t *entry = NULL;
@@ -510,12 +521,12 @@ ssize_t sendto(int a, const void * b, size_t c, int flags,
   _HIP_DEBUG("stream %d datagram %d raw %d\n", SOCK_STREAM, SOCK_DGRAM, SOCK_RAW);
   
   // we are only interested in (AF_INET/AFINET6 && !SOCKET_RAW)
-  if(check_sin6_family_and_socket_type(to, socket_type)){
-    hit_local = get_local_hits_wrapper();
-    assert(hit_local);
-    HIP_DEBUG_HIT("!!!! The local HIT =", hit_local);
+  if(check_sin6_family_and_socket_type(to->sa_family, socket_type)){
+    local_hit = get_local_hits_wrapper();
+    assert(local_hit);
+    HIP_DEBUG_HIT("!!!! The local HIT =", local_hit);
     
-    errno = util_func_with_sockaddr(to, id, &socket, hit_local);
+    errno = util_func_with_sockaddr(&socket, local_hit, id, NULL, to);
     if(errno)
       goto out_err;
   }
@@ -619,7 +630,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   local_hit = get_local_hits_wrapper();
   assert(local_hit);
 
-  errno = util_func_with_sockaddr(is, id, &socket, local_hit);
+  errno = util_func_with_sockaddr(&socket, local_hit, id, NULL, is);
   
   if(errno){
     HIP_ERROR("sendmsg util_func call failed: %s\n", strerror(errno));
