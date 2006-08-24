@@ -16,15 +16,7 @@
  *   hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
  *   hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
  *
- * Production quality code prints debugging stuff via syslog, testing code
- * prints interactively on stderr. This is done automatically using DEBUG
- * flag in Makefile (see logtype variable below).
- *
- * A note about the newlines: PERROR() appends always a newline after message
- * to be printed as in perror(3). In the rest of the functions, you have to
- * append a newline (as in fprinf(3)).
- *
- * TODO:
+ * TODO: 
  * - debug messages should not be compiled at all in a production release
  * - set_log{type|format}(XX_DEFAULT)
  * - locking (is it really needed?)
@@ -39,9 +31,16 @@
  * - change char * to void * in hexdump ?
  * - HIP_ASSERT()
  *
- * BUGS:
- * - XX
+ * Production quality code prints debugging stuff via syslog, testing code
+ * prints interactively on stderr. This is done automatically using DEBUG
+ * flag in Makefile (see logtype variable below).
  *
+ * A note about the newlines: PERROR() appends always a newline after message
+ * to be printed as in perror(3). In the rest of the functions, you have to
+ * append a newline (as in fprinf(3)).
+ *
+ * BUGS
+ * - XX
  */
 
 #include "debug.h"

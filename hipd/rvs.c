@@ -1,37 +1,45 @@
-/**
+/** @file
  * This file defines a rendezvous extension for the Host Identity Protocol
  * (HIP). The rendezvous extension extends HIP and the HIP registration
  * extension for initiating communication between HIP nodes via HIP
  * rendezvous servers. The rendezvous server (RVS) serves as an initial contact
  * point ("rendezvous point") for its clients.  The clients of an RVS are HIP
- * nodes that use the HIP Registration Protocol [draft-ietf-hip-registration-02]
- * to register their HIT->IP address mappings with the RVS. After this
- * registration, other HIP nodes can initiate a base exchange using the IP
- * address of the RVS instead of the current IP address of the node they attempt
- * to contact.
+ * nodes that use the HIP Registration Protocol
+ * [<a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-registration-02.txt">
+ * draft-ietf-hip-registration-02</a>] to register their HIT->IP address mappings
+ * with the RVS. After this registration, other HIP nodes can initiate a base
+ * exchange using the IP address of the RVS instead of the current IP address
+ * of the node they attempt to contact.
  * 
  * A rendezvous server stores the HIT->IP address mappings of its clients into
  * a hashtable as a rendezvous association data structure. A client can have
- * a maximum number of HIP_RVA_MAX_IPS IP addresses mapped to a single HIT,
- * and a RVS can have a maximum of HIP_RVA_SIZE clients.
+ * a maximum number of @c HIP_RVA_MAX_IPS IP addresses mapped to a single HIT,
+ * and a RVS can have a maximum of @c HIP_RVA_SIZE clients.
  * 
- * author:  (version 1.0) Kristian Slavov 
- * author:  (version 2.0) Lauri Silvennoinen 
- * date:    22.08.2006
- * draft:   draft-ietf-hip-rvs-05
- * licence: GNU/GPL
+ * @author  (version 1.0) Kristian Slavov
+ * @author  (version 2.0) Lauri Silvennoinen
+ * @version 2.0
+ * @date    24.08.2006
+ * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ *          draft-ietf-hip-rvs-05</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Version 1.0 was document scarcely and the comments regarding
+ *          version 1.0 that have been added afterwards may thus be inaccurate
+ *          or even misleading.
  */ 
 #include "rvs.h"
 
+/** A hashtable for storing rendezvous associations. */
 HIP_HASHTABLE rva_table;
+/** A linked list head used inside @c rva_table hashtable. */
 static struct list_head rvadb[HIP_RVA_SIZE];
 
 /**
- * hip_rva_allocate - Allocate and initialize a rendezvous association.
- * @param gfpmask Mask for HIP_MALLOC() that is used to allocate the memory.
+ * Allocates and initializes a rendezvous association.
  *
- * @return a pointer to a newly allocated and initialized rendezvous 
- *          association structure or NULL if failed to allocate memory.
+ * @param gfpmask a mask for HIP_MALLOC() that is used to allocate the memory.
+ * @return        a pointer to a newly allocated and initialized rendezvous 
+ *                association structure or NULL if failed to allocate memory.
  */
 HIP_RVA *hip_rva_allocate(int gfpmask)
 {
@@ -51,15 +59,15 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 }
 
 /**
- * hip_rva_ha2rva - create a rendezvous association from a host association
- * @param ha      a host association from where from to copy. 
- * @param gfpmask: memory allocation mask.
+ * Creates a rendezvous association from a host association.
  * 
  * Allocates memory for a new rendezvous association and copies information
  * from the parameter host association into it.
  * 
- * @Returns a pointer to a newly allocated rendezvous association or NULL if
- *          failed to allocate memory.
+ * @param  ha      a host association from where from to copy. 
+ * @param  gfpmask memory allocation mask.
+ * @return         a pointer to a newly allocated rendezvous association or
+ *                 NULL if failed to allocate memory.
  */
 HIP_RVA *hip_rva_ha2rva(hip_ha_t *ha, int gfpmask)
 {
@@ -108,14 +116,15 @@ HIP_RVA *hip_rva_ha2rva(hip_ha_t *ha, int gfpmask)
 }
 
 /**
- * hip_rva_get - get a rendezvous association matching the argument hit.
- * @param hit The HIT of the rendezvous association to get.
- * 
- * If a rendezvous association is found, it is automatically holded
- * (refcnt incremented).
+ * Gets a rendezvous association from the rendezvous association hashtable.
  *
- * @Returns a pointer to a matching rendezvous association or NULL if
- *          a matching rendezvous association was not found.
+ * Gets a rendezvous association matching the argument @c hit.If
+ * a rendezvous association is found, it is automatically holded (refcnt
+ * incremented).
+ *
+ * @param hit the HIT of the rendezvous association to get.
+ * @return    a pointer to a matching rendezvous association or NULL if
+ *            a matching rendezvous association was not found.
  */
 HIP_RVA *hip_rva_get(struct in6_addr *hit)
 {
@@ -123,15 +132,17 @@ HIP_RVA *hip_rva_get(struct in6_addr *hit)
 }
 
 /**
- * hip_rva_get_valid - get a valid rendezvous association matching the argument hit.
- * @hit: The HIT of the rendezvous association to get.
- * 
- * Finds a rendezvous association matching the argument hit and whose state is
- * HIP_RVASTATE_VALID. If a valid rendezvous association is found, it is
- * automatically holded (refcnt incremented).
+ * Gets a valid rendezvous association from the rendezvous association
+ * hashtable.
  *
+ * Gets a valid rendezvous association matching the argument hit. Finds
+ * a rendezvous association matching the argument hit and whose state is
+ * @c HIP_RVASTATE_VALID. If a valid rendezvous association is found,
+ * it is automatically holded (refcnt incremented).
+ * 
+ * @param hit the HIT of the rendezvous association to get.
  * @return a pointer to a matching valid rendezvous association or NULL if
- *          a matching valid rendezvous association was not found.
+ *         a matching valid rendezvous association was not found.
  */
 HIP_RVA *hip_rva_get_valid(struct in6_addr *hit)
 {
@@ -150,17 +161,18 @@ HIP_RVA *hip_rva_get_valid(struct in6_addr *hit)
 }
 
 /**
- * hip_rva_put_ip - inserts or updates a rendezvous association IP address.
+ * Inserts or updates a rendezvous association IP address.
+ * 
+ * A rendezvous server client can register more than one of its IP addresses to
+ * a rendezvous server. In this case the rendezvous association has a maximum
+ * number of @c HIP_RVA_MAX_IPS IP addresses mapped to a single HIT.
+ * This function inserts one IP address to a rendezvous association. The index
+ * of the IP address to insert must be smaller than @c HIP_RVA_MAX_IPS. The
+ * existing IP at @c index is overwritten.
+ *
  * @param rva   the rendezvous association whose IP address is to be modified. 
  * @param ip    the IP address to insert.
  * @param index the index of the IP address to be modified.
- * 
- * A rendezvous server client can register more than one of its IP addresses
- * to a rendezvous server. In this case the rendezvous association has a maximum
- * number of HIP_RVA_MAX_IPS IP addresses mapped to a single HIT. This function
- * inserts one IP address to a rendezvous association. The index of the IP
- * address to insert must be smaller than HIP_RVA_MAX_IPS. The existing IP at
- * "index" is overwritten.
  */
 void hip_rva_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
 {
@@ -173,14 +185,15 @@ void hip_rva_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
 }
 
 /**
- * hip_rva_get_ip - get an IP address from a rendezvous association.
+ * Gets an IP address from a rendezvous association.
+ * 
+ * Gets an IP address at @c index from a rendezvous association. Destination
+ * buffer @c dst must be allocated before calling this function and @c index
+ * must be smaller than @c HIP_RVA_MAX_IPS.
+ *
  * @param rva   the rendezvous association from where to get the IP address.
  * @param dst   a pointer to a buffer where to put the IP address.
  * @param index the index of the IP address to get.
- *
- * Gets an IP address at "index" from a rendezvous association. Destination
- * buffer "dst" must be allocated before calling this function and "index"
- * must be smaller than HIP_RVA_MAX_IPS.
  */
 void hip_rva_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
 {
@@ -194,12 +207,15 @@ void hip_rva_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
 }
 
 /**
- * hip_rva_put_rva - insert a new rendezvous association into the hashtable.
+ * Inserts a new rendezvous association into the rendezvous association
+ * hashtable.
+ * 
+ * Inserts a parameter rendezvous association @c rva into the rendezvous
+ * association hashtable. The rendezvous association @c rva is automatically
+ * holded (refcnt incremented).
+ *
  * @param rva the rendezvous association to be added into the hashtable.
- *
- * The rendezvous association is automatically holded (refcnt incremented).
- *
- * @return zero on success, or negative error value on error.
+ * @return    zero on success, or negative error value on error.
  */
 int hip_rva_put_rva(HIP_RVA *rva)
 {
@@ -226,12 +242,12 @@ int hip_rva_put_rva(HIP_RVA *rva)
 }
 
 /**
- * hip_rva_hold_entry - hold a rendezvous association hashtable entry. 
- * @entry: the entry to be held.
+ * Holds a rendezvous association hashtable entry. 
  * 
- * A function used as the hold function of the rendezvous association hashtable.
- * 
- * Note: this is a static function and thus can't be used outside this file.
+ * A function used as the @c hold function of the rendezvous association hashtable.
+ *  
+ * @param entry the entry to be held.
+ * @note        this is a static function and thus can't be used outside this file.
  */
 static void hip_rva_hold_entry(void *entry)
 {
@@ -243,12 +259,12 @@ static void hip_rva_hold_entry(void *entry)
 }
 
 /**
- * hip_rva_put_entry - put a rendezvous association hashtable entry. 
- * @entry: the entry to be put.
- * 
- * A function used as the put function of the rendezvous association hashtable.
- * 
- * Note: this is a static function and thus can't be used outside this file.
+ * Puts a rendezvous association hashtable entry. 
+ *
+ * A function used as the @c put function of the rendezvous association hashtable.
+ *
+ * @param entry the entry to be put.
+ * @note  this is a static function and thus can't be used outside this file.
  */
 static void hip_rva_put_entry(void *entry)
 {
@@ -256,28 +272,39 @@ static void hip_rva_put_entry(void *entry)
 
 	HIP_ASSERT(entry);
 	if (atomic_dec_and_test(&rva->refcnt)) {
-                HIP_DEBUG("RVA: %p, refcnt reached zero. Deleting...\n",rva);
-		hip_rva_delete(rva);
+                HIP_DEBUG("rva: %p, refcnt reached zero. Deleting...\n",rva);
+		hip_rva_free_rva(rva);
 	} else {
-                HIP_DEBUG("RVA: %p, refcnt decremented to: %d\n", rva, atomic_read(&rva->refcnt));
+                HIP_DEBUG("rva: %p, refcnt decremented to: %d\n", rva, atomic_read(&rva->refcnt));
 	}
 }
 
 /**
- * hip_rva_get_key - get a key from rendezvous association hashtable. 
- * @entry: the entry to be got.
+ * Gets a key from rendezvous association hashtable. 
  * 
- * A function used as the get_key function of the rendezvous association
+ * A function used as the @c get_key function of the rendezvous association
  * hashtable. Rendezvous association hashtable uses client HITs as keys.
  * 
- * Note:    this is a static function and thus can't be used outside this file.
- * Returns: a pointer to the matching key or NULL if no match was found.
+ * @param entry the entry to be got.
+ * @return      a pointer to the matching key or NULL if no match was found.
+ * @note        this is a static function and thus can't be used outside this file.
  */
 static void *hip_rva_get_key(void *entry)
 {
 	return (void *)&(((HIP_RVA *)entry)->hit);
 }
 
+/**
+ * Initializes the rendezvous association hashtable.
+ *
+ * Initializes the rendezvous association hashtable @c rva_table by
+ * <ul>
+ * <li>setting the memory area all zeros,
+ * <li>setting the hashsize and offset,
+ * <li>setting the needed function pointers,
+ * <li>naming the table as <code>RVA TABLE</code>.
+ * </ul>
+ */ 
 void hip_init_rvadb()
 {
 	memset(&rva_table,0,sizeof(rva_table));
@@ -297,17 +324,39 @@ void hip_init_rvadb()
 	hip_ht_init(&rva_table);
 }
 
+/**
+ * Uninitializes the rendezvous association hashtable.
+ *
+ * @warning does nothing yet
+ * @todo    implement functionality
+ */ 
 void hip_uninit_rvadb()
 {
-	/* do something... */
+
 }
 
-void hip_rva_delete(HIP_RVA *rva)
+/**
+ * Frees the memory allocated for a rendezvous association.
+ *
+ * Frees the memory allocated for the parameter rendezvous association.
+ *
+ * @param rva the rendezvous association whose memory to free.
+ * @note      this function should be called only after the last reference to
+ *            the parameter @c rva is deleted. 
+ */ 
+void hip_rva_free_rva(HIP_RVA *rva)
 {
-	/* last reference has been deleted by now */
 	HIP_FREE(rva);
 }
 
+/**
+ * Removes a rendezvous association from the rendezvous association hashtable.
+ *
+ * Removes the parameter rendezvous association from the rendezvous
+ * association hashtable.
+ *
+ * @param rva the rendezvous association to remove.
+ */ 
 void hip_rva_remove(HIP_RVA *rva)
 {
 	HIP_ASSERT(rva);
@@ -321,32 +370,30 @@ void hip_rva_remove(HIP_RVA *rva)
 	hip_ht_delete(&rva_table, rva);
 	HIP_UNLOCK_HA(rva);
 
-	/* the refcnt should now be at least 1, since we must have
-	   at least two references when calling this function: One in the
-	   hashtable, one in the calling function.
-	   After the delete operation we should have one less, but still over
-	   0 and thus the HIP_UNLOCK_HA should not cause problems (accessing
-	   deleted memory).
-	*/
+	/* the refcnt should now be at least 1, since we must have at least two
+	   references when calling this function: One in the hashtable, one in
+	   the calling function. After the delete operation we should have one
+	   less, but still over 0 and thus the HIP_UNLOCK_HA should not cause
+	   problems (accessing deleted memory). */
 }
 
 /**
- * hip_relay_i1 - relay an incoming I1 packet.
+ * Relays an incoming I1 packet.
+ *
+ * This function relays an incoming @b I1 packet to the next node on path
+ * to receiver and inserts a @b FROM parameter encapsulating the source IP address.
+ * Next node on path is typically the responder, but if the message is to travel
+ * multiple rendezvous servers en route to responder, next node can also be
+ * another rendezvous server. In this case the @b FROM parameter is appended after
+ * the existing ones. Thus current RVS appends the address of previous RVS
+ * and the final RVS (n) sends @b FROM:I, @b FROM:RVS1, ... , <b>FROM:RVS(n-1)</b>.
+ * 
  * @param i1        HIP packet common header with source and destination HITs.
  * @param i1_saddr the source address from where the I1 packet was received.
  * @param i1_daddr the destination address where the I1 packet was sent to (own address).
  * @param rva      rendezvous association matching the HIT of next hop.
  * @param i1_info  the source and destination ports (when NAT is in use).
- *
- * This function relays an incoming I1 packet to the next node on path
- * to receiver and inserts a FROM parameter encapsulating the source IP address.
- * Next node on path is typically the responder, but if the message is to travel
- * multiple rendezvous servers en route to responder, next node can also be
- * another rendezvous server. In this case the FROM parameter is appended after
- * the existing ones. Thus current RVS appends the address of previous RVS
- * and the final RVS (n) sends FROM:I, FROM:RVS1, ... , FROM:RVS(n-1).
- * 
- * @return zero on success, or negative error value on error.
+ * @return         zero on success, or negative error value on error.
  */
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
@@ -381,8 +428,8 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");
 	
-	/*! \todo : TH: hip_build_network_hdr has to be replaced with an appropriate
-	   function pointer */
+	/** @todo hip_build_network_hdr has to be replaced with an appropriate
+	    function pointer. */
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits), &(old_i1->hitr));
 
@@ -440,6 +487,20 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
+/**
+ * Set a rendezvous server request flag for a host association.
+ *
+ * Set a rendezvous server request flag for a host association matching the
+ * source/destination -hitpair. Calling this function indicates that the current
+ * machine is requesting a rendezvous service for a host association entry. This
+ * function is called when a host starts registering procedure to rendezvous
+ * service by sending a @b I1 packet to the rendezvous server.
+ *
+ * @param  src_hit the source hit of a host association.
+ * @param  dst_hit the destination hit of a host association.
+ * @return zero on success, or negative error value if a matching entry is
+ *         not found.
+ */ 
 int hip_rvs_set_request_flag(hip_hit_t *src_hit,
 			      hip_hit_t *dst_hit)
 {

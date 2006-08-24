@@ -14,7 +14,7 @@
 #define HIP_RVA_SIZE    7
 
 /* TYPE DEFINITIONS */
-/* TODO: Add HIP_RVASTATE_REGISTERING? */
+/** @todo Add HIP_RVASTATE_REGISTERING? */
 typedef enum { HIP_RVASTATE_INVALID=0, HIP_RVASTATE_VALID=1 } hip_rvastate_t;
 typedef struct hip_rendezvous_association
 {
@@ -31,7 +31,7 @@ typedef struct hip_rendezvous_association
 
 /* FUNCTION PROTOTYPES */
 void hip_init_rvadb(void);
-void hip_rva_delete(HIP_RVA *rva);
+void hip_rva_free_rva(HIP_RVA *rva);
 void hip_rva_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index);
 void hip_rva_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index);
 void hip_rva_remove(HIP_RVA *rva);
@@ -44,15 +44,21 @@ HIP_RVA *hip_rva_get(struct in6_addr *hit);
 HIP_RVA *hip_rva_get_valid(struct in6_addr *hit);
 
 /* MACRO DEFINITIONS */
+/**
+ * Holds (increases the reference count) a rva.
+ */
 #define hip_hold_rva(rva) do { \
 	atomic_inc(&rva->refcnt); \
         HIP_DEBUG("RVA: %p, refcnt increased to: %d\n",rva, atomic_read(&rva->refcnt)); \
 } while(0) 
 
+/**
+ * Puts (decreases the reference count) a rva.
+ */
 #define hip_put_rva(rva) do { \
 	if (atomic_dec_and_test(&rva->refcnt)) { \
                 HIP_DEBUG("RVA: %p, refcnt reached zero. Deleting...\n",rva); \
-		hip_rva_delete(rva); \
+		hip_rva_free_rva(rva); \
 	} else { \
                 HIP_DEBUG("RVA: %p, refcnt decremented to: %d\n", rva, atomic_read(&rva->refcnt)); \
         } \
