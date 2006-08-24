@@ -18,11 +18,11 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "firewall.h"
-#include "conntrack.h"
-#include "helpers.h"
+//#include "firewall.h"
+//#include "conntrack.h"
+//#include "helpers.h"
 #include "debug.h"
-#include "firewall.h"
+//#include "firewall.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
@@ -126,7 +126,7 @@ void read_rules_exit(int hook);
 //rule management functions
 void insert_rule(const struct rule * rule, int hook);
 int delete_rule(const struct rule * rule, int hook);
-GList * list_rules(int hook);
+struct GList * list_rules(int hook);
 int flush(int hook);
 
 void test_rule_management();

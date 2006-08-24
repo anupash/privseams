@@ -246,10 +246,15 @@ static inline int ipv6_addr_is_hit(const struct in6_addr *a)
 #define SO_HIP_I1_REJECT			38
 #define SO_HIP_ADD_ESCROW			39
 #define SO_HIP_OFFER_ESCROW			40
+#define SO_HIP_FIREWALL_PING		40
+#define SO_HIP_FIREWALL_PING_REPLY	41
+#define SO_HIP_FIREWALL_QUIT		42
+#define SO_HIP_ADD_ESCROW_DATA		43
 
 #define HIP_DAEMONADDR_PATH                    "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_AGENTADDR_PATH                     "/tmp/hip_agentaddr_path.tmp"
 #define HIP_USERADDR_PATH                     "/tmp/hip_useraddr_path.tmp"
+#define HIP_FIREWALLADDR_PATH				"/tmp/hip_firewalladdr_path.tmp"
 
 #define HIP_HOST_ID_HOSTNAME_LEN_MAX 64
 

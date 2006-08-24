@@ -16,6 +16,7 @@
 struct ipq_handle *h;
 int statefulFiltering = 1; 
 
+
 //currently done at all times, rule_management 
 //delete rule needs checking for state options in 
 //all chains
@@ -92,7 +93,7 @@ static void die(struct ipq_handle *h)
 
 int is_hip_packet(const struct ip6_hdr * ip6_hdr)
 {
-  if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == 99)
+  if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == 253)
     return 1;
   else
     return 0;
@@ -126,28 +127,28 @@ int filter_esp(const struct in6_addr * dst_addr,
     {
       match = 1;
       rule = (struct rule *) list->data;
-      HIP_DEBUG("   filter_esp: checking for:\n");     
+      _HIP_DEBUG("   filter_esp: checking for:\n");     
       print_rule(rule);
 
       //type not valid with ESP packets
       if(rule->type)
 	  {
 	    //not valid with ESP packet
-	    HIP_DEBUG("filter_esp: type option not valid for esp\n");
+	    _HIP_DEBUG("filter_esp: type option not valid for esp\n");
 	      match = 0;	
 	  }      
       //src and dst hits are matched with state option
       if((rule->src_hit || rule->dst_hit) && !rule->state)
 	  {
 	    //not valid with ESP packet
-	    HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
+	    _HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
 	      match = 0;	
 	  }      
       if(match && rule->in_if)
 	  {
 	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->in_if->value, 
 		      in_if, rule->in_if->boolean, match);
 	  }
@@ -157,7 +158,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 			     out_if, 
 			     rule->out_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  }	
 	//must be last, so match and verdict known here
@@ -218,12 +219,12 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
     {
       match = 1;
       rule = (struct rule *) list->data;
-      HIP_DEBUG("   filter_hip: checking for \n");     
+      _HIP_DEBUG("   filter_hip: checking for \n");     
       print_rule(rule);
 
       if(match && rule->src_hit)
 	  {
-	    HIP_DEBUG("filter_hip: src_hit ");
+	    _HIP_DEBUG("filter_hip: src_hit ");
 	    if(!match_hit(rule->src_hit->value, 
 			  buf->hits, 
 			  rule->src_hit->boolean))
@@ -231,14 +232,14 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	    //if HIT has matched and HI defined, verify signature 
 	    if(match && rule->src_hi)
 	      {
-		HIP_DEBUG("filter_hip: src_hi \n");
+		_HIP_DEBUG("filter_hip: src_hi \n");
 		if(!match_hi(rule->src_hi, buf))
 		  match = 0;	
 	      }
 	  }
       if(match && rule->dst_hit)
 	  {
-	    HIP_DEBUG("filter_hip: dst_hit \n");
+	    _HIP_DEBUG("filter_hip: dst_hit \n");
 	    if(!match_hit(rule->dst_hit->value, 
 			  buf->hitr, 
 			  rule->dst_hit->boolean))
@@ -246,12 +247,12 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	  }
       if(match && rule->type)
 	  {
-	    HIP_DEBUG("filter_hip: type ");
+	    _HIP_DEBUG("filter_hip: type ");
 	    if(!match_int(rule->type->value, 
 			  buf->type_hdr, 
 			  rule->type->boolean))
 	      match = 0;	
-	    HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
+	    _HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
 		      rule->type->value, 
 		      buf->type_hdr,
 		      rule->type->boolean,
@@ -262,7 +263,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	  {
 	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->in_if->value, 
 		      in_if, rule->in_if->boolean, match);
 	  }
@@ -272,7 +273,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 			     out_if, 
 			     rule->out_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  }
 	
@@ -283,7 +284,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	      match = 0;
 	    else
 	      conntracked = 1;
-	    HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
+	    _HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
 		      rule->state->int_opt.value,
 		      rule->state->int_opt.boolean, 
 		      match);
@@ -314,6 +315,8 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
   //return the target of the the matched rule
   return ret_val; 
 }
+
+
 
 int main(int argc, char **argv)
 {
@@ -349,7 +352,21 @@ int main(int argc, char **argv)
   if (status < 0)
     die(h);
 
+
+#ifdef G_THREADS_IMPL_POSIX
+      HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
+#endif //G_THREADS_IMPL_POSIX
+#ifdef G_THREADS_IMPL_SOLARIS
+      HIP_DEBUG("init_timeout_checking: solaris thread implementation\n");
+#endif //G_THREADS_IMPL_SOLARIS
+#ifdef G_THREADS_IMPL_NONE
+      HIP_DEBUG("init_timeout_checking: no thread implementation\n");
+#endif //G_THREADS_IMPL_NONE
+		//HIP_DEBUG("Timeout val = %d", timeout_val);
+      g_thread_init(NULL);
+  
   init_timeout_checking(timeout);
+  control_thread_init();	
 
   do{
     status = ipq_read(h, buf, BUFSIZE, 0);

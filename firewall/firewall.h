@@ -15,9 +15,11 @@
 
 #include "hip.h"
 #include "rule_management.h"
+#include "firewall_control.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
+
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 

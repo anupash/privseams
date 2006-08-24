@@ -1549,7 +1549,7 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-GList * list_rules(int hook)
+struct GList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
   struct _GList * temp = NULL, * ret = NULL;

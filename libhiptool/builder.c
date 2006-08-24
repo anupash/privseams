@@ -1715,6 +1715,8 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)array);
+	
+	//TODO: FREE memory
 	return err;
 
 }

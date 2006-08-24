@@ -36,6 +36,9 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+int hip_firewall_sock = 0, hip_firewall_status = 0;
+struct sockaddr_un hip_firewall_addr;
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
 unsigned int oppdb_exist = 0;
@@ -210,6 +213,7 @@ int hip_agent_is_alive()
 #endif /* CONFIG_HIP_AGENT */
 }
 
+
 int hip_agent_filter(struct hip_common *msg)
 {
 	int err = 0;
@@ -286,6 +290,70 @@ int hip_agent_filter(struct hip_common *msg)
 
 out_err:
        return (err);
+}
+
+
+int hip_firewall_is_alive()
+{
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_firewall_status) {
+		HIP_DEBUG("Firewall is alive.\n");
+	}
+	else {
+		HIP_DEBUG("Firewall is not alive.\n");
+	}
+	return hip_firewall_status;
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
+
+
+int hip_firewall_add_escrow_data(struct hip_keys *keys)
+{
+		struct hip_common *msg;
+		int err = 0;
+		int n;
+		socklen_t alen;
+		
+		msg = malloc(HIP_MAX_PACKET);
+		if (!msg)
+		{
+			HIP_ERROR("malloc failed\n");
+			goto out_err;
+		}
+		hip_msg_init(msg);
+
+		err = hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW_DATA, 0);
+		if (err)
+		{
+			HIP_ERROR("build hdr failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
+		if (err)
+		{
+			HIP_ERROR("build param failed: %s\n", strerror(err));
+			goto out_err;
+		}
+	
+		HIP_DEBUG("Sending test msg to firewall\n");
+
+		alen = sizeof(hip_firewall_addr);                      
+		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+	           0, (struct sockaddr *)&hip_firewall_addr, alen);
+		if (n < 0)
+		{
+			HIP_ERROR("Sendto firewall failed.\n");
+			err = -1;
+			goto out_err;
+		}
+		else HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
+
 }
 
 
@@ -1059,10 +1127,22 @@ int main(int argc, char *argv[]) {
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
-	highest_descriptor = maxof(7, hip_nl_route.fd, hip_raw_sock_v6,
+	
+	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_firewall_sock < 0), 1,
+		 "Could not create socket for firewall communication.\n");
+	unlink(HIP_FIREWALLADDR_PATH);
+	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
+	hip_firewall_addr.sun_family = AF_LOCAL;
+	strcpy(hip_firewall_addr.sun_path, HIP_FIREWALLADDR_PATH);
+	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)&hip_firewall_addr,
+	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
+	chmod(HIP_FIREWALLADDR_PATH, 0777);
+	
+	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock, hip_raw_sock_v4,
-				   hip_nat_sock_udp);
+				   hip_nat_sock_udp, hip_firewall_sock);
 	
 	register_to_dht();
 
@@ -1084,6 +1164,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
+		FD_SET(hip_firewall_sock, &read_fdset);
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
@@ -1247,6 +1328,59 @@ int main(int argc, char *argv[]) {
 					HIP_DEBUG("Agent rejected I1.\n");
 				}
 			}
+		} else if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
+			int n;
+			socklen_t alen;
+			err = 0;
+			hip_hdr_type_t msg_type;
+			
+			HIP_DEBUG("Receiving message from firewall.\n");
+			
+			bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
+			alen = sizeof(hip_firewall_addr);
+			n = recvfrom(hip_firewall_sock, hip_msg, sizeof(struct hip_common), 0,
+			             (struct sockaddr *) &hip_firewall_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
+				continue;
+			}
+			
+			msg_type = hip_get_msg_type(hip_msg);
+			
+			if (msg_type == SO_HIP_FIREWALL_PING)
+			{
+				HIP_DEBUG("Received ping from firewall\n");
+				memset(hip_msg, 0, sizeof(struct hip_common));
+				hip_build_user_hdr(hip_msg, SO_HIP_FIREWALL_PING_REPLY, 0);
+				alen = sizeof(hip_firewall_addr);                    
+				n = sendto(hip_firewall_sock, hip_msg, sizeof(struct hip_common),
+				           0, (struct sockaddr *) &hip_firewall_addr, alen);
+				if (n < 0)
+				{
+					HIP_ERROR("Sendto() failed.\n");
+					err = -1;
+					continue;
+				}
+
+				if (err == 0)
+				{
+					HIP_DEBUG("HIP firewall ok.\n");
+					if (hip_firewall_status == 0)
+					{
+						// TODO: initializing of firewall needed?
+						HIP_DEBUG("First ping\n");
+					}
+					hip_firewall_status = 1;
+				}
+			}
+			else if (msg_type == SO_HIP_FIREWALL_QUIT)
+			{
+				HIP_DEBUG("Firewall quit.\n");
+				hip_firewall_status = 0;
+			}
+		
 		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */

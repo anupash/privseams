@@ -382,6 +382,8 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 		// set state if needed
 	}
 	
+	
+	
  out_err:
 	return err;
 }

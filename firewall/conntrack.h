@@ -16,8 +16,8 @@
 #include "firewall.h"
 #include "rule_management.h"
 #include "debug.h"
-#include "firewall.h"
-#include "rule_management.h"
+//#include "firewall.h"
+//#include "rule_management.h"
 #include "hip.h"
 #include "misc.h"
 #include "hadb.h"
@@ -52,6 +52,14 @@ struct esp_tuple{
   uint32_t spi_update_id;
   struct GSList * dst_addr_list;
   struct tuple * tuple;
+  struct decryption_data * dec_data;
+};
+
+struct decryption_data{
+  int dec_alg;
+  int auth_len;
+  int key_len;
+  struct hip_crypto_key	dec_key;	
 };
 
 struct hip_data{
@@ -85,7 +93,7 @@ struct connection {
 void print_data(struct hip_data * data);
 int filter_esp_state(const struct in6_addr * dst_addr, 
 		     uint32_t spi, 
-		     const struct rule * rule);
+		    const struct rule * rule);
 int filter_state(const struct ip6_hdr * ip6_hdr, 
 		 struct hip_common * buf, 
 		 const struct state_option * rule, 
@@ -94,6 +102,10 @@ void conntrack(const struct ip6_hdr * ip6_hdr,
 	       struct hip_common * buf);
 int verify_packet_signature(struct hip_host_id * hi, 
 			    struct hip_common * common);
+
+int add_esp_decryption_data(const struct in6_addr * dst_addr, 
+		     uint32_t spi, int dec_alg, int auth_len, int key_len, 
+		     struct hip_crypto_key	* dec_key);
 
 void init_timeout_checking(long int timeout_val);
 #endif

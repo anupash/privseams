@@ -89,7 +89,7 @@ struct tuple * get_tuple_by_hip(struct hip_data * data){
 	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
 	{
 	  HIP_DEBUG("connection found, ");
-	  print_data(data);
+	  //print_data(data);
 	  return tuple->tuple;
 	}
       list = list->next;
@@ -245,7 +245,7 @@ void insert_new_connection(struct hip_data * data){
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
 					   (gpointer)connection->reply.hip_tuple);
   HIP_DEBUG("inserting connection ");
-  print_data(data);
+  //print_data(data);
 }
 
 void insert_esp_tuple(const struct esp_tuple * esp_tuple )
@@ -254,7 +254,7 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
   espList = (struct GList *) g_list_append((struct _GList *)espList, 
 					   (gpointer)esp_tuple);
   HIP_DEBUG("insert_esp_tuple:\n");
-  print_esp_list();
+  //print_esp_list();
 }
 
 
@@ -269,7 +269,7 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
     {
       if(hip_tuple->data)
 	{
-	  print_data(hip_tuple->data);
+	  //print_data(hip_tuple->data);
 	  if(hip_tuple->data->src_hi)
 	    free(hip_tuple->data->src_hi);
 	  free(hip_tuple->data);
@@ -285,7 +285,7 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
 void free_esp_tuple(struct esp_tuple * esp_tuple)
 {
   HIP_DEBUG("free_esp_tuple:\n");
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
   if(esp_tuple)
     {
       struct _GSList * list = (struct _GSList *) esp_tuple->dst_addr_list;
@@ -340,7 +340,7 @@ void remove_tuple(struct tuple * tuple)
 void remove_connection(struct connection * connection)
 {
   HIP_DEBUG("remove_connection: esp list before: \n");
-  print_esp_list();
+  //print_esp_list();
   if(connection)
     {
       remove_tuple(&connection->original);
@@ -348,7 +348,7 @@ void remove_connection(struct connection * connection)
       free(connection);
     } 
   HIP_DEBUG("remove_connection: esp list after: \n");
-  print_esp_list();
+  //print_esp_list();
 }
 
 /**
@@ -370,6 +370,7 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       new_esp->spi = esp_info->new_spi;
       new_esp->tuple = tuple;
       new_esp->dst_addr_list = NULL;
+      new_esp->dec_data = NULL;
       
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
 	sizeof(struct hip_locator_info_addr_item);
@@ -389,7 +390,7 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
 		g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 			       (gpointer) esp_address);
 	      HIP_DEBUG("esp_tuple_from_esp_info_locator: ");
-	      print_esp_tuple(new_esp);
+	      //print_esp_tuple(new_esp);
 	      n--;
 	      if(n > 0)
 		locator_addr++;
@@ -418,6 +419,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
       new_esp->spi = esp_info->new_spi;
       new_esp->tuple = tuple;
+      new_esp->dec_data = NULL;
       
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 	  
@@ -428,7 +430,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
       new_esp->dst_addr_list = (struct GSList *)g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 							       (gpointer) esp_address);
 	  HIP_DEBUG("esp_tuple_from_esp_info: ");
-	  print_esp_tuple(new_esp);
+	  //print_esp_tuple(new_esp);
     }
   return new_esp;
 }
@@ -503,7 +505,7 @@ int insert_connection_from_update(struct hip_data * data,
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
 					   (gpointer)connection->reply.hip_tuple);
   HIP_DEBUG("insert_connection_from_update ");
-  print_data(data);
+  //print_data(data);
   return 1;
 }
 
@@ -679,7 +681,7 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
   struct hip_locator_info_addr_item * locator_addr = NULL;
   int n = 0;
   HIP_DEBUG("update_esp_tuple: "); 
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
   if(esp_info && locator && seq)
     {
       HIP_DEBUG("esp_info, locator and seq, "); 
@@ -703,7 +705,7 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
       locator_addr = (void *) locator + sizeof(struct hip_locator);
 
       HIP_DEBUG("update_esp_tuple: ");
-      print_esp_tuple(esp_tuple); 
+      //print_esp_tuple(esp_tuple); 
 
       while(n > 0)
 	{
@@ -715,8 +717,8 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 	    locator_addr++;
 
 	}
-      HIP_DEBUG("new tuple: ");
-      print_esp_tuple(esp_tuple);
+      _HIP_DEBUG("new tuple: ");
+      //print_esp_tuple(esp_tuple);
     }
   else if(esp_info && seq)
     {
@@ -747,7 +749,7 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 
       locator_addr = (void *) locator + sizeof(struct hip_locator);
       HIP_DEBUG("update_esp_tuple: locator addr: old tuple ");
-      print_esp_tuple(esp_tuple);
+      //print_esp_tuple(esp_tuple);
       while(n > 0)
 	{
 	  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
@@ -759,10 +761,10 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 	}
 
       HIP_DEBUG("update_esp_tuple: locator addr: new tuple ");
-      print_esp_tuple(esp_tuple);
+      //print_esp_tuple(esp_tuple);
     }
   HIP_DEBUG("update_esp_tuple: done, ");
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
 
   return 1;
 }
@@ -989,7 +991,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		    {
 		      HIP_DEBUG("handle_update: ack update id %d,   updated: ", 
 				ack->peer_update_id);
-		      print_esp_tuple(esp_tuple);
+		      //print_esp_tuple(esp_tuple);
 		    }
 		  temp_tuple_list = temp_tuple_list->next;
 		}
@@ -1141,13 +1143,13 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   struct hip_tuple * hip_tuple = NULL; 
   //option refers to a new connection
   //ESP packet cannot start a connection
-  HIP_DEBUG("filter_esp_state\n");
+  _HIP_DEBUG("filter_esp_state\n");
   if((option->int_opt.value == CONN_NEW &&   
       option->int_opt.boolean) ||
      (option->int_opt.value == CONN_ESTABLISHED &&   
       !option->int_opt.boolean))
     {
-      HIP_DEBUG("filter_esp_state: rule for new connection not valid with esp\n");
+      _HIP_DEBUG("filter_esp_state: rule for new connection not valid with esp\n");
       return_value = 0;
       goto out;
     }
@@ -1158,7 +1160,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   //ESP packet cannot start a connection
   if(!tuple) 
     {
-      HIP_DEBUG("filter_esp_packet: dst addr %s spi %d no connection found\n",
+      _HIP_DEBUG("filter_esp_packet: dst addr %s spi %d no connection found\n",
 		addr_to_numeric(dst_addr), spi);
       return_value = 0;
       goto out;
@@ -1172,7 +1174,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   hip_tuple = tuple->hip_tuple;
   if(match && rule->src_hit)
     {
-      HIP_DEBUG("filter_esp_state: src_hit ");
+      _HIP_DEBUG("filter_esp_state: src_hit ");
       if(!match_hit(rule->src_hit->value, 
 		    hip_tuple->data->src_hit, 
 		    rule->src_hit->boolean))
@@ -1180,7 +1182,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
     }
   if(match && rule->dst_hit)
     {
-      HIP_DEBUG("filter_esp_state: dst_hit \n");
+      _HIP_DEBUG("filter_esp_state: dst_hit \n");
       if(!match_hit(rule->dst_hit->value, 
 		    hip_tuple->data->dst_hit, 
 		    rule->dst_hit->boolean))
@@ -1229,7 +1231,7 @@ int filter_state(const struct ip6_hdr * ip6_hdr,
   data = get_hip_data(buf);
   tuple = get_tuple_by_hip(data);
   HIP_DEBUG("filter_state: hip_data: ");
-  print_data(data);
+  //print_data(data);
   
   //cases where packet does not match
   if(!tuple)
@@ -1325,13 +1327,55 @@ void conntrack(const struct ip6_hdr * ip6_hdr,
 }
 
 
+int add_esp_decryption_data(const struct in6_addr * dst_addr, 
+		     uint32_t spi, int dec_alg, int auth_len, int key_len, 
+		     struct hip_crypto_key	* dec_key)
+{
+	int err = 0;
+	struct tuple * tuple = NULL;
+	struct esp_tuple * esp_tuple;
+	struct decryption_data * dec_data;
+
+	HIP_DEBUG("add_esp_decryption_data\n");
+	g_mutex_lock(connectionTableMutex);
+	HIP_DEBUG("add_esp_decryption_data:locked mutex\n");
+	
+	HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
+		addr_to_numeric(dst_addr), spi);
+	tuple = get_tuple_by_esp(dst_addr, spi);
+	if (!tuple) {
+		HIP_DEBUG("Tuple not found!\n");
+		err = -1;
+		goto out_err;
+	}
+	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1, 
+		"ESP tuple not found!\n");
+	
+	esp_tuple->dec_data = (struct decryption_data *)malloc(sizeof(struct decryption_data));
+	if (esp_tuple->dec_data) {
+		esp_tuple->dec_data->auth_len = auth_len;
+		esp_tuple->dec_data->dec_alg = dec_alg;
+		esp_tuple->dec_data->key_len = key_len;
+		memcpy(&esp_tuple->dec_data->dec_key, dec_key, sizeof(struct hip_crypto_key));
+		HIP_DEBUG("Added decryption data\n");
+	}
+	g_mutex_unlock(connectionTableMutex);
+  	HIP_DEBUG("add_esp_decryption_data:unlocked mutex\n");
+  	return err;
+  	
+out_err:
+	g_mutex_unlock(connectionTableMutex);
+	return err;  	
+}
+
+
 //Functions for connection timeout checking
 
 gpointer check_for_timeouts(gpointer data)
 {
   while(timeoutChecking)
     {
-      _HIP_DEBUG("check_for_timeouts: waiting for %d seconds \n", 20);
+      HIP_DEBUG("check_for_timeouts: waiting for %d seconds \n", 20);
       g_usleep(20000000);
       HIP_DEBUG("check_for_timeouts: checking for timed out connections\n");
       g_mutex_lock(connectionTableMutex);
@@ -1367,22 +1411,26 @@ gpointer check_for_timeouts(gpointer data)
 */
 void init_timeout_checking(long int timeout_val)
 {
-  if(timeout_val > 0)
+	HIP_DEBUG("initializing timeout checking\n");
+	/* Mutex needs to be initialized because thread system is initialized
+	 * elsewhere */
+ 	connectionTableMutex = g_mutex_new();
+  if (timeout_val > 0)
     {
-#ifdef G_THREADS_IMPL_POSIX
-      HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
-#endif //G_THREADS_IMPL_POSIX
-#ifdef G_THREADS_IMPL_SOLARIS
-      HIP_DEBUG("init_timeout_checking: solaris thread implementation\n");
-#endif //G_THREADS_IMPL_SOLARIS
-#ifdef G_THREADS_IMPL_NONE
-      HIP_DEBUG("init_timeout_checking: no thread implementation\n");
-#endif //G_THREADS_IMPL_NONE
+	HIP_DEBUG("Timeout val = %d", timeout_val);
       timeoutValue = timeout_val;
       timeoutChecking = 1;
-      g_thread_init(NULL);
+      if (!g_thread_supported()) 
+      {
+     		g_thread_init(NULL);
+     		HIP_DEBUG("init_timeout_checking: initialized thread system\n");
+  		}
+  		else 
+  		{
+     		HIP_DEBUG("init_timeout_checking: thread system already initialized\n");
+  		}
       condition = g_cond_new();
-      connectionTableMutex = g_mutex_new();
+      
       connectionChecking = g_thread_create(check_for_timeouts, 
 					   NULL, 
 					   FALSE,
