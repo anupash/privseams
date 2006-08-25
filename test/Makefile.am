@@ -46,7 +46,7 @@ bin_PROGRAMS += sha1ime_test
 
 #sbin_SCRIPTS = hipsetup
 
-conntest_client_SOURCES = conntest-client.c 
+conntest_client_SOURCES = conntest-client.c  conntest.c
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \
