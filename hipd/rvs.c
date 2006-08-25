@@ -14,7 +14,7 @@ static struct list_head rvadb[HIP_RVA_SIZE];
 
 /**
  * hip_rva_allocate - Allocate and initialize Rendezvous Association
- * @gfpmask: Mask for HIP_MALLOC() that is used to allocate  the memory.
+ * @param gfpmask Mask for HIP_MALLOC() that is used to allocate  the memory.
  *
  * Returns NULL if failure, or a pointer to newly allocated and initialized
  * RVA atructure
@@ -36,8 +36,8 @@ HIP_RVA *hip_rva_allocate(int gfpmask)
 }
 /**
  * hip_ha_to_rva - Create a Rendezvous Association from Host Association
-  * @ha: HA
-  * @gfpmask: Mask for HIP_MALLOC(). Used to allocate memory for the RVA.
+ * @param ha HA
+ * @param gfpmask Mask for HIP_MALLOC(). Used to allocate memory for the RVA.
   *
   * Returns the newly created RVA, with information from HA copied to it.
   * NULL if there was an error (out of memory).
@@ -61,10 +61,8 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 
-//	if (!ipv6_addr_any(&ha->bex_address)) {
 	if (!ipv6_addr_any(&ha->preferred_address)) {
 		HIP_DEBUG("copying bex address\n");
-		//			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->bex_address);
 		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
 		ipcnt++;
 		if (ipcnt >= HIP_RVA_MAX_IPS)
@@ -93,7 +91,7 @@ HIP_RVA *hip_ha_to_rva(hip_ha_t *ha, int gfpmask)
 
 /**
  * hip_rva_find - Get RVA entry corresponding to the argument hit.
- * @hit: Key
+ * @param hit Key
  * 
  * If a RVA is found, it is automatically holded (refcnt incremented).
  *
@@ -121,9 +119,9 @@ HIP_RVA *hip_rva_find_valid(struct in6_addr *hit)
 
 /**
  * hip_rva_insert_ip_n - Insert/update/overwrite one IP in the RVA.
- * @rva: RVA
- * @ip: IP address to be written to the RVA's IP-list.
- * @n: Repalce n:th element in the IP-list. 0 <= n < HIP_RVA_MAX_IPS
+ * @param rva RVA
+ * @param ip IP address to be written to the RVA's IP-list.
+ * @param n Repalce n:th element in the IP-list. 0 <= n < HIP_RVA_MAX_IPS
  *
  * The IP that is overwritten is the n:th in the list.
  *
@@ -139,8 +137,8 @@ void hip_rva_insert_ip_n(HIP_RVA *rva, struct in6_addr *ip, unsigned int n)
 
 /**
  * hip_rva_insert_ip - Insert/update/overwrite one IP in the RVA.
- * @rva: RVA
- * @ip: IP address to be written to the RVA's IP-list.
+ * @param rva RVA
+ * @param ip IP address to be written to the RVA's IP-list.
  *
  * The IP that is overwritten is the first in the list. This can, and probably
  * will change as we create better algorithms to decide which address to
@@ -154,9 +152,9 @@ void hip_rva_insert_ip(HIP_RVA *rva, struct in6_addr *ip)
 
 /**
  * hip_rva_fetch_ip_n - Fetch Nth IP-address from the RVA to the destination buffer
- * @rva: Rendezvous Association
- * @dst: Target buffer (must be preallocated)
- * @n: The IP-address to fetch (0 <= n < HIP_RVA_MAX_IPS)
+ * @param rva Rendezvous Association
+ * @param dst Target buffer (must be preallocated)
+ * @param n The IP-address to fetch (0 <= n < HIP_RVA_MAX_IPS)
  *
  */
 void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n)
@@ -171,8 +169,8 @@ void hip_rva_fetch_ip_n(HIP_RVA *rva, struct in6_addr *dst, unsigned int n)
 
 /**
  * hip_rva_fetch_ip - Fetch first IP-address from the RVA to the destination buffer
- * @rva: Rendezvous Association
- * @dst: Target buffer (must be preallocated)
+ * @param rva Rendezvous Association
+ * @param dst Target buffer (must be preallocated)
  *
  */
 void hip_rva_fetch_ip(HIP_RVA *rva, struct in6_addr *dst)
@@ -182,8 +180,8 @@ void hip_rva_fetch_ip(HIP_RVA *rva, struct in6_addr *dst)
 
 /**
  * hip_rva_get_ip - Allocate memory and copy one IP from RVA's list.
- * @rva: RVA
- * @gfpmask: gfpmask
+ * @param rva RVA
+ * @param gfpmask gfpmask
  *
  * Memory is allocated and the IP to copy is selected to be the first one
  * in to RVA's list. Later we might have a better algorithm selecting
@@ -198,9 +196,9 @@ struct in6_addr *hip_rva_get_ip(HIP_RVA *rva,int gfpmask)
 
 /**
  * hip_rva_get_ip - Allocate memory and copy one IP from RVA's list.
- * @rva: RVA
- * @gfpmask: gfpmask
- * @n: Element ot get from the RVA's IP-list.
+ * @param rva RVA
+ * @param gfpmask gfpmask
+ * @param n Element ot get from the RVA's IP-list.
  *
  * Memory is allocated and the IP to copy is selected to be the first one
  * in to RVA's list. Later we might have a better algorithm selecting
@@ -225,7 +223,7 @@ struct in6_addr *hip_rva_get_ip_n(HIP_RVA *rva, int gfpmask, unsigned int n)
 
 /**
  * hip_rva_insert - Insert Rendezvous Association into the RVA hashtable
- * @rva: The RVA to be added to the hashtable.
+ * @param rva The RVA to be added to the hashtable.
  *
  * The RVA is automatically holded (refcnt incremented) as a side effect of
  * inserting it to the hashtable.
@@ -239,14 +237,19 @@ int hip_rva_insert(HIP_RVA *rva)
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
 
+	HIP_DEBUG_HIT("rva->hit", &rva->hit);
+
 	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
 		 "Cannot insert RVA entry with NULL hit\n");
 	HIP_IFEL(hip_ht_find(&rva_table, &rva->hit), -EEXIST,
 		 "Duplicate RVA entry. Not adding to RVA table\n");
 	
 	err = hip_ht_add(&rva_table, rva);
-	if (!err)
+	if (err) {
+		HIP_ERROR("Failed to add rva hash table entry\n");
+	} else {
 		rva->rvastate |= HIP_RVASTATE_VALID;
+	}
  out_err:
 	return err;
 }
@@ -333,9 +336,9 @@ void hip_rva_remove(HIP_RVA *rva)
 
 /**
  * hip_select_rva_types - Select RVA types that we accept
- * @rreq: The original request
- * @type_list: List that holds place for @llen 16-bit integers.
- * @llen: length of @type_list.
+ * @param rreq The original request
+ * @param type_list List that holds place for @llen 16-bit integers.
+ * @param llen length of @type_list.
  *
  * Returns the amount of types that were accepted.
  */
@@ -374,7 +377,7 @@ int hip_select_rva_types(struct hip_rva_request *rreq, int *type_list, int llen)
 }
 
 int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		 struct in6_addr *i1_daddr, HIP_RVA *rva)
+		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
 {
 	struct in6_addr *final_dst = NULL, *original_src;
 	struct hip_common *old_i1, *new_i1;
@@ -390,7 +393,7 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_IFEL(!(new_i1 = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");
 	
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
+	/*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
 	hip_build_network_hdr(new_i1, HIP_I1, 0,
 			      &(old_i1->hits),
 			      &(old_i1->hitr));
@@ -413,7 +416,8 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		hip_build_param_from(new_i1, original_src, 0);
 	}
 
-	err = hip_csum_send(NULL, final_dst, new_i1, NULL, 0);
+	err = hip_csum_send(NULL, final_dst, i1_info->src_port, i1_info->dst_port, new_i1, NULL, 0); 
+		//Sending the port info from the I1 from initiator behind NAT to the server --Abi
 	if (err)
 		HIP_ERROR("Sending the modified I1 (RVS) failed: %d\n",err);
 	else {
@@ -427,16 +431,19 @@ int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
-void hip_rvs_set_request_flag(struct in6_addr *hit)
+int hip_rvs_set_request_flag(hip_hit_t *src_hit,
+			      hip_hit_t *dst_hit)
 {
+	int err = 0;
 	hip_ha_t *entry;
 
-	entry = hip_hadb_try_to_find_by_peer_hit(hit);
-	if (!entry) {
-		HIP_ERROR("Could not set RVS request bit\n");
-		return;
-	}
+
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
+		 -1, "Could not set RVS request bit\n");
 
 	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
 	hip_put_ha(entry);
+
+ out_err:
+	return err;
 }

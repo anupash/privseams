@@ -355,45 +355,44 @@ void remove_connection(struct connection * connection)
  * creates new esp_tuple from parameters.
  * if spis dont match or other failure occurs returns NULL
  */
-struct esp_tuple * esp_tuple_from_nes_rea(const struct hip_nes * nes,
-					  const struct hip_rea * rea,
+struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * esp_info,
+					  const struct hip_locator * locator,
 					  const struct hip_seq * seq,
 					  struct tuple * tuple)
 {
   struct esp_tuple * new_esp = NULL;
-  struct hip_rea_info_addr_item * rea_addr = NULL;
+  struct hip_locator_info_addr_item * locator_addr = NULL;
   int n = 0, i = 0;
-  if(nes && rea && nes->new_spi == rea->spi)
-    {
-      HIP_DEBUG("esp_tuple_from_nes_rea: new spi %d\n", nes->new_spi);
+  if(esp_info && locator && esp_info->new_spi == esp_info->old_spi) {
+      HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi %d\n", esp_info->new_spi);
       //check that old spi is found
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
-      new_esp->spi = nes->new_spi;
+      new_esp->spi = esp_info->new_spi;
       new_esp->tuple = tuple;
       new_esp->dst_addr_list = NULL;
       
-      n = (hip_get_param_total_len(rea) - sizeof(struct hip_rea))/
-	sizeof(struct hip_rea_info_addr_item);
-      HIP_DEBUG("esp_tuple_from_nes_rea: %d addresses in rea\n", n);
+      n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
+	sizeof(struct hip_locator_info_addr_item);
+      HIP_DEBUG("esp_tuple_from_esp_info_locator: %d addresses in locator\n", n);
       if(n > 0)
 	{
-	  rea_addr = (void *) rea + sizeof(struct hip_rea);
+	  locator_addr = (void *) locator + sizeof(struct hip_locator);
 	  while(n > 0)
 	    {
 	      struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 	      memcpy(&esp_address->dst_addr, 
-		     &rea_addr->address, 
+		     &locator_addr->address, 
 		     sizeof(struct in6_addr)); 
 	      esp_address->update_id = malloc(sizeof(uint32_t));
 	      *esp_address->update_id = seq->update_id;
 	      new_esp->dst_addr_list = (struct GSList *)
 		g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 			       (gpointer) esp_address);
-	      HIP_DEBUG("esp_tuple_from_nes_rea: ");
+	      HIP_DEBUG("esp_tuple_from_esp_info_locator: ");
 	      print_esp_tuple(new_esp);
 	      n--;
 	      if(n > 0)
-		rea_addr++;
+		locator_addr++;
 	    }
 	}
       else
@@ -409,15 +408,15 @@ struct esp_tuple * esp_tuple_from_nes_rea(const struct hip_nes * nes,
  * creates new esp_tuple from parameters
  * if spis don't match or other failure occurs returns NULL
  */
-struct esp_tuple * esp_tuple_from_nes(const struct hip_nes * nes,
+struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
 				      const struct in6_addr * addr, 
 				      struct tuple * tuple)
 {
   struct esp_tuple * new_esp = NULL;
-  if(nes)
+  if(esp_info)
     {
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
-      new_esp->spi = nes->new_spi;
+      new_esp->spi = esp_info->new_spi;
       new_esp->tuple = tuple;
       
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
@@ -428,7 +427,7 @@ struct esp_tuple * esp_tuple_from_nes(const struct hip_nes * nes,
       new_esp->dst_addr_list = NULL;
       new_esp->dst_addr_list = (struct GSList *)g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 							       (gpointer) esp_address);
-	  HIP_DEBUG("esp_tuple_from_nes: ");
+	  HIP_DEBUG("esp_tuple_from_esp_info: ");
 	  print_esp_tuple(new_esp);
     }
   return new_esp;
@@ -436,12 +435,12 @@ struct esp_tuple * esp_tuple_from_nes(const struct hip_nes * nes,
 
 
 /** 
- * initialize and insert connection based on nes and rea
+ * initialize and insert connection based on esp_info and locator
  * returns 1 if succesful 0 otherwise. not used currently
  */
 int insert_connection_from_update(struct hip_data * data, 
-				  struct hip_nes * nes,
-				  struct hip_rea * rea,
+				  struct hip_esp_info * esp_info,
+				  struct hip_locator * locator,
 				  struct hip_seq * seq)
 {
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
@@ -449,13 +448,13 @@ int insert_connection_from_update(struct hip_data * data,
   struct esp_tuple * esp_tuple = NULL;
 
   HIP_DEBUG("insert_connection_from_update");
-  if(nes)
-    _HIP_DEBUG(" nes ");
-  if(rea)
-    _HIP_DEBUG(" rea ");
-  if(nes)
-    _HIP_DEBUG(" nes ");
-  esp_tuple = esp_tuple_from_nes_rea(nes, rea, seq, &connection->reply);
+  if(esp_info)
+    _HIP_DEBUG(" esp_info ");
+  if(locator)
+    _HIP_DEBUG(" locator ");
+  if(esp_info)
+    _HIP_DEBUG(" esp_info ");
+  esp_tuple = esp_tuple_from_esp_info_locator(esp_info, locator, seq, &connection->reply);
   if(esp_tuple == NULL)
     {
       free(connection);
@@ -553,7 +552,7 @@ int handle_r1(struct hip_common * common,
   if(verify_responder)
     {
       _HIP_DEBUG("handle_r1: verifying responder\n");
-      hip_host_id_to_hit(hi, &hit, HIP_HIT_TYPE_HASH120);
+      hip_host_id_to_hit(hi, &hit, HIP_HIT_TYPE_HASH100);
 
       //verify hi -> hit
       if(!ipv6_addr_cmp(&hit, &tuple->hip_tuple->data->src_hit))
@@ -600,11 +599,11 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
 	      const struct hip_common * common, 
 	      struct tuple * tuple)
 {
-  struct hip_spi * spi = NULL, * spi_tuple = NULL;
+  struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
   struct tuple * other_dir = NULL;
   struct esp_tuple * esp_tuple = malloc(sizeof(struct esp_tuple));
   HIP_DEBUG("handle_i2: ");
-  spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_SPI);
+  spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   if(spi == NULL){
     HIP_DEBUG("handle_i2: no spi found");
     return 0;
@@ -615,7 +614,7 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
     other_dir = &tuple->connection->reply;
   else
     other_dir = &tuple->connection->original;
-  esp_tuple->spi = spi->spi;
+  esp_tuple->spi = spi->new_spi;
   esp_tuple->dst_addr_list = NULL;
   esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
 						&ip6_hdr->ip6_src, NULL);
@@ -636,11 +635,11 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
 	      const struct hip_common * common, 
 	      struct tuple * tuple)
 {
-  struct hip_spi * spi = NULL, * spi_tuple = NULL;
+  struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
   struct tuple * other_dir = NULL;
   struct esp_tuple * esp_tuple = malloc(sizeof(struct esp_tuple));
   int v = 1;
-  spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_SPI);
+  spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   if(spi == NULL){
     HIP_DEBUG("handle_r2: no spi found");
     return 0;
@@ -649,7 +648,7 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
     other_dir = &tuple->connection->reply;
   else
     other_dir = &tuple->connection->original;
-  esp_tuple->spi = spi->spi;
+  esp_tuple->spi = spi->new_spi;
 
   esp_tuple->dst_addr_list = NULL;
   esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
@@ -668,40 +667,40 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
 
 /**
  * updates esp tuple according to parameters
- * nes or rea may be null and spi or ip_addr is 
+ * esp_info or locator may be null and spi or ip_addr is 
  * not updated in tha case
  * returns 1 if succesfull 0 otherwise
  */
-int update_esp_tuple(const struct hip_nes * nes,
-		     const struct hip_rea * rea,
+int update_esp_tuple(const struct hip_esp_info * esp_info,
+		     const struct hip_locator * locator,
 		     const struct hip_seq * seq,
 		     struct esp_tuple * esp_tuple)
 {
-  struct hip_rea_info_addr_item * rea_addr = NULL;
+  struct hip_locator_info_addr_item * locator_addr = NULL;
   int n = 0;
   HIP_DEBUG("update_esp_tuple: "); 
   print_esp_tuple(esp_tuple);
-  if(nes && rea && seq)
+  if(esp_info && locator && seq)
     {
-      HIP_DEBUG("nes, rea and seq, "); 
-      if(nes->old_spi != esp_tuple->spi || rea->spi != nes->old_spi)
+      HIP_DEBUG("esp_info, locator and seq, "); 
+      if(esp_info->old_spi != esp_tuple->spi || esp_info->new_spi != esp_info->old_spi)
 	{
-	  HIP_DEBUG("update_esp_tuple: spi no match nes old:%d tuple:%d rea:%d\n",
-		    nes->old_spi, esp_tuple->spi, rea->spi);
+	  HIP_DEBUG("update_esp_tuple: spi no match esp_info old:%d tuple:%d locator:%d\n",
+		    esp_info->old_spi, esp_tuple->spi, esp_info->new_spi);
 	  return 0;
 	}
-      esp_tuple->new_spi = nes->new_spi;
+      esp_tuple->new_spi = esp_info->new_spi;
       esp_tuple->spi_update_id = seq->update_id;
       
-      n = (hip_get_param_total_len(rea) - sizeof(struct hip_rea))/
-	sizeof(struct hip_rea_info_addr_item);
-      HIP_DEBUG(" %d rea addresses\n", n);
+      n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
+	sizeof(struct hip_locator_info_addr_item);
+      HIP_DEBUG(" %d locator addresses\n", n);
       if(n < 1)
 	{
-	  HIP_DEBUG("update_esp_tuple: no rea param found\n");
+	  HIP_DEBUG("update_esp_tuple: no locator param found\n");
 	  return 0; // no param found
 	}
-      rea_addr = (void *) rea + sizeof(struct hip_rea);
+      locator_addr = (void *) locator + sizeof(struct hip_locator);
 
       HIP_DEBUG("update_esp_tuple: ");
       print_esp_tuple(esp_tuple); 
@@ -709,57 +708,57 @@ int update_esp_tuple(const struct hip_nes * nes,
       while(n > 0)
 	{
 	  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
-							&rea_addr->address, 
+							&locator_addr->address, 
 							&seq->update_id);
 	  n--;
 	  if(n > 0)
-	    rea_addr++;
+	    locator_addr++;
 
 	}
       HIP_DEBUG("new tuple: ");
       print_esp_tuple(esp_tuple);
     }
-  else if(nes && seq)
+  else if(esp_info && seq)
     {
-      HIP_DEBUG("nes and seq, "); 
-      if(nes->old_spi != esp_tuple->spi)
+      HIP_DEBUG("esp_info and seq, "); 
+      if(esp_info->old_spi != esp_tuple->spi)
 	{
-	  HIP_DEBUG("update_esp_tuple: nes spi no match nes:%d tuple:%d\n",
-		    nes->old_spi, esp_tuple->spi);
+	  HIP_DEBUG("update_esp_tuple: esp_info spi no match esp_info:%d tuple:%d\n",
+		    esp_info->old_spi, esp_tuple->spi);
 	  return 0;
 	}
 
-      esp_tuple->new_spi = nes->new_spi;
+      esp_tuple->new_spi = esp_info->new_spi;
       esp_tuple->spi_update_id = seq->update_id;
     }
 
-  else if(rea && seq)
+  else if(locator && seq)
     {
-      HIP_DEBUG("rea and seq, "); 
-      if(rea->spi != esp_tuple->spi)
+      HIP_DEBUG("locator and seq, "); 
+      if(esp_info->new_spi != esp_tuple->spi)
 	{
-	  HIP_DEBUG("update_esp_tuple: nes spi no match nes:%d tuple:%d\n",
-		    rea->spi, esp_tuple->spi);
+	  HIP_DEBUG("update_esp_tuple: esp_info spi no match esp_info:%d tuple:%d\n",
+		    esp_info->new_spi, esp_tuple->spi);
 	  return 0;	  
 	}
-      n = (hip_get_param_total_len(rea) - sizeof(struct hip_rea))/
-	sizeof(struct hip_rea_info_addr_item);
-      HIP_DEBUG(" %d rea addresses\n", n);
+      n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
+	sizeof(struct hip_locator_info_addr_item);
+      HIP_DEBUG(" %d locator addresses\n", n);
 
-      rea_addr = (void *) rea + sizeof(struct hip_rea);
-      HIP_DEBUG("update_esp_tuple: rea addr: old tuple ");
+      locator_addr = (void *) locator + sizeof(struct hip_locator);
+      HIP_DEBUG("update_esp_tuple: locator addr: old tuple ");
       print_esp_tuple(esp_tuple);
       while(n > 0)
 	{
 	  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
-							&rea_addr->address, 
+							&locator_addr->address, 
 							&seq->update_id);
 	  n--;
 	  if(n > 0)
-	    rea_addr++;
+	    locator_addr++;
 	}
 
-      HIP_DEBUG("update_esp_tuple: rea addr: new tuple ");
+      HIP_DEBUG("update_esp_tuple: locator addr: new tuple ");
       print_esp_tuple(esp_tuple);
     }
   HIP_DEBUG("update_esp_tuple: done, ");
@@ -784,20 +783,20 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
   //Anything that can come out of an update packet
   struct hip_tlv_common * param = NULL;
   struct hip_seq * seq = NULL;
-  struct hip_nes * nes = NULL;
+  struct hip_esp_info * esp_info = NULL;
   struct hip_ack * ack = NULL;
-  struct hip_rea * rea = NULL;
+  struct hip_locator * locator = NULL;
   struct hip_spi * spi = NULL;
-  struct hip_rea_info_addr_item * rea_addr = NULL;
+  struct hip_locator_info_addr_item * locator_addr = NULL;
   struct hip_echo_request * echo_req = NULL;
   struct hip_echo_response * echo_res = NULL;
   struct tuple * other_dir_tuple = NULL;
   HIP_DEBUG("handle_update\n");
   seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
-  nes = (struct hip_nes *) hip_get_param(common, HIP_PARAM_NES);
+  esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
-  rea = (struct hip_rea *) hip_get_param(common, HIP_PARAM_REA);
-  spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_SPI);
+  locator = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
+  spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   echo_req = (struct hip_echo_request *) hip_get_param(common, 
 						       HIP_PARAM_ECHO_REQUEST);
   echo_res = (struct hip_echo_response *) hip_get_param(common, HIP_PARAM_ECHO_RESPONSE);
@@ -805,9 +804,9 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
     _HIP_DEBUG("handle_update: spi param, spi: %d \n", spi->spi);
   if(tuple == NULL)// attempt to create state for new connection
     {
-      if(nes && rea && seq)
+      if(esp_info && locator && seq)
 	{
-	  if(!insert_connection_from_update(get_hip_data(common), nes, rea, seq))
+	  if(!insert_connection_from_update(get_hip_data(common), esp_info, locator, seq))
 	    return 0;
 	}      
       else 
@@ -832,57 +831,57 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 
 	HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
       }
-      //handling single nes and rea parameters
+      //handling single esp_info and locator parameters
       //Readdress with mobile-initiated rekey
-      if(nes && rea && seq) 
+      if(esp_info && locator && seq) 
 	{
-	  HIP_DEBUG("handle_update: nes and rea found\n");
+	  HIP_DEBUG("handle_update: esp_info and locator found\n");
 	  struct esp_tuple * new_esp = NULL;
-	  if(nes->old_spi != nes->new_spi)//update existing
+	  if(esp_info->old_spi != esp_info->new_spi)//update existing
 	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, nes->old_spi);
+	      esp_tuple = find_esp_tuple(other_dir_esps, esp_info->old_spi);
 	      if(esp_tuple == NULL)
 		{
 		  HIP_DEBUG("No suitable esp_tuple found for updating\n");
 		  return 0; 
 		}	
-	      if(!update_esp_tuple(nes, rea, seq, esp_tuple))
+	      if(!update_esp_tuple(esp_info, locator, seq, esp_tuple))
 		return 0;
 	    }
 	  else//create new
 	    {
-	      new_esp = esp_tuple_from_nes_rea(nes, rea, seq, other_dir_tuple);
+	      new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq, other_dir_tuple);
 	      if(new_esp == NULL)
-		return 0;//rea must contain adress for this spi
+		return 0;//locator must contain adress for this spi
 	      other_dir_esps = (struct GSList *) g_slist_append((struct _GSList *) other_dir_esps, 
 								(gpointer) new_esp);
 	      insert_esp_tuple(new_esp);
 	    }
 	}
       //Readdress without rekeying
-      else if(rea && seq)
+      else if(locator && seq)
 	{
-	  HIP_DEBUG("handle_update: rea found\n");
-	  esp_tuple = find_esp_tuple(other_dir_esps, rea->spi);
+	  HIP_DEBUG("handle_update: locator found\n");
+	  esp_tuple = find_esp_tuple(other_dir_esps, esp_info->new_spi);
 	  if(esp_tuple == NULL)
 	    {
 	      HIP_DEBUG("No suitable esp_tuple found for updating\n");
 	      return 0; 
 	      //if mobile host spi not intercepted, but valid,  
 	    }
-	  if(!update_esp_tuple(NULL, rea, seq, esp_tuple))
+	  if(!update_esp_tuple(NULL, locator, seq, esp_tuple))
 	    {
 	      return 0;
 	    }
 	}
       //replying to Readdress with mobile-initiated rekey
-      else if(nes && seq)
+      else if(esp_info && seq)
 	{
-	  HIP_DEBUG("handle_update: nes found old:%d new:%d\n",
-		    nes->old_spi, nes->new_spi);
-	  if(nes->old_spi != nes->new_spi)
+	  HIP_DEBUG("handle_update: esp_info found old:%d new:%d\n",
+		    esp_info->old_spi, esp_info->new_spi);
+	  if(esp_info->old_spi != esp_info->new_spi)
 	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, nes->old_spi);
+	      esp_tuple = find_esp_tuple(other_dir_esps, esp_info->old_spi);
 	      if(esp_tuple == NULL)
 		{
 		  if(tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE)
@@ -893,7 +892,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		  else//connection state is being established from update
 		    {
 		      struct esp_tuple * new_esp = 
-			esp_tuple_from_nes(nes,
+			esp_tuple_from_esp_info(esp_info,
 					   &ip6_hdr->ip6_src, 
 					   other_dir_tuple);
 		      other_dir_esps = (struct GSList *) 
@@ -903,7 +902,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		      tuple->connection->state = STATE_ESTABLISHED;
 		    }
 		}
-	      else if(!update_esp_tuple(nes, NULL, seq, esp_tuple))
+	      else if(!update_esp_tuple(esp_info, NULL, seq, esp_tuple))
 		return 0;
 	      
 	    }
@@ -911,7 +910,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 	    {
 	      
 	      struct esp_tuple * new_esp = 
-		esp_tuple_from_nes(nes,
+		esp_tuple_from_esp_info(esp_info,
 				   &ip6_hdr->ip6_src, 
 				   other_dir_tuple);
 	      other_dir_esps = (struct GSList *) g_slist_append((struct _GSList *) other_dir_esps, 

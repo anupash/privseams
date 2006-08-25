@@ -15,8 +15,10 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "hip.h"
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
@@ -24,8 +26,10 @@
 #include "linux/netlink.h"
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
+
 #include "agent_tools.h"
 #include "gui_interface.h"
+#include "terminal.h"
 
 
 /******************************************************************************/

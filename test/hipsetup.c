@@ -1,4 +1,4 @@
-#include "hipsetupNew.h"
+#include "hipsetup.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 			else
 				peer_name = optarg;
 			sprintf(buf, "%d",DEFAULT_PORT);
-			main_client_gai(IPPROTO_TCP, SOCK_STREAM, peer_name, buf);
+			main_client_gai(IPPROTO_TCP, SOCK_STREAM, peer_name, buf, AI_HIP);
 			break;
 		case 'r':
 			printf("Responder mode\n");

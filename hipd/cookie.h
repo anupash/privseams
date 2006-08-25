@@ -1,7 +1,6 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#include "hip.h"
 #include "debug.h"
 #include "builder.h"
 #include "output.h"
@@ -17,10 +16,11 @@ struct hip_r1entry {
 };
 
 #define HIP_PUZZLE_MAX_LIFETIME 60 /* in seconds */
-#define HIP_R1TABLESIZE 3 /* precreate only this many R1s */
-#define HIP_DEFAULT_COOKIE_K 10ULL
+#define HIP_R1TABLESIZE         3 /* precreate only this many R1s */
+#define HIP_DEFAULT_COOKIE_K    10ULL
+#define HIP_PUZZLE_MAX_K        28
 
-struct hip_common * hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *src_hit);
+struct hip_common * hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r, struct in6_addr *src_hit, struct in6_addr *peer_hit);
 struct hip_r1entry * hip_init_r1(void);
 void hip_uninit_r1(struct hip_r1entry *);		 
 int hip_precreate_r1(struct hip_r1entry *r1table, 

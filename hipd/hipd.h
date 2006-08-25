@@ -8,18 +8,22 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <time.h>
+#include <stdint.h>
+#include <sys/un.h>
+#include <netinet/udp.h>
+#include <sys/socket.h>
 
-#include "hip.h"
 #include "crypto.h"
 #include "cookie.h"
-#include "workqueue.h"
+#include "user.h"
 #include "debug.h"
 #include "netdev.h"
 #include "hipconf.h"
-
-#include <linux/netlink.h>      /* get_my_addresses() support   */
-#include <linux/rtnetlink.h>    /* get_my_addresses() support   */
-#include <sys/un.h>
+#include "nat.h"
+#include "init.h"
+#include "hidb.h"
+#include "maintenance.h"
+#include "accessor.h"
 
 #ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"
@@ -30,24 +34,61 @@
 #include "dhtresolver.h"
 #endif
 
+#define HIPL_VERSION 1.0
+
 #define HIP_HIT_DEV "dummy0"
 
 #ifdef CONFIG_HIP_HI3
-#define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
+#  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
 #else
-#define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
+#  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
 #endif
 
+#define HIP_SELECT_TIMEOUT      1
+#define HIP_RETRANSMIT_MAX      10
+#define HIP_RETRANSMIT_INTERVAL 1 /* seconds */
+/* the interval with which the hadb entries are checked for retransmissions */
+#define HIP_RETRANSMIT_INIT \
+           (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
+/* wait about n seconds before retransmitting.
+   the actual time is between n and n + RETRANSMIT_INIT seconds */
+#define HIP_RETRANSMIT_WAIT 5 
+#define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
+#define HIP_R1_PRECREATE_INIT \
+           (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INIT \
+           (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+
+/* How many duplicates to send simultaneously: 1 means no duplicates */
+#define HIP_PACKET_DUPLICATES                1
+/* Set to 1 if you want to simulate lost output packet */
+#define HIP_SIMULATE_PACKET_LOSS             0
+ /* Packet loss probability in percents */
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
+#define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
+
+#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
 
 
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;
 
+extern int hip_raw_sock_v6;
+extern int hip_raw_sock_v4;
+extern int hip_nat_sock_udp;
+extern int hip_nat_sock_udp_data;
+
+extern int hip_user_sock;
+extern int hip_agent_sock, hip_agent_status;
+extern struct sockaddr_un hip_agent_addr;
+
 int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
 #define IPV4_HDR_SIZE 20
+
 
 #define HIT_SIZE 16
 

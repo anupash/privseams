@@ -34,12 +34,15 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		goto out_err;
 	}
 
+        if (!(entry->state == HIP_STATE_ESTABLISHED)) {
+		HIP_ERROR("State %d, not sending CLOSE\n");
+		goto out_err;
+	}
+
 	HIP_DEBUG("Sending close to peer\n");
 
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
 			      &entry->hit_peer);
 
@@ -60,7 +63,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 "Could not create signature\n");
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSING;
@@ -94,8 +97,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 -1, "No echo request under signature\n");
 	echo_len = hip_get_param_contents_len(request);
 
-	mask = hip_create_control_flags(0, 0, HIP_CONTROL_SHT_TYPE1,
-					HIP_CONTROL_DHT_TYPE1);
 	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
 			      mask, &entry->hit_our,
 			      &entry->hit_peer);
@@ -114,18 +115,14 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature\n");
 
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,
+						     &entry->preferred_address,0,0,
 						     close_ack, entry, 0), -1);
 
 	entry->state = HIP_STATE_CLOSED;
 
 	HIP_DEBUG("CLOSED\n");
 
-	/* Note: I had some problems with deletion of peer info. Try to close
-	   a SA and then to re-establish without killing
-	   the hipd when you test the CLOSE. -miika */
-
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed\n");
 	//hip_hadb_remove_state(entry);
@@ -172,9 +169,9 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 	   a SA and then to re-establish without rmmod or killing
 	   the hipd when you test the CLOSE. -miika */
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_peer,
-				   &entry->preferred_address), -1,
-		 "Deleting peer info failed\n");
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
+	         &entry->preferred_address), -1,
+	         "Deleting peer info failed\n");
 
 	//hip_hadb_remove_state(entry);
 	//hip_delete_esp(entry);
@@ -185,5 +182,58 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
  out_err:
 
+	return err;
+}
+
+
+int hip_receive_close_ack(struct hip_common *close_ack,
+			  hip_ha_t *entry) 
+{
+	int state = 0;
+	int err = 0;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
+
+	/* XX FIX:  */
+
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(ipv6_addr_any(&close_ack->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
+
+	if (!hip_controls_sane(ntohs(close_ack->control), mask
+		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
+		       //HIP_CONTROL_RVS_CAPABLE
+		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
+		               )) {
+		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",
+			  ntohs(close_ack->control));
+		goto out_err;
+	}
+	
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close ack\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+	case HIP_STATE_CLOSING:
+	case HIP_STATE_CLOSED:
+		err = entry->hadb_handle_func->hip_handle_close_ack(close_ack, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		hip_put_ha(entry);
+	}
+ out_err:
 	return err;
 }
