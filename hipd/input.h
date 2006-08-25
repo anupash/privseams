@@ -17,9 +17,7 @@
 #include "hidb.h"
 #include "cookie.h"
 #include "output.h"
-//#include "socket.h"
 #include "pk.h"
-#include "rvs.h"
 #include "netdev.h"
 #include "beet.h"
 #if defined CONFIG_HIP_HI3

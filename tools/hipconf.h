@@ -1,3 +1,16 @@
+/** @file
+ * A header file for hipconf.c
+ * 
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Anthony D. Joseph <adj_hiit.fi>
+ * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Anu Markkola
+ * @author  Lauri Silvennoinen
+ */
 #ifndef HIPCONF_H
 #define HIPCONF_H
 
@@ -32,6 +45,13 @@
 #include "builder.h"
 #include "hipd.h"
 
+/** @todo Lauri: Come back to this idea...
+typedef enum { 
+	HIPCONF_HLP_GENERIC=0,
+	HIPCONF_HLP_RVS=1,
+	HIPCONF_HLP_SERVICE=2
+} hipconf_hlp_t;
+*/
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -56,7 +76,6 @@
 #define TYPE_OPP     8
 #define TYPE_ESCROW  9
 #define TYPE_SERVICE 10
-#define TYPE_RVS_NEW 11
 #define TYPE_RUN     12
 #define TYPE_MAX     13 /* exclusive */
 
@@ -69,8 +88,7 @@ int handle_hi(struct hip_common *, int type, const char **opt, int optc);
 int handle_map(struct hip_common *, int type, const char **opt, int optc);
 int handle_rst(struct hip_common *, int type, const char **opt, int optc);
 int handle_bos(struct hip_common *, int type, const char **opt, int optc);
-int handle_rvs(struct hip_common *, int type, const char **opt, int optc);
-int handle_rvs_new(struct hip_common *msg, int action, const char **opt, int optc);
+int handle_rvs(struct hip_common *msg, int action, const char **opt, int optc);
 int handle_del(struct hip_common *, int type, const char **opt, int optc);
 int handle_nat(struct hip_common *, int type, const char **opt, int optc);
 int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);

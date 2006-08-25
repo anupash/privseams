@@ -247,36 +247,42 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 /**
- * hip_xmit_r1 - transmit an R1 packet to the network
- * @param i1_saddr      the source address from where the I1 packet was received.
- * @param i1_daddr      the destination address where the I1 packet was sent to (own address).
- * @param src_hit       the source HIT i.e. responder HIT (own HIT). 
- * @param dst_ip        the destination IPv6 address where the R1 should be sent (peer ip).
- * @param dst_hit       the destination HIT i.e. initiator HIT (peer HIT).
- * @param i1_info       the source and destination ports (when NAT is in use).
- * @param traversed_rvs the rvs addresses to be inserted into the VIA_RVS parameter.
- * @param rvs_count     number of addresses in "traversed_rvs".
+ * Transmits an R1 packet to the network.
  *
- * Sends an R1 to the peer and stores the cookie information that was sent.
- * The packet is sent either to "i1_saddr" or "dst_ip" depending on the value of
- * "dst_ip". If "dst_ip" is all zeroes (::/128) or NULL, R1 is sent to
- * "i1_saddr"; otherwise it is sent to "dst_ip". In case the incoming I1 was
- * relayed through a middlebox (e.g. rvs) "i1_saddr" should have the address of
- * that middlebox. 07.08.2006 19:59.
- * 
+ * Sends an R1 packet to the peer and stores the cookie information that was
+ * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
+ * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
+ * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
+ * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
+ * have the address of that middlebox.
  *
- * @return zero on success, or negative error value on error.
+ * @param i1_saddr      a pointer to the source address from where the I1 packet
+ *                      was received.
+ * @param i1_daddr      a pointer to the destination address where to the I1
+ *                      packet was sent to (own address).
+ * @param src_hit       a pointer to the source HIT i.e. responder HIT
+ *                      (own HIT). 
+ * @param dst_ip        a pointer to the destination IPv6 address where the R1
+ *                      should be sent (peer ip).
+ * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
+ *                      (peer HIT).
+ * @param i1_info       a pointer to the source and destination ports
+ *                      (when NAT is in use).
+ * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
+ *                      @c VIA_RVS parameter.
+ * @param rvs_count     number of addresses in @c traversed_rvs.
+ * @return              zero on success, or negative error value on error.
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr,
 		struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, 
-		struct in6_addr *dst_ip, struct in6_addr *dst_hit, 
+		struct in6_addr *dst_ip,
+		struct in6_addr *dst_hit, 
 		struct hip_stateless_info *i1_info,
 		const struct in6_addr *traversed_rvs,
 		const int rvs_count)
 {
-	HIP_DEBUG("Lauri: hip_xmit_r1() invoked.\n");
-	HIP_DEBUG("Lauri: rvs_count:%d.\n", rvs_count);
+	HIP_DEBUG("hip_xmit_r1() invoked.\n");
 
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
@@ -310,7 +316,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 #ifdef CONFIG_HIP_RVS
 	if(rvs_count > 0)
 	{
-		/*  TODO: Parameters must be in ascending order, should this
+		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
 		hip_build_param_via_rvs(r1pkt, traversed_rvs, rvs_count);
 	}

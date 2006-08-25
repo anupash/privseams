@@ -37,7 +37,7 @@ int hipd_init(int flush_ipsec)
 	hip_init_puzzle_defaults();
 
 #ifdef CONFIG_HIP_RVS
-        hip_init_rvadb();
+        hip_rvs_init_rvadb();
 #endif	
 
 #ifdef CONFIG_HIP_ESCROW
@@ -365,7 +365,7 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_uninit_rvadb();
+        hip_rvs_uninit_rvadb();
 #endif
 
 #ifdef CONFIG_HIP_ESCROW

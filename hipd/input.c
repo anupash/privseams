@@ -2,20 +2,17 @@
  * HIP input
  *
  * Licence: GNU/GPL
- * Authors: Janne Lundberg <jlu@tcs.hut.fi>
- *          Miika Komu <miika@iki.fi>
- *          Mika Kousa <mkousa@cc.hut.fi>
- *          Kristian Slavov <kslavov@hiit.fi>
- *          Anthony D. Joseph <adj@hiit.fi>
- *          Bing Zhou <bingzhou@cc.hut.fi>
- *	    Tobias Heer <heer@tobibox.de>
+ * Authors: Janne Lundberg <jlu_tcs.hut.fi>
+ *          Miika Komu <miika_iki.fi>
+ *          Mika Kousa <mkousa_cc.hut.fi>
+ *          Kristian Slavov <kslavov_hiit.fi>
+ *          Anthony D. Joseph <adj_hiit.fi>
+ *          Bing Zhou <bingzhou_cc.hut.fi>
+ *	    Tobias Heer <heer_tobibox.de>
  *
  */
 #include "input.h"
 #include "util.h"
-
-extern int hip_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-			struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info);
 
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
@@ -121,9 +118,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a NULL in HIT-sender. Dropping\n");
 
-        /*
-         * XX FIXME: handle the RVS case better
-         */
+        /** @todo handle the RVS case better. */
         if (ipv6_addr_any(&hip_common->hitr)) {
                 /* Required for e.g. BOS */
                 HIP_DEBUG("Received opportunistic HIT\n");
@@ -1559,12 +1554,6 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
-/*#ifdef CONFIG_HIP_ESCROW
-	int create_kea = 0;
-	#endif*/ //CONFIG_HIP_ESCROW
-
-	HIP_DEBUG("\n");
-
 	/* Assume already locked entry */
 	i2 = ctx->input;
 
@@ -1601,6 +1590,7 @@ int hip_create_r2(struct hip_context *ctx,
 			int request_count, my_request_count, accepted_count, rejected_count;
 			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
 			
+			/** @todo Lauri: Fix this. */
 			/* - sizeof(reg_request->lifetime) perhaps...*/
 			request_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
 			my_request_count = hip_get_param_contents_len(reg_request)
@@ -1660,8 +1650,8 @@ int hip_create_r2(struct hip_context *ctx,
 	// FIXME: Should this be skipped if an error occurs? (tkoponen)
 	/*if (create_rva) {
 	  HIP_RVA *rva;
-	  HIP_IFE(!(rva = hip_rva_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
-	  HIP_IFEBL(hip_rva_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	  HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	  HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 	  }*/
 #endif
 
@@ -1680,8 +1670,8 @@ int hip_create_r2(struct hip_context *ctx,
 	/* TODO: insert onky if REG_REQUEST parameter with Reg Type
 	   RENDEZVOUS was received. */
 	HIP_RVA *rva;
-	HIP_IFE(!(rva = hip_rva_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
-	HIP_IFEBL(hip_rva_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
 
 #endif //CONFIG_HIP_ESCROW
 
@@ -2354,19 +2344,23 @@ int hip_handle_r2(struct hip_common *r2,
 }
 
 /**
- * hip_handle_i1 - handle an incoming I1 packet.
- * @param i1       HIP packet common header with source and destination HITs.
- * @param i1_saddr the source address from where the I1 packet was received.
- * @param i1_daddr the destination address where the I1 packet was sent to (own address).
- * @param entry    current host association database state.
- * @param i1_info  the source and destination ports (when NAT is in use).
+ * Handles an incoming I1 packet.
  *
- * Handles an incoming I1 packet and parses FROM parameters from the packet.
- * If FROM parameter(s) is(are) found, the IP addresses obtained from the parameters
- * are passed to "hip_xmit_r1()" as an array. In "hip_xmit_r1()" this array is used
- * create a VIA_RVS parameter. 16.08.2006 15:30
- * 
- * @return zero on success, or negative error value on error.
+ * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
+ * If one ore more @c FROM parameters are found, the IP addresses obtained from
+ * the parameters are passed to hip_xmit_r1() as an array. In hip_xmit_r1() this
+ * array is used create a @c VIA_RVS parameter.
+ *
+ * @param i1       a pointer to the received I1 HIP packet common header with
+ *                 source and destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param i1_daddr a pointer to the destination address where to the I1 packet
+ *                 was sent to (own address).
+ * @param entry    a pointer to the current host association database state.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error.
  */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
@@ -2374,7 +2368,7 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
-	HIP_DEBUG("Lauri: hip_handle_i1() invoked.\n");
+	HIP_DEBUG("hip_handle_i1() invoked.\n");
 	HIP_DUMP_MSG(i1);
 
 #ifdef CONFIG_HIP_RVS
@@ -2403,7 +2397,7 @@ int hip_handle_i1(struct hip_common *i1,
 		/* First FROM parameter has the destination IP (Initiator). */
 		dstip = (struct in6_addr *)&from->address;
 		if (entry) {
-			HIP_DEBUG("Lauri: Entry was non NULL.\n");
+			HIP_DEBUG("Entry was non NULL.\n");
 			struct in6_addr daddr;
 			
                         /* The entry contains wrong address mapping...
@@ -2459,31 +2453,43 @@ int hip_handle_i1(struct hip_common *i1,
 }
 
 /**
- * hip_receive_i1 - receive I1 packet.
- * @param hip_i1    HIP packet common header with source and destination HITs.
- * @param i1_saddr the source address from where the I1 packet was received.
- * @param i1_daddr the destination address where the I1 packet was sent to (own address).
- * @param entry    current host association database state.
- * @param i1_info  the source and destination ports (when NAT is in use).
+ * Determines the action to be executed for an incoming I1 packet.
  *
  * This function is called when a HIP control packet is received by
  * hip_receive_control_packet()-function and the packet is detected to be
  * an I1 packet. The operation of this function depends on whether the current
  * machine is a rendezvous server or not.
  * 
- * If the current machine is NOT a rendezvous server and it is either in state
- * HIP_STATE_NONE, HIP_STATE_I1_SENT or HIP_STATE_CLOSING, hip_handle_i1() is
- * invoked. If the state is none of the previous, no action is taken. If the
- * current machine IS a rendezvous server and a valid rendezvous association
- * is found from the server's rva table, the I1 packet is relayed by invoking 
- * hip_relay_i1(). In case no valid valid rendezvous association is found,
- * hip_handle_i1() is invoked. 08.08.2006 13:56
+ * <ol>
+ * <li>If the current machine is @b NOT a rendezvous server:</li> 
+ * <ul>
+ * <li>If the state of the host association is @c HIP_STATE_NONE,
+ * @c HIP_STATE_I1_SENT or @c HIP_STATE_CLOSING, hip_handle_i1() is invoked.</li>
+ * <li>If the state is none of the previous, no action is taken.</li>
+ * </ul>
+ * <li>If the current machine @b IS a rendezvous server:</li>
+ * <ul>
+ * <li>if a valid rendezvous association is found from the server's rva table,
+ * the I1 packet is relayed by invoking hip_rvs_relay_i1().</li> 
+ * <li>If no valid valid rendezvous association is found, hip_handle_i1() is
+ * invoked.</li>
+ * </ul>
+ * </ol>
  *
- * This function never writes into hip_sdb_state entries.
+ * This function never writes into @c hip_sdb_state entries.
  * 
- * @return zero on success, or negative error value on error.
+ * @param i1       a pointer to the received I1 HIP packet common header with
+ *                 source and destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param i1_daddr a pointer to the destination address where to the I1 packet
+ *                 was sent to (own address).
+ * @param entry    a pointer to the current host association database state.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error.
  */
-int hip_receive_i1(struct hip_common *hip_i1,
+int hip_receive_i1(struct hip_common *i1,
 		   struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr,
 		   hip_ha_t *entry,
@@ -2495,12 +2501,12 @@ int hip_receive_i1(struct hip_common *hip_i1,
  	HIP_RVA *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
-	HIP_IFEL(ipv6_addr_any(&hip_i1->hitr), -EPROTONOSUPPORT, 
+	HIP_IFEL(ipv6_addr_any(&i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
- 	HIP_IFEL(!hip_controls_sane(ntohs(hip_i1->control), mask), -1, 
-		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(hip_i1->control));
+ 	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
+		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 	
 	
 	if (entry) {
@@ -2509,9 +2515,11 @@ int hip_receive_i1(struct hip_common *hip_i1,
 		hip_put_ha(entry);
 	} else {
 #ifdef CONFIG_HIP_RVS
-		HIP_DEBUG_HIT("Doing rvs check on HIT", &hip_i1->hitr);
- 		rva = hip_rva_get_valid(&hip_i1->hitr);
-		HIP_DEBUG("Valid rendezvous association found: %s \n", (rva ? "yes" : "no"));
+		HIP_DEBUG_HIT("Searching rendezvous association on HIT",
+			      &i1->hitr);
+ 		rva = hip_rvs_get_valid(&i1->hitr);
+		HIP_DEBUG("Valid rendezvous association found: %s \n",
+			  (rva ? "yes" : "no"));
  		if (rva) {
  			/* we should now relay the I1.
  			   We have two options: Rewrite destination address or
@@ -2520,12 +2528,8 @@ int hip_receive_i1(struct hip_common *hip_i1,
  			   same subnet, and we'll fall back to the latter in other
  			   cases.
  			*/
-			err = hip_relay_i1(hip_i1, i1_saddr, i1_daddr, rva, i1_info);
-			if (err)
- 				HIP_ERROR("Relaying I1 failed\n");
- 			else
- 				HIP_DEBUG("Relayed I1\n");
- 			return err;
+			err = hip_rvs_relay_i1(i1, i1_saddr, i1_daddr, rva, i1_info);
+			return err;
  		}
 #endif
 		state = HIP_STATE_NONE;
@@ -2536,13 +2540,12 @@ int hip_receive_i1(struct hip_common *hip_i1,
 
 	switch(state) {
 	case HIP_STATE_NONE:
-		/* entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
                 if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
 			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		} else {
 			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
 		}
@@ -2553,7 +2556,7 @@ int hip_receive_i1(struct hip_common *hip_i1,
 	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(hip_i1, i1_saddr, i1_daddr, entry, i1_info);
+		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	default:
 		/* should not happen */

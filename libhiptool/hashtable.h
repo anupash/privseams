@@ -5,7 +5,7 @@
 #include "debug.h"
 
 struct hip_ht_common {
-	/** a pointer to memory area to be used as hash table. */
+	/** a pointer to memory area to be used as hashtable. */
 	struct list_head *head;
 	/** spinlock. */
 	spinlock_t lock;
@@ -27,7 +27,7 @@ struct hip_ht_common {
 	/** a pointer to a function that returns the element's key from
 	    the element structure. */
 	void *(*get_key)(void *entry);
-	/** name of this hashtable. */
+	/** name of the hashtable. */
 	char name[16];
 };
 

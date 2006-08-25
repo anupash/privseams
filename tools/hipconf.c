@@ -1,28 +1,28 @@
-/*
- * Command line tool for configuring the HIP kernel module.
+/** @file
+ * This file defines a command line tool for configuring the the Host Identity
+ * Protocol daemon (hipd).
  *
- * Authors:
- * - Janne Lundberg <jlu@tcs.hut.fi>
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
- * - Anthony D. Joseph <adj@hiit.fi>
- * - Abhinav Pathak <abhinav.pathak@hiit.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- * Licence: GNU/GPL
- *
- * TODO:
- * - add/del map
- * - fix the rst kludges
- * - read the output message from send_msg?
- *
- * BUGS:
- * - makefile compiles prefix of debug messages wrong for hipconf in "make all"
- *
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Anthony D. Joseph <adj_hiit.fi>
+ * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Anu Markkola
+ * @author  Lauri Silvennoinen
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @todo    add/del map
+ * @todo    fix the rst kludges
+ * @todo    read the output message from send_msg?
+ * @bug     makefile compiles prefix of debug messages wrong for hipconf in 
+ *          "make all"
  */
-
 #include "hipconf.h"
 
+/* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
+   the nat mapping only when the communication takes place with specified
+   peer_hit --Abi */
+/** A help string containing the usage of @c hipconf. */
 const char *usage =
 	"new|add hi default\n"
 	"new|add hi anon|pub rsa|dsa filebasename\n"
@@ -30,7 +30,6 @@ const char *usage =
 	"add|del map hit ipv6\n"
 	"hip rst all|peer_hit\n"
 	"add rvs hit ipv6\n"
-        "add rvs_new hit ipv6\n"
 	"hip bos\n"
 	"hip nat on|off|peer_hit\n"
 	"add|del service service_type\n"
@@ -40,7 +39,6 @@ const char *usage =
 #else
 	"get|set|inc|dec|new puzzle all\n"
 #endif
-
 #ifdef CONFIG_HIP_ESCROW
 	"add|del escrow hit\n"
 #endif
@@ -48,12 +46,11 @@ const char *usage =
 	"set opp on|off\n"
 #endif
 ;
-/* hip nat on|off|peer_hit is currently specified. 
- * For peer_hit we should 'on' the nat mapping only when the 
- * communication takes place with specified peer_hit --Abi */
 
-/* Function pointer array containing handler functions. Keep the elements
- * in the same order as the TYPE values are defined in "hipconf.h". */
+/** Function pointer array containing handler functions.
+ *  @note Keep the elements in the same order as the @c TYPE values are defined
+ *  in hipconf.h because type values are used as @c action_handler array index.
+ */
 int (*action_handler[])(struct hip_common *, int action,
 			const char *opt[], int optc) = {
 	NULL, /* reserved */
@@ -67,15 +64,14 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_opp,
 	handle_escrow,
 	handle_service,
-	handle_rvs_new
 };
 
 /**
- * get_action - map symbolic hipconf action (=add/del) names into numeric
- *              action identifiers
- * @param text the action as a string
- *
- * @return Returns the numeric action id correspoding to the symbolic text
+ * Maps symbolic hipconf action (=add/del) names into numeric action
+ * identifiers.
+ * 
+ * @param  text the action as a string.
+ * @return the numeric action id correspoding to the symbolic text.
  */
 int get_action(char *text) {
 	int ret = -1;
@@ -102,9 +98,9 @@ int get_action(char *text) {
 }
 
 /**
- * check_action_argc - get minimum amount of arguments needed to be given to the action
- * @param action action type
- *
+ * Gets the minimum amount of arguments needed to be given to the action.
+ * 
+ * @param  action action type
  * @return how many arguments needs to be given at least
  */
 int check_action_argc(int action) {
@@ -134,10 +130,10 @@ int check_action_argc(int action) {
 }
 
 /**
- * get_type - map symbolic hipconf type (=lhi/map) names to numeric types
- * @param text the type as a string
- *
- * @return the numeric type id correspoding to the symbolic text
+ * Maps symbolic hipconf type (=lhi/map) names to numeric types.
+ * 
+ * @param  text the type as a string.
+ * @return the numeric type id correspoding to the symbolic text.
  */
 int get_type(char *text) {
 	int ret = -1;
@@ -168,8 +164,6 @@ int get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-	else if (!strcmp("rvs_new", text))
-		ret = TYPE_RVS_NEW;
 	return ret;
 }
 
@@ -194,79 +188,33 @@ int get_type_arg(int action) {
 }
 
 /**
- * handle_rvs - handle hipconf commands related to "rvs".
- * @msg:    the buffer where the message for kernel will be written.
- * @action: the action (add/del) to be performed on the given mapping.
- * @opt:    an array of pointers to the command line arguments after
- *          the action and type, the HIT and the corresponding IPv6 address
- * @optc:   the number of elements in the array (=2, HIT and IPv6 address)
+ * Handles @c rvs commands received from @c hipconf.
+ *  
+ * Create a message to the kernel module from the function parameters @c msg,
+ * @c action and @c opt[].
  * 
- * Create a message to the kernel module from the function parameters.
- * Currently only action "add" is supported.
- * 
- * NOTE: This function is used with the outdated rvs registration.
- * 15.08.2006 15:49
- * 
- * Returns: zero on success, or negative error value on error.
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed on
+ *               the given mapping.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type (should be the HIT and the corresponding
+ *               IPv6 address).
+ * @param optc   the number of elements in the array (@b 2).
+ * @return       zero on success, or negative error value on error.
+ * @note         Currently only action @c add is supported.
  */ 
 int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 	       int optc)
 {
+	HIP_DEBUG("handle_rvs() invoked.\n");
 	struct in6_addr hit, ip6;
 	int err=0;
 	int ret;
-	
-	/* TODO: Print info to user that this is outdated. */
 	HIP_INFO("action=%d optc=%d\n", action, optc);
-
-	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-		 "string to address conversion failed\n");
-	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
-		 "string to address conversion failed\n");
-	
-	/*! \todo source HIT selection? */
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
-		 "build param hit failed\n");
-	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
-					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
-		 "build param hit failed\n");
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
-		 "build hdr failed\n");
-out_err:
-	return err;
-
-}
-
-/**
- * handle_rvs_new - handle hipconf commands related to "rvs".
- * @msg:    the buffer where the message for kernel will be written.
- * @action: the action to be performed on the given mapping.
- * @opt:    an array of pointers to the command line arguments after
- *          the action and type, the HIT and the corresponding IPv6 address.
- * @optc:   the number of elements in the array (=2, HIT and IPv6 address).
- * 
- * Create a message to the kernel module from the function parameters.
- * Currently only action "add" is supported.
- * 
- * author: Lauri Silvennoinen 15.08.2006 16:35
- * 
- * Returns: zero on success, or negative error value on error.
- */ 
-int handle_rvs_new(struct hip_common *msg, int action, const char *opt[], 
-	       int optc)
-{
-	struct in6_addr hit, ip6;
-	int err=0;
-	int ret;
-	HIP_DEBUG("Lauri: handle_rvs_new() invoked.\n");
-	HIP_INFO("action=%d optc=%d\n", action, optc);
-
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"rvs\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
 	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
@@ -753,17 +701,19 @@ out_err:
 }
 
 /**
- * handle_service - handle hipconf commands related to "service".
- * @msg:    the buffer where the message for kernel will be written.
- * @action: the action to be performed on the given mapping.
- * @opt:    an array of pointers to the command line arguments after
- *          the action and type.
- * @optc:   the number of elements in the array "opt".
+ * Handles @c service commands received from @c hipconf.
+ *  
+ * Create a message to the kernel module from the function parameters @c msg,
+ * @c action and @c opt[].
  * 
- * Create a message to the kernel module from the function parameters.
- * Currently only action "add" is supported. 16.08.2006 18:09.
- * 
- * Returns: zero on success, or negative error value on error.
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed on
+ *               the given mapping.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
  */
 int handle_service(struct hip_common *msg, int action, const char *opt[], 
 		   int optc)
@@ -773,7 +723,8 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	int err = 0;
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((action != ACTION_ADD), -1, "Only action \"add\" is supported for \"service\".\n");
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"service\".\n");
 	HIP_IFEL((optc < 1), -1, "Missing arguments\n");
 	HIP_IFEL((optc > 1), -1, "Too many arguments\n");
 	

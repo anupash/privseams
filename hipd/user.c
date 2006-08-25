@@ -58,22 +58,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_RST:
 		err = hip_send_close(msg);
 		break;
-	case SO_HIP_ADD_RVS:
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-							    HIP_PARAM_HIT)),
-			 -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-							   HIP_PARAM_IPV6_ADDR)),
-			 -1, "no ip found\n");
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		HIP_IFEL(!(entry =
-			   hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
-			 -1, "setting of rvs request flag failed\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
@@ -234,7 +218,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 		/* Create an rva assosiation and set state registering...
 		HIP_RVA *rendezvous_association;
-		rendezvous_association = hip_rva_get(&entry->hit_our);
+		rendezvous_association = hip_rvs_get(&entry->hit_our);
 		if(rendezvous_association){
 			HIP_DEBUG("Found rendezvous_association.\n");
 		}

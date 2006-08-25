@@ -1,14 +1,13 @@
+/** @file
+ * This file defines a Host Identity Protocol (HIP) header and parameter
+ * related constants and structures.
+ */
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
-/*
- * HIP header and parameter related constants and structures.
- *
- */
-
 #define HIP_MAX_PACKET 2048
 
-/*! \addtogroup hip_msg
+/** @addtogroup hip_msg
  * @{
  */
 
@@ -31,7 +30,7 @@
 
 /** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
-/** Daemon should reply to HIP_AGENT_PING with this one. */
+/** Daemon should reply to @c HIP_AGENT_PING with this one. */
 #define HIP_AGENT_PING_REPLY		71
 /** Agent send this one to daemon when exiting. */
 #define HIP_AGENT_QUIT				72
@@ -71,8 +70,6 @@
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
-#define HIP_PARAM_RVA_REQUEST          100 /* TODO: Outdated by draft-ietf-hip-rvs-05. */
-#define HIP_PARAM_RVA_REPLY            102 /* TODO: Outdated by draft-ietf-hip-rvs-05. */
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */
@@ -83,7 +80,7 @@
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-#define HIP_PARAM_DSA_SIGN_DATA         32770 /*! \todo change to digest */
+#define HIP_PARAM_DSA_SIGN_DATA         32770 /** @todo change to digest */
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
@@ -94,14 +91,12 @@
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO		32781 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_REQUEST		32782 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_RESPONSE		32783 /* TODO: move somewhere else*/
-#define HIP_PARAM_REG_FAILED		32784 /* TODO: move somewhere else*/
+#define HIP_PARAM_REG_INFO		32781
+#define HIP_PARAM_REG_REQUEST		32782
+#define HIP_PARAM_REG_RESPONSE		32783
+#define HIP_PARAM_REG_FAILED		32784
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_FROM_SIGN       65100 /* TODO: Outdated by draft-ietf-hip-rvs-05. */
-#define HIP_PARAM_TO_SIGN         65102 /* TODO: Outdated by draft-ietf-hip-rvs-05. */
 #define HIP_PARAM_HMAC            61505
 #define HIP_PARAM_HMAC2           61569
 #define HIP_PARAM_HIP_SIGNATURE2  61633
@@ -109,8 +104,7 @@
 #define HIP_PARAM_ECHO_REQUEST    63661
 #define HIP_PARAM_ECHO_RESPONSE   63425
 #define HIP_PARAM_FROM            65300
-#define HIP_PARAM_TO              65302 /* TODO: Outdated by draft-ietf-hip-rvs-05. */
-#define HIP_PARAM_RVA_HMAC        65320
+#define HIP_PARAM_RVS_HMAC        65320
 #define HIP_PARAM_VIA_RVS         65500
 #define HIP_PARAM_MAX             65536 /* exclusive */
 
@@ -539,46 +533,45 @@ struct hip_cert {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
-/************* RVS *******************/
 
-struct hip_rva_request {
+/* Parameters related to rendezvous service. */
+/** Rendezvous server HMAC. A non-critical parameter whose only difference with
+    the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
+    This change causes it to be located after the @c FROM parameter (as
+    opposed to the @c HMAC) */
+struct hip_rvs_hmac {
+	/** Type code for the parameter. */
 	hip_tlv_type_t type;
+	/** Length (@b 20) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
-	uint32_t       lifetime;
-	/* RVA types */
-} __attribute__ ((packed));
-
-struct hip_rva_reply {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint32_t       lifetime;
-	/* RVA types */
-} __attribute__ ((packed));
-
-struct hip_rva_hmac {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
+	/** @c HMAC is computed over the HIP packet, excluding @c RVS_HMAC
+	    and any following parameters. */
 	uint8_t hmac_data[HIP_AH_SHA_LEN];
 } __attribute__ ((packed));
 
+/** Parameter containing the original source IP address of a HIP packet. */
 struct hip_from {
+	/** Type code for the parameter. */
 	hip_tlv_type_t type;
+	/** Length (@b 16) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
+	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
 	uint8_t address[16];
 } __attribute__ ((packed));
 
-struct hip_to {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint8_t address[16];
-} __attribute__ ((packed));
-
+/** Parameter containing the IP addresses of traversed rendezvous servers. */
 struct hip_via_rvs {
+	/** Type code for the parameter. */
 	hip_tlv_type_t type;
+	/** Length (@b variable) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
+	/** A short cut pointer to the memory region where the rendezvous
+	    server addresses are to be put. */
 	uint8_t address[0];
 	/* the rest of the addresses */
 } __attribute__ ((packed));
+/* End of parameters related to rendezvous service. */
+
 
 struct hip_echo_request {
 	hip_tlv_type_t type;
@@ -629,7 +622,6 @@ struct hip_reg_info {
 	uint8_t       max_lifetime;
 } __attribute__ ((packed));
 
-
 struct hip_reg_request {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
@@ -641,7 +633,6 @@ struct hip_reg_failed {
 	hip_tlv_len_t  length;
 	uint8_t       failure_type;
 } __attribute__ ((packed));
-
 
 struct hip_keys {
 	hip_tlv_type_t 	type;
@@ -656,7 +647,6 @@ struct hip_keys {
 	struct hip_crypto_key enc;
 	//int direction; // ?
 } __attribute__ ((packed));
-
 
 #endif /* _HIP_PROTODEFS */
 
