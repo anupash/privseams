@@ -53,10 +53,10 @@ int gui_init(void)
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
 	/* Create toolwindow. */
-	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	w = gtk_hbox_new(TRUE, 0); //gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
-	gtk_window_set_title(w, "HIP tool window");
+//	gtk_window_set_title(w, "HIP tool window");
 //	gtk_widget_set_size_request(w, 450, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);

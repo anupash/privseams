@@ -39,6 +39,8 @@
 #define HIP_ADD_DB_HI				73
 /** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
+/** Daemon sends remote HITs in use with this message to agent. */
+#define HIP_UPDATE_HIU				75
 
 /* @} addtogroup hip_msg */
 
