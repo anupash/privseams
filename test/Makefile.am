@@ -15,6 +15,9 @@ if HIP_OPPORTUNISTIC
   conntest_client_LDADD = ../libopphip/.libs/libopphip.a
   conntest_client_LDADD += ../libinet6/.libs/libinet6.a
   conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+else
+  conntest_client_LDADD = ../libinet6/.libs/libinet6.a
+  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
