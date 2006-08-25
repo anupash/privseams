@@ -173,9 +173,11 @@ int util_func_with_sockaddr(int *const socket,
     IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) peer_sockaddr_ip)->sin_addr,
 		     &mapped_addr);
     peer_ip = &mapped_addr;
+    HIP_DEBUG_INADDR("ipv4 addr", SA2IP(peer_sockaddr_ip));
   } else if (peer_sockaddr_ip->sa_family == AF_INET6) {
     peer_ip = SA2IP(peer_sockaddr_ip);
     HIP_ASSERT(!ipv6_addr_is_hit(peer_ip));
+    HIP_DEBUG_INADDR("ipv6 addr\n", SA2IP(peer_sockaddr_ip));
   } else {
     HIP_DEBUG("Not an IPv4/IPv6 socket, skipping\n");
     goto out_err;
