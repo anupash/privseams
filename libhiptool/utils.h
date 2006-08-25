@@ -58,6 +58,7 @@ static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
 static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
 	return hit_is_opportunistic_hit(hit);
 }
+
 static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 	// return hit_is_opportunistic_hit(hit);
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
@@ -109,6 +110,13 @@ static inline void set_hit_prefix(struct in6_addr *hit)
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
          && IS_LSI32(((__const uint32_t *) (a))[3]))        
+
+#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        (void*)&((struct sockaddr_in*)x)->sin_addr : \
+        (void*)&((struct sockaddr_in6*)x)->sin6_addr
+#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
+#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
