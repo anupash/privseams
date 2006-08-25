@@ -481,6 +481,7 @@ ssize_t send(int a, const void * b, size_t c, int flags)
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
+ * Untested.
  */
 ssize_t sendto(int a, const void * b, size_t c, int flags, 
 	       const struct sockaddr  *to, socklen_t tolen)
