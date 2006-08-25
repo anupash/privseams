@@ -125,9 +125,9 @@ int any_sa_to_hit_sa(const struct sockaddr *from,
   to->sin6_family = AF_INET6;
   ipv6_addr_copy(&to->sin6_addr, use_hit);
   if (from->sa_family == AF_INET)
-    to->sin6_port = ((struct sockaddr_in *) from)->sin_family;
+    to->sin6_port = ((struct sockaddr_in *) from)->sin_port;
   else if (from->sa_family == AF_INET6)
-    to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_family;
+    to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_port;
   else
     return -1;
 
@@ -164,7 +164,8 @@ int util_func_with_sockaddr(int *const socket,
 			    const void *local_sockaddr_ip_unused,
 			    const struct sockaddr *peer_sockaddr_ip)
 {
-  int err = 0, pid = 0, port = 0, mapping = 0;
+  int err = 0, pid = 0, port = 0, mapping = 0, type = 0, old_socket = 0;
+    
   hip_opp_socket_t *entry = NULL;
   struct in6_addr *peer_ip, mapped_addr;
 
@@ -175,6 +176,7 @@ int util_func_with_sockaddr(int *const socket,
   } else if (peer_sockaddr_ip->sa_family == AF_INET6) {
     peer_ip = SA2IP(peer_sockaddr_ip);
   } else {
+    HIP_DEBUG("Not an IPv4/IPv6 socket, skipping\n");
     goto out_err;
   }
 
@@ -191,54 +193,43 @@ int util_func_with_sockaddr(int *const socket,
     HIP_ASSERT(entry);
     hip_socketdb_add_new_socket(entry, *socket);
     hip_socketdb_add_dst_hit(entry, peer_ip);
-  } else if(!hit_is_opportunistic_hashed_hit(peer_ip)){ // is ip
-    HIP_DEBUG("ip\n");
-    err = request_peer_hit_from_hipd(peer_ip, peer_hit, local_hit);
-    if(err) {
-      HIP_ERROR("failed to get peer hit err=\n",  strerror(err));
-      return err;
-    }
-    
-    HIP_DEBUG_HIT("peer_ip ", peer_ip);
-    HIP_DEBUG_HIT("peer_hit", peer_hit);
-    
-    if(hit_is_real_hit(peer_hit)){
-      int type = 0;	
-      int old_socket = 0;
-      
-      entry = hip_socketdb_find_entry(pid, *socket); 
-      HIP_ASSERT(entry);
-      type = hip_socketdb_get_type(entry);
-
-      old_socket = *socket;
-      
-      // socket() call will add socket as old_socket in entry, 
-      //we need to change it to new_socket later
-      if(type != 0) {
-	*socket = create_new_socket(type, 0); // XX TODO: BING CHECK
-	if (*socket < 0) {
-	  perror("socket");
-	  err = *socket;
-	  goto out_err;
-	}
-      }    
-      
-      hip_socketdb_add_new_socket(entry, *socket);
-      hip_socketdb_add_dst_ip(entry, peer_ip);
-      hip_socketdb_add_dst_hit(entry, peer_hit);
-      HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
-      
-      // modify sockaddr, id points to sockaddr's sin6_addr
-      //memcpy(peer_ip, &peer_hit, sizeof(peer_hit));
-      HIP_DEBUG_IN6ADDR("opp mode enabled, peer_ip", peer_ip);
-    } else { // not opp mode 
-      entry = hip_socketdb_find_entry(pid, *socket);
-      HIP_ASSERT(entry);
-      hip_socketdb_add_new_socket(entry, *socket);
-      hip_socketdb_add_dst_ip(entry, peer_ip);
-    }
+    goto out_err;
   }
+
+  HIP_DEBUG("requesting hit from hipd\n");
+  err = request_peer_hit_from_hipd(peer_ip, peer_hit, local_hit);
+  if(err) {
+    HIP_ERROR("failed to get peer hit err=\n",  strerror(err));
+      goto out_err;;
+  }
+    
+  HIP_DEBUG_HIT("peer_hit", peer_hit);
+  HIP_DEBUG_IN6ADDR("peer_ip ", peer_ip);
   
+  entry = hip_socketdb_find_entry(pid, *socket); 
+  HIP_ASSERT(entry);
+  type = hip_socketdb_get_type(entry);
+  
+  old_socket = *socket;
+    
+  // socket() call will add socket as old_socket in entry, 
+  //we need to change it to new_socket later
+  if(type != 0) {
+    *socket = create_new_socket(type, 0); // XX TODO: BING CHECK
+    if (*socket < 0) {
+      perror("socket");
+      err = *socket;
+      goto out_err;
+    }
+  }    
+    
+  hip_socketdb_add_new_socket(entry, *socket);
+  hip_socketdb_add_dst_ip(entry, peer_ip);
+  hip_socketdb_add_dst_hit(entry, peer_hit);
+  HIP_DEBUG("pid %d, new_socket %d, old_socket %d\n", pid, *socket, old_socket);
+    
+  HIP_DEBUG_IN6ADDR("opp mode enabled, peer_ip", peer_ip);
+
  out_err:
   return err;
 }
