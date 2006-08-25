@@ -9,7 +9,6 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 

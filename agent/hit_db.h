@@ -18,9 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
+#include "ife.h"
 
 #ifndef __cplusplus
-#include "hip.h"
 #else
 //#include <netinet/in6.h>
 #endif
@@ -111,10 +111,13 @@ typedef struct
 	*/
 	char url[MAX_URL_LEN + 1];
 	/**
-		Stores port of this item.
+		Stores port information for this item.
 		Used for accepting connections for this HIT.
+		This should be able to contain different forms of
+		port info, like range, single, descriptive strings and so on.
+		Example string: "80,443,7780-7790,ftp,ntp"
 	*/
-	int port;
+	char port[MAX_URL_LEN + 1];
 	/** Remote HIT group. */
 	HIT_Group *g;
 	/* Next remote item. */
@@ -137,7 +140,7 @@ void hit_db_quit(char *);
 void hit_db_clear(void);
 
 HIT_Remote *hit_db_add_hit(HIT_Remote *, int);
-HIT_Remote *hit_db_add(char *, struct in6_addr *, char *, int, HIT_Group *, int);
+HIT_Remote *hit_db_add(char *, struct in6_addr *, char *, char *, HIT_Group *, int);
 int hit_db_del(char *);
 HIT_Remote *hit_db_find(char *, struct in6_addr *);
 int hit_db_enum(int (*)(HIT_Remote *, void *), void *);

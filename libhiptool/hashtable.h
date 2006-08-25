@@ -2,7 +2,6 @@
 #define HIP_HASHTABLE_H
 
 #include "list.h"
-#include "hip.h"
 #include "debug.h"
 
 struct hip_ht_common {

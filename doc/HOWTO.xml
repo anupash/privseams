@@ -80,8 +80,8 @@
       &nbsp;* netcat6
     </para>
     <para>
-      &nbsp;* latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
-      HIPL documentation)
+      &nbsp;* latex, dvips, dvipdf, fig2dev, doxygen (for building the
+      HIPL source code documentation)
     </para>
     <para>
       &nbsp;* java compiler for "jip" (java hip resolver) if you want to
@@ -106,14 +106,23 @@
   <chapter>
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+     Architectural documentation:
     </para>
     <para>
      &nbsp; % cd hipl/doc
     </para>
     <para>
-      &nbsp;% make design_choices.dvi design_choices.ps design_choices.pdf
+     &nbsp; % make design_choices.dvi design_choices.ps design_choices.pdf
     </para>
+	<para>
+	 Source code documentation:
+	</para>
+	<para>
+	 &nbsp; % cd hipl/doc
+	</para>
+	<para>
+	 &nbsp; % doxygen
+	</para>
   </chapter>
   <chapter>
     <title>Compiling the Kernel</title>
@@ -960,6 +969,7 @@ using getaddrinfo: ping, ping6, tla, svn.
 		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
            If you want to use 'system tray' icon, you need atleast 2.10.0 version
 		   of GTK.
+		4. Automake 1.9
       </para>
 	  <para>
 		  In order to the agent start properly with right window and system tray icon,
@@ -968,7 +978,7 @@ using getaddrinfo: ping, ping6, tla, svn.
 	  </para>
       <para>
 		HIT database is saved and loaded on agent startup as default from
-		'$HOMEDIR/.agentdb'-file.
+		'$HOMEDIR/.hipagentdb'-file.
       </para>
       <para>The agent executable is called "hipagent". You should run it using
             normal user (non-root) priviledges.
@@ -1047,7 +1057,15 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>Using Opportunistic mode</title>
     <para>
-    &nbsp; Opportunistic mode is not compiled by default. In order to use Opportunistic mode enabled HIP, the following steps are needed:
+    &nbsp; Opportunistic mode has two benefits. First, you don't have to know
+    the HIT of the peer. This is makes HIP more suitable to "ad-hoc"
+    environments where preconfiguration of HITs is difficult. Second, the
+    opp. mode implementation allows the use of IPv4 addresses at the
+    application. This way, even IPv4-only legacy applications can benefit
+    from the security and mobility features of HIP.
+    </para>
+    <para>
+    &nbsp; Opportunistic mode is not compiled by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
     </para>
     <para>
     &nbsp; 1. Move to top level of HIPL

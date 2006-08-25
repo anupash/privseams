@@ -27,6 +27,10 @@ struct list_head {
 	struct list_head *next, *prev;
 };
 
+#ifndef IPPROTO_HIP
+#  define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
+#endif
+
 #define HIP_MALLOC(size, flags)  malloc(size)
 #define HIP_FREE(obj)            free(obj)
 #define GFP_ATOMIC               0

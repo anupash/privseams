@@ -2,11 +2,11 @@
 
 /**
  * hip_create_signature - Calculate SHA1 hash over the data and sign it.
- * @buffer_start: Pointer to start of the buffer over which the hash is
+ * @param buffer_start Pointer to start of the buffer over which the hash is
  *                calculated.
- * @buffer_length: Length of the buffer.
- * @host_id: DSA private key.
- * @signature: Place for signature.
+ * @param buffer_length Length of the buffer.
+ * @param host_id DSA private key.
+ * @param signature Place for signature.
  *
  * Signature size for DSA is 41 bytes.
  *
@@ -32,12 +32,12 @@ int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_comm
 
 
 /** hip_socket_send_bos - send a BOS packet
- * @msg: input message (should be empty)
+ * @param msg input message (should be empty)
  *
  * Generate a signed HIP BOS packet containing our HIT, and send
  * the packet out each network device interface.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_send_bos(const struct hip_common *msg)
 {
@@ -95,7 +95,7 @@ int hip_send_bos(const struct hip_common *msg)
 	}
 
  	/* Ready to begin building the BOS packet */
-	/* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
+	/*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
  	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
@@ -170,12 +170,12 @@ out_err:
 
 
 /** hip_verify_packet_signature - verify the signature in the bos packet
- * @bos: the bos packet
- * @peer_host_id: peer host id
+ * @param bos the bos packet
+ * @param peer_host_id peer host id
  *
  * Depending on the algorithm it checks whether the signature is correct
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_verify_packet_signature(struct hip_common *bos, 
 				struct hip_host_id *peer_host_id)
@@ -194,8 +194,8 @@ int hip_verify_packet_signature(struct hip_common *bos,
 
 /**
  * hip_handle_bos - handle incoming BOS packet
- * @skb: sk_buff where the HIP packet is in
- * @entry: HA
+ * @param skb sk_buff where the HIP packet is in
+ * @param entry HA
  *
  * This function is the actual point from where the processing of BOS
  * is started.
@@ -267,7 +267,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */
-		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), KHIPD_ERROR,
+		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), -1,
 			 "Failed to insert new peer info");
 		HIP_DEBUG("HA entry created.\n");
 

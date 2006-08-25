@@ -2,9 +2,9 @@
 #define REG_H_
 
 #include "hadb.h"
-#include "hip.h"
 #include "misc.h"
 #include "hashtable.h"
+#include "escrow.h"
 
 #define HIP_SERVICE_MAX_COUNT 2
 
@@ -18,7 +18,7 @@ struct hip_reg_service {
 	char 					name[20];
 	hip_servicestate_t 		state;
 
-	/* TODO: Authorization data */
+	/*! \todo Authorization data */
 	
 	/* accept or reject registration based on the requester hit */
 	int (*handle_registration)(struct in6_addr *hit);

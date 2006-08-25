@@ -131,6 +131,8 @@ int gui_main(void)
 	}
 
 	gtk_main();
+
+	gui_quit();
 }
 /* END OF FUNCTION */
 

@@ -8,6 +8,12 @@
 #ifndef GUI_WIDGETS_H
 #define GUI_WIDGETS_H
 
+#include "ife.h"
+
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -81,6 +87,10 @@ enum WIDGET_IDS
 	ID_NG_TYPE1,
 	ID_NG_TYPE2,
 
+	/* Some misc. */
+	ID_SYSTRAYMENU,
+	ID_RLISTMENU,
+
 	/* IDs for hipstart. */
 	ID_HS_MAIN,
 	ID_HS_MODEL,
@@ -108,6 +118,8 @@ void widget_quit(void);
 void widget_set(int, void *);
 void *widget(int);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

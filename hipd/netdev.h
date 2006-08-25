@@ -15,7 +15,6 @@
 #include <netinet/ip6.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "list.h"
 #include "debug.h"
 

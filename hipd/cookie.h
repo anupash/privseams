@@ -1,7 +1,6 @@
 #ifndef HIP_COOKIE_H
 #define HIP_COOKIE_H
 
-#include "hip.h"
 #include "debug.h"
 #include "builder.h"
 #include "output.h"

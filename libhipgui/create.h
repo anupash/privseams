@@ -13,11 +13,17 @@
 #include <gtk/gtk.h>
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int ngdlg_create_content(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/
