@@ -1057,7 +1057,15 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>Using Opportunistic mode</title>
     <para>
-    &nbsp; Opportunistic mode is not compiled by default. In order to use Opportunistic mode enabled HIP, the following steps are needed:
+    &nbsp; Opportunistic mode has two benefits. First, you don't have to know
+    the HIT of the peer. This is makes HIP more suitable to "ad-hoc"
+    environments where preconfiguration of HITs is difficult. Second, the
+    opp. mode implementation allows the use of IPv4 addresses at the
+    application. This way, even IPv4-only legacy applications can benefit
+    from the security and mobility features of HIP.
+    </para>
+    <para>
+    &nbsp; Opportunistic mode is not compiled by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
     </para>
     <para>
     &nbsp; 1. Move to top level of HIPL

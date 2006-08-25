@@ -15,6 +15,9 @@ if HIP_OPPORTUNISTIC
   conntest_client_LDADD = ../libopphip/.libs/libopphip.a
   conntest_client_LDADD += ../libinet6/.libs/libinet6.a
   conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+else
+  conntest_client_LDADD = ../libinet6/.libs/libinet6.a
+  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
@@ -46,7 +49,7 @@ bin_PROGRAMS += sha1ime_test
 
 #sbin_SCRIPTS = hipsetup
 
-conntest_client_SOURCES = conntest-client.c 
+conntest_client_SOURCES = conntest-client.c  conntest.c
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \

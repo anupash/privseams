@@ -553,8 +553,8 @@ int hip_csum_send(struct in6_addr *local_addr,
 		}
 	}
 	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
-	HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
+		HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 		HIP_DEBUG("Packet was lost (simulation)\n");
 		goto out_err;
 	}
