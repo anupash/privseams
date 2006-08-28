@@ -55,7 +55,7 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
 
 	atomic_set(&res->refcnt, 0);
 	HIP_LOCK_INIT(res);
-	res->lifetime = 0;
+	res->lifetime = 0; // HIP_DEFAULT_RVA_LIFETIME
 	memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
 
 	return res;
@@ -406,7 +406,8 @@ void hip_rvs_remove(HIP_RVA *rva)
  * @todo           @c RVS_HMAC parameter is not build yet.
  */
 int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		 struct in6_addr *i1_daddr, HIP_RVA *rva, struct hip_stateless_info *i1_info)
+		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
+		     struct hip_stateless_info *i1_info)
 {
 	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
@@ -415,21 +416,24 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
 	
-	struct hip_common i1_to_be_relayed;
+	struct hip_common *i1_to_be_relayed;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
 	struct in6_addr final_dst;
 
 	/* Get the destination IP address the client has registered from the
 	   rendezvous association. */
-	/** @todo How to decide which IP address to use? */
+	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &final_dst, 0);
 
-	/* New I1 packet has to be created since the received
-	   has wrong network header. */
 	/** @todo hip_build_network_hdr has to be replaced with an appropriate
 	    function pointer. */
-	hip_build_network_hdr(&i1_to_be_relayed, HIP_I1, 0,
+	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
+		 "No memory to copy original I1\n");	
+
+	/* I1 packet forwarding is achieved by rewriting the source and
+	   destination IP addresses. */
+	hip_build_network_hdr(i1_to_be_relayed, HIP_I1, 0,
 			      &(i1->hits), &(i1->hitr));
 
 	/* Adding FROM parameter. Loop through all the parameters in the
@@ -447,7 +451,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		{
 			HIP_DEBUG("Copying existing parameter to I1 packet "\
 				  "to be relayed.\n");
-			hip_build_param(&i1_to_be_relayed,current_param);
+			hip_build_param(i1_to_be_relayed,current_param);
 			continue;
 		}
 		/* Parameter under inspections has greater type than FROM
@@ -457,8 +461,8 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		{
 			HIP_DEBUG("Created new FROM and copied "\
 				  "current parameter to relayed I1.\n");
-			hip_build_param_from(&i1_to_be_relayed, i1_saddr);
-			hip_build_param(&i1_to_be_relayed, current_param);
+			hip_build_param_from(i1_to_be_relayed, i1_saddr);
+			hip_build_param(i1_to_be_relayed, current_param);
 			from_added = 1;
 		}
 	}
@@ -468,11 +472,40 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	if (!from_added)
 	{
 		HIP_DEBUG("Adding a new FROM as the last parameter.\n");
-		hip_build_param_from(&i1_to_be_relayed, i1_saddr);
+		hip_build_param_from(i1_to_be_relayed, i1_saddr);
 	}
 
+	/* Adding RVS_HMAC parameter as the last parameter of the relayed
+	   packet. Notice, that this presumes that there are no parameters
+	   whose type value is > RVS_HMAC in the incoming I1 packet. */
+/*
+	if(rva)
+	{
+		HIP_DEBUG("rva exists.\n");
+		if(&rva->hmac_our)
+		{
+			HIP_DEBUG("rva->hmac_our exists.\n");
+			if((&rva->hmac_our)->key)
+			{
+				HIP_DEBUG("rva->hmac_our->key exists.\n");
+				HIP_DEBUG("rva->hmac_our->key is %s.\n", (&rva->hmac_our)->key);
+			}
+		}
+	}
+
+	if(&rva->hmac_our == NULL)
+	{
+		HIP_DEBUG("rva->hmac_our is NULL.\n");
+	}
+	else{
+		HIP_DEBUG("Lauri: &entry->hip_hmac_out: %s.\n", rva->hmac_our);
+		HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed,
+							   &rva->hmac_our), -1,
+			 "Building of HMAC failed\n");
+	}
+	*/
 	err = hip_csum_send(NULL, &final_dst, i1_info->src_port,
-			    i1_info->dst_port, &i1_to_be_relayed, NULL, 0); 
+			    i1_info->dst_port, i1_to_be_relayed, NULL, 0); 
 	
 	if (err)
 		HIP_ERROR("Relaying I1 failed: %d\n",err);
@@ -481,6 +514,10 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 
  out_err:
+	if(i1_to_be_relayed)
+	{
+		HIP_FREE(i1_to_be_relayed);
+	}
 	return err;
 }
 

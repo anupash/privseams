@@ -1,7 +1,6 @@
 /** @file
  * A header file for hipconf.c
  * 
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @author  Janne Lundberg <jlu_tcs.hut.fi>
  * @author  Miika Komu <miika_iki.fi>
  * @author  Mika Kousa <mkousa_cc.hut.fi>
@@ -10,6 +9,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
 #define HIPCONF_H
@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -30,11 +29,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
-
 #include <sysexits.h>
-
 #include <assert.h>
-
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
@@ -45,13 +41,6 @@
 #include "builder.h"
 #include "hipd.h"
 
-/** @todo Lauri: Come back to this idea...
-typedef enum { 
-	HIPCONF_HLP_GENERIC=0,
-	HIPCONF_HLP_RVS=1,
-	HIPCONF_HLP_SERVICE=2
-} hipconf_hlp_t;
-*/
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -84,14 +73,14 @@ typedef enum {
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
 
-int handle_hi(struct hip_common *, int type, const char **opt, int optc);
-int handle_map(struct hip_common *, int type, const char **opt, int optc);
-int handle_rst(struct hip_common *, int type, const char **opt, int optc);
-int handle_bos(struct hip_common *, int type, const char **opt, int optc);
-int handle_rvs(struct hip_common *msg, int action, const char **opt, int optc);
-int handle_del(struct hip_common *, int type, const char **opt, int optc);
-int handle_nat(struct hip_common *, int type, const char **opt, int optc);
-int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
+int handle_hi(struct hip_common *, int type, const char *opt[], int optc);
+int handle_map(struct hip_common *, int type, const char *opt[], int optc);
+int handle_rst(struct hip_common *, int type, const char *opt[], int optc);
+int handle_bos(struct hip_common *, int type, const char *opt[], int optc);
+int handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_del(struct hip_common *, int type, const char *opt[], int optc);
+int handle_nat(struct hip_common *, int type, const char *opt[], int optc);
+int handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);

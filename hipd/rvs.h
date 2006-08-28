@@ -20,6 +20,7 @@
 #include "misc.h"
 #include "builder.h"
 #include "output.h"
+#include "state.h"
 
 /* CONSTANTS */
 /** Maximum number of HIT->IP mappings for a single HIT. */
@@ -61,17 +62,19 @@ typedef struct hip_rendezvous_association
 
 /* FUNCTION PROTOTYPES */
 void hip_rvs_init_rvadb(void);
-void hip_rvs_free_rva(HIP_RVA *rva);
-void hip_rvs_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index);
-void hip_rvs_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index);
-void hip_rvs_remove(HIP_RVA *rva);
+void hip_rvs_free_rva(HIP_RVA*);
+void hip_rvs_get_ip(HIP_RVA*, struct in6_addr*, unsigned int);
+void hip_rvs_put_ip(HIP_RVA*, struct in6_addr*, unsigned int);
+void hip_rvs_remove(HIP_RVA*);
 void hip_rvs_uninit_rvadb(void);
-int hip_rvs_put_rva(HIP_RVA *rva);
-int hip_rvs_set_request_flag(hip_hit_t *, hip_hit_t *);
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask);
-HIP_RVA *hip_rvs_allocate(int gfpmask);
-HIP_RVA *hip_rvs_get(struct in6_addr *hit);
-HIP_RVA *hip_rvs_get_valid(struct in6_addr *hit);
+int hip_rvs_put_rva(HIP_RVA*);
+int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
+int hip_rvs_relay_i1(struct hip_common*, struct in6_addr*,struct in6_addr*,
+		     HIP_RVA*, struct hip_stateless_info*);
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t*, int);
+HIP_RVA *hip_rvs_allocate(int);
+HIP_RVA *hip_rvs_get(struct in6_addr*);
+HIP_RVA *hip_rvs_get_valid(struct in6_addr*);
 
 /* MACRO DEFINITIONS */
 /**

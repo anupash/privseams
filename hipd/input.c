@@ -1147,6 +1147,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   peer is rvs capable. */
 		if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
 		    (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
+			HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
 			request_rvs = 1;
 			type_count++;
 		}
@@ -2521,13 +2522,6 @@ int hip_receive_i1(struct hip_common *i1,
 		HIP_DEBUG("Valid rendezvous association found: %s \n",
 			  (rva ? "yes" : "no"));
  		if (rva) {
- 			/* we should now relay the I1.
- 			   We have two options: Rewrite destination address or
- 			   rewrite both destination and source addresses.
- 			   We'll try to do the former if the destination is in the
- 			   same subnet, and we'll fall back to the latter in other
- 			   cases.
- 			*/
 			err = hip_rvs_relay_i1(i1, i1_saddr, i1_daddr, rva, i1_info);
 			return err;
  		}

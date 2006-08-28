@@ -1329,13 +1329,11 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 
 #ifndef __KERNEL__
 /**
- * hip_build_param_hmac_contents - build and append a HIP hmac parameter
+ * Builds and appends a HIP @c HMAC parameter. This function calculates also the
+ * @c HMAC value from the whole message as specified in the drafts.
+ *
  * @param msg the message where the hmac parameter will be appended
- * @param key pointer to a key used for HMAC
- *
- * This function calculates the also the HMAC value from the whole message
- * as specified in the drafts.
- *
+ * @param key pointer to a key used for @c HMAC
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_hmac_contents(struct hip_common *msg,
@@ -1345,6 +1343,25 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	struct hip_hmac hmac;
 
 	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
+	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
+
+	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				 hip_get_msg_total_len(msg),
+				 hmac.hmac_data), -EFAULT,
+		 "Error while building HMAC\n");
+
+	err = hip_build_param(msg, &hmac);
+ out_err:
+	return err;
+}
+
+int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
+				  struct hip_crypto_key *key)
+{
+	int err = 0;
+	struct hip_hmac hmac;
+
+	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
 	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,

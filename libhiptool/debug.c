@@ -418,7 +418,7 @@ void hip_print_lsi(const char *str, const struct in_addr *lsi)
  */
 void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
-	if(!hit) { // Null check added by Lauri Silvennoinen 27.07.2006 18:47
+	if(!hit) { // Null check added 27.07.2006
 		HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}

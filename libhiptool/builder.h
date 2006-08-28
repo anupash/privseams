@@ -165,6 +165,8 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 int hip_build_param_via_rvs(struct hip_common *msg,
 			    const struct in6_addr rvs_addresses[],
 			    const int address_count);
+int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
+				      struct hip_crypto_key *key);
 
 int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
 			uint8_t max_lifetime, int *type_list, int cnt);
