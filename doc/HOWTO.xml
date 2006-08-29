@@ -779,15 +779,15 @@ using getaddrinfo: ping, ping6, tla, svn.
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the user-space.  These rules must be inserted
               so that they precede any other firewall rules that might
-              concern the HIP and ESP packets. If ESP packet filtering
-              is not necessary the ip6tables rules concerning ESP
-              packets (-p 50) can be left out.</para>
+              concern the HIP (-p 253) and ESP packets (-p 50).
+              If ESP packet filtering is not necessary the ip6tables
+              rules concerning ESP packets can be left out.</para>
 
-        <para>ip6tables -A FORWARD -p 99 -j QUEUE</para>
+        <para>ip6tables -A FORWARD -p 253 -j QUEUE</para>
         <para>ip6tables -A FORWARD -p 50 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A INPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
 
         <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
@@ -857,10 +857,9 @@ using getaddrinfo: ping, ping6, tla, svn.
               for verifying signatures in the packets. With
               --accept_mobile option, the firewall may establish state
               for existing connection when a mobile host enters the
-              network protected by the firewall. In practice this
-              requires bringing down the previous interface and
-              bringing up a new one in the new network.</para>
-
+              network protected by the firewall. Please see the
+              corresponding section on mobility to see how mobility events
+              can be tested.</para>
 
         <para>Management interface:</para>
 
@@ -870,7 +869,7 @@ using getaddrinfo: ping, ping6, tla, svn.
               firewall/rule_management.c. Rule_management.c also
               contains functions for copying, comparing and freeing
               rules, etc. If any functions are needed outside the
-              rule_management they can be defined in the header file.</para>
+              rule_management, they can be defined in the header file.</para>
 
         <para>The argument "hook" in the rule is the Netfilter hook
               for which rule is intended. The hooks are defined in
