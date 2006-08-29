@@ -614,11 +614,11 @@ using getaddrinfo: ping, ping6, tla, svn.
    initiating communication between HIP nodes via HIP rendezvous servers. The
    rendezvous server (RVS) serves as an initial contact point ("rendezvous
    point") for its clients. The clients of an RVS are HIP nodes that use the HIP
-   Registration Protocol [draft-ietf-hip-registration-02] to register their
-   HIT->IP address mappings with the RVS. After this registration, other HIP
-   nodes can initiate a base exchange using the IP address of the RVS instead of
-   the current IP address of the node they attempt to contact. Essentially, the
-   clients of an RVS become reachable at the RVS' IP addresses.
+   Registration Protocol to register their HIT->IP address mappings with the RVS.
+   After this registration, other HIP nodes can initiate a base exchange using
+   the IP address of the RVS instead of the current IP address of the node they
+   attempt to contact. Essentially, the clients of an RVS become reachable at
+   the RVS' IP addresses.
   </para>
   <para>
    The rendezvous server is similar to the home agent in Mobile IP. The
@@ -736,7 +736,16 @@ using getaddrinfo: ping, ping6, tla, svn.
    example, the double jump scenario does not work.
   </para>
   <para>
-   The mechanism does not comply 100% with the RVS-05 draft.
+   Drafts complied with: Host Identity Protocol (HIP) Registration Extension
+   draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
+   Extension draft-ietf-hip-rvs-05.
+  </para>
+  <para>
+   Parameters used during registration: REG_INFO, REG_REQUEST, REG_RESPONSE,
+   REG_FAILED.
+  </para>
+  <para>
+   Parameters used with rendezvous service: RVS_HMAC, FROM, VIA_RVS.
   </para>
   <para>
    The rendezvous mechanism is not yet guaranteed to be interoperable

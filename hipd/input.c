@@ -153,7 +153,7 @@ out_err:
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	HIP_DEBUG("Lauri: hip_controls_sane() invoked.\n");
+	HIP_DEBUG("hip_controls_sane() invoked.\n");
 	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
@@ -209,7 +209,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
-	HIP_DEBUG("Lauri: hip_verify_packet_hmac() invoked.\n");
+	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 	int err = 0, len, orig_len;
 	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
@@ -260,7 +260,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 			    struct hip_crypto_key *crypto_key,
 			    struct hip_host_id *host_id)
 {
-	HIP_DEBUG("Lauri: hip_verify_packet_hmac2() invoked.\n");
+	HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	int err = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
@@ -306,7 +306,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 				uint64_t I,
 				uint64_t J)
 {
-	HIP_DEBUG("Lauri: hip_produce_keying_material() invoked.\n");
+	HIP_DEBUG("hip_produce_keying_material() invoked.\n");
 	char *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
@@ -734,7 +734,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr,
 	                       struct hip_stateless_info *msg_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_control_packet() invoked.\n");
+	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	hip_ha_t tmp;
 	int err = 0, type, skip_sync = 0;
 
@@ -923,7 +923,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  hip_ha_t *entry,
 	          struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("Lauri: hip_create_i2() invoked.\n");
+	HIP_DEBUG("hip_create_i2() invoked.\n");
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -1268,8 +1268,8 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("Lauri: hip_handle_r1() invoked.\n");
-	HIP_DUMP_MSG(r1); //Lauri
+	HIP_DEBUG("hip_handle_r1() invoked.\n");
+	HIP_DUMP_MSG(r1);
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
@@ -1459,7 +1459,7 @@ int hip_receive_r1(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_r1() invoked.\n");
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
 #ifdef CONFIG_HIP_RVS
@@ -1547,7 +1547,7 @@ int hip_create_r2(struct hip_context *ctx,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("Lauri: hip_create_r2() invoked.\n");
+	HIP_DEBUG("hip_create_r2() invoked.\n");
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
@@ -1668,7 +1668,7 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/* RVS */
 	/* Insert rendezvous association to rendezvous database. */
-	/* TODO: insert onky if REG_REQUEST parameter with Reg Type
+	/* TODO: insert only if REG_REQUEST parameter with Reg Type
 	   RENDEZVOUS was received. */
 	HIP_RVA *rva;
 	HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
@@ -1703,7 +1703,7 @@ int hip_handle_i2(struct hip_common *i2,
 		  hip_ha_t *ha,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("Lauri: hip_handle_i2() invoked.\n");
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
@@ -2101,7 +2101,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_i2() invoked.\n");
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
@@ -2185,7 +2185,7 @@ int hip_handle_r2(struct hip_common *r2,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("Lauri: hip_handle_r2() invoked.\n");
+	HIP_DEBUG("hip_handle_r2() invoked.\n");
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
@@ -2371,6 +2371,7 @@ int hip_handle_i1(struct hip_common *i1,
 {
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 	HIP_DUMP_MSG(i1);
+	int err = 0;
 
 #ifdef CONFIG_HIP_RVS
   	struct hip_from *from;
@@ -2385,6 +2386,13 @@ int hip_handle_i1(struct hip_common *i1,
 	dstip = NULL;
 
 #ifdef CONFIG_HIP_RVS
+
+	
+
+	/* verify HMAC */
+	/*HIP_IFEL(hip_verify_packet_hmac(i1, &entry->hip_hmac_in), -ENOENT,
+	  "HMAC validation on i1 failed\n");*/
+	
 	/* We have three cases:
 	   1. One FROM parameter was found.
 	   2. Multiple FROM parameters were found.
@@ -2449,8 +2457,10 @@ int hip_handle_i1(struct hip_common *i1,
 		via_rvs_count++;
 	}
 #endif
-	return hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
+	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
 			   dst, i1_info, rvs_addresses, via_rvs_count);
+ out_err:
+	return err;
 }
 
 /**
@@ -2496,7 +2506,7 @@ int hip_receive_i1(struct hip_common *i1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *i1_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_i1() invoked.\n");
+	HIP_DEBUG("hip_receive_i1() invoked.\n");
        	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
@@ -2578,8 +2588,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_i2() invoked.\n");
-	HIP_DEBUG("\n-- hip_receive_r2 --\n\n");
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int err = 0, state;
 	uint16_t mask = 0;
 
@@ -2640,7 +2649,7 @@ int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notity_daddr,
 		       hip_ha_t* entry)
 {
-	HIP_DEBUG("Lauri: hip_receive_notify() invoked.\n");
+	HIP_DEBUG("hip_receive_notify() invoked.\n");
 	int err = 0;
 	struct hip_notify *notify_param;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
@@ -2688,7 +2697,7 @@ int hip_receive_bos(struct hip_common *bos,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *bos_info)
 {
-	HIP_DEBUG("Lauri: hip_receive_bos() invoked.\n");
+	HIP_DEBUG("hip_receive_bos() invoked.\n");
 	int err = 0, state = 0;
 
 	HIP_DEBUG("\n");

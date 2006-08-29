@@ -25,10 +25,9 @@
  * @date    24.08.2006
  * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Version 1.0 was document scarcely and the comments regarding
- *          version 1.0 that have been added afterwards may be inaccurate
- *          or even misleading.
+ *          version 1.0 that have been added afterwards may be inaccurate.
  */ 
 #include "rvs.h"
 
@@ -74,6 +73,7 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  */
 HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 {
+	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
@@ -94,7 +94,7 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 	/* Copy HMACs. */
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
-
+	
 	/* If the host association has a preferred address, copy it as the
 	   first IP address of the rendezvous association. */
 	if (!ipv6_addr_any(&ha->preferred_address)) {
@@ -281,10 +281,14 @@ static void hip_rvs_put_entry(void *entry)
 
 	HIP_ASSERT(entry);
 	if (atomic_dec_and_test(&rva->refcnt)) {
-                HIP_DEBUG("rva: %p, refcnt reached zero. Deleting...\n",rva);
+                HIP_DEBUG("Reference count of rendezvous association at %p "\
+			  "reached zero. Rendezvous association is freed.\n",
+			  rva);
 		hip_rvs_free_rva(rva);
 	} else {
-                HIP_DEBUG("rva: %p, refcnt decremented to: %d\n", rva, atomic_read(&rva->refcnt));
+		HIP_DEBUG("Reference count of rendezvous association at %p "\
+			  "decremented to %d.\n.", rva,
+			  atomic_read(&rva->refcnt));
 	}
 }
 
@@ -334,13 +338,15 @@ void hip_rvs_init_rvadb()
 
 /**
  * Uninitializes the rendezvous association hashtable.
- *
- * @warning does nothing yet
- * @todo    implement functionality
+ * 
+ * Uninitializes the rendezvous association hashtable @c rva_table by calling
+ * hip_ht_uninit() for @c rva_table. Memory allocated for each rendezvous
+ * association is freed.
  */ 
 void hip_rvs_uninit_rvadb()
 {
-
+	HIP_DEBUG("hip_rvs_uninit_rvadb() invoked.\n");
+	hip_ht_uninit(&rva_table);
 }
 
 /**
@@ -403,7 +409,6 @@ void hip_rvs_remove(HIP_RVA *rva)
  * @param rva      rendezvous association matching the HIT of next hop.
  * @param i1_info  the source and destination ports (when NAT is in use).
  * @return         zero on success, or negative error value on error.
- * @todo           @c RVS_HMAC parameter is not build yet.
  */
 int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
@@ -416,7 +421,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
 	
-	struct hip_common *i1_to_be_relayed;
+	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
 	struct in6_addr final_dst;
@@ -426,8 +431,6 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &final_dst, 0);
 
-	/** @todo hip_build_network_hdr has to be replaced with an appropriate
-	    function pointer. */
 	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
 
@@ -471,39 +474,17 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   parameters, new FROM parameter is not added until here. */
 	if (!from_added)
 	{
-		HIP_DEBUG("Adding a new FROM as the last parameter.\n");
+		HIP_DEBUG("No parameters found, adding a new FROM.\n");
 		hip_build_param_from(i1_to_be_relayed, i1_saddr);
 	}
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
 	   whose type value is > RVS_HMAC in the incoming I1 packet. */
-/*
-	if(rva)
-	{
-		HIP_DEBUG("rva exists.\n");
-		if(&rva->hmac_our)
-		{
-			HIP_DEBUG("rva->hmac_our exists.\n");
-			if((&rva->hmac_our)->key)
-			{
-				HIP_DEBUG("rva->hmac_our->key exists.\n");
-				HIP_DEBUG("rva->hmac_our->key is %s.\n", (&rva->hmac_our)->key);
-			}
-		}
-	}
-
-	if(&rva->hmac_our == NULL)
-	{
-		HIP_DEBUG("rva->hmac_our is NULL.\n");
-	}
-	else{
-		HIP_DEBUG("Lauri: &entry->hip_hmac_out: %s.\n", rva->hmac_our);
-		HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed,
-							   &rva->hmac_our), -1,
-			 "Building of HMAC failed\n");
-	}
-	*/
+	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
+	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed, &rva->hmac_our), -1,
+		 "Building of HMAC failed\n");
+	
 	err = hip_csum_send(NULL, &final_dst, i1_info->src_port,
 			    i1_info->dst_port, i1_to_be_relayed, NULL, 0); 
 	

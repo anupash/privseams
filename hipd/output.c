@@ -86,7 +86,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
- 	HIP_DEBUG("Lauri: hip_create_r1() invoked.\n");
+ 	HIP_DEBUG("hip_create_r1() invoked.\n");
 	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;

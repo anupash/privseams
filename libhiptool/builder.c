@@ -1363,12 +1363,10 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 
 	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-
 	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
 				 hip_get_msg_total_len(msg),
 				 hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
-
 	err = hip_build_param(msg, &hmac);
  out_err:
 	return err;

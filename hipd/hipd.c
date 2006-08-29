@@ -58,18 +58,14 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  HIP_DEBUG("Lauri: hip_sendto() invoked.\n");
-  int n = 0;
-
-  HIP_DEBUG("hip_sendto sending phit...\n");
-
-  n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-  return n;
+  	HIP_DEBUG("hip_sendto() invoked.\n");
+	int n = 0;
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+	return n;
 }
 
 int main(int argc, char *argv[]) {
-	HIP_DEBUG("Lauri: main() invoked.\n");
 	int ch;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3

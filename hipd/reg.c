@@ -1,14 +1,14 @@
-/*
- * Registration stuff for HIP.
- *
- * Authors:
- * - Anu Markkola
- *
- * Licence: GNU/GPL
+/** @file
+ * This file defines a service registration functions for the Host Identity
+ * Protocol (HIP).
+ * 
+ * @author  Anu Markkola
+ * @date    17.08.2006
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
 #include "reg.h"
 
+/** A linked list for storing the supported services. */
 static struct list_head services;
 
 void hip_init_services(void)
@@ -22,13 +22,15 @@ void hip_uninit_services(void)
 }
 
 /**
- * hip_services_add - Adds a service to supported services list.
- * @service_type: The service type to add.
+ * Adds a service to supported services list.
  *  
- * Each service can be added only once. Attempt to add a duplicate service
- * results to a negative return value. 17.08.2006
- * 
- * Returns: zero on success, or negative on error.
+ * Adds a service to the supported services linked list @c services. Each
+ * service can be added only once. An attempt to add a duplicate service
+ * results to a negative return value and the service not being added to
+ * the list.
+ *
+ * @param service_type the service type to add.
+ * @returns       zero on success, or negative on error.
  */ 
 int hip_services_add(int service_type)
 {
@@ -56,7 +58,6 @@ int hip_services_add(int service_type)
 		goto out_err;
 	}
 	
-	//service->service_type = service_type;
 	service->state = HIP_SERVICE_INACTIVE;
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
@@ -222,7 +223,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 			}
 		}
 	}
-	/* TODO: Where is this memory freed? */
+	/** @todo Where is this memory freed? Should user free this
+	    memory returned as parameter? */
 	a_req = HIP_MALLOC((sizeof(int) * accept_count), GFP_KERNEL);	
 	r_req = HIP_MALLOC((sizeof(int) * reject_count), GFP_KERNEL);	
 		

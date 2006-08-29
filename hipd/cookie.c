@@ -134,7 +134,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
-	/* Replaced memory allocation Lauri Silvennoinen 02.08.2006 16:23 */
+	/* Replaced memory allocation, Lauri Silvennoinen 02.08.2006 */
         //r1 = HIP_MALLOC(len, GFP_KERNEL);
 	r1 = hip_msg_alloc();
 	memcpy(r1, hip_r1table[idx].r1, len);

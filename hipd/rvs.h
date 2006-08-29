@@ -7,10 +7,9 @@
  * @date    25.08.2006
  * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Version 1.0 was document scarcely and the comments regarding
- *          version 1.0 that have been added afterwards may be inaccurate
- *          or even misleading.
+ *          version 1.0 that have been added afterwards may be inaccurate.
  */
 #ifndef HIP_RVS_H
 #define HIP_RVS_H
