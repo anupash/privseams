@@ -2434,6 +2434,33 @@ int hip_handle_i1(struct hip_common *i1,
 	dst = &i1->hits;
 	dstip = NULL;
 
+	/* Debug stuff. */
+	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
+	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
+	struct in6_addr rvs_ipv6;
+	convert_string_to_address("2001:0072:8745:9ad4:2fb5:67ea:85c7:4799", &rvs_ipv6);
+	hip_hit_t rvs_hit = (hip_hit_t)rvs_ipv6;
+	hip_ha_t *rvs_ha_entry = hip_hadb_find_byhits( &i1->hitr, &rvs_hit);
+	if(rvs_ha_entry)
+	{
+		int foo;
+		HIP_DEBUG("RVS ha entry found.\n");
+		HIP_HEXDUMP("rvs_ha_entry->hmac_out.key:", rvs_ha_entry->hip_hmac_out.key,
+			    HIP_MAX_KEY_LEN);
+		HIP_HEXDUMP("rvs_ha_entry->hmac_in.key:", rvs_ha_entry->hip_hmac_in.key,
+			    HIP_MAX_KEY_LEN);
+		foo = hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out);
+		HIP_DEBUG("foo after hmac_out verification: %d.\n", foo);
+		foo = hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_in);
+		HIP_DEBUG("foo after hmac_in verification: %d.\n", foo);
+	}
+	else
+	{
+		HIP_DEBUG("RVS ha entry NOT found.\n");
+	}
+
+	/* End of debug stuff. */
+
 #ifdef CONFIG_HIP_RVS
 	
 	/* We have three cases:

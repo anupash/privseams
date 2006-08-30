@@ -212,6 +212,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
+
+		/* DEBUG STUFF: */
+		HIP_HEXDUMP("entry->hmac_out.key:", entry->hip_hmac_out.key,
+			    HIP_MAX_KEY_LEN);
+		HIP_HEXDUMP("entry->hmac_in.key:", entry->hip_hmac_in.key,
+			    HIP_MAX_KEY_LEN);
+		HIP_DEBUG_HIT("&entry->hit_our:", &entry->hit_our);
+		HIP_DEBUG_HIT("&entry->hit_peer:", &entry->hit_peer);
+		/* End of debug stuff. */
+			      
 		/* Set a rvs request flag. */
 		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
 			 -1, "setting of rvs request flag failed\n");
