@@ -275,8 +275,11 @@ void register_to_dht ()
     
     HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
 	      tmp_hit_str, tmp_addr_str, hostname);
-    updateHIT(hostname, tmp_hit_str);
-    updateHIT(tmp_hit_str, tmp_addr_str);
+
+   // upload mappings with the old functions
+   // updateHIT(hostname, tmp_hit_str);
+   // updateHIT(tmp_hit_str, tmp_addr_str);
+    updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
   } 	
 #endif
 }
