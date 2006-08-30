@@ -13,12 +13,12 @@ lib_LTLIBRARIES = libdhtresolver.la libdhttracker.la
 libdhtresolver_la_SOURCES  = resolver.c opendht_interface.c rpcif_client.c rpcif_xdr.c
 libdhttracker_la_SOURCES = tracker.c
 
-bin_PROGRAMS =  client client-teststub
-bin_PROGRAMS += tracker-teststub
+bin_PROGRAMS =  client client-teststub tracker-teststub dht-dnsd
 
 client_SOURCES =  client.c
 client_teststub_SOURCES = client-teststub.c
 tracker_teststub_SOURCES = tracker-teststub.c
+dht_dnsd_SOURCES = conf.c base64.c dns.c hex.c sha.c validator.c
 
 LDADD = .libs/libdhttracker.a .libs/libdhtresolver.a ../libinet6/.libs/libinet6.a
 
