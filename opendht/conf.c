@@ -3,7 +3,7 @@
 #include <string.h>
 #include "environ.h"
 #include "sha.h"
-#include "config.h"
+#include "conf.h"
 
 int shaFQDN();
 static sha_digest mydigest;
