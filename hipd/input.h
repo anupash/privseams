@@ -97,6 +97,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       
 int hip_verify_packet_hmac(struct hip_common *, 
 			   struct hip_crypto_key *);
+
+int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
+
 			   
 int hip_receive_i1(struct hip_common *, 
 		   struct in6_addr *, 

@@ -248,6 +248,55 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 }
 
 /**
+ * Verifies packet RVS_HMAC
+ * @param msg HIP packet
+ * @param entry HA
+ *
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated.
+ */
+int hip_verify_packet_rvs_hmac(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key)
+{
+	HIP_DEBUG("hip_verify_packet_rvs_hmac() invoked.\n");
+	int err = 0, len, orig_len;
+	u8 orig_checksum;
+	struct hip_crypto_key tmpkey;
+	struct hip_hmac *hmac;
+
+	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RVS_HMAC)),
+		 -ENOMSG, "No HMAC parameter\n");
+
+	/* hmac verification modifies the msg length temporarile, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
+
+	len = (u8 *) hmac - (u8*) msg;
+	hip_set_msg_total_len(msg, len);
+
+	HIP_HEXDUMP("HMAC key", crypto_key->key,
+		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+
+	HIP_HEXDUMP("HMACced data", msg, len);
+	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC), 
+		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
+	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
+
+ out_err:
+	return err;
+}
+
+/**
  * hip_verify_packet_hmac2 - verify packet HMAC
  * @param msg HIP packet
  * @param entry HA
@@ -1591,8 +1640,7 @@ int hip_create_r2(struct hip_context *ctx,
 			int request_count, my_request_count, accepted_count, rejected_count;
 			uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
 			
-			/** @todo Lauri: Fix this. */
-			/* - sizeof(reg_request->lifetime) perhaps...*/
+			/** @todo - sizeof(reg_request->lifetime) instead of - 1*/
 			request_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
 			my_request_count = hip_get_param_contents_len(reg_request)
 				- sizeof(reg_request->lifetime); // leave out lifetime field
@@ -1668,11 +1716,12 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/* RVS */
 	/* Insert rendezvous association to rendezvous database. */
-	/* TODO: insert only if REG_REQUEST parameter with Reg Type
-	   RENDEZVOUS was received. */
+	/** @todo Insert only if REG_REQUEST parameter with Reg Type
+	    RENDEZVOUS was received. */
 	HIP_RVA *rva;
 	HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
-	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva), "Error while inserting RVA into hash table\n");
+	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
+		  "Error while inserting RVA into hash table\n");
 
 #endif //CONFIG_HIP_ESCROW
 
@@ -2386,12 +2435,6 @@ int hip_handle_i1(struct hip_common *i1,
 	dstip = NULL;
 
 #ifdef CONFIG_HIP_RVS
-
-	
-
-	/* verify HMAC */
-	/*HIP_IFEL(hip_verify_packet_hmac(i1, &entry->hip_hmac_in), -ENOENT,
-	  "HMAC validation on i1 failed\n");*/
 	
 	/* We have three cases:
 	   1. One FROM parameter was found.
@@ -2401,6 +2444,19 @@ int hip_handle_i1(struct hip_common *i1,
 	/* Check if the incoming I1 packet has a FROM parameter. */
 	from = hip_get_param(i1, HIP_PARAM_FROM);
 	if (from) {
+
+		/* If there's a FROM parameter present, there must be a RVS_HMAC
+		   parameter present also. */
+
+		/* verify HMAC */
+		
+		/* MIIKA: This won't compile. */ 
+		//HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &entry->hip_hmac_in), -ENOENT,
+		// "HMAC validation on i2 failed\n");
+		
+		/* MIIKA: Neither will this... */ 
+		//goto out_err;
+		
 		/* Case 1. */
 		HIP_DEBUG("Found FROM parameter in I1.\n");
 		/* First FROM parameter has the destination IP (Initiator). */
@@ -2416,6 +2472,19 @@ int hip_handle_i1(struct hip_common *i1,
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, dst, 0, 0, PEER_ADDR_STATE_ACTIVE);
+		}
+		else {
+			/* MIIKA: After registration has been succesfully completed and the
+			   responder receives a relayed I1 packet, this entry is NULL. In which 
+			   point should be this entry stored? And what entry am I looking for here?
+			   This entry is fethced from the hadb at hip_receive_control_packet()
+			   with msg->hits and msg->hitr. Whose hits are these?
+
+			   I cannot check the validity of RVS_HMAC unless a matching entry is found..
+			   Also check the previous comment starting at line 2468 (not my comment).
+			   Is this somehow related?
+			*/
+			HIP_DEBUG("Entry was NULL.\n");
 		}
 		
 		/* Check if there are multiple FROM parameters. Rest of the FROM
