@@ -1012,13 +1012,6 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>OpenDHT Support (Experimental!)</title>
     <para>
-    &nbsp; unpack patches/misc/hip-dht-04052006.tgz
-    </para>
-    <para>
-    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
-    the unpacked hip-dht directory
-    </para>
-    <para>
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
     </para>
     <para>
