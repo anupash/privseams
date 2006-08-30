@@ -11,7 +11,7 @@ EXTRA_DIST += libhipgui/logo.png libhipgui/run.png libhipgui/swtool.png libhipgu
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip hip-dht tools hipd test firewall libhipgui agent
+SUBDIRS = libinet6 libhiptool libopphip opendht tools hipd test firewall libhipgui agent
 
 doxygen:
 	cd doc && doxygen

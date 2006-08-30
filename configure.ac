@@ -242,9 +242,9 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
-AC_SUBST(HIPL_OPENDHT, "$HIPL/hip-dht")
+AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT_SHARE")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
 
 AC_CONFIG_FILES([ Makefile
@@ -254,7 +254,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc22/Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
-                  hip-dht/Makefile
+                  opendht/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
