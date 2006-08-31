@@ -36,18 +36,16 @@ int hipd_init(int flush_ipsec)
 
 	hip_init_puzzle_defaults();
 
+	/* This is needed only if RVS or escrow is in use. */
+	hip_init_services();
+
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
-
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
-	
-	hip_init_services();
-	
 #endif
-
 #ifdef CONFIG_HIP_HI3
 	cl_init(i3_config);
 #endif
@@ -385,13 +383,16 @@ void hip_exit(int signal)
 	//hip_delete_default_prefix_sp_pair();
 
 	/* Close SAs with all peers */
-//	hip_send_close(NULL);
-
+        // hip_send_close(NULL);
+	
 	hip_delete_all_sp();
 
 	delete_all_addresses();
 
 	set_up_device(HIP_HIT_DEV, 0);
+
+	/* This is needed only if RVS or escrow is in use. */
+	hip_uninit_services();
 
 #ifdef CONFIG_HIP_HI3
 	cl_exit();
@@ -400,11 +401,9 @@ void hip_exit(int signal)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_uninit_rvadb();
 #endif
-
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
 	hip_uninit_kea_endpoints();
-	hip_uninit_services();
 #endif
 
 	// hip_uninit_host_id_dbs();

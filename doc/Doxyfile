@@ -84,7 +84,8 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 INPUT                  = ../agent ../firewall ../hipd ../hipsock ../libhipgui \
                          ../libhiptool ../libinet6 ../libopphip ../test \
-                         ../tools ../doc ../hip-dht
+                         ../tools ../doc
+#../hip-dht
 FILE_PATTERNS          = *.c \
                          *.h
 RECURSIVE              = YES

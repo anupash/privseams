@@ -732,13 +732,14 @@ using getaddrinfo: ping, ping6, tla, svn.
    source and  destination IP addresses rewritten.
   </para>
   <para>
-   No changes were  made to the REA / mm-code,  which means that, for 
-   example, the double jump scenario does not work.
-  </para>
-  <para>
    Drafts complied with: Host Identity Protocol (HIP) Registration Extension
    draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
    Extension draft-ietf-hip-rvs-05.
+  </para>
+  <para>
+   The initiator does not yet store the IP addresses received in the
+   VIA_RVS parameter encapsulated in R1 packet. This means that the double
+   jump scenario does not work.
   </para>
   <para>
    Parameters used during registration: REG_INFO, REG_REQUEST, REG_RESPONSE,

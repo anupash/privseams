@@ -145,16 +145,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  break;
 #endif
 #ifdef CONFIG_HIP_ESCROW
-// TODO: - create kea with own hit (params: server_hit, rules)
-// 		 - send i1 
-// hip_add_peer_map
+/** @todo create kea with own hit (params: server_hit, rules) 
+    - send i1 hip_add_peer_map */
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message.\n");
 	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-						       HIP_PARAM_HIT)),
+							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-						       HIP_PARAM_IPV6_ADDR)),
+							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
@@ -194,7 +193,9 @@ int hip_handle_user_msg(struct hip_common *msg,
 			HIP_DEBUG("Escrow service is now active.\n");
 		err = hip_recreate_all_precreated_r1_packets();	
 		break;
-	
+
+#endif /* CONFIG_HIP_ESCROW */
+#ifdef CONFIG_HIP_RVS
 	/* draft-ietf-hip-registration-02 RVS registration.
 	   Responder (of I,RVS,R hierarchy) handles this message. Message
 	   indicates that the current machine wants to register to a rvs server.
