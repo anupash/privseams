@@ -11,6 +11,7 @@
 
 #include "hipconf.h"
 
+extern char *i3_config;
 
 int hipd_init(int flush_ipsec);
 int hip_init_host_ids();
