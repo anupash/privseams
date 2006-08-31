@@ -18,6 +18,7 @@ float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
+int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 
 /**
@@ -264,7 +265,7 @@ void register_to_dht ()
     if (ipv6_addr_is_hit(SA2IP(&n->addr)))
 	continue;
 
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
       HIP_ERROR("No HIT found\n");
       return;
     }
@@ -274,8 +275,11 @@ void register_to_dht ()
     
     HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
 	      tmp_hit_str, tmp_addr_str, hostname);
-    updateHIT(hostname, tmp_hit_str);
-    updateHIT(tmp_hit_str, tmp_addr_str);
+
+   // upload mappings with the old functions
+   // updateHIT(hostname, tmp_hit_str);
+   // updateHIT(tmp_hit_str, tmp_addr_str);
+    updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
   } 	
 #endif
 }
@@ -286,7 +290,22 @@ void register_to_dht ()
 int periodic_maintenance()
 {
 	int err = 0;
-
+	
+	if (hipd_get_state() == HIPD_STATE_CLOSING)
+	{
+		if (force_exit_counter > 0)
+		{
+			err = hip_count_open_connections();
+			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
+		}
+		else
+		{
+			hip_exit(signal);
+			exit(signal);
+		}
+		force_exit_counter--;
+	}
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");
@@ -323,6 +342,4 @@ int periodic_maintenance()
 	
 	return err;
 }
-
-
 
