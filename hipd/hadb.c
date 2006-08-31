@@ -2309,8 +2309,9 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 
 
 /** Enumeration for hip_count_open_connections */
-int hip_count_one_entry(hip_ha_t *entry, int *counter)
+int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
+	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
 	    entry->state == HIP_STATE_ESTABLISHED ||
 	    entry->state == HIP_STATE_FILTERING)
@@ -2333,3 +2334,40 @@ int hip_count_open_connections(void)
 	return n;
 }
 
+#ifdef CONFIG_HIP_RVS
+
+hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
+					    hip_hit_t *rvs_ip)
+{
+	int err = 0, i;
+	hip_ha_t *this, *tmp, *result = NULL;
+
+	HIP_LOCK_HT(&hadb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("The %d list is empty? %d\n", i,
+			   list_empty(&hadb_byhit[i]));
+		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
+			hip_hold_ha(this);
+			if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
+			    (ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
+				result = this;
+				break;
+			}
+			hip_db_put_ha(this, hip_hadb_delete_state);
+			if (err)
+				break;
+		}
+		if (err)
+			break;
+	}
+	HIP_UNLOCK_HT(&hadb_hit);
+
+ out_err:
+	if (err)
+		result = NULL;
+
+	return result;
+}
+#endif

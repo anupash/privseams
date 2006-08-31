@@ -65,8 +65,8 @@ include_HEADERS = libc-compat.h util.h
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 if HIP_OPENDHT
- INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
- LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/resolver/resolver.a
+  INCLUDES += -I../opendht
+  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
 endif
 
 if HIP_HI3
