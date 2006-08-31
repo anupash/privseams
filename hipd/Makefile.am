@@ -30,14 +30,21 @@ if HIP_HI3
 endif
 
 if HIP_OPENDHT
- INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
- hipd_LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
+ hipd_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
 endif
 
 # KeyNotev2
 #INCLUDES += -Ikeynote
 #hipd_LDADD += keynote/.libs/libkeynote.a
 #SUBDIRS += keynote
+
+../opendht/.libs/libdhttracker.a:
+	$(MAKE) -C $(HIPL)/opendht
+
+../opendht/.libs/libdhtresolver.a:
+	$(MAKE) -C $(HIPL)/opendht
+
+
 
 # The sources depend on builder, but it is located elsewhere. Linking is
 # the best way to access it because the object must be built on this
