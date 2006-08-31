@@ -265,7 +265,7 @@ void register_to_dht ()
     if (ipv6_addr_is_hit(SA2IP(&n->addr)))
 	continue;
 
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, -1) < 0) {
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, -1, 0) < 0) {
       HIP_ERROR("No HIT found\n");
       return;
     }
