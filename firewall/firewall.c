@@ -13,7 +13,7 @@
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
 
-struct ipq_handle *h;
+struct ipq_handle *h = NULL;
 int statefulFiltering = 1; 
 
 
@@ -112,7 +112,7 @@ int is_esp_packet(const struct ip6_hdr * ip6_hdr)
  * return verdict
  */
 int filter_esp(const struct in6_addr * dst_addr,
-	       uint32_t spi,
+	       struct hip_esp_packet * esp,
 	       unsigned int hook, 
 	       const char * in_if, 
 	       const char * out_if)
@@ -121,6 +121,7 @@ int filter_esp(const struct in6_addr * dst_addr,
   struct rule * rule = NULL;
   int match = 1; // is the packet still a potential match to current rule
   int ret_val = 0;
+  uint32_t spi = esp->esp_data->esp_spi;	
 
   HIP_DEBUG("filter_esp:\n");
   while (list != NULL)
@@ -166,7 +167,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 	  {
 	    //the entire rule os passed as argument as hits can only be 
 	    //filtered whit the state information
-	    if(!filter_esp_state(dst_addr, spi, rule))//rule->state, rule->accept))
+	    if(!filter_esp_state(dst_addr, esp, rule))//rule->state, rule->accept))
 	      match = 0;
 	    _HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n", 
 		      rule->state->int_opt.value,
@@ -416,12 +417,39 @@ int main(int argc, char **argv)
       else if (is_esp_packet(ip6_hdr))
 	{
 	  HIP_DEBUG("****** Received ESP packet ******\n");
+	  uint32_t spi_temp;
 	  uint32_t spi_val;
-	  memcpy(&spi_val, 
+	  struct hip_esp * esp_data;
+	  
+	  struct hip_esp_packet * esp = 
+	  	(struct hip_esp_packet *)malloc(sizeof(struct hip_esp_packet));
+	  esp->packet_length = 0;
+	  esp->esp_data = NULL;
+	  if (m->data_len <= (BUFSIZE - sizeof(struct ip6_hdr))){
+	  	esp->packet_length = m->data_len - sizeof (struct ip6_hdr); 	
+	  	HIP_DEBUG("Packet size smaller than buffer size\n");
+	  }
+	  else { 
+	  	esp->packet_length = BUFSIZE - sizeof(struct ip6_hdr);	
+	 
+	  	HIP_DEBUG("Packet size greater than buffer size\n");
+	  }
+	  //esp_data = (struct hip_esp *)malloc(esp->packet_length);
+	  //memcpy(esp_data, m->payload + sizeof (struct ip6_hdr), esp->packet_length);
+	  //esp->esp_data = esp_data;
+	  esp->esp_data = m->payload + sizeof (struct ip6_hdr);
+	  //esp->esp_tail = NULL;
+	  memcpy(&spi_temp, 
 		 (m->payload + sizeof (struct ip6_hdr)), 
 		 sizeof(__u32));
+	  spi_val = ntohl(spi_temp);	 
+	  
+	  spi_temp = esp->esp_data->esp_spi;
+	   
+	  HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
+	 HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
 	  if(filter_esp(&ip6_hdr->ip6_dst, 
-			spi_val,
+			esp,
 			m->hook,
 			m->indev_name,
 			m->outdev_name))
@@ -435,6 +463,13 @@ int main(int argc, char **argv)
 	      status = ipq_set_verdict(h, m->packet_id,
 				       NF_DROP, 0, NULL);
 	      HIP_DEBUG("esp packet dropped \n"); 
+	    }
+	    if (esp) {
+	    	/*if (esp_data) {
+	    		esp->esp_data = NULL;
+	    		free(esp_data);
+	    	}*/
+	    	free(esp);
 	    }
 	}
       else{

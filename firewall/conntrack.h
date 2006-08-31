@@ -13,11 +13,13 @@
 #include <glib/gtypes.h>
 #include <glib/gthread.h>
 
-#include "firewall.h"
-#include "rule_management.h"
-#include "debug.h"
 //#include "firewall.h"
 //#include "rule_management.h"
+#include "debug.h"
+//#include "firewall.h"
+#include "firewall_defines.h"
+#include "esp_decrypt.h"
+#include "rule_management.h"
 #include "hip.h"
 #include "misc.h"
 #include "hadb.h"
@@ -37,7 +39,7 @@ enum{
 };
 
 /*state table structures*/
-
+/*
 struct esp_address{
   struct in6_addr dst_addr;
   uint32_t * update_id; // null or pointer to the update id from the packet 
@@ -88,11 +90,16 @@ struct connection {
   int verify_responder;
   int state;
   GTimeVal time_stamp;
-};/*--------------  CONNECTION TRACKING ------------*/
+};*//*--------------  CONNECTION TRACKING ------------*/
+
+
+
+
+
 
 void print_data(struct hip_data * data);
 int filter_esp_state(const struct in6_addr * dst_addr, 
-		     uint32_t spi, 
+		     struct hip_esp_packet * esp, 
 		    const struct rule * rule);
 int filter_state(const struct ip6_hdr * ip6_hdr, 
 		 struct hip_common * buf, 
@@ -103,7 +110,8 @@ void conntrack(const struct ip6_hdr * ip6_hdr,
 int verify_packet_signature(struct hip_host_id * hi, 
 			    struct hip_common * common);
 
-int add_esp_decryption_data(const struct in6_addr * dst_addr, 
+int add_esp_decryption_data(const struct in6_addr * hit_s, 
+	const struct in6_addr * hit_r, const struct in6_addr * dst_addr, 
 		     uint32_t spi, int dec_alg, int auth_len, int key_len, 
 		     struct hip_crypto_key	* dec_key);
 

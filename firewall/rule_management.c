@@ -1434,7 +1434,7 @@ void read_file(char * file_name)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
-	  original_line = (char *) malloc(strlen(line) * + sizeof(char) );
+	  original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
 	  //remove trailing new line

@@ -310,13 +310,15 @@ int hip_firewall_is_alive()
 }
 
 
-int hip_firewall_add_escrow_data(struct hip_keys *keys)
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
 {
 		struct hip_common *msg;
 		int err = 0;
 		int n;
 		socklen_t alen;
-		
+		struct in6_addr * hit_s;
+		struct in6_addr * hit_r;
+				
 		msg = malloc(HIP_MAX_PACKET);
 		if (!msg)
 		{
@@ -331,6 +333,31 @@ int hip_firewall_add_escrow_data(struct hip_keys *keys)
 			HIP_ERROR("build hdr failed: %s\n", strerror(err));
 			goto out_err;
 		}
+		
+		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+			hit_s = &entry->hit_peer;
+			hit_r = &entry->hit_our;
+		}
+		else {
+			hit_r = &entry->hit_peer;
+			hit_s = &entry->hit_our;
+		}
+		
+		err = hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_our failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		err = hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_peer failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		
 		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
 		if (err)
 		{

@@ -14,11 +14,14 @@
 #include <string.h>
 
 #include "hip.h"
+#include "firewall_defines.h"
+#include "esp_decrypt.h"
 #include "rule_management.h"
 #include "firewall_control.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
+
 
 
 //made public for filter_esp_state function

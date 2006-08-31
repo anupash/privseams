@@ -1365,7 +1365,7 @@ int hip_handle_escrow_parameter(hip_ha_t *entry,
 		// TODO: Delivering data to firewall
 	if (hip_firewall_is_alive()) {
 		HIP_DEBUG("Firewall alive!\n");
-		if (hip_firewall_add_escrow_data(keys))
+		if (hip_firewall_add_escrow_data(entry, keys))
 			HIP_DEBUG("Sent data to firewall\n");
 	}
 	

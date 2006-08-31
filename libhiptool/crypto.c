@@ -449,7 +449,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         }
 
 	
-	HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
+	HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
 	err = 0;
 
  out_err:

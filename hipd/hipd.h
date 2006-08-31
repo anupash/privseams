@@ -51,7 +51,7 @@ int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
 int hip_firewall_is_alive();
-int hip_firewall_add_escrow_data(struct hip_keys *keys);
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys);
 
 #define IPV4_HDR_SIZE 20
 
