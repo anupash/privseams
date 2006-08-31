@@ -69,6 +69,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+
+#ifdef CONFIG_HIP_OPENDHT
+#include "dhtresolver.h"
+#endif
+
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
