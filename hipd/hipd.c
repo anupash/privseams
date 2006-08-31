@@ -47,6 +47,10 @@ struct list_head addresses;
 
 time_t load_time;
 
+#ifdef CONFIG_HIP_HI3
+char *i3_config = NULL;
+#endif
+
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");

@@ -1030,10 +1030,10 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>Hi3 Support (Experimental!)</title>
     <para>
-    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz
+    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz in the top directory (hipl--main--2.6)
     </para>
     <para>
-    &nbsp; make a link called "hipl--main--2.6/i3" that points to
+    &nbsp; make sure that the link "hipl--main--2.6/i3" points to
     the unpacked i3_0.3/i3 directory
     </para>
     <para>
