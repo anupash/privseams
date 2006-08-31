@@ -169,18 +169,17 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
  *
- * XX TODO: find a better solution, see the text below:
+ * @todo Find a better solution, see the text below:
  * This function is needed because we index the HADB now by
  * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in
  * some functions like the ipv6 stack hooks hip_get_saddr() and
  * hip_handle_output() we just can't know the local_hit so we have to
  * improvise and just try to find some HA entry.
  *
- * NOTE: This way of finding HA entries doesn't work properly if we have 
+ * @note This way of finding HA entries doesn't work properly if we have 
  * multiple entries with the same peer_hit.
- *
- * NOTE: DON'T USE THIS FUNCTION BECAUSE IT DOES NOT DEAL PROPERLY
- * WITH MULTIPLE SOURCE HITS. PREFER hip_hadb_find_byhits FUNCTION.
+ * @note Don't use this function because it does not deal properly
+ * with multiple source hits. Prefer hip_hadb_find_byhits() function.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 {
@@ -206,7 +205,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
  *
- * *** TODO: SPI STUFF IS DEPRECATED ***
+ * @todo SPI STUFF IS DEPRECATED
  *
  * Adds @ha to either SPI or HIT hash table, or _BOTH_.
  * As a side effect updates the hastate of the @ha.
@@ -596,14 +595,14 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  * hip_hadb_get_peer_addr_info - get infomation on the given peer IPv6 address
  * @param entry corresponding hadb entry of the peer
  * @param addr the IPv6 address for which the information is to be retrieved
- * @param spi where the outbound SPI of @addr is copied to
- * @param lifetime where the lifetime of @addr is copied to
- * @param modified_time where the time when @addr was added or updated is copied to
+ * @param spi where the outbound SPI of @c addr is copied to
+ * @param lifetime where the lifetime of @c addr is copied to
+ * @param modified_time where the time when @c addr was added or updated is copied to
  *
- * @return if @entry has the address @addr in its peer address list
- * parameters @spi, @lifetime, and @modified_time are
- * assigned if they are non-NULL and 1 is returned, else @interface_id
- * and @lifetime are not assigned a value and 0 is returned.
+ * @return if @c entry has the address @c addr in its peer address list
+ * parameters @c spi, @lifetime, and @c modified_time are
+ * assigned if they are non-NULL and 1 is returned, else @c interface_id
+ * and @c lifetime are not assigned a value and 0 is returned.
  */
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				uint32_t *spi, uint32_t *lifetime,
@@ -641,11 +640,11 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
  * hip_hadb_add_peer_addr - add a new peer IPv6 address to the entry's list of peer addresses
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
- * @param spi outbound SPI to which the @new_addr is related to
+ * @param spi outbound SPI to which the @c new_addr is related to
  * @param lifetime address lifetime of the address
  * @param state address state
  *
- * @return if @new_addr already exists, 0 is returned. If address was
+ * @return if @c new_addr already exists, 0 is returned. If address was
  * added successfully 0 is returned, else < 0.
  *
 */

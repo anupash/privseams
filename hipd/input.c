@@ -142,6 +142,25 @@ out_err:
         return err;
 }
 
+/**
+ * Checks for illegal controls
+ *
+ * Controls are given in host byte order.
+ *
+ * @param controls control value to be checked
+ * @param legal   legal control values to check @c controls against
+ * @return        1 if there are no illegal control values in @c controls,
+ *                otherwise 0.
+ */
+static inline int hip_controls_sane(u16 controls, u16 legal)
+{
+	HIP_DEBUG("hip_controls_sane() invoked.\n");
+	return ((controls & (   HIP_CONTROL_HIT_ANON
+#ifdef CONFIG_HIP_RVS
+			      | HIP_CONTROL_RVS_CAPABLE //XX:FIXME
+#endif
+		)) | legal) == legal;
+}
 
 /**
  * hip_verify_hmac - verify HMAC
@@ -249,7 +268,7 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RVS_HMAC)),
 		 -ENOMSG, "No HMAC parameter\n");
 
-	/* hmac verification modifies the msg length temporarile, so we have
+	/* hmac verification modifies the msg length temporarily, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
 
@@ -2349,47 +2368,12 @@ int hip_handle_i1(struct hip_common *i1,
 		  struct hip_stateless_info *i1_info)
 {
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
-	HIP_DUMP_MSG(i1);
-	int err = 0;
-
-#ifdef CONFIG_HIP_RVS
-  	struct hip_from *from;
-#endif
-#ifndef CONFIG_HIP_RVS
-	/* If rvs is not in use, pass NULL to hip_xmit_r1() as rvs_addresses. */
-	struct in6_addr *rvs_addresses = NULL;
-#endif
-	struct in6_addr *dst, *dstip;
-	int via_rvs_count = 0;
-	dst = &i1->hits;
-	dstip = NULL;
-
-	/* Debug stuff. */
 	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
 	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
-	struct in6_addr rvs_ipv6;
-	convert_string_to_address("2001:0072:8745:9ad4:2fb5:67ea:85c7:4799", &rvs_ipv6);
-	hip_hit_t rvs_hit = (hip_hit_t)rvs_ipv6;
-	hip_ha_t *rvs_ha_entry = hip_hadb_find_byhits( &i1->hitr, &rvs_hit);
-	if(rvs_ha_entry)
-	{
-		int foo;
-		HIP_DEBUG("RVS ha entry found.\n");
-		HIP_HEXDUMP("rvs_ha_entry->hmac_out.key:", rvs_ha_entry->hip_hmac_out.key,
-			    HIP_MAX_KEY_LEN);
-		HIP_HEXDUMP("rvs_ha_entry->hmac_in.key:", rvs_ha_entry->hip_hmac_in.key,
-			    HIP_MAX_KEY_LEN);
-		foo = hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out);
-		HIP_DEBUG("foo after hmac_out verification: %d.\n", foo);
-		foo = hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_in);
-		HIP_DEBUG("foo after hmac_in verification: %d.\n", foo);
-	}
-	else
-	{
-		HIP_DEBUG("RVS ha entry NOT found.\n");
-	}
+	HIP_DUMP_MSG(i1);
 
-	/* End of debug stuff. */
+	int err = 0, via_rvs_count = 0;
+	struct in6_addr *dstip = NULL, *rvs_addresses = NULL;
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -2399,23 +2383,40 @@ int hip_handle_i1(struct hip_common *i1,
 	   3. FROM parameter was not found. */
 	
 	/* Check if the incoming I1 packet has a FROM parameter. */
-	from = hip_get_param(i1, HIP_PARAM_FROM);
+	struct hip_from *from = hip_get_param(i1, HIP_PARAM_FROM);
 	if (from) {
 
-		/* If there's a FROM parameter present, there must be a RVS_HMAC
-		   parameter present also. */
-
-		/* verify HMAC */
-		
-		/* MIIKA: This won't compile. */ 
-		//HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &entry->hip_hmac_in), -ENOENT,
-		// "HMAC validation on i2 failed\n");
-		
-		/* MIIKA: Neither will this... */ 
-		//goto out_err;
-		
 		/* Case 1. */
 		HIP_DEBUG("Found FROM parameter in I1.\n");
+
+		/* If there's a FROM parameter present, there must be a RVS_HMAC
+		   parameter present also. This HMAC must be verified first. 
+		   However, the relayed I1 packet has the initiators HIT as
+		   source HIT, and the responder HIT as destination HIT. We
+		   would like to verify the HMAC againts the host association
+		   that was created when the responder registered to the rvs.
+		   That particular host association has the responders HIT as
+		   source HIT and the rvs' HIT as destination HIT. Let's get
+		   that host association. */
+
+		/* Debug stuff. */
+		struct in6_addr rvs_ipv6;
+		convert_string_to_address(
+			"2001:0072:8745:9ad4:2fb5:67ea:85c7:4799", &rvs_ipv6);
+		hip_hit_t rvs_hit = (hip_hit_t)rvs_ipv6;
+		hip_ha_t *rvs_ha_entry = NULL;
+
+		HIP_IFEL((rvs_ha_entry = hip_hadb_find_byhits(&i1->hitr, &rvs_hit)) == NULL,
+			 -1, "A matching host association was not found for "\
+			 "responder HIT / RVS HIT.");
+		
+		HIP_DEBUG("RVS ha entry found.\n");
+		
+		HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
+			 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
+			 
+		/* End of debug stuff. */
+
 		/* First FROM parameter has the destination IP (Initiator). */
 		dstip = (struct in6_addr *)&from->address;
 		if (entry) {
@@ -2428,47 +2429,35 @@ int hip_handle_i1(struct hip_common *i1,
 			   We need the RVS's IP in double-jump case. */
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, dst, 0, 0, PEER_ADDR_STATE_ACTIVE);
+			hip_hadb_add_peer_addr(entry, &i1->hits, 0, 0, PEER_ADDR_STATE_ACTIVE);
 		}
 		else {
-			/* MIIKA: After registration has been succesfully completed and the
-			   responder receives a relayed I1 packet, this entry is NULL. In which 
-			   point should be this entry stored? And what entry am I looking for here?
-			   This entry is fethced from the hadb at hip_receive_control_packet()
-			   with msg->hits and msg->hitr. Whose hits are these?
-
-			   I cannot check the validity of RVS_HMAC unless a matching entry is found..
-			   Also check the previous comment starting at line 2468 (not my comment).
-			   Is this somehow related?
-			*/
 			HIP_DEBUG("Entry was NULL.\n");
 		}
 		
 		/* Check if there are multiple FROM parameters. Rest of the FROM
 		   parameters have the IP addresses of the traversed RVSes. */
 		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
-		while ((current_param = hip_get_next_param(i1, current_param)) != NULL){
+		while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
 			if(ntohs(current_param->type) == HIP_PARAM_FROM){
 				/* Case 2. */
 				via_rvs_count++;
 				HIP_DEBUG("Found multiple FROM parameters in I1.\n");
 			}
-			else{
+			else {
 				break;
 			}
 		}
-	} else {
-		/* Case 3. */
-		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
-	}
-
-	/* Copy traversed rvsaddresses to an array. RVS addresses are
-	   the addresses in FROM parameters 2...n + source IP in the
-	   incoming I1 packet. */
-	struct in6_addr rvs_addresses[via_rvs_count + 1];
-	if(from)
-	{
-		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
+		/* Now that it is known how many FROM parameters there are, memory
+		   can be allocated for the rvs_addresses array. */
+		HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
+				   (via_rvs_count + 1) * sizeof(struct in6_addr), 0)),
+			 -ENOMEM, "Not enough memory to rvs_addresses.");
+		
+		/* Copy traversed rvsaddresses to an array. RVS addresses are
+		   the addresses in FROM parameters 2...n + source IP in the
+		   incoming I1 packet. */
+		current_param = (struct hip_tlv_common *)from;
 		int i;
 		for(i = 0; i < via_rvs_count; i++)
 		{
@@ -2482,10 +2471,20 @@ int hip_handle_i1(struct hip_common *i1,
 		memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
 		via_rvs_count++;
 	}
+	else {
+		/* Case 3. */
+		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
+	}
 #endif
+
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-			   dst, i1_info, rvs_addresses, via_rvs_count);
+			  &i1->hits, i1_info, rvs_addresses, via_rvs_count);
  out_err:
+	if(rvs_addresses)
+	{
+		HIP_FREE(rvs_addresses);
+	}
+	
 	return err;
 }
 
