@@ -30,7 +30,6 @@ if HIP_HI3
 endif
 
 if HIP_OPENDHT
- INCLUDES += -I../opendht
  hipd_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
 endif
 
