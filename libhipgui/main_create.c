@@ -77,6 +77,13 @@ int main_create_content(void)
 		gtk_widget_show(label);
 		
 		widget_set(ID_SYSTRAYMENU, w);
+		
+/*		w = gtk_message_dialog_new(NULL, GTK_DIALOG_NO_SEPARATOR | GTK_DIALOG_NO_SEPARATOR,
+		                           GTK_MESSAGE_OTHER, GTK_BUTTONS_NONE, "testi viesti\nheipä hei");
+		gtk_window_set_decorated(w, FALSE);
+		gtk_widget_show(w);
+		gtk_dialog_run(w);
+		gtk_widget_hide(w);*/
 	}
 #endif
 
