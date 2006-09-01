@@ -45,9 +45,9 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
 
 /**
  * hip_calc_cookie_idx - get an index
- * @ip_i: Initiator's IPv6 address
- * @ip_r: Responder's IPv6 address
- * @hit_i: Initiators HIT
+ * @param ip_i Initiator's IPv6 address
+ * @param ip_r Responder's IPv6 address
+ * @param hit_i Initiators HIT
  *
  * Return 0 <= x < HIP_R1TABLESIZE
  */
@@ -74,8 +74,8 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
- * @ip_i: Initiator's IPv6
- * @ip_r: Responder's IPv6
+ * @param ip_i Initiator's IPv6
+ * @param ip_r Responder's IPv6
  *
  * Comments for the if 0 code are inlined below. 
  * 
@@ -92,7 +92,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	/* Find the proper R1 table and copy the R1 message from the table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)), 
 		 NULL, "Requested source HIT no more available.\n");
 	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
 	hip_r1table = hid->r1;
@@ -134,7 +134,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
-	r1 = HIP_MALLOC(len, GFP_KERNEL);
+	/* Replaced memory allocation, Lauri Silvennoinen 02.08.2006 */
+        //r1 = HIP_MALLOC(len, GFP_KERNEL);
+	r1 = hip_msg_alloc();
 	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
 
@@ -149,9 +151,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 /**
  * hip_solve_puzzle - Solve puzzle.
- * @puzzle_or_solution: Either a pointer to hip_puzzle or hip_solution structure
- * @hdr: The incoming R1/I2 packet header.
- * @mode: Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
+ * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
+ * @param hdr The incoming R1/I2 packet header.
+ * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
  * The K and I is read from the @puzzle_or_solution. 
  *
@@ -320,10 +322,10 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 
 /**
  * hip_verify_cookie - Verify solution to the puzzle
- * @ip_i: Initiator's IPv6
- * @ip_r: Responder's IPv6
- * @hdr: Received HIP packet
- * @solution: Solution structure
+ * @param ip_i Initiator's IPv6
+ * @param ip_r Responder's IPv6
+ * @param hdr Received HIP packet
+ * @param solution Solution structure
  *
  * First we check that K and I are the same as in the puzzle we sent.
  * If not, then we check the previous ones (since the puzzle might just
@@ -341,7 +343,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	/* Find the proper R1 table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
 		 0, "Requested source HIT not (any more) available.\n");
 	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 

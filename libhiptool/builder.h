@@ -10,14 +10,13 @@
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
+#  include "protodefs.h"
 #else
 #  include "kerncompat.h"
 #  include "debug.h"
 #  include "misc.h"
+#  include "icomm.h"
 #endif
-
-#include "hip.h"
-
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
@@ -163,8 +162,11 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
-int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
-			int *type_list, int cnt, int request);
+int hip_build_param_via_rvs(struct hip_common *msg,
+			    const struct in6_addr rvs_addresses[],
+			    const int address_count);
+int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
+				      struct hip_crypto_key *key);
 
 int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
 			uint8_t max_lifetime, int *type_list, int cnt);
@@ -179,7 +181,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request);
 
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign);
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr);
 
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);

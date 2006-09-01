@@ -4,14 +4,14 @@
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
- * @cmd: command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
- * @tmpl_saddr: source IP address
- * @tmpl_daddr: dst IP address
- * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param tmpl_saddr source IP address
+ * @param tmpl_daddr dst IP address
+ * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
@@ -147,11 +147,11 @@ int hip_flush_all_sa() {
 
 /**
  * hip_xfrm_policy_delete - delete the Security Policy
- * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
+ * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
@@ -195,13 +195,13 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 /**
  * hip_xfrm_state_modify - modify the Security Association
- * @cmd: command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
- * @tmpl_saddr: source IP address
- * @tmpl_daddr: dst IP address
+ * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param tmpl_saddr source IP address
+ * @param tmpl_daddr dst IP address
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int cmd, struct in6_addr *saddr,
@@ -262,10 +262,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
-			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
-			   0,0, AF_INET6), -1);
-			   //preferred_family), -1);
+			   0, 0, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -328,10 +325,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 /**
  * hip_xfrm_state_delete - delete the Security Association
- * @peer_addr: Peer IP address
- * @spi: Security Parameter Index
+ * @param peer_addr Peer IP address
+ * @param spi Security Parameter Index
  *
- * Returns: 0 if successful
+ * @return 0 if successful
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
 			  struct in6_addr *peer_addr, __u32 spi,
@@ -568,8 +565,8 @@ void hip_delete_default_prefix_sp_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* See the comment in hip_setup_sp_prefix_pair() */
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
 	hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0, 0);
 }
@@ -582,9 +579,8 @@ int hip_setup_default_sp_prefix_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
-
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
 	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
 		-1);

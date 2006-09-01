@@ -57,8 +57,7 @@ void SHA1IMEProcessMessageBlock(SHA1IMEContext *);
  *      context: [in/out]
  *          The context to reset.
  *
- *  Returns:
- *      sha Error Code.
+ * @return  *      sha Error Code.
  *
  */
 int SHA1IMEReset(SHA1IMEContext *context)
@@ -99,8 +98,7 @@ int SHA1IMEReset(SHA1IMEContext *context)
  *      Message_Digest: [out]
  *          Where the digest is returned.
  *
- *  Returns:
- *      sha Error Code.
+ * @return  *      sha Error Code.
  *
  */
 int SHA1IMEResult( SHA1IMEContext *context,
@@ -157,8 +155,7 @@ int SHA1IMEResult( SHA1IMEContext *context,
  *      length: [in]
  *          The length of the message in message_array
  *
- *  Returns:
- *      sha Error Code.
+ * @return  *      sha Error Code.
  *
  */
 int SHA1IMEInput(    SHA1IMEContext    *context,
@@ -223,8 +220,7 @@ int SHA1IMEInput(    SHA1IMEContext    *context,
  *  Parameters:
  *      None.
  *
- *  Returns:
- *      Nothing.
+ * @return  *      Nothing.
  *
  *  Comments:
 
@@ -348,8 +344,7 @@ void SHA1IMEProcessMessageBlock(SHA1IMEContext *context)
  *          The context to pad
  *      ProcessMessageBlock: [in]
  *          The appropriate SHA*ProcessMessageBlock function
- *  Returns:
- *      Nothing.
+ * @return  *      Nothing.
  *
  */
 

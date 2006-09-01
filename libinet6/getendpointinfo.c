@@ -77,11 +77,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 #include <ctype.h>
 #include <openssl/dsa.h>
-#include <hip.h>
 
 #include "builder.h"
 #include "crypto.h"
 #include "libinet6/util.h"
+#include "icomm.h"
 
 //#include <ifaddrs.h>
 
@@ -141,7 +141,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
   socklen_t msg_len;
   in_port_t port;
   int socket_fd = 0;
-  int len = 0;
+  unsigned int len = 0;
 
   if (ep_hip->family != PF_HIP) {
     HIP_ERROR("Only HIP endpoints are supported\n");
@@ -193,7 +193,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     HIP_DEBUG("Private key found from hip_host_id\n");
     
     err = hip_private_host_id_to_hit(host_identity, &ep_hip->id.hit, 
-				     HIP_HIT_TYPE_HASH120);
+				     HIP_HIT_TYPE_HASH100);
     if (err) {
       HIP_ERROR("Failed to calculate HIT from private HI.");
       goto out_err;
@@ -206,7 +206,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
     /*Generate HIT from the public HI */
     err = hip_host_id_to_hit(host_identity, &ep_hip->id.hit, 
-			     HIP_HIT_TYPE_HASH120);
+			     HIP_HIT_TYPE_HASH100);
     
     if (err) {
       HIP_ERROR("Failed to calculate HIT from public key.");
@@ -307,7 +307,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   in_port_t port = 0;
   struct endpoint_hip *ep_hip = (struct endpoint_hip *) endpoint;
   int socket_fd = 0;
-  int msg_len = 0;
+  unsigned int msg_len = 0;
 
   HIP_DEBUG("\n");
 
@@ -558,11 +558,11 @@ void free_endpointinfo(struct endpointinfo *res)
 
 /**
  * get_localhost_endpointinfo - query endpoint info about the localhost
- * @basename: the basename for the hip/hosts file (included for easier writing
+ * @param basename the basename for the hip/hosts file (included for easier writing
  *            of unit tests)
- * @servname: the service port name (e.g. "http" or "12345")
- * @hints:    selects which type of endpoints is going to be resolved
- * @res:      the result of the query
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
  *
  * This function is for libinet6 internal purposes only. This function does
  * not resolve private identities, only public identities. The locators of
@@ -572,12 +572,12 @@ void free_endpointinfo(struct endpointinfo *res)
  *
  * Only one identity at a time can be resolved with this function. If multiple
  * identities are needed, one needs to call this function multiple times
- * with different @basename arguments and link the results together.
+ * with different basename arguments and link the results together.
  *
  * XX FIX: LOCAL RESOLVER SHOULD RESOLVE PUBLIC KEYS, NOT
  * PRIVATE. CHECK THAT IT WORKS WITH THE USER-KEY TEST PROGRAM.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int get_localhost_endpointinfo(const char *basename,
 			       const char *servname,
@@ -784,16 +784,16 @@ int get_localhost_endpointinfo(const char *basename,
 
 /**
  * get_kernel_peer_list - query kernel for list of known peers
- * @nodename:  the name of the peer to be resolved
- * @servname:  the service port name (e.g. "http" or "12345")
- * @hints:    selects which type of endpoints is going to be resolved
- * @res:       the result of the query
- * @alt_flag:  flag for an alternate query (after a file query has been done)
+ * @param nodename the name of the peer to be resolved
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
+ * @param alt_flag flag for an alternate query (after a file query has been done)
  *             This flag will add entries (if found) to an existing result
  *
  * This function is for libinet6 internal purposes only.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  *
  */
 int get_kernel_peer_list(const char *nodename, const char *servname,
@@ -1102,15 +1102,15 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
 
 /**
  * get_peer_endpointinfo - query endpoint info about a peer
- * @hostsfile: the filename where the endpoint information is stored
- * @nodename:  the name of the peer to be resolved
- * @servname:  the service port name (e.g. "http" or "12345")
- * @hints:     selects which type of endpoints is going to be resolved
- * @res:       the result of the query
+ * @param hostsfile the filename where the endpoint information is stored
+ * @param nodename the name of the peer to be resolved
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
  *
  * This function is for libinet6 internal purposes only.
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  *
  */
 int get_peer_endpointinfo(const char *hostsfile,
@@ -1163,11 +1163,11 @@ int get_peer_endpointinfo(const char *hostsfile,
     goto fallback;
   }
   
-  /* XX TODO: check and handle flags here */
+  /*! \todo check and handle flags here */
   
   HIP_ASSERT(!*res); /* Pre-loop invariable */
 
-  /* XX TODO: reverse the order of hi_str and fqdn_str in the
+  /*! \todo reverse the order of hi_str and fqdn_str in the
      /etc/hosts file? */
   
   while( getwithoutnewline(line, 500, hosts) != NULL ) {
@@ -1581,9 +1581,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
-  
-  
-  
 
   if(algo == HIP_HI_RSA)
     //modified according Laura's suggestion
@@ -1622,7 +1619,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       goto out_err;
     }
     //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1637,7 +1634,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       goto out_err;
     }
     //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
@@ -1810,7 +1807,7 @@ int get_localhost_endpoint(const char *basename,
       goto out_err;
     }
     //    err = hip_private_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_rsa_to_hit(rsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from RSA to HIT failed\n");
       goto out_err;
@@ -1825,7 +1822,7 @@ int get_localhost_endpoint(const char *basename,
       goto out_err;
     }
     //err = hip_private_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
-    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH120, &lhi->hit);
+    err = hip_public_dsa_to_hit(dsa, key_rr, HIP_HIT_TYPE_HASH100, &lhi->hit);
     if (err) {
       HIP_ERROR("Conversion from DSA to HIT failed\n");
       goto out_err;
@@ -1904,10 +1901,10 @@ int get_localhost_endpoint(const char *basename,
  * get_local_hits - Query about local HITs and add the corresponding HIs into
  * kernel database. This function is used by getaddrinfo() in getaddrinfo.c
  *
- * @servname:  the service port name (e.g. "http" or "12345")
- * @adr:       the result of the query - HITs in a linked list
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param adr the result of the query - HITs in a linked list
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  *
  */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {

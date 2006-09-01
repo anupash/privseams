@@ -22,7 +22,7 @@ extern GtkTreeIter local_top, remote_top, process_top;
 /**
 	Tell GUI to add new local HIT into list.
 
-	@param New HIT to add.
+	@param hit New HIT to add.
 */
 void gui_add_local_hit(HIT_Local *hit)
 {
@@ -223,7 +223,7 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 	Ask for new HIT from user.
 
 	@param hit Information of HIT to be accepted.
-	@param Whether in or outgoing packet.
+	@param inout Whether in or outgoing packet.
 	@return Returns 0 on add, -1 on drop.
 */
 int gui_ask_new_hit(HIT_Remote *hit, int inout)
@@ -266,7 +266,7 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	ps = gtk_entry_get_text(widget(ID_NH_URL));
 	URLCPY(hit->url, ps);
 	ps = gtk_entry_get_text(widget(ID_NH_PORT));
-	hit->port = atoi(ps);
+	URLCPY(hit->port, ps);
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
 	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
 

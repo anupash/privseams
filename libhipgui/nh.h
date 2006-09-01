@@ -15,6 +15,10 @@
 #include "events.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
@@ -25,6 +29,8 @@ int nhdlg_create_content(void);
 /* file: nh_manage.c */
 void nh_set_remote_rgroup_info(HIT_Group *);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

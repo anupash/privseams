@@ -483,12 +483,12 @@ struct hit_option * parse_hit(char * token)
  * XX FIX: rewrite for better code reuse (integrate to rsa_to_dns_key_rr)
  *
  * rsa_to_dns_key_rr - create DNS KEY RR record from host RSA key
- * @rsa:        the RSA structure from where the KEY RR record is to be created
- * @rsa_key_rr: where the resultin KEY RR is stored
+ * @param rsa the RSA structure from where the KEY RR record is to be created
+ * @param rsa_key_rr where the resultin KEY RR is stored
  *
  * Caller must free @rsa_key_rr when it is not used anymore.
  *
- * Returns: On successful operation, the length of the KEY RR buffer is
+ * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
  * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
  * and sets @rsa_key_rr to NULL.
@@ -553,12 +553,12 @@ int rsa_to_public_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
  * XX FIX: rewrite for better code reuse (integrate to dsa_to_dns_key_rr)
  *
  * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
- * @dsa:        the DSA structure from where the KEY RR record is to be created
- * @dsa_key_rr: where the resultin KEY RR is stored
+ * @param dsa the DSA structure from where the KEY RR record is to be created
+ * @param dsa_key_rr where the resultin KEY RR is stored
  *
  * Caller must free @dsa_key_rr when it is not used anymore.
  *
- * Returns: On successful operation, the length of the KEY RR buffer is
+ * @return On successful operation, the length of the KEY RR buffer is
  * returned (greater than zero) and pointer to the buffer containing
  * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
  * and sets @dsa_key_rr to NULL.
@@ -812,7 +812,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     }
 
   //verify hi => hit
-  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH120);
+  hip_host_id_to_hit(hi, &temp_hit, HIP_HIT_TYPE_HASH100);
   if(!ipv6_addr_cmp(&temp_hit, hit))
     _HIP_DEBUG("parse hi: hi-hit match\n");
   else

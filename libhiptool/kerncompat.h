@@ -18,7 +18,7 @@ typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef struct { volatile int counter; } atomic_t;
 typedef struct {
-	/* XX FIXME */
+	/** @todo Is empty. */
 } spinlock_t;
 
 #define spin_lock_init 
@@ -26,6 +26,10 @@ typedef struct {
 struct list_head {
 	struct list_head *next, *prev;
 };
+
+#ifndef IPPROTO_HIP
+#  define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
+#endif
 
 #define HIP_MALLOC(size, flags)  malloc(size)
 #define HIP_FREE(obj)            free(obj)

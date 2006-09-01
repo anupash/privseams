@@ -69,6 +69,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+
+#ifdef CONFIG_HIP_OPENDHT
+#include "dhtresolver.h"
+#endif
+
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
@@ -454,7 +459,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
     }
 #endif
 									
-  /* TODO: check return values */
+  /*! \todo check return values */
   _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
   fp = fopen(_PATH_HIP_HOSTS, "r");					
 									
@@ -1154,11 +1159,14 @@ static struct gaih gaih[] =
 
 /**
  * getaddrinfo - retrieves the info of the specified peer
- * @msg: message containing information about which unit tests to execute
+ * @param name ?
+ * @param service ?
+ * @param hints ?
+ * @param pai ?
  *
  * Process a request for the list of known peers
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
  * database is returned
  */

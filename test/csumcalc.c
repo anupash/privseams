@@ -139,7 +139,7 @@ int main(int argc,char **argv) {
    printf("illegal destination HIT address\n");
    return 1;
  }
-  /* TODO: TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
+  /*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
   hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
                         HIP_CONTROL_NONE, &hits, &hitd);
   i1.payload_len = len = (sizeof(struct hip_i1) >> 3) - 1;

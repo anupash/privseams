@@ -15,6 +15,10 @@
 #include "events.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -46,6 +50,8 @@ void tw_apply(void);
 void tw_cancel(void);
 void tw_delete(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

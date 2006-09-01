@@ -15,6 +15,10 @@
 #include "hit_db.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* STRUCTS */
@@ -58,6 +62,8 @@ int all_add_local(HIT_Remote *hit, void *p);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

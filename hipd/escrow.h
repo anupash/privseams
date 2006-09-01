@@ -4,6 +4,7 @@
 #include "hadb.h"
 #include "hashtable.h"
 #include "misc.h"
+#include "hidb.h"
 
 #define HIP_KEA_SIZE 10
 #define HIP_KEA_EP_SIZE 10
@@ -16,22 +17,19 @@ typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_REGISTERING=1,
 
 struct hip_key_escrow_association 
 {
-	struct list_head		list_hit;
+	struct list_head list_hit;
 
-	atomic_t				refcnt;
-	spinlock_t            	lock;
-
-	struct in6_addr			hit; /* if we are the server, this is client hit,
-									if we are the client, this is our own hit */
-	// TODO: Find better key. Client HIT used for now.  
+	atomic_t	 refcnt;
+	spinlock_t       lock;
+	struct in6_addr	 hit; /* if we are the server, this is client hit,
+				 if we are the client, this is our own hit */
+	/*! \todo Find better key. Client HIT used for now. */
 	//struct in6_addr       	client_hit; 
 	//struct in6_addr       	peer_hit; //? 
-	struct in6_addr			server_hit;
-	
-	uint32_t 				spi_in;//?
-	uint32_t				spi_out;//?
-	
-	hip_keastate_t			keastate;
+	struct in6_addr	server_hit;
+	uint32_t 	spi_in;//?
+	uint32_t	spi_out;//?
+	hip_keastate_t	keastate;
 };
 
 // Contains endpoint HIT and SPI
@@ -92,7 +90,7 @@ void hip_uninit_keadb(void);
 
 HIP_KEA *hip_kea_allocate(int gfpmask);
 
-// TODO: Not ready!!
+/*! \todo Not ready!! */
 HIP_KEA *hip_kea_create(struct in6_addr *hit1, int gfpmask);
 
 int hip_keadb_add_entry(HIP_KEA *kea);

@@ -14,15 +14,7 @@
 #include <sys/socket.h>
 #include "hashtable.h"
 #include "hadb.h"
-//#include "hip.h"
-//#include "list.h"
-//#include "debug.h"
 
-//struct hip_opp_pid_socket_entry {
-//pid_t pid;
-//int old_socket;
-//int new_socket;
-//}
 struct hip_opp_socket_entry {
   struct list_head     	next_entry;
   spinlock_t           	lock;
@@ -72,7 +64,7 @@ int exists_mapping(int pid, int socket)
     if(entry->pid == pid && entry->old_socket == socket)
       return 1;
     else // this should not happen
-      assert(0);
+      HIP_ASSERT(0);
   } else
     return 0;
 }
@@ -303,7 +295,7 @@ hip_opp_socket_t *hip_create_opp_entry()
   INIT_LIST_HEAD(&entry->next_entry);
   
   HIP_LOCK_SOCKET_INIT(entry);
-  atomic_set(&entry->refcnt,0);
+  atomic_set(&entry->refcnt, 0);
   HIP_UNLOCK_SOCKET_INIT(entry);
  out_err:
 	return entry;

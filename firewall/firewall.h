@@ -13,7 +13,6 @@
 #include <glib/glist.h>
 #include <string.h>
 
-#include "hip.h"
 #include "firewall_defines.h"
 #include "esp_decrypt.h"
 #include "rule_management.h"
