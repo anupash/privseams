@@ -7,25 +7,15 @@
  * groups and lists.
  */
  
-/*!
- * \defgroup ife Error handling macros
- */
+/** @defgroup ife Error handling macros */
 
-/*!
- * \defgroup params TODOs for parameters
- */
+/** @defgroup params TODOs for parameters */
 
-/*!
- * \defgroup hip_msg HIP daemon message types
- */
+/** @defgroup hip_msg HIP daemon message types */
 
-/*!
- * \defgroup hip_so HIP socket options
- */
+/** @defgroup hip_so HIP socket options */
 
-/*!
- * \defgroup libhipgui HIP GUI library
- */
+/** @defgroup libhipgui HIP GUI library */
 
 
 #endif /* _DOXYGEN_H */
