@@ -8,7 +8,7 @@
 int gethiphostbyhit(char *hit, char *ip)
 {
 
-   if(strlen(hit)!= 39) // Check if the HIT has the correct length
+   if(strlen(hit) > 40) // Check if the HIT has the correct length
     {
       printf("Incorrect HIT!\n");
       return 1;
