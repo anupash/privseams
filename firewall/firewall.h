@@ -8,15 +8,20 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <glib.h>
 #include <glib/glist.h>
 #include <string.h>
 
+#include "crypto.h"
+#include "ife.h"
+#include "state.h"
+//#include "protodefs.h"
+#include "firewall_control.h"
 #include "firewall_defines.h"
 #include "esp_decrypt.h"
 #include "rule_management.h"
-#include "firewall_control.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"

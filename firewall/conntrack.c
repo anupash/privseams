@@ -42,6 +42,14 @@ void print_esp_addr_list(struct GSList * addr_list)
   HIP_DEBUG("\n");
 }
 
+void print_tuple(const struct hip_tuple * hiptuple)
+{
+  HIP_DEBUG("tuple: src:%s dst:%s tuple dir:%d\n", 
+	    addr_to_numeric(&hiptuple->data->src_hit), 
+	    addr_to_numeric(&hiptuple->data->dst_hit), 
+	    hiptuple->tuple->direction);
+}
+
 void print_esp_tuple(const struct esp_tuple * esp_tuple)
 {
   HIP_DEBUG("esp_tuple: spi:%d new_spi:%d spi_update_id:%d tuple dir:%d ", 
@@ -53,12 +61,27 @@ void print_esp_tuple(const struct esp_tuple * esp_tuple)
 void print_esp_list()
 {
   struct _GList * list = (struct _GList *)espList;
-  HIP_DEBUG("ESP LIST: ");
+  HIP_DEBUG("ESP LIST: \n");
   while(list){
     print_esp_tuple((struct esp_tuple *) list->data);
     list = list->next;
   }
   HIP_DEBUG("\n");
+}
+
+void print_tuple_list()
+{
+  struct _GList * list = (struct _GList *)hipList;
+  HIP_DEBUG("TUPLE LIST: \n");
+  if (list) {
+  	while(list){
+    	print_tuple((struct hip_tuple *) list->data);
+    	list = list->next;
+  	}
+  	HIP_DEBUG("\n");
+  }
+  else 
+  	HIP_DEBUG("NULL\n");
 }
 
 /*------------tuple handling functions-------------*/
@@ -277,7 +300,7 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
   espList = (struct GList *) g_list_append((struct _GList *)espList, 
 					   (gpointer)esp_tuple);
   HIP_DEBUG("insert_esp_tuple:\n");
-  //print_esp_list();
+  print_esp_list();
 }
 
 
@@ -364,16 +387,24 @@ void remove_tuple(struct tuple * tuple)
  */
 void remove_connection(struct connection * connection)
 {
+  HIP_DEBUG("remove_connection: tuple list before: \n");
+  print_tuple_list();
+  
   HIP_DEBUG("remove_connection: esp list before: \n");
-  //print_esp_list();
+  print_esp_list();
+  
   if(connection)
     {
       remove_tuple(&connection->original);
       remove_tuple(&connection->reply);
       free(connection);
     } 
+  
+  HIP_DEBUG("remove_connection: tuple list after: \n");
+  print_tuple_list();
+     
   HIP_DEBUG("remove_connection: esp list after: \n");
-  //print_esp_list();
+  print_esp_list();
 }
 
 /**
@@ -1105,7 +1136,18 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
-  //set timeout UAL + MSL ++
+  //set timeout UAL + MSL ++ (?)
+	long int timeout = 20; // TODO: Should this be UAL + MSL?  
+  
+   HIP_DEBUG("handle_close\n");
+   if (tuple == NULL)
+   	return 0;
+   	
+   tuple->state = STATE_CLOSING;  
+  	//if (!timeoutChecking) 
+	//	init_timeout_checking(timeout);	
+  	//else 
+  	//	timeoutValue = timeout;  	
   return 1; 
 }
 
@@ -1116,9 +1158,16 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
  *
  * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
-int handle_close_ack()
+int handle_close_ack(const struct ip6_hdr * ip6_hdr, 
+		 const struct hip_common * common, 
+		 struct tuple * tuple)
 {
-  //set timeout UAL + 2MSL ++
+  //set timeout UAL + 2MSL ++ (?)
+  HIP_DEBUG("handle_close_ack\n");
+  if (tuple == NULL)
+   	return 0;
+   tuple->state = STATE_CLOSING;  
+   remove_connection(tuple->connection);
   return 1; //notify details not specified
 }
 
@@ -1272,8 +1321,8 @@ int filter_esp_state(const struct in6_addr * dst_addr,
 	// END_TEST
 
 	/* TODO: Decrypt contents */
-	if (esp_tuple && esp_tuple->dec_data)
-		decrypt_packet(dst_addr, esp_tuple, esp);
+	//if (esp_tuple && esp_tuple->dec_data)
+	//	decrypt_packet(dst_addr, esp_tuple, esp);
 
   // connection exists and rule is for established connection
   //if rule has options for hits, match them first

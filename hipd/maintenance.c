@@ -20,6 +20,7 @@ int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
+int hip_firewall_status = 0;
 
 /**
  * Handle packet retransmissions.
@@ -377,7 +378,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
 		}
 		hip_msg_init(msg);
 
-		err = hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW_DATA, 0);
+		err = hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0);
 		if (err)
 		{
 			HIP_ERROR("build hdr failed: %s\n", strerror(err));
@@ -417,9 +418,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
 	
 		HIP_DEBUG("Sending test msg to firewall\n");
 
-		alen = sizeof(hip_firewall_addr);                      
-		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-	           0, (struct sockaddr *)&hip_firewall_addr, alen);
+		n = hip_sendto(msg, &hip_firewall_addr);                   
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");

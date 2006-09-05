@@ -446,8 +446,8 @@ int main(int argc, char **argv)
 	  
 	  spi_temp = esp->esp_data->esp_spi;
 	   
-	  HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
-	 HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
+	  _HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
+	 _HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
 	  if(filter_esp(&ip6_hdr->ip6_dst, 
 			esp,
 			m->hook,

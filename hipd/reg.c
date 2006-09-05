@@ -38,7 +38,7 @@ int hip_services_add(int service_type)
 	HIP_DEBUG("Adding service.\n");
 	int err = 0;
 	
-	/* Check if the service is allready supported. */
+	/* Check if the service is already supported. */
 	HIP_SERVICE *tmp = hip_get_service(service_type);
 	if(tmp) {
 		HIP_ERROR("Trying to add duplicate service: %s. " \
@@ -198,8 +198,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	HIP_SERVICE *s;
 	int *a_req, *r_req;
 	count = hip_get_service_count();
-	tmp_a = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
-	tmp_r = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
+	tmp_a = HIP_MALLOC((sizeof(int) * count), 0);
+	tmp_r = HIP_MALLOC((sizeof(int) * count), 0);
 
 	HIP_DEBUG("Service request count: %d.\n", request_count);
 
@@ -225,8 +225,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	}
 	/** @todo Where is this memory freed? Should user free this
 	    memory returned as parameter? */
-	a_req = HIP_MALLOC((sizeof(int) * accept_count), GFP_KERNEL);	
-	r_req = HIP_MALLOC((sizeof(int) * reject_count), GFP_KERNEL);	
+	a_req = HIP_MALLOC((sizeof(int) * accept_count), 0);	
+	r_req = HIP_MALLOC((sizeof(int) * reject_count), 0);	
 		
 	for (i = 0; i < accept_count; i++)
 		a_req[i] = tmp_a[i];
@@ -243,6 +243,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	
 	*accepted_requests = a_req;
 	*rejected_requests = r_req;
+	
+//TODO: out_err	
 	
 	return accept_count;
 }

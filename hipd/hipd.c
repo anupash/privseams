@@ -36,7 +36,7 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-int hip_firewall_sock = 0, hip_firewall_status = 0;
+int hip_firewall_sock = 0;
 struct sockaddr_un hip_firewall_addr;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -78,6 +78,20 @@ int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
 		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
 	return n;
 }
+
+/*int hip_sendto_firewall(const struct hip_common *msg){
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_get_firewall_status()) {
+		int n = 0;
+		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
+		return n;
+	}
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}*/
 
 int main(int argc, char *argv[]) {
 	int ch;
@@ -360,14 +374,13 @@ int main(int argc, char *argv[]) {
 			
 			msg_type = hip_get_msg_type(hip_msg);
 			
-			if (msg_type == SO_HIP_FIREWALL_PING)
+			if (msg_type == HIP_FIREWALL_PING)
 			{
 				HIP_DEBUG("Received ping from firewall\n");
 				memset(hip_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hip_msg, SO_HIP_FIREWALL_PING_REPLY, 0);
+				hip_build_user_hdr(hip_msg, HIP_FIREWALL_PING_REPLY, 0);
 				alen = sizeof(hip_firewall_addr);                    
-				n = sendto(hip_firewall_sock, hip_msg, sizeof(struct hip_common),
-				           0, (struct sockaddr *) &hip_firewall_addr, alen);
+				n = hip_sendto(hip_msg, &hip_firewall_addr);
 				if (n < 0)
 				{
 					HIP_ERROR("Sendto() failed.\n");
@@ -386,7 +399,7 @@ int main(int argc, char *argv[]) {
 					hip_firewall_status = 1;
 				}
 			}
-			else if (msg_type == SO_HIP_FIREWALL_QUIT)
+			else if (msg_type == HIP_FIREWALL_QUIT)
 			{
 				HIP_DEBUG("Firewall quit.\n");
 				hip_firewall_status = 0;

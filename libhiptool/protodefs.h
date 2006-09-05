@@ -39,6 +39,17 @@
 /** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
 
+/** Firewall can ping daemon with this message. */
+#define HIP_FIREWALL_PING			75
+/** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
+#define HIP_FIREWALL_PING_REPLY			76
+/** Firewall sends this one to daemon when exiting. */
+#define HIP_FIREWALL_QUIT			77
+/** Daemon sends escrow data to firewall with this message. */
+#define HIP_ADD_ESCROW_DATA			78
+
+
+
 /* @} addtogroup hip_msg */
 
 
