@@ -4,4 +4,7 @@
  * Purpose: Prototype declaration for tracker.c
  */
 
+
 int updateHIT(char*, char*);
+
+int updateMAPS(char *, char *, char *);

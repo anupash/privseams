@@ -72,7 +72,7 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
   int j;
   for(j=0;j<get_result->values.values_len;j++) {
     if ( !strcmp(ip, get_result->values.values_val[j].bamboo_value_val) ) {
-       //printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
+       printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
        strncpy(res,get_result->values.values_val [j].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len + 1);
     }
   }
