@@ -36,6 +36,8 @@ int match_hit(struct in6_addr match_hit,
   int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
   HIP_DEBUG("match_hit: hit: %s bool: %d match: %d\n", 
 	    addr_to_numeric(&match_hit), boolean, i);
+  if (!i)
+  	HIP_DEBUG("No match\n");	    
   if(boolean)
     return i;
   else 
