@@ -62,13 +62,11 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  int n = 0;
-
-  HIP_DEBUG("hip_sendto sending phit...\n");
-
-  n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-  return n;
+  	HIP_DEBUG("hip_sendto() invoked.\n");
+	int n = 0;
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+	return n;
 }
 
 int main(int argc, char *argv[]) {
@@ -365,4 +363,3 @@ int main(int argc, char *argv[]) {
 
 	return err;
 }
-

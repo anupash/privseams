@@ -259,5 +259,4 @@ int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 
-
 #endif /* HIP_HADB_H */

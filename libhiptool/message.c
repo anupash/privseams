@@ -57,6 +57,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
+	/* TODO: Compiler warning;
+	   warning: the use of `tmpnam' is dangerous, better use `mkstemp' */
 	HIP_IFEL(!(app_name = tmpnam(NULL)), -1, "app_name\n");
 	_HIP_DEBUG("app_name: %s\n", app_name);
 	//HIP_IFEL((creat(app_name, S_IRWXO) < 0), -1, "creat\n");
@@ -181,7 +183,10 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 #endif
 
 	_HIP_DEBUG("msg total length = %d\n", total);
-
+	
+	/* TODO: Compiler warning;
+	   warning: pointer targets in passing argument 6 of 'recvfrom'
+	   differ in signedness. */
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
 				    &len)) != total), -1, "recv\n");
 

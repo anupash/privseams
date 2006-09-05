@@ -16,15 +16,7 @@
  *   hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
  *   hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
  *
- * Production quality code prints debugging stuff via syslog, testing code
- * prints interactively on stderr. This is done automatically using DEBUG
- * flag in Makefile (see logtype variable below).
- *
- * A note about the newlines: PERROR() appends always a newline after message
- * to be printed as in perror(3). In the rest of the functions, you have to
- * append a newline (as in fprinf(3)).
- *
- * TODO:
+ * TODO: 
  * - debug messages should not be compiled at all in a production release
  * - set_log{type|format}(XX_DEFAULT)
  * - locking (is it really needed?)
@@ -39,9 +31,16 @@
  * - change char * to void * in hexdump ?
  * - HIP_ASSERT()
  *
- * BUGS:
- * - XX
+ * Production quality code prints debugging stuff via syslog, testing code
+ * prints interactively on stderr. This is done automatically using DEBUG
+ * flag in Makefile (see logtype variable below).
  *
+ * A note about the newlines: PERROR() appends always a newline after message
+ * to be printed as in perror(3). In the rest of the functions, you have to
+ * append a newline (as in fprinf(3)).
+ *
+ * BUGS
+ * - XX
  */
 
 #include "debug.h"
@@ -419,18 +418,23 @@ void hip_print_lsi(const char *str, const struct in_addr *lsi)
  */
 void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
-	char dst[INET6_ADDRSTRLEN];
-
-	if (IN6_IS_ADDR_V4MAPPED(hit)) {
-		struct in_addr in_addr;
-		IPV6_TO_IPV4_MAP(hit, &in_addr);
-		hip_print_lsi(str, &in_addr);
-	} else {
-		hip_in6_ntop(hit, dst);
-		HIP_DEBUG("%s: %s\n", str, dst);
+	if(!hit) { // Null check added 27.07.2006
+		HIP_DEBUG("%s: NULL\n", str);
+		return;
 	}
-
-	return;
+	else {
+		char dst[INET6_ADDRSTRLEN];
+		
+		if (IN6_IS_ADDR_V4MAPPED(hit)) {
+			struct in_addr in_addr;
+			IPV6_TO_IPV4_MAP(hit, &in_addr);
+			hip_print_lsi(str, &in_addr);
+		} else {
+			hip_in6_ntop(hit, dst);
+			HIP_DEBUG("%s: %s\n", str, dst);
+		}
+		return;
+	}
 }
 
 void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_len)
@@ -439,4 +443,3 @@ void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_le
 	strncpy(dst, key->key, key_len);
 	HIP_DEBUG("%s: %s\n", str, dst);
 }
-
