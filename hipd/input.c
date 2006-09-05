@@ -2341,7 +2341,7 @@ int hip_handle_r2(struct hip_common *r2,
  * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
  * <ul>
  * <li>If one ore more @c FROM parameters are found, there must also be a
- * @c RVS_HMAC parameter present. This HMAC is first verified. If verification
+ * @c RVS_HMAC parameter present. This hmac is first verified. If verification
  * succeeds, the IP addresses obtained from the parameters are passed to
  * hip_xmit_r1() as an array. In hip_xmit_r1() this array is used create a
  * @c VIA_RVS parameter. If the verification fails, a negative error value is

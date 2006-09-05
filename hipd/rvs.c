@@ -403,7 +403,7 @@ void hip_rvs_remove(HIP_RVA *rva)
  * and the final RVS (n) sends @c FROM:I, @c FROM:RVS1, ... ,
  * <code>FROM:RVS(n-1)</code>.
  * 
- * @param i1        HIP packet common header with source and destination HITs.
+ * @param i1       HIP packet common header with source and destination HITs.
  * @param i1_saddr the source address from where the I1 packet was received.
  * @param i1_daddr the destination address where the I1 packet was sent to (own address).
  * @param rva      rendezvous association matching the HIT of next hop.
@@ -480,7 +480,8 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
-	   whose type value is > RVS_HMAC in the incoming I1 packet. */
+	   whose type value is greater than RVS_HMAC in the incoming I1
+	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
 	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed, &rva->hmac_our), -1,
 		 "Building of HMAC failed\n");
