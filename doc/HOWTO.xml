@@ -1034,6 +1034,12 @@ using getaddrinfo: ping, ping6, tla, svn.
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
     </para>
     <para>
+    &nbsp; With OpenDHT support, the hip daemon pushes the hostname,
+           RSA public HIT and public IP address to the OpenDHT. The resolver
+           can then look up this information automatically without DNS or manual
+           /etc/(hip)/hosts configuration.
+    </para>
+    <para>
     &nbsp; To test, just run normally conntest-server 
 	and conntest-client-gai between hosts. You would see messages 
 	from hipd and conntest showing DNS->HIT->IP lookups. Everything 

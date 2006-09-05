@@ -430,6 +430,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   char tmp_hit_str[INET6_ADDRSTRLEN], tmp_addr_str[INET6_ADDRSTRLEN];	
   struct in6_addr tmp_hit, tmp_addr;
 
+  memset(tmp_hit_str, '\0', sizeof(tmp_hit_str));
+  memset(tmp_addr_str, '\0', sizeof(tmp_addr_str));
+
   if (!gethiphostbyname(name, tmp_hit_str) 
       && !gethiphostbyhit(tmp_hit_str, tmp_addr_str)) 
     { 
