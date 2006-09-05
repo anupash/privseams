@@ -18,7 +18,7 @@ typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef struct { volatile int counter; } atomic_t;
 typedef struct {
-	/* XX FIXME */
+	/** @todo Is empty. */
 } spinlock_t;
 
 #define spin_lock_init 

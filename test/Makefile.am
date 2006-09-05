@@ -15,6 +15,9 @@ if HIP_OPPORTUNISTIC
   conntest_client_LDADD = ../libopphip/.libs/libopphip.a
   conntest_client_LDADD += ../libinet6/.libs/libinet6.a
   conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+else
+  conntest_client_LDADD = ../libinet6/.libs/libinet6.a
+  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
@@ -23,8 +26,9 @@ endif
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
- LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
- INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  conntest_client_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  INCLUDES += -I../opendht
 endif
 
 bin_PROGRAMS = conntest-client
@@ -46,7 +50,7 @@ bin_PROGRAMS += sha1ime_test
 
 #sbin_SCRIPTS = hipsetup
 
-conntest_client_SOURCES = conntest-client.c 
+conntest_client_SOURCES = conntest-client.c  conntest.c
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \

@@ -304,7 +304,8 @@ static inline void list_splice_init(struct list_head *list,
 		     prefetch(pos->member.next))
 
 /**
- * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
+ * Iterates over a list of given type safe against removal of list entry.
+ *
  * @param pos the type * to use as a loop counter.
  * @param n another type * to use as temporary storage
  * @param head the head for your list.

@@ -12,4 +12,4 @@ int opendhtgetbyname(char *,char *);
 int opendhtputhit(char *,char *);
 
 //TTL 
-#define TTL 60*4 
+#define TTL 60*2 

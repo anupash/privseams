@@ -1,3 +1,15 @@
+/** @file
+ * A header file for input.c
+ * 
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @author  Anthony D. Joseph <adj_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tobias Heer <heer_tobibox.de>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
@@ -17,9 +29,7 @@
 #include "hidb.h"
 #include "cookie.h"
 #include "output.h"
-//#include "socket.h"
 #include "pk.h"
-#include "rvs.h"
 #include "netdev.h"
 #include "beet.h"
 #if defined CONFIG_HIP_HI3
@@ -84,6 +94,26 @@ static inline const char *hip_msg_type_str(int type)
 	return str;
 }
 
+/**
+ * Checks for illegal controls
+ *
+ * Controls are given in host byte order.
+ *
+ * @param controls control value to be checked
+ * @param legal   legal control values to check @c controls against
+ * @return        1 if there are no illegal control values in @c controls,
+ *                otherwise 0.
+ */
+static inline int hip_controls_sane(u16 controls, u16 legal)
+{
+	HIP_DEBUG("hip_controls_sane() invoked.\n");
+	return ((controls & (   HIP_CONTROL_HIT_ANON
+#ifdef CONFIG_HIP_RVS
+				| HIP_CONTROL_RVS_CAPABLE //XX:FIXME
+#endif
+			 )) | legal) == legal;
+}
+
 int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
 					struct in6_addr *src_addr,
 					struct in6_addr *dst_addr,
@@ -99,6 +129,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       
 int hip_verify_packet_hmac(struct hip_common *, 
 			   struct hip_crypto_key *);
+
+int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
+
 			   
 int hip_receive_i1(struct hip_common *, 
 		   struct in6_addr *, 

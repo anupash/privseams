@@ -47,6 +47,10 @@ struct list_head addresses;
 
 time_t load_time;
 
+#ifdef CONFIG_HIP_HI3
+char *i3_config = NULL;
+#endif
+
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
@@ -58,13 +62,11 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  int n = 0;
-
-  HIP_DEBUG("hip_sendto sending phit...\n");
-
-  n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-  return n;
+  	HIP_DEBUG("hip_sendto() invoked.\n");
+	int n = 0;
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+	return n;
 }
 
 int main(int argc, char *argv[]) {
@@ -149,7 +151,9 @@ int main(int argc, char *argv[]) {
 		     HIP_DEBUG_LEVEL_INFORMATIVE,
 		     "Hipd daemon running.\n"
 		     "Starting select loop.\n");
-	for (;;) {
+	hipd_set_state(HIPD_STATE_EXEC);
+	while (hipd_get_state() != HIPD_STATE_CLOSED)
+	{
 		struct hip_work_order *hwo;
 		
 		/* prepare file descriptor sets */
@@ -352,11 +356,10 @@ int main(int argc, char *argv[]) {
 
  out_err:
 
-	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
-
 	/* free allocated resources */
 	hip_exit(err);
 
+	HIP_INFO("hipd pid=%d exiting, retval=%d\n", getpid(), err);
+
 	return err;
 }
-

@@ -67,7 +67,7 @@
       &nbsp;* ipsec-tools: setkey
     </para>
     <para>
-      &nbsp;* iptables userspace tools and IPv6 netfilter in the kernel
+      &nbsp;* ip6tables userspace tools and IPv6 netfilter in the kernel
               (for the HIP firewall only)
     </para>
     <para>
@@ -609,135 +609,154 @@ using getaddrinfo: ping, ping6, tla, svn.
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
-    <para>
-      The rendezvous server is similar to the home agent in Mobile IP. The
-      rendezvous server provides a stable IP for the responder and forwards
-      the initial I1 packet to the current location of the responder.
-      </para>
-    <para>
-      The rendezvous server is similar to the home agent in Mobile IP. The
-      rendezvous server provides a stable IP for the responder and forwards
-      the initial I1 packet to the current location of the responder.
-    </para>
-    <para>
-      Prerequisites:
-    </para>
-    <para>
-      ./configure --enable-rvs
-    </para>
-    <para>
-      The hipconf tool must support rvs option:
-    </para>
-    <para>
-      hipconf add rvs &lt;hit&gt; &lt;ip&gt;
-    </para>
-    <para>
-      For now it is best if all the hosts involved in communications have
-      the Rendezvous Mechanism option enabled. Although, for the initiator
-      this should not be a requirement. Also, you should have run the base
-      exchange once without rendezvous server to get familiar how the
-      /etc/hosts and /etc/hip/hosts are configured.
-    </para>
-    <para>
-      The participants:
-    </para>
-    <para>
-      &nbsp;I = Initiator
-    </para>
-    <para>
-      &nbsp;RVS = The Rendezvous server
-    </para>
-    <para>
-      &nbsp;R = Responder
-    </para>
-    <para>
-      The idea is that I wants to connect to R's HIT but only knows RVS's IP
-      address (and that RVS is representing R). We'll show how to use RVS
-      the native HIP example applications (although you can do it with
-      nc6 or the other conntest test applications).
-    </para>
-    <para>
-      Steps:
-    </para>
-    <para>
-      -----
-    </para>
-    <para>
-      	  1. Start and initialize HIP module in each host:
-    </para>
-    <para>
-      2. At the initiator, you must modify the "/etc/hosts" file. In the file,
-      responder's hostname must be mapped to the IP address of the rendezvous
-      server. It must not be mapped to the responder's IP address, or
-      otherwise the rendezvous server is not used at all!
-    </para>
-    <para>
-      The "/etc/hip/hosts" file should contain the hostname and HIT of the
-      responder as in the normal base exchange execution.
-    </para>
-    <para>
-      3. R has to tell the RVS that it would like to use RVS's services:
-    </para>
-    <para>
-      responder # hipconf add rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
-    </para>
-    <para>
-      This will establish a HIP SA between the rendezvous server and the responder.
-    </para>
-    <para>
-      4. Put some server listening at R:
-    </para>
-    <para>
-      responder # test/conntest-server tcp 5000
-    </para>
-    <para>
-      5. Start a connection at I:
-    </para>
-    <para>
-      initiator # test/conntest-client-gai &lt;responder-hostname&gt; tcp 5000
-    </para>
-    <para>
-      6. Type some text...
-    </para>
-    <para>
-      Notes:
-    </para>
-    <para>
-      &nbsp;* If the RVS won't relay the I1 packet, please make sure that the HIT
-      that the responder uses to register itself matches to the one the initiator
-      is connecting to. The HIT the responder chooses to register itself
-      to the RVS can be any one of the four defaults.
-    </para>
-    <para>
-      &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 
-      source and  destination IP addresses rewritten.
-    </para>
-    <para>
-      &nbsp;* No changes were  made to the REA / mm-code,  which means that, for 
-      example, the double jump scenario does not work.
-    </para>
-    <para>
-      &nbsp;* The mechanism  does not comply 100% with the RVS-00 draft.
-    </para>
-    <para>
-      &nbsp;* We don't use REA TLV in R1 (from responder to initiator). The same 
-      functionality is achieved by using the sender's IP address of 
-      the R1 packet.
-    </para>
-    <para>
-      &nbsp;* The VIA_RVS TLV is also left out, since it is meant only for 
-      diagnostic purposes, and doesn't really add anything to the
-      implementation, except for bugs. :)
-    </para>
-    <para>
-      &nbsp;* The rendezvous mechanism is not yet guaranteed to be interoperable 
-		with other implementations than HIPL
-    </para>
+  <para>
+   The rendezvous extension extends HIP and the HIP registration extension for
+   initiating communication between HIP nodes via HIP rendezvous servers. The
+   rendezvous server (RVS) serves as an initial contact point ("rendezvous
+   point") for its clients. The clients of an RVS are HIP nodes that use the HIP
+   Registration Protocol to register their HIT->IP address mappings with the RVS.
+   After this registration, other HIP nodes can initiate a base exchange using
+   the IP address of the RVS instead of the current IP address of the node they
+   attempt to contact. Essentially, the clients of an RVS become reachable at
+   the RVS' IP addresses.
+  </para>
+  <para>
+   The rendezvous server is similar to the home agent in Mobile IP. The
+   rendezvous server provides a stable IP for the responder and forwards
+   the initial I1 packet to the current location of the responder.
+  </para>
+  <para>
+   Prerequisites:
+  </para>
+  <para>
+    ./configure --enable-rvs
+  </para>
+  <para>
+   The hipconf tool must support the a) "rvs" and b) "service" options:
+  </para>
+  <para>
+   a) hipconf add rvs &lt;HIT&gt; &lt;IP&gt;
+  </para>
+  <para>
+   b) hipconf add service rvs
+  </para>
+  <para>
+   The participants:
+  </para>
+  <para>
+  I = Initiator, RVS = RendezVous Server, R = Responder
+  </para>
+  <para>
+   For now it is best if all the hosts involved in communications have the
+   rendezvous mechanism option enabled ("./configure --enable-rvs"). Although,
+   for the initiator this should not be a requirement. Also, you should have run
+   the base exchange once without rendezvous server to get familiar how the
+   "/etc/hosts" and "/etc/hip/hosts" are configured.
+  </para>
+  <para>
+   The idea is that I wants to connect to R's HIT but only knows RVS's IP
+   address (and that RVS is representing R). We'll show how to use RVS
+   the native HIP example applications (although you can do it with
+   nc6 or the other conntest test applications).
+  </para>
+  <para>
+   "/etc/hosts" and "/etc/hip/hosts" configurations:
+  </para>
+  <para>
+   INITIATOR: At the initiator, you must modify the "/etc/hosts" file. In the
+   file, responder's hostname must be mapped to the IP address of the rendezvous
+   server. It must not be mapped to the responder's IP address, or otherwise the
+   rendezvous server is not used at all! Thus in /etc/hosts you should have:
+   &lt;RVS IP&gt; &lt;RESPONDER NAME&gt;. The "/etc/hip/hosts" file should
+   contain the hostname and the HIT of the responder as in the normal base
+   exchange execution: &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. Notice
+   that there are currently four different HITs at each machine's "dummy0"
+   interface. When the responder registers to the rendezvous server, it can
+   choose any one four HITs. Please make sure that you use the same HIT here as
+   &lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
+   check which HIT is used from the messages the responders's hipdaemon prints;
+   there should be a line saying: "HIT being registered to rvs: &lt;HIT&gt;"
+  </para> 
+  <para>
+   RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
+   are left blank ("/etc/hosts" can of course contain the non-hiprelated
+   mappings). These files are left blank because the rendezvous server
+   is assumed to have no information of its clients beforehand, it just
+   offers the rendezvous service, and the responder then registers its
+   HIT->IP mapping to the rendezvous server.
+  </para>
+  <para>
+   RESPONDER: Also at the responder both files,"/etc/hosts" and 
+   "/etc/hip/hosts" are left blank ("/etc/hosts" can of course contain the
+   non-hiprelated mappings). The responder is assumed to know the IP address
+   and the HIT of the rendezvous server, but this information is given as
+   commandline parameters of "hipconf" tool.
+  </para>
+  <para>
+   Steps:
+  </para>
+  <para>
+   1. Start HIP daemon in each host: "hipd/hipd".
+  </para>
+  <para>
+   2. At the rendezvous server we have to indicate that we're willing to offer
+   rendezvous service: "tools/hipconf add service rvs".
+  </para>
+  <para>
+   3. At the responder we have to register to the rendezvous server:
+   "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
+   a HIP SA between the rendezvous server and the responder.
+  </para>
+  <para>
+   4. At the responder start a server listening for incoming connections:
+   "test/conntest-server tcp 5000"
+  </para>
+  <para>
+   5. At the initiator start a connection:
+   "test/conntest-client-gai &lt;RESPONDER-HOSTNAME&gt; tcp 5000"
+  </para>
+  <para>
+   6. At the initiator type some text and press CTRL + d. If everything works
+   ok, the typed text should be now echoed at the responder.
+  </para>
+  <para>
+    Notes:
+  </para>
+  <para>
+   The rendezvous server is only supposed to relay the I1 packet. Once the
+   I1 packet has been successfully relayed to the responder, all other traffic
+   flows directly between the initiator and the responder.
+  </para>
+  <para>
+   The implemented mechanism is simple forwarding of I1 packet with 
+   source and  destination IP addresses rewritten.
+  </para>
+  <para>
+   Drafts complied with: Host Identity Protocol (HIP) Registration Extension
+   draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
+   Extension draft-ietf-hip-rvs-05.
+  </para>
+  <para>
+   The initiator does not yet store the IP addresses received in the
+   VIA_RVS parameter encapsulated in R1 packet. This means that the double
+   jump scenario does not work.
+  </para>
+  <para>
+   Parameters used during registration: REG_INFO, REG_REQUEST, REG_RESPONSE,
+   REG_FAILED.
+  </para>
+  <para>
+   Parameters used with rendezvous service: RVS_HMAC, FROM, VIA_RVS.
+  </para>
+  <para>
+   The rendezvous mechanism is not yet guaranteed to be interoperable
+   with other implementations than HIPL.
+  </para>
   </chapter>
   <chapter>
     <title> Using HIP BOS support</title>
     <para>
-      &nbsp;* To generate a BOS packet (sent to the global multicast address
+      * To generate a BOS packet (sent to the global multicast address
       on all interfaces), use the following command:
     </para>
     <para>
@@ -776,21 +795,21 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>HIP Firewall</title>
 
+        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
+
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the user-space.  These rules must be inserted
               so that they precede any other firewall rules that might
-              concern the HIP and ESP packets. If ESP packet filtering
-              is not necessary the ip6tables rules concerning ESP
-              packets (-p 50) can be left out.</para>
+              concern the HIP (-p 253) and ESP packets (-p 50).
+              If ESP packet filtering is not necessary the ip6tables
+              rules concerning ESP packets can be left out.</para>
 
-        <para>ip6tables -A FORWARD -p 99 -j QUEUE</para>
+        <para>ip6tables -A FORWARD -p 253 -j QUEUE</para>
         <para>ip6tables -A FORWARD -p 50 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A INPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 99 -j QUEUE</para>
+        <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
-
-        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
 
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
@@ -857,10 +876,9 @@ using getaddrinfo: ping, ping6, tla, svn.
               for verifying signatures in the packets. With
               --accept_mobile option, the firewall may establish state
               for existing connection when a mobile host enters the
-              network protected by the firewall. In practice this
-              requires bringing down the previous interface and
-              bringing up a new one in the new network.</para>
-
+              network protected by the firewall. Please see the
+              corresponding section on mobility to see how mobility events
+              can be tested.</para>
 
         <para>Management interface:</para>
 
@@ -870,7 +888,7 @@ using getaddrinfo: ping, ping6, tla, svn.
               firewall/rule_management.c. Rule_management.c also
               contains functions for copying, comparing and freeing
               rules, etc. If any functions are needed outside the
-              rule_management they can be defined in the header file.</para>
+              rule_management, they can be defined in the header file.</para>
 
         <para>The argument "hook" in the rule is the Netfilter hook
               for which rule is intended. The hooks are defined in
@@ -1013,14 +1031,13 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>OpenDHT Support (Experimental!)</title>
     <para>
-    &nbsp; unpack patches/misc/hip-dht-04052006.tgz
-    </para>
-    <para>
-    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
-    the unpacked hip-dht directory
-    </para>
-    <para>
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
+    </para>
+    <para>
+    &nbsp; With OpenDHT support, the hip daemon pushes the hostname,
+           RSA public HIT and public IP address to the OpenDHT. The resolver
+           can then look up this information automatically without DNS or manual
+           /etc/(hip)/hosts configuration.
     </para>
     <para>
     &nbsp; To test, just run normally conntest-server 
@@ -1038,10 +1055,10 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>Hi3 Support (Experimental!)</title>
     <para>
-    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz
+    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz in the top directory (hipl--main--2.6)
     </para>
     <para>
-    &nbsp; make a link called "hipl--main--2.6/i3" that points to
+    &nbsp; make sure that the link "hipl--main--2.6/i3" points to
     the unpacked i3_0.3/i3 directory
     </para>
     <para>
@@ -1057,7 +1074,15 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>Using Opportunistic mode</title>
     <para>
-    &nbsp; Opportunistic mode is not compiled by default. In order to use Opportunistic mode enabled HIP, the following steps are needed:
+    &nbsp; Opportunistic mode has two benefits. First, you don't have to know
+    the HIT of the peer. This is makes HIP more suitable to "ad-hoc"
+    environments where preconfiguration of HITs is difficult. Second, the
+    opp. mode implementation allows the use of IPv4 addresses at the
+    application. This way, even IPv4-only legacy applications can benefit
+    from the security and mobility features of HIP.
+    </para>
+    <para>
+    &nbsp; Opportunistic mode is not compiled by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
     </para>
     <para>
     &nbsp; 1. Move to top level of HIPL

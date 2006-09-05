@@ -114,16 +114,16 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
 
 
 /*
- **********************************************************************
+ *
  * All the primitive functions up to this point are static, to force
  * some information hiding. The construct functions can access these
  * functions directly.
  *
- **********************************************************************
+ *
  */
 
 
-/*********************** PRIMITIVES ***************************/
+/* PRIMITIVES */
 
 /* find HA by inbound SPI */
 hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
@@ -169,18 +169,17 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
  *
- * XX TODO: find a better solution, see the text below:
+ * @todo Find a better solution, see the text below:
  * This function is needed because we index the HADB now by
  * key values calculated from <peer_hit,local_hit> pairs. Unfortunately, in
  * some functions like the ipv6 stack hooks hip_get_saddr() and
  * hip_handle_output() we just can't know the local_hit so we have to
  * improvise and just try to find some HA entry.
  *
- * NOTE: This way of finding HA entries doesn't work properly if we have 
+ * @note This way of finding HA entries doesn't work properly if we have 
  * multiple entries with the same peer_hit.
- *
- * NOTE: DON'T USE THIS FUNCTION BECAUSE IT DOES NOT DEAL PROPERLY
- * WITH MULTIPLE SOURCE HITS. PREFER hip_hadb_find_byhits FUNCTION.
+ * @note Don't use this function because it does not deal properly
+ * with multiple source hits. Prefer hip_hadb_find_byhits() function.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 {
@@ -206,7 +205,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 /**
  * hip_hadb_insert_state - Insert state to hash tables.
  *
- * *** TODO: SPI STUFF IS DEPRECATED ***
+ * @todo SPI STUFF IS DEPRECATED
  *
  * Adds @ha to either SPI or HIT hash table, or _BOTH_.
  * As a side effect updates the hastate of the @ha.
@@ -256,8 +255,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		HIP_KEA *kea;
 		kea = hip_kea_find(&ha->hit_our);
 		if (kea) {
-			/*! \todo check conditions for escrow associations here 
-			 (for now, there are none)*/
+			/** @todo Check conditions for escrow associations here 
+			    (for now, there are none). */
 			HIP_DEBUG("Escrow used for this entry: Initializing ha_state escrow fields");
 			ha->escrow_used = 1;
 			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
@@ -364,10 +363,12 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 {
+	HIP_DEBUG_HIT("hip_hadb_add_peer_info(): peer_hit is: ", peer_hit);
+	HIP_DEBUG_IN6ADDR("hip_hadb_add_peer_info(): peer_addr is: ", peer_addr);
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
-	HIP_DEBUG_HIT("!!!!!!!!!!!!!!!!!!!!!!!! add_peer_info=", peer_hit);
+
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 
@@ -388,7 +389,7 @@ int hip_add_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit, *ip;
 	int err = 0;
-	//HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
+	_HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
 	if (!hit) {
@@ -407,7 +408,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 	err = hip_hadb_add_peer_info(hit, ip);
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
-	//HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
+	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
  		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
 		goto out_err;
@@ -517,7 +518,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	return entry;
 }
 
-/************** END OF PRIMITIVE FUNCTIONS **************/
+/* END OF PRIMITIVE FUNCTIONS */
 
 /* select the preferred address within the addresses of the given SPI */
 /* selected address is copied to @addr, it is is non-NULL */
@@ -594,14 +595,14 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
  * hip_hadb_get_peer_addr_info - get infomation on the given peer IPv6 address
  * @param entry corresponding hadb entry of the peer
  * @param addr the IPv6 address for which the information is to be retrieved
- * @param spi where the outbound SPI of @addr is copied to
- * @param lifetime where the lifetime of @addr is copied to
- * @param modified_time where the time when @addr was added or updated is copied to
+ * @param spi where the outbound SPI of @c addr is copied to
+ * @param lifetime where the lifetime of @c addr is copied to
+ * @param modified_time where the time when @c addr was added or updated is copied to
  *
- * @return if @entry has the address @addr in its peer address list
- * parameters @spi, @lifetime, and @modified_time are
- * assigned if they are non-NULL and 1 is returned, else @interface_id
- * and @lifetime are not assigned a value and 0 is returned.
+ * @return if @c entry has the address @c addr in its peer address list
+ * parameters @c spi, @lifetime, and @c modified_time are
+ * assigned if they are non-NULL and 1 is returned, else @c interface_id
+ * and @c lifetime are not assigned a value and 0 is returned.
  */
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				uint32_t *spi, uint32_t *lifetime,
@@ -639,14 +640,13 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
  * hip_hadb_add_peer_addr - add a new peer IPv6 address to the entry's list of peer addresses
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
- * @param spi outbound SPI to which the @new_addr is related to
+ * @param spi outbound SPI to which the @c new_addr is related to
  * @param lifetime address lifetime of the address
  * @param state address state
  *
- * @return if @new_addr already exists, 0 is returned. If address was
+ * @return if @c new_addr already exists, 0 is returned. If address was
  * added successfully 0 is returned, else < 0.
- *
-*/
+ */
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t spi, uint32_t lifetime, int state)
 {
@@ -1706,7 +1706,7 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	return err;
 }
 
-/******************************************************************************************************/
+/* ----------------- */
 
 void hip_hadb_dump_hs_ht(void)
 {
@@ -2306,3 +2306,86 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_UNLOCK_HT(&hadb_hit);
 	return fail;
 }
+
+
+/** Enumeration for hip_count_open_connections */
+int hip_count_one_entry(hip_ha_t *entry, void *cntr)
+{
+	int *counter = cntr;
+	if (entry->state == HIP_STATE_CLOSING ||
+	    entry->state == HIP_STATE_ESTABLISHED ||
+	    entry->state == HIP_STATE_FILTERING)
+	{
+		(*counter)++;
+	}
+	return 0;
+}
+
+
+/**
+ * Return number of open connections by calculating hadb entrys.
+ */
+int hip_count_open_connections(void)
+{
+	int n = 0;
+	
+	hip_for_each_ha(hip_count_one_entry, &n);
+	
+	return n;
+}
+
+#ifdef CONFIG_HIP_RVS
+
+/**
+ * Finds a rendezvous server candidate host association entry.
+ *
+ * Finds a rendezvous server candidate host association entry matching the
+ * parameter @c local_hit and @c rvs_ip. When a relayed I1 packet arrives to the
+ * responder, the packet has the initiators HIT as the source HIT, and the
+ * responder HIT as the destination HIT. The responder needs the host
+ * assosiation having RVS's HIT and the responder's HIT. This function gets that
+ * host assosiation without using the RVS's HIT as searching key.
+ *
+ * @param  local_hit a pointer to rendezvous server HIT used as searching key.
+ * @param  rvs_ip    a pointer to rendezvous server IPv6 or IPv4-in-IPv6 format
+ *                   IPv4 address  used as searching key.
+ * @return           a pointer to a matching host association or NULL if
+ *                   a matching host association was not found.
+ * @author           Miika Komu
+ * @date             31.08.2006
+ */ 
+hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
+					    hip_hit_t *rvs_ip)
+{
+	int err = 0, i;
+	hip_ha_t *this, *tmp, *result = NULL;
+
+	HIP_LOCK_HT(&hadb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("The %d list is empty? %d\n", i,
+			   list_empty(&hadb_byhit[i]));
+		list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
+			hip_hold_ha(this);
+			if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
+			    (ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
+				result = this;
+				break;
+			}
+			hip_db_put_ha(this, hip_hadb_delete_state);
+			if (err)
+				break;
+		}
+		if (err)
+			break;
+	}
+	HIP_UNLOCK_HT(&hadb_hit);
+
+ out_err:
+	if (err)
+		result = NULL;
+
+	return result;
+}
+#endif

@@ -67,6 +67,6 @@ int main(int argc,char *argv[]) {
 		exit(1);
 	}
 	
-	main_client_gai(proto, socktype, peer_name, peer_port_name);
+	main_client_gai(proto, socktype, peer_name, peer_port_name, AI_HIP);
 
 }

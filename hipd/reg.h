@@ -1,3 +1,10 @@
+/** @file
+ * A header file for reg.c
+ * 
+ * @author  Anu Markkola
+ * @date    17.08.2006
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef REG_H_
 #define REG_H_
 
@@ -11,14 +18,12 @@
 typedef enum { HIP_SERVICE_ACTIVE=0, HIP_SERVICE_INACTIVE=1 } hip_servicestate_t;
 
 struct hip_reg_service {
-	
-	struct list_head 		list;
-	
-	int	 					service_type;
-	char 					name[20];
-	hip_servicestate_t 		state;
+	struct list_head   list;
+	int	 	   service_type;
+	char 		   name[20];
+	hip_servicestate_t state;
 
-	/*! \todo Authorization data */
+	/** @todo Authorization data */
 	
 	/* accept or reject registration based on the requester hit */
 	int (*handle_registration)(struct in6_addr *hit);

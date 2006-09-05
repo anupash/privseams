@@ -1,14 +1,14 @@
-/*
- * Registration stuff for HIP.
- *
- * Authors:
- * - Anu Markkola
- *
- * Licence: GNU/GPL
+/** @file
+ * This file defines a service registration functions for the Host Identity
+ * Protocol (HIP).
+ * 
+ * @author  Anu Markkola
+ * @date    17.08.2006
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
 #include "reg.h"
 
+/** A linked list for storing the supported services. */
 static struct list_head services;
 
 void hip_init_services(void)
@@ -21,11 +21,34 @@ void hip_uninit_services(void)
 	
 }
 
+/**
+ * Adds a service to supported services list.
+ *  
+ * Adds a service to the supported services linked list @c services. Each
+ * service can be added only once. An attempt to add a duplicate service
+ * results to a negative return value and the service not being added to
+ * the list.
+ *
+ * @param service_type the service type to add.
+ * @returns       zero on success, or negative on error.
+ */ 
 int hip_services_add(int service_type)
 {
 	
-	HIP_DEBUG("Adding service");
+	HIP_DEBUG("Adding service.\n");
 	int err = 0;
+	
+	/* Check if the service is allready supported. */
+	HIP_SERVICE *tmp = hip_get_service(service_type);
+	if(tmp) {
+		HIP_ERROR("Trying to add duplicate service: %s. " \
+			  "Current service state is: %s\n", tmp->name,
+			  (tmp->state) ? "inactive" : "active");
+		err = -1;
+		goto out_err;
+	}
+	
+	
 	HIP_SERVICE *service;
 	service = HIP_MALLOC(sizeof(struct hip_reg_service), GFP_KERNEL);
 	
@@ -35,32 +58,25 @@ int hip_services_add(int service_type)
 		goto out_err;
 	}
 	
-	//service->service_type = service_type;
 	service->state = HIP_SERVICE_INACTIVE;
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
-		service->service_type = 7;
-		HIP_DEBUG("Adding escrow service");
+		service->service_type = HIP_ESCROW_SERVICE;
+		HIP_INFO("Adding escrow service.\n");
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		
-	}
-	else if (service_type == HIP_RVA_RELAY_I1) {
-		//TODO: do something about this
-		service->service_type = 1;
-		HIP_DEBUG("Adding rvs service");
-		strncpy(service->name, "HIP_RVS_SERVICE", 20); 
+	} else if (service_type == HIP_RENDEZVOUS_SERVICE) {
+		service->service_type = HIP_RENDEZVOUS_SERVICE;
+		HIP_INFO("Adding rendezvous service.\n");
+		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
-	}	
-	else {
-		HIP_DEBUG("Unknown service type");
+	} else {
+		HIP_ERROR("Unknown service type.\n");
 		err = -1;
 		free(service);
 		goto out_err;
 	}
-	
-	
-	//TODO: check that this service isn't already listed
 	
 	list_add(&service->list, &services);
 	
@@ -75,7 +91,7 @@ int hip_services_set_active(int service)
 	HIP_SERVICE *s, *tmp;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Activating service");
+			HIP_DEBUG("Activating service.\n");
 			s->state = HIP_SERVICE_ACTIVE;
 		}
 	}
@@ -86,7 +102,7 @@ int hip_services_set_inactive(int service)
 	HIP_SERVICE *s, *tmp;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Inactivating service");
+			HIP_DEBUG("Inactivating service.\n");
 			s->state = HIP_SERVICE_INACTIVE;
 		}
 	}
@@ -98,7 +114,7 @@ int hip_services_remove(int service)
 	
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
-			HIP_DEBUG("Removing service %d", service);
+			HIP_DEBUG("Removing service %d.\n", service);
 			list_del(&s->list);
 			HIP_FREE(s);
 		}
@@ -185,28 +201,30 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	tmp_a = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
 	tmp_r = HIP_MALLOC((sizeof(int) * count), GFP_KERNEL);
 
-	HIP_DEBUG("Service request count: %d", request_count);
+	HIP_DEBUG("Service request count: %d.\n", request_count);
 
 	for (i = 0; i < request_count; i++) {
 		s = hip_get_service((int)requests[i]);
 		if (s) {
 			if (s->state == HIP_SERVICE_ACTIVE) {
 				if (s->handle_registration(hit)) {	
-					HIP_DEBUG("Accepting service request %d", (int)requests[i]);	
+					HIP_DEBUG("Accepting service request %d.\n", (int)requests[i]);	
 					tmp_a[accept_count] = (int)requests[i];
 					accept_count++;
 				}
 				else {
-					HIP_DEBUG("Rejecting service request %d", (int)requests[i]);	
+					HIP_DEBUG("Rejecting service request %d.\n", (int)requests[i]);	
 					tmp_r[reject_count] = (int)requests[i];
 					reject_count++;
 				}
 			}
 			else {
-				HIP_DEBUG("Service inactive");
+				HIP_DEBUG("Service inactive.\n");
 			}
 		}
 	}
+	/** @todo Where is this memory freed? Should user free this
+	    memory returned as parameter? */
 	a_req = HIP_MALLOC((sizeof(int) * accept_count), GFP_KERNEL);	
 	r_req = HIP_MALLOC((sizeof(int) * reject_count), GFP_KERNEL);	
 		
@@ -216,9 +234,9 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 		r_req[i] = tmp_r[i];
 	
 	if ((accept_count + reject_count) != request_count)
-		HIP_ERROR("Amount of rejected and accepted services does not match the requests");
+		HIP_ERROR("Amount of rejected and accepted services does not match the requests.\n");
 	else 
-		HIP_DEBUG("Accepted %d and rejected %d service requests", accept_count, reject_count);
+		HIP_DEBUG("Accepted %d and rejected %d service requests.\n", accept_count, reject_count);
 	
 	HIP_FREE(tmp_a);
 	HIP_FREE(tmp_r);
