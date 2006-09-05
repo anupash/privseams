@@ -32,6 +32,12 @@ int opendhtgetbyhit(char *hit, char *res)
   sprintf(get_args.key,"%ld",a64l(hit));
 
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
+
+  if (get_result == NULL) {
+    printf("GET FAILED\n");
+    return 1;
+  }
+
   int j;
   for(j=0;j<get_result->values.values_len;j++) //test line
      printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
@@ -63,6 +69,11 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
 
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
+  if (get_result == NULL) {
+    printf("GET FAILED\n");
+    return 1;
+  }
+  
   if (get_result->values.values_len == 0) 
      {
        printf("Key was not found from the openDHT (%s)\n", hit);
@@ -96,6 +107,11 @@ int opendhtgetbyname(char *fqdn, char *res)
   
   get_result = opendhtget(clnt, &get_args,1); // The 1 indicated the amount of results
   
+  if (get_result == NULL) {
+    printf("GET FAILED\n");
+    return 1;
+  }
+
  if (get_result->values.values_len == 0) 
    {
      printf ("Get failed: returned %d values.\n", get_result->values.values_len);
@@ -238,7 +254,7 @@ static bamboo_get_res* opendhtget(CLIENT* clnt, bamboo_get_args *get_args, int m
     clnt_perror (clnt, "get failed");
     //exit (1);
     //Return zero length answer to the upper layer caused by time out etc..
-    get_result->values.values_len == 0;
+    get_result = NULL;
   }
   
   return get_result;
