@@ -73,16 +73,6 @@ void hip_uninit_keadb(void)
 	//TODO
 }
 
-// ?
-HIP_KEA *hip_kea_get_base_entry(void)
-{
-	/*HIP_KEA *kea = &kea_base;
-	if (kea_base == NULL)
-		return 0;
-	return 1;*/
-	return NULL;
-}
-
 // hit_our is not really needed now
 int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
 	void *server_hit_void)
@@ -152,7 +142,7 @@ HIP_KEA *hip_kea_create(struct in6_addr *hit, int gfpmask)
 	if (!kea)
 		return NULL;
 	
-	hip_hold_kea(kea); // Add reference
+	hip_keadb_hold_entry(kea); // Add reference
 	
 	ipv6_addr_copy(&kea->hit, hit);
 	kea->keastate = HIP_KEASTATE_VALID;
@@ -178,7 +168,7 @@ int hip_keadb_add_entry(HIP_KEA *kea)
 	temp = hip_ht_find(&kea_table, &kea->hit); // Adds reference
 	
 	if (temp) {
-		hip_put_kea(temp); // remove reference
+		hip_keadb_put_entry(temp); // remove reference
 		HIP_ERROR("Failed to add kea hash table entry\n");
 	} else {
 		hip_ht_add(&kea_table, kea);
@@ -323,7 +313,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	HIP_DEBUG("ep spi: %d", spi);
 	//HIP_HEXDUMP("spi: ", spi, sizeof(uint32_t));
 	
-	hip_hold_kea(kea_ep); // Add reference
+	hip_kea_hold_ep(kea_ep); // Add reference
 	
 	ipv6_addr_copy(&kea_ep->hit, hit);
 	ipv6_addr_copy(&kea_ep->ip, ip);
@@ -375,12 +365,14 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 	temp = hip_ht_find(&kea_endpoints, &kea_ep->ep_id); // Adds reference
 	
 	if (temp) {
-		hip_put_kea_ep(temp); // remove reference
+		hip_kea_put_ep(temp); // remove reference
 		HIP_ERROR("Failed to add kea endpoint hash table entry\n");
 	} else {
 		hip_ht_add(&kea_endpoints, kea_ep);
 		// set state if needed
 	}
+	
+	
 	
  out_err:
 	return err;
@@ -445,11 +437,16 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	//uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
 	uint16_t mask = 0;
 	//struct hip_own_addr_list_item *own_address_item, *tmp;
-	
+	struct hip_keys keys_tmp;
+	struct hip_keys * keys = NULL;
+	char * keys_enc = NULL;
+	char * enc_in_msg = NULL;
+	int keys_enc_len;
+	unsigned char * iv = NULL;
 	
 	hip_hadb_get_peer_addr(entry, &daddr);
 	
-	/* Start building UPDATE packet */
+	/*** Start building UPDATE packet ***/
 	
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory.\n");
@@ -475,26 +472,105 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 		 "Building of SEQ param failed\n");
 
 	
-	/* Add hip_keys */
-	HIP_DEBUG("Adding hip_keys parameter (escrow data)");
+	/*** Add hip_keys-parameter encrypted ***/
 	
-	HIP_IFEL(hip_build_param_keys(update_packet, (uint16_t)operation, 
+	HIP_DEBUG("Creating hip_keys parameter (escrow data)");
+	/* Build hip_keys parameter*/
+	HIP_IFEL(hip_build_param_keys_hdr(&keys_tmp, (uint16_t)operation, 
 		(uint16_t)ealg, addr, hit, spi, old_spi, key_len, enc), -1, 
 		 "Building of hip_keys param (escrow data) failed\n");
-	
+	HIP_IFEL(!(keys = HIP_MALLOC(hip_get_param_total_len(&keys_tmp), 0)), -1, 
+		"Memory allocation failed.\n");
+	memcpy(keys, &keys_tmp, sizeof(keys_tmp));
 	HIP_DEBUG("Built escrow data");
 	
+	/* Encrypt hip_keys */
+
+	//TODO
 	
-	/* Add HMAC */
+	
+	switch (entry->hip_transform) {
+	case HIP_HIP_AES_SHA1:
+		HIP_IFEL(hip_build_param_encrypted_aes_sha1(update_packet, (struct hip_tlv_common *)keys), 
+			 -1, "Building of param encrypted failed.\n");
+		enc_in_msg = hip_get_param(update_packet, HIP_PARAM_ENCRYPTED);
+		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+ 		iv = ((struct hip_encrypted_aes_sha1 *) enc_in_msg)->iv;
+		get_random_bytes(iv, 16);
+ 		keys_enc = enc_in_msg +
+			sizeof(struct hip_encrypted_aes_sha1);
+		break;
+	case HIP_HIP_3DES_SHA1:
+		HIP_IFEL(hip_build_param_encrypted_3des_sha1(update_packet, (struct hip_tlv_common *)keys), 
+			 -1, "Building of param encrypted failed.\n");
+		enc_in_msg = hip_get_param(update_packet, HIP_PARAM_ENCRYPTED);
+		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+ 		iv = ((struct hip_encrypted_3des_sha1 *) enc_in_msg)->iv;
+		get_random_bytes(iv, 8);
+ 		keys_enc = enc_in_msg +
+ 			sizeof(struct hip_encrypted_3des_sha1);
+		break;
+	case HIP_HIP_NULL_SHA1:
+		HIP_IFEL(hip_build_param_encrypted_null_sha1(update_packet, (struct hip_tlv_common *)keys), 
+			 -1, "Building of param encrypted failed.\n");
+		enc_in_msg = hip_get_param(update_packet, HIP_PARAM_ENCRYPTED);
+		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
+ 		iv = NULL;
+ 		keys_enc = enc_in_msg +
+ 			sizeof(struct hip_encrypted_null_sha1);
+		break;
+	default:
+ 		HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
+			 entry->hip_transform);
+	}
+
+	HIP_HEXDUMP("enc(keys)", keys_enc,
+		    hip_get_param_total_len(keys_enc));
+
+	/* Calculate the length of the host id inside the encrypted param */
+	keys_enc_len = hip_get_param_total_len(keys_enc);
+
+	/* Adjust the host id length for AES (block size 16).
+	   build_param_encrypted_aes has already taken care that there is
+	   enough padding */
+	if (entry->hip_transform == HIP_HIP_AES_SHA1) {
+		int remainder = keys_enc_len % 16;
+		if (remainder) {
+			HIP_DEBUG("Remainder %d (for AES)\n", remainder);
+			keys_enc_len += remainder;
+		}
+	}
+
+	_HIP_HEXDUMP("hostidinmsg", keys_enc,
+		    hip_get_param_total_len(keys_enc));
+	_HIP_HEXDUMP("encinmsg", enc_in_msg,
+		    hip_get_param_total_len(enc_in_msg));
+	HIP_HEXDUMP("enc key", &entry->hip_enc_out.key, HIP_MAX_KEY_LEN);
+	_HIP_HEXDUMP("IV", iv, 16); // or 8
+	//_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
+
+	HIP_IFEL(hip_crypto_encrypted(keys_enc, iv,
+				      entry->hip_transform,
+				      keys_enc_len,
+				      &entry->hip_enc_out.key,
+				      HIP_DIRECTION_ENCRYPT), -1, 
+		 "Building of param encrypted failed\n");
+
+	_HIP_HEXDUMP("encinmsg 2", enc_in_msg,
+		     hip_get_param_total_len(enc_in_msg));
+	//_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
+	
+	/*** Add HMAC ***/
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out), -1,
 		 "Building of HMAC failed\n");
 
-	/* Add SIGNATURE */
+	/*** Add SIGNATURE ***/
 	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
 	 	 "Could not sign UPDATE. Failing\n");
 
-	/* Send UPDATE */
+	
+	/*** Send UPDATE ***/
 	//hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
 
@@ -523,7 +599,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 int hip_handle_escrow_registration(struct in6_addr *hit)
 {
-	// TODO: check the limits of the registration
+	// TODO: check the authorization of the registration
 	
 	return 1;
 }

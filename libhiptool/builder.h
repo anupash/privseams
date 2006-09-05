@@ -96,7 +96,10 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 						uint16_t alg_id, struct in6_addr *addr,
 						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
 						uint16_t key_len, struct hip_crypto_key *enc);
-
+int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
@@ -131,11 +134,11 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
-				      struct hip_host_id *host_id);
+				      struct hip_tlv_common *param);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
-				      struct hip_host_id *host_id);
+				      struct hip_tlv_common *param);
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id);
+					struct hip_tlv_common *param);
 int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint);
 void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
