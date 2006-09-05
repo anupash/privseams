@@ -92,7 +92,7 @@ static void die(struct ipq_handle *h)
 
 int is_hip_packet(const struct ip6_hdr * ip6_hdr)
 {
-  if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == 99)
+  if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
     return 1;
   else
     return 0;
