@@ -30,12 +30,13 @@ int get_stateful_filtering()
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
-int match_hit(struct in6_addr match_hit, 
-	      struct in6_addr packet_hit, 
+int match_hit(struct in6_addr *match_hit, 
+	      struct in6_addr *packet_hit, 
 	      int boolean){
-  int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
-  HIP_DEBUG("match_hit: hit: %s bool: %d match: %d\n", 
-	    addr_to_numeric(&match_hit), boolean, i);
+  //int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+  int i = hip_match_hit(match_hit, packet_hit);
+  HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
+	    addr_to_numeric(match_hit), addr_to_numeric(packet_hit), boolean, i);
   if (!i)
   	HIP_DEBUG("No match\n");	    
   if(boolean)
@@ -222,40 +223,40 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
     {
       match = 1;
       rule = (struct rule *) list->data;
-      _HIP_DEBUG("   filter_hip: checking for \n");     
+      HIP_DEBUG("   filter_hip: checking for \n");     
       print_rule(rule);
 
       if(match && rule->src_hit)
 	  {
-	    _HIP_DEBUG("filter_hip: src_hit ");
-	    if(!match_hit(rule->src_hit->value, 
-			  buf->hits, 
+	    HIP_DEBUG("filter_hip: src_hit ");
+	    if(!match_hit(&rule->src_hit->value, 
+			  &buf->hits, 
 			  rule->src_hit->boolean))
 	      match = 0;	
 	    //if HIT has matched and HI defined, verify signature 
 	    if(match && rule->src_hi)
 	      {
-		_HIP_DEBUG("filter_hip: src_hi \n");
+		HIP_DEBUG("filter_hip: src_hi \n");
 		if(!match_hi(rule->src_hi, buf))
 		  match = 0;	
 	      }
 	  }
       if(match && rule->dst_hit)
 	  {
-	    _HIP_DEBUG("filter_hip: dst_hit \n");
-	    if(!match_hit(rule->dst_hit->value, 
-			  buf->hitr, 
+	    HIP_DEBUG("filter_hip: dst_hit \n");
+	    if(!match_hit(&rule->dst_hit->value, 
+			  &buf->hitr, 
 			  rule->dst_hit->boolean))
 	      match = 0;	
 	  }
       if(match && rule->type)
 	  {
-	    _HIP_DEBUG("filter_hip: type ");
+	    HIP_DEBUG("filter_hip: type ");
 	    if(!match_int(rule->type->value, 
 			  buf->type_hdr, 
 			  rule->type->boolean))
 	      match = 0;	
-	    _HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
+	    HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
 		      rule->type->value, 
 		      buf->type_hdr,
 		      rule->type->boolean,
@@ -266,7 +267,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	  {
 	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
 	      match = 0;
-	    _HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->in_if->value, 
 		      in_if, rule->in_if->boolean, match);
 	  }
@@ -276,7 +277,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 			     out_if, 
 			     rule->out_if->boolean))
 	      match = 0;
-	    _HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  }
 	
@@ -287,14 +288,14 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	      match = 0;
 	    else
 	      conntracked = 1;
-	    _HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
+	    HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
 		      rule->state->int_opt.value,
 		      rule->state->int_opt.boolean, 
 		      match);
 	  }
 	// if a match, no need to check further rules
 	if(match){
-	  _HIP_DEBUG("filter_hip: match found\n");
+	  HIP_DEBUG("filter_hip: match found\n");
 	  break;
  	}
       list = list->next;
