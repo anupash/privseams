@@ -1212,7 +1212,7 @@ void read_file(char * file_name)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
-	  original_line = (char *) malloc(strlen(line) * + sizeof(char) );
+	  original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
 	  //remove trailing new line
@@ -1327,7 +1327,7 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-GList * list_rules(int hook)
+struct GList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
   struct _GList * temp = NULL, * ret = NULL;

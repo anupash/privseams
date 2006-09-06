@@ -1320,6 +1320,8 @@ int hip_handle_escrow_parameter(hip_ha_t *entry,
 	HIP_KEA *kea; 
 	HIP_KEA_EP *ep;
 	struct in6_addr *hit, *ip;
+	int accept = 0;
+	
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_peer)), -1, 
 		"No KEA found: Could not add escrow endpoint info");
 	
@@ -1364,8 +1366,21 @@ int hip_handle_escrow_parameter(hip_ha_t *entry,
 	 	default:	
 	 		HIP_ERROR("Unknown operation type in escrow parameter %d", 
 	 			op);	 
+			accept = -1;	
 	 }
-	 	
+	
+	/* If firewall is used, the received information shuold be delivered 
+	 * to it. TODO: a better place for this? */ 	
+	if (accept == 0) {
+		// TODO: Delivering data to firewall
+	if (hip_firewall_is_alive()) {
+		HIP_DEBUG("Firewall alive!\n");
+		if (hip_firewall_add_escrow_data(entry, keys))
+			HIP_DEBUG("Sent data to firewall\n");
+	}
+	
+	}
+			
 out_err:
 	if (err)
 		HIP_DEBUG("Error while handlling escrow parameter");		

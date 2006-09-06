@@ -42,6 +42,14 @@ void print_esp_addr_list(struct GSList * addr_list)
   HIP_DEBUG("\n");
 }
 
+void print_tuple(const struct hip_tuple * hiptuple)
+{
+  HIP_DEBUG("tuple: src:%s dst:%s tuple dir:%d\n", 
+	    addr_to_numeric(&hiptuple->data->src_hit), 
+	    addr_to_numeric(&hiptuple->data->dst_hit), 
+	    hiptuple->tuple->direction);
+}
+
 void print_esp_tuple(const struct esp_tuple * esp_tuple)
 {
   HIP_DEBUG("esp_tuple: spi:%d new_spi:%d spi_update_id:%d tuple dir:%d ", 
@@ -53,12 +61,27 @@ void print_esp_tuple(const struct esp_tuple * esp_tuple)
 void print_esp_list()
 {
   struct _GList * list = (struct _GList *)espList;
-  HIP_DEBUG("ESP LIST: ");
+  HIP_DEBUG("ESP LIST: \n");
   while(list){
     print_esp_tuple((struct esp_tuple *) list->data);
     list = list->next;
   }
   HIP_DEBUG("\n");
+}
+
+void print_tuple_list()
+{
+  struct _GList * list = (struct _GList *)hipList;
+  HIP_DEBUG("TUPLE LIST: \n");
+  if (list) {
+  	while(list){
+    	print_tuple((struct hip_tuple *) list->data);
+    	list = list->next;
+  	}
+  	HIP_DEBUG("\n");
+  }
+  else 
+  	HIP_DEBUG("NULL\n");
 }
 
 /*------------tuple handling functions-------------*/
@@ -89,12 +112,33 @@ struct tuple * get_tuple_by_hip(struct hip_data * data){
 	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
 	{
 	  HIP_DEBUG("connection found, ");
-	  print_data(data);
+	  //print_data(data);
 	  return tuple->tuple;
 	}
       list = list->next;
     }
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
+  return NULL;
+}
+
+/* fetches the hip_tuple from connection table. 
+ * Returns the tuple or NULL, if not found.
+ */
+struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
+  struct _GList * list = (struct _GList *) hipList;
+  while(list)
+    {
+      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+      if(IN6_ARE_ADDR_EQUAL(src_hit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(dst_hit, &tuple->data->dst_hit))
+	{
+	  HIP_DEBUG("connection found, ");
+	  //print_data(data);
+	  return tuple->tuple;
+	}
+      list = list->next;
+    }
+  HIP_DEBUG("get_tuple_by_hits: no connection found\n");
   return NULL;
 }
 
@@ -194,8 +238,10 @@ struct esp_tuple * find_esp_tuple(const struct GSList * esp_list, uint32_t spi)
   while(list)
     {
       esp_tuple = (struct esp_tuple *) list->data;
-      if(esp_tuple->spi == spi)
-	return esp_tuple;
+      if(esp_tuple->spi == spi) {
+			HIP_DEBUG("find_esp_tuple: Found esp_tuple with spi %d\n", spi);
+			return esp_tuple;
+      }
       list = list->next;
     }
   return NULL;
@@ -245,7 +291,7 @@ void insert_new_connection(struct hip_data * data){
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
 					   (gpointer)connection->reply.hip_tuple);
   HIP_DEBUG("inserting connection ");
-  print_data(data);
+  //print_data(data);
 }
 
 void insert_esp_tuple(const struct esp_tuple * esp_tuple )
@@ -269,7 +315,7 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
     {
       if(hip_tuple->data)
 	{
-	  print_data(hip_tuple->data);
+	  //print_data(hip_tuple->data);
 	  if(hip_tuple->data->src_hi)
 	    free(hip_tuple->data->src_hi);
 	  free(hip_tuple->data);
@@ -285,7 +331,7 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
 void free_esp_tuple(struct esp_tuple * esp_tuple)
 {
   HIP_DEBUG("free_esp_tuple:\n");
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
   if(esp_tuple)
     {
       struct _GSList * list = (struct _GSList *) esp_tuple->dst_addr_list;
@@ -299,6 +345,8 @@ void free_esp_tuple(struct esp_tuple * esp_tuple)
 	  free(addr);
 	  list = (struct _GSList *) esp_tuple->dst_addr_list;
 	}
+	if (esp_tuple->dec_data)
+		free(esp_tuple->dec_data);
       free(esp_tuple);
     }
   _HIP_DEBUG("free_esp_tuple\n");
@@ -339,14 +387,22 @@ void remove_tuple(struct tuple * tuple)
  */
 void remove_connection(struct connection * connection)
 {
+  HIP_DEBUG("remove_connection: tuple list before: \n");
+  print_tuple_list();
+  
   HIP_DEBUG("remove_connection: esp list before: \n");
   print_esp_list();
+  
   if(connection)
     {
       remove_tuple(&connection->original);
       remove_tuple(&connection->reply);
       free(connection);
     } 
+  
+  HIP_DEBUG("remove_connection: tuple list after: \n");
+  print_tuple_list();
+     
   HIP_DEBUG("remove_connection: esp list after: \n");
   print_esp_list();
 }
@@ -367,9 +423,10 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi %d\n", esp_info->new_spi);
       //check that old spi is found
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
-      new_esp->spi = esp_info->new_spi;
+      new_esp->spi = ntohl(esp_info->new_spi);
       new_esp->tuple = tuple;
       new_esp->dst_addr_list = NULL;
+      new_esp->dec_data = NULL;
       
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
 	sizeof(struct hip_locator_info_addr_item);
@@ -389,7 +446,7 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
 		g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 			       (gpointer) esp_address);
 	      HIP_DEBUG("esp_tuple_from_esp_info_locator: ");
-	      print_esp_tuple(new_esp);
+	      //print_esp_tuple(new_esp);
 	      n--;
 	      if(n > 0)
 		locator_addr++;
@@ -416,8 +473,9 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
   if(esp_info)
     {
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
-      new_esp->spi = esp_info->new_spi;
+      new_esp->spi = ntohl(esp_info->new_spi);
       new_esp->tuple = tuple;
+      new_esp->dec_data = NULL;
       
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 	  
@@ -428,7 +486,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
       new_esp->dst_addr_list = (struct GSList *)g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 							       (gpointer) esp_address);
 	  HIP_DEBUG("esp_tuple_from_esp_info: ");
-	  print_esp_tuple(new_esp);
+	  //print_esp_tuple(new_esp);
     }
   return new_esp;
 }
@@ -503,7 +561,7 @@ int insert_connection_from_update(struct hip_data * data,
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
 					   (gpointer)connection->reply.hip_tuple);
   HIP_DEBUG("insert_connection_from_update ");
-  print_data(data);
+  //print_data(data);
   return 1;
 }
 
@@ -601,26 +659,54 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
 {
   struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
   struct tuple * other_dir = NULL;
-  struct esp_tuple * esp_tuple = malloc(sizeof(struct esp_tuple));
+  struct esp_tuple * esp_tuple = NULL;
+  struct GSList * other_dir_esps = NULL;
+    
+  
   HIP_DEBUG("handle_i2: ");
   spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   if(spi == NULL){
     HIP_DEBUG("handle_i2: no spi found");
     return 0;
   }
+  // TODO: clean up
+  // TEST
+	if(tuple->direction == ORIGINAL_DIR)
+	{
+	  other_dir = &tuple->connection->reply;
+	  other_dir_esps = tuple->connection->reply.esp_tuples;
+	}
+    else
+	{
+	  other_dir = &tuple->connection->original;
+	  other_dir_esps = tuple->connection->original.esp_tuples;
+	}
+  
+  esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
+  if (!esp_tuple) {
+  	esp_tuple = malloc(sizeof(struct esp_tuple));
+  	esp_tuple->spi = ntohl(spi->new_spi);
+	esp_tuple->dst_addr_list = NULL;
+  	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
+						&ip6_hdr->ip6_src, NULL);
+	esp_tuple->tuple = other_dir;
+  	esp_tuple->dec_data = NULL;
+  	other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
+  	insert_esp_tuple(esp_tuple);
+  }
+  else 
+  	HIP_DEBUG("Esp tuple already exists!\n");
+  	 
+  
+  // TEST_END
+  
   // store in tuple of other direction that will be using
   // this spi and dst address 
-  if(tuple->direction == ORIGINAL_DIR)
+  /*if(tuple->direction == ORIGINAL_DIR)
     other_dir = &tuple->connection->reply;
   else
-    other_dir = &tuple->connection->original;
-  esp_tuple->spi = spi->new_spi;
-  esp_tuple->dst_addr_list = NULL;
-  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
-						&ip6_hdr->ip6_src, NULL);
-  esp_tuple->tuple = other_dir;
-  other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
-  insert_esp_tuple(esp_tuple);
+    other_dir = &tuple->connection->original;*/
+  
   return 1;
 }
 
@@ -637,30 +723,57 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
 {
   struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
   struct tuple * other_dir = NULL;
-  struct esp_tuple * esp_tuple = malloc(sizeof(struct esp_tuple));
+  struct GSList * other_dir_esps = NULL;
+  struct esp_tuple * esp_tuple = NULL;
   int v = 1;
   spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   if(spi == NULL){
     HIP_DEBUG("handle_r2: no spi found");
     return 0;
   }
-  if(tuple->direction == ORIGINAL_DIR)
-    other_dir = &tuple->connection->reply;
-  else
-    other_dir = &tuple->connection->original;
-  esp_tuple->spi = spi->new_spi;
+  
+   // TODO: clean up
+  // TEST
+	if(tuple->direction == ORIGINAL_DIR)
+	{
+	  other_dir = &tuple->connection->reply;
+	  other_dir_esps = tuple->connection->reply.esp_tuples;
+	}
+    else
+	{
+	  other_dir = &tuple->connection->original;
+	  other_dir_esps = tuple->connection->original.esp_tuples;
+	}
+  
+  esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
+  if (!esp_tuple) {
+  	esp_tuple = malloc(sizeof(struct esp_tuple));
+  	esp_tuple->spi = ntohl(spi->new_spi);
 
-  esp_tuple->dst_addr_list = NULL;
-  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
+  	esp_tuple->dst_addr_list = NULL;
+  	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
 						&ip6_hdr->ip6_src, NULL);
 
-  esp_tuple->tuple = other_dir;
-  //add esp_tuple to list of tuples
-  other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
-  HIP_DEBUG("handle_r2: spi found %d\n", esp_tuple->spi);
-  insert_esp_tuple(esp_tuple);
-  HIP_DEBUG("handle r2, inserted spi\n");
-
+	esp_tuple->dec_data = NULL;
+ 	 esp_tuple->tuple = other_dir;
+  	//add esp_tuple to list of tuples
+  	other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
+  	HIP_DEBUG("handle_r2: spi found %d\n", esp_tuple->spi);
+  	insert_esp_tuple(esp_tuple);
+  	HIP_DEBUG("handle r2, inserted spi\n");
+  	
+  }
+  else 
+  	HIP_DEBUG("Esp tuple already exists!\n");
+  	 
+  // TEST_END
+  
+  
+  /*if(tuple->direction == ORIGINAL_DIR)
+    other_dir = &tuple->connection->reply;
+  else
+    other_dir = &tuple->connection->original;*/
+  
   return v;
 }
 
@@ -679,17 +792,17 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
   struct hip_locator_info_addr_item * locator_addr = NULL;
   int n = 0;
   HIP_DEBUG("update_esp_tuple: "); 
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
   if(esp_info && locator && seq)
     {
       HIP_DEBUG("esp_info, locator and seq, "); 
-      if(esp_info->old_spi != esp_tuple->spi || esp_info->new_spi != esp_info->old_spi)
+      if(ntohl(esp_info->old_spi) != esp_tuple->spi || ntohl(esp_info->new_spi) != ntohl(esp_info->old_spi))
 	{
 	  HIP_DEBUG("update_esp_tuple: spi no match esp_info old:%d tuple:%d locator:%d\n",
-		    esp_info->old_spi, esp_tuple->spi, esp_info->new_spi);
+		    ntohl(esp_info->old_spi), esp_tuple->spi, ntohl(esp_info->new_spi));
 	  return 0;
 	}
-      esp_tuple->new_spi = esp_info->new_spi;
+      esp_tuple->new_spi = ntohl(esp_info->new_spi);
       esp_tuple->spi_update_id = seq->update_id;
       
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
@@ -703,7 +816,7 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
       locator_addr = (void *) locator + sizeof(struct hip_locator);
 
       HIP_DEBUG("update_esp_tuple: ");
-      print_esp_tuple(esp_tuple); 
+      //print_esp_tuple(esp_tuple); 
 
       while(n > 0)
 	{
@@ -715,30 +828,30 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 	    locator_addr++;
 
 	}
-      HIP_DEBUG("new tuple: ");
-      print_esp_tuple(esp_tuple);
+      _HIP_DEBUG("new tuple: ");
+      //print_esp_tuple(esp_tuple);
     }
   else if(esp_info && seq)
     {
       HIP_DEBUG("esp_info and seq, "); 
-      if(esp_info->old_spi != esp_tuple->spi)
+      if(ntohl(esp_info->old_spi) != esp_tuple->spi)
 	{
 	  HIP_DEBUG("update_esp_tuple: esp_info spi no match esp_info:%d tuple:%d\n",
-		    esp_info->old_spi, esp_tuple->spi);
+		    ntohl(esp_info->old_spi), esp_tuple->spi);
 	  return 0;
 	}
 
-      esp_tuple->new_spi = esp_info->new_spi;
+      esp_tuple->new_spi = ntohl(esp_info->new_spi);
       esp_tuple->spi_update_id = seq->update_id;
     }
 
   else if(locator && seq)
     {
       HIP_DEBUG("locator and seq, "); 
-      if(esp_info->new_spi != esp_tuple->spi)
+      if(ntohl(esp_info->new_spi) != esp_tuple->spi)
 	{
 	  HIP_DEBUG("update_esp_tuple: esp_info spi no match esp_info:%d tuple:%d\n",
-		    esp_info->new_spi, esp_tuple->spi);
+		    ntohl(esp_info->new_spi), esp_tuple->spi);
 	  return 0;	  
 	}
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
@@ -747,7 +860,7 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 
       locator_addr = (void *) locator + sizeof(struct hip_locator);
       HIP_DEBUG("update_esp_tuple: locator addr: old tuple ");
-      print_esp_tuple(esp_tuple);
+      //print_esp_tuple(esp_tuple);
       while(n > 0)
 	{
 	  esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
@@ -759,10 +872,10 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 	}
 
       HIP_DEBUG("update_esp_tuple: locator addr: new tuple ");
-      print_esp_tuple(esp_tuple);
+      //print_esp_tuple(esp_tuple);
     }
   HIP_DEBUG("update_esp_tuple: done, ");
-  print_esp_tuple(esp_tuple);
+  //print_esp_tuple(esp_tuple);
 
   return 1;
 }
@@ -791,6 +904,9 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
   struct hip_echo_request * echo_req = NULL;
   struct hip_echo_response * echo_res = NULL;
   struct tuple * other_dir_tuple = NULL;
+  uint32_t spi_new = 0;
+  uint32_t spi_old = 0;
+  
   HIP_DEBUG("handle_update\n");
   seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
   esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
@@ -801,7 +917,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 						       HIP_PARAM_ECHO_REQUEST);
   echo_res = (struct hip_echo_response *) hip_get_param(common, HIP_PARAM_ECHO_RESPONSE);
   if(spi)
-    _HIP_DEBUG("handle_update: spi param, spi: %d \n", spi->spi);
+    _HIP_DEBUG("handle_update: spi param, spi: %d \n", ntohl(spi->spi));
   if(tuple == NULL)// attempt to create state for new connection
     {
       if(esp_info && locator && seq)
@@ -839,7 +955,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 	  struct esp_tuple * new_esp = NULL;
 	  if(esp_info->old_spi != esp_info->new_spi)//update existing
 	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, esp_info->old_spi);
+	      esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 	      if(esp_tuple == NULL)
 		{
 		  HIP_DEBUG("No suitable esp_tuple found for updating\n");
@@ -862,7 +978,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
       else if(locator && seq)
 	{
 	  HIP_DEBUG("handle_update: locator found\n");
-	  esp_tuple = find_esp_tuple(other_dir_esps, esp_info->new_spi);
+	  esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
 	  if(esp_tuple == NULL)
 	    {
 	      HIP_DEBUG("No suitable esp_tuple found for updating\n");
@@ -878,10 +994,10 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
       else if(esp_info && seq)
 	{
 	  HIP_DEBUG("handle_update: esp_info found old:%d new:%d\n",
-		    esp_info->old_spi, esp_info->new_spi);
-	  if(esp_info->old_spi != esp_info->new_spi)
+		    ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
+	  if(ntohl(esp_info->old_spi) != ntohl(esp_info->new_spi))
 	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, esp_info->old_spi);
+	      esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 	      if(esp_tuple == NULL)
 		{
 		  if(tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE)
@@ -947,8 +1063,8 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		  //is ack for changing spi?
 		  if(esp_tuple->spi_update_id == *upd_id)
 		    {
-		      esp_tuple->spi = esp_tuple->new_spi;
-		      HIP_DEBUG("handle_update: ack update id %d, updated spi: %d\n", *upd_id, esp_tuple->spi);
+		      esp_tuple->spi = ntohl(esp_tuple->new_spi);
+		      HIP_DEBUG("handle_update: ack update id %d, updated spi: %d\n", *upd_id, ntohl(esp_tuple->spi));
 		    }
 
 		  addr_list = (struct _GSList *)esp_tuple->dst_addr_list;
@@ -989,7 +1105,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		    {
 		      HIP_DEBUG("handle_update: ack update id %d,   updated: ", 
 				ack->peer_update_id);
-		      print_esp_tuple(esp_tuple);
+		      //print_esp_tuple(esp_tuple);
 		    }
 		  temp_tuple_list = temp_tuple_list->next;
 		}
@@ -1020,7 +1136,18 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
-  //set timeout UAL + MSL ++
+  //set timeout UAL + MSL ++ (?)
+	long int timeout = 20; // TODO: Should this be UAL + MSL?  
+  
+   HIP_DEBUG("handle_close\n");
+   if (tuple == NULL)
+   	return 0;
+   	
+   tuple->state = STATE_CLOSING;  
+  	//if (!timeoutChecking) 
+	//	init_timeout_checking(timeout);	
+  	//else 
+  	//	timeoutValue = timeout;  	
   return 1; 
 }
 
@@ -1031,9 +1158,16 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
  *
  * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
-int handle_close_ack()
+int handle_close_ack(const struct ip6_hdr * ip6_hdr, 
+		 const struct hip_common * common, 
+		 struct tuple * tuple)
 {
-  //set timeout UAL + 2MSL ++
+  //set timeout UAL + 2MSL ++ (?)
+  HIP_DEBUG("handle_close_ack\n");
+  if (tuple == NULL)
+   	return 0;
+   tuple->state = STATE_CLOSING;  
+   remove_connection(tuple->connection);
   return 1; //notify details not specified
 }
 
@@ -1131,7 +1265,7 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
  * connection. 
  */
 int filter_esp_state(const struct in6_addr * dst_addr, 
-		     uint32_t spi,
+		     struct hip_esp_packet * esp,
 		     const struct rule *rule)
 {
   const struct state_option * option = rule->state;
@@ -1139,6 +1273,8 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   int match = 1;
   int return_value = 0;
   struct hip_tuple * hip_tuple = NULL; 
+  struct esp_tuple *esp_tuple = NULL; //REMOVE
+  uint32_t spi = ntohl(esp->esp_data->esp_spi);
   //option refers to a new connection
   //ESP packet cannot start a connection
   HIP_DEBUG("filter_esp_state\n");
@@ -1166,13 +1302,35 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found\n",
 	    addr_to_numeric(dst_addr), spi);
 
+	// TEST
+	esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
+	if (!esp_tuple) {
+		HIP_DEBUG("Could not find corresponding esp_tuple\n");
+	}
+	else {
+		
+		HIP_DEBUG("Esp_tuple spi %d\n", esp_tuple->spi);
+		//HIP_DEBUG("Found esp_tuple: ");
+		if (esp_tuple->dec_data) {
+			HIP_DEBUG("Data is not null\n");
+			HIP_DEBUG("Key length: %d", esp_tuple->dec_data->key_len);	
+			HIP_HEXDUMP("Keyhex: ", esp_tuple->dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
+			
+		}
+	}
+	// END_TEST
+
+	/* TODO: Decrypt contents */
+	//if (esp_tuple && esp_tuple->dec_data)
+	//	decrypt_packet(dst_addr, esp_tuple, esp);
+
   // connection exists and rule is for established connection
   //if rule has options for hits, match them first
   //hits are matched with information on the tuple
   hip_tuple = tuple->hip_tuple;
   if(match && rule->src_hit)
     {
-      HIP_DEBUG("filter_esp_state: src_hit ");
+      _HIP_DEBUG("filter_esp_state: src_hit ");
       if(!match_hit(rule->src_hit->value, 
 		    hip_tuple->data->src_hit, 
 		    rule->src_hit->boolean))
@@ -1180,7 +1338,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
     }
   if(match && rule->dst_hit)
     {
-      HIP_DEBUG("filter_esp_state: dst_hit \n");
+      _HIP_DEBUG("filter_esp_state: dst_hit \n");
       if(!match_hit(rule->dst_hit->value, 
 		    hip_tuple->data->dst_hit, 
 		    rule->dst_hit->boolean))
@@ -1229,7 +1387,7 @@ int filter_state(const struct ip6_hdr * ip6_hdr,
   data = get_hip_data(buf);
   tuple = get_tuple_by_hip(data);
   HIP_DEBUG("filter_state: hip_data: ");
-  print_data(data);
+  //print_data(data);
   
   //cases where packet does not match
   if(!tuple)
@@ -1325,13 +1483,90 @@ void conntrack(const struct ip6_hdr * ip6_hdr,
 }
 
 
+int add_esp_decryption_data(const struct in6_addr * hit_s, 
+	const struct in6_addr * hit_r, 
+	const struct in6_addr * dst_addr, 
+	uint32_t spi, int dec_alg, int auth_len, int key_len, 
+	struct hip_crypto_key	* dec_key)
+{
+	int err = 0;
+	struct tuple * tuple = NULL;
+	struct esp_tuple * esp_tuple;
+	struct decryption_data * dec_data;
+
+	HIP_DEBUG("add_esp_decryption_data\n");
+	g_mutex_lock(connectionTableMutex);
+	HIP_DEBUG("add_esp_decryption_data:locked mutex\n");
+	
+	HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
+		addr_to_numeric(dst_addr), spi);
+	tuple = get_tuple_by_esp(dst_addr, spi);	
+	if (!tuple)
+		tuple = get_tuple_by_hits(hit_s, hit_r);
+	if (!tuple) {
+		HIP_DEBUG("Tuple not found!\n");
+		err = -1;
+		goto out_err;
+	}
+	esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
+	if (!esp_tuple) {
+		HIP_DEBUG("ESP tuple not found, creating new\n");
+		esp_tuple = malloc(sizeof(struct esp_tuple));
+		struct tuple * other_dir = NULL;
+  		
+  		// store in tuple of other direction that will be using
+  		// this spi and dst address 
+  		if(tuple->direction == ORIGINAL_DIR)
+    		other_dir = &tuple->connection->reply;
+		else
+    		other_dir = &tuple->connection->original;
+  		esp_tuple->spi = spi;
+  		esp_tuple->dst_addr_list = NULL;
+  		esp_tuple->dec_data = NULL;
+  		esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
+						dst_addr, NULL);
+  		esp_tuple->tuple = other_dir;
+ 		other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
+  		insert_esp_tuple(esp_tuple);
+		HIP_DEBUG("Created new esp tuple!\n");
+	}
+	if (esp_tuple != NULL) {
+		dec_data = (struct decryption_data *)malloc(sizeof(struct decryption_data));
+		if (dec_data) {
+			dec_data->auth_len = auth_len;
+			dec_data->dec_alg = dec_alg;
+			dec_data->key_len = key_len;
+			memcpy(&dec_data->dec_key, dec_key, sizeof(struct hip_crypto_key));
+			HIP_DEBUG("Found esp_tuple: ");
+			HIP_DEBUG("Key length: %d", key_len);	
+			HIP_DEBUG("Key length: %d", dec_data->key_len);	
+			HIP_HEXDUMP("Keyhex: ", dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
+			esp_tuple->dec_data = dec_data;
+			HIP_DEBUG("Added decryption data\n");
+		}
+	}
+	else {
+		HIP_DEBUG("esp_tuple is NULL!");
+		err = -1;
+		goto out_err;
+	}
+	g_mutex_unlock(connectionTableMutex);
+  	HIP_DEBUG("add_esp_decryption_data:unlocked mutex\n");
+  	return err;
+  	
+out_err:
+	g_mutex_unlock(connectionTableMutex);
+	return err;  	
+}
+
+
 //Functions for connection timeout checking
 
 gpointer check_for_timeouts(gpointer data)
 {
   while(timeoutChecking)
     {
-      _HIP_DEBUG("check_for_timeouts: waiting for %d seconds \n", 20);
+      HIP_DEBUG("check_for_timeouts: waiting for %d seconds \n", 20);
       g_usleep(20000000);
       HIP_DEBUG("check_for_timeouts: checking for timed out connections\n");
       g_mutex_lock(connectionTableMutex);
@@ -1367,22 +1602,26 @@ gpointer check_for_timeouts(gpointer data)
 */
 void init_timeout_checking(long int timeout_val)
 {
-  if(timeout_val > 0)
+	HIP_DEBUG("initializing timeout checking\n");
+	/* Mutex needs to be initialized because thread system is initialized
+	 * elsewhere */
+ 	connectionTableMutex = g_mutex_new();
+  if (timeout_val > 0)
     {
-#ifdef G_THREADS_IMPL_POSIX
-      HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
-#endif //G_THREADS_IMPL_POSIX
-#ifdef G_THREADS_IMPL_SOLARIS
-      HIP_DEBUG("init_timeout_checking: solaris thread implementation\n");
-#endif //G_THREADS_IMPL_SOLARIS
-#ifdef G_THREADS_IMPL_NONE
-      HIP_DEBUG("init_timeout_checking: no thread implementation\n");
-#endif //G_THREADS_IMPL_NONE
+	HIP_DEBUG("Timeout val = %d", timeout_val);
       timeoutValue = timeout_val;
       timeoutChecking = 1;
-      g_thread_init(NULL);
+      if (!g_thread_supported()) 
+      {
+     		g_thread_init(NULL);
+     		HIP_DEBUG("init_timeout_checking: initialized thread system\n");
+  		}
+  		else 
+  		{
+     		HIP_DEBUG("init_timeout_checking: thread system already initialized\n");
+  		}
       condition = g_cond_new();
-      connectionTableMutex = g_mutex_new();
+      
       connectionChecking = g_thread_create(check_for_timeouts, 
 					   NULL, 
 					   FALSE,

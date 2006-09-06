@@ -1443,23 +1443,23 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
+					struct hip_tlv_common *param)
 {
 	int rem, err = 0;
 	struct hip_encrypted_aes_sha1 enc;
-	int host_id_len = hip_get_param_total_len(host_id);
-	struct hip_host_id *hid = host_id;
-	char *host_id_padded = NULL;
+	int param_len = hip_get_param_total_len(param);
+	struct hip_tlv_common *common = param;
+	char *param_padded = NULL;
 
 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
 	enc.reserved = htonl(0);
@@ -1468,12 +1468,12 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 	/* copy the IV *IF* needed, and then the encrypted data */
 
 	/* AES block size must be multiple of 16 bytes */
-	rem = host_id_len % 16;
+	rem = param_len % 16;
 	if (rem) {
-		HIP_DEBUG("Adjusting host id size to AES block size\n");
+		HIP_DEBUG("Adjusting param size to AES block size\n");
 
-		host_id_padded = (char *)HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
-		if (!host_id_padded) {
+		param_padded = (char *)HIP_MALLOC(param_len + rem, GFP_KERNEL);
+		if (!param_padded) {
 			err = -ENOMEM;
 			goto out_err;
 		}
@@ -1481,23 +1481,23 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 		/* this kind of padding works against Ericsson/OpenSSL
 		   (method 4: RFC2630 method) */
 		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
-		memcpy(host_id_padded, host_id, host_id_len);
-		memset(host_id_padded + host_id_len, rem, rem);
+		memcpy(param_padded, param, param_len);
+		memset(param_padded + param_len, rem, rem);
 
-		hid = (struct hip_host_id *) host_id_padded;
-		host_id_len += rem;
+		common = (struct hip_tlv_common *) param_padded;
+		param_len += rem;
 	}
 
 	hip_calc_param_len(&enc, sizeof(enc) -
 			   sizeof(struct hip_tlv_common) +
-			   host_id_len);
+			   param_len);
 
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), hid);
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), common);
 
  out_err:
 
-	if (host_id_padded)
-		HIP_FREE(host_id_padded);
+	if (param_padded)
+		HIP_FREE(param_padded);
 		
 	return err;
 }
@@ -1710,7 +1710,8 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
 				   cnt * sizeof(uint8_t));
 	
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)), 
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
 		uint8_t val = (uint8_t)type_list[i];
@@ -1721,8 +1722,11 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)array);
-	/** @todo reference to array lost, and mem not freed -> leak. */
-	return err;
+
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;	
 }
 
 /**
@@ -1747,7 +1751,8 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
 				   cnt * sizeof(uint8_t));
 
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
 		uint8_t val = (uint8_t)type_list[i];
@@ -1756,9 +1761,11 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 
 	rreq.lifetime = lifetime;
 	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
-				      (void *)array);
-	/** @todo reference to array lost, and mem not freed -> leak. */
-	return err;
+				      (void *)array);	
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;		
 }
 
 /**
@@ -1782,7 +1789,8 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
 				   cnt * sizeof(uint8_t));
 
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
 		uint8_t val = (uint8_t)type_list[i];
@@ -1793,8 +1801,11 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	rfail.failure_type = failure_type;
 	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
 				      (void *)array);
-	/** @todo reference to array lost, and mem not freed -> leak. */
-	return err;
+	
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;		
 }			
 
 
@@ -2126,12 +2137,7 @@ int hip_build_param_locator(struct hip_common *msg,
  * @param enc encryption key
  * 
  * @return 0 on success, otherwise < 0.
- */
-/*int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
-			 struct hip_crypto_key *auth,
-			 uint32_t spi, int alg, 
-			 int already_acquired, int direction) */
-			 
+ */	 
 int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
 						uint16_t alg_id, struct in6_addr *addr,
 						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
@@ -2153,11 +2159,29 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 	keys.key_len = htons(key_len);
 	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
 	
-		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
-		//keys.acquired = already_acquired;
-		//keys.direction = direction;
-	
 	err = hip_build_param(msg, &keys);
+	return err;
+}
+
+int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc)
+{
+	int err = 0;
+
+	hip_set_param_type(keys, HIP_PARAM_KEYS);
+	hip_calc_generic_param_len(keys, sizeof(struct hip_keys), 0);
+	
+	memcpy((struct in6_addr *)keys->address, addr, 16);
+	memcpy((struct in6_addr *)keys->hit, hit, 16);		
+	keys->operation = htons(operation_id);
+	keys->alg_id = htons(alg_id);	
+	keys->spi = htonl(spi);
+	keys->spi_old = htonl(spi_old);
+	keys->key_len = htons(key_len);
+	memcpy(&keys->enc, enc, sizeof(struct hip_crypto_key));
+	
 	return err;
 }
 
@@ -2284,20 +2308,32 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 }
 #endif
 
+
+/**
+ * 
+ */
+/*int hip_build_param_encrypted(struct hip_common *msg,
+					struct hip_tlv_common *param) 
+{
+	//TODO
+	return 0;
+}*/
+
+
 /**
  * hip_build_param_encrypted_3des_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
+					struct hip_tlv_common *param)
 {
 	int err = 0;
 	struct hip_encrypted_3des_sha1 enc;
@@ -2305,13 +2341,13 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
 	hip_calc_param_len(&enc, sizeof(enc) -
 			   sizeof(struct hip_tlv_common) +
-			   hip_get_param_total_len(host_id));
+			   hip_get_param_total_len(param));
 	enc.reserved = htonl(0);
 	memset(&enc.iv, 0, 8);
 
 	/* copy the IV *IF* needed, and then the encrypted data */
 
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), param);
 
 	return err;
 }
@@ -2319,17 +2355,17 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 /**
  * hip_build_param_encrypted_null_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
- 					struct hip_host_id *host_id)
+ 					struct hip_tlv_common *param)
 {
 	int err = 0;
  	struct hip_encrypted_null_sha1 enc;
@@ -2337,12 +2373,12 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
  	hip_calc_param_len(&enc, sizeof(enc) -
  			   sizeof(struct hip_tlv_common) +
- 			   hip_get_param_total_len(host_id));
+ 			   hip_get_param_total_len(param));
  	enc.reserved = htonl(0);
 
  	/* copy the IV *IF* needed, and then the encrypted data */
 
- 	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+ 	err = hip_build_generic_param(msg, &enc, sizeof(enc), param);
 
  	return err;
 }

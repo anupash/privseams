@@ -173,6 +173,7 @@ gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
 						   GtkTreeViewColumn *column, gpointer data)
 {
 	gtk_widget_show(widget(ID_TOOLWND));
+	gtk_toggle_button_set_active(widget(ID_TB_TW), TRUE);
 }
 /* END OF FUNCTION */
 

@@ -8,5 +8,5 @@
 #          -state [!] <state> --verify_responder --accept_mobile
 # TARGET::= <ACCEPT|DROP>
 
-INPUT   -src_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -dst_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 DROP
-OUTPUT  -dst_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -src_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 DROP
+INPUT   -src_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -dst_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 --hi /etc/hip/hip_host_rsa_key_pub.pub DROP
+OUTPUT  -dst_hit 2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7 -src_hit 2001:7c:a2ff:6c4:379a:411:bd02:5375 --hi /etc/hip/hip_host_rsa_key_pub.pub DROP
