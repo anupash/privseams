@@ -463,7 +463,7 @@ struct hit_option * parse_hit(char * token)
   }
   else
     option->boolean = 1;
-  hit = numeric_to_addr(token);
+  hit = (struct in6_addr *)numeric_to_addr(token);
   if(hit == NULL)
     {
       HIP_DEBUG("parse_hit error\n");
@@ -1194,7 +1194,8 @@ void read_rules_exit(int hook){
 
 /**
  * Reads rules from file specified and parses them into rule
- * list.  
+ * list.
+ * TODO: Fix reading of empty lines (memory problems)  
  */
 void read_file(char * file_name)
 {
@@ -1327,7 +1328,7 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-struct GList * list_rules(int hook)
+struct _GList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
   struct _GList * temp = NULL, * ret = NULL;

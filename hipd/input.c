@@ -987,7 +987,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not find acceptable hip transform suite\n");
-
+	entry->hip_transform = transform_hip_suite;
+	
 	/* Select only one transform */
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_HIP_TRANSFORM,
 					   &transform_hip_suite, 1), -1, 
@@ -1208,7 +1209,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
-	entry->hip_transform = transform_hip_suite;
+	
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -1890,6 +1891,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		_HIP_DEBUG("HA entry created.");
 	}
+	entry->hip_transform = hip_tfm;
 	
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
@@ -2022,7 +2024,7 @@ int hip_handle_i2(struct hip_common *i2,
 	entry->default_spi_out = spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
-	entry->hip_transform = hip_tfm;
+	
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);
