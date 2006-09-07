@@ -1372,7 +1372,7 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
 		HIP_KEA *kea;
 		kea = hip_kea_find(&entry->hit_our);
-		if (kea)
+		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
 			kea->keastate = HIP_KEASTATE_INVALID;
 	}
 #endif /* CONFIG_HIP_ESCROW */

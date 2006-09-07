@@ -1129,8 +1129,6 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
  * the sending party wishes to close HIP association.
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
- *
- * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
 int handle_close(const struct ip6_hdr * ip6_hdr, 
 		 const struct hip_common * common, 
@@ -1155,8 +1153,6 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
  * the sending party agrees to close HIP association.
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
- *
- * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
 int handle_close_ack(const struct ip6_hdr * ip6_hdr, 
 		 const struct hip_common * common, 
