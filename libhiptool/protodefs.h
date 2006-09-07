@@ -38,6 +38,8 @@
 #define HIP_ADD_DB_HI				73
 /** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
+/** Daemon sends remote HITs in use with this message to agent. */
+#define HIP_UPDATE_HIU				75
 
 /** Firewall can ping daemon with this message. */
 #define HIP_FIREWALL_PING			75
