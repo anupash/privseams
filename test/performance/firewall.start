@@ -15,24 +15,23 @@ export PATH=.:../../firewall:$PWD/test/performance:$PWD/firewall:$PATH
 RULE_FILE=/tmp/fw.tmp
 TIMEOUT=0
 
-ACCEPT_INIT_LIST=
-DROP_INIT_LIST=2001:7c:e802:a62e:cccb:8bd2:79f2:e6d7
+ACCEPT_INIT_LIST=2001:77:9caf:f8c2:1191:29b5:583e:850
+DROP_INIT_LIST=
 
-RESP=2001:7c:a2ff:6c4:379a:411:bd02:5375
-RESP=2001:7c:a2ff:6c4:379a:411:bd02:5375
+RESP=2001:7b:7435:2a0a:3eec:68c0:66a5:ed5a
 
 rm $RULE_FILE 2>/dev/null
 
 for INIT in $ACCEPT_INIT_LIST
 do
-  echo "INPUT -src_hit $INIT -dst_hit $RESP ACCEPT" >> $RULE_FILE
-  echo "INPUT -src_hit $RESP -dst_hit $INIT ACCEPT" >> $RULE_FILE
+  echo "FORWARD -src_hit $INIT -dst_hit $RESP ACCEPT" >> $RULE_FILE
+  echo "FORWARD -src_hit $RESP -dst_hit $INIT ACCEPT" >> $RULE_FILE
 done
 
 for INIT in $DROP_INIT_LIST
 do
-  echo "INPUT -src_hit $INIT -dst_hit $RESP DROP"   >> $RULE_FILE
-  echo "INPUT -src_hit $RESP -dst_hit $INIT DROP"   >> $RULE_FILE
+  echo "FORWARD -src_hit $INIT -dst_hit $RESP DROP"   >> $RULE_FILE
+  echo "FORWARD -src_hit $RESP -dst_hit $INIT DROP"   >> $RULE_FILE
 done
 
 firewall.init
