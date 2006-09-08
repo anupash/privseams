@@ -246,25 +246,27 @@ int main(int argc, char *argv[]) {
 			HIP_DEBUG("Receiving a message on UDP from NAT "\
 				  "socket %d.\n", hip_nat_sock_udp);
 			
+			/* Data structures for storing the source and
+			   destination addresses and ports of the incoming
+			   packet. */
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
-			//int src_port = 0;
-			
+			/* Initialization of the hip_common header struct. We'll
+			   store the HIP header data here. */
 			hip_msg_init(hip_msg);
 			
+			/* Read in the values to hip_msg, saddr, daddr and
+			   pkt_info. */
         		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
 						    1, &saddr, &daddr,
 						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
-                        else
-                        {
-				err =  hip_nat_receive_udp_ctrl_msg(hip_msg,
-								    &saddr,
-								    &daddr,
-								    &pkt_info);
+			/* If the values were read in succesfully, we can do
+			   the UDP specific stuff. */
+                        else {
+				err =  hip_nat_receive_udp_control_packet(
+					hip_msg, &saddr, &daddr, &pkt_info);
                         }
-
-			
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 		  	//struct sockaddr_un app_src, app_dst;
 		  //  	struct sockaddr_storage app_src;

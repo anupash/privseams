@@ -47,15 +47,11 @@ int hip_nat_on();
 int hip_nat_off();
 int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
-int hip_nat_receive_udp_ctrl_msg(struct hip_common *, struct in6_addr *,
-				 struct in6_addr *, struct hip_stateless_info *);
-
-int hip_send_udp(struct in6_addr *local_addr,
-                  struct in6_addr *peer_addr,
-		  uint32_t src_port, uint32_t dst_port,
-                  struct hip_common* msg,
-                  hip_ha_t *entry,
-                  int retransmit);
+int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
+				       struct in6_addr *,
+				       struct hip_stateless_info *);
+int hip_nat_send_udp(struct in6_addr *, struct in6_addr *, uint32_t, uint32_t,
+		     struct hip_common*, hip_ha_t *, int);
 
 int hip_nat_keep_alive();
 int hip_handle_keep_alive(hip_ha_t *entry, void *not_used);

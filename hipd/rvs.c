@@ -75,6 +75,7 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
 HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 {
 	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
+	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;

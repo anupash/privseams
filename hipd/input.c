@@ -1850,23 +1850,23 @@ int hip_handle_i2(struct hip_common *i2,
 	 * storage and nobody uses the data in the original packet.
 	 */
 
-	/* Create state (if not previously done) */
+	/* Create host association state (if not previously done). */
 	if (!entry) {
 		int if_index;
 		struct sockaddr_storage ss_addr;
 		struct sockaddr *addr;
 		addr = (struct sockaddr*) &ss_addr;
 		/* we have no previous infomation on the peer, create
-		 * a new HIP HA */
+		   a new HIP HA */
 		HIP_DEBUG("No entry, creating new\n");
 		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 			 "Failed to create or find entry\n");
 
 		/* the rest of the code assume already locked entry,
-		 * so lock the newly created entry as well */
+		   so lock the newly created entry as well */
 		HIP_LOCK_HA(entry);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
+		/* ipv6_addr_copy(&entry->hit_our, &i2->hitr); */
 		hip_init_us(entry, &i2->hitr);
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
@@ -1876,9 +1876,16 @@ int hip_handle_i2(struct hip_common *i2,
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		/*FIXME : This is a temporary fix. Need to think on this a bit ! --Abi*/
-		//Add other info here
+		add_address_to_list(addr, if_index);
+                /* if_index = addr2ifindx(entry->local_address); */
+
+		/* If the incoming I2 packet has a source or destination port
+		   other than zero, we set "on" the NAT state of current machine
+		   (the responder) and store the source port of the incoming I2
+		   packet. This port is the NAT-P' of 
+		   [draft-schmitt-hip-nat-traversal-01] section 3.3.1. */
+		/** @todo This is a temporary fix. Need to think on this a bit.
+		    Add other info here. --Abi */
 		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
 		{
 			entry->nat = 1;
@@ -1892,8 +1899,8 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 	entry->hip_transform = hip_tfm;
 	
-	/* FIXME: the above should not be done if signature fails...
-	   or it should be cancelled */
+	/** @todo the above should not be done if signature fails...
+	    or it should be cancelled. */
 	
 	/* Store peer's public key and HIT to HA */
 	HIP_IFEL(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL,

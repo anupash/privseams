@@ -128,23 +128,48 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 	return err;
 }
 
-int hip_nat_receive_udp_ctrl_msg(struct hip_common *msg,
-				 struct in6_addr *src_addr_orig,
-				 struct in6_addr *dst_addr,
-				 struct hip_stateless_info *info)
+/**
+ * Logic specific to HIP control packets received on UDP.
+ *
+ * Does logic specific to HIP control packets received on UDP and calls
+ * hip_receive_control_packet() after the UDP specific logic.
+ * hip_receive_control_packet() is called with different IP source address
+ * depending on whether the current machine is a rendezvous server or not:
+ * 
+ * <ol>
+ * <li>If the current machine is @b NOT a rendezvous server the source address
+ * of hip_receive_control_packet() is the @c preferred_address of the matching
+ * host association.</li> 
+ * <li>If the current machine @b IS a rendezvous server the source address
+ * of hip_receive_control_packet() is the @c saddr of this function.</li>
+ * </ol>
+ *
+ * @param msg   a pointer to the received HIP control packet common header with
+ *              source and destination HITs.
+ * @param saddr a pointer to the source address from where the packet was
+ *              received.
+ * @param daddr a pointer to the destination address where to the packet was
+ *              sent to (own address).
+ * @param info  a pointer to the source and destination ports.
+ * @return      zero on success, or negative error value on error.
+ */ 
+int hip_nat_receive_udp_control_packet(struct hip_common *msg,
+				       struct in6_addr *saddr,
+				       struct in6_addr *daddr,
+				       struct hip_stateless_info *info)
 {
-        HIP_DEBUG("hip_nat_receive_udp_ctrl_msg() invoked.\n");
-	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_ctrl_msg(): source address",
-			  src_addr_orig);
-	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_ctrl_msg(): destination address",
-			  dst_addr);
+        HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
+	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_control_packet(): "\
+			  "source address", saddr);
+	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_control_packet(): "\
+			  "destination address", daddr);
 	HIP_DEBUG("Source port: %u, destination port: %u\n",
 		  info->src_port, info->dst_port);
 	HIP_DUMP_MSG(msg);
 
 	hip_ha_t *entry;
         int err = 0, type, skip_sync = 0;
-	struct in6_addr *src_addr = src_addr_orig;
+	struct in6_addr *saddr_public = saddr;
 
         type = hip_get_msg_type(msg);
         entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -157,64 +182,63 @@ int hip_nat_receive_udp_ctrl_msg(struct hip_common *msg,
 		HIP_DEBUG("entry found src port %d\n",
 			  entry->peer_udp_port);
 	}
+
 #ifndef CONFIG_HIP_RVS
-
-	/* The ip of RVS is taken to be ip of the peer while using RVS server to relay R1.
-	 * Hence have removed this part for RVS --Abi
-	 */
-
-	
+	/* The ip of RVS is taken to be ip of the peer while using RVS server
+	   to relay R1. Hence have removed this part for RVS --Abi */
 	if (entry && (type == HIP_R1 || type == HIP_R2)) {
-		/* When the responder equals to the NAT host, it can
-		   reply from the private address instead of the public
-		   address. In this case, the src_addr_orig will point to
-		   the private address, and using it for I2 will fail the
-		   puzzle indexing (I1 was sent to the public address). So,
-		   we make sure here that we're using the same dst address
-		   for the I2 as for I1. Also, this address is used for setting
-		   up the SAs: handle_r1 creates one-way SA and handle_i2 the
-		   other way; let's make sure that they are the same. */
-		src_addr = &entry->preferred_address;
+		/* When the responder equals to the NAT host, it can reply from
+		   the private address instead of the public address. In this
+		   case, the saddr will point to the private address, and using
+		   it for I2 will fail the puzzle indexing (I1 was sent to the
+		   public address). So, we make sure here that we're using the
+		   same dst address for the I2 as for I1. Also, this address is
+		   used for setting up the SAs: handle_r1 creates one-way SA and
+		   handle_i2 the other way; let's make sure that they are the
+		   same. */
+		saddr_public = &entry->preferred_address;
 	}
 #endif
-	HIP_IFEL(hip_receive_control_packet(msg,
-					    src_addr,
-					    dst_addr,
-					    info), -1,
+
+	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info), -1,
 		 "receiving of control packet failed\n");
  out_err:
-
-        return err;
+	return err;
 }
 
-
-int hip_send_udp(struct in6_addr *my_addr, 
-		 struct in6_addr *peer_addr,
-		 uint32_t src_port, uint32_t dst_port,
-		 struct hip_common* msg,
-		 hip_ha_t *entry,
-		 int retransmit)
+/**
+ * Sends a message using User Datagram Protocol (UDP).
+ *
+ * @param my_addr
+ * @param peer_addr
+ * @param src_port
+ * @param dst_port
+ * @param msg
+ * @param entry
+ * @param retransmit
+ * @return 
+ */ 
+int hip_nat_send_udp(struct in6_addr *my_addr, struct in6_addr *peer_addr,
+		     uint32_t src_port, uint32_t dst_port,
+		     struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
-
+	HIP_DEBUG("hip_nat_send_udp() invoked.\n");
+	HIP_DEBUG_IN6ADDR("my_addr:", my_addr);
+	HIP_DEBUG_IN6ADDR("peer_addr:", peer_addr);
+	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
+	
 	struct sockaddr_in src, dst;
 	struct in_addr any = {INADDR_ANY};
 	struct in6_addr local_addr;
-        int sockfd = 0, n, len = 0 , err = 0;
-	int type = 0;
-	int i = 0;
-
+        int sockfd = 0, n, len = 0 , err = 0, type = 0, i = 0;
+	
 	len = hip_get_msg_total_len(msg);
-
-	HIP_DEBUG("Sending a packet to peer using UDP\n");
-	if(my_addr)
-		HIP_DEBUG_IN6ADDR("localAddr:", my_addr);
-	if(peer_addr)
-		HIP_DEBUG_IN6ADDR("peerAddr:", peer_addr);
-	HIP_DEBUG("given src port=%d, dst port=%d\n", src_port, dst_port);
-
 	src.sin_family = AF_INET;
 
         if (my_addr) {
+		HIP_DEBUG_IN6ADDR("Random address? &local_addr", &local_addr);
+		/* Should this be IPV6_TO_IPV4_MAP(&local_addr, &src.sin_addr);
+		   What is this local_addr anyways? */
 		IPV6_TO_IPV4_MAP(&local_addr, &src.sin_addr);
 	} else {
 		IPV6_TO_IPV4_MAP(&local_addr, &any);
@@ -353,11 +377,11 @@ int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
 	//Initialize sockets
 
 //#if 0
-	n = hip_send_udp(&entry->local_address, 
-                  		&entry->preferred_address,
-                  		HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,	//Sending keepalives on 50500 !! --Abi
-                  		update_packet,
-        			entry, 0);
+	n = hip_nat_send_udp(&entry->local_address, 
+			     &entry->preferred_address,
+			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,	//Sending keepalives on 50500 !! --Abi
+			     update_packet,
+			     entry, 0);
 
 //#endif
 	//n = hip_send_update(entry, NULL, 0,0, 0 );

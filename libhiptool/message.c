@@ -201,24 +201,30 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 }
 
 /**
- * hip_read_control_msg - prepares the hip_common struct,
- * allocates memory for buffers and nested structs. Receives
- * a message from socket and fills the hip_common struct with the
- * values from this message.
+ * Prepares a @c hip_common struct based on information received from a socket.
+ * 
+ * Prepares a @c hip_common struct, allocates memory for buffers and nested
+ * structs. Receives a message from socket and fills the @c hip_common struct
+ * with the values from this message.
  *
- * @param socket socket to read from
- * @param hip_msg is returned as filled struct
- * @param read_addr flag whether the adresses should be read from the received packet
- *                  1:read addresses, 0:don't read addresses
- * @param saddr is used as return value for the sender address of the received message
- *              (if read_addr is set to 1)
- * @param daddr is used as return value for the destination address of the received message
- *              (if read_addr is set to 1)
- * @param msg_info No description.
- * @param encap_hdr_size No description.
- * @param is_ipv4 No description.
- *
- * @return -1 in case of an error, >0 otherwise.
+ * @param socket         a socket to read from.
+ * @param hip_msg        a pointer to a buffer where to put the received HIP
+ *                       common header. This is returned as filled struct.
+ * @param read_addr      a flag whether the adresses should be read from the
+ *                       received packet. <b>1</b>:read addresses,
+ *                       <b>0</b>:don't read addresses.
+ * @param saddr          a pointer to a buffer where to put the source IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param daddr          a pointer to a buffer where to put the destination IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param msg_info       a pointer to a buffer where to put the source and 
+ *                       destination ports of the received message.
+ * @param encap_hdr_size size of encapsulated header in bytes.
+ * @param is_ipv4        a boolean value to indicate whether message is received
+ *                       on IPv4.
+ * @return               -1 in case of an error, 0 otherwise.
  */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              int read_addr, struct in6_addr *saddr,
