@@ -1450,7 +1450,9 @@ int hip_handle_encrypted(hip_ha_t *entry,
 	/* Handling contents */
 	 switch (param_type) {
 	 case HIP_PARAM_KEYS:
+#ifdef CONFIG_HIP_ESCROW
 	 	HIP_IFEL(hip_handle_escrow_parameter(entry, (struct hip_keys *)enc_param), -1, "Error while handling hip_keys parameter\n");
+#endif
 	 	break;
 	 default:
 	 	HIP_IFEL(1, -EINVAL, "Unknown update paramer type in encrypted %d\n", param_type);
