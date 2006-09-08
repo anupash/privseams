@@ -64,7 +64,7 @@ typedef struct hip_key_escrow_association HIP_KEA;
 typedef struct hip_kea_endpoint HIP_KEA_EP;
 
 
-/***************************************/
+/************** ESCROW  ****************/
 
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
 	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
@@ -73,10 +73,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 int hip_handle_escrow_registration(struct in6_addr *hit);
 
-/****** KEA ****************************/
-
-
-HIP_KEA *hip_kea_get_base_entry(void);
+/************ KEA HABNDLING **************/
 
 int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
 	void *server_hit);
@@ -104,7 +101,8 @@ void hip_keadb_put_entry(void *entry);
 
 void hip_kea_set_state_registering(HIP_KEA *kea);
 
-/*********** KEA_EP ********************/
+
+/*********** KEA_EP HANDLING *************/
 
 void hip_init_kea_endpoints(void);
 void hip_uninit_kea_endpoints(void);
@@ -129,35 +127,5 @@ void hip_kea_hold_ep(void *entry);
 void hip_kea_put_ep(void *entry);
 
 
-
-/************* macros *****************/
-
-#define hip_hold_kea(entry) do { \
-	atomic_inc(&entry->refcnt); \
-    HIP_DEBUG("KEA: %p, refcnt increased to: %d\n",entry, atomic_read(&entry->refcnt)); \
-} while(0) 
-
-#define hip_put_kea(entry) do { \
-	if (atomic_dec_and_test(&entry->refcnt)) { \
-        HIP_DEBUG("KEA: %p, refcnt reached zero. Deleting...\n",entry); \
-		hip_keadb_delete_entry(entry); \
-	} else { \
-        HIP_DEBUG("KEA: %p, refcnt decremented to: %d\n", entry, atomic_read(&entry->refcnt)); \
-    } \
-} while(0) 
-
-#define hip_hold_kea_ep(entry) do { \
-	atomic_inc(&entry->refcnt); \
-    HIP_DEBUG("KEA EP: %p, refcnt increased to: %d\n",entry, atomic_read(&entry->refcnt)); \
-} while(0) 
-
-#define hip_put_kea_ep(entry) do { \
-	if (atomic_dec_and_test(&entry->refcnt)) { \
-        HIP_DEBUG("KEA EP: %p, refcnt reached zero. Deleting...\n",entry); \
-		hip_kea_delete_endpoint(entry); \
-	} else { \
-        HIP_DEBUG("KEA EP: %p, refcnt decremented to: %d\n", entry, atomic_read(&entry->refcnt)); \
-    } \
-} while(0) 
 
 #endif /*ESCROW_H_*/

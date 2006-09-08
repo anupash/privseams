@@ -34,7 +34,7 @@ int opendhtgetbyhit(char *hit, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
-    printf("GET FAILED\n");
+    //printf("Get failed\n");
     return 1;
   }
 
@@ -70,7 +70,7 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
-    printf("GET FAILED\n");
+    //printf("Get failed\n");
     return 1;
   }
   
@@ -108,7 +108,7 @@ int opendhtgetbyname(char *fqdn, char *res)
   get_result = opendhtget(clnt, &get_args,1); // The 1 indicated the amount of results
   
   if (get_result == NULL) {
-    printf("GET FAILED\n");
+    //printf("Get failed\n");
     return 1;
   }
 
@@ -139,7 +139,7 @@ int opendhtputname(char *fqdn, char *hit)
   clnt = connectDHTserver();
   if(opendhtput(clnt,fqdn,hit,TTL))
     {
-      printf("Could not put %s",hit);
+      //printf("Could not put %s",hit);
       clnt_destroy (clnt);
       return 1;
     }
@@ -177,7 +177,6 @@ static CLIENT* connectDHTserver(void)
     h = gethostbyname (host); 
   if (h == NULL) {
     printf("Could not resolve %s\n",host);
-    clnt_destroy (clnt);
     exit(1);
   }
   //Create sockaddr_in
@@ -218,8 +217,8 @@ int opendhtput(CLIENT* clnt, char* key, char* value, int ttl)
 
   put_result = bamboo_dht_proc_put_2 (&put_args, clnt);
   if (put_result == (bamboo_stat *) NULL) {
-       clnt_perror (clnt, "put failed");
-    exit (1);
+       clnt_perror (clnt, "Put failed");
+       return 1;
   }  
     return 0;
 }
@@ -251,9 +250,7 @@ static bamboo_get_res* opendhtget(CLIENT* clnt, bamboo_get_args *get_args, int m
 
   get_result = bamboo_dht_proc_get_2 (get_args, clnt);
   if (get_result == (bamboo_get_res *) NULL) {
-    clnt_perror (clnt, "get failed");
-    //exit (1);
-    //Return zero length answer to the upper layer caused by time out etc..
+    clnt_perror (clnt, "Get failed");
     get_result = NULL;
   }
   

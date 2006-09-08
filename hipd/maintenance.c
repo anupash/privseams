@@ -20,6 +20,7 @@ int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
+int hip_firewall_status = 0;
 
 /**
  * Handle packet retransmissions.
@@ -161,6 +162,77 @@ int hip_agent_add_lhits(void)
 out_err:
 	return (err);
 }
+
+
+/**
+ * Send one used remote HIT to agent, enumerative function.
+ */
+int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
+{
+	int err = 0;
+
+	if (entry->state != HIP_STATE_ESTABLISHED) return (err);
+	
+	err = hip_build_param_contents(msg, (void *)&entry->hit_peer, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+/*	err = hip_build_param_contents(msg, (void *)&entry->hit_our, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));*/
+	if (err)
+	{
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+out_err:
+	return (err);
+}
+
+
+/**
+ * Send remote HITs in use (hadb entrys) to agent.
+ */
+int hip_agent_send_remote_hits(void)
+{
+	struct hip_common *msg;
+	int err = 0, n;
+	socklen_t alen;
+
+#ifdef CONFIG_HIP_AGENT
+	msg = malloc(HIP_MAX_PACKET);
+	if (!msg)
+	{
+		HIP_ERROR("malloc failed\n");
+		goto out_err;
+	}
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
+	         "for_each_ha err.\n");
+
+	err = hip_build_user_hdr(msg, HIP_UPDATE_HIU, 0);
+	if (err)
+	{
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+	alen = sizeof(hip_agent_addr);                      
+	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
+	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+//	else HIP_DEBUG("Sendto() OK.\n");
+
+#endif
+
+out_err:
+	return (err);
+}
+
 
 /**
  * Filter packet trough agent.
@@ -306,6 +378,13 @@ int periodic_maintenance()
 		force_exit_counter--;
 	}
 	
+#ifdef CONFIG_HIP_AGENT
+	if (hip_agent_is_alive())
+	{
+		//hip_agent_send_remote_hits();
+	}
+#endif
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");
@@ -342,4 +421,94 @@ int periodic_maintenance()
 	
 	return err;
 }
+
+int hip_firewall_is_alive()
+{
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_firewall_status) {
+		HIP_DEBUG("Firewall is alive.\n");
+	}
+	else {
+		HIP_DEBUG("Firewall is not alive.\n");
+	}
+	return hip_firewall_status;
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
+
+
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
+{
+		struct hip_common *msg;
+		int err = 0;
+		int n;
+		socklen_t alen;
+		struct in6_addr * hit_s;
+		struct in6_addr * hit_r;
+				
+		msg = malloc(HIP_MAX_PACKET);
+		if (!msg)
+		{
+			HIP_ERROR("malloc failed\n");
+			goto out_err;
+		}
+		hip_msg_init(msg);
+
+		err = hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0);
+		if (err)
+		{
+			HIP_ERROR("build hdr failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		
+		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+			hit_s = &entry->hit_peer;
+			hit_r = &entry->hit_our;
+		}
+		else {
+			hit_r = &entry->hit_peer;
+			hit_s = &entry->hit_our;
+		}
+		
+		err = hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_our failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		err = hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_peer failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		
+		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
+		if (err)
+		{
+			HIP_ERROR("build param failed: %s\n", strerror(err));
+			goto out_err;
+		}
+	
+		HIP_DEBUG("Sending test msg to firewall\n");
+
+		n = hip_sendto(msg, &hip_firewall_addr);                   
+		if (n < 0)
+		{
+			HIP_ERROR("Sendto firewall failed.\n");
+			err = -1;
+			goto out_err;
+		}
+		else HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
+
+}
+
+
 
