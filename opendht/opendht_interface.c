@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include "rpcif.h"
 #include "opendht_interface.h"
+#include "debug.h"
 
 #define APP_STRING "OpenDHT HIP Interface $Revision: 1.5 $"
 #define CLIB_STRING "rpcgen"
@@ -25,7 +26,8 @@ int opendhtgetbyhit(char *hit, char *res)
 
   clnt = connectDHTserver();
 
-  printf("Getting %s from DHT\n",hit);  
+  printf("Getting %s from openDHT\n", hit);  
+  //HIP_DEBUG("Getting %s from openDHT\n", hit);
 
   memset (&get_args, 0, sizeof (get_args));
   
@@ -34,21 +36,20 @@ int opendhtgetbyhit(char *hit, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
-    //printf("Get failed\n");
     return 1;
   }
 
-  int j;
-  for(j=0;j<get_result->values.values_len;j++) //test line
-     printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
+  //  int j;
+  //for(j=0;j<get_result->values.values_len;j++) //test line
+  //   printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
 
   if (get_result->values.values_len == 0) {
     printf ("Key was not found from the openDHT (%s)\n", hit);
+    //HIP_DEBUG("Key was not found from the openDHT (%s)\n", hit);
     return 1;
   }
 
   strncpy(res,get_result->values.values_val [0].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len + 1);
-  //printf("results: %s\n",get_result->values.values_val[0].bamboo_value_val); //test line
   return 0; //success
 
 }
@@ -61,7 +62,8 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
 
   clnt = connectDHTserver();
 
-  printf("Getting %s from DHT\n",hit);  
+  printf("Getting %s from openDHT\n",hit);  
+  //HIP_DEBUG("Getting %s from openDHT\n",hit);  
 
   memset (&get_args, 0, sizeof (get_args));
   
@@ -70,25 +72,24 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
-    //printf("Get failed\n");
     return 1;
   }
   
   if (get_result->values.values_len == 0) 
      {
        printf("Key was not found from the openDHT (%s)\n", hit);
+       //HIP_DEBUG("Key was not found from the openDHT (%s)\n", hit);
        return 1;
      }
 
   int j;
   for(j=0;j<get_result->values.values_len;j++) {
     if ( !strcmp(ip, get_result->values.values_val[j].bamboo_value_val) ) {
-       printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
+      //printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
        strncpy(res,get_result->values.values_val [j].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len + 1);
     }
   }
 
-  //printf("results: %s\n",get_result->values.values_val[0].bamboo_value_val); //test line
   return 0; //success
 
 }
@@ -108,13 +109,13 @@ int opendhtgetbyname(char *fqdn, char *res)
   get_result = opendhtget(clnt, &get_args,1); // The 1 indicated the amount of results
   
   if (get_result == NULL) {
-    //printf("Get failed\n");
     return 1;
   }
 
  if (get_result->values.values_len == 0) 
    {
-     printf ("Get failed: returned %d values.\n", get_result->values.values_len);
+     printf("Get failed: returned %d values.\n", get_result->values.values_len);
+     //HIP_DEBUG("Get failed: returned %d values.\n", get_result->values.values_len);
      return 1;
    }
  strncpy(res,get_result->values.values_val [0].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len + 1);
@@ -133,18 +134,16 @@ int opendhtputname(char *fqdn, char *hit)
   CLIENT *clnt;
 
   printf("Putting %s with hit %s\n",fqdn,hit);
+  //HIP_DEBUG("Putting %s with hit %s\n",fqdn,hit);
   
   sprintf(fqdn,"%ld",a64l(fqdn));
 
   clnt = connectDHTserver();
-  if(opendhtput(clnt,fqdn,hit,TTL))
-    {
-      //printf("Could not put %s",hit);
-      clnt_destroy (clnt);
-      return 1;
-    }
-      printf("Putting %s with hit %s\n",fqdn,hit);
-      clnt_destroy (clnt);
+  if(opendhtput(clnt,fqdn,hit,TTL)){
+    clnt_destroy (clnt);
+    return 1;
+  }
+  clnt_destroy (clnt);
   return 0; //success
 }
 
@@ -153,18 +152,21 @@ static void do_null_call (CLIENT *clnt)
   char *null_args = NULL; 
   void *null_result; 
   printf ("Doing a null call.\n");
+  //HIP_DEBUG("Doing a null call.\n");
   null_result = bamboo_dht_proc_null_2((void*)&null_args, clnt);
   if (null_result == (void *) NULL) {
     clnt_perror (clnt, "null call failed.");
     exit (1);
   }
-  printf ("Null call successful.\n");
+  printf("Null call was successful.\n");
+  //HIP_DEBUG("Null call was successful.\n");
 }
   
 static CLIENT* connectDHTserver(void)
 {
   // host and port should be extracted from a file
   char host[] = "planetlab1.diku.dk";
+  //char host[] = "opendht.nyuld.net";
   int port = 5852;
 
   CLIENT *clnt;
@@ -172,11 +174,13 @@ static CLIENT* connectDHTserver(void)
   struct hostent *h;
   int sockp = RPC_ANYSOCK; 
   
-  //  printf("connecting to %s port %d\n",host, port);
+  //printf("connecting to %s port %d\n",host, port);
+  //HIP_DEBUG("connecting to %s port %d\n",host, port);
   //Lookup server
     h = gethostbyname (host); 
   if (h == NULL) {
     printf("Could not resolve %s\n",host);
+    //HIP_DEBUG("Could not resolve %s\n",host);
     exit(1);
   }
   //Create sockaddr_in
@@ -189,7 +193,7 @@ static CLIENT* connectDHTserver(void)
   //Connect
   clnt = clnttcp_create (addr, BAMBOO_DHT_GATEWAY_PROGRAM, BAMBOO_DHT_GATEWAY_VERSION, &sockp, 0, 0);
   if (clnt == NULL) {
-    clnt_pcreateerror ("Connect:");
+    clnt_pcreateerror ("Connect failed");
     exit(1);
   }
   //  do_null_call(clnt);
@@ -203,7 +207,8 @@ int opendhtput(CLIENT* clnt, char* key, char* value, int ttl)
   bamboo_put_args put_args;
   bamboo_stat     *put_result;
   
-  printf ("Doing a put\n key: %s val: %s ttl: %d\n",key, value,ttl);
+  printf("KEY: %s VAL: %s TTL: %d\n",key, value,ttl);
+  //HIP_DEBUG("KEY: %s VAL: %s TTL: %d\n",key, value,ttl);
     
   memset (&put_args, 0, sizeof (put_args));
 
@@ -227,10 +232,12 @@ int opendhtputhit(char *hit, char *ip)
 {
   CLIENT *clnt;
   printf("Putting %s with ip %s\n",hit,ip);
+  //HIP_DEBUG("Putting %s with ip %s\n",hit,ip);
   clnt = connectDHTserver();
   if(opendhtput(clnt,hit,ip,TTL))
     {
       printf("Could not put %s",hit);
+      //HIP_DEBUG("Could not put %s",hit);
       clnt_destroy (clnt);
       return 1;
     }
@@ -242,7 +249,6 @@ int opendhtputhit(char *hit, char *ip)
 static bamboo_get_res* opendhtget(CLIENT* clnt, bamboo_get_args *get_args, int maxvals)
 {
   bamboo_get_res  *get_result;
-  printf ("Doing a get\n");
 
   get_args->application = APP_STRING;
   get_args->client_library = CLIB_STRING;
@@ -264,6 +270,7 @@ CLIENT *clnt;
 bamboo_get_args get_args;
 bamboo_get_res  *get_result;
 char host[] =  "planetlab1.diku.dk";
+//char host[] = "opendht.nyuld.net";
 int port = 5852;
 char key[] = "01928491824091";
 int ttl = 100;
