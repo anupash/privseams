@@ -881,7 +881,8 @@ using getaddrinfo: ping, ping6, tla, svn.
               can be tested.</para>
 
         <para>If you get "No buffer space available" errors, please disable
-              all of the firewall debug messages (especially ESP). This can
+              all of the firewall debug messages (./configure --disable-debug
+              && make clean all). This can
               occur when moving large files and the firewall cannot serve
               with sufficient speed when it has to display debug messages.
         </para>
