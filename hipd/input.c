@@ -915,6 +915,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req;
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask = 0;
+	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 	HIP_DEBUG("\n");
 
@@ -1117,7 +1118,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/** @todo This is just a temporary kludge until something more 
 	    elegant is build. Rationalize this. */
-	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 #ifdef CONFIG_HIP_RVS	
 	/* RVS */
@@ -1305,7 +1305,6 @@ int hip_handle_r1(struct hip_common *r1,
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 
 	if (reg_info) {
-		
 		int i;
 		uint8_t current_reg_type = 0;
 		uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
@@ -2349,7 +2348,7 @@ int hip_handle_r2(struct hip_common *r2,
  * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
  * <ul>
  * <li>If one ore more @c FROM parameters are found, there must also be a
- * @c RVS_HMAC parameter present. This HMAC is first verified. If verification
+ * @c RVS_HMAC parameter present. This hmac is first verified. If verification
  * succeeds, the IP addresses obtained from the parameters are passed to
  * hip_xmit_r1() as an array. In hip_xmit_r1() this array is used create a
  * @c VIA_RVS parameter. If the verification fails, a negative error value is

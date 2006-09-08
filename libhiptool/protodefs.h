@@ -52,7 +52,7 @@
 
 
 
-/* @} addtogroup hip_msg */
+/* @} */
 
 
 #define HIP_HIT_TYPE_HASH100    1
@@ -68,7 +68,13 @@
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
-#define HIP_PARAM_MIN                 -1 /* exclusive */
+/** @addtogroup hip_param_type_numbers
+ * @{ 
+ */
+/** Defines the minimum parameter type value.
+ * @note exclusive
+ */
+#define HIP_PARAM_MIN                 -1
 
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
@@ -93,7 +99,8 @@
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-#define HIP_PARAM_DSA_SIGN_DATA         32770 /** @todo change to digest */
+/** @todo change to digest */
+#define HIP_PARAM_DSA_SIGN_DATA         32770
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
@@ -116,10 +123,16 @@
 #define HIP_PARAM_HIP_SIGNATURE   61697
 #define HIP_PARAM_ECHO_REQUEST    63661
 #define HIP_PARAM_ECHO_RESPONSE   63425
+#define HIP_PARAM_FROM_NAT        63998
+#define HIP_PARAM_VIA_RVS_NAT     64002
 #define HIP_PARAM_FROM            65300
 #define HIP_PARAM_RVS_HMAC        65320
 #define HIP_PARAM_VIA_RVS         65500
-#define HIP_PARAM_MAX             65536 /* exclusive */
+/** Defines the maximum parameter type value.
+ * @note exclusive
+ */
+#define HIP_PARAM_MAX             65536
+/* @} */
 
 #define HIP_HIP_RESERVED                0
 #define HIP_HIP_AES_SHA1                1
@@ -387,6 +400,10 @@ struct hip_esp_info {
 	uint32_t new_spi;
 } __attribute__ ((packed));
 
+
+/** @addtogroup hip_tlv
+ * @{ 
+ */
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
@@ -394,7 +411,6 @@ struct hip_r1_counter {
 	uint32_t           reserved;
 	uint64_t           generation;
 } __attribute__ ((packed));
-
 
 struct hip_puzzle {
 	hip_tlv_type_t     type;
@@ -445,11 +461,11 @@ struct hip_esp_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
-/*! \todo HIP AND ESP TRANSFORM ARE NOT SYMMETRIC (RESERVED) */
+/** @todo hip and esp transform are not symmetric (reserved) */
 struct hip_any_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-		/*! \todo replace with MAX(HIP, ESP) */
+	/** @todo replace with MAX(HIP, ESP) */
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX +
 				       HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
@@ -546,9 +562,20 @@ struct hip_cert {
 	/* end of fixed part */
 } __attribute__ ((packed));
 
+struct hip_echo_request {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	/* opaque */
+} __attribute__ ((packed));
 
-/* Parameters related to rendezvous service. */
-/** Rendezvous server HMAC. A non-critical parameter whose only difference with
+struct hip_echo_response {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	/* opaque */
+} __attribute__ ((packed));
+
+/* Parameters related to rendezvous service and NAT. */
+/** Rendezvous server hmac. A non-critical parameter whose only difference with
     the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
     This change causes it to be located after the @c FROM parameter (as
     opposed to the @c HMAC) */
@@ -581,25 +608,39 @@ struct hip_via_rvs {
 	/** A short cut pointer to the memory region where the rendezvous
 	    server addresses are to be put. */
 	uint8_t address[0];
-	/* the rest of the addresses */
+} __attribute__ ((packed));
+
+/** Parameter containing the original source IP address and port number
+    of a HIP packet. */
+struct hip_from_nat {
+	/** Type code for the parameter. */
+	hip_tlv_type_t type;
+	/** Length (@b 16) of the parameter contents in bytes. */
+	hip_tlv_len_t  length;
+	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
+	uint8_t address[16];
+	/** Port number. */
+	uint16_t port;
 } __attribute__ ((packed));
 /* End of parameters related to rendezvous service. */
 
 
-struct hip_echo_request {
+/** Parameter containing the IP addresses and source ports of traversed
+    rendezvous servers. */
+struct hip_via_rvs_nat {
+	/** Type code for the parameter. */
 	hip_tlv_type_t type;
+	/** Length (@b variable) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
-	/* opaque */
+	/** A short cut pointer to the memory region where the rendezvous
+	    server addresses and ports are to be put. */
+	uint8_t address_and_port[0];
 } __attribute__ ((packed));
+/* End of parameters related to rendezvous service and NAT. */
 
-struct hip_echo_response {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	/* opaque */
-} __attribute__ ((packed));
 
-/*
- * This structure is by the native API to carry local and peer identities
+/**
+ * This structure is used by the native API to carry local and peer identities
  * from libc (setmyeid and setpeereid calls) to the HIP socket handler
  * (setsockopt). It is almost the same as endpoint_hip, but it is
  * length-padded like HIP parameters to make it usable with the builder
@@ -626,7 +667,7 @@ struct hip_eid_sockaddr {
 } __attribute__ ((packed));
 
 
-/******** ESCROW *********/
+/* ESCROW */
 
 struct hip_reg_info {
 	hip_tlv_type_t type;
@@ -660,6 +701,8 @@ struct hip_keys {
 	struct hip_crypto_key enc;
 	//int direction; // ?
 } __attribute__ ((packed));
+
+/* @} */
 
 #endif /* _HIP_PROTODEFS */
 

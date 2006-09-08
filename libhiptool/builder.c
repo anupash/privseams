@@ -1329,12 +1329,18 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 
 #ifndef __KERNEL__
 /**
- * Builds and appends a HIP @c HMAC parameter. This function calculates also the
- * @c HMAC value from the whole message as specified in the drafts.
+ * Builds a @c HMAC parameter.
  *
- * @param msg the message where the hmac parameter will be appended
- * @param key pointer to a key used for @c HMAC
- * @return 0 on success, otherwise < 0.
+ * Builds a @c HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
+ *
+ * @param msg a pointer to the message where the @c HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac2_contents()
+ * @see       hip_build_param_rvs_hmac_contents().
+ * @see       hip_write_hmac().
  */
 int hip_build_param_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key)
@@ -1355,6 +1361,24 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	return err;
 }
 
+/**
+ * Builds a @c RVS_HMAC parameter.
+ *
+ * Builds a @c RVS_HMAC parameter to the HIP packet @c msg. This function
+ * calculates also the hmac value from the whole message as specified in the drafts.
+ *
+ * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac_contents().
+ * @see       hip_build_param_hmac2_contents().
+ * @see       hip_write_hmac().
+ * @note      The functionality of this function is identical to the
+ *            functionality of hip_build_param_hmac_contents(). If something
+ *            is changed there, it is most likely that it should be changed
+ *            here also.
+ */
 int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key)
 {
@@ -1373,16 +1397,20 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_hmac2_contents - build and append a HIP hmac2 parameter
- * @param msg the message where the hmac parameter will be appended
- * @param key pointer to a key used for HMAC
- * @param host_id pointer to host id
+ * Builds a @c HMAC2 parameter.
  *
- * This function calculates the also the HMAC value from the whole message
- * as specified in the drafts. Assumes that the hmac includes only the header
- * and host id.
+ * Builds a @c HMAC2 parameter to the HIP packet @c msg. This function 
+ * calculates also the hmac value from the whole message as specified in the
+ * drafts. Assumes that the hmac includes only the header and host id.
  *
- * @return 0 on success, otherwise < 0.
+ * @param msg      a pointer to the message where the @c HMAC2 parameter will be
+ *                 appended.
+ * @param key      a pointer to a key used for hmac.
+ * @param host_id  a pointer to a host id.
+ * @return         zero on success, or negative error value on error.
+ * @see            hip_build_param_hmac_contents().
+ * @see            hip_build_param_rvs_hmac_contents().
+ * @see            hip_write_hmac().
  */
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
@@ -1704,7 +1732,7 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 {
 	struct hip_reg_info rinfo;
 	int err = 0, i;
-	uint8_t *array;
+	uint8_t *array = NULL;
 
 	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
 	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
@@ -1722,7 +1750,6 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)array);
-
 out_err: 
 	if (array)
 		HIP_FREE(array);	
@@ -1745,7 +1772,7 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	int err = 0;
 	int i;
 	struct hip_reg_request rreq;
-	uint8_t *array;
+	uint8_t *array = NULL;
 	
 	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
 	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
@@ -1783,7 +1810,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	int err = 0;
 	int i;
 	struct hip_reg_failed rfail;
-	uint8_t *array;
+	uint8_t *array = NULL;
 
 	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
 	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
@@ -1801,7 +1828,6 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	rfail.failure_type = failure_type;
 	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
 				      (void *)array);
-	
 out_err: 
 	if (array)
 		HIP_FREE(array);	

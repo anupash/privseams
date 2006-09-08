@@ -4,7 +4,7 @@
 #include "hipd.h"
 
 
-/** \addtogroup daemon_states
+/** @addtogroup daemon_states
  * @{
  */
 
@@ -15,7 +15,7 @@
 /** Daemon is closed, exiting main(). */
 #define HIPD_STATE_CLOSED	2
 
-/** @} addtogroup daemon_states */
+/* @}  */
 
 
 int hipd_get_state(void);
