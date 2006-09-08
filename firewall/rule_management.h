@@ -126,7 +126,7 @@ void read_rules_exit(int hook);
 //rule management functions
 void insert_rule(const struct rule * rule, int hook);
 int delete_rule(const struct rule * rule, int hook);
-struct GList * list_rules(int hook);
+struct _GList * list_rules(int hook);
 int flush(int hook);
 
 void test_rule_management();
