@@ -241,32 +241,27 @@ int main(int argc, char *argv[]) {
 			  err = hip_receive_control_packet(hip_msg, &saddr,
 							   &daddr, &pkt_info);
 			}
-		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)){
-			/* do NAT recieving here !! --Abi */
+		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)) {
+			/* Receiving of a UDP message from NAT socket. */
+			HIP_DEBUG("Receiving a message on UDP from NAT "\
+				  "socket %d.\n", hip_nat_sock_udp);
 			
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
 			//int src_port = 0;
-
+			
 			hip_msg_init(hip_msg);
-			HIP_DEBUG("Getting a msg on udp\n");	
-
-		//	if (hip_read_control_msg_udp(hip_nat_sock_udp, hip_msg, 1,
-                  //                                 &saddr, &daddr))
+			
         		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
 						    1, &saddr, &daddr,
 						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
-				err =  hip_receive_control_packet_udp(hip_msg,
-                                                                 &saddr,
-                                                                 &daddr,
-								 &pkt_info);
-
-                                //err = hip_receive_control_packet(hip_msg,
-                                                                 //&saddr,
-                                                                 //&daddr);
+				err =  hip_nat_receive_udp_ctrl_msg(hip_msg,
+								    &saddr,
+								    &daddr,
+								    &pkt_info);
                         }
 
 			

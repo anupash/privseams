@@ -5,7 +5,8 @@
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
  * @date    25.08.2006
- * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ * @note    Related draft:
+ *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Version 1.0 was document scarcely and the comments regarding

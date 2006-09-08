@@ -1,47 +1,152 @@
+/** @file
+ * This file defines extensions to Host Identity Protocol (HIP) to support
+ * traversal of Network Address Translator (NAT) middleboxes.
+ * 
+ * The traversal mechanism tunnels HIP control and data traffic over UDP
+ * and enables HIP initiators which may be behind NATs to contact HIP
+ * responders which may be behind another NAT. Three basic cases exist for NAT
+ * traversal. In the first case, only the initiator of a HIP base exchange is
+ * located behind a NAT. In the second case, only the responder of a HIP base
+ * exchange is located behind a NAT. In the third case, both parties are
+ * located behind (different) NATs. The use rendezvous server is mandatory
+ * when the responder is behind a NAT.
+ * 
+ * @author  (version 1.0) Abhinav Pathak
+ * @author  (version 1.1) Lauri Silvennoinen
+ * @version 1.1
+ * @date    07.09.2006
+ * @note    Related drafts:
+ *          <ul>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
+ *          draft-schmitt-hip-nat-traversal-01</a></li>
+ *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
+ *          draft-irtf-hiprg-nat-03</a></li>
+ *          </ul>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    All Doxygen comments have been added in version 1.1.
+ */ 
 #include "nat.h"
 
-int hip_nat_on(struct hip_common *msg)
+/**
+ * Sets NAT status "on".
+ * 
+ * Sets NAT status "on" for each host association in the host association
+ * database.
+ *
+ * @return zero on success, or negative error value on error.
+ * @todo   Extend this to handle peer_hit case for
+ *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
+ *         multihoming case.
+ */ 
+int hip_nat_on()
 {
 	int err = 0;
 
 	hip_nat_status = 1;
-	HIP_IFEL(hip_for_each_ha(hip_set_nat_on_sa, NULL), 0,
-                         "for_each_ha err.\n");
-
-	// Extend it to handle peer_hit case for "hipconf hip nat peer_hit"
-	// This would be helpful in multihoming case --Abi
+	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
+		 "Error from for_each_ha().\n");
  out_err:
 	return err;
 }
 
-
-int hip_nat_off(struct hip_common *msg)
+/**
+ * Sets NAT status "off".
+ *
+ * Sets NAT status "off" for each host association in the host association
+ * database.
+ * 
+ * @return zero on success, or negative error value on error.
+ * @todo   Extend this to handle peer_hit case for
+ *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
+ *         multihoming case.
+ */
+int hip_nat_off()
 {
 	int err = 0;
 
 	hip_nat_status = 0;
-	HIP_IFEL(hip_for_each_ha(hip_set_nat_off_sa, NULL), 0,
-                         "for_each_ha err.\n");
-
+	HIP_IFEL(hip_for_each_ha(hip_nat_off_for_ha, NULL), 0,
+		 "Error from for_each_ha().\n");
  out_err:
 	return err;
 }
 
-int hip_receive_control_packet_udp(struct hip_common *msg,
-				   struct in6_addr *src_addr_orig,
-				   struct in6_addr *dst_addr,
-				   struct hip_stateless_info *info)
+/**
+ * Sets NAT status "on" for a single host association.
+ *
+ * @param entry    a pointer to a host association for which to set NAT status.
+ * @param not_used this parameter is not used (but it's needed).
+ * @return         zero.
+ * @note           the status is changed just for the parameter host 
+ *                 association. This function does @b not insert the host
+ *                 association into the host association database.
+ */
+int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 {
-        hip_ha_t tmp, *entry;
+	/* Parameter not_used is needed because this function is called from
+	   hip_nat_on() which calls hip_for_each_ha(). hip_for_each_ha()
+	   requires a function pointer as parameter which in turn has two
+	   parameters. */
+	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
+	int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->nat = 1;
+		HIP_DEBUG("NAT status of host association %p: %d\n",
+			  entry, entry->nat);
+	}
+ out_err:
+	return err;
+}
+
+/**
+ * Sets NAT status "off" for a single host association.
+ *
+ * @param entry    a pointer to a host association for which to set NAT status.
+ * @param not_used this parameter is not used (but it's needed).
+ * @return         zero.
+ * @note           the status is changed just for the parameter host 
+ *                 association. This function does @b not insert the host
+ *                 association into the host association database.
+ */
+int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
+{
+	/* Check hip_nat_on_for_ha() for further explanation on "not_used". */
+	HIP_DEBUG("hip_nat_off_for_ha() invoked.\n");
+	 int err = 0;
+
+	if(entry)
+	{
+		entry->peer_udp_port = 0;
+		entry->nat = 0;
+		HIP_DEBUG("NAT status of host association %p: %d\n",
+			  entry, entry->nat);
+	}
+ out_err:
+	return err;
+}
+
+int hip_nat_receive_udp_ctrl_msg(struct hip_common *msg,
+				 struct in6_addr *src_addr_orig,
+				 struct in6_addr *dst_addr,
+				 struct hip_stateless_info *info)
+{
+        HIP_DEBUG("hip_nat_receive_udp_ctrl_msg() invoked.\n");
+	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_ctrl_msg(): source address",
+			  src_addr_orig);
+	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_ctrl_msg(): destination address",
+			  dst_addr);
+	HIP_DEBUG("Source port: %u, destination port: %u\n",
+		  info->src_port, info->dst_port);
+	HIP_DUMP_MSG(msg);
+
+	hip_ha_t *entry;
         int err = 0, type, skip_sync = 0;
 	struct in6_addr *src_addr = src_addr_orig;
 
         type = hip_get_msg_type(msg);
-
-        HIP_DEBUG("Received packet type %d\n", type);
-        _HIP_DUMP_MSG(msg);
-        _HIP_HEXDUMP("dumping packet", msg,  40);
-
         entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
 	if(entry) {
@@ -84,11 +189,11 @@ int hip_receive_control_packet_udp(struct hip_common *msg,
 
 
 int hip_send_udp(struct in6_addr *my_addr, 
-                  struct in6_addr *peer_addr,
-		  uint32_t src_port, uint32_t dst_port,
-                  struct hip_common* msg,
-                  hip_ha_t *entry,
-                  int retransmit)
+		 struct in6_addr *peer_addr,
+		 uint32_t src_port, uint32_t dst_port,
+		 struct hip_common* msg,
+		 hip_ha_t *entry,
+		 int retransmit)
 {
 
 	struct sockaddr_in src, dst;
@@ -264,31 +369,6 @@ int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
 	//		(struct sockaddr *) &dst, sizeof(dst)); 
 		
 
- out_err:
-	return err;
-}
-int hip_set_nat_on_sa(hip_ha_t *entry, void *not_used)
-{
-	int err = 0;
-
-	if(entry)
-	{
-		entry->peer_udp_port = HIP_NAT_UDP_PORT;
-		entry->nat = 1;
-	}
- out_err:
-	return err;
-}
-int hip_set_nat_off_sa(hip_ha_t *entry, void *not_used)
-{
-	int err = 0;
-
-	if(entry)
-	{
-		entry->peer_udp_port = 0;
-		entry->nat = 0;
-		HIP_DEBUG("****************Setting nat off nat: %d\n", entry->nat);
-	}
  out_err:
 	return err;
 }

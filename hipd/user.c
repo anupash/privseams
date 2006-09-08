@@ -69,12 +69,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_send_bos(msg);
 		break;
 	case SO_HIP_SET_NAT_ON:
-		HIP_DEBUG("Nat on!!\n");
-		err = hip_nat_on(msg);
+		HIP_DEBUG("Handling NAT ON user message.\n");
+		HIP_IFEL(hip_nat_on(), -1,
+			 "Error when setting daemon NAT status to \"on\"\n");
 		break;
 	case SO_HIP_SET_NAT_OFF:
-		HIP_DEBUG("Nat off!!\n");
-		err = hip_nat_off(msg);
+		HIP_DEBUG("Handling NAT OFF user message.\n");
+		HIP_IFEL(hip_nat_off(), -1,
+			 "Error when setting daemon NAT status to \"on\"\n");
 		break;
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
