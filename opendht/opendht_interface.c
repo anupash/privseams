@@ -32,9 +32,15 @@ int opendhtgetbyhit(char *hit, char *res)
   sprintf(get_args.key,"%ld",a64l(hit));
 
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
+
+  if (get_result == NULL) {
+    //printf("Get failed\n");
+    return 1;
+  }
+
   int j;
-  //for(j=0;j<get_result->values.values_len;j++) //test line
-  //   printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
+  for(j=0;j<get_result->values.values_len;j++) //test line
+     printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
 
   if (get_result->values.values_len == 0) {
     printf ("Key was not found from the openDHT (%s)\n", hit);
@@ -63,6 +69,11 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
 
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
+  if (get_result == NULL) {
+    //printf("Get failed\n");
+    return 1;
+  }
+  
   if (get_result->values.values_len == 0) 
      {
        printf("Key was not found from the openDHT (%s)\n", hit);
@@ -84,9 +95,7 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
 
 int opendhtgetbyname(char *fqdn, char *res)
 {
-  int j;
   CLIENT *clnt;
-
   bamboo_get_args get_args;
   bamboo_get_res  *get_result;
 
@@ -98,16 +107,23 @@ int opendhtgetbyname(char *fqdn, char *res)
   
   get_result = opendhtget(clnt, &get_args,1); // The 1 indicated the amount of results
   
+  if (get_result == NULL) {
+    //printf("Get failed\n");
+    return 1;
+  }
+
  if (get_result->values.values_len == 0) 
    {
      printf ("Get failed: returned %d values.\n", get_result->values.values_len);
      return 1;
    }
- strncpy(res,get_result->values.values_val [0].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len);
+ strncpy(res,get_result->values.values_val [0].bamboo_value_val, get_result->values.values_val [0].bamboo_value_len + 1);
+
+ int j;
 
  printf("Got %d results\n", get_result->values.values_len);
- //for(j=0;j<get_result->values.values_len;j++)
-     //printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val);
+// for(j=0;j<get_result->values.values_len;j++) //test line
+//     printf("results[%d]: %s\n",j,get_result->values.values_val[j].bamboo_value_val); //test line
 
   return 0; //success
 }
@@ -123,7 +139,7 @@ int opendhtputname(char *fqdn, char *hit)
   clnt = connectDHTserver();
   if(opendhtput(clnt,fqdn,hit,TTL))
     {
-      printf("Could not put %s",hit);
+      //printf("Could not put %s",hit);
       clnt_destroy (clnt);
       return 1;
     }
@@ -161,11 +177,11 @@ static CLIENT* connectDHTserver(void)
     h = gethostbyname (host); 
   if (h == NULL) {
     printf("Could not resolve %s\n",host);
-    clnt_destroy (clnt);
     exit(1);
   }
   //Create sockaddr_in
-  bzero (addr, sizeof (struct sockaddr_in));
+ // bzero (addr, sizeof (struct sockaddr_in));//old line
+  memset(addr, 0, sizeof(struct sockaddr_in));
   addr->sin_family = AF_INET;
   addr->sin_port = htons (port);
   addr->sin_addr = *((struct in_addr *) h->h_addr);
@@ -201,8 +217,8 @@ int opendhtput(CLIENT* clnt, char* key, char* value, int ttl)
 
   put_result = bamboo_dht_proc_put_2 (&put_args, clnt);
   if (put_result == (bamboo_stat *) NULL) {
-       clnt_perror (clnt, "put failed");
-    exit (1);
+       clnt_perror (clnt, "Put failed");
+       return 1;
   }  
     return 0;
 }
@@ -234,8 +250,8 @@ static bamboo_get_res* opendhtget(CLIENT* clnt, bamboo_get_args *get_args, int m
 
   get_result = bamboo_dht_proc_get_2 (get_args, clnt);
   if (get_result == (bamboo_get_res *) NULL) {
-    clnt_perror (clnt, "get failed");
-    exit (1);
+    clnt_perror (clnt, "Get failed");
+    get_result = NULL;
   }
   
   return get_result;

@@ -16,7 +16,7 @@
 
 int hipd_state = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-unsigned int opportunistic_mode = 1;
+unsigned int opportunistic_mode = 0;
 unsigned int oppdb_exist = 0;
 extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
 						const hip_hit_t *hit_our);
@@ -51,11 +51,11 @@ int hipd_get_state(void)
 int hip_agent_is_alive()
 {
 #ifdef CONFIG_HIP_AGENT
-	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
-	else HIP_DEBUG("Agent is not alive.\n");
+//	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
+//	else HIP_DEBUG("Agent is not alive.\n");
 	return hip_agent_status;
 #else
-	HIP_DEBUG("Agent is disabled.\n");
+//	HIP_DEBUG("Agent is disabled.\n");
        return 0;
 #endif /* CONFIG_HIP_AGENT */
 }

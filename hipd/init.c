@@ -135,6 +135,18 @@ int hipd_init(int flush_ipsec)
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
+//	TODO: initialize firewall socket
+    hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_firewall_sock < 0), 1,
+		 "Could not create socket for firewall communication.\n");
+	unlink(HIP_FIREWALLADDR_PATH);
+	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
+	hip_firewall_addr.sun_family = AF_LOCAL;
+	strcpy(hip_firewall_addr.sun_path, HIP_FIREWALLADDR_PATH);
+	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)&hip_firewall_addr,
+	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
+	chmod(HIP_FIREWALLADDR_PATH, 0777);
+	
 	register_to_dht();
 	
 out_err:

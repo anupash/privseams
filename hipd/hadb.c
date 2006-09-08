@@ -1603,11 +1603,12 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 				  struct hip_context *ctx, int is_initiator)
 {
 	int err = 0;
-	int hmac_key_len, enc_key_len, auth_key_len;
+	int hmac_key_len, enc_key_len, auth_key_len, hip_enc_key_len;
 
 	hmac_key_len = hip_hmac_key_length(entry->esp_transform);
 	enc_key_len = hip_enc_key_length(entry->esp_transform);
 	auth_key_len = hip_auth_key_length_esp(entry->esp_transform);
+	hip_enc_key_len = hip_transform_key_length(entry->hip_transform);
 
 	memcpy(&entry->hip_hmac_out, &ctx->hip_hmac_out, hmac_key_len);
 	memcpy(&entry->hip_hmac_in, &ctx->hip_hmac_in, hmac_key_len);
@@ -1617,6 +1618,9 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 
 	memcpy(&entry->esp_out.key, &ctx->esp_out.key, enc_key_len);
 	memcpy(&entry->auth_out.key, &ctx->auth_out.key, auth_key_len);
+
+	memcpy(&entry->hip_enc_out.key, &ctx->hip_enc_out.key, hip_enc_key_len);
+	memcpy(&entry->hip_enc_in.key, &ctx->hip_enc_in.key, hip_enc_key_len);
 
 	hip_update_entry_keymat(entry, ctx->current_keymat_index,
 				ctx->keymat_calc_index, ctx->esp_keymat_index,

@@ -915,6 +915,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req;
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask = 0;
+	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 	HIP_DEBUG("\n");
 
@@ -1007,7 +1008,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/************ Encrypted ***********/
 	switch (transform_hip_suite) {
 	case HIP_HIP_AES_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_aes_sha1(i2, entry->our_pub), 
+		HIP_IFEL(hip_build_param_encrypted_aes_sha1(i2, (struct hip_tlv_common *)entry->our_pub), 
 			 -1, "Building of param encrypted failed.\n");
 		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
@@ -1017,7 +1018,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			sizeof(struct hip_encrypted_aes_sha1);
 		break;
 	case HIP_HIP_3DES_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_3des_sha1(i2, entry->our_pub), 
+		HIP_IFEL(hip_build_param_encrypted_3des_sha1(i2, (struct hip_tlv_common *)entry->our_pub), 
 			 -1, "Building of param encrypted failed.\n");
 		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
@@ -1027,7 +1028,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  			sizeof(struct hip_encrypted_3des_sha1);
 		break;
 	case HIP_HIP_NULL_SHA1:
-		HIP_IFEL(hip_build_param_encrypted_null_sha1(i2, entry->our_pub), 
+		HIP_IFEL(hip_build_param_encrypted_null_sha1(i2, (struct hip_tlv_common *)entry->our_pub), 
 			 -1, "Building of param encrypted failed.\n");
 		enc_in_msg = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 		HIP_ASSERT(enc_in_msg); /* Builder internal error. */
@@ -1116,7 +1117,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/** @todo This is just a temporary kludge until something more 
 	    elegant is build. Rationalize this. */
-	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 #ifdef CONFIG_HIP_RVS	
 	/* RVS */
@@ -1208,6 +1208,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
+	entry->hip_transform = transform_hip_suite;
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -1273,6 +1274,8 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
 
+	struct hip_reg_info *reg_info;
+
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
 		retransmission = 1;
@@ -1298,21 +1301,21 @@ int hip_handle_r1(struct hip_common *r1,
 		 "Verification of R1 signature failed\n");
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
-	struct hip_reg_info *reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
+	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 
 	if (reg_info) {
-		
 		int i;
 		uint8_t current_reg_type = 0;
 		uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
 			+ sizeof(reg_info->max_lifetime);
-
+		int typecount;
+	
 		/* Registration types begin after "Min Lifetime" and "Max
 		   Lifetime" fields. */
 		uint8_t *reg_types = (uint8_t *)
 			(hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
 
-		int typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
+		typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
 
 		/* Check draft-ietf-hip-registration-02 chapter 3.1. */
 		if(typecount == 0){
@@ -1652,6 +1655,7 @@ int hip_create_r2(struct hip_context *ctx,
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database
+	// TODO: definition
 	HIP_KEA *kea;	
 	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
 	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
@@ -2017,6 +2021,7 @@ int hip_handle_i2(struct hip_common *i2,
 	entry->default_spi_out = spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
+	entry->hip_transform = hip_tfm;
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);

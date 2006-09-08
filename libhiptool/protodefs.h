@@ -38,6 +38,19 @@
 #define HIP_ADD_DB_HI				73
 /** Agent informs daemon about I1 rejection with this message. */
 #define HIP_I1_REJECT				74
+/** Daemon sends remote HITs in use with this message to agent. */
+#define HIP_UPDATE_HIU				75
+
+/** Firewall can ping daemon with this message. */
+#define HIP_FIREWALL_PING			75
+/** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
+#define HIP_FIREWALL_PING_REPLY			76
+/** Firewall sends this one to daemon when exiting. */
+#define HIP_FIREWALL_QUIT			77
+/** Daemon sends escrow data to firewall with this message. */
+#define HIP_ADD_ESCROW_DATA			78
+
+
 
 /* @} */
 
@@ -609,6 +622,8 @@ struct hip_from_nat {
 	/** Port number. */
 	uint16_t port;
 } __attribute__ ((packed));
+/* End of parameters related to rendezvous service. */
+
 
 /** Parameter containing the IP addresses and source ports of traversed
     rendezvous servers. */

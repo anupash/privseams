@@ -414,17 +414,17 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
 		     struct hip_stateless_info *i1_info)
 {
+	struct hip_common *i1_to_be_relayed = NULL;
+	struct hip_tlv_common *current_param = NULL;
+	int err = 0, from_added = 0;
+	struct in6_addr final_dst;
+
 	_HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	_HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
 	_HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
 	_HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
 	_HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
-	
-	struct hip_common *i1_to_be_relayed = NULL;
-	struct hip_tlv_common *current_param = NULL;
-	int err = 0, from_added = 0;
-	struct in6_addr final_dst;
 
 	/* Get the destination IP address the client has registered from the
 	   rendezvous association. */

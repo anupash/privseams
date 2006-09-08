@@ -109,12 +109,12 @@ int connhipd_handle_msg(struct hip_common *msg,
                         struct sockaddr_un *addr)
 {
 	/* Variables. */
-	struct hip_tlv_common *param = NULL;
+	struct hip_tlv_common *param = NULL, *param2 = NULL;
 	hip_hdr_type_t type;
 	HIT_Remote hit, *r;
 	HIT_Local *l;
 	socklen_t alen;
-	struct in6_addr *lhit;
+	struct in6_addr *lhit, *rhit;
 	int err = 0, ret, n, tr, check;
 	char chit[128], *type_s;
 
@@ -137,6 +137,33 @@ int connhipd_handle_msg(struct hip_common *msg,
 				n++;
 			}
 		}
+	}
+	if (type == HIP_UPDATE_HIU)
+	{
+		n = 0;
+		
+		gui_clear_hiu();
+		
+		while((param = hip_get_next_param(msg, param)))
+		{
+			/*param2 = hip_get_next_param(msg, param);
+			if (param2 == NULL) break;*/
+			
+			if (hip_get_param_type(param) == HIP_PARAM_HIT)/* &&
+			    hip_get_param_type(param2) == HIP_PARAM_HIT)*/
+			{
+				rhit = hip_get_param_contents_direct(param);
+				//lhit = hip_get_param_contents_direct(param2);
+				r = hit_db_find(NULL, rhit);
+				if (r)
+				{
+					gui_add_hiu(r);
+					n++;
+				}
+			}
+		}
+		
+		gui_set_nof_hiu(n);
 	}
 	else if (type == HIP_I1)
 	{
@@ -296,7 +323,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 	}
 
 out_err:
-	HIP_DEBUG("Message handled.\n");
+//	HIP_DEBUG("Message handled.\n");
 	return (err);
 }
 /* END OF FUNCTION */
@@ -352,11 +379,11 @@ int connhipd_thread(void *data)
 			goto out_err;
 		}
 
-		HIP_DEBUG("Header received successfully\n");
+//		HIP_DEBUG("Header received successfully\n");
 		alen = sizeof(agent_addr);
 		len = hip_get_msg_total_len(msg);
 
-		HIP_DEBUG("Receiving message (%d bytes)\n", len);
+//		HIP_DEBUG("Receiving message (%d bytes)\n", len);
 		n = recvfrom(hip_agent_sock, msg, len, 0,
 		             (struct sockaddr *)&agent_addr, &alen);
 
