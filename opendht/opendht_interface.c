@@ -25,6 +25,9 @@ int opendhtgetbyhit(char *hit, char *res)
   bamboo_get_res  *get_result;
 
   clnt = connectDHTserver();
+  if (clnt == NULL) {
+    return 1;
+  }
 
   printf("Getting %s from openDHT\n", hit);  
   //HIP_DEBUG("Getting %s from openDHT\n", hit);
@@ -36,6 +39,7 @@ int opendhtgetbyhit(char *hit, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
+    printf("Get failed\n");
     return 1;
   }
 
@@ -61,6 +65,9 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
   bamboo_get_res  *get_result;
 
   clnt = connectDHTserver();
+  if (clnt == NULL) {
+    return 1;
+  }
 
   printf("Getting %s from openDHT\n",hit);  
   //HIP_DEBUG("Getting %s from openDHT\n",hit);  
@@ -72,6 +79,7 @@ int opendhtgetbyhitmultiple(char *hit, char *ip, char *res)
   get_result = opendhtget(clnt, &get_args,10); // The 1 indicated the amount of results
 
   if (get_result == NULL) {
+    printf("Get failed\n");
     return 1;
   }
   
@@ -101,6 +109,9 @@ int opendhtgetbyname(char *fqdn, char *res)
   bamboo_get_res  *get_result;
 
   clnt = connectDHTserver();
+  if (clnt == NULL) {
+    return 1;
+  }
 
   memset (&get_args, 0, sizeof (get_args));
 
@@ -109,6 +120,7 @@ int opendhtgetbyname(char *fqdn, char *res)
   get_result = opendhtget(clnt, &get_args,1); // The 1 indicated the amount of results
   
   if (get_result == NULL) {
+    printf("Get failed\n");
     return 1;
   }
 
@@ -139,6 +151,10 @@ int opendhtputname(char *fqdn, char *hit)
   sprintf(fqdn,"%ld",a64l(fqdn));
 
   clnt = connectDHTserver();
+  if (clnt == NULL) {
+    return 1;
+  }
+
   if(opendhtput(clnt,fqdn,hit,TTL)){
     clnt_destroy (clnt);
     return 1;
@@ -181,7 +197,8 @@ static CLIENT* connectDHTserver(void)
   if (h == NULL) {
     printf("Could not resolve %s\n",host);
     //HIP_DEBUG("Could not resolve %s\n",host);
-    exit(1);
+    //exit(1);
+    clnt = NULL;
   }
   //Create sockaddr_in
  // bzero (addr, sizeof (struct sockaddr_in));//old line
@@ -194,7 +211,7 @@ static CLIENT* connectDHTserver(void)
   clnt = clnttcp_create (addr, BAMBOO_DHT_GATEWAY_PROGRAM, BAMBOO_DHT_GATEWAY_VERSION, &sockp, 0, 0);
   if (clnt == NULL) {
     clnt_pcreateerror ("Connect failed");
-    exit(1);
+    //exit(1);
   }
   //  do_null_call(clnt);
   free(addr);
@@ -234,6 +251,10 @@ int opendhtputhit(char *hit, char *ip)
   printf("Putting %s with ip %s\n",hit,ip);
   //HIP_DEBUG("Putting %s with ip %s\n",hit,ip);
   clnt = connectDHTserver();
+  if (clnt == NULL) {
+    return 1;
+  }
+
   if(opendhtput(clnt,hit,ip,TTL))
     {
       printf("Could not put %s",hit);
