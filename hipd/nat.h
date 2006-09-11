@@ -50,7 +50,7 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				       struct in6_addr *,
 				       struct hip_stateless_info *);
-int hip_nat_send_udp(struct in6_addr *, struct in6_addr *, uint32_t, uint32_t,
+int hip_nat_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		     struct hip_common*, hip_ha_t *, int);
 
 int hip_nat_keep_alive();

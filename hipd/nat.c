@@ -93,9 +93,9 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
-		entry->nat = 1;
+		entry->nat_between = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat);
+			  entry, entry->nat_between);
 	}
  out_err:
 	return err;
@@ -120,9 +120,9 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		entry->peer_udp_port = 0;
-		entry->nat = 0;
+		entry->nat_between = 0;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat);
+			  entry, entry->nat_between);
 	}
  out_err:
 	return err;
@@ -131,7 +131,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 /**
  * Logic specific to HIP control packets received on UDP.
  *
- * Does logic specific to HIP control packets received on UDP and calls
+ * Does the logic specific to HIP control packets received on UDP and calls
  * hip_receive_control_packet() after the UDP specific logic.
  * hip_receive_control_packet() is called with different IP source address
  * depending on whether the current machine is a rendezvous server or not:
@@ -177,7 +177,7 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 	if(entry) {
 		/* XX FIXME: this information is unreliable. We should
 		   be able to cancel it if hip_receive_control_packet fails */
-		entry->nat = 1;
+		entry->nat_between = 1;
 		entry->peer_udp_port = info->src_port;
 		HIP_DEBUG("entry found src port %d\n",
 			  entry->peer_udp_port);
@@ -209,53 +209,50 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 /**
  * Sends a message using User Datagram Protocol (UDP).
  *
- * @param my_addr
- * @param peer_addr
- * @param src_port
- * @param dst_port
- * @param msg
- * @param entry
- * @param retransmit
- * @return 
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   source port number to be used in the UDP packet header.
+ * @param dst_port   destination port number to be used in the UDP packet header.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
  */ 
-int hip_nat_send_udp(struct in6_addr *my_addr, struct in6_addr *peer_addr,
-		     uint32_t src_port, uint32_t dst_port,
+int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		     in_port_t src_port, in_port_t dst_port,
 		     struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	HIP_DEBUG("hip_nat_send_udp() invoked.\n");
-	HIP_DEBUG_IN6ADDR("my_addr:", my_addr);
+	HIP_DEBUG_IN6ADDR("local_addr:", local_addr);
 	HIP_DEBUG_IN6ADDR("peer_addr:", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	
 	struct sockaddr_in src, dst;
 	struct in_addr any = {INADDR_ANY};
-	struct in6_addr local_addr;
-        int sockfd = 0, n, len = 0 , err = 0, type = 0, i = 0;
+	int sockfd = 0, n, len = 0 , err = 0, type = 0, i = 0;
 	
 	len = hip_get_msg_total_len(msg);
 	src.sin_family = AF_INET;
 
-        if (my_addr) {
-		HIP_DEBUG_IN6ADDR("Random address? &local_addr", &local_addr);
-		/* Should this be IPV6_TO_IPV4_MAP(&local_addr, &src.sin_addr);
-		   What is this local_addr anyways? */
-		IPV6_TO_IPV4_MAP(&local_addr, &src.sin_addr);
+        if (local_addr) {
+		IPV6_TO_IPV4_MAP(local_addr, &src.sin_addr);
 	} else {
-		IPV6_TO_IPV4_MAP(&local_addr, &any);
 		src.sin_addr.s_addr = INADDR_ANY;
 	}
 
         HIP_IFEL(((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0), -1,
 		 "Error getting a socket for sending\n");
 
-        dst.sin_family=AF_INET;
+        dst.sin_family = AF_INET;
        	type = hip_get_msg_type(msg);
 
 	switch(type) {
         case HIP_I1:
 	case HIP_I2:
 		if(entry)
-			HIP_DEBUG("Entry Found: nat %d\n", entry->nat);
+			HIP_DEBUG("Entry Found: nat %d\n", entry->nat_between);
 		else
 			HIP_DEBUG("Entry not found\n");
         	src.sin_port = htons(HIP_NAT_UDP_PORT);
@@ -267,7 +264,7 @@ int hip_nat_send_udp(struct in6_addr *my_addr, struct in6_addr *peer_addr,
         case HIP_R1:
 	case HIP_R2:
 		if(entry)
-			HIP_DEBUG("Entry Found: nat %d\n", entry->nat);
+			HIP_DEBUG("Entry Found: nat %d\n", entry->nat_between);
 		else
 			HIP_DEBUG("Entry not found\n");
 	       	

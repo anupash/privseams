@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
-
+	
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
 	HIP_DEBUG_GL(HIP_DEBUG_GROUP_INIT, 
@@ -262,14 +262,14 @@ int main(int argc, char *argv[]) {
 						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
 			/* If the values were read in succesfully, we can do
-			   the UDP specific stuff. */
+			   the UDP specific stuff next. */
                         else {
 				err =  hip_nat_receive_udp_control_packet(
 					hip_msg, &saddr, &daddr, &pkt_info);
                         }
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
 		  	//struct sockaddr_un app_src, app_dst;
-		  //  	struct sockaddr_storage app_src;
+			//struct sockaddr_storage app_src;
 			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);

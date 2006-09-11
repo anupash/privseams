@@ -437,11 +437,11 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (peer_addr)
 		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
 
-	if(entry) HIP_DEBUG("**********NAT status %d\n", entry->nat);
+	if(entry) HIP_DEBUG("NAT status %d\n", entry->nat_between);
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
-		((entry && entry->nat) ||
+		((entry && entry->nat_between) ||
 		 (src_port != 0 || dst_port != 0))))//Temporary fix 
-		//if(dst_is_ipv4)// && entry->nat) //Will set this later --Abi
+		//if(dst_is_ipv4)// && entry->nat_between) //Will set this later --Abi
 	{
 		return hip_nat_send_udp(local_addr, peer_addr,
 					src_port, dst_port, msg, entry, retransmit);

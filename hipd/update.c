@@ -1691,7 +1691,7 @@ int hip_receive_update(struct hip_common *msg,
 	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
 		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
-		entry->nat = 0;
+		entry->nat_between = 0;
 		entry->peer_udp_port = 0;
 	}
 	else{

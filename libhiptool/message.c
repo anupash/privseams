@@ -232,7 +232,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct hip_stateless_info *msg_info,
                              int encap_hdr_size, int is_ipv4)
 {
-        struct sockaddr_storage addr_from;
+        HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
+	struct sockaddr_storage addr_from;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
 	struct sockaddr_in6 *addr_from6 =
 		((struct sockaddr_in6 *) &addr_from);
@@ -247,7 +248,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         int err = 0, len;
 	int cmsg_level, cmsg_type;
 
-	HIP_DEBUG("db1\n");
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);
 
@@ -269,7 +269,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
-	HIP_DEBUG("db2\n");
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -289,8 +288,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		}
 	}
         
-        HIP_DEBUG("db3\n");
-
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */
 	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
@@ -298,7 +295,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	/* UDP port numbers */
 	if (is_ipv4) {
-		HIP_DEBUG("port number ntohs = %d\n",
+		/** @todo Store the destination port also. */
+		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
 	}

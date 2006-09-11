@@ -1888,7 +1888,7 @@ int hip_handle_i2(struct hip_common *i2,
 		    Add other info here. --Abi */
 		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
 		{
-			entry->nat = 1;
+			entry->nat_between = 1;
 			entry->peer_udp_port = i2_info->src_port;
 		}
 

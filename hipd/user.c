@@ -225,7 +225,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
 		
-                /* Lauri: if(entry->nat_status == 1) 
+                /* Lauri: if(entry->nat_between_status == 1) 
 		   {
 		   Now what?
 		   }
