@@ -208,7 +208,6 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
-
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],
                             [Enable debug (default is YES)]),
