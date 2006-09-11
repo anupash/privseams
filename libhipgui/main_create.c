@@ -29,7 +29,7 @@ int main_create_content(void)
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
 	GtkWidget *pane, *pbox, *notebook, *w, *w2;
-	GtkWidget *button, *scroll, *chat, *div;
+	GtkWidget *button, *scroll, *chat, *div, *hiubox;
 	GtkWidget *label, *label2, *cframe, *menu_bar;
 	GtkTreeStore *model;
 	GtkWidget *list;
@@ -77,6 +77,13 @@ int main_create_content(void)
 		gtk_widget_show(label);
 		
 		widget_set(ID_SYSTRAYMENU, w);
+		
+/*		w = gtk_message_dialog_new(NULL, GTK_DIALOG_NO_SEPARATOR | GTK_DIALOG_NO_SEPARATOR,
+		                           GTK_MESSAGE_OTHER, GTK_BUTTONS_NONE, "testi viesti\nheipä hei");
+		gtk_window_set_decorated(w, FALSE);
+		gtk_widget_show(w);
+		gtk_dialog_run(w);
+		gtk_widget_hide(w);*/
 	}
 #endif
 
@@ -127,6 +134,7 @@ int main_create_content(void)
 	                               GTK_SIGNAL_FUNC(toolbar_event),
 	                               ID_TOOLBAR_TOGGLETOOLWINDOW);
 	widget_set(ID_TB_TW, w);
+	gtk_toggle_button_set_active(w, TRUE);
 
 	gtk_toolbar_append_space(toolbar);
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newgroup.png");
@@ -161,16 +169,16 @@ int main_create_content(void)
 
 	/* Create tabs. */
 	pane = gtk_hpaned_new();
-	label = gtk_label_new("Treeview");
+	label = gtk_label_new("HITs");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pane, label);
 	gtk_widget_show(pane);
 
-/*	label = gtk_label_new("HITs in use");
+	hiubox = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new("HITs in use");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
-	gtk_widget_show(label);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
+	gtk_widget_show(hiubox);
 
-	label = gtk_label_new("Net");
+/*	label = gtk_label_new("Net");
 	label2 = gtk_label_new("Net");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
 	gtk_widget_show(label);
@@ -186,7 +194,7 @@ int main_create_content(void)
 	gtk_widget_show(label);*/
 
 	cframe = gtk_frame_new("Configure HIP options");
-	label2 = gtk_label_new("Configuration");
+	label2 = gtk_label_new("Options");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
 	gtk_widget_show(cframe);
 
@@ -201,7 +209,7 @@ int main_create_content(void)
 	gtk_widget_show(chat);
 
 	/***************************************
-	/* HITs. */
+	/* Configure HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -223,15 +231,53 @@ int main_create_content(void)
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);
-	gtk_paned_add2(GTK_PANED(pane), scroll);
+	gtk_paned_add1(GTK_PANED(pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
+	gtk_paned_add2(GTK_PANED(pane), widget(ID_TOOLWND));
+	gtk_widget_show(widget(ID_TOOLWND));
 
 	/***************************************
-	/* Configuration. */
+	/* HITs in use -list. */
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	model = gtk_tree_store_new(1, G_TYPE_STRING);
+//	gtk_tree_store_append(model, &process_top, NULL);
+
+	list = gtk_tree_view_new();
+	widget_set(ID_PHIUVIEW, list);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("HIT", cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+/*	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Local HIT", cell, "text", 1, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("group", cell, "text", 2, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));*/
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
+	gtk_widget_set_size_request(scroll, 200, 0);
+	gtk_box_pack_start(GTK_BOX(hiubox), scroll, TRUE, TRUE, 1);
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
+	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
+	gtk_widget_show(list);
+	gtk_widget_show(scroll);
+	widget_set(ID_PHIUMODEL, model);
+	
+	w = gtk_label_new("Number of remote HITs in use: 0");
+	gtk_misc_set_alignment(w, 0.0f, 0.0f);
+	gtk_box_pack_end(GTK_BOX(hiubox), w, FALSE, FALSE, 1);
+	gtk_widget_show(w);
+	widget_set(ID_HIUNUM, w);
+	
+	/***************************************
+	/* Options. */
 	//gtk_vbutton_box_set_layout_default(GTK_BUTTONBOX_START);
 	w = gtk_vbox_new(FALSE, 1);
 	gtk_container_add(cframe, w);

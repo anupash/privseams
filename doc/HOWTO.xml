@@ -67,7 +67,7 @@
       &nbsp;* ipsec-tools: setkey
     </para>
     <para>
-      &nbsp;* iptables userspace tools and IPv6 netfilter in the kernel
+      &nbsp;* ip6tables userspace tools and IPv6 netfilter in the kernel
               (for the HIP firewall only)
     </para>
     <para>
@@ -795,6 +795,8 @@ using getaddrinfo: ping, ping6, tla, svn.
   <chapter>
     <title>HIP Firewall</title>
 
+        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
+
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the user-space.  These rules must be inserted
               so that they precede any other firewall rules that might
@@ -808,8 +810,6 @@ using getaddrinfo: ping, ping6, tla, svn.
         <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
-
-        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
 
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
@@ -879,6 +879,13 @@ using getaddrinfo: ping, ping6, tla, svn.
               network protected by the firewall. Please see the
               corresponding section on mobility to see how mobility events
               can be tested.</para>
+
+        <para>If you get "No buffer space available" errors, please disable
+              all of the firewall debug messages (./configure --disable-debug
+              && make clean all). This can
+              occur when moving large files and the firewall cannot serve
+              with sufficient speed when it has to display debug messages.
+        </para>
 
         <para>Management interface:</para>
 

@@ -1,18 +1,25 @@
-/*
- * User msg handling for hipd
- *
- * Licence: GNU/GPL
- * Authors:
- * - Kristian Slavov <ksl@iki.fi>
- * - Miika Komu <miika@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
+/** @file
+ * This file defines a user message handling function for the Host Identity
+ * Protocol (HIP).
+ * 
  * We don't currently have a workqueue. The functionality in this file mostly
  * covers catching userspace messages only.
  *
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
 
+/**
+ * Handles a user message.
+ *
+ * @param  msg  a pointer to the received user message HIP packet.
+ * @param  src  
+ * @return zero on success, or negative error value on error.
+ * @see    hip_so.
+ */ 
 int hip_handle_user_msg(struct hip_common *msg, 
 			const struct sockaddr_un *src) {
 	hip_hit_t *hit;
@@ -201,6 +208,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	   indicates that the current machine wants to register to a rvs server.
 	   This message is received from hipconf. */
 	case SO_HIP_ADD_RENDEZVOUS:
+		
+		/* Lauri: if(nat_status == 1) */ 
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
 		/* Get rvs ip and hit given as commandline parameters to hipconf. */
@@ -213,27 +222,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
+		
+                /* Lauri: if(entry->nat_status == 1) 
+		   {
+		   Now what?
+		   }
+		*/ 
 
-		/* DEBUG STUFF: */
-		HIP_HEXDUMP("entry->hmac_out.key:", entry->hip_hmac_out.key,
-			    HIP_MAX_KEY_LEN);
-		HIP_HEXDUMP("entry->hmac_in.key:", entry->hip_hmac_in.key,
-			    HIP_MAX_KEY_LEN);
-		HIP_DEBUG_HIT("&entry->hit_our:", &entry->hit_our);
-		HIP_DEBUG_HIT("&entry->hit_peer:", &entry->hit_peer);
-		/* End of debug stuff. */
-			      
 		/* Set a rvs request flag. */
 		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
 			 -1, "setting of rvs request flag failed\n");
 
-		/* Create an rva assosiation and set state registering...
-		HIP_RVA *rendezvous_association;
-		rendezvous_association = hip_rvs_get(&entry->hit_our);
-		if(rendezvous_association){
-			HIP_DEBUG("Found rendezvous_association.\n");
-		}
-		*/
 		/* Send a I1 packet to rvs. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
