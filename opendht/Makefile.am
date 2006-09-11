@@ -39,4 +39,13 @@ client.c: rpcif.h
 opendht_interface.c: rpcif.h
 rpcif_client.c: rpcif.h
 
+else
+
+# Workaround for "make dist" to succeed;
+# the generatable c files are problematic.
+rpcif_client.c:
+	touch  rpcif_client.c
+rpcif_xdr.c:
+	touch  rpcif_xdr.c
+
 endif
