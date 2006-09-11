@@ -4,12 +4,13 @@ CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 EXTRA_DIST = rpcif.x
-CLEANFILES = rpcif.h rpcif_client.c rpcif_xdr.c
 
 XDR=rpcgen
 XDRCONFIG=rpcif.x
 
 if HIP_OPENDHT
+
+CLEANFILES = rpcif.h rpcif_client.c rpcif_xdr.c
 
 lib_LTLIBRARIES = libdhtresolver.la libdhttracker.la
 libdhtresolver_la_SOURCES  = resolver.c opendht_interface.c rpcif_client.c rpcif_xdr.c
@@ -23,8 +24,6 @@ tracker_teststub_SOURCES = tracker-teststub.c
 dht_dnsd_SOURCES = conf.c base64.c dns.c hex.c sha.c validator.c
 
 LDADD = .libs/libdhttracker.a .libs/libdhtresolver.a ../libinet6/.libs/libinet6.a
-
-endif
 
 ../libinet6/.libs/libinet6.a:
 	$(MAKE) -C $(HIPL)/libinet6
@@ -40,3 +39,4 @@ client.c: rpcif.h
 opendht_interface.c: rpcif.h
 rpcif_client.c: rpcif.h
 
+endif
