@@ -987,13 +987,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not find acceptable hip transform suite\n");
-	entry->hip_transform = transform_hip_suite;
 	
 	/* Select only one transform */
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_HIP_TRANSFORM,
 					   &transform_hip_suite, 1), -1, 
 		 "Building of HIP transform failed\n");
-
+	
+	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
+	
 	/********** ESP-ENC transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
 
@@ -1084,6 +1085,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
+	entry->hip_transform = transform_hip_suite;
 
 	/* let the setup routine give us a SPI. */
 	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
@@ -1209,7 +1211,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
-	
+	HIP_DEBUG("Saving base exchange encryption data to entry \n");
+	HIP_DEBUG_HIT("our_hit: ", &entry->hit_our);
+	HIP_DEBUG_HIT("peer_hit: ", &entry->hit_peer);
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -1885,6 +1889,7 @@ int hip_handle_i2(struct hip_common *i2,
 			entry->nat = 1;
 			entry->peer_udp_port = i2_info->src_port;
 		}
+		entry->hip_transform = hip_tfm;
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -2236,6 +2241,8 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
+	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
+
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
@@ -2320,11 +2327,8 @@ int hip_handle_r2(struct hip_common *r2,
 		}
 		if (accept) {
 			HIP_DEBUG("Registration to escrow service completed!\n");
-			HIP_KEA *kea;	
-			HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
-			HIP_DEBUG("Found kea base entry.\n");
-			kea->keastate = HIP_KEASTATE_VALID;
-			hip_keadb_put_entry(kea); 
+			HIP_IFEL(hip_for_each_hi(hip_kea_complete_base_entry, &entry->hit_our), 0,
+	         "for_each_hi err.\n");	
 		}
 	}
 	

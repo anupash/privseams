@@ -330,7 +330,11 @@ int main(int argc, char **argv)
   struct rule * rule = NULL;
   struct _GList * temp_list = NULL;
   struct hip_common hc;
-  struct hip_common * hc_ptr;
+  struct hip_common * hc_ptr = NULL;
+  struct hip_common * hip_common = NULL;
+  struct hip_esp * esp_data = NULL;
+ struct hip_esp_packet * esp = NULL;
+  
   if(argc != 3)
     {
       printf("Firewall usage: firewall <file_name> <timeout>, where file_name is a path to a file containing firewall filtering rules and timeout is connection timeout value in seconds. Invalid argument count. Closing. \n");
@@ -390,8 +394,21 @@ int main(int argc, char **argv)
       
       if(is_hip_packet(ip6_hdr)){
       HIP_DEBUG("****** Received HIP packet ******\n");
-	struct hip_common * hip_common = (struct hip_common*) (m->payload + 
-       							      sizeof (struct ip6_hdr));
+	
+	int packet_length = 0;
+	if (m->data_len <= (BUFSIZE - sizeof(struct ip6_hdr))){
+	  	packet_length = m->data_len - sizeof (struct ip6_hdr); 	
+	  	HIP_DEBUG("HIP packet size smaller than buffer size\n");
+	  }
+	  else { 
+	  	packet_length = BUFSIZE - sizeof(struct ip6_hdr);	
+	 
+	  	HIP_DEBUG("HIP packet size greater than buffer size\n");
+	  }
+	hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
+	/*hip_common = (struct hip_common*) (m->payload + 
+       							      sizeof (struct ip6_hdr));*/
+	memcpy(hip_common, m->payload + sizeof (struct ip6_hdr), packet_length);		
 			
 	struct hip_sig * sig = NULL;
 	sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
@@ -422,10 +439,8 @@ int main(int argc, char **argv)
 	  HIP_DEBUG("****** Received ESP packet ******\n");
 	  uint32_t spi_temp;
 	  uint32_t spi_val;
-	  struct hip_esp * esp_data;
 	  
-	  struct hip_esp_packet * esp = 
-	  	(struct hip_esp_packet *)malloc(sizeof(struct hip_esp_packet));
+	  esp = (struct hip_esp_packet *)malloc(sizeof(struct hip_esp_packet));
 	  esp->packet_length = 0;
 	  esp->esp_data = NULL;
 	  if (m->data_len <= (BUFSIZE - sizeof(struct ip6_hdr))){
@@ -437,10 +452,10 @@ int main(int argc, char **argv)
 	 
 	  	HIP_DEBUG("Packet size greater than buffer size\n");
 	  }
-	  //esp_data = (struct hip_esp *)malloc(esp->packet_length);
-	  //memcpy(esp_data, m->payload + sizeof (struct ip6_hdr), esp->packet_length);
-	  //esp->esp_data = esp_data;
-	  esp->esp_data = m->payload + sizeof (struct ip6_hdr);
+	  esp_data = (struct hip_esp *)malloc(esp->packet_length);
+	  memcpy(esp_data, m->payload + sizeof (struct ip6_hdr), esp->packet_length);
+	  esp->esp_data = esp_data;
+	  //esp->esp_data = m->payload + sizeof (struct ip6_hdr);
 	  //esp->esp_tail = NULL;
 	  memcpy(&spi_temp, 
 		 (m->payload + sizeof (struct ip6_hdr)), 
@@ -449,8 +464,8 @@ int main(int argc, char **argv)
 	  
 	  spi_temp = esp->esp_data->esp_spi;
 	   
-	  _HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
-	 _HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
+	  HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
+	 	HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
 	  if(filter_esp(&ip6_hdr->ip6_dst, 
 			esp,
 			m->hook,
@@ -468,10 +483,10 @@ int main(int argc, char **argv)
 	      HIP_DEBUG("esp packet dropped \n"); 
 	    }
 	    if (esp) {
-	    	/*if (esp_data) {
+	    	if (esp_data) {
 	    		esp->esp_data = NULL;
 	    		free(esp_data);
-	    	}*/
+	    	}
 	    	free(esp);
 	    }
 	}
@@ -492,6 +507,16 @@ int main(int argc, char **argv)
     }
   } while (1);
   
+out_err:  
+	if (hip_common)
+		free(hip_common);
+	if (esp) {
+		if (esp_data) {
+	    	esp->esp_data = NULL;
+	    	free(esp_data);
+	    }
+	    free(esp);
+	}
   ipq_destroy_handle(h);
   return 0;
 }

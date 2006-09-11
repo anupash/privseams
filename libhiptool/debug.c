@@ -358,6 +358,15 @@ void hip_hexdump(const char *file, int line, const char *function,
 }
 
 /**
+ * 
+ */
+void hip_print_packet(const char *file, int line, const char *function,
+		 const char *prefix, const void *str, int len)
+{
+	HIP_DEBUG("Dumping packet\n");
+}
+
+/**
  * hip_print_sockaddr - print a socket address structure
  * @param file the file from where the debug call was made        
  * @param line the line of the debug call in the source file

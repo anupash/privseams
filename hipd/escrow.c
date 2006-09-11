@@ -89,6 +89,24 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 	return err;
 }
 
+int hip_kea_complete_base_entry(struct hip_host_id_entry * entry, 
+	void * local_hit_void)
+{
+	int err = 0;
+	HIP_KEA *kea;
+	struct in6_addr * local_hit = local_hit_void; 	
+	
+	kea = hip_kea_find(&entry->lhi.hit);
+	if (!kea) 
+		return -1;	
+	HIP_DEBUG("Found kea base entry.\n");
+	ipv6_addr_copy(&kea->local_hit, local_hit);	
+	kea->keastate = HIP_KEASTATE_VALID;
+	hip_keadb_put_entry(kea); 
+	HIP_DEBUG_HIT("Added local hit to kea base entry: ", local_hit);
+	return err;
+}
+
 int hip_kea_remove(struct hip_host_id_entry *entry, 
 	void *hit) 
 {
@@ -451,6 +469,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory.\n");
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
+	HIP_DEBUG_HIT("... from", &entry->hit_our);
 
 	HIP_DEBUG_HIT("escrow data hit:", hit);
 	HIP_DEBUG("escrow data spi: %d", spi);

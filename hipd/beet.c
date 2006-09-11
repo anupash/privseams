@@ -478,12 +478,17 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 #ifdef CONFIG_HIP_ESCROW
 	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_find_byhits(src_hit, dst_hit);	
+		HIP_KEA * kea = NULL;
+		hip_ha_t * entry = hip_hadb_find_byhits(src_hit, dst_hit);	
 		if (entry) {
 			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
+				hip_ha_t * server_entry = NULL;
+				HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "Could not find kea base entry");
+				HIP_DEBUG_HIT("escrow_server_hit ", &entry->escrow_server_hit);
+				HIP_DEBUG_HIT("kea base entry server_hit", &kea->server_hit);
+				//hip_ha_t * server_entry = 
+				//	hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
+				server_entry = hip_hadb_find_byhits(&kea->server_hit, &kea->local_hit);
 				if (server_entry) {
 					int err;
 					kea = hip_kea_find(&server_entry->hit_our);
