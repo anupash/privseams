@@ -412,45 +412,40 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-			HIP_PARAM_ESP_INFO,
-			HIP_PARAM_R1_COUNTER,
-			HIP_PARAM_LOCATOR,
-			HIP_PARAM_PUZZLE,
-			HIP_PARAM_SOLUTION,
-			HIP_PARAM_ESP_INFO,
-			HIP_PARAM_SEQ,
 			HIP_PARAM_ACK,
-			HIP_PARAM_DIFFIE_HELLMAN,
-			HIP_PARAM_HIP_TRANSFORM,
-			HIP_PARAM_ESP_TRANSFORM,
-			HIP_PARAM_ENCRYPTED,
-			HIP_PARAM_HOST_ID,
-			HIP_PARAM_CERT,
-			HIP_PARAM_RVA_REQUEST,
-			HIP_PARAM_RVA_REPLY,
-			HIP_PARAM_NOTIFY,
-			HIP_PARAM_ECHO_REQUEST_SIGN,
-			HIP_PARAM_ECHO_RESPONSE_SIGN,
-			HIP_PARAM_FROM_SIGN,
-			HIP_PARAM_TO_SIGN,
-			HIP_PARAM_HMAC,
-			HIP_PARAM_HMAC2,
-			HIP_PARAM_HIP_SIGNATURE2,
-			HIP_PARAM_HIP_SIGNATURE,
-			HIP_PARAM_ECHO_REQUEST,
-			HIP_PARAM_ECHO_RESPONSE,
-			HIP_PARAM_FROM,
-			HIP_PARAM_TO,
-			HIP_PARAM_HMAC,
-			HIP_PARAM_VIA_RVS,
-			HIP_PARAM_REG_INFO,
-			HIP_PARAM_REG_REQUEST,
-			HIP_PARAM_REG_RESPONSE,
-			HIP_PARAM_REG_FAILED
+                        HIP_PARAM_CERT,
+                        HIP_PARAM_DIFFIE_HELLMAN,
+                        HIP_PARAM_ECHO_REQUEST,
+                        HIP_PARAM_ECHO_REQUEST_SIGN,
+                        HIP_PARAM_ECHO_RESPONSE,
+                        HIP_PARAM_ECHO_RESPONSE_SIGN,
+                        HIP_PARAM_ENCRYPTED,
+                        HIP_PARAM_ESP_INFO,
+                        HIP_PARAM_ESP_INFO,
+                        HIP_PARAM_ESP_TRANSFORM,
+                        HIP_PARAM_FROM,
+                        HIP_PARAM_HIP_SIGNATURE,
+                        HIP_PARAM_HIP_SIGNATURE2,
+                        HIP_PARAM_HIP_TRANSFORM,
+                        HIP_PARAM_HMAC,
+                        HIP_PARAM_HMAC,
+                        HIP_PARAM_HMAC2,
+                        HIP_PARAM_HOST_ID,
+                        HIP_PARAM_LOCATOR,
+                        HIP_PARAM_NOTIFY,
+                        HIP_PARAM_PUZZLE,
+                        HIP_PARAM_R1_COUNTER,
+                        HIP_PARAM_REG_FAILED,
+                        HIP_PARAM_REG_INFO,
+                        HIP_PARAM_REG_REQUEST,
+                        HIP_PARAM_REG_RESPONSE,
+                        HIP_PARAM_SEQ,
+                        HIP_PARAM_SOLUTION,
+                        HIP_PARAM_VIA_RVS
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
-	/*! \todo check the lengths of the parameters */
+	/** @todo check the lengths of the parameters */
 
 	for (i = 0; i < ARRAY_SIZE(valid); i++) {
 		if (type == valid[i]) {
@@ -855,53 +850,49 @@ char* hip_message_type_name(uint8_t msg_type){
  * @return name of the message type
  **/
 char* hip_param_type_name(uint16_t param_type){
-	switch (param_type){
-		case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
-		case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
-		case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
-		case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
-		case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
-		case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
-		case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
-		case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
-		case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
-		case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
-		case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
-		case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
-		case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
-		case HIP_PARAM_RVA_REQUEST: return "HIP_PARAM_RVA_REQUEST";
-		case HIP_PARAM_RVA_REPLY: return "HIP_PARAM_RVA_REPLY";
-		case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
-		case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
-		case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
-		case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
-		case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
-		case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
-		case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
-		case HIP_PARAM_HI: return "HIP_PARAM_HI";
-		case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
-		case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
-		case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
-		case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
-		case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
-		case HIP_PARAM_EID_ADDR: return "HIP_PARAM_EID_ADDR";
-		case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
-		case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
-		case HIP_PARAM_FROM_SIGN: return "HIP_PARAM_FROM_SIGN";
-		case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
-		case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
-		case HIP_PARAM_HIP_SIGNATURE2: return "HIP_PARAM_HIP_SIGNATURE2";
-		case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
-		case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
-		case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
-		case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
-		case HIP_PARAM_TO: return "HIP_PARAM_TO";
-		case HIP_PARAM_RVA_HMAC: return "HIP_PARAM_RVA_HMAC";
-		case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-		case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
-		case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
-		case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
-		case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
+	switch (param_type) {
+	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
+	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
+	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
+	case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
+	case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
+	case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
+	case HIP_PARAM_ECHO_RESPONSE_SIGN: return "HIP_PARAM_ECHO_RESPONSE_SIGN";
+	case HIP_PARAM_EID_ADDR: return "HIP_PARAM_EID_ADDR";
+	case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
+	case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
+	case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
+	case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
+	case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
+	case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
+	case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
+	case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
+	case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
+	case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
+	case HIP_PARAM_HIP_SIGNATURE2: return "HIP_PARAM_HIP_SIGNATURE2";
+	case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
+	case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
+	case HIP_PARAM_HI: return "HIP_PARAM_HI";
+	case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
+	case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
+	case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
+	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
+	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
+	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
+	case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
+	case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
+	case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
+	case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
+	case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
+	case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
+	case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
+	case HIP_PARAM_RVS_HMAC: return "HIP_PARAM_RVS_HMAC";
+	case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
+	case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
+	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
+	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
+	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	}
 	return "UNDEFINED";
 }
@@ -1338,14 +1329,18 @@ void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 
 #ifndef __KERNEL__
 /**
- * hip_build_param_hmac_contents - build and append a HIP hmac parameter
- * @param msg the message where the hmac parameter will be appended
- * @param key pointer to a key used for HMAC
+ * Builds a @c HMAC parameter.
  *
- * This function calculates the also the HMAC value from the whole message
- * as specified in the drafts.
+ * Builds a @c HMAC parameter to the HIP packet @c msg. This function calculates
+ * also the hmac value from the whole message as specified in the drafts.
  *
- * @return 0 on success, otherwise < 0.
+ * @param msg a pointer to the message where the @c HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac2_contents()
+ * @see       hip_build_param_rvs_hmac_contents().
+ * @see       hip_write_hmac().
  */
 int hip_build_param_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key)
@@ -1367,16 +1362,55 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_hmac2_contents - build and append a HIP hmac2 parameter
- * @param msg the message where the hmac parameter will be appended
- * @param key pointer to a key used for HMAC
- * @param host_id pointer to host id
+ * Builds a @c RVS_HMAC parameter.
  *
- * This function calculates the also the HMAC value from the whole message
- * as specified in the drafts. Assumes that the hmac includes only the header
- * and host id.
+ * Builds a @c RVS_HMAC parameter to the HIP packet @c msg. This function
+ * calculates also the hmac value from the whole message as specified in the drafts.
  *
- * @return 0 on success, otherwise < 0.
+ * @param msg a pointer to the message where the @c RVS_HMAC parameter will be
+ *            appended.
+ * @param key a pointer to a key used for hmac.
+ * @return    zero on success, or negative error value on error.
+ * @see       hip_build_param_hmac_contents().
+ * @see       hip_build_param_hmac2_contents().
+ * @see       hip_write_hmac().
+ * @note      The functionality of this function is identical to the
+ *            functionality of hip_build_param_hmac_contents(). If something
+ *            is changed there, it is most likely that it should be changed
+ *            here also.
+ */
+int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
+				  struct hip_crypto_key *key)
+{
+	int err = 0;
+	struct hip_hmac hmac;
+
+	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
+	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
+	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				 hip_get_msg_total_len(msg),
+				 hmac.hmac_data), -EFAULT,
+		 "Error while building HMAC\n");
+	err = hip_build_param(msg, &hmac);
+ out_err:
+	return err;
+}
+
+/**
+ * Builds a @c HMAC2 parameter.
+ *
+ * Builds a @c HMAC2 parameter to the HIP packet @c msg. This function 
+ * calculates also the hmac value from the whole message as specified in the
+ * drafts. Assumes that the hmac includes only the header and host id.
+ *
+ * @param msg      a pointer to the message where the @c HMAC2 parameter will be
+ *                 appended.
+ * @param key      a pointer to a key used for hmac.
+ * @param host_id  a pointer to a host id.
+ * @return         zero on success, or negative error value on error.
+ * @see            hip_build_param_hmac_contents().
+ * @see            hip_build_param_rvs_hmac_contents().
+ * @see            hip_write_hmac().
  */
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
@@ -1437,23 +1471,23 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 /**
  * hip_build_param_encrypted_aes_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
+					struct hip_tlv_common *param)
 {
 	int rem, err = 0;
 	struct hip_encrypted_aes_sha1 enc;
-	int host_id_len = hip_get_param_total_len(host_id);
-	struct hip_host_id *hid = host_id;
-	char *host_id_padded = NULL;
+	int param_len = hip_get_param_total_len(param);
+	struct hip_tlv_common *common = param;
+	char *param_padded = NULL;
 
 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
 	enc.reserved = htonl(0);
@@ -1462,12 +1496,12 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 	/* copy the IV *IF* needed, and then the encrypted data */
 
 	/* AES block size must be multiple of 16 bytes */
-	rem = host_id_len % 16;
+	rem = param_len % 16;
 	if (rem) {
-		HIP_DEBUG("Adjusting host id size to AES block size\n");
+		HIP_DEBUG("Adjusting param size to AES block size\n");
 
-		host_id_padded = (char *)HIP_MALLOC(host_id_len + rem, GFP_KERNEL);
-		if (!host_id_padded) {
+		param_padded = (char *)HIP_MALLOC(param_len + rem, GFP_KERNEL);
+		if (!param_padded) {
 			err = -ENOMEM;
 			goto out_err;
 		}
@@ -1475,23 +1509,23 @@ int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
 		/* this kind of padding works against Ericsson/OpenSSL
 		   (method 4: RFC2630 method) */
 		/* http://www.di-mgt.com.au/cryptopad.html#exampleaes */
-		memcpy(host_id_padded, host_id, host_id_len);
-		memset(host_id_padded + host_id_len, rem, rem);
+		memcpy(param_padded, param, param_len);
+		memset(param_padded + param_len, rem, rem);
 
-		hid = (struct hip_host_id *) host_id_padded;
-		host_id_len += rem;
+		common = (struct hip_tlv_common *) param_padded;
+		param_len += rem;
 	}
 
 	hip_calc_param_len(&enc, sizeof(enc) -
 			   sizeof(struct hip_tlv_common) +
-			   host_id_len);
+			   param_len);
 
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), hid);
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), common);
 
  out_err:
 
-	if (host_id_padded)
-		HIP_FREE(host_id_padded);
+	if (param_padded)
+		HIP_FREE(param_padded);
 		
 	return err;
 }
@@ -1577,27 +1611,6 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_from - build HIP FROM parameter
- * @param msg the message 
- * @param addr An IPv6 address or an IPv4-in-IPv6 format IPv4 address
- * @param sign true if parameter is under signature, false otherwise
- *
- * @return zero for success, or non-zero on error
- */
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign)
-{
-	struct hip_from from;
-	int err;
-	
-	hip_set_param_type(&from, sign ? HIP_PARAM_FROM_SIGN : HIP_PARAM_FROM);
-	memcpy((struct in6_addr *)&from.address, addr, 16);
-
-	hip_calc_generic_param_len(&from, sizeof(struct hip_from), 0);
-	err = hip_build_param(msg, &from);
-	return err;
-}
-
-/**
  * hip_build_param_echo - build HIP ECHO parameter
  * @param msg the message 
  * @param opaque opaque data copied to the parameter
@@ -1651,34 +1664,57 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 }
 
 /**
- * hip_build_param_rva - build HIP RVA parameter
- * @param msg the message
- * @param lifetime lifetime in seconds in host bute order
- * @param type_list list of types (in host byte order) to be appended
- * @param cnt number of addresses in type_list
- * @param request true if parameter is RVA_REQUEST, otherwise parameter is RVA_REPLY
+ * Builds a @c FROM parameter.
  *
- * @return zero for success, or non-zero on error
+ * Builds a @c FROM parameter to the HIP packet @c msg.
+ *
+ * @param msg  a pointer to a HIP packet common header
+ * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @return     zero on success, or negative error value on error.
+ * @see        <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ *             draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
-			int *type_list, int cnt, int request)
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr)
 {
-	int err = 0;
-	int i;
-	struct hip_rva_reply rrep;
+	struct hip_from from;
+	int err;
+	
+	hip_set_param_type(&from, HIP_PARAM_FROM);
+	memcpy((struct in6_addr *)&from.address, addr, 16);
 
-	hip_set_param_type(&rrep, (request ? HIP_PARAM_RVA_REQUEST : HIP_PARAM_RVA_REPLY));
-	hip_calc_generic_param_len(&rrep, sizeof(struct hip_rva_reply),
-				   cnt * sizeof(uint16_t));
-
-	for(i=0;i<cnt;i++)
-		type_list[i] = htons(type_list[i]);
-
-	rrep.lifetime = htonl(lifetime);
-	err = hip_build_generic_param(msg, &rrep, sizeof(struct hip_rva_reply),
-				      (void *)type_list);
+	hip_calc_generic_param_len(&from, sizeof(struct hip_from), 0);
+	err = hip_build_param(msg, &from);
 	return err;
+}
 
+/**
+ * Builds a @c VIA_RVS parameter.
+ *
+ * Builds a @c VIA_RVS parameter to the HIP packet @c msg.
+ *
+ * @param msg           a pointer to a HIP packet common header
+ * @param rvs_addresses a pointer to rendezvous server IPv6 or IPv4-in-IPv6
+ *                      format IPv4 addresses.
+ * @param address_count number of addresses in @c rvs_addresses.
+ * @return              zero on success, or negative error value on error.
+ * @author              Lauri Silvennoinen
+ * @see                 <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ *                      draft-ietf-hip-rvs-05</a> section 4.2.3.
+ */
+int hip_build_param_via_rvs(struct hip_common *msg,
+			    const struct in6_addr rvs_addresses[],
+			    const int address_count)
+{
+	HIP_DEBUG("hip_build_param_rvs() invoked.\n");
+	int err = 0;
+	struct hip_via_rvs viarvs;
+	
+	hip_set_param_type(&viarvs, HIP_PARAM_VIA_RVS);
+	hip_calc_generic_param_len(&viarvs, sizeof(struct hip_via_rvs),
+				   address_count * sizeof(struct in6_addr));
+	err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
+				      (void *)rvs_addresses);
+	return err;
 }
 
 /**
@@ -1695,18 +1731,17 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 			uint8_t max_lifetime, int *type_list, int cnt)
 {
 	struct hip_reg_info rinfo;
-	//uint8_t list[2] = { HIP_ESCROW_SERVICE, HIP_RVA_RELAY_I1 };
 	int err = 0, i;
-	uint8_t *array;
+	uint8_t *array = NULL;
 
 	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
 	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
 				   cnt * sizeof(uint8_t));
 	
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)), 
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
@@ -1715,14 +1750,16 @@ int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime,
 	rinfo.max_lifetime = max_lifetime;
 	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
 				      (void *)array);
-	return err;
-
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;	
 }
 
 /**
  * hip_build_param_reg_request - build HIP REG_REQUEST or REG_RESPONSE parameter
- * @param msg the message
- * @param lifetime lifetime in seconds in host byte order
+ * @param msg       the message
+ * @param lifetime  lifetime in seconds in host byte order
  * @param type_list list of types to be appended
  * @param cnt number of addresses in type_list
  * @param request true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
@@ -1735,27 +1772,27 @@ int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime,
 	int err = 0;
 	int i;
 	struct hip_reg_request rreq;
-	uint8_t *array;
+	uint8_t *array = NULL;
 	
-
 	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
 	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
 				   cnt * sizeof(uint8_t));
 
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
-	
 
 	rreq.lifetime = lifetime;
 	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
-				      (void *)array);
-	return err;
-
+				      (void *)array);	
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;		
 }
 
 /**
@@ -1773,16 +1810,16 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	int err = 0;
 	int i;
 	struct hip_reg_failed rfail;
-	uint8_t *array;
+	uint8_t *array = NULL;
 
 	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
 	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
 				   cnt * sizeof(uint8_t));
 
-	array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL);
+	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
+		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
 	for (i = 0; i < cnt; i++) {
-		//int value = type_list[i];
 		uint8_t val = (uint8_t)type_list[i];
 		array[i] = val;
 	}
@@ -1791,7 +1828,10 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	rfail.failure_type = failure_type;
 	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
 				      (void *)array);
-	return err;
+out_err: 
+	if (array)
+		HIP_FREE(array);	
+	return err;		
 }			
 
 
@@ -2123,12 +2163,7 @@ int hip_build_param_locator(struct hip_common *msg,
  * @param enc encryption key
  * 
  * @return 0 on success, otherwise < 0.
- */
-/*int hip_build_param_keys(struct hip_common *msg, struct hip_crypto_key *enc,
-			 struct hip_crypto_key *auth,
-			 uint32_t spi, int alg, 
-			 int already_acquired, int direction) */
-			 
+ */	 
 int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
 						uint16_t alg_id, struct in6_addr *addr,
 						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
@@ -2150,11 +2185,29 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 	keys.key_len = htons(key_len);
 	memcpy(&keys.enc, enc, sizeof(struct hip_crypto_key));
 	
-		//memcpy(&keys.auth, auth, sizeof(struct hip_crypto_key));
-		//keys.acquired = already_acquired;
-		//keys.direction = direction;
-	
 	err = hip_build_param(msg, &keys);
+	return err;
+}
+
+int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc)
+{
+	int err = 0;
+
+	hip_set_param_type(keys, HIP_PARAM_KEYS);
+	hip_calc_generic_param_len(keys, sizeof(struct hip_keys), 0);
+	
+	memcpy((struct in6_addr *)keys->address, addr, 16);
+	memcpy((struct in6_addr *)keys->hit, hit, 16);		
+	keys->operation = htons(operation_id);
+	keys->alg_id = htons(alg_id);	
+	keys->spi = htonl(spi);
+	keys->spi_old = htonl(spi_old);
+	keys->key_len = htons(key_len);
+	memcpy(&keys->enc, enc, sizeof(struct hip_crypto_key));
+	
 	return err;
 }
 
@@ -2281,20 +2334,32 @@ int hip_build_param_spi(struct hip_common *msg, uint32_t spi)
 }
 #endif
 
+
+/**
+ * 
+ */
+/*int hip_build_param_encrypted(struct hip_common *msg,
+					struct hip_tlv_common *param) 
+{
+	//TODO
+	return 0;
+}*/
+
+
 /**
  * hip_build_param_encrypted_3des_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id)
+					struct hip_tlv_common *param)
 {
 	int err = 0;
 	struct hip_encrypted_3des_sha1 enc;
@@ -2302,13 +2367,13 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
 	hip_calc_param_len(&enc, sizeof(enc) -
 			   sizeof(struct hip_tlv_common) +
-			   hip_get_param_total_len(host_id));
+			   hip_get_param_total_len(param));
 	enc.reserved = htonl(0);
 	memset(&enc.iv, 0, 8);
 
 	/* copy the IV *IF* needed, and then the encrypted data */
 
-	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+	err = hip_build_generic_param(msg, &enc, sizeof(enc), param);
 
 	return err;
 }
@@ -2316,17 +2381,17 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
 /**
  * hip_build_param_encrypted_null_sha1 - build the hip_encrypted parameter
  * @param msg the message where the parameter will be appended
- * @param host_id the host id parameter that will contained in the hip_encrypted
+ * @param param the parameter that will contained in the hip_encrypted
  *           parameter
  * 
  * Note that this function does not actually encrypt anything, it just builds
- * the parameter. The host_id that will be encapsulated in the hip_encrypted
+ * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.
  *
- * @return zero on success, or negative on failure
+ * Returns: zero on success, or negative on failure
  */
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
- 					struct hip_host_id *host_id)
+ 					struct hip_tlv_common *param)
 {
 	int err = 0;
  	struct hip_encrypted_null_sha1 enc;
@@ -2334,12 +2399,12 @@ int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
  	hip_set_param_type(&enc, HIP_PARAM_ENCRYPTED);
  	hip_calc_param_len(&enc, sizeof(enc) -
  			   sizeof(struct hip_tlv_common) +
- 			   hip_get_param_total_len(host_id));
+ 			   hip_get_param_total_len(param));
  	enc.reserved = htonl(0);
 
  	/* copy the IV *IF* needed, and then the encrypted data */
 
- 	err = hip_build_generic_param(msg, &enc, sizeof(enc), host_id);
+ 	err = hip_build_generic_param(msg, &enc, sizeof(enc), param);
 
  	return err;
 }

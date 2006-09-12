@@ -622,7 +622,7 @@ int hip_socket_setsockopt(struct socket *sock,
 	case SO_HIP_RST:
 		err = hip_socket_handle_rst(msg);
 		break;
-	case SO_HIP_ADD_RVS:
+	case SO_HIP_ADD_RENDEZVOUS:
 		err = hip_socket_handle_rvs(msg);
 		break;
 // XX TODO: not supported for now, this message should be moved as

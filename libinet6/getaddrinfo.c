@@ -69,6 +69,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
+
+#ifdef CONFIG_HIP_OPENDHT
+#include "dhtresolver.h"
+#endif
+
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
@@ -424,6 +429,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
 #ifdef CONFIG_HIP_OPENDHT
   char tmp_hit_str[INET6_ADDRSTRLEN], tmp_addr_str[INET6_ADDRSTRLEN];	
   struct in6_addr tmp_hit, tmp_addr;
+
+  memset(tmp_hit_str, '\0', sizeof(tmp_hit_str));
+  memset(tmp_addr_str, '\0', sizeof(tmp_addr_str));
 
   if (!gethiphostbyname(name, tmp_hit_str) 
       && !gethiphostbyhit(tmp_hit_str, tmp_addr_str)) 

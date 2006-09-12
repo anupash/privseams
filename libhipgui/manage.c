@@ -281,6 +281,53 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 
 /******************************************************************************/
 /**
+	Set number of remote HITs in use.
+*/
+void gui_set_nof_hiu(int n)
+{
+	/* Variables. */
+	char str[320];
+	
+	sprintf(str, "Number of remote HITs in use: %d", n);
+	gtk_label_set_text(widget(ID_HIUNUM), str);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Delete all remote HITs in use from list.
+*/
+void gui_clear_hiu(void)
+{
+	/* Variables. */
+	GtkWidget *w;
+	
+	w = widget(ID_PHIUMODEL);
+	gtk_tree_store_clear(w);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add remote HIT in use.
+*/
+void gui_add_hiu(HIT_Remote *hit)
+{
+	/* Variables. */
+	GtkWidget *w;
+	GtkTreeIter iter;
+
+	w = widget(ID_PHIUMODEL);
+	gtk_tree_store_insert(w, &iter, NULL, 99);
+	gtk_tree_store_set(w, &iter, 0, hit->name, -1);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Create new remote group.
 
 	@return Name of new remote group.

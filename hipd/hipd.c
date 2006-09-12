@@ -36,6 +36,16 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
+int hip_firewall_sock = 0;
+struct sockaddr_un hip_firewall_addr;
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+unsigned int opportunistic_mode = 1;
+unsigned int oppdb_exist = 0;
+extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+						const hip_hit_t *hit_our);
+#endif // CONFIG_HIP_OPPORTUNISTIC
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -46,6 +56,10 @@ int address_count;
 struct list_head addresses;
 
 time_t load_time;
+
+#ifdef CONFIG_HIP_HI3
+char *i3_config = NULL;
+#endif
 
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
@@ -58,14 +72,26 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  int n = 0;
-
-  HIP_DEBUG("hip_sendto sending phit...\n");
-
-  n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-	     0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-  return n;
+  	HIP_DEBUG("hip_sendto() invoked.\n");
+	int n = 0;
+	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+	return n;
 }
+
+/*int hip_sendto_firewall(const struct hip_common *msg){
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_get_firewall_status()) {
+		int n = 0;
+		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
+		return n;
+	}
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}*/
 
 int main(int argc, char *argv[]) {
 	int ch;
@@ -135,10 +161,10 @@ int main(int argc, char *argv[]) {
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec), 1, "hipd_init() failed!\n");
 
-	highest_descriptor = maxof(7, hip_nl_route.fd, hip_raw_sock_v6,
+	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock, hip_raw_sock_v4,
-				   hip_nat_sock_udp);
+				   hip_nat_sock_udp, hip_firewall_sock);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
@@ -163,6 +189,7 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
+		FD_SET(hip_firewall_sock, &read_fdset);
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
@@ -326,6 +353,58 @@ int main(int argc, char *argv[]) {
 					HIP_DEBUG("Agent rejected I1.\n");
 				}
 			}
+		} else if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
+			int n;
+			socklen_t alen;
+			err = 0;
+			hip_hdr_type_t msg_type;
+			
+			HIP_DEBUG("Receiving message from firewall.\n");
+			
+			bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
+			alen = sizeof(hip_firewall_addr);
+			n = recvfrom(hip_firewall_sock, hip_msg, sizeof(struct hip_common), 0,
+			             (struct sockaddr *) &hip_firewall_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
+				continue;
+			}
+			
+			msg_type = hip_get_msg_type(hip_msg);
+			
+			if (msg_type == HIP_FIREWALL_PING)
+			{
+				HIP_DEBUG("Received ping from firewall\n");
+				memset(hip_msg, 0, sizeof(struct hip_common));
+				hip_build_user_hdr(hip_msg, HIP_FIREWALL_PING_REPLY, 0);
+				alen = sizeof(hip_firewall_addr);                    
+				n = hip_sendto(hip_msg, &hip_firewall_addr);
+				if (n < 0)
+				{
+					HIP_ERROR("Sendto() failed.\n");
+					err = -1;
+					continue;
+				}
+
+				if (err == 0)
+				{
+					HIP_DEBUG("HIP firewall ok.\n");
+					if (hip_firewall_status == 0)
+					{
+						// TODO: initializing of firewall needed?
+						HIP_DEBUG("First ping\n");
+					}
+					hip_firewall_status = 1;
+				}
+			}
+			else if (msg_type == HIP_FIREWALL_QUIT)
+			{
+				HIP_DEBUG("Firewall quit.\n");
+				hip_firewall_status = 0;
+			}
+		
 		} else if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset)) {
 			/* Something on IF and address event netlink socket,
 			   fetch it. */
@@ -361,4 +440,3 @@ int main(int argc, char *argv[]) {
 
 	return err;
 }
-

@@ -1,3 +1,16 @@
+/** @file
+ * A header file for hipconf.c
+ * 
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Anthony D. Joseph <adj_hiit.fi>
+ * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Anu Markkola
+ * @author  Lauri Silvennoinen
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ */
 #ifndef HIPCONF_H
 #define HIPCONF_H
 
@@ -7,7 +20,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,11 +29,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
-
 #include <sysexits.h>
-
 #include <assert.h>
-
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
@@ -46,32 +55,32 @@
 #define ACTION_MAX 10 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI     1
-#define TYPE_MAP    2
-#define TYPE_RST    3
-#define TYPE_RVS    4
-#define TYPE_BOS    5
-#define TYPE_PUZZLE 6
-#define TYPE_NAT    7
-#define TYPE_OPP    8
-#define TYPE_ESCROW 9
+#define TYPE_HI      1
+#define TYPE_MAP     2
+#define TYPE_RST     3
+#define TYPE_RVS     4
+#define TYPE_BOS     5
+#define TYPE_PUZZLE  6
+#define TYPE_NAT     7
+#define TYPE_OPP     8
+#define TYPE_ESCROW  9
 #define TYPE_SERVICE 10
-#define TYPE_RUN    11
-#define TYPE_MAX    12 /* exclusive */
+#define TYPE_RUN     12
+#define TYPE_MAX     13 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
 
-int handle_hi(struct hip_common *, int type, const char **opt, int optc);
-int handle_map(struct hip_common *, int type, const char **opt, int optc);
-int handle_rst(struct hip_common *, int type, const char **opt, int optc);
-int handle_bos(struct hip_common *, int type, const char **opt, int optc);
-int handle_rvs(struct hip_common *, int type, const char **opt, int optc);
-int handle_del(struct hip_common *, int type, const char **opt, int optc);
-int handle_nat(struct hip_common *, int type, const char **opt, int optc);
-int handle_puzzle(struct hip_common *, int type, const char **opt, int optc);
+int handle_hi(struct hip_common *, int type, const char *opt[], int optc);
+int handle_map(struct hip_common *, int type, const char *opt[], int optc);
+int handle_rst(struct hip_common *, int type, const char *opt[], int optc);
+int handle_bos(struct hip_common *, int type, const char *opt[], int optc);
+int handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_del(struct hip_common *, int type, const char *opt[], int optc);
+int handle_nat(struct hip_common *, int type, const char *opt[], int optc);
+int handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);

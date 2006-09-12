@@ -256,8 +256,7 @@ int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
 
-int hip_count_one_entry(hip_ha_t *entry, int *counter);
+int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
-
 
 #endif /* HIP_HADB_H */

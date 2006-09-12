@@ -1,4 +1,4 @@
-#include "config.h"
+#include "conf.h"
 #include "dnsd.h"
 
 
