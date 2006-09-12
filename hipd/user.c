@@ -156,30 +156,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
 		
-		HIP_KEA *kea;
-
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
 		
 		HIP_DEBUG("Added kea base entry.\n");
-		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
-		// TODO: how to know later that we want to do registration? with kea state?
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea) {
-			HIP_DEBUG("Found kea base entry.\n");
-			kea->keastate = HIP_KEASTATE_REGISTERING;
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!\n");
-		}
-		
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
+		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
+	         "for_each_hi err.\n");	
 	
 		break;
 		

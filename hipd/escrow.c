@@ -89,22 +89,29 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 	return err;
 }
 
-int hip_kea_complete_base_entry(struct hip_host_id_entry * entry, 
-	void * local_hit_void)
+/**
+ * Launches registration to escrow service
+ */
+int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
+	void * server_hit_void)
 {
 	int err = 0;
-	HIP_KEA *kea;
-	struct in6_addr * local_hit = local_hit_void; 	
+	hip_ha_t * entry = NULL;	
+	struct in6_addr * server_hit = server_hit_void;
+	HIP_KEA * kea = NULL;
 	
-	kea = hip_kea_find(&entry->lhi.hit);
-	if (!kea) 
-		return -1;	
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
+			 -1, "internal error: no hadb entry found\n");
+	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
 	HIP_DEBUG("Found kea base entry.\n");
-	ipv6_addr_copy(&kea->local_hit, local_hit);	
-	kea->keastate = HIP_KEASTATE_VALID;
-	hip_keadb_put_entry(kea); 
-	HIP_DEBUG_HIT("Added local hit to kea base entry: ", local_hit);
-	return err;
+	kea->keastate = HIP_KEASTATE_REGISTERING;
+	hip_keadb_put_entry(kea);
+	
+	HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry),
+			 -1, "sending i1 failed\n");
+		
+out_err:
+	return err;		
 }
 
 int hip_kea_remove(struct hip_host_id_entry *entry, 

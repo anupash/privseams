@@ -2326,9 +2326,13 @@ int hip_handle_r2(struct hip_common *r2,
 			}	
 		}
 		if (accept) {
-			HIP_DEBUG("Registration to escrow service completed!\n");
-			HIP_IFEL(hip_for_each_hi(hip_kea_complete_base_entry, &entry->hit_our), 0,
-	         "for_each_hi err.\n");	
+			HIP_KEA *kea = NULL;
+			
+			HIP_DEBUG("Registration to escrow service completed!\n"); 
+			HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1); 
+			HIP_DEBUG("Found kea base entry.\n");
+			kea->keastate = HIP_KEASTATE_VALID;
+			hip_keadb_put_entry(kea); 
 		}
 	}
 	

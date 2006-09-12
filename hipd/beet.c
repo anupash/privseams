@@ -486,9 +486,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "Could not find kea base entry");
 				HIP_DEBUG_HIT("escrow_server_hit ", &entry->escrow_server_hit);
 				HIP_DEBUG_HIT("kea base entry server_hit", &kea->server_hit);
-				//hip_ha_t * server_entry = 
-				//	hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				server_entry = hip_hadb_find_byhits(&kea->server_hit, &kea->local_hit);
+				server_entry = hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
 				if (server_entry) {
 					int err;
 					kea = hip_kea_find(&server_entry->hit_our);

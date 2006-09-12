@@ -25,7 +25,6 @@ struct hip_key_escrow_association
 				 if we are the client, this is our own hit */
 
 	struct in6_addr	server_hit;
-	struct in6_addr local_hit;
 	uint32_t 	spi_in;//?
 	uint32_t	spi_out;//?
 	hip_keastate_t	keastate;
@@ -77,8 +76,8 @@ int hip_handle_escrow_registration(struct in6_addr *hit);
 int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 
 	void *server_hit);
 
-int hip_kea_complete_base_entry(struct hip_host_id_entry * entry, 
-	void * local_hit);
+int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
+	void * server_hit_void);
 
 int hip_kea_remove(struct hip_host_id_entry *entry, void *hit); 
 
