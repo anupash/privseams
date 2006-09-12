@@ -150,12 +150,10 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
-	/*! \todo required by the native HIP API */
+	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
   	//hip_send_daemon_info(msg);
-	
-
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,

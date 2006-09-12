@@ -16,7 +16,7 @@
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
@@ -409,11 +409,11 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
-
+	/* Send an UPDATE message to NAT to keep the port open. */
 	if(nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_keep_alive(), -1, 
-			"Failed to send out keepalives\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+		HIP_IFEL(hip_nat_refresh_port(), -1, 
+			 "Failed to refresh NAT port state.\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 	} else {
 		nat_keep_alive_counter--;
 	}	

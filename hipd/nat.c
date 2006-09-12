@@ -14,7 +14,7 @@
  * @author  (version 1.0) Abhinav Pathak
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
- * @date    07.09.2006
+ * @date    12.09.2006
  * @note    Related drafts:
  *          <ul>
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
@@ -310,14 +310,16 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("sending with src port=%d, dst port=%d\n", src.sin_port,
 		  dst.sin_port);
-	for(i = 0; i < HIP_NAT_NUM_RETRANSMISSION; i++)
+	for(i = 0; i <= HIP_NAT_NUM_RETRANSMISSION; i++)
 	{
         	n = sendto( hip_nat_sock_udp, msg, len, 0,
 			    (struct sockaddr *) &dst, sizeof(dst));
 		if(n<0)
 		{
-			HIP_DEBUG("Some problem in sending packet ! Check route - Sleeping 2 seconds\n");
-			sleep(2);
+			HIP_DEBUG("Problem in sending UDP packet. Sleeping for "\
+				  "%d seconds and trying again.\n",
+				  HIP_NAT_SLEEP_TIME);
+			sleep(HIP_NAT_SLEEP_TIME);
 		}
 		else
 			break;
@@ -331,13 +333,22 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
-int hip_nat_keep_alive()
+/**
+ * Refreshes the port state of all NATs related to this host.
+ *
+ * Refreshes the port state of all NATs between current host and all its peer
+ * hosts by calling hip_nat_send_keep_alive() for each host association in
+ * the host association database.
+ *
+ * @return zero on success, or negative error value on error.
+ */ 
+int hip_nat_refresh_port()
 {
 	int err = 0 ;
 	if(hip_nat_status == 1)
 	{
 		HIP_DEBUG("Sending keepalives\n");
-		HIP_IFEL(hip_for_each_ha(hip_handle_keep_alive, NULL), 0,
+		HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL), 0,
         	         "for_each_ha err.\n");
 	}
 	
@@ -345,51 +356,77 @@ int hip_nat_keep_alive()
 	return err;
 }
 
-int hip_handle_keep_alive(hip_ha_t *entry, void *not_used)
+/**
+ * Sends an NAT Keep-Alive packet.
+ *
+ * Sends an UPDATE packet with nothing but @c HMAC parameter in it to the peer's
+ * preferred address. If the @c entry is @b not in state ESTABLISHED or if there
+ * is no NAT between this host and the peer (@c entry->nat_between = 0), then no
+ * packet is sent. The packet is send on UDP with source and destination ports
+ * set as @c HIP_NAT_UDP_PORT .
+ * 
+ * @param entry    a pointer to a host association which links current host and
+ *                 the peer.
+ * @param not_used this parameter is not used (but it's needed).
+ * @return         zero on success, or negative error value on error.
+ * @note           If the state of @c entry is not ESTABLISHED or if
+ *                 @c entry->nat_between = 0 this function still returns zero
+ *                 because these conditions are not errors. Negative error
+ *                 value is only returned when the creation of the new UPDATE
+ *                 message fails in some way.
+ */
+int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
+	HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
+	HIP_DEBUG("entry @ %p, entry->nat_between %d.\n",
+		  entry, entry->nat_between);
+	static int kala = 0;
+	kala++;
+	HIP_DEBUG("kala: %d.\n", kala);
 	int err = 0;
-	int n = 0, len, mask = 0;
-	struct hip_common *update_packet;
+	struct hip_common *update_packet = NULL;
 	
-	if(entry->state != HIP_STATE_ESTABLISHED)
-		goto out_err;
-	//Create an empty update packet and send to all the peer of the hip association;
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
-        	         "Out of memory.\n");
+	/* Check that the host association is in correct state and that there is
+	   a NAT between this host and the peer. Note, that there is no error
+	   (err is set to zero) if the condition does not hold. We just don't
+	   send the packet in that case. */
+	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0, 
+		 "Not sending NAT keepalive, invalid hip state "\
+		 "in current host association.\n");
+	
+	HIP_IFEL(!(entry->nat_between), 0, 
+		 "Not sending NAT keepalive, there is no NAT between this "\
+		 "host and the peer in current host association.\n");
 
+	/* Create an empty update packet. */
+	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+		 "No memory to create an UPDATE packet.\n");
+	
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
-                                                     mask, &entry->hit_our,
+                                                     0, &entry->hit_our,
                                                      &entry->hit_peer);
 
-	/* Add HMAC */
-        HIP_IFEL(hip_build_param_hmac_contents(update_packet,
-                                               &entry->hip_hmac_out), -1,
-                 "Building of HMAC failed\n");
+	/* Add a HMAC parameter to the UPDATE packet. */
+        HIP_IFEL(hip_build_param_hmac_contents(
+			 update_packet, &entry->hip_hmac_out), -1,
+                 "Building of HMAC failed.\n");
+        
+	/* Send the UPDATE packet using 50500 as source and destination ports.
+	   Only outgoing traffic acts refresh the NAT port state. We could
+	   choose to use other than 50500 as source port, but we must use 50500
+	   as destination port. However, because it is recommended to use
+	   50500 as source port also, we choose to do so here. */
+	hip_nat_send_udp(&entry->local_address, &entry->preferred_address,
+			 HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, update_packet,
+			 entry, 0);
 
-        /* Add SIGNATURE */
-        //HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-          //       "Could not sign UPDATE. Failing\n");
-
-
-	//Initialize sockets
-
-//#if 0
-	n = hip_nat_send_udp(&entry->local_address, 
-			     &entry->preferred_address,
-			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,	//Sending keepalives on 50500 !! --Abi
-			     update_packet,
-			     entry, 0);
-
-//#endif
-	//n = hip_send_update(entry, NULL, 0,0, 0 );
-	//HIP_DEBUG("Keep alive status %d\n", n);
-	//HIP_DEBUG_IN6ADDR("Peer address \n", &entry->preferred_address);
-	//Send the packet
-	//len = hip_get_msg_total_len(msg);
-	//n = sendto(hip_nat_sock_udp, msg, len, 0,
-	//		(struct sockaddr *) &dst, sizeof(dst)); 
-		
-
+	HIP_DEBUG_HIT("hip_nat_send_keep_alive(): Sent UPDATE packet to",
+		      &entry->preferred_address);
  out_err:
+	if(update_packet)
+	{
+		HIP_DEBUG("Freeing update_packet %p.\n", update_packet);
+		HIP_FREE(update_packet);
+	}
 	return err;
 }

@@ -129,7 +129,7 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 /**
  * Gets a rendezvous association from the rendezvous association hashtable.
  *
- * Gets a rendezvous association matching the argument @c hit.If
+ * Gets a rendezvous association matching the argument @c hit. If
  * a rendezvous association is found, it is automatically holded (refcnt
  * incremented).
  *
@@ -491,8 +491,9 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   whose type value is greater than RVS_HMAC in the incoming I1
 	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
-	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed, &rva->hmac_our), -1,
-		 "Building of HMAC failed\n");
+	HIP_IFEL(hip_build_param_rvs_hmac_contents(
+			 i1_to_be_relayed, &rva->hmac_our), -1,
+		 "Building of RVS_HMAC failed.\n");
 	
 	err = hip_csum_send(NULL, &final_dst, i1_info->src_port,
 			    i1_info->dst_port, i1_to_be_relayed, NULL, 0); 

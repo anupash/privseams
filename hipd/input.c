@@ -721,7 +721,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG("Received packet type %d\n", type);
 	_HIP_DUMP_MSG(msg);
 	_HIP_HEXDUMP("dumping packet", msg,  40);
-	// XX FIXME: CHECK PACKET CSUM
+	/** @todo Check packet csum.*/
 
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
@@ -729,7 +729,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	if (entry)
 	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	// XX TODO BING: ISOLATE TO A SEPARATE FUNCTION
+	/** @todo Isolate to a separate function. */
 	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  hip_ha_t oppEntry;

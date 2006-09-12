@@ -16,11 +16,14 @@
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-int hip_nat_sock_udp = 0;	/* For NAT traversal of IPv4 packets for base exchange*/
-int hip_nat_sock_udp_data = 0;  /* For NAT traversal of IPv4 packets for Data traffic */
-
-int hip_nat_status = 0; /*Specifies the NAT status of the daemon. It is turned off by default*/
-
+/** File descriptor of socket used for hip control packet NAT traversal on
+    UDP/IPv4. */
+int hip_nat_sock_udp = 0;
+/** File descriptor of socket used for data packet NAT traversal on UDP/IPv4. */
+int hip_nat_sock_udp_data = 0;
+/** Specifies the NAT status of the daemon. This value indicates if the current
+    machine is behind a NAT. */
+int hip_nat_status = 0;
 
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
@@ -261,7 +264,7 @@ int main(int argc, char *argv[]) {
 						    1, &saddr, &daddr,
 						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
-			/* If the values were read in succesfully, we can do
+			/* If the values were read in succesfully, we do
 			   the UDP specific stuff next. */
                         else {
 				err =  hip_nat_receive_udp_control_packet(

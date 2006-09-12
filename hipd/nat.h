@@ -31,16 +31,34 @@
 #include "debug.h"
 #include "state.h"
 
+/** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
-#define HIP_NAT_KEEP_ALIVE_TIME 5
-#define HIP_NAT_NUM_RETRANSMISSION 2
-#define HIP_NAT_UDP_PORT 50500 /* For NAT traversal */
-#define HIP_NAT_UDP_DATA_PORT 54500 /* For data traffic*/
-#define UDP_ENCAP 100 /* For setting socket to listen for beet-udp packets*/
-#define UDP_ENCAP_ESPINUDP 2 
-#define UDP_ENCAP_ESPINUDP_NONIKE 1 
+/** Time interval between consecutive NAT Keep-Alive packets in seconds.
+    @note According to [draft-schmitt-hip-nat-traversal-01], the default
+    keep-alive interval for control channels must be 20 seconds. However, for
+    debugging purposes we use a smaller value here.
+    @todo Change this value. */
+#define HIP_NAT_KEEP_ALIVE_INTERVAL 3
+/** Number of retransmissions to try if hip_nat_send_udp() fails. */
+#define HIP_NAT_NUM_RETRANSMISSION 1
+/** Amount of time to sleep between transmission and retransmissions. */
+#define HIP_NAT_SLEEP_TIME 2
+/** Port number for NAT traversal of hip control packets. */
+#define HIP_NAT_UDP_PORT 50500
+/** Port number for NAT travelsal of UDP data traffic. */
+#define HIP_UDP_DATA_PORT 54500
+/** For setting socket to listen for beet-udp packets. */
+#define HIP_UDP_ENCAP 100
+/** UDP encapsulation type. */
+#define HIP_UDP_ENCAP_ESPINUDP 2
+/** UDP encapsulation type. */ 
+#define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
 
+/** File descriptor of socket used for hip control packet NAT traversal on
+    UDP/IPv4. Defined in hipd.c */
 extern int hip_nat_sock_udp;
+/** Specifies the NAT status of the daemon. This value indicates if the current
+    machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
 
 int hip_nat_on();
@@ -52,8 +70,7 @@ int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				       struct hip_stateless_info *);
 int hip_nat_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		     struct hip_common*, hip_ha_t *, int);
-
-int hip_nat_keep_alive();
-int hip_handle_keep_alive(hip_ha_t *entry, void *not_used);
-#endif //__NAT_H__
+int hip_nat_refresh_port();
+int hip_nat_send_keep_alive(hip_ha_t *, void *);
+#endif /* __NAT_H__ */
 

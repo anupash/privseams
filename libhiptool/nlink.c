@@ -788,7 +788,7 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 }
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
 {
-	encap->encap_type = UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
+	encap->encap_type = HIP_UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
 	encap->encap_sport = htons(sport);
 	encap->encap_dport = htons(dport);
 	encap->encap_oa.a4 = oa->s6_addr32[3];
