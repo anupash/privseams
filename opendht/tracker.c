@@ -2,7 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "tracker.h"
-#include <opendht_interface.h>
+#include "opendht_interface.h"
+#include "debug.h"
 
 int updateHIT(char *hit, char *ip)
 {
@@ -91,7 +92,7 @@ int updateMAPS(char *fqdn, char *hit, char *ip)
   }
   else
   {
-   printf("TEST: HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
+    printf("TEST: HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
     //HIP_DEBUG("HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
   }
   free(dht_val);

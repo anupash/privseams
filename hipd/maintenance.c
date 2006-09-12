@@ -345,12 +345,7 @@ void register_to_dht ()
     tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
     tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
     
-    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
-	      tmp_hit_str, tmp_addr_str, hostname);
-
-   // upload mappings with the old functions
-   // updateHIT(hostname, tmp_hit_str);
-   // updateHIT(tmp_hit_str, tmp_addr_str);
+    // HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", tmp_hit_str, tmp_addr_str, hostname);
     updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
   } 	
 #endif
