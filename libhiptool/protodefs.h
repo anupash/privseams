@@ -42,15 +42,25 @@
 #define HIP_UPDATE_HIU				75
 
 /** Firewall can ping daemon with this message. */
-#define HIP_FIREWALL_PING			75
+#define HIP_FIREWALL_PING			80
 /** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
-#define HIP_FIREWALL_PING_REPLY			76
+#define HIP_FIREWALL_PING_REPLY		81
 /** Firewall sends this one to daemon when exiting. */
-#define HIP_FIREWALL_QUIT			77
+#define HIP_FIREWALL_QUIT			82
 /** Daemon sends escrow data to firewall with this message. */
-#define HIP_ADD_ESCROW_DATA			78
+#define HIP_ADD_ESCROW_DATA			83
 
+/**
+ * Daemon should send this message to other processes, when quiting.
+ * Currently sending to:
+ *    agent
+ */
+#define HIP_DAEMON_QUIT				127
 
+/*
+ * DONT MAKE THESE VALUES HIGHER THAN 255
+ * The variable, which stores this type, is 8 bits
+ */
 
 /* @} */
 
