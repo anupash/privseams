@@ -2414,8 +2414,8 @@ int hip_handle_i1(struct hip_common *i1,
 		   search keys. */
 		
 		hip_ha_t *rvs_ha_entry = NULL;
-		HIP_IFEL((rvs_ha_entry = 
-			  hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL,
+		HIP_IFEL(((rvs_ha_entry =
+			   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
 			  -1, "A matching host association was not found for "\
 			  "responder HIT / RVS IP.");
 		

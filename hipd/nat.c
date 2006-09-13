@@ -384,12 +384,12 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 
 	int err = 0;
 	struct hip_common *update_packet = NULL;
-	
+		
 	/* Check that the host association is in correct state and that there is
 	   a NAT between this host and the peer. Note, that there is no error
 	   (err is set to zero) if the condition does not hold. We just don't
 	   send the packet in that case. */
-	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0, 
+	HIP_IFEL((entry->state != HIP_STATE_ESTABLISHED), 0, 
 		 "Not sending NAT keepalive, invalid hip state "\
 		 "in current host association.\n");
 	

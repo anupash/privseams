@@ -451,9 +451,8 @@ struct hip_hadb_misc_func_set{
 struct hip_hadb_xmit_func_set{ 
 	int  (*hip_csum_send)(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
-			      uint32_t src_port, uint32_t dst_port,
-			      struct hip_common* msg,
-			      hip_ha_t *entry,
+			      in_port_t src_port, in_port_t dst_port,
+			      struct hip_common* msg, hip_ha_t *entry,
 			      int retransmit);
 };
 

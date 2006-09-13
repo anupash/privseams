@@ -435,6 +435,7 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock = 0;
 	
+	/* Abi's UDP stuff :| */
 	if(entry) {
 		HIP_DEBUG("NAT status %d\n", entry->nat_between);
 	}
@@ -448,7 +449,8 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 					src_port, dst_port, msg, entry, retransmit);
 		
 	} 
-	
+	/**/
+
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be
