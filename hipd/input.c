@@ -1879,14 +1879,14 @@ int hip_handle_i2(struct hip_common *i2,
 		add_address_to_list(addr, if_index);
                 /* if_index = addr2ifindx(entry->local_address); */
 
-		/* If the incoming I2 packet has a source or destination port
-		   other than zero, we set "on" the NAT state of current machine
-		   (the responder) and store the source port of the incoming I2
-		   packet. This port is the NAT-P' of 
-		   [draft-schmitt-hip-nat-traversal-01] section 3.3.1. */
+		/* If the incoming I2 packet has a source other than zero, we
+		   set "on" the NAT state of current machine (the responder)
+		   and store the source port of the incoming I2 packet. This
+		   port is the NAT-P' of [draft-schmitt-hip-nat-traversal-01]
+		   section 3.3.1. */
 		/** @todo This is a temporary fix. Need to think on this a bit.
 		    Add other info here. --Abi */
-		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
+		if(i2_info->src_port != 0)
 		{
 			entry->nat_between = 1;
 			entry->peer_udp_port = i2_info->src_port;
@@ -2045,8 +2045,9 @@ int hip_handle_i2(struct hip_common *i2,
 	/* we cannot do this outside (in hip_receive_i2) since we don't have
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
-//	if (!ha && entry) {
-		HIP_DEBUG("state is %d\n", entry->state);
+
+	HIP_DEBUG("state is %d\n", entry->state);
+	
 	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
@@ -2354,7 +2355,7 @@ int hip_handle_r2(struct hip_common *r2,
  *
  * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
  * <ul>
- * <li>If one ore more @c FROM parameters are found, there must also be a
+ * <li>If one or more @c FROM parameters are found, there must also be a
  * @c RVS_HMAC parameter present. This hmac is first verified. If verification
  * succeeds, the IP addresses obtained from the parameters are passed to
  * hip_xmit_r1() as an array. In hip_xmit_r1() this array is used create a

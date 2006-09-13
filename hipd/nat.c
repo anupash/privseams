@@ -225,8 +225,8 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		     struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	HIP_DEBUG("hip_nat_send_udp() invoked.\n");
-	HIP_DEBUG_IN6ADDR("local_addr:", local_addr);
-	HIP_DEBUG_IN6ADDR("peer_addr:", peer_addr);
+	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	
 	struct sockaddr_in src, dst;
@@ -380,9 +380,8 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
 	HIP_DEBUG("entry @ %p, entry->nat_between %d.\n",
 		  entry, entry->nat_between);
-	static int kala = 0;
-	kala++;
-	HIP_DEBUG("kala: %d.\n", kala);
+	HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
+
 	int err = 0;
 	struct hip_common *update_packet = NULL;
 	
@@ -425,7 +424,6 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
  out_err:
 	if(update_packet)
 	{
-		HIP_DEBUG("Freeing update_packet %p.\n", update_packet);
 		HIP_FREE(update_packet);
 	}
 	return err;

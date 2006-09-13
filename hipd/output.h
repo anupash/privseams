@@ -21,7 +21,7 @@ extern int hip_nat_status;
 /* Called by userspace daemon or kernel packet processing to send a
    packet to wire */
 int hip_csum_send(struct in6_addr *src_addr, struct in6_addr *peer_addr,
-		  uint32_t src_port, uint32_t dst_port,
+		  in_port_t src_port, in_port_t dst_port,
 		  struct hip_common* buf, hip_ha_t *entry, int retransmit);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit,

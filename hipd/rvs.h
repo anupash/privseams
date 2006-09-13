@@ -55,7 +55,7 @@ typedef struct hip_rendezvous_association
 	    @todo Indicate what is the preferred IP addresses. */
 	struct in6_addr       ip_addrs[HIP_RVA_MAX_IPS];
 	/** Client UDP port received in I2 packet of registration. */
-	uint16_t              client_udp_port;
+	in_port_t             client_udp_port;
 	/** Our HMAC. */
 	struct hip_crypto_key hmac_our;
 	/** Client HMAC. */

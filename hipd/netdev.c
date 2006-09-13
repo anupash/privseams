@@ -683,6 +683,16 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
+/**
+ * Selects a source IP address.
+ *
+ * Selection criteria is explained in [RFC1122] for IPv4 and in [RFC3484] for
+ * IPv6.
+ *
+ * @param src 
+ * @param dst
+ * @return zero on success, or negative error value on error.
+ */ 
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {

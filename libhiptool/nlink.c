@@ -574,28 +574,23 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	return err;
 }
 
-int hip_iproute_get(struct rtnl_handle *rth,
-		    struct in6_addr *src_addr,
-		    struct in6_addr *dst_addr,
-		    char *idev,
-		    char *odev,
-		    int family,
-		    struct idxmap **idxmap)
+int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
+		    struct in6_addr *dst_addr, char *idev, char *odev,
+		    int family, struct idxmap **idxmap)
 {
 	struct {
 		struct nlmsghdr 	n;
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
+
 	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
-	HIP_DEBUG("\n");
-
-	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
+	HIP_DEBUG_IN6ADDR("Getting route for destination address", dst_addr);
 
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
 		IPV6_TO_IPV4_MAP(dst_addr, &ip4);

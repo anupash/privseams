@@ -88,11 +88,21 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 	
 	/* Incremented the refrerence count of the new rendezvous association. */
 	hip_hold_rva(rva);
+	
+	/* Copy the client udp port. */
+	if(ha->peer_udp_port != 0) {
+		rva->client_udp_port = ha->peer_udp_port;
+	}
+	else {
+		rva->client_udp_port = 0;
+	}
+	
+	/* Lock the host association copying values from it. */
 	HIP_LOCK_HA(ha);
 
 	/* Copy peer hit as the client hit. */
 	ipv6_addr_copy(&rva->hit, &ha->hit_peer);
-
+	
 	/* Copy HMACs. */
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
@@ -425,18 +435,25 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
 	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
+	HIP_DEBUG("Rendezvous association port: %d.\n", rva->client_udp_port);
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
-	
+		
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
-	struct in6_addr final_dst;
+	struct in6_addr final_dst, local_addr;
 
-	/* Get the destination IP address the client has registered from the
-	   rendezvous association. */
+	/* Get the destination IP address which the client has registered from
+	   the rendezvous association. */
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &final_dst, 0);
+	
+        /* Select a source address which to use in the outgoing I1 packet. Note,
+	   that this is also done in hip_csum_send(), but for some reason not
+	   in hip_nat_send_udp(). */
+	HIP_IFEL(hip_select_source_address(&local_addr, &final_dst), -1,
+		 "Cannot select a source address for rendezvous server.\n");
 
 	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
@@ -491,19 +508,31 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   whose type value is greater than RVS_HMAC in the incoming I1
 	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
-	HIP_IFEL(hip_build_param_rvs_hmac_contents(
-			 i1_to_be_relayed, &rva->hmac_our), -1,
+	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed,
+						   &rva->hmac_our), -1,
 		 "Building of RVS_HMAC failed.\n");
 	
-	err = hip_csum_send(NULL, &final_dst, i1_info->src_port,
-			    i1_info->dst_port, i1_to_be_relayed, NULL, 0); 
-	
-	if (err)
-		HIP_ERROR("Relaying I1 failed: %d\n",err);
-	else {
-		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
+	/* If the client is behind NAT, the I1 packet is relayed on UDP,
+	   if there's no NAT, it is relayed on TCP. */
+	if(rva->client_udp_port == 0) {
+		HIP_DEBUG("Relaying I1 on TCP.\n");
+		HIP_IFEL(hip_csum_send(&local_addr, &final_dst,
+				       i1_info->src_port, i1_info->dst_port,
+				       i1_to_be_relayed, NULL, 0), -1,
+			 "Relaying I1 on TCP failed.\n");
+		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on TCP to",
+			      &final_dst);
 	}
-
+	else {
+		HIP_DEBUG("Relaying I1 on UDP.\n");
+		HIP_IFEL(hip_nat_send_udp(&local_addr, &final_dst,
+					  i1_info->src_port, i1_info->dst_port,
+					  i1_to_be_relayed, NULL, 0), -1,
+			 "Relaying I1 on UDP failed.\n");
+		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on UDP to",
+			      &final_dst);
+	}
+		
  out_err:
 	if(i1_to_be_relayed)
 	{

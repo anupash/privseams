@@ -319,7 +319,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 	/* set cookie state to used (more or less temporary solution ?) */
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
-	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port, i1_info->src_port, r1pkt, NULL, 0), -1, 
+	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port,
+			       i1_info->src_port, r1pkt, NULL, 0), -1, 
 		 "hip_xmit_r1 failed.\n");
 
  out_err:
@@ -416,32 +417,32 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
-int hip_csum_send(struct in6_addr *local_addr,
-		  struct in6_addr *peer_addr,
-		  uint32_t src_port, uint32_t dst_port,
-		  struct hip_common *msg,
-		  hip_ha_t *_entry,
-		  int retransmit)
+int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		  in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
+		  hip_ha_t *entry, int retransmit)
 {
+	HIP_DEBUG("hip_csum_send() invoked.\n");
+	HIP_DEBUG_IN6ADDR("hip_csum_send(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_csum_send(): peer_addr", peer_addr);
+	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
+
 	int err = 0, sa_size, sent, len, dupl, try_bind_again;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	struct sockaddr_in6 *src6, *dst6;
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
-	int hip_raw_sock = 0; /* Points either to v4 or v6 raw sock */
-	hip_ha_t *entry = _entry;
-
-	if (local_addr)
-		HIP_DEBUG_IN6ADDR("local_addr", local_addr);
-	if (peer_addr)
-		HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
-
-	if(entry) HIP_DEBUG("NAT status %d\n", entry->nat_between);
+	/* Points either to v4 or v6 raw sock */
+	int hip_raw_sock = 0;
+	
+	if(entry) {
+		HIP_DEBUG("NAT status %d\n", entry->nat_between);
+	}
+	
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
-		((entry && entry->nat_between) ||
-		 (src_port != 0 || dst_port != 0))))//Temporary fix 
-		//if(dst_is_ipv4)// && entry->nat_between) //Will set this later --Abi
+					       ((entry && entry->nat_between) ||
+						(src_port != 0 || dst_port != 0))))
+		
 	{
 		return hip_nat_send_udp(local_addr, peer_addr,
 					src_port, dst_port, msg, entry, retransmit);
@@ -478,7 +479,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		HIP_DEBUG("no local address, selecting one\n");
 		HIP_IFEL(hip_select_source_address(&my_addr,
 						   peer_addr), -1,
-				 "Cannot find source address\n");
+			 "Cannot find source address\n");
 	}
 
 	src_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&my_addr);
@@ -531,16 +532,16 @@ int hip_csum_send(struct in6_addr *local_addr,
 	if (err == -ENOENT)
 	{
 		err = 0;
-    }
-    else if (err == 0)
-    {
-    	HIP_DEBUG("Agent accepted the packet.\n");
-    }
-    else if (err == 1)
-    {
+	}
+	else if (err == 0)
+	{
+		HIP_DEBUG("Agent accepted the packet.\n");
+	}
+	else if (err == 1)
+	{
 		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
 		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
-		         msg, entry), -1, "queue failed\n");
+					  msg, entry), -1, "queue failed\n");
 		err = 1;
 		entry->state = HIP_STATE_FILTERING;
 		HIP_HEXDUMP("HA: ", entry, 4);
@@ -567,7 +568,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	   detection). */
 	if (retransmit)
 		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
-				       msg, entry), -1, "queue failed\n");
+					  msg, entry), -1, "queue failed\n");
 
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
