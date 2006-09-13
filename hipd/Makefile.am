@@ -10,7 +10,7 @@ include_HEADERS =  beet.h hadb.h oppdb.h hipd.h netdev.h rvs.h user.h
 include_HEADERS += bos.h input.h output.h spam.h xfrm.h
 include_HEADERS += close.h hi3.h keymat.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h update.h
-include_HEADERS += escrow.h reg.h
+include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
