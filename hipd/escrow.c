@@ -103,7 +103,8 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
 			 -1, "internal error: no hadb entry found\n");
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
-	HIP_DEBUG("Found kea base entry.\n");
+	HIP_DEBUG_HIT("Registering to server from ", &entry->hit_our);
+	
 	kea->keastate = HIP_KEASTATE_REGISTERING;
 	hip_keadb_put_entry(kea);
 	

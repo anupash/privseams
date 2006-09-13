@@ -388,10 +388,10 @@ void remove_tuple(struct tuple * tuple)
 void remove_connection(struct connection * connection)
 {
   HIP_DEBUG("remove_connection: tuple list before: \n");
-  print_tuple_list();
+  //print_tuple_list();
   
   HIP_DEBUG("remove_connection: esp list before: \n");
-  print_esp_list();
+  //print_esp_list();
   
   if(connection)
     {
@@ -401,10 +401,10 @@ void remove_connection(struct connection * connection)
     } 
   
   HIP_DEBUG("remove_connection: tuple list after: \n");
-  print_tuple_list();
+  //print_tuple_list();
      
   HIP_DEBUG("remove_connection: esp list after: \n");
-  print_esp_list();
+  //print_esp_list();
 }
 
 /**
@@ -584,7 +584,7 @@ int verify_packet_signature(struct hip_host_id * hi,
     return hip_dsa_verify(hi, common);
   else
     {
-      printf("verify_packet_signature: unknown algorithm\n");
+      HIP_DEBUG("verify_packet_signature: unknown algorithm\n");
       return -1;
     }
 }
@@ -1305,25 +1305,12 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found\n",
 	    addr_to_numeric(dst_addr), spi);
 
-	// TEST
+	// If decryption data for this spi exists, decrypt the contents
 	esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
 	if (!esp_tuple) {
 		HIP_DEBUG("Could not find corresponding esp_tuple\n");
 	}
-	else {
-		
-		HIP_DEBUG("Esp_tuple spi %d\n", esp_tuple->spi);
-		//HIP_DEBUG("Found esp_tuple: ");
-		if (esp_tuple->dec_data) {
-			HIP_DEBUG("Data is not null\n");
-			HIP_DEBUG("Key length: %d", esp_tuple->dec_data->key_len);	
-			HIP_HEXDUMP("Keyhex: ", esp_tuple->dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
-			
-		}
-	}
-	// END_TEST
-
-	/* TODO: Decrypt contents */
+	/* Decrypt contents */
 	if (esp_tuple && esp_tuple->dec_data)
 		decrypt_packet(dst_addr, esp_tuple, esp);
 
@@ -1499,9 +1486,9 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 
 	HIP_DEBUG("add_esp_decryption_data\n");
 	g_mutex_lock(connectionTableMutex);
-	HIP_DEBUG("add_esp_decryption_data:locked mutex\n");
+	_HIP_DEBUG("add_esp_decryption_data:locked mutex\n");
 	
-	HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
+	_HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
 		addr_to_numeric(dst_addr), spi);
 	tuple = get_tuple_by_esp(dst_addr, spi);	
 	if (!tuple)
@@ -1542,10 +1529,10 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 			dec_data->dec_alg = dec_alg;
 			dec_data->key_len = key_len;
 			memcpy(&dec_data->dec_key, dec_key, sizeof(struct hip_crypto_key));
-			HIP_DEBUG("Found esp_tuple: ");
-			HIP_DEBUG("Key length: %d", key_len);	
-			HIP_DEBUG("Key length: %d", dec_data->key_len);	
-			HIP_HEXDUMP("Keyhex: ", dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
+			HIP_DEBUG("Found existing esp_tuple\n");
+			_HIP_DEBUG("Key length: %d", key_len);	
+			_HIP_DEBUG("Key length: %d", dec_data->key_len);	
+			_HIP_HEXDUMP("Keyhex: ", dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
 			esp_tuple->dec_data = dec_data;
 			HIP_DEBUG("Added decryption data\n");
 		}
@@ -1555,9 +1542,6 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 		err = -1;
 		goto out_err;
 	}
-	g_mutex_unlock(connectionTableMutex);
-  	HIP_DEBUG("add_esp_decryption_data:unlocked mutex\n");
-  	return err;
   	
 out_err:
 	g_mutex_unlock(connectionTableMutex);

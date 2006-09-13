@@ -156,15 +156,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
-		
 		HIP_DEBUG("Added kea base entry.\n");
 		
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
 	         "for_each_hi err.\n");	
-	
 		break;
 		
 	case SO_HIP_OFFER_ESCROW:

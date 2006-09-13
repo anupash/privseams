@@ -445,12 +445,12 @@ int main(int argc, char **argv)
 	  esp->esp_data = NULL;
 	  if (m->data_len <= (BUFSIZE - sizeof(struct ip6_hdr))){
 	  	esp->packet_length = m->data_len - sizeof (struct ip6_hdr); 	
-	  	HIP_DEBUG("Packet size smaller than buffer size\n");
+	  	_HIP_DEBUG("Packet size smaller than buffer size\n");
 	  }
 	  else { 
 	  	esp->packet_length = BUFSIZE - sizeof(struct ip6_hdr);	
 	 
-	  	HIP_DEBUG("Packet size greater than buffer size\n");
+	  	_HIP_DEBUG("Packet size greater than buffer size\n");
 	  }
 	  esp_data = (struct hip_esp *)malloc(esp->packet_length);
 	  memcpy(esp_data, m->payload + sizeof (struct ip6_hdr), esp->packet_length);
@@ -464,8 +464,8 @@ int main(int argc, char **argv)
 	  
 	  spi_temp = esp->esp_data->esp_spi;
 	   
-	  HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
-	 	HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
+	  _HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
+	 _HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
 	  if(filter_esp(&ip6_hdr->ip6_dst, 
 			esp,
 			m->hook,
