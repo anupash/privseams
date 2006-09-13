@@ -96,7 +96,10 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 						uint16_t alg_id, struct in6_addr *addr,
 						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
 						uint16_t key_len, struct hip_crypto_key *enc);
-
+int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id, 
+						uint16_t alg_id, struct in6_addr *addr,
+						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						uint16_t key_len, struct hip_crypto_key *enc);
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
 int hip_build_param_hmac2_contents(struct hip_common *msg,
 				   struct hip_crypto_key *key,
@@ -131,11 +134,11 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id);
 int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
 			      uint16_t caseid);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *msg,
-				      struct hip_host_id *host_id);
+				      struct hip_tlv_common *param);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
-				      struct hip_host_id *host_id);
+				      struct hip_tlv_common *param);
 int hip_build_param_encrypted_null_sha1(struct hip_common *msg,
-					struct hip_host_id *host_id);
+					struct hip_tlv_common *param);
 int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint);
 void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
@@ -162,8 +165,11 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
-int hip_build_param_rva(struct hip_common *msg, uint32_t lifetime,
-			int *type_list, int cnt, int request);
+int hip_build_param_via_rvs(struct hip_common *msg,
+			    const struct in6_addr rvs_addresses[],
+			    const int address_count);
+int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
+				      struct hip_crypto_key *key);
 
 int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
 			uint8_t max_lifetime, int *type_list, int cnt);
@@ -178,7 +184,7 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request);
 
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr, int sign);
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr);
 
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);

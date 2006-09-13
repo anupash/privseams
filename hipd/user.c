@@ -1,18 +1,25 @@
-/*
- * User msg handling for hipd
- *
- * Licence: GNU/GPL
- * Authors:
- * - Kristian Slavov <ksl@iki.fi>
- * - Miika Komu <miika@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
+/** @file
+ * This file defines a user message handling function for the Host Identity
+ * Protocol (HIP).
+ * 
  * We don't currently have a workqueue. The functionality in this file mostly
  * covers catching userspace messages only.
  *
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
 
+/**
+ * Handles a user message.
+ *
+ * @param  msg  a pointer to the received user message HIP packet.
+ * @param  src  
+ * @return zero on success, or negative error value on error.
+ * @see    hip_so.
+ */ 
 int hip_handle_user_msg(struct hip_common *msg, 
 			const struct sockaddr_un *src) {
 	hip_hit_t *hit;
@@ -57,22 +64,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 #endif
 	case SO_HIP_RST:
 		err = hip_send_close(msg);
-		break;
-	case SO_HIP_ADD_RVS:
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-						       HIP_PARAM_HIT)),
-			 -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-						       HIP_PARAM_IPV6_ADDR)),
-			 -1, "no ip found\n");
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		HIP_IFEL(!(entry =
-			   hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
-			 -1, "setting of rvs request flag failed\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
@@ -161,16 +152,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  break;
 #endif
 #ifdef CONFIG_HIP_ESCROW
-// TODO: - create kea with own hit (params: server_hit, rules)
-// 		 - send i1 
-// hip_add_peer_map
+/** @todo create kea with own hit (params: server_hit, rules) 
+    - send i1 hip_add_peer_map */
 	case SO_HIP_ADD_ESCROW:
-		HIP_DEBUG("handling escrow user message");
+		HIP_DEBUG("handling escrow user message.\n");
 	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-						       HIP_PARAM_HIT)),
+							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-						       HIP_PARAM_IPV6_ADDR)),
+							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
@@ -181,41 +171,94 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
 		
-		
-		HIP_DEBUG("Added kea base entry");
+		HIP_DEBUG("Added kea base entry.\n");
 		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
 		// TODO: how to know later that we want to do registration? with kea state?
 		kea = hip_kea_find(&entry->hit_our);
 		if (kea) {
-			HIP_DEBUG("Found kea base entry");
+			HIP_DEBUG("Found kea base entry.\n");
 			kea->keastate = HIP_KEASTATE_REGISTERING;
 			hip_keadb_put_entry(kea);
 		}
 		else {
-			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!");
+			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!\n");
 		}
 		
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 	
 		break;
-	
-	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling escrow service user message");
 		
-		hip_services_add(HIP_ESCROW_SERVICE);
+	case SO_HIP_OFFER_ESCROW:
+		HIP_DEBUG("Handling escrow service user message.\n");
+		
+		HIP_IFE(hip_services_add(HIP_ESCROW_SERVICE), -1);
 	
 		hip_services_set_active(HIP_ESCROW_SERVICE);
 		if (hip_services_is_active(HIP_ESCROW_SERVICE))
-			HIP_DEBUG("Escrow service active");
+			HIP_DEBUG("Escrow service is now active.\n");
 		err = hip_recreate_all_precreated_r1_packets();	
-		break;	
+		break;
+
+#endif /* CONFIG_HIP_ESCROW */
+#ifdef CONFIG_HIP_RVS
+	/* draft-ietf-hip-registration-02 RVS registration.
+	   Responder (of I,RVS,R hierarchy) handles this message. Message
+	   indicates that the current machine wants to register to a rvs server.
+	   This message is received from hipconf. */
+	case SO_HIP_ADD_RENDEZVOUS:
+		
+		/* Lauri: if(nat_status == 1) */ 
+		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+		
+		/* Get rvs ip and hit given as commandline parameters to hipconf. */
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(
+				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(
+				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+		/* Add HIT to IP mapping of rvs to hadb. */ 
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		/* Fetch the hadb entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		
+                /* Lauri: if(entry->nat_status == 1) 
+		   {
+		   Now what?
+		   }
+		*/ 
+
+		/* Set a rvs request flag. */
+		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
+			 -1, "setting of rvs request flag failed\n");
+
+		/* Send a I1 packet to rvs. */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+		break;
+	
+	/* draft-ietf-hip-registration-02 RVS registration.
+	   Rendezvous server handles this message. Message indicates that the
+	   current machine is willing to offer rendezvous service. This message
+	   is received from hipconf. */
+	case SO_HIP_OFFER_RENDEZVOUS:
+		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
+		
+		HIP_IFE(hip_services_add(HIP_RENDEZVOUS_SERVICE), -1);
+		hip_services_set_active(HIP_RENDEZVOUS_SERVICE);
+		
+		if (hip_services_is_active(HIP_RENDEZVOUS_SERVICE)){
+			HIP_DEBUG("Rendezvous service is now active.\n");
+		}
+		
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
 	
 #endif
 	default:
-	 	 HIP_ERROR("Unknown socket option (%d)\n", msg_type);
-		 err = -ESOCKTNOSUPPORT;
+		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
+		err = -ESOCKTNOSUPPORT;
 	}
 
  out_err:

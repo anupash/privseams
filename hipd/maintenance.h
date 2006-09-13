@@ -19,7 +19,8 @@ int hip_agent_send_remote_hits(void);
 int hip_agent_filter(struct hip_common *msg);
 void register_to_dht();
 int periodic_maintenance();
-
+int hip_get_firewall_status();
+void hip_set_firewall_status();
 
 #endif /* _HIPD_MAINTENANCE */
 

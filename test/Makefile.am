@@ -26,8 +26,9 @@ endif
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
- LDADD += ../hip-dht/tracker/libtracker.a ../hip-dht/clientlib/resolver.a
- INCLUDES += -I../hip-dht/tracker -I../hip-dht/clientlib
+  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  conntest_client_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  INCLUDES += -I../opendht
 endif
 
 bin_PROGRAMS = conntest-client

@@ -210,6 +210,7 @@ struct hip_hadb_state
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
 	int                  esp_transform;
+	int                  hip_transform;
 	uint64_t             birthday;
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
@@ -217,8 +218,8 @@ struct hip_hadb_state
 	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
 	uint32_t	     peer_udp_port;    /* NAT mangled port */
 	//struct in6_addr      peer_udp_address; /* NAT address */
-	int					escrow_used;
-	struct in6_addr		escrow_server_hit;
+        int                  escrow_used;
+	struct in6_addr	     escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
 	 * here in the mean time.

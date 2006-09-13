@@ -20,6 +20,7 @@ int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
+int hip_firewall_status = 0;
 
 /**
  * Handle packet retransmissions.
@@ -336,7 +337,7 @@ void register_to_dht ()
     if (ipv6_addr_is_hit(SA2IP(&n->addr)))
 	continue;
 
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
       HIP_ERROR("No HIT found\n");
       return;
     }
@@ -344,10 +345,8 @@ void register_to_dht ()
     tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
     tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
     
-    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
-	      tmp_hit_str, tmp_addr_str, hostname);
-    updateHIT(hostname, tmp_hit_str);
-    updateHIT(tmp_hit_str, tmp_addr_str);
+    // HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", tmp_hit_str, tmp_addr_str, hostname);
+    updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
   } 	
 #endif
 }
@@ -417,4 +416,94 @@ int periodic_maintenance()
 	
 	return err;
 }
+
+int hip_firewall_is_alive()
+{
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_firewall_status) {
+		HIP_DEBUG("Firewall is alive.\n");
+	}
+	else {
+		HIP_DEBUG("Firewall is not alive.\n");
+	}
+	return hip_firewall_status;
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
+
+
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
+{
+		struct hip_common *msg;
+		int err = 0;
+		int n;
+		socklen_t alen;
+		struct in6_addr * hit_s;
+		struct in6_addr * hit_r;
+				
+		msg = malloc(HIP_MAX_PACKET);
+		if (!msg)
+		{
+			HIP_ERROR("malloc failed\n");
+			goto out_err;
+		}
+		hip_msg_init(msg);
+
+		err = hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0);
+		if (err)
+		{
+			HIP_ERROR("build hdr failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		
+		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+			hit_s = &entry->hit_peer;
+			hit_r = &entry->hit_our;
+		}
+		else {
+			hit_r = &entry->hit_peer;
+			hit_s = &entry->hit_our;
+		}
+		
+		err = hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_our failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		err = hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+		if (err)
+		{
+			HIP_ERROR("build param hit with hit_peer failed: %s\n", strerror(err));
+			goto out_err;
+		}
+		
+		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
+		if (err)
+		{
+			HIP_ERROR("build param failed: %s\n", strerror(err));
+			goto out_err;
+		}
+	
+		HIP_DEBUG("Sending test msg to firewall\n");
+
+		n = hip_sendto(msg, &hip_firewall_addr);                   
+		if (n < 0)
+		{
+			HIP_ERROR("Sendto firewall failed.\n");
+			err = -1;
+			goto out_err;
+		}
+		else HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
+
+}
+
+
 

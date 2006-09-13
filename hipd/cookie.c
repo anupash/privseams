@@ -92,7 +92,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	/* Find the proper R1 table and copy the R1 message from the table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)), 
 		 NULL, "Requested source HIT no more available.\n");
 	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
 	hip_r1table = hid->r1;
@@ -134,7 +134,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
-	r1 = HIP_MALLOC(len, GFP_KERNEL);
+	/* Replaced memory allocation, Lauri Silvennoinen 02.08.2006 */
+        //r1 = HIP_MALLOC(len, GFP_KERNEL);
+	r1 = hip_msg_alloc();
 	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
 
@@ -341,7 +343,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	/* Find the proper R1 table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO)), 
+	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
 		 0, "Requested source HIT not (any more) available.\n");
 	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
