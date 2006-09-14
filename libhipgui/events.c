@@ -45,6 +45,7 @@ gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 /** On window destroy. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
+	connhipd_quit();
 	gtk_main_quit();
 }
 /* END OF FUNCTION */
