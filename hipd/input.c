@@ -1347,11 +1347,13 @@ int hip_handle_r1(struct hip_common *r1,
 				kea = hip_kea_find(&entry->hit_our);
 				if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
 					HIP_DEBUG("Registering to escrow service.\n");
+					hip_keadb_put_entry(kea);
 				} 
 				else if(kea){
 					kea->keastate = HIP_KEASTATE_INVALID;
 					HIP_DEBUG("Not doing escrow registration, "\
 						  "invalid kea state.\n");
+					hip_keadb_put_entry(kea);	  
 				}
 				else{
 					HIP_DEBUG("Not doing escrow registration.\n");
@@ -1379,6 +1381,8 @@ int hip_handle_r1(struct hip_common *r1,
 		kea = hip_kea_find(&entry->hit_our);
 		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
 			kea->keastate = HIP_KEASTATE_INVALID;
+		if (kea)
+			hip_keadb_put_entry(kea);	
 	}
 #endif /* CONFIG_HIP_ESCROW */
 

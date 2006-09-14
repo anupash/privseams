@@ -489,7 +489,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				server_entry = hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
 				if (server_entry) {
 					int err;
-					kea = hip_kea_find(&server_entry->hit_our);
 					if (kea->keastate == HIP_KEASTATE_VALID) {
 						// TODO: Fix values. Spi usage needs to be checked. 
 						// direction should propably be checked
@@ -518,6 +517,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		else {
 			HIP_DEBUG("Could not find ha_state entry");
 		}
+		if (kea)
+			hip_keadb_put_entry(kea);
 	} 		
 
 #endif //CONFIG_HIP_ESCROW

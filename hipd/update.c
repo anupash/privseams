@@ -1311,15 +1311,15 @@ out_err:
 
 #ifdef CONFIG_HIP_ESCROW
 
-int hip_handle_escrow_parameter(hip_ha_t *entry, 
-	struct hip_keys *keys)
+int hip_handle_escrow_parameter(hip_ha_t * entry, 
+	struct hip_keys * keys)
 {
 	uint32_t spi, spi_old;
 	uint16_t op, len, alg;
 	int err = 0;
-	HIP_KEA *kea; 
-	HIP_KEA_EP *ep;
-	struct in6_addr *hit, *ip;
+	HIP_KEA * kea = NULL; 
+	HIP_KEA_EP * ep = NULL;
+	struct in6_addr * hit, * ip;
 	int accept = 0;
 	
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_peer)), -1, 
@@ -1382,6 +1382,8 @@ int hip_handle_escrow_parameter(hip_ha_t *entry,
 	}
 			
 out_err:
+	if (kea)
+		hip_keadb_put_entry(kea);
 	if (err)
 		HIP_DEBUG("Error while handlling escrow parameter");		
 	return err;

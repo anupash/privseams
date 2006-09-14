@@ -44,7 +44,7 @@ void hip_init_keadb(void)
 }
 
 
-void hip_keadb_hold_entry(void *entry) //TODO: remove?
+void hip_keadb_hold_entry(void *entry) 
 {
 	HIP_KEA *kea = entry;
 
@@ -54,7 +54,7 @@ void hip_keadb_hold_entry(void *entry) //TODO: remove?
 		atomic_read(&kea->refcnt));
 }
 
-void hip_keadb_put_entry(void *entry) //TODO: remove?
+void hip_keadb_put_entry(void *entry)
 {
 	HIP_KEA *kea = entry;
 
@@ -70,7 +70,8 @@ void hip_keadb_put_entry(void *entry) //TODO: remove?
 
 void hip_uninit_keadb(void)
 {
-	//TODO
+	HIP_DEBUG("Unitializing KEA TABLE\n");
+	hip_ht_uninit(&kea_table);
 }
 
 // hit_our is not really needed now
@@ -85,6 +86,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 		return -1;	
 	ipv6_addr_copy(&kea->server_hit, server_hit);	
 	err = hip_keadb_add_entry(kea);
+	hip_keadb_put_entry(kea);
 	HIP_DEBUG_HIT("Created kea base entry with hit: ", &entry->lhi.hit);
 	return err;
 }
@@ -293,7 +295,8 @@ void hip_init_kea_endpoints(void)
 
 void hip_uninit_kea_endpoints(void)
 {
-	//TODO:
+	HIP_DEBUG("Unitializing KEA ENDPOINTS TABLE\n");
+	hip_ht_uninit(&kea_endpoints);
 }
 
 int hip_kea_ep_hash(const void * key, int range)
@@ -432,7 +435,7 @@ void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
 HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 {
 
-	HIP_KEA_EP_ID *key;
+	HIP_KEA_EP_ID * key = NULL;
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
 	
@@ -512,10 +515,6 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG("Built escrow data");
 	
 	/* Encrypt hip_keys */
-
-	//TODO
-	
-	
 	switch (entry->hip_transform) {
 	case HIP_HIP_AES_SHA1:
 		HIP_IFEL(hip_build_param_encrypted_aes_sha1(update_packet, (struct hip_tlv_common *)keys), 
@@ -554,7 +553,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_HEXDUMP("enc(keys)", keys_enc,
 		    hip_get_param_total_len(keys_enc));
 
-	/* Calculate the length of the host id inside the encrypted param */
+	/* Calculate the length of the parameter inside the encrypted param */
 	keys_enc_len = hip_get_param_total_len(keys_enc);
 
 	/* Adjust the host id length for AES (block size 16).
@@ -574,7 +573,6 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 		    hip_get_param_total_len(enc_in_msg));
 	HIP_HEXDUMP("enc key", &entry->hip_enc_out.key, HIP_MAX_KEY_LEN);
 	_HIP_HEXDUMP("IV", iv, 16); // or 8
-	//_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 
 	HIP_IFEL(hip_crypto_encrypted(keys_enc, iv,
 				      entry->hip_transform,
@@ -585,7 +583,6 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	_HIP_HEXDUMP("encinmsg 2", enc_in_msg,
 		     hip_get_param_total_len(enc_in_msg));
-	//_HIP_HEXDUMP("hostidinmsg 2", host_id_in_enc, x);
 	
 	/*** Add HMAC ***/
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
