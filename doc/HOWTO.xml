@@ -567,7 +567,7 @@
 	E.g. "env  LD_PRELOAD=libinet6.so:libhiptool.so firefox hipserver.infrahip.net"
         Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so
     </para>
-    <para>If you have installed the library using make install, you should reference /usr/lib instead of your home directory.
+    <para>If you have installed the library using make install, you should reference /usr/local/lib instead of your home directory.
     </para>
     <para>
 Make sure that libinet6 is compiled with 
