@@ -269,7 +269,8 @@ int translate_unconnected_socket(int *const orig_socket,
      IP address instead of a HIT */
   if (is_peer) {
     HIP_DEBUG("requesting hit from hipd\n");
-    err = request_peer_hit_from_hipd(&ip->sin6_addr, &entry->translated_dst_id.sin6_addr,
+    err = request_peer_hit_from_hipd(&ip->sin6_addr,
+				     &entry->translated_dst_id.sin6_addr,
 				     &entry->translated_src_id.sin6_addr);
     if (err) {
       HIP_DEBUG("Request peer returned error, bailing out\n");
