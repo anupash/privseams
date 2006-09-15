@@ -423,7 +423,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
-                        HIP_PARAM_FROM,
+                        HIP_PARAM_FROM, /** @todo Remove? */
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -441,7 +441,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_REG_RESPONSE,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
-                        HIP_PARAM_VIA_RVS
+                        HIP_PARAM_VIA_RVS /** @todo Remove? */
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1374,10 +1374,10 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
  * @see       hip_build_param_hmac_contents().
  * @see       hip_build_param_hmac2_contents().
  * @see       hip_write_hmac().
- * @note      The functionality of this function is identical to the
- *            functionality of hip_build_param_hmac_contents(). If something
- *            is changed there, it is most likely that it should be changed
- *            here also.
+ * @note      Except the TLV type value, the functionality of this function is
+ *            identical to the functionality of hip_build_param_hmac_contents().
+ *            If something is changed there, it is most likely that it should
+ *            be changed here also.
  */
 int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 				  struct hip_crypto_key *key)

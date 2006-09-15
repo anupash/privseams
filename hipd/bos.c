@@ -132,6 +132,8 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
+		/** @todo Add NAT support. If we're behind a NAT,
+		    we need to use UDP. */
 		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
@@ -150,6 +152,8 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
+		/** @todo Add NAT support. If we're behind a NAT,
+		    we need to use UDP. */
 		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);

@@ -437,19 +437,24 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Abi's UDP stuff :| */
 	if(entry) {
-		HIP_DEBUG("NAT status %d\n", entry->nat_between);
+		HIP_DEBUG("entry->nat_between %d\n", entry->nat_between);
 	}
-	
+
+	HIP_DEBUG("hip_nat_status %d\n", hip_nat_status);
+	HIP_DEBUG("dst_is_ipv4 %d\n", dst_is_ipv4);
+
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
 					       ((entry && entry->nat_between) ||
 						(src_port != 0 || dst_port != 0))))
 		
 	{
+		HIP_DEBUG("Abi's UDP stuff is true.\n");
 		return hip_nat_send_udp(local_addr, peer_addr,
 					src_port, dst_port, msg, entry, retransmit);
 		
-	} 
-	/* */
+	}
+	HIP_DEBUG("Abi's UDP stuff is NOT true.\n");
+	/* End of Abi's UDP stuff. */
 
 	len = hip_get_msg_total_len(msg);
 
@@ -462,7 +467,7 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
-
+	
 	if (dst_is_ipv4) {
 		hip_raw_sock = hip_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
@@ -473,7 +478,7 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	HIP_ASSERT(peer_addr);
-
+	
 	if (local_addr) {
 		HIP_DEBUG("local address given\n");
 		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
@@ -598,8 +603,10 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
+
 		sent = sendto(hip_raw_sock, msg, len, 0,
 			      (struct sockaddr *) &dst, sa_size);
+	
 		HIP_IFEL((sent != len), -1,
 			 "Could not send the all requested data (%d/%d)\n",
 			 sent, len);

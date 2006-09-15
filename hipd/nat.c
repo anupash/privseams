@@ -225,107 +225,102 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		     struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	HIP_DEBUG("hip_nat_send_udp() invoked.\n");
+
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr && msg);
+	
 	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): peer_addr", peer_addr);
-	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
-	
-	struct sockaddr_in src, dst;
-	int sockfd = 0, n, len = 0 , err = 0, type = 0, i = 0;
-	
-	len = hip_get_msg_total_len(msg);
-	src.sin_family = AF_INET;
+	HIP_DEBUG("Source port: %d, destination port: %d.\n",
+		  src_port, dst_port);
+	HIP_DEBUG("Message type is %s\n",
+		  hip_message_type_name(hip_get_msg_type(msg)));
 
+	int sockfd = 0, err = 0, xmit_count = 0;
+	/* IPv4 Internet socket addresses. */
+	struct sockaddr_in src4, dst4;
+	/* Length of the HIP message. */
+	uint16_t packet_length = 0;
+	/* Number of characters sent. */
+	ssize_t chars_sent = 0;
+	/* If local address is not given, we fetch one here. */
+	struct in6_addr my_addr;
+
+	/* Currently only IPv4 is supported, so we set internet address family
+	   accordingly and map IPv6 addresses to IPv4 addresses. */
+	src4.sin_family = dst4.sin_family = AF_INET;
+	
+        /* Source address. */
         if (local_addr) {
-		IPV6_TO_IPV4_MAP(local_addr, &src.sin_addr);
+		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
+		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
 	} else {
-		src.sin_addr.s_addr = INADDR_ANY;
+		HIP_DEBUG("Local address is NOT given, selecting one.\n");
+		HIP_IFEL(hip_select_source_address(
+				 &my_addr, peer_addr), -EADDRNOTAVAIL,
+			 "Cannot find local address.\n");
+		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
+		HIP_DEBUG_IN6ADDR("Selected local address", &my_addr);
+	}
+	
+        /* Destination address. */
+	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	
+        /* Source port */
+	if(src_port != 0) {
+		src4.sin_port = htons(src_port);
+	}
+	else {
+		src4.sin_port = 0;
+	}
+	
+	/* Destination port. */
+	if(dst_port != 0) {
+		dst4.sin_port = htons(dst_port);
+	}
+	else {
+		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
 	}
 
-        HIP_IFEL(((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0), -1,
-		 "Error getting a socket for sending\n");
-
-        dst.sin_family = AF_INET;
-       	type = hip_get_msg_type(msg);
-
-	switch(type) {
-        case HIP_I1:
-	case HIP_I2:
-		if(entry)
-			HIP_DEBUG("Entry Found: nat %d\n", entry->nat_between);
-		else
-			HIP_DEBUG("Entry not found\n");
-        	src.sin_port = htons(HIP_NAT_UDP_PORT);
-        	dst.sin_port = htons(HIP_NAT_UDP_PORT);
-		/* Note: If we change this src.sin_port we need to put a
-		   listener to that port */
-		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
-		break;
-        case HIP_R1:
-	case HIP_R2:
-		if(entry)
-			HIP_DEBUG("Entry Found: nat %d\n", entry->nat_between);
-		else
-			HIP_DEBUG("Entry not found\n");
-	       	
-		src.sin_port = htons(HIP_NAT_UDP_PORT);
-       		dst.sin_port = htons(dst_port);
-		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
-		break;
-        case HIP_NOTIFY:
-        case HIP_BOS:
-        case HIP_CLOSE:
-        case HIP_CLOSE_ACK:
-        case HIP_UPDATE:
-		/* The logic below has been tested only with CLOSE */
-		if (!entry) {
-			err = -1;
-			HIP_ERROR("No entry, bailing out\n");
-			break;
-		}
-		IPV6_TO_IPV4_MAP(peer_addr, &dst.sin_addr);
-		src.sin_port = htons(HIP_NAT_UDP_PORT);
-		if(dst_port)
-			dst.sin_port = htons(dst_port);
-		else
-			dst.sin_port = htons(entry->peer_udp_port);
-		break;
-	 default:
-                HIP_ERROR("Unhandled packet type %d\n", type);
-		err = -1;
-		goto out_err;
-	}			
-
-	/* Probably required for mobility -miika */
-#if 0	
-	if(bind(sockfd, (struct sockaddr *)&src, sizeof(src))< 0)
-        {
-                HIP_ERROR("Error binding socket to port %d\n", src.sin_port);
-                return -1;
-        }
-#endif
-
-        hip_zero_msg_checksum(msg);
-        msg->checksum = checksum_packet((char*) msg, &src, &dst);
-
-	HIP_DEBUG("sending with src port=%d, dst port=%d\n", src.sin_port,
-		  dst.sin_port);
-	for(i = 0; i <= HIP_NAT_NUM_RETRANSMISSION; i++)
-	{
-        	n = sendto( hip_nat_sock_udp, msg, len, 0,
-			    (struct sockaddr *) &dst, sizeof(dst));
-		if(n<0)
+	/* Zero message HIP checksum... */
+	hip_zero_msg_checksum(msg);
+	/* ...and calculate a new HIP checksum. */
+        msg->checksum = checksum_packet((char*) msg, &src4, &dst4);
+	/* Get the packet total length for sendto(). */
+	packet_length = hip_get_msg_total_len(msg);
+	
+	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
+		  "destination port: %u.\n",
+		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
+	
+	/* Try to send the data. */
+	do{
+		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
+				     (struct sockaddr *) &dst4, sizeof(dst4));
+		/* Failure. */
+		if(chars_sent < 0)
 		{
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping for "\
 				  "%d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
 			sleep(HIP_NAT_SLEEP_TIME);
 		}
+		/* Success. */
 		else
+		{
 			break;
-	}
-	HIP_IFEL(( n < 0), -1, "Error in sending packet to server %d\n",n);
-        HIP_DEBUG("Packet sent successfully over UDP n=%d d=%d\n",
-				n, len);
+		}
+		xmit_count++;
+	}while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
+
+	/* Verify that the message was send completely. */
+	HIP_IFEL((chars_sent != packet_length), chars_sent,
+		 "Error while sending data on UDP: %d bytes of %d sent.)\n",
+		 chars_sent, packet_length);
+
+	HIP_DEBUG("Packet sent successfully over UDP, characters sent: %u, "\
+		  "packet length: %u.\n", chars_sent, packet_length);
+
  out_err:
 	if (sockfd)
 		close(sockfd);
@@ -390,7 +385,8 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   send the packet in that case. */
 	HIP_IFEL((entry->state != HIP_STATE_ESTABLISHED), 0, 
 		 "Not sending NAT keepalive, invalid hip state "\
-		 "in current host association.\n");
+		 "in current host association. State is %s.\n", 
+		 hip_state_str(entry->state));
 	
 	HIP_IFEL(!(entry->nat_between), 0, 
 		 "Not sending NAT keepalive, there is no NAT between this "\
@@ -400,10 +396,11 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "No memory to create an UPDATE packet.\n");
 	
-	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
-                                                     0, &entry->hit_our,
-                                                     &entry->hit_peer);
-
+	entry->hadb_misc_func->
+		hip_build_network_hdr(update_packet, HIP_UPDATE,
+				      0, &entry->hit_our,
+				      &entry->hit_peer);
+	
 	/* Add a HMAC parameter to the UPDATE packet. */
         HIP_IFEL(hip_build_param_hmac_contents(
 			 update_packet, &entry->hip_hmac_out), -1,
@@ -414,9 +411,10 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   choose to use other than 50500 as source port, but we must use 50500
 	   as destination port. However, because it is recommended to use
 	   50500 as source port also, we choose to do so here. */
-	hip_nat_send_udp(&entry->local_address, &entry->preferred_address,
-			 HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, update_packet,
-			 entry, 0);
+	entry->hadb_xmit_func->
+		hip_nat_send_udp(&entry->local_address, &entry->preferred_address,
+				 HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, update_packet,
+				 entry, 0);
 
 	HIP_DEBUG_HIT("hip_nat_send_keep_alive(): Sent UPDATE packet to",
 		      &entry->preferred_address);

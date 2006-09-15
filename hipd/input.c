@@ -78,7 +78,7 @@ u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	}
 
 	/* one's complement sum 16-bit words of data */
-	HIP_DEBUG("checksumming %d bytes of data.\n", length);
+	HIP_DEBUG("Checksumming %d bytes of data.\n", length);
 	count = length;
 	p = (unsigned short*) data;
 	while (count > 1) {
@@ -1219,6 +1219,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
+	
+	HIP_DEBUG("hip_create_i2() entry->nat_between: %u.\n", entry->nat_between);
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
 						     r1_info->dst_port, i2,

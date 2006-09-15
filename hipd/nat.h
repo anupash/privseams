@@ -40,9 +40,9 @@
     @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 3
 /** Number of retransmissions to try if hip_nat_send_udp() fails. */
-#define HIP_NAT_NUM_RETRANSMISSION 1
+#define HIP_NAT_NUM_RETRANSMISSION 2
 /** Amount of time to sleep between transmission and retransmissions. */
-#define HIP_NAT_SLEEP_TIME 2
+#define HIP_NAT_SLEEP_TIME 1
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 /** Port number for NAT travelsal of UDP data traffic. */
