@@ -33,13 +33,13 @@ int exists_mapping(int pid, int socket)
     return 0;
 }
 
-inline int hip_hash_pid_socket(const void *hashed_pit_socket, int range)
+inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
 {
   int hash = 0;
 
   HIP_DEBUG("range %d\n", range);
 
-  hash = *(int*)hashed_pit_socket;
+  hash = *(int*)hashed_pid_socket;
   _HIP_DEBUG("hash %d\n", hash);
 
   //int hashed = 0;

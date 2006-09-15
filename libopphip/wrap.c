@@ -108,23 +108,16 @@ int any_sa_to_hit_sa(const struct sockaddr *from,
 
 int translate_connected_socket(int * const socket)
 {
-  int err = 0;
-  int pid = getpid();
-  hip_opp_socket_t;
+  int err = 0, pid = getpid();
+  hip_opp_socket_t *entry = hip_socketdb_find_entry(pid, *socket);
 
-  entry =  hip_socketdb_find_entry(pid, *socket);
-  if(entry){
-    if(hip_socketdb_has_new_socket(entry)){
-      *socket = hip_socketdb_get_new_socket(entry);
-      HIP_DEBUG("hasnew socket %d\n", *socket);
-    }
-    else 
-      HIP_DEBUG("no new socket\n");
-  }
- out_err:
+  HIP_ASSERT(entry);
+  HIP_ASSERT(entry->translated_socket);
+
+  *socket = entry->translated_socket;
+
   return err;
 }
-
 
 int request_peer_hit_from_hipd(const struct in6_addr *ip, 
 			       hip_hit_t *peer_hit,
@@ -200,16 +193,26 @@ int translate_unconnected_socket(int *const orig_socket,
   hip_opp_socket_t *entry;
   struct sockaddr_in6 *ip, mapped_addr;
 
-  /* By default, we don't translate at all */
-  *translated_sock = orig_socket;
-  *translated_id = (struct sockaddr *) orig_id;
-
   entry = hip_socketdb_find_entry(pid, *orig_socket);
   HIP_ASSERT(entry);
+
+  /* By default, we don't translate at all */
+  memcpy(&entry->orig_socket, orig_socket, sizeof(*orig_socket));
+  memcpy(&entry->translated_socket, orig_socket, sizeof(*orig_socket));
+  *translated_sock = orig_socket;
+  *translated_id = orig_id;
 
   if(!entry->is_translated &&
      !wrapping_is_applicable(orig_id, hip_socketdb_get_type(entry))) {
     HIP_DEBUG("Wrapping is not applicable, returning original\n");
+    /* Copy the identifiers for diagnostic purposes */
+    if (is_peer) {
+      memcpy(&entry->orig_dst_id, ip, sizeof(*ip));
+      memcpy(&entry->translated_dst_id, ip, sizeof(*ip));
+    } else {
+      memcpy(&entry->orig_src_id, ip, sizeof(*ip));
+      memcpy(&entry->translated_src_id, ip, sizeof(*ip));
+    }
     goto out_err;
   }
 
@@ -234,24 +237,8 @@ int translate_unconnected_socket(int *const orig_socket,
   _HIP_DEBUG("connect sin_port=%d\n", ntohs(port));
   _HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
   
-  /* If the "ip" is actually a HIT, there is no need to create a new socket */
-  if(hit_is_real_hit(&ip->sin6_addr)){
-    HIP_DEBUG("real hit\n");
-    /* Cache the socket information in connect/bind because send, recv etc
-       cannot find this information anymore. Is this necessary? */
-    if (!entry->is_translated) {
-      entry->orig_socket = *orig_socket;
-      if (is_peer)
-	memcpy(&entry->translated_dst_id, ip, sizeof(*ip));
-      else
-	memcpy(&entry->translated_src_id, ip, sizeof(*ip));
-    }
-    goto out_err;
-  }
-
   /* Now, the socket identifier seems translatable (e.g. not an HIT or a
      RAW_SOCK). */
-
 
   /* Optimization: we don't request a HIT from hipd in sendto()
      and sendmsg() unless the application layer id has changed. Note: this
@@ -289,10 +276,11 @@ int translate_unconnected_socket(int *const orig_socket,
     &entry->translated_dst_id->sin6_port = port;
     
     entry->translatated_src_id.sin6_family = AF_INET6;
-    entry->translatated_src_id.sin6_port = 0; /* discovered in autobind or bind() */
+    entry->translatated_src_id.sin6_port = 0; /* discovered in (auto)bind */
   } else {
     /* Binding to an interface: assign any HIT */
-    memcpy(&entry->translated_src_hit, get_local_hits_wrapper(), sizeof(hip_hit_t));
+    memcpy(&entry->translated_src_hit, get_local_hits_wrapper(),
+	   sizeof(hip_hit_t));
     &entry->translated_src_id->sin6_port = port;
   }
 
