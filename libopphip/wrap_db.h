@@ -1,0 +1,49 @@
+#ifndef WRAP_DB_H
+#define WRAP_DB_H
+
+struct hip_opp_socket_entry {
+  struct list_head     	next_entry;
+  spinlock_t           	lock;
+  atomic_t             	refcnt;
+  pid_t 		pid;
+  int 			orig_socket;
+  int  			translated_socket;
+  int 			hash_key;// pid XOR old_socket
+  int 	       		domain;
+  int 			type;
+  int 			protocol;
+  int                   is_translated;
+  struct sockaddr_storage orig_src_id;
+  struct sockaddr_storage orig_dst_id;
+  struct sockaddr_storage translated_src_id;
+  struct sockaddr_storage translated_dst_id;
+};
+
+typedef struct hip_opp_socket_entry hip_opp_socket_t;
+
+// not implemented for hs either
+#define HIP_LOCK_SOCKET_INIT(entry)
+#define HIP_UNLOCK_SOCKET_INIT(entry)
+#define HIP_LOCK_SOCKET(entry)  
+#define HIP_UNLOCK_SOCKET(entry)
+#define HIP_SOCKETDB_SIZE 533
+#define SOFILE "libc.so.6" 
+
+void hip_init_socket_db();
+void hip_uninit_socket_db();
+hip_opp_socket_t *hip_create_opp_entry();
+void hip_socketdb_dump();
+//void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
+hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket);
+int hip_socketdb_add_entry(int pid, int socket);
+int hip_socketdb_del_entry(int pid, int socket);
+// functions in wrap_db.c
+int request_pseudo_hit_from_hipd(const struct in6_addr *ip, struct in6_addr *phit);
+int request_peer_hit_from_hipd(const struct in6_addr *ip, 
+			       struct in6_addr *peer_hit,
+			       const struct in6_addr *local_hit);
+int exists_mapping(int pid, int socket);
+
+extern hip_hit_t *get_local_hits_wrapper();
+
+#endif

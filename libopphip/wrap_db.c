@@ -14,46 +14,10 @@
 #include <sys/socket.h>
 #include "hashtable.h"
 #include "hadb.h"
-
-struct hip_opp_socket_entry {
-  struct list_head     	next_entry;
-  spinlock_t           	lock;
-  atomic_t             	refcnt;
-  pid_t 		pid;
-  int 			old_socket;
-  int  			new_socket;
-  int 			hash_key;// pid XOR old_socket
-  int 	       		domain;
-  int 			type;
-  int 			protocol;
-  struct in6_addr      	src_ip;
-  struct in6_addr      	dst_ip;
-  struct in6_addr      	src_hit;
-  struct in6_addr      	dst_hit;
-};
-
-typedef struct hip_opp_socket_entry hip_opp_socket_t;
-
-// not implemented for hs either
-#define HIP_LOCK_SOCKET_INIT(entry)
-#define HIP_UNLOCK_SOCKET_INIT(entry)
-#define HIP_LOCK_SOCKET(entry)  
-#define HIP_UNLOCK_SOCKET(entry)
-#define HIP_SOCKETDB_SIZE 533
+#include "wrap_db_h"
 
 HIP_HASHTABLE socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
-
-void hip_init_socket_db();
-void hip_uninit_socket_db();
-hip_opp_socket_t *hip_create_opp_entry();
-void hip_socketdb_dump();
-//void hip_socketdb_get_entry(hip_opp_socket_t *entry, int pid, int socket);
-hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket);
-int hip_socketdb_add_entry(int pid, int socket);
-int hip_socketdb_del_entry(int pid, int socket);
-int hip_socketdb_add_entry_by_entry(const hip_opp_socket_t *entry); //TODO::implement this func
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
 int exists_mapping(int pid, int socket)
 {
@@ -68,73 +32,6 @@ int exists_mapping(int pid, int socket)
   } else
     return 0;
 }
-
-inline int hip_socketdb_has_new_socket(const hip_opp_socket_t *entry)
-{
-  HIP_DEBUG("new socket %d\n", entry->new_socket);
-  if(entry)
-    return (entry->new_socket > 0);
-  else 
-    return 0;
-
-}
-inline int hip_socketdb_get_old_socket(const hip_opp_socket_t *entry)
-{
-    return entry->old_socket;
-}
-inline int hip_socketdb_get_domain(const hip_opp_socket_t *entry)
-{
-    return entry->domain;
-}
-inline int hip_socketdb_get_type(const hip_opp_socket_t *entry)
-{
-    return entry->type;
-}
-inline int hip_socketdb_get_protocol(const hip_opp_socket_t *entry)
-{
-    return entry->protocol;
-}
-inline int hip_socketdb_get_new_socket(const hip_opp_socket_t *entry)
-{
-    return entry->new_socket;
-}
-inline void hip_socketdb_modify_old_socket(hip_opp_socket_t *entry, int socket)
-{
-  entry->old_socket = socket;
-}
-inline void hip_socketdb_add_new_socket(hip_opp_socket_t *entry, int socket)
-{
-  entry->new_socket = socket;
-}
-inline void hip_socketdb_add_domain(hip_opp_socket_t *entry, int domain)
-{
-  entry->domain = domain;
-}
-inline void hip_socketdb_add_type(hip_opp_socket_t *entry, int type)
-{
-  entry->type = type;
-
-}
-inline void hip_socketdb_add_protocol(hip_opp_socket_t *entry, int protocol)
-{
-  entry->protocol = protocol;
-}
-inline void hip_socketdb_add_src_ip(hip_opp_socket_t *entry, const struct in6_addr *ip)
-{
-  memcpy(&entry->src_ip, ip, sizeof(entry->src_ip));
-}
-inline void hip_socketdb_add_dst_ip(hip_opp_socket_t *entry, const struct in6_addr *ip)
-{
-  memcpy(&entry->dst_ip, ip, sizeof(entry->dst_ip));
-}
-inline void hip_socketdb_add_src_hit(hip_opp_socket_t *entry, const struct in6_addr *hit)
-{
-  memcpy(&entry->src_hit, hit, sizeof(entry->src_hit));
-}
-inline void hip_socketdb_add_dst_hit(hip_opp_socket_t *entry, const struct in6_addr *hit)
-{
-  memcpy(&entry->dst_hit, hit, sizeof(entry->dst_hit));
-} 
 
 inline int hip_hash_pid_socket(const void *hashed_pit_socket, int range)
 {
