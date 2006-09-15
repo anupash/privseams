@@ -298,6 +298,9 @@ struct hip_hadb_state
 	hip_output_filter_func_set_t *hadb_output_filter_func;
 };
 
+/** @addtogroup hadb_func
+ * @{
+ */
 struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
 			      struct in6_addr *, 
@@ -448,12 +451,21 @@ struct hip_hadb_misc_func_set{
 				      const struct in6_addr *hit_receiver);
 };
 
-struct hip_hadb_xmit_func_set{ 
+/** A data structure containing function pointers to functions used for sending
+    data on wire. */
+struct hip_hadb_xmit_func_set{
+	/** A function pointer for sending data on TCP. */
 	int  (*hip_csum_send)(struct in6_addr *local_addr,
 			      struct in6_addr *peer_addr,
 			      in_port_t src_port, in_port_t dst_port,
 			      struct hip_common* msg, hip_ha_t *entry,
 			      int retransmit);
+	/** A function pointer for sending data on UDP. */
+	int (*hip_nat_send_udp)(struct in6_addr *local_addr,
+				struct in6_addr *peer_addr,
+				in_port_t src_port, in_port_t dst_port,
+				struct hip_common* msg, hip_ha_t *entry,
+				int retransmit);
 };
 
 struct hip_hadb_input_filter_func_set { 
@@ -464,6 +476,7 @@ struct hip_hadb_output_filter_func_set {
 	int (*hip_output_filter)(struct hip_common *msg);
 };
 
+/* @} */
 
 #endif /* _HIP_STATE */
 

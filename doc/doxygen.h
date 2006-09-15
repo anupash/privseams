@@ -61,4 +61,13 @@
  *           @b must be in order from lowest to highest.
  */
 
+/**
+ * HIP host assosiation function pointer data structures.
+ * 
+ * Data structures containing function pointers pointing to functions used for
+ * sending, receiving and handling data and modifying host assosiation state.
+ * 
+ * @defgroup hadb_func HIP host assosiation function sets
+ */
+
 #endif /* _DOXYGEN_H */

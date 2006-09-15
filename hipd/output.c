@@ -449,7 +449,7 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 					src_port, dst_port, msg, entry, retransmit);
 		
 	} 
-	/**/
+	/* */
 
 	len = hip_get_msg_total_len(msg);
 

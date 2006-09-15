@@ -230,7 +230,6 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	
 	struct sockaddr_in src, dst;
-	struct in_addr any = {INADDR_ANY};
 	int sockfd = 0, n, len = 0 , err = 0, type = 0, i = 0;
 	
 	len = hip_get_msg_total_len(msg);

@@ -513,7 +513,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 "Building of RVS_HMAC failed.\n");
 	
 	/* If the client is behind NAT, the I1 packet is relayed on UDP,
-	   if there's no NAT, it is relayed on TCP. */
+	   if there's no NAT, the packet is relayed on TCP. */
 	if(rva->client_udp_port == 0) {
 		HIP_DEBUG("Relaying I1 on TCP.\n");
 		HIP_IFEL(hip_csum_send(&local_addr, &final_dst,
@@ -526,7 +526,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 		HIP_DEBUG("Relaying I1 on UDP.\n");
 		HIP_IFEL(hip_nat_send_udp(&local_addr, &final_dst,
-					  i1_info->src_port, i1_info->dst_port,
+					 HIP_NAT_UDP_PORT, rva->client_udp_port,
 					  i1_to_be_relayed, NULL, 0), -1,
 			 "Relaying I1 on UDP failed.\n");
 		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on UDP to",

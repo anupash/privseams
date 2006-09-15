@@ -1818,6 +1818,7 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 	/* xmit function set */
 	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
+	default_xmit_func_set.hip_nat_send_udp	           = hip_nat_send_udp;
 
 	/* filter function sets */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
@@ -1881,7 +1882,7 @@ int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 				     hip_handle_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
 		return 0;
@@ -1900,7 +1901,7 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 				   hip_misc_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_misc_func = new_func_set;
 		return 0;

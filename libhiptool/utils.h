@@ -82,6 +82,8 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 	//printf("*************** %x\n", *hit);
 }
 
+/* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
+
 #define SET_NULL_HIT(hit)                           \
         { memset(hit, 0, sizeof(hip_hit_t));        \
           set_hit_prefix(hit) }
