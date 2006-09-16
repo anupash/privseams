@@ -43,6 +43,7 @@ int request_peer_hit_from_hipd(const struct in6_addr *ip,
 			       struct in6_addr *peer_hit,
 			       const struct in6_addr *local_hit);
 int exists_mapping(int pid, int socket);
+void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
 extern hip_hit_t *get_local_hits_wrapper();
 

@@ -14,18 +14,18 @@
 #include <sys/socket.h>
 #include "hashtable.h"
 #include "hadb.h"
-#include "wrap_db_h"
+#include "wrap_db.h"
 
 HIP_HASHTABLE socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
-int exists_mapping(int pid, int socket)
+int exists_translation(int pid, int socket)
 {
   hip_opp_socket_t *entry = NULL;
 
   entry = hip_socketdb_find_entry(pid, socket);
   if(entry) {
-    if(entry->pid == pid && entry->old_socket == socket)
+    if(entry->pid == pid && entry->orig_socket == socket)
       return 1;
     else // this should not happen
       HIP_ASSERT(0);
@@ -115,8 +115,8 @@ void hip_uninit_socket_db()
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
-	HIP_DEBUG("entry=0x%p pid=%d, old_socket=%d\n", entry,
-		  entry->pid, entry->old_socket);
+	HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+		  entry->pid, entry->orig_socket);
 	HIP_LOCK_SOCKET(entry);
 	hip_ht_delete(&socketdb, entry);
 	HIP_UNLOCK_SOCKET(entry);
@@ -124,7 +124,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 }
 /**
  * This function searches for a hip_opp_socket_t entry from the socketdb
- * by pid and old_socket.
+ * by pid and orig_socket.
  */
 //hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
@@ -160,14 +160,14 @@ void hip_socketdb_dump()
     if (!list_empty(&socketdb_by_pid_socket_list[i])) {
       HIP_DEBUG("HT[%d]\n", i);
       list_for_each_entry_safe(item, tmp, &(socketdb_by_pid_socket_list[i]), next_entry) {
-	hip_in6_ntop(&item->src_ip, src_ip);
-	hip_in6_ntop(&item->dst_ip, dst_ip);
-	hip_in6_ntop(&item->src_hit, src_hit);
-	hip_in6_ntop(&item->dst_hit, dst_hit);
+	hip_in6_ntop(SA2IP(&item->orig_src_id), src_ip);
+	hip_in6_ntop(SA2IP(&item->orig_dst_id), dst_ip);
+	hip_in6_ntop(SA2IP(&item->translated_src_id), src_hit);
+	hip_in6_ntop(SA2IP(&item->translated_dst_id), dst_hit);
 
-	HIP_DEBUG("pid=%d old_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
+	HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
 src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
-		  item->pid, item->old_socket, item->new_socket,
+		  item->pid, item->orig_socket, item->translated_socket,
 		  item->hash_key, item->domain, item->type, item->protocol,
 		  src_ip, dst_ip, src_hit, dst_hit, item->lock, item->refcnt);
       }
@@ -213,18 +213,13 @@ int hip_socketdb_add_entry(int pid, int socket)
     return err;                                                       
   }                                    
 
+  memset(new_item, 0, sizeof(hip_opp_socket_t));
+
   hip_xor_pid_socket(&new_item->hash_key, pid, socket);
   new_item->pid = pid;
-  new_item->old_socket = socket;
-  new_item->new_socket = 0;
-
-  ipv6_addr_copy(&new_item->src_ip, &in6addr_any);
-  ipv6_addr_copy(&new_item->dst_ip, &in6addr_any);
-  ipv6_addr_copy(&new_item->src_hit, &in6addr_any);
-  ipv6_addr_copy(&new_item->dst_hit, &in6addr_any);
-  err = hip_ht_add(&socketdb, new_item);                                     
-  HIP_DEBUG("pid %d, old_socket %d are added to HT socketdb, entry=%p\n",
-	    new_item->pid, new_item->old_socket,  new_item); 
+  new_item->orig_socket = socket;
+  HIP_DEBUG("pid %d, orig_socket %d are added to HT socketdb, entry=%p\n",
+	    new_item->pid, new_item->orig_socket,  new_item); 
   hip_socketdb_dump();
 
   return err;
