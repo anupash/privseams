@@ -93,9 +93,9 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
-		entry->nat_between = 1;
+		entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat_between);
+			  entry, entry->nat_mode);
 	}
  out_err:
 	return err;
@@ -120,9 +120,9 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		entry->peer_udp_port = 0;
-		entry->nat_between = 0;
+		entry->nat_mode = 0;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat_between);
+			  entry, entry->nat_mode);
 	}
  out_err:
 	return err;
@@ -177,7 +177,7 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 	if(entry) {
 		/* XX FIXME: this information is unreliable. We should
 		   be able to cancel it if hip_receive_control_packet fails */
-		entry->nat_between = 1;
+		entry->nat_mode = 1;
 		entry->peer_udp_port = info->src_port;
 		HIP_DEBUG("entry found src port %d\n",
 			  entry->peer_udp_port);
@@ -207,10 +207,21 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 }
 
 /**
- * Sends a message using User Datagram Protocol (UDP).
+ * Sends a HIP message using User Datagram Protocol (UDP).
  *
- * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
+ * there are no IPv6 NATs deployed in the Internet yet. If either @c local_addr
+ * or @c peer_addr is pure (not a IPv4-in-IPv6 format IPv4 address) IPv6
+ * address, no message is send. IPv4-in-IPv6 format IPv4 addresses are mapped to
+ * pure IPv4 addresses. This function calculates the HIP packet checksum. In
+ * case of transmission error, this function tries to retransmit the packet
+ * @c HIP_NAT_NUM_RETRANSMISSION times and sleeps for @c HIP_NAT_SLEEP_TIME
+ * seconds between retransmissions. 
+ * 
+ * Used protocol suite is <code>IPv4(UDP(HIP))</code>.
+ * 
+ * @param local_addr a pointer to our IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv4-in-IPv6 format IPv4 address.
  * @param src_port   source port number to be used in the UDP packet header.
  * @param dst_port   destination port number to be used in the UDP packet header.
  * @param msg        a pointer to a HIP packet common header with source and
@@ -235,7 +246,7 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  src_port, dst_port);
 	HIP_DEBUG("Message type is %s\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
-
+	
 	int sockfd = 0, err = 0, xmit_count = 0;
 	/* IPv4 Internet socket addresses. */
 	struct sockaddr_in src4, dst4;
@@ -245,7 +256,7 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	ssize_t chars_sent = 0;
 	/* If local address is not given, we fetch one here. */
 	struct in6_addr my_addr;
-
+	
 	/* Currently only IPv4 is supported, so we set internet address family
 	   accordingly and map IPv6 addresses to IPv4 addresses. */
 	src4.sin_family = dst4.sin_family = AF_INET;
@@ -253,6 +264,9 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
         /* Source address. */
         if (local_addr) {
 		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
+		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
+			 "Local address is pure IPv6 address, IPv6 address "\
+			 "family is currently not supported on UDP/HIP.\n");
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
@@ -264,6 +278,9 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 	
         /* Destination address. */
+	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
+		 "Peer address is pure IPv6 address, IPv6 address family is "\
+		 "currently not supported on UDP/HIP.\n");
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
 	
         /* Source port */
@@ -339,6 +356,7 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 int hip_nat_refresh_port()
 {
 	int err = 0 ;
+	/** @todo Is this "if" needed? */
 	if(hip_nat_status == 1)
 	{
 		HIP_DEBUG("Sending keepalives\n");
@@ -355,7 +373,7 @@ int hip_nat_refresh_port()
  *
  * Sends an UPDATE packet with nothing but @c HMAC parameter in it to the peer's
  * preferred address. If the @c entry is @b not in state ESTABLISHED or if there
- * is no NAT between this host and the peer (@c entry->nat_between = 0), then no
+ * is no NAT between this host and the peer (@c entry->nat_mode = 0), then no
  * packet is sent. The packet is send on UDP with source and destination ports
  * set as @c HIP_NAT_UDP_PORT .
  * 
@@ -364,7 +382,7 @@ int hip_nat_refresh_port()
  * @param not_used this parameter is not used (but it's needed).
  * @return         zero on success, or negative error value on error.
  * @note           If the state of @c entry is not ESTABLISHED or if
- *                 @c entry->nat_between = 0 this function still returns zero
+ *                 @c entry->nat_mode = 0 this function still returns zero
  *                 because these conditions are not errors. Negative error
  *                 value is only returned when the creation of the new UPDATE
  *                 message fails in some way.
@@ -372,8 +390,8 @@ int hip_nat_refresh_port()
 int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
 	HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
-	HIP_DEBUG("entry @ %p, entry->nat_between %d.\n",
-		  entry, entry->nat_between);
+	HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
+		  entry, entry->nat_mode);
 	HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
 
 	int err = 0;
@@ -388,7 +406,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 		 "in current host association. State is %s.\n", 
 		 hip_state_str(entry->state));
 	
-	HIP_IFEL(!(entry->nat_between), 0, 
+	HIP_IFEL(!(entry->nat_mode), 0, 
 		 "Not sending NAT keepalive, there is no NAT between this "\
 		 "host and the peer in current host association.\n");
 

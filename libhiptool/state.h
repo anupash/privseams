@@ -218,7 +218,7 @@ struct hip_hadb_state
 	size_t               dh_shared_key_len;
 	/** A boolean value indicating whether there is a NAT between this
 	    host and the peer. */
-	uint8_t	             nat_between;
+	uint8_t	             nat_mode;
         /** NAT mangled port (source port of I2 packet). */
 	in_port_t	     peer_udp_port;
         int                  escrow_used;

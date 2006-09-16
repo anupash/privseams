@@ -417,6 +417,9 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+/**
+ * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
+ */ 
 int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
 		  hip_ha_t *entry, int retransmit)
@@ -437,14 +440,14 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Abi's UDP stuff :| */
 	if(entry) {
-		HIP_DEBUG("entry->nat_between %d\n", entry->nat_between);
+		HIP_DEBUG("entry->nat_mode %d\n", entry->nat_mode);
 	}
 
 	HIP_DEBUG("hip_nat_status %d\n", hip_nat_status);
 	HIP_DEBUG("dst_is_ipv4 %d\n", dst_is_ipv4);
 
 	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
-					       ((entry && entry->nat_between) ||
+					       ((entry && entry->nat_mode) ||
 						(src_port != 0 || dst_port != 0))))
 		
 	{

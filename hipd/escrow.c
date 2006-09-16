@@ -578,7 +578,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	/* If the peer is behind a NAT, UDP is used. */
 	/** @todo Functionality on UDP has not been tested. */
-	if(entry->nat_between)
+	if(entry->nat_mode)
 	{
 		HIP_DEBUG("Sending UPDATE packet with escrow data on UDP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->hip_nat_send_udp(
@@ -586,13 +586,14 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 				 update_packet, entry, 1), -1,
 			 "Sending UPDATE packet on UDP failed.\n");
 	}
-	/* If there's no NAT between, TCP is used. */
+	/* If there's no NAT between, raw HIP is used. */
 	else
 	{
-		HIP_DEBUG("Sending UPDATE packet with escrow data on TCP.\n");
+		HIP_DEBUG("Sending UPDATE packet with escrow data on raw "\
+			  "HIP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(
 				 &saddr, &daddr, 0, 0, update_packet, entry, 1),
-			 -1, "Sending UPDATE packet on TCP failed.\n");
+			 -1, "Sending UPDATE packet on raw HIP failed.\n");
 	}
 	
 	goto out;

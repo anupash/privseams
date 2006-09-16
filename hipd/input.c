@@ -1220,7 +1220,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
-	HIP_DEBUG("hip_create_i2() entry->nat_between: %u.\n", entry->nat_between);
+	HIP_DEBUG("hip_create_i2() entry->nat_mode: %u.\n", entry->nat_mode);
 	
 	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
 						     r1_info->dst_port, i2,
@@ -1890,7 +1890,7 @@ int hip_handle_i2(struct hip_common *i2,
 		    Add other info here. --Abi */
 		if(i2_info->src_port != 0)
 		{
-			entry->nat_between = 1;
+			entry->nat_mode = 1;
 			entry->peer_udp_port = i2_info->src_port;
 		}
 
@@ -2532,7 +2532,6 @@ int hip_receive_i1(struct hip_common *i1,
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
-	
 	
 	if (entry) {
 		wmb();
