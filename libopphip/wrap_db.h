@@ -12,7 +12,8 @@ struct hip_opp_socket_entry {
   int 	       		domain;
   int 			type;
   int 			protocol;
-  int                   is_translated;
+  int                   local_id_is_translated;
+  int                   peer_id_is_translated;
   struct sockaddr_storage orig_src_id;
   struct sockaddr_storage orig_dst_id;
   struct sockaddr_storage translated_src_id;
