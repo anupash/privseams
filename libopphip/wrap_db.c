@@ -218,6 +218,7 @@ int hip_socketdb_add_entry(int pid, int socket)
   hip_xor_pid_socket(&new_item->hash_key, pid, socket);
   new_item->pid = pid;
   new_item->orig_socket = socket;
+  err = hip_ht_add(&socketdb, new_item);
   HIP_DEBUG("pid %d, orig_socket %d are added to HT socketdb, entry=%p\n",
 	    new_item->pid, new_item->orig_socket,  new_item); 
   hip_socketdb_dump();

@@ -31,23 +31,27 @@ int db_exist = 0;
 
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 10
-int (*socket_dlsym)(int domain, int type, int protocol);
-int (*bind_dlsym)(int socket, const struct sockaddr *sa, socklen_t sa_len);
-int (*connect_dlsym)(int a, const struct sockaddr * b, socklen_t c);
-ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
-ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, 
-			const struct sockaddr *to, socklen_t tolen);
-ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
-ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
-ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
-		 struct sockaddr *from, socklen_t *fromlen);
-ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
-int (*close_dlsym)(int fd);
 
-void *dl_function_filehandles[NUMBER_OF_DLSYM_FUNCTIONS];
-void *dl_registered_functions[] =
+struct {
+  int (*socket_dlsym)(int domain, int type, int protocol);
+  int (*bind_dlsym)(int socket, const struct sockaddr *sa, socklen_t sa_len);
+  int (*connect_dlsym)(int a, const struct sockaddr * b, socklen_t c);
+  ssize_t (*send_dlsym)(int s, const void *buf, size_t len, int flags);
+  ssize_t (*sendto_dlsym)(int s, const void *buf, size_t len, int flags, 
+			  const struct sockaddr *to, socklen_t tolen);
+  ssize_t (*sendmsg_dlsym)(int s, const struct msghdr *msg, int flags);
+  ssize_t (*recv_dlsym)(int s, const void *buf, size_t len, int flags);
+  ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
+			    struct sockaddr *from, socklen_t *fromlen);
+  ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
+  int (*close_dlsym)(int fd);
+  int (*accept_dlsym)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+} dl_function_ptr;
+
+void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
+void *dl_function_name[] =
   {"socket", "bind", "connect", "send", "sendto",
-   "sendmsg", "recv", "recvfrom", "recvmsg", "close"};
+   "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept"};
 
 inline hip_hit_t *get_local_hits_wrapper()
 {
@@ -93,7 +97,7 @@ void uninit_dlsym_functions()
 {
   int i = 0;
   for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-    dlclose(dl_function_filehandles[i]);
+    dlclose(dl_function_fd[i]);
   }
 }
 
@@ -103,10 +107,10 @@ void init_dlsym_functions()
   char *error = NULL;
 
   for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-    dl_function_filehandles[i] = dlopen(SOFILE, RTLD_LAZY);
-    HIP_ASSERT(dl_function_filehandles[i]);
-    socket_dlsym = dlsym(dl_function_filehandles[i],
-			 dl_registered_functions[i]);
+    dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
+    HIP_ASSERT(dl_function_fd[i]);
+    ((int **) (&dl_function_ptr))[i] = dlsym(dl_function_fd[i],
+					    dl_function_name[i]);
   }
 
   error = dlerror();
@@ -391,7 +395,7 @@ int socket(int domain, int type, int protocol)
 
   initialize_db_when_not_exist();
 
-  socket_fd = socket_dlsym(domain, type, protocol);
+  socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
 
   if(socket_fd != -1){
     pid = getpid();    
@@ -447,7 +451,7 @@ int connect(int orig_sock, const struct sockaddr *orig_peer_sa,
 
  skip:
 
-  err = connect_dlsym(*translated_socket, translated_peer, SALEN(translated_peer));
+  err = dl_function_ptr.connect_dlsym(*translated_socket, translated_peer, SALEN(translated_peer));
   if (err) {
     HIP_PERROR("connect error:");
   }
@@ -471,7 +475,7 @@ ssize_t send(int a, const void * b, size_t c, int flags)
     return err;
   }
   
-  charnum = send_dlsym(*translated_socket, b, c, flags);
+  charnum = dl_function_ptr.send_dlsym(*translated_socket, b, c, flags);
   
   HIP_DEBUG("Called send_dlsym with number of returned char=%d\n", charnum);
 
@@ -566,7 +570,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
     if( check_domain_type_protocol(domain, type, protocol) ||
 	check_msg_name(msg) ||
 	(!pktinfo.pktinfo_in4) ){
-      charnum = sendmsg_dlsym(socket, msg, flags);
+      charnum = dl_function_ptr.sendmsg_dlsym(socket, msg, flags);
       dlclose(dp);
       HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
       return charnum;
@@ -587,7 +591,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
     HIP_ERROR("sendmsg cache_translation call failed: %s\n", strerror(err));
     return errno;
   }
-  charnum = sendmsg_dlsym(socket, msg, flags);
+  charnum = dl_function_ptr.sendmsg_dlsym(socket, msg, flags);
   
   HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
 
@@ -608,7 +612,7 @@ ssize_t recv(int a, void *b, size_t c, int flags)
     return err;
   }
 
-  charnum = recv_dlsym(*translated_socket, b, c, flags);
+  charnum = dl_function_ptr.recv_dlsym(*translated_socket, b, c, flags);
   
   HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", charnum);
 
@@ -624,7 +628,7 @@ ssize_t recvfrom(int s, void *buf, size_t len, int flags,
 
   return -1; // XX TODO
 
-  charnum = recvfrom_dlsym(translated_socket, buf, len, flags, from, fromlen);
+  charnum = dl_function_ptr.recvfrom_dlsym(translated_socket, buf, len, flags, from, fromlen);
   HIP_DEBUG("recvfrom_dlsym dlopen recvfrom\n");
   
   HIP_DEBUG("Called recvfrom_dlsym with number of returned char=%d\n", charnum);
@@ -643,7 +647,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 
   return -1; // XX TODO
   
-  charnum = recvmsg_dlsym(socket, msg, flags);
+  charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
 
   HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n", charnum);
 
@@ -680,7 +684,7 @@ int close(int fd)
 	if(old_socket != new_socket){
 	  HIP_DEBUG("old_socket %d new_socket %d\n", 
 		    old_socket, new_socket);	  
-	  err = close_dlsym(new_socket);
+	  err = dl_function_ptr.close_dlsym(new_socket);
 	  if(err){
 	    _HIP_DEBUG("close new_socket failed err %d\n", err);
 	  } else{
@@ -691,7 +695,7 @@ int close(int fd)
     }    
   }
   
-  err = close_dlsym(fd);
+  err = dl_function_ptr.close_dlsym(fd);
   HIP_DEBUG("close_dlsym called with err %d\n", err);
 
 out_err:
