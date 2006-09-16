@@ -1,0 +1,236 @@
+diff --git a/include/linux/in.h b/include/linux/in.h
+index bcaca83..f1ae3cc 100644
+--- a/include/linux/in.h
++++ b/include/linux/in.h
+@@ -40,6 +40,7 @@ enum {
+ 
+   IPPROTO_ESP = 50,            /* Encapsulation Security Payload protocol */
+   IPPROTO_AH = 51,             /* Authentication Header protocol       */
++  IPPROTO_BEETPH = 94,	       /* IP option pseudo header for BEET */
+   IPPROTO_PIM    = 103,		/* Protocol Independent Multicast	*/
+ 
+   IPPROTO_COMP   = 108,                /* Compression Header protocol */
+diff --git a/include/linux/ip.h b/include/linux/ip.h
+index 2f46001..7a3aee8 100644
+--- a/include/linux/ip.h
++++ b/include/linux/ip.h
+@@ -80,6 +80,8 @@
+ #define	IPOPT_TS_TSANDADDR	1		/* timestamps and addresses */
+ #define	IPOPT_TS_PRESPEC	3		/* specified modules only */
+ 
++#define IPV4_BEET_PHMAXLEN 8
++
+ struct iphdr {
+ #if defined(__LITTLE_ENDIAN_BITFIELD)
+ 	__u8	ihl:4,
+@@ -123,4 +125,11 @@ struct ip_comp_hdr {
+ 	__u16 cpi;
+ };
+ 
++struct ip_beet_phdr {
++	__u8 nexthdr;
++	__u8 hdrlen;
++	__u8 padlen;
++	__u8 reserved;
++};
++
+ #endif	/* _LINUX_IP_H */
+diff --git a/include/linux/ipsec.h b/include/linux/ipsec.h
+index d3c5276..d17a630 100644
+--- a/include/linux/ipsec.h
++++ b/include/linux/ipsec.h
+@@ -12,7 +12,8 @@
+ enum {
+ 	IPSEC_MODE_ANY		= 0,	/* We do not support this for SA */
+ 	IPSEC_MODE_TRANSPORT	= 1,
+-	IPSEC_MODE_TUNNEL	= 2
++	IPSEC_MODE_TUNNEL	= 2,
++	IPSEC_MODE_BEET         = 3
+ };
+ 
+ enum {
+diff --git a/include/linux/xfrm.h b/include/linux/xfrm.h
+index 14ecd19..a745cb3 100644
+--- a/include/linux/xfrm.h
++++ b/include/linux/xfrm.h
+@@ -129,7 +129,8 @@ enum
+ #define XFRM_MODE_TUNNEL 1
+ #define XFRM_MODE_ROUTEOPTIMIZATION 2
+ #define XFRM_MODE_IN_TRIGGER 3
+-#define XFRM_MODE_MAX 4
++#define XFRM_MODE_BEET 4
++#define XFRM_MODE_MAX 5
+ 
+ /* Netlink configuration messages.  */
+ enum {
+diff --git a/net/ipv4/Kconfig b/net/ipv4/Kconfig
+index 90f9136..c5e3b17 100644
+--- a/net/ipv4/Kconfig
++++ b/net/ipv4/Kconfig
+@@ -433,6 +433,15 @@ config INET_XFRM_MODE_TUNNEL
+ 
+ 	  If unsure, say Y.
+ 
++config INET_XFRM_MODE_BEET
++	tristate "IP: IPsec BEET mode"
++	default y
++	select XFRM
++	---help---
++	  Support for IPsec BEET mode.
++
++	  If unsure, say Y.
++
+ config INET_DIAG
+ 	tristate "INET: socket monitoring interface"
+ 	default y
+diff --git a/net/ipv4/Makefile b/net/ipv4/Makefile
+index f66049e..15645c5 100644
+--- a/net/ipv4/Makefile
++++ b/net/ipv4/Makefile
+@@ -23,6 +23,7 @@ obj-$(CONFIG_INET_AH) += ah4.o
+ obj-$(CONFIG_INET_ESP) += esp4.o
+ obj-$(CONFIG_INET_IPCOMP) += ipcomp.o
+ obj-$(CONFIG_INET_XFRM_TUNNEL) += xfrm4_tunnel.o
++obj-$(CONFIG_INET_XFRM_MODE_BEET) += xfrm4_mode_beet.o
+ obj-$(CONFIG_INET_TUNNEL) += tunnel4.o
+ obj-$(CONFIG_INET_XFRM_MODE_TRANSPORT) += xfrm4_mode_transport.o
+ obj-$(CONFIG_INET_XFRM_MODE_TUNNEL) += xfrm4_mode_tunnel.o
+diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+index 9628de9..55344b3 100644
+--- a/net/ipv4/esp4.c
++++ b/net/ipv4/esp4.c
+@@ -241,7 +241,8 @@ static int esp_input(struct xfrm_state *
+ 		 *    as per draft-ietf-ipsec-udp-encaps-06,
+ 		 *    section 3.1.2
+ 		 */
+-		if (x->props.mode == XFRM_MODE_TRANSPORT)
++		if (x->props.mode == XFRM_MODE_TRANSPORT ||
++		    x->props.mode == XFRM_MODE_BEET)
+ 			skb->ip_summed = CHECKSUM_UNNECESSARY;
+ 	}
+ 
+@@ -259,17 +260,28 @@ static u32 esp4_get_max_size(struct xfrm
+ {
+ 	struct esp_data *esp = x->data;
+ 	u32 blksize = ALIGN(crypto_tfm_alg_blocksize(esp->conf.tfm), 4);
++	int enclen = 0;
+ 
+-	if (x->props.mode == XFRM_MODE_TUNNEL) {
+-		mtu = ALIGN(mtu + 2, blksize);
+-	} else {
+-		/* The worst case. */
++	switch (x->props.mode) {
++	default:
++	case XFRM_MODE_TUNNEL:
++		mtu = ALIGN(mtu +2, blksize);
++		break;
++	case XFRM_MODE_TRANSPORT:
++		/* The worst case */
+ 		mtu = ALIGN(mtu + 2, 4) + blksize - 4;
++		break;
++	case XFRM_MODE_BEET:
++ 		/* The worst case. */
++		enclen = IPV4_BEET_PHMAXLEN;
++		mtu = ALIGN(mtu + enclen + 2, blksize);
++		break;
+ 	}
++
+ 	if (esp->conf.padlen)
+ 		mtu = ALIGN(mtu, esp->conf.padlen);
+ 
+-	return mtu + x->props.header_len + esp->auth.icv_trunc_len;
++	return mtu + x->props.header_len + esp->auth.icv_trunc_len - enclen;
+ }
+ 
+ static void esp4_err(struct sk_buff *skb, u32 info)
+diff --git a/net/ipv4/ipcomp.c b/net/ipv4/ipcomp.c
+index b163ebc..67bd228 100644
+--- a/net/ipv4/ipcomp.c
++++ b/net/ipv4/ipcomp.c
+@@ -206,6 +206,7 @@ static void ipcomp4_err(struct sk_buff *
+ static struct xfrm_state *ipcomp_tunnel_create(struct xfrm_state *x)
+ {
+ 	struct xfrm_state *t;
++	u8 mode = XFRM_MODE_TUNNEL;
+ 	
+ 	t = xfrm_state_alloc();
+ 	if (t == NULL)
+@@ -216,7 +217,9 @@ static struct xfrm_state *ipcomp_tunnel_
+ 	t->id.daddr.a4 = x->id.daddr.a4;
+ 	memcpy(&t->sel, &x->sel, sizeof(t->sel));
+ 	t->props.family = AF_INET;
+-	t->props.mode = XFRM_MODE_TUNNEL;
++	if (x->props.mode == XFRM_MODE_BEET)
++		mode = x->props.mode;
++	t->props.mode = mode;
+ 	t->props.saddr.a4 = x->props.saddr.a4;
+ 	t->props.flags = x->props.flags;
+ 
+diff --git a/net/ipv6/Kconfig b/net/ipv6/Kconfig
+index 54397ee..25dd486 100644
+--- a/net/ipv6/Kconfig
++++ b/net/ipv6/Kconfig
+@@ -135,6 +135,16 @@ config INET6_XFRM_MODE_TUNNEL
+ 
+ 	  If unsure, say Y.
+ 
++config INET6_XFRM_MODE_BEET
++	tristate "IPv6: IPsec BEET mode"
++	depends on IPV6
++	default IPV6
++	select XFRM
++	---help---
++	  Support for IPsec BEET mode.
++
++	  If unsure, say Y.
++
+ config INET6_XFRM_MODE_ROUTEOPTIMIZATION
+ 	tristate "IPv6: MIPv6 route optimization mode (EXPERIMENTAL)"
+ 	depends on IPV6 && EXPERIMENTAL
+diff --git a/net/ipv6/Makefile b/net/ipv6/Makefile
+index 0213c66..87274e4 100644
+--- a/net/ipv6/Makefile
++++ b/net/ipv6/Makefile
+@@ -26,6 +26,7 @@ obj-$(CONFIG_INET6_TUNNEL) += tunnel6.o
+ obj-$(CONFIG_INET6_XFRM_MODE_TRANSPORT) += xfrm6_mode_transport.o
+ obj-$(CONFIG_INET6_XFRM_MODE_TUNNEL) += xfrm6_mode_tunnel.o
+ obj-$(CONFIG_INET6_XFRM_MODE_ROUTEOPTIMIZATION) += xfrm6_mode_ro.o
++obj-$(CONFIG_INET6_XFRM_MODE_BEET) += xfrm6_mode_beet.o
+ obj-$(CONFIG_NETFILTER)	+= netfilter/
+ 
+ obj-$(CONFIG_IPV6_TUNNEL) += ip6_tunnel.o
+diff --git a/net/ipv6/ipcomp6.c b/net/ipv6/ipcomp6.c
+index 8669146..692b74e 100644
+--- a/net/ipv6/ipcomp6.c
++++ b/net/ipv6/ipcomp6.c
+@@ -199,6 +199,7 @@ static void ipcomp6_err(struct sk_buff *
+ static struct xfrm_state *ipcomp6_tunnel_create(struct xfrm_state *x)
+ {
+ 	struct xfrm_state *t = NULL;
++	u8 mode = XFRM_MODE_TUNNEL;
+ 
+ 	t = xfrm_state_alloc();
+ 	if (!t)
+@@ -212,7 +213,9 @@ static struct xfrm_state *ipcomp6_tunnel
+ 	memcpy(t->id.daddr.a6, x->id.daddr.a6, sizeof(struct in6_addr));
+ 	memcpy(&t->sel, &x->sel, sizeof(t->sel));
+ 	t->props.family = AF_INET6;
+-	t->props.mode = XFRM_MODE_TUNNEL;
++	if (x->props.mode == XFRM_MODE_BEET)
++		mode = x->props.mode;
++	t->props.mode = mode;
+ 	memcpy(t->props.saddr.a6, x->props.saddr.a6, sizeof(struct in6_addr));
+ 
+ 	if (xfrm_init_state(t))
+diff --git a/net/xfrm/xfrm_user.c b/net/xfrm/xfrm_user.c
+index a096586..236c4a5 100644
+--- a/net/xfrm/xfrm_user.c
++++ b/net/xfrm/xfrm_user.c
+@@ -210,6 +210,7 @@ static int verify_newsa_info(struct xfrm
+ 	case XFRM_MODE_TRANSPORT:
+ 	case XFRM_MODE_TUNNEL:
+ 	case XFRM_MODE_ROUTEOPTIMIZATION:
++	case XFRM_MODE_BEET:
+ 		break;
+ 
+ 	default:

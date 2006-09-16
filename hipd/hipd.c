@@ -42,13 +42,6 @@ struct sockaddr_un hip_agent_addr;
 int hip_firewall_sock = 0;
 struct sockaddr_un hip_firewall_addr;
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-unsigned int opportunistic_mode = 1;
-unsigned int oppdb_exist = 0;
-extern   hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
-						const hip_hit_t *hit_our);
-#endif // CONFIG_HIP_OPPORTUNISTIC
-
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
