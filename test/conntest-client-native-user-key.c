@@ -41,10 +41,10 @@ int main(int argc,char *argv[]) {
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
   char receiveddata[IP_MAXPACKET];
-  char *proto_name, *peer_port_name, *peer_name;
+  char *type_name, *peer_port_name, *peer_name;
   int recvnum, sendnum;
   int datalen = 0;
-  int proto;
+  int type;
   int datasent = 0;
   int datareceived = 0;
   int ch;
@@ -64,16 +64,14 @@ int main(int argc,char *argv[]) {
   }
   
   peer_name = argv[1];
-  proto_name = argv[2];
+  type_name = argv[2];
   peer_port_name = argv[3];
   endpoint_family = PF_HIP;
   
   /* Set transport protocol */
-  if (strcmp(proto_name, "tcp") == 0) {
-    proto = IPPROTO_TCP;
+  if (strcmp(type_name, "tcp") == 0) {
     socktype = SOCK_STREAM;
-  } else if (strcmp(proto_name, "udp") == 0) {
-    proto = IPPROTO_UDP;
+  } else if (strcmp(type_name, "udp") == 0) {
     socktype = SOCK_DGRAM;
   } else {
     HIP_ERROR("Error: only TCP and UDP supported.\n");
