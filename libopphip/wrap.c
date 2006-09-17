@@ -168,8 +168,8 @@ inline int translate_connected_socket(const int socket, int **translated_socket)
 }
 
 inline int request_peer_hit_from_hipd(const struct in6_addr *ip, 
-			       hip_hit_t *peer_hit,
-			       const struct in6_addr *local_hit)
+				      hip_hit_t *peer_hit,
+				      const struct in6_addr *local_hit)
 {
   struct hip_common *msg = NULL;
   struct in6_addr *hit_recv = NULL;
@@ -177,55 +177,58 @@ inline int request_peer_hit_from_hipd(const struct in6_addr *ip,
   int err = 0;
   int ret = 0;
 
-  if(!ipv6_addr_any(ip)) {
-    msg = malloc(HIP_MAX_PACKET);
-    if (!msg){
-      HIP_ERROR("malloc failed\n");
-      goto out_err;
-    }	
-    hip_msg_init(msg);
-    
-    err = hip_build_param_contents(msg, (void *)(local_hit), HIP_PARAM_HIT,
-				   sizeof(struct in6_addr));
-    if (err) {
-      HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
-      goto out_err;
-    }
-    err = hip_build_param_contents(msg, (void *)(ip), HIP_PARAM_IPV6_ADDR,
-				   sizeof(struct in6_addr));
-    if (err) {
+  if(ipv6_addr_any(ip)) {
+    err = -1;
+    goto out_err;
+  }
+
+  msg = malloc(HIP_MAX_PACKET);
+  if (!msg){
+    HIP_ERROR("malloc failed\n");
+    goto out_err;
+  }	
+  hip_msg_init(msg);
+  
+  err = hip_build_param_contents(msg, (void *)(local_hit), HIP_PARAM_HIT,
+				 sizeof(struct in6_addr));
+  if (err) {
+    HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  err = hip_build_param_contents(msg, (void *)(ip), HIP_PARAM_IPV6_ADDR,
+				 sizeof(struct in6_addr));
+  if (err) {
       HIP_ERROR("build param HIP_PARAM_IPV6_ADDR  failed: %s\n", strerror(err));
       goto out_err;
-    }
-    
-    /* Build the message header */
-    err = hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0);
-    if (err) {
-      HIP_ERROR("build hdr failed: %s\n", strerror(err));
-      goto out_err;
-    }
-    
-    /* send and receive msg to/from hipd */
-    err = hip_send_recv_daemon_info(msg);
-    if (err) {
-      HIP_ERROR("send_recv msg failed\n");
-      goto out_err;
-    }
-    HIP_DEBUG("send_recv msg succeed\n");
-    
-    /* getsockopt wrote the corresponding EID into the message, use it */
-    err = hip_get_msg_err(msg);
-    if (err) {
-      goto out_err;
-    }
-
-    ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
-    HIP_DEBUG_HIT("ptr", ptr);
-    HIP_ASSERT(ptr);
-    memcpy(peer_hit, ptr, sizeof(hip_hit_t));
-    HIP_DEBUG_HIT("peer_hit", peer_hit);
-  } // end of  if(!ipv6_addr_any(&ip))
-
+  }
+  
+  /* build the message header */
+  err = hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0);
+  if (err) {
+    HIP_ERROR("build hdr failed: %s\n", strerror(err));
+    goto out_err;
+  }
+  
+  /* send and receive msg to/from hipd */
+  err = hip_send_recv_daemon_info(msg);
+  if (err) {
+    HIP_ERROR("send_recv msg failed\n");
+    goto out_err;
+  }
+  HIP_DEBUG("send_recv msg succeed\n");
+  
+  /* check error value */
+  err = hip_get_msg_err(msg);
+  if (err) {
+    goto out_err;
+  }
+  
+  ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+  HIP_DEBUG_HIT("ptr", ptr);
+  HIP_ASSERT(ptr);
+  memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+  HIP_DEBUG_HIT("peer_hit", peer_hit);
+  
  out_err:
 
   if(msg)
@@ -234,13 +237,13 @@ inline int request_peer_hit_from_hipd(const struct in6_addr *ip,
   return err;
 }
 
-inline int translate_disconnected_socket(const int orig_socket,
-					 const struct sockaddr *orig_id,
-					 const int orig_id_len,
-					 int **translated_socket,
-					 struct sockaddr **translated_id,
-					 int *translated_id_len,
-					 int is_peer)
+inline int translate_unconnected_socket(const int orig_socket,
+					const struct sockaddr *orig_id,
+					const socklen_t orig_id_len,
+					int **translated_socket,
+					struct sockaddr **translated_id,
+					socklen_t *translated_id_len,
+					int is_peer)
 {
   int err = 0, pid = getpid(), port, type, *is_translated;
   hip_opp_socket_t *entry;
@@ -249,7 +252,8 @@ inline int translate_disconnected_socket(const int orig_socket,
   entry = hip_socketdb_find_entry(pid, orig_socket);
   HIP_ASSERT(entry);
 
-  /* By default, we don't translate at all */
+  /* By default, we don't translate at all (assuming an already translated
+     or untranslatable id) */
   *translated_id_len = orig_id_len;
   entry->orig_socket = orig_socket;
   entry->translated_socket = orig_socket;
@@ -259,11 +263,20 @@ inline int translate_disconnected_socket(const int orig_socket,
   is_translated =
     (is_peer ? &entry->peer_id_is_translated : &entry->local_id_is_translated);
 
+  /* Optimization: we don't request a HIT from hipd in sendto()
+     and sendmsg() unless the application layer id has changed. Note: this
+     optimization may have limitations when addressing hosts behind a remote
+     NAT network. The orig_id may be NULL in sendto and recvfrom. */
+  if ((*is_translated && !memcmp(*translated_id, orig_id, orig_id_len)) || !orig_id) {
+    HIP_DEBUG("entry does not require a request from hipd\n");
+    goto out_err;
+  }
+
   /* Copy the original identifier to the database even when we are dealing with e.g.
      untranslatable ids such as HIT or SOCK_RAW because the wrapping requires
-     it for datagram oriented packets */
-  if(!*is_translated &&
-     !wrapping_is_applicable(orig_id, entry->type)) {
+     it for *datagram* oriented sockets. For those sockets, this function is called
+     and this function always returns the translated entry */
+  if (!wrapping_is_applicable(orig_id, entry->type)) {
     HIP_DEBUG("Wrapping is not applicable, returning original\n");
     memcpy(*translated_id, orig_id, orig_id_len);
     *is_translated = 1;
@@ -287,21 +300,11 @@ inline int translate_disconnected_socket(const int orig_socket,
   mapped_addr.sin6_family = orig_id->sa_family;
   mapped_addr.sin6_port = port;
 
-  _HIP_DEBUG("connect sin_port=%d\n", ntohs(port));
+  _HIP_DEBUG("sin_port=%d\n", ntohs(port));
   _HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
   
   /* Now, the socket identifier seems translatable (e.g. not an HIT or a
      RAW_SOCK). */
-
-  /* Optimization: we don't request a HIT from hipd in sendto()
-     and sendmsg() unless the application layer id has changed. Note: this
-     may have limitations when addressing hosts behind a remote NAT network. */
-  if (*is_translated &&
-      !memcmp((is_peer ? &entry->orig_dst_id : &entry->orig_dst_id), orig_id,
-	      orig_id_len)) {
-    HIP_DEBUG("entry does not require a request from hipd\n");
-    goto skip_request;
-  }
 
   /* Request a HIT of the peer from hipd. This will possibly launch an I1
      with NULL HIT that will block until R1 is received. Called e.g. in
@@ -326,8 +329,6 @@ inline int translate_disconnected_socket(const int orig_socket,
 
   ((struct sockaddr_in6 *)(*translated_id))->sin6_family = AF_INET6;
   ((struct sockaddr_in6 *)(*translated_id))->sin6_port = port;
-
- skip_request:
 
   /* We have now successfully translated an IP to an HIT. The HIT requires a new socket.
      Also, we need set the return values correctly */
@@ -391,14 +392,15 @@ int bind(int orig_socket, const struct sockaddr *orig_local_sa, socklen_t orig_s
 {
   // XX TODO: write entry->translated_id_src_port
 
-  int err = 0, *translated_socket, translated_local_id_len;
+  int err = 0, *translated_socket;
+  socklen_t translated_local_id_len;
   struct sockaddr *translated_local_id;
 
   HIP_DEBUG("\n");
 
-  err = translate_disconnected_socket(orig_socket, orig_local_sa, orig_sock_len,
-				      &translated_socket, &translated_local_id,
-				      &translated_local_id_len, 0);
+  err = translate_unconnected_socket(orig_socket, orig_local_sa, orig_sock_len,
+				     &translated_socket, &translated_local_id,
+				     &translated_local_id_len, 0);
   if (err) {
     HIP_ERROR("Translation failure\n");
     goto out_err;
@@ -424,14 +426,15 @@ int accept(int osockfd, struct sockaddr *oaddr, socklen_t *oaddrlen)
 int connect(int orig_sock, const struct sockaddr *orig_peer_id,
 	    socklen_t orig_sock_len)
 {
-  int err = 0, *translated_socket, translated_peer_id_len;
+  int err = 0, *translated_socket;
+  socklen_t translated_peer_id_len;
   struct sockaddr *translated_peer_id;
 
   HIP_DEBUG("\n");
 
-  err = translate_disconnected_socket(orig_sock, orig_peer_id, orig_sock_len,
-				      &translated_socket, &translated_peer_id,
-				      &translated_peer_id_len, 1);
+  err = translate_unconnected_socket(orig_sock, orig_peer_id, orig_sock_len,
+				     &translated_socket, &translated_peer_id,
+				     &translated_peer_id_len, 1);
   if (err) {
     HIP_ERROR("Translation failure\n");
     goto out_err;
@@ -475,14 +478,15 @@ ssize_t send(int a, const void * b, size_t c, int flags)
 ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags, 
 	       const struct sockaddr  *orig_peer_id, socklen_t orig_peer_id_len)
 {
-  int err = 0, *translated_socket, translated_peer_id_len;
+  int err = 0, *translated_socket;
+  socklen_t translated_peer_id_len;
   struct sockaddr *translated_peer_id;
 
   HIP_DEBUG("\n");
 
-  err = translate_disconnected_socket(orig_socket, orig_peer_id, orig_peer_id_len,
-				      &translated_socket, &translated_peer_id,
-				      &translated_peer_id_len, 1);
+  err = translate_unconnected_socket(orig_socket, orig_peer_id, orig_peer_id_len,
+				     &translated_socket, &translated_peer_id,
+				     &translated_peer_id_len, 1);
   if (err) {
     HIP_ERROR("Translation failure\n");
     goto out_err;
@@ -618,14 +622,15 @@ ssize_t recv(int a, void *b, size_t c, int flags)
 ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags, 
 		 struct sockaddr *orig_local_id, socklen_t *orig_local_id_len)
 {
-  int err = 0, *translated_socket, translated_local_id_len;
+  int err = 0, *translated_socket;
+  socklen_t translated_local_id_len;
   struct sockaddr *translated_local_id;
 
   HIP_DEBUG("\n");
 
-  err = translate_disconnected_socket(orig_socket, orig_local_id, orig_local_id_len,
-				      &translated_socket, &translated_local_id,
-				      &translated_local_id_len, 0);
+  err = translate_unconnected_socket(orig_socket, orig_local_id, *orig_local_id_len,
+				     &translated_socket, &translated_local_id,
+				     &translated_local_id_len, 0);
   if (err) {
     HIP_ERROR("Translation failure\n");
     goto out_err;
@@ -635,7 +640,7 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 
   err = dl_function_ptr.recvfrom_dlsym(*translated_socket, buf, len, flags,
 				       translated_local_id,
-				       translated_local_id_len);
+				       &translated_local_id_len);
   if (err) {
     HIP_PERROR("connect error:");
   }
