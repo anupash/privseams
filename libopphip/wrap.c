@@ -137,7 +137,8 @@ inline int wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_t *e
 {
   HIP_ASSERT(entry);
 
-  if (entry->protocol)
+  if (!(entry->protocol == 0 || entry->protocol == IPPROTO_TCP ||
+	entry->protocol == IPPROTO_UDP))
     return 0;
 
   if (!(entry->type == SOCK_STREAM || entry->type == SOCK_DGRAM))
@@ -563,7 +564,6 @@ int socket(int domain, int type, int protocol)
 	entry->type = type;
 	entry->protocol = protocol;
       }
-
     } 
   }
   else{
