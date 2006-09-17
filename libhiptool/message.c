@@ -74,11 +74,16 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
 	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
 
+	// XX FIXME: check why we are calling bind and connect
 	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
 		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
 		 -1, "app_addr bind failed");
 
-	n = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	err = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	if (err) {
+	  HIP_ERROR("connect failed\n");
+	  goto out_err;
+	}
 
 	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 
 		   0,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
@@ -109,16 +114,16 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 }
 
 int hip_send_daemon_info(const struct hip_common *msg) {
+  	int err = 0, n, len, hip_user_sock = 0;
+	struct sockaddr_un user_addr;
+	socklen_t alen;
+	
   	// return hip_send_recv_daemon_info(msg);
   
   	// do not call send_recv function here,
   	// since this function is called at several other places
 	// TODO: copy send_recv function's recvfrom to hip_recv_daemon_info()
 
-  	int err = 0, n, len, hip_user_sock = 0;
-	struct sockaddr_un user_addr;
-	socklen_t alen;
-	
 	// Create and bind daemon socket.
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)

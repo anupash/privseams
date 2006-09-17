@@ -160,10 +160,10 @@ void hip_socketdb_dump()
     if (!list_empty(&socketdb_by_pid_socket_list[i])) {
       HIP_DEBUG("HT[%d]\n", i);
       list_for_each_entry_safe(item, tmp, &(socketdb_by_pid_socket_list[i]), next_entry) {
-	hip_in6_ntop(SA2IP(&item->orig_src_id), src_ip);
-	hip_in6_ntop(SA2IP(&item->orig_dst_id), dst_ip);
-	hip_in6_ntop(SA2IP(&item->translated_src_id), src_hit);
-	hip_in6_ntop(SA2IP(&item->translated_dst_id), dst_hit);
+	hip_in6_ntop(SA2IP(&item->orig_local_id), src_ip);
+	hip_in6_ntop(SA2IP(&item->orig_peer_id), dst_ip);
+	hip_in6_ntop(SA2IP(&item->translated_local_id), src_hit);
+	hip_in6_ntop(SA2IP(&item->translated_peer_id), dst_hit);
 
 	HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
 src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",

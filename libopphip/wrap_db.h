@@ -14,10 +14,14 @@ struct hip_opp_socket_entry {
   int 			protocol;
   int                   local_id_is_translated;
   int                   peer_id_is_translated;
-  struct sockaddr_storage orig_src_id;
-  struct sockaddr_storage orig_dst_id;
-  struct sockaddr_storage translated_src_id;
-  struct sockaddr_storage translated_dst_id;
+  struct sockaddr_storage orig_local_id;
+  struct sockaddr_storage orig_peer_id;
+  struct sockaddr_storage translated_local_id;
+  struct sockaddr_storage translated_peer_id;
+  socklen_t orig_local_id_len;
+  socklen_t orig_peer_id_len;
+  socklen_t translated_local_id_len;
+  socklen_t translated_peer_id_len;
 };
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
