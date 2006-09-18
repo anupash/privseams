@@ -29,52 +29,6 @@
 //static
 int db_exist = 0;
 
-#if 0
-enum trans_decision_t { TRANS_ERR, TRANS_NOGO, TRANS_EXISTS, TRANS_GOGO };
-
-/* bits: [wrap_applicable][already_translated][dgram][exists]  */
-const trans_decision_t trans_logic_table[] = {
-  TRANS_ERR, /* 0000 */ /* cannot translate_new */
-  TRANS_ERR, /* 0001 */ /* cannot translate_new */
-  TRANS_ERR, /* 0010 */ /* cannot translate_new */
-  TRANS_ERR, /* 0011 */ /* cannot translate_new */
-  TRANS_ERR, /* 0100 */ /* cannot translate_new */
-  TRANS_ERR, /* 0101 */ /* cannot translate_new */
-  TRANS_ERR, /* 0110 */ /* cannot translate_new */
-  TRANS_ERR, /* 0111 */ /* cannot translate_new */
-  TRANS_ERR, /* 1000 */
-  TRANS_ERR, /* 1001 */
-  TRANS_ERR, /* 1010 */
-  TRANS_ERR, /* 1011 */
-  TRANS_ERR, /* 1100 */
-  TRANS_ERR, /* 1101 */
-  TRANS_ERR, /* 1110 */
-  TRANS_ERR, /* 1111 */
-}
-  switch (determine_action((orig_id ? 1 : 0), is_dgram, wrap_applicable,
-			   already_translated)) {
-  case TRANS_ERR:
-    HIP_DIE("Translation error\n");
-    break;
-  case TRANS_NOGO:
-    HIP_DEBUG("No translation\n");
-    translate_to_original(entry);
-    break;
-  case TRANS_EXISTS:
-    HIP_DEBUG("Translation exists\n");
-    err = translate_old(xx);
-    break;
-  case TRANS_GOGO:
-    HIP_DEBUG("Continuing with translation\n");
-    err = translate_new(xx);
-    break;
-  default:
-    HIP_DIE("Bad internal decision\n");
-  }
-
-  HIP_ASSERT(err == 0);
-#endif
-
 
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 10
@@ -236,24 +190,6 @@ void copy_orig_to_translated(hip_opp_socket_t *entry)
   memcpy(&entry->translated_local_id, &entry->orig_local_id, sizeof(struct sockaddr_storage));
 }
 
-#if 0 // XX TODO: embed in unconnected
-int translate_connected_socket(const int *socket, int **translated_socket)
-{
-  int err = 0, pid = getpid();
-  hip_opp_socket_t *entry = hip_socketdb_find_entry(pid, socket);
-
-  HIP_ASSERT(entry);
-  HIP_ASSERT(entry->translated_socket);
-
-  // XX FIXME: HANDLE NULL ENTRY
-
-  *translated_socket = &entry->translated_socket;
-  xxfixme;
-
-  return err;
-}
-#endif
-
 inline int request_peer_hit_from_hipd(const struct in6_addr *ip, 
 				      hip_hit_t *peer_hit,
 				      const struct in6_addr *local_hit)
@@ -323,23 +259,6 @@ inline int request_peer_hit_from_hipd(const struct in6_addr *ip,
 
   return err;
 }
-
-#if 0
-/*
- * action: ERROR, NO_TRANSLATION, ALREADY_TRANSLATED, TRANSLATE
- */
-int determine_action(int exists, int dgram,
-		     int wrap_applicable, int already_translated) {
-  int index =
-    (wrap_applicable << 3) |
-    (already_translated << 2) |
-    (dgram << 1) |
-    (exists << 0);
-  HIP_DEBUG("decision index %x\n", index);
-  return trans_logic_table[index]
-}
-#endif
-
 
 void translate_to_original(hip_opp_socket_t *entry)
 {
