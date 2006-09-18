@@ -330,8 +330,8 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		xmit_count++;
 	}while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
 
-	/* Verify that the message was send completely. */
-	HIP_IFEL((chars_sent != packet_length), chars_sent,
+	/* Verify that the message was sent completely. */
+	HIP_IFEL((chars_sent != packet_length), -ECOMM,
 		 "Error while sending data on UDP: %d bytes of %d sent.)\n",
 		 chars_sent, packet_length);
 

@@ -874,13 +874,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 		err = -ENOSYS;
 	}
 
-	HIP_DEBUG("Done with control packet (%d).\n", err);
-	HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
-	HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
-
+	HIP_DEBUG("Done with control packet, err is %d.\n", err);
+	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hits", &msg->hits);
+	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hitr", &msg->hitr);
+	
 	if (err)
 		goto out_err;
-	
 
  out_err:
 
@@ -1220,11 +1219,25 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
-	HIP_DEBUG("hip_create_i2() entry->nat_mode: %u.\n", entry->nat_mode);
-	
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
-						     r1_info->dst_port, i2,
-						     entry, 0), -1);
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		HIP_DEBUG("Sending I2 packet on UDP.\n");
+		/* Destination port of R1 becomes the source port of I2, and the
+		   destination port of I2 is set as 50500. */
+		/** @todo Source port should be NAT-P'. */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
+					  HIP_NAT_UDP_PORT, i2, entry, 0),
+			 -ECOMM, "Sending I2 packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_DEBUG("Sending I2 packet on raw HIP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(r1_daddr, &daddr, r1_info->dst_port, 
+				       r1_info->src_port, i2, entry, 0),
+			 -ECOMM, "Sending I2 packet on raw HIP failed.\n");
+	}
 
  out_err:
 	if (i2)
@@ -1649,12 +1662,23 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
- 	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
-							i2_info->src_port,
-						      r2, entry, 0), -1,
-		 "Failed to send r2\n")
-	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
+ 	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		HIP_DEBUG("Sending R2 packet on UDP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+					  entry->peer_udp_port, r2, entry, 0),
+			 -ECOMM, "Sending R2 packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_DEBUG("Sending R2 packet on raw HIP.\n");
+		/** @todo remove ports. */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+				       entry->peer_udp_port, r2, entry, 0),
+			 -ECOMM, "Sending R2 packet on raw HIP failed.\n");
+	}
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database

@@ -1346,15 +1346,28 @@ int hip_update_send_echo(hip_ha_t *entry,
 
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, 
 					    &entry->hit_peer, &entry->hit_our),
-		 -1, "Building Echo  Packet failed\n");
+		 -1, "Building Echo Packet failed\n");
 
-	/* test: send all addr check from same address */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &addr->address,
-						      0, 0, update_packet,
-						      entry, 0), -1,
-		 "csum_send failed\n");
-
+	/* If the peer is behind a NAT, UDP is used. */
+	/** @todo Functionality on UDP has not been tested. */
+	if(entry->nat_mode) {
+		HIP_DEBUG("Sending UPDATE packet with echo data on UDP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(&entry->local_address, &addr->address,
+					  0, entry->peer_udp_port,
+					  update_packet, entry, 1), -ECOMM,
+			 "Sending UPDATE packet with echo data on UDP "\
+			 "failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_DEBUG("Sending UPDATE packet with echo data on raw HIP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(&entry->local_address, &addr->address,
+				       0, 0, update_packet, entry, 0), -ECOMM,
+			 "Sending UPDATE packet with echo data on raw HIP "\
+			 "failed.\n");
+	}
  out_err:
 	return err;
 

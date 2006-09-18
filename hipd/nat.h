@@ -54,6 +54,11 @@
 /** UDP encapsulation type. */ 
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
 
+/** Port used for NAT travelsal NAT-P random port simulation. */
+static in_port_t HIP_NAT_DEBUG_PORT1 = 2222;
+/** Port used for NAT travelsal NAT-P' random port simulation. */
+static in_port_t HIP_NAT_DEBUG_PORT2 = 3333;
+
 /** File descriptor of socket used for hip control packet NAT traversal on
     UDP/IPv4. Defined in hipd.c */
 extern int hip_nat_sock_udp;

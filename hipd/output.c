@@ -418,8 +418,25 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 }
 
 /**
+ * Sends a HIP message using raw HIP-packets.
+ *
+ * Sends a HIP message to the peer on HIP/IP. This function calculates the
+ * HIP packet checksum. 
+ * 
  * Used protocol suite is <code>IPv4(HIP)</code> or <code>IPv6(HIP)</code>.
- */ 
+ * 
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   not used.
+ * @param dst_port   not used.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @todo             Ports are used nowhere, remove them from argument list.
+ */
 int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
 		  hip_ha_t *entry, int retransmit)

@@ -829,17 +829,18 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(uint8_t msg_type){
 	switch (msg_type){
-		case HIP_I1: return "HIP_I1";
-		case HIP_R1: return "HIP_R1";
-		case HIP_I2: return "HIP_I2";
-		case HIP_CER: return "HIP_CER";
-		case HIP_UPDATE: return "HIP_UPDATE";
-		case HIP_NOTIFY: return "HIP_NOTIFY";
-		case HIP_CLOSE: return "HIP_CLOSE";
-		case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-		case HIP_BOS: return "HIP_BOS";
-		case HIP_PSIG: return "HIP_PSIG";
-		case HIP_TRIG: return "HIP_TRIG";
+	case HIP_I1: return "HIP_I1";
+	case HIP_R1: return "HIP_R1";
+	case HIP_I2: return "HIP_I2";
+	case HIP_R2: return "HIP_R2";
+	case HIP_CER: return "HIP_CER";
+	case HIP_UPDATE: return "HIP_UPDATE";
+	case HIP_NOTIFY: return "HIP_NOTIFY";
+	case HIP_CLOSE: return "HIP_CLOSE";
+	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
+	case HIP_BOS: return "HIP_BOS";
+	case HIP_PSIG: return "HIP_PSIG";
+	case HIP_TRIG: return "HIP_TRIG";
 	}
 	return "UNDEFINED";
 }
