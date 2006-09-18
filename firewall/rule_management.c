@@ -105,6 +105,8 @@ void print_rule(const struct rule * rule){
 	    HIP_DEBUG("%s ", VERIFY_RESPONDER_STR); 
 	  if (rule->state->accept_mobile)
 	    HIP_DEBUG("%s ", ACCEPT_MOBILE_STR); 
+	  if (rule->state->decrypt_contents)
+	    HIP_DEBUG("%s ", DECRYPT_CONTENTS_STR);  
 	}
       if(rule->in_if != NULL)
 	{
@@ -325,7 +327,8 @@ int state_options_equal(const struct state_option * state_option1,
 			 &state_option2->int_opt)
        && 
        state_option1->verify_responder == state_option2->verify_responder && 
-       state_option1->accept_mobile == state_option2->accept_mobile)
+       state_option1->accept_mobile == state_option2->accept_mobile && 
+       state_option1->decrypt_contents == state_option2->decrypt_contents)
       return 1;
     return 0;
   }
@@ -455,6 +458,7 @@ struct hit_option * parse_hit(char * token)
   int err;
   DSA dsa;
   RSA rsa;
+	option->boolean = 1;
 
   if(!strcmp(token, NEGATE_STR)){
     _HIP_DEBUG("found ! \n");
@@ -471,7 +475,7 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  _HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
   return option;
 }
 
@@ -678,6 +682,7 @@ struct state_option * parse_state(char * token)
     }
   option->verify_responder = 0;
   option->accept_mobile = 0;
+  option->decrypt_contents = 0;
   return option;
 }
 
@@ -849,6 +854,19 @@ struct rule * parse_rule(char * string)
 	      rule->state->accept_mobile = 1;
 	      _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
 	    }
+	  else if(!strcmp(token, DECRYPT_CONTENTS_STR))
+	    {
+	      //related state option must be defined
+	      if(rule->state == NULL)
+		{
+		  printf("error parsing rule: %s without %s\n", 
+			    DECRYPT_CONTENTS_STR, STATE_STR);
+		  free_rule(rule);
+		  return NULL;
+		}
+	      rule->state->decrypt_contents = 1;
+	      HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
+	    }  
 	  else if(!strcmp(token, IN_IF_STR))
 	    {
 	      //option already defined

@@ -30,15 +30,12 @@ int get_stateful_filtering()
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
-int match_hit(struct in6_addr *match_hit, 
-	      struct in6_addr *packet_hit, 
+int match_hit(struct in6_addr match_hit, 
+	      struct in6_addr packet_hit, 
 	      int boolean){
-  //int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
-  int i = hip_match_hit(match_hit, packet_hit);
-  _HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
-	    addr_to_numeric(match_hit), addr_to_numeric(packet_hit), boolean, i);   
-  HIP_DEBUG_HIT("hit1: ", match_hit);
-  HIP_DEBUG_HIT("hit2: ", packet_hit);	    
+   int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+  HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
+	    addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit), boolean, i);
   if(boolean)
     return i;
   else 
@@ -229,8 +226,8 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
       if(match && rule->src_hit)
 	  {
 	    HIP_DEBUG("filter_hip: src_hit ");
-	    if(!match_hit(&rule->src_hit->value, 
-			  &buf->hits, 
+	    if(!match_hit(rule->src_hit->value, 
+			  buf->hits, 
 			  rule->src_hit->boolean))
 	      match = 0;	
 	    //if HIT has matched and HI defined, verify signature 
@@ -244,8 +241,8 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
       if(match && rule->dst_hit)
 	  {
 	    HIP_DEBUG("filter_hip: dst_hit \n");
-	    if(!match_hit(&rule->dst_hit->value, 
-			  &buf->hitr, 
+	    if(!match_hit(rule->dst_hit->value, 
+			  buf->hitr, 
 			  rule->dst_hit->boolean))
 	      match = 0;	
 	  }

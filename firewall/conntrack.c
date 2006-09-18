@@ -300,7 +300,7 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
   espList = (struct GList *) g_list_append((struct _GList *)espList, 
 					   (gpointer)esp_tuple);
   HIP_DEBUG("insert_esp_tuple:\n");
-  print_esp_list();
+  //print_esp_list();
 }
 
 
@@ -1305,15 +1305,6 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found\n",
 	    addr_to_numeric(dst_addr), spi);
 
-	// If decryption data for this spi exists, decrypt the contents
-	esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
-	if (!esp_tuple) {
-		HIP_DEBUG("Could not find corresponding esp_tuple\n");
-	}
-	/* Decrypt contents */
-	if (esp_tuple && esp_tuple->dec_data)
-		decrypt_packet(dst_addr, esp_tuple, esp);
-
   // connection exists and rule is for established connection
   //if rule has options for hits, match them first
   //hits are matched with information on the tuple
@@ -1340,6 +1331,20 @@ int filter_esp_state(const struct in6_addr * dst_addr,
       return_value = 0;
       goto out;
     }
+    
+    // Check if decryption is needed 
+    if (rule->state->decrypt_contents) 
+    {
+		// If decryption data for this spi exists, decrypt the contents
+		esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
+		if (!esp_tuple) {
+			HIP_DEBUG("Could not find corresponding esp_tuple\n");
+		}
+		/* Decrypt contents */
+		if (esp_tuple && esp_tuple->dec_data)
+			decrypt_packet(dst_addr, esp_tuple, esp);
+    }
+    
   // if packet accepted, update time stamp of the connection
   if(accept)
     {

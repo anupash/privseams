@@ -867,7 +867,7 @@ using getaddrinfo: ping, ping6, tla, svn.
               the interface. Can not be used for rules in INPUT hook
               as packet has no outgoing interface in that case.</para>
 
-        <para>-state [!] &lt;state&gt; --verify_responder --accept_mobile</para>
+        <para>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</para>
 
         <para>Matches state of HIP association: "NEW" or
               "ESTABLISHED". ESP packets are also filtered as part of
@@ -878,7 +878,10 @@ using getaddrinfo: ping, ping6, tla, svn.
               for existing connection when a mobile host enters the
               network protected by the firewall. Please see the
               corresponding section on mobility to see how mobility events
-              can be tested.</para>
+              can be tested. When option --decrypt_contents is set firewall 
+              tries to decrypt ESP-packet contents. This can be done if 
+              session data has been delivered to firewall. See "Using 
+              Key Escrow" for details.</para>
 
         <para>Management interface:</para>
 
@@ -1123,6 +1126,66 @@ using getaddrinfo: ping, ping6, tla, svn.
     <para>
     &nbsp; Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in Chapter 6. 
     </para>
+  </chapter>
+  <chapter>
+  	<title>Using Key Escrow</title>
+  	<para>
+  	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
+  	offered by the server, sends session data of all its HIP asssociations to the server. On the server HIP Firewall 
+  	can be used to decrypt ESP-traffic when keys are available. For testing escrow functionality three machines are needed, 
+  	the server offering escrow service, the client who registers to the server and an other host which is communicating 
+  	with the client. The session data of the association between the client and the other host are then delivered to the 
+  	escrow server. If the server is working as a firewall between the hosts HIP firewall can decrypt the ESP-traffic.  
+  	</para>
+  	<para>
+  	Follow these steps to compile and initialize escrow functionality:
+  	</para>
+  	<para>
+  	&nbsp; 1. Run autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; ./autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	</para>
+  	<para>
+  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	</para>
+  	<para>
+  	&nbsp; 3. Run make
+  	</para>
+  	<para>
+  	&nbsp; make
+  	</para>
+  	<para>
+  	&nbsp; 4. Start hip daemon on all machines
+  	</para>
+  	<para>
+  	&nbsp; ./hipd/hipd -b
+  	</para>
+  	<para>
+  	&nbsp; 5. On the server enable escrow service using hipconf
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add service escrow
+  	</para>
+  	<para>
+  	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
+  	</para>
+  	<para>
+  	 On client host register to escrow server using hipconf.
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add escrow hit address
+  	</para>
+  	<para>
+  	After this connection between client and the other host can be tested using conntest-server and conntest-client-gai. 
+  	</para>
+  	<para>
+  	&nbsp; ./test/conntest-server tcp 5000 
+  	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	</para>
   </chapter>
 </book>    
 
