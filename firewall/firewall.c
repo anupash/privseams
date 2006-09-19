@@ -505,7 +505,7 @@ int main(int argc, char **argv)
   } while (1);
   
 out_err:  
-	if (hip_common)
+	//if (hip_common)
 		free(hip_common);
 	if (esp) {
 		if (esp_data) {

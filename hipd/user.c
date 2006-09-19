@@ -22,6 +22,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int err = 0;
 	int msg_type;
 	int n = 0;
+	hip_ha_t * server_entry = NULL;
+	HIP_KEA * kea = NULL;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -148,7 +150,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 /** @todo create kea with own hit (params: server_hit, rules) 
     - send i1 hip_add_peer_map */
 	case SO_HIP_ADD_ESCROW:
-		HIP_DEBUG("handling escrow user message.\n");
+		HIP_DEBUG("handling escrow user message (add).\n");
 	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
 							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
@@ -162,6 +164,29 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
 	         "for_each_hi err.\n");	
+		break;
+	
+	case SO_HIP_DEL_ESCROW:
+		
+		HIP_DEBUG("handling escrow user message (delete).\n");
+	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
+							    HIP_PARAM_HIT)),
+			 -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
+							   HIP_PARAM_IPV6_ADDR)),
+			 -1, "no ip found\n");
+		server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
+			"Could not find kea base entry");
+		if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
+			//TODO: Cancel registration? (REG_REQUEST with zero lifetime)
+			hip_keadb_put_entry(kea);
+			HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 0,
+	        	 "for_each_hi err.\n");	
+			HIP_IFEL(hip_kea_remove_base_entries(dst_hit), 0,
+	         "Could not remove base entries\n");	
+			HIP_DEBUG("Removed kea base entries.\n");	
+		}
 		break;
 		
 	case SO_HIP_OFFER_ESCROW:

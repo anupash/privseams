@@ -71,6 +71,8 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 int hip_handle_escrow_registration(struct in6_addr *hit);
 
+int hip_remove_escrow_data(hip_ha_t * entry, void * data);
+
 /************ KEA HABNDLING **************/
 
 int hip_kea_create_base_entry(struct hip_host_id_entry *entry, 

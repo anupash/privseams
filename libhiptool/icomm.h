@@ -44,7 +44,8 @@
 #define SO_HIP_GET_PEER_LIST                    116
 #define SO_HIP_NETLINK_DUMMY                    117
 #define SO_HIP_ADD_ESCROW			118
-#define SO_HIP_OFFER_ESCROW			119
+#define SO_HIP_DEL_ESCROW			119
+#define SO_HIP_OFFER_ESCROW			120
 #define SO_HIP_CONF_PUZZLE_NEW                  121
 #define SO_HIP_CONF_PUZZLE_GET                  122
 #define SO_HIP_CONF_PUZZLE_SET                  123

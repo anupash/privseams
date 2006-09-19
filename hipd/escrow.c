@@ -117,6 +117,14 @@ out_err:
 	return err;		
 }
 
+int hip_remove_escrow_data(hip_ha_t * entry, void * data)
+{
+	int err = 0;
+	entry->escrow_used = 0;
+out_err:	
+	return err;
+}
+
 int hip_kea_remove(struct hip_host_id_entry *entry, 
 	void *hit) 
 {
@@ -126,7 +134,7 @@ int hip_kea_remove(struct hip_host_id_entry *entry,
 	HIP_DEBUG("Found kea base entry");
 	hip_keadb_remove_entry(kea);
 	hip_keadb_put_entry(kea); 
-	hip_keadb_delete_entry(kea);	
+	//hip_keadb_delete_entry(kea);	
 
 out_err:
 	return err;	
@@ -134,10 +142,12 @@ out_err:
 
 int hip_kea_remove_base_entries(struct in6_addr *hit)
 {
-
+	int err = 0;
 	HIP_DEBUG("Removing base entries");
 	// Removing keas
-	return hip_for_each_hi(hip_kea_remove, hit);
+	HIP_IFEL(hip_for_each_hi(hip_kea_remove, hit), 0, "for_each error");
+out_err:
+	return err;	
 }
 
 

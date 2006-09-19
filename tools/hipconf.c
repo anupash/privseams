@@ -25,7 +25,7 @@
 /** A help string containing the usage of @c hipconf. */
 const char *usage =
 #ifdef CONFIG_HIP_ESCROW
-"add|del escrow hit\n"
+"add|del escrow hit ipv6\n"
 #endif
 "add|del map hit ipv6\n"
 "add|del service escrow|rvs\n"
@@ -769,8 +769,14 @@ int handle_escrow(struct hip_common *msg, int action, const char *opt[],
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
-		 "build hdr failed\n");
+	if (action == ACTION_ADD) {
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
+			 "build hdr failed\n");
+	}
+	else if (action == ACTION_DEL) {
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_ESCROW, 0), -1,
+			 "build hdr failed\n");		
+	} 
 out_err:
 	return err;
 	

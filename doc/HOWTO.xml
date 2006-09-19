@@ -881,7 +881,8 @@ using getaddrinfo: ping, ping6, tla, svn.
               can be tested. When option --decrypt_contents is set firewall 
               tries to decrypt ESP-packet contents. This can be done if 
               session data has been delivered to firewall. See "Using 
-              Key Escrow" for details.</para>
+              Key Escrow" for details. Currently decrypted packet contents 
+              can be viewed in firewall output.</para>
 
         <para>Management interface:</para>
 
@@ -1185,6 +1186,9 @@ using getaddrinfo: ping, ping6, tla, svn.
   	<para>
   	&nbsp; ./test/conntest-server tcp 5000 
   	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	</para>
+  	<para>
+  	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
   </chapter>
 </book>    
