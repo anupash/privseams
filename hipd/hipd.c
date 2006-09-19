@@ -194,10 +194,17 @@ int main(int argc, char *argv[]) {
 		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
 				       NULL, NULL, &timeout)) < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
+
 		} else if (err == 0) {
 			/* idle cycle - select() timeout */
-			_HIP_DEBUG("Idle\n");
+			_HIP_DEBUG("Idle.\n");
+			
 		} else if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
+			/* Receiving of a raw HIP message from IPv6 socket. */
+			HIP_DEBUG("Receiving a message on raw HIP from "\
+				  "IPv6/HIP socket (file descriptor: %d).\n",
+				  hip_raw_sock_v6);
+			
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
 
@@ -212,13 +219,17 @@ int main(int argc, char *argv[]) {
 								 &saddr,
 								 &daddr,
 								 &pkt_info);
+			
 		} else if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
+			/* Receiving of a raw HIP message from IPv4 socket. */
+			HIP_DEBUG("Receiving a message on raw HIP from "\
+				  "IPv4/HIP socket (file descriptor: %d).\n",
+				  hip_raw_sock_v4);
+
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
-			//int src_port = 0;
 
 			hip_msg_init(hip_msg);
-			HIP_DEBUG("Getting a msg on v4\n");
 			/* Assuming that IPv4 header does not include any
 			   options */
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg,
@@ -237,16 +248,24 @@ int main(int argc, char *argv[]) {
 			  err = hip_receive_control_packet(hip_msg, &saddr,
 							   &daddr, &pkt_info);
 			}
+
 		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)) {
 			/* Receiving of a UDP message from NAT socket. */
 			HIP_DEBUG("Receiving a message on UDP from NAT "\
-				  "socket %d.\n", hip_nat_sock_udp);
+				  "socket (file descriptor: %d).\n",
+				  hip_nat_sock_udp);
 			
 			/* Data structures for storing the source and
 			   destination addresses and ports of the incoming
 			   packet. */
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
+
+			/* The NAT socket is bound on port 50500, thus packets
+			   received from NAT socket must have had 50500 as
+			   destination port. */
+			pkt_info.dst_port = HIP_NAT_UDP_PORT; 
+
 			/* Initialization of the hip_common header struct. We'll
 			   store the HIP header data here. */
 			hip_msg_init(hip_msg);
@@ -263,24 +282,30 @@ int main(int argc, char *argv[]) {
 				err =  hip_nat_receive_udp_control_packet(
 					hip_msg, &saddr, &daddr, &pkt_info);
                         }
+
 		} else if (FD_ISSET(hip_user_sock, &read_fdset)) {
-		  	//struct sockaddr_un app_src, app_dst;
-			//struct sockaddr_storage app_src;
+			/* Receiving of a message from user socket. */
+			HIP_DEBUG("Receiving a message from user socket "\
+				  "(file descriptor: %d).\n",
+				  hip_user_sock);
+
 			struct sockaddr_un app_src;
-			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hip_msg);
 
 			if (hip_read_user_control_msg(hip_user_sock, hip_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				err = hip_handle_user_msg(hip_msg, &app_src);
+
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
+			/* Receiving of a message from agent socket. */
+			HIP_DEBUG("Receiving a message from agent socket "\
+				  "(file descriptor: %d).\n",
+				  hip_agent_sock);
 			int n;
 			socklen_t alen;
 			err = 0;
 			hip_hdr_type_t msg_type;
-			
-			HIP_DEBUG("Receiving message from agent(?).\n");
 			
 			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 			alen = sizeof(hip_agent_addr);
@@ -346,13 +371,16 @@ int main(int argc, char *argv[]) {
 					HIP_DEBUG("Agent rejected I1.\n");
 				}
 			}
+
 		} else if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
+			/* Receiving of a message from firewall socket. */
+			HIP_DEBUG("Receiving a message from firewall socket "\
+				  "(file descriptor: %d).\n",
+				  hip_firewall_sock);
 			int n;
 			socklen_t alen;
 			err = 0;
 			hip_hdr_type_t msg_type;
-			
-			HIP_DEBUG("Receiving message from firewall.\n");
 			
 			bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
 			alen = sizeof(hip_firewall_addr);

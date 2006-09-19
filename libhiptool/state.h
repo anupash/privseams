@@ -22,11 +22,11 @@
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-/* when adding new states update debug.h hip_state_str */
+/* when adding new states update debug.h hip_state_str() */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
-#define HIP_STATE_FILTERING			10
+#define HIP_STATE_FILTERING	    10
 
 #define HIP_UPDATE_STATE_REKEYING    1      /** @todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2

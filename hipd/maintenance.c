@@ -45,27 +45,46 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
+
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-	    	entry->state != HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Retransmit packet\n");
-			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-								   &entry->hip_msg_retrans.daddr,
-									0,0, /*need to correct it*/
-								   entry->hip_msg_retrans.buf,
-								   entry, 0);
-			/* Set entry state, if previous state was unassosiated and type is I1. */
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
-			{
-				HIP_DEBUG("Send I1 succcesfully after acception.\n");
+		    entry->state != HIP_STATE_ESTABLISHED) {
+			
+			/* If NAT status is on, UDP is used. */
+			if(hip_nat_status) {
+				/** @todo How to know which source and
+				    destination ports to use? */
+				entry->hadb_xmit_func->
+					hip_nat_send_udp(&entry->hip_msg_retrans.saddr,
+							 &entry->hip_msg_retrans.daddr,
+							 0, HIP_NAT_UDP_PORT,
+							 entry->hip_msg_retrans.buf,
+							 entry, 0);
+			}
+			/* If NAT status is off, raw HIP is used. */
+			else {
+				err = entry->hadb_xmit_func->
+					hip_csum_send(&entry->hip_msg_retrans.saddr,
+						      &entry->hip_msg_retrans.daddr,
+						      0,0,
+						      entry->hip_msg_retrans.buf,
+						      entry, 0);
+			}
+
+			/* Set entry state, if previous state was unassosiated
+			   and type is I1. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_I1) {
+				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		} else {
+		}
+		else {
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;

@@ -48,6 +48,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
 	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
@@ -57,12 +58,23 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 	
-	err = entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						   &daddr,0,0, 
-						   /* Kept 0 as src and dst port. This should be taken out from entry --Abi*/
-						   (struct hip_common*) &i1,
-						   entry, 1);
-	HIP_DEBUG("err = %d\n", err);
+	/* If NAT mode is on, UDP is used. */
+	if(entry->nat_mode) {
+		/** @todo Source port should be NAT-P. */
+		err = entry->hadb_xmit_func->
+			hip_nat_send_udp(&entry->local_address, &daddr,
+					 0, HIP_NAT_UDP_PORT,
+					 (struct hip_common*) &i1, entry, 1);
+	}
+	/* If NAT mode is off, raw HIP is used. */
+	else {
+		err = entry->hadb_xmit_func->
+			hip_csum_send(&entry->local_address, &daddr, 0, 0,
+				      (struct hip_common*) &i1, entry, 1);
+	}
+
+	HIP_DEBUG("err after sending: %d.\n", err);
+	
 	if (!err) {
 		HIP_LOCK_HA(entry);
 		entry->state = HIP_STATE_I1_SENT;
@@ -266,14 +278,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(struct in6_addr *i1_saddr,
-		struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit, 
-		struct in6_addr *dst_ip,
-		struct in6_addr *dst_hit, 
-		struct hip_stateless_info *i1_info,
-		const struct in6_addr *traversed_rvs,
-		const int rvs_count)
+int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
+		struct in6_addr *src_hit, struct in6_addr *dst_ip,
+		struct in6_addr *dst_hit, struct hip_stateless_info *i1_info,
+		const struct in6_addr *traversed_rvs, const int rvs_count)
 {
 	HIP_DEBUG("hip_xmit_r1() invoked.\n");
 
@@ -316,13 +324,21 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 #endif
 	HIP_DUMP_MSG(r1pkt);
 
-	/* set cookie state to used (more or less temporary solution ?) */
-	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
-	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
-	HIP_IFEL(hip_csum_send(own_addr, dst_addr, i1_info->dst_port,
-			       i1_info->src_port, r1pkt, NULL, 0), -1, 
-		 "hip_xmit_r1 failed.\n");
-
+	/* If I1 was destined to 50500, UDP is used for sending R1. */
+	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
+		/* Source port of I1 becomes the destination port of R1, and the
+		   source port of R1 is set as 50500. */
+		HIP_IFEL(hip_nat_send_udp(own_addr, dst_addr, HIP_NAT_UDP_PORT,
+					  i1_info->src_port, r1pkt, NULL, 0),
+			 -ECOMM, "Sending R1 packet on UDP failed.\n");
+	}
+	/* Else R1 is send on raw HIP. */
+	else {
+		HIP_IFEL(hip_csum_send(own_addr, dst_addr, 0, 0, r1pkt, NULL,
+				       0),
+			 -ECOMM, "Sending R1 packet on raw HIP failed.\n");
+	}
+	
  out_err:
 	if (r1pkt)
 		HIP_FREE(r1pkt);
@@ -343,9 +359,23 @@ void hip_send_notify(hip_ha_t *entry)
 		 "Building of NOTIFY failed.\n");
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
-	entry->hadb_xmit_func->hip_csum_send(NULL, &daddr, 0,0, notify_packet,
-					     entry, 0);
-
+	
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		/** @todo How to know which source port to use? */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(NULL, &daddr, 0, entry->peer_udp_port,
+					  notify_packet, entry, 0),
+			 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(NULL, &daddr, 0,0, notify_packet, entry,
+				       0),
+			 -ECOMM, "Sending NOTIFY packet on raw HIP failed.\n");
+	}
+	
  out_err:
 	if (notify_packet)
 		HIP_FREE(notify_packet);
@@ -442,6 +472,12 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  hip_ha_t *entry, int retransmit)
 {
 	HIP_DEBUG("hip_csum_send() invoked.\n");
+	
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr && msg);
+
+	HIP_DEBUG("Sending %s packet on raw HIP.\n",
+		  hip_message_type_name(hip_get_msg_type(msg)));
 	HIP_DEBUG_IN6ADDR("hip_csum_send(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_csum_send(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
@@ -455,27 +491,6 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* Points either to v4 or v6 raw sock */
 	int hip_raw_sock = 0;
 	
-	/* Abi's UDP stuff :| */
-	if(entry) {
-		HIP_DEBUG("entry->nat_mode %d\n", entry->nat_mode);
-	}
-
-	HIP_DEBUG("hip_nat_status %d\n", hip_nat_status);
-	HIP_DEBUG("dst_is_ipv4 %d\n", dst_is_ipv4);
-
-	if ((hip_nat_status && dst_is_ipv4)|| (dst_is_ipv4 && 
-					       ((entry && entry->nat_mode) ||
-						(src_port != 0 || dst_port != 0))))
-		
-	{
-		HIP_DEBUG("Abi's UDP stuff is true.\n");
-		return hip_nat_send_udp(local_addr, peer_addr,
-					src_port, dst_port, msg, entry, retransmit);
-		
-	}
-	HIP_DEBUG("Abi's UDP stuff is NOT true.\n");
-	/* End of Abi's UDP stuff. */
-
 	len = hip_get_msg_total_len(msg);
 
 	/* Some convinient short-hands to avoid too much casting (could be
@@ -497,8 +512,6 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		sa_size = sizeof(struct sockaddr_in6);
 	}
 
-	HIP_ASSERT(peer_addr);
-	
 	if (local_addr) {
 		HIP_DEBUG("local address given\n");
 		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
@@ -642,9 +655,14 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 }
 
 #ifdef CONFIG_HIP_HI3
-/*
+/**
  * The callback for i3 "no matching id" callback.
- * FIXME: tkoponen, Should this somehow trigger the timeout for waiting outbound traffic (state machine)?
+ * 
+ * @param ctx_data a pointer to...
+ * @param data     a pointer to...
+ * @param fun_ctx  a pointer to...
+ * @todo           tkoponen, should this somehow trigger the timeout for waiting
+ *                 outbound traffic (state machine)?
  */
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
 	char id[32];
@@ -653,10 +671,19 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
 	HIP_ERROR("Following ID not found: %s", id);
 }
 
-/* Hi3 outbound traffic processing */
-/* XX FIXME: For now this supports only serialiazation of IPv6 addresses to Hi3 header */
-/* XX FIXME: this function is outdated. Does not support in6 mapped addresses
-   and retransmission queues -mk */
+/** 
+ * Hi3 outbound traffic processing.
+ * 
+ * @param src_addr  a pointer to...
+ * @param peer_addr a pointer to...
+ * @param msg       a pointer to...
+ * @todo            For now this supports only serialiazation of IPv6 addresses
+ *                  to Hi3 header.
+ * @todo            This function is outdated. Does not support in6 mapped
+ *                  addresses and retransmission queues -mk
+ * @todo            If there's a NAT between this host and the peer, UDP should
+ *                  be used.
+ */
 int hip_csum_send_i3(struct in6_addr *src_addr, 
 		  struct in6_addr *peer_addr,
 		  struct hip_common *msg)
@@ -672,13 +699,13 @@ int hip_csum_send_i3(struct in6_addr *src_addr,
 	/* This code is outdated. Synchronize to the non-hi3 version */
 
 	if (!src_addr) {
-		// FIXME: Obtain the preferred address
+		/** @todo Obtain the preferred address. */
 		HIP_ERROR("No source address.\n");
 		return -1;
 	}
 
 	if (!peer_addr) {
-		// FIXME: Just ignore?
+		/** @todo Just ignore? */
 		HIP_ERROR("No destination address.\n");
 		return -1;
 	}

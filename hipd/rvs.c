@@ -448,12 +448,6 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   the rendezvous association. */
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &final_dst, 0);
-	
-        /* Select a source address which to use in the outgoing I1 packet. Note,
-	   that this is also done in hip_csum_send(), but for some reason not
-	   in hip_nat_send_udp(). */
-	HIP_IFEL(hip_select_source_address(&local_addr, &final_dst), -1,
-		 "Cannot select a source address for rendezvous server.\n");
 
 	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
@@ -512,20 +506,20 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 						   &rva->hmac_our), -1,
 		 "Building of RVS_HMAC failed.\n");
 	
-	/* If the client is behind NAT, the I1 packet is relayed on UDP,
-	   if there's no NAT, the packet is relayed on raw HIP. */
+	/* If the client is behind NAT, the I1 packet is relayed on UDP. If
+	   there is no NAT, the packet is relayed on raw HIP. Note that we
+	   use NULL as source IP address instead of i1_daddr. A source address
+	   is selected in the corresponding send function. */
 	if(rva->client_udp_port == 0) {
-		HIP_DEBUG("Relaying I1 on raw HIP.\n");
-		HIP_IFEL(hip_csum_send(&local_addr, &final_dst,
+		HIP_IFEL(hip_csum_send(NULL, &final_dst,
 				       i1_info->src_port, i1_info->dst_port,
 				       i1_to_be_relayed, NULL, 0), -1,
 			 "Relaying I1 on raw HIP failed.\n");
-		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on TCP to",
+		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on raw HIP to",
 			      &final_dst);
 	}
 	else {
-		HIP_DEBUG("Relaying I1 on UDP.\n");
-		HIP_IFEL(hip_nat_send_udp(&local_addr, &final_dst,
+		HIP_IFEL(hip_nat_send_udp(NULL, &final_dst,
 					 HIP_NAT_UDP_PORT, rva->client_udp_port,
 					  i1_to_be_relayed, NULL, 0), -1,
 			 "Relaying I1 on UDP failed.\n");

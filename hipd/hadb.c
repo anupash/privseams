@@ -1351,7 +1351,6 @@ int hip_update_send_echo(hip_ha_t *entry,
 	/* If the peer is behind a NAT, UDP is used. */
 	/** @todo Functionality on UDP has not been tested. */
 	if(entry->nat_mode) {
-		HIP_DEBUG("Sending UPDATE packet with echo data on UDP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->
 			 hip_nat_send_udp(&entry->local_address, &addr->address,
 					  0, entry->peer_udp_port,
@@ -1361,7 +1360,6 @@ int hip_update_send_echo(hip_ha_t *entry,
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
-		HIP_DEBUG("Sending UPDATE packet with echo data on raw HIP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->
 			 hip_csum_send(&entry->local_address, &addr->address,
 				       0, 0, update_packet, entry, 0), -ECOMM,

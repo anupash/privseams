@@ -341,7 +341,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 
 /**
- * hip_handle_update_established - handle incoming UPDATE packet received in ESTABLISHED state
+ * Handles an incoming UPDATE packet received in ESTABLISHED state.
+ * 
  * @param entry hadb entry corresponding to the peer
  * @param msg the HIP packet
  * @param src_ip source IPv6 address from where the UPDATE was sent
@@ -370,8 +371,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	int err = 0, esp_info_i = 1, need_to_generate_key = 0,
 		dh_key_generated = 0;
-	
-	HIP_DEBUG("\n");
 	
 	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
 		 "No SEQ parameter in packet\n");
@@ -402,7 +401,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
-        /* Todo: handle this case */
+        /** @todo handle this case. */
 	HIP_IFEL(!update_id_out, -EINVAL, 
 		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
 
@@ -421,7 +420,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (dh || dh_key_generated) {
 		HIP_DEBUG("would generate new keymat\n");
-		/* todo: generate_new_keymat(); */
+		/** @todo generate_new_keymat(); */
 		keymat_index = 0;
 	} else {
 		/* Otherwise, the ESP_INFO Keymat Index MUST be larger or
@@ -507,7 +506,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
 
-	/*! \todo hmac/signature to common functions */
+	/** @todo hmac/signature to common functions */
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out),
@@ -520,13 +519,25 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
-
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      src_ip, update_info->src_port,
-							update_info->dst_port,
-						      update_packet,
-						      entry, 1), -1,
-		 "csum send failed\n");
+	
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		/* Destination port of the received packet becomes the source
+		   port of the UPDATE. */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(&entry->local_address, src_ip,
+					  update_info->dst_port,
+					  entry->peer_udp_port, update_packet,
+					  entry, 1),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(&entry->local_address, src_ip, 0, 0,
+				       update_packet, entry, 1),
+			 -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
+	}
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
@@ -828,8 +839,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 
 	if (ack) /* breaks if packet has no ack but esp_info exists ? */
 		hip_update_handle_ack(entry, ack, esp_info ? 1 : 0);
-//	if (esp_info)
-//		hip_update_handle_esp_info(entry, puid); /* kludge */
+	/* if (esp_info)
+	   hip_update_handle_esp_info(entry, puid); kludge */
 
 	/* finish SAs if we have received ACK and ESP_INFO */
 	HIP_IFEL(hip_update_for_each_local_addr(hip_update_do_finish_rekey,
@@ -852,11 +863,23 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
         HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
 
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &daddr, 0, 0, update_packet,
-						      entry, 1), -1,
-		 "csum_send failed\n");
-
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		/** @todo How to decide the value of source port? */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(&entry->local_address, &daddr,
+					  0, entry->peer_udp_port,
+					  update_packet, entry, 1),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(&entry->local_address, &daddr,
+				       0, 0,
+				       update_packet, entry, 1),
+			 -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
+	}
  out_err:
 	/* if (err)
 	   TODO: REMOVE IPSEC SAs
@@ -934,10 +957,10 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
-				       struct hip_peer_addr_list_item *addr,
-				       struct hip_spi_out_item *spi_out,
-				       struct in6_addr *src_ip,
-				       int verify_active_addresses)
+					   struct hip_peer_addr_list_item *addr,
+					   struct hip_spi_out_item *spi_out,
+					   struct in6_addr *src_ip,
+					   int verify_active_addresses)
 {
 	int err = 0;
 	struct hip_common *update_packet = NULL;
@@ -974,13 +997,23 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 					    hitr),
 		 -1, "Building Verification Packet failed\n");
 
-	/* test: send all addr check from same address */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
-						      &addr->address,
-						      0, 0, update_packet,
-						      entry, 0), -1,
-		 "csum_send failed\n");
-
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		/** @todo How to decide the value of source port? */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(src_ip, &addr->address,
+					  0, entry->peer_udp_port,
+					  update_packet, entry, 0),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(src_ip, &addr->address,
+				       0, 0,
+				       update_packet, entry, 0),
+			 -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
+	}
  out_err:
 	return err;
 }
@@ -1131,12 +1164,30 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				      hip_get_param_contents_len(echo), 0, 0),
 		 -1, "Building of ECHO_RESPONSE failed\n");
 
-	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
-						      update_packet, entry, 0),
-		 -1, "csum_send failed\n");
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		HIP_DEBUG("Sending reply UPDATE packet (address check) on "\
+			  "UDP.\n");
+		/** @todo How to decide the value of source port? */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(dst_ip, src_ip,
+					  0, entry->peer_udp_port,
+					  update_packet, entry, 0),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_DEBUG("Sending reply UPDATE packet (address check) on raw "\
+			  "HIP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(dst_ip, src_ip,
+				       0, 0,
+				       update_packet, entry, 0),
+			 -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
+	}
 
-	HIP_IFEL(set_address_state(entry, src_ip), -1, "Setting Own address status to ACTIVE failed\n");
+	HIP_IFEL(set_address_state(entry, src_ip),
+		 -1, "Setting Own address status to ACTIVE failed\n");
 
  out_err:
 	if (update_packet)
@@ -2009,7 +2060,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SP :alue for the SA 0x%x\n", new_spi_in);
 
-		/*! \todo move to rekeying_finish */
+		/** @todo move to rekeying_finish */
 		if (!mapped_spi) {
 			struct hip_spi_in_item spi_in_data;
 
@@ -2112,11 +2163,26 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-        HIP_DEBUG("Sending initial UPDATE packet\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
-						      update_packet, entry, 1),
-		 -1, "csum_send failed\n");
-
+	
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		HIP_DEBUG("Sending initial UPDATE packet on UDP.\n");
+		/** @todo How to decide the value of source port? */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_nat_send_udp(&saddr, &daddr,
+					  0, entry->peer_udp_port,
+					  update_packet, entry, 1),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_DEBUG("Sending initial UPDATE packet on raw HIP.\n");
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_csum_send(&saddr, &daddr,
+				       0,0,
+				       update_packet, entry, 1),
+			 -ECOMM, "Sending UPDATE packet on UDP failed.\n");
+	}
 	
 	if (err) {
 		HIP_ERROR("addr list copy failed\n");

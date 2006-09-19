@@ -240,12 +240,12 @@ int hip_nat_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr && msg);
 	
+	HIP_DEBUG("Sending %s packet on UDP.\n",
+		  hip_message_type_name(hip_get_msg_type(msg)));
 	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_nat_send_udp(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port: %d, destination port: %d.\n",
 		  src_port, dst_port);
-	HIP_DEBUG("Message type is %s\n",
-		  hip_message_type_name(hip_get_msg_type(msg)));
 	
 	int sockfd = 0, err = 0, xmit_count = 0;
 	/* IPv4 Internet socket addresses. */

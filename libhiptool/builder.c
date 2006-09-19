@@ -1280,16 +1280,17 @@ int hip_build_user_hdr(struct hip_common *msg,
 }
 
 /**
- * hip_build_network_hdr - write network header into message
- * @param msg the message where the HIP network should be written
- * @param type_hdr the type of the HIP header as specified in the drafts
- * @param control HIP control bits in host byte order
- * @param hit_sender source HIT in network byte order
- * @param hit_receiver destination HIT in network byte order
- *
+ * Writes a network header into a message.
+ * 
  * This function does not write the header length into the message. It should
  * be written by the build_param_functions. The checksum field is not written
- * either because it is done in hip_csum_send().
+ * either because it is done in hip_csum_send() and hip_nat_send_udp().
+ * 
+ * @param msg          the message where the HIP network should be written
+ * @param type_hdr     the type of the HIP header as specified in the drafts
+ * @param control      HIP control bits in host byte order
+ * @param hit_sender   source HIT in network byte order
+ * @param hit_receiver destination HIT in network byte order
  */
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 			   uint16_t control, const struct in6_addr *hit_sender,

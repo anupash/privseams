@@ -68,16 +68,14 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	/* If the peer is behind a NAT, UDP is used. */
 	if(entry->nat_mode)
 	{
-		HIP_DEBUG("Sending CLOSE on UDP.\n");
 		HIP_IFE(entry->hadb_xmit_func->
 			hip_nat_send_udp(NULL, &entry->preferred_address,0,
 					 entry->peer_udp_port,
 					 close, entry, 0), -1);
 	}
-	/* If there's no NAT between, TCP is used. */
+	/* If there's no NAT between, raw HIP is used. */
 	else
 	{
-		HIP_DEBUG("Sending CLOSE on TCP.\n");
 		HIP_IFE(entry->hadb_xmit_func->
 			hip_csum_send(NULL,&entry->preferred_address,0,0,
 				      close, entry, 0), -1);
@@ -134,7 +132,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	/* If the peer is behind a NAT, UDP is used. */
 	if(entry->nat_mode)
 	{
-		HIP_DEBUG("Sending CLOSE ACK on UDP.\n");
 		HIP_IFE(entry->hadb_xmit_func->
 			hip_nat_send_udp(NULL, &entry->preferred_address,0,
 					 entry->peer_udp_port,
@@ -143,7 +140,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	/* If there's no NAT between, raw HIP is used. */
 	else
 	{
-		HIP_DEBUG("Sending CLOSE ACK on raw HIP.\n");
 		HIP_IFE(entry->hadb_xmit_func->
 			hip_csum_send(NULL,&entry->preferred_address,0,0,
 				      close_ack, entry, 0), -1);

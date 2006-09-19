@@ -1221,7 +1221,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 	/* If the peer is behind a NAT, UDP is used. */
 	if(entry->nat_mode) {
-		HIP_DEBUG("Sending I2 packet on UDP.\n");
 		/* Destination port of R1 becomes the source port of I2, and the
 		   destination port of I2 is set as 50500. */
 		/** @todo Source port should be NAT-P'. */
@@ -1232,10 +1231,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
-		HIP_DEBUG("Sending I2 packet on raw HIP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(r1_daddr, &daddr, r1_info->dst_port, 
-				       r1_info->src_port, i2, entry, 0),
+			 hip_csum_send(r1_daddr, &daddr, 0, 0, i2, entry, 0),
 			 -ECOMM, "Sending I2 packet on raw HIP failed.\n");
 	}
 
@@ -1664,7 +1661,6 @@ int hip_create_r2(struct hip_context *ctx,
 
  	/* If the peer is behind a NAT, UDP is used. */
 	if(entry->nat_mode) {
-		HIP_DEBUG("Sending R2 packet on UDP.\n");
 		HIP_IFEL(entry->hadb_xmit_func->
 			 hip_nat_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
 					  entry->peer_udp_port, r2, entry, 0),
@@ -1672,11 +1668,9 @@ int hip_create_r2(struct hip_context *ctx,
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
-		HIP_DEBUG("Sending R2 packet on raw HIP.\n");
 		/** @todo remove ports. */
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
-				       entry->peer_udp_port, r2, entry, 0),
+			 hip_csum_send(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
 			 -ECOMM, "Sending R2 packet on raw HIP failed.\n");
 	}
 

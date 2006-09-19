@@ -319,9 +319,9 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	}
 
 	if (saddr)
-		HIP_DEBUG_IN6ADDR("src\n", saddr);
+		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
-		HIP_DEBUG_IN6ADDR("dst\n", daddr);
+		HIP_DEBUG_IN6ADDR("dst", daddr);
 
  out_err:
 	return err;
