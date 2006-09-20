@@ -88,8 +88,8 @@ int hip_kea_remove_base_entries(struct in6_addr *hit);
 void hip_init_keadb(void);
 void hip_uninit_keadb(void);
 
-HIP_KEA *hip_kea_allocate(int gfpmask);
-HIP_KEA *hip_kea_create(struct in6_addr *hit1, int gfpmask);
+HIP_KEA *hip_kea_allocate();
+HIP_KEA *hip_kea_create(struct in6_addr *hit1);
 
 int hip_keadb_add_entry(HIP_KEA *kea);
 void hip_keadb_remove_entry(HIP_KEA *kea);
@@ -112,11 +112,11 @@ int hip_kea_ep_hash(const void * key, int range);
 
 int hip_kea_ep_match(const void * ep1, const void * ep2);
 
-HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask);
+HIP_KEA_EP *hip_kea_ep_allocate();
 
 HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, int esp_transform, 
 							  uint32_t spi, uint16_t key_len, 
-							  struct hip_crypto_key * key, int gfpmask);
+							  struct hip_crypto_key * key);
 
 int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep);
 void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep);

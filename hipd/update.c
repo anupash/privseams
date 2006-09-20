@@ -1340,7 +1340,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 	
 	 	case HIP_ESCROW_OPERATION_ADD:
 	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
-				spi, len, &keys->enc, GFP_KERNEL)), -1,
+				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
 	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
 	 			"Error while adding endpoint");
@@ -1351,7 +1351,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 			"Could not find endpoint to be modified");
 	 		hip_kea_remove_endpoint(ep);
 	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
-				spi, len, &keys->enc, GFP_KERNEL)), -1,
+				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
 	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
 	 			"Error while adding endpoint");	
@@ -1372,13 +1372,11 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	/* If firewall is used, the received information shuold be delivered 
 	 * to it. TODO: a better place for this? */ 	
 	if (accept == 0) {
-		// TODO: Delivering data to firewall
-	if (hip_firewall_is_alive()) {
-		HIP_DEBUG("Firewall alive!\n");
-		if (hip_firewall_add_escrow_data(entry, keys))
-			HIP_DEBUG("Sent data to firewall\n");
-	}
-	
+		if (hip_firewall_is_alive()) {
+			HIP_DEBUG("Firewall alive!\n");
+			if (hip_firewall_add_escrow_data(entry, keys))
+				HIP_DEBUG("Sent data to firewall\n");
+		}
 	}
 			
 out_err:

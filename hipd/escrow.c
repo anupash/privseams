@@ -81,7 +81,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 	int err = 0;
 	HIP_KEA *kea;
 	struct in6_addr *server_hit = server_hit_void; 	
-	kea = hip_kea_create(&entry->lhi.hit, GFP_KERNEL);
+	kea = hip_kea_create(&entry->lhi.hit);
 	if (!kea) 
 		return -1;	
 	ipv6_addr_copy(&kea->server_hit, server_hit);	
@@ -140,6 +140,7 @@ out_err:
 	return err;	
 }
 
+// TODO: fix parameter to something meaningful
 int hip_kea_remove_base_entries(struct in6_addr *hit)
 {
 	int err = 0;
@@ -151,11 +152,11 @@ out_err:
 }
 
 
-HIP_KEA *hip_kea_allocate(int gfpmask)
+HIP_KEA *hip_kea_allocate()
 {
 	HIP_KEA *kea;
 
-	kea = HIP_MALLOC(sizeof(*kea), gfpmask);
+	kea = HIP_MALLOC(sizeof(*kea), 0);
 	
 	if (!kea)
 		return NULL;
@@ -172,11 +173,11 @@ HIP_KEA *hip_kea_allocate(int gfpmask)
 /**
  * Creates a new key escrow association with the given values.
  */
-HIP_KEA *hip_kea_create(struct in6_addr *hit, int gfpmask)
+HIP_KEA *hip_kea_create(struct in6_addr *hit)
 {
 	HIP_KEA *kea;
 	_HIP_DEBUG("Creating kea entry");
-	kea = hip_kea_allocate(gfpmask);
+	kea = hip_kea_allocate();
 	if (!kea)
 		return NULL;
 	
@@ -223,8 +224,8 @@ void hip_keadb_remove_entry(HIP_KEA *kea)
 	HIP_ASSERT(kea);
 
 	HIP_LOCK_HA(kea); // refcnt should be more than 1
-	if (!(kea->keastate & HIP_KEASTATE_VALID)) {
-		HIP_DEBUG("KEA not in kea hashtable or state corrupted\n");
+	if (!kea->keastate) {
+		HIP_DEBUG("KEA not in kea hashtable\n");
 		return;
 	}
 	
@@ -322,11 +323,11 @@ int hip_kea_ep_match(const void * ep1, const void * ep2)
 	return !memcmp((const void *) ep1, (const void *) ep2, 18);
 }
 
-HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask)
+HIP_KEA_EP *hip_kea_ep_allocate()
 {
 	HIP_KEA_EP *kea_ep;
 
-	kea_ep = HIP_MALLOC(sizeof(*kea_ep), gfpmask);
+	kea_ep = HIP_MALLOC(sizeof(*kea_ep), 0);
 	
 	if (!kea_ep)
 		return NULL;
@@ -340,10 +341,10 @@ HIP_KEA_EP *hip_kea_ep_allocate(int gfpmask)
 
 HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, 
 							  int esp_transform, uint32_t spi, uint16_t key_len, 
-							  struct hip_crypto_key * key, int gfpmask)
+							  struct hip_crypto_key * key)
 {
 	HIP_KEA_EP *kea_ep;
-	kea_ep = hip_kea_ep_allocate(gfpmask);
+	kea_ep = hip_kea_ep_allocate();
 	if (!kea_ep)
 		return NULL;
 	
@@ -602,7 +603,19 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 int hip_handle_escrow_registration(struct in6_addr *hit)
 {
+	int err = 0;
+	HIP_KEA * kea = NULL;
 	// TODO: check the authorization of the registration
-	
+		
+	// If hit is authorized add escrow association to database
+	HIP_IFE(!(kea = hip_kea_create(hit)), -1);
+	HIP_HEXDUMP("Created kea entry with peer hit: ", hit, 16);
+	kea->keastate = HIP_KEASTATE_VALID;
+	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
+		"Error while inserting KEA to keatable");
+	HIP_DEBUG("Added kea entry");
 	return 1;
+
+out_err:	
+	return 0;
 }

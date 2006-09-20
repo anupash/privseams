@@ -493,8 +493,6 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
 			HIP_ERROR("build param failed: %s\n", strerror(err));
 			goto out_err;
 		}
-	
-		HIP_DEBUG("Sending test msg to firewall\n");
 
 		n = hip_sendto(msg, &hip_firewall_addr);                   
 		if (n < 0)

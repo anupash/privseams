@@ -1383,6 +1383,7 @@ int hip_handle_r1(struct hip_common *r1,
 			kea->keastate = HIP_KEASTATE_INVALID;
 		if (kea)
 			hip_keadb_put_entry(kea);	
+		//TODO: Remove base keas	
 	}
 #endif /* CONFIG_HIP_ESCROW */
 
@@ -1576,6 +1577,10 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+	uint8_t *types = NULL;
+	uint8_t lifetime;
+	struct hip_reg_request *reg_request = NULL;
+
 	/* Assume already locked entry */
 	i2 = ctx->input;
 
@@ -1596,21 +1601,20 @@ int hip_create_r2(struct hip_context *ctx,
 
 	
 	/* Check if the incoming I2 has a REG_REQUEST parameter. */
-
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 	HIP_DUMP_MSG(i2);
 
-	uint8_t lifetime;
-	struct hip_reg_request *reg_request;
 	reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
 				
 	if (reg_request) {
-		HIP_DEBUG("Found REG_REQUEST parameter.\n");
-
-		int *accepted_requests, *rejected_requests;
+		int *accepted_requests = NULL;
+		int *rejected_requests = NULL;
+		int i = 0;
+		
 		int request_count, my_request_count, accepted_count, rejected_count;
 		uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
-			
+		
+		HIP_DEBUG("Found REG_REQUEST parameter.\n");	
 		/** @todo - sizeof(reg_request->lifetime) instead of - 1 ?*/
 		request_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
 		my_request_count = hip_get_param_contents_len(reg_request)
@@ -1619,11 +1623,12 @@ int hip_create_r2(struct hip_context *ctx,
 		HIP_DEBUG("request_count: %d\n", request_count);
 		HIP_DEBUG("my_request_count: %d\n", my_request_count);
 
-		accepted_count = hip_check_service_requests(&entry->hit_our, (types + 1),
+		accepted_count = hip_check_service_requests(&entry->hit_peer, (types + 1),
 							    request_count, &accepted_requests,
 							    &rejected_requests);
 		rejected_count = request_count - accepted_count;
-			
+		
+		/* Adding REG_RESPONSE and/or REG_FAILED parameter */	
 		HIP_DEBUG("Accepted %d, rejected: %d\n", accepted_count, rejected_count);
 		if (accepted_count > 0) {
 			lifetime = reg_request->lifetime;
@@ -1660,20 +1665,8 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
 							i2_info->src_port,
 						      r2, entry, 0), -1,
-		 "Failed to send r2\n")
+		 "Failed to send r2\n");
 	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
-
-#ifdef CONFIG_HIP_ESCROW
-	// Add escrow association to database
-	// TODO: definition
-	HIP_KEA *kea;	
-	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
-	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
-	kea->keastate = HIP_KEASTATE_VALID;
-	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
-		"Error while inserting KEA to keatable");
-	HIP_DEBUG("Added kea entry");
-#endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
 	/* Insert rendezvous association to rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
@@ -1687,6 +1680,8 @@ int hip_create_r2(struct hip_context *ctx,
  out_err:
 	if (r2)
 		HIP_FREE(r2);
+	if (types)	
+		HIP_FREE(types);	
 	if (clear && entry) {/* Hmm, check */
 		HIP_ERROR("TODO: about to do hip_put_ha, should this happen here ?\n");
 		hip_put_ha(entry);
@@ -2294,7 +2289,7 @@ int hip_handle_r2(struct hip_common *r2,
 	*/
 
 	/* Check if the incoming R2 has a REG_RESPONSE parameter. */
-		
+	/* TODO: Check this only if we are doing registration */	
 	HIP_DEBUG("Checking R2 for REG_RESPONSE parameter.\n");
 	struct hip_reg_request *rresp;
 	uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
@@ -2311,9 +2306,8 @@ int hip_handle_r2(struct hip_common *r2,
 			HIP_DEBUG("Server not responding to registration attempt.\n");
 			
 		/** @todo Should the base entry be removed when registration fails?
-		    Registration unsuccessful - removing base keas
-		    hip_kea_remove_base_entries(); */
-			
+		    Registration unsuccessful - removing base keas*/
+		    hip_kea_remove_base_entries(&entry->hit_our);
 	}
 	else {
 		HIP_DEBUG("Found REG_RESPONSE parameter.\n");

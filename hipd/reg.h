@@ -25,7 +25,8 @@ struct hip_reg_service {
 
 	/** @todo Authorization data */
 	
-	/* accept or reject registration based on the requester hit */
+	/* accept or reject registration based on the requester hit and do 
+	 * service specific initialization */
 	// TODO: add local hit
 	int (*handle_registration)(struct in6_addr *hit);
 };
