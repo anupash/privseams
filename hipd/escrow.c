@@ -361,34 +361,16 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	kea_ep->spi = spi;
 	
 	memcpy(&kea_ep->esp_key, key, sizeof(kea_ep->esp_key));
-	
-	
-	/* PRINTING VALUES*/
-	
-	HIP_DEBUG("KEA EP VALUES: ");
-	if (esp_transform == HIP_ESP_3DES_SHA1 || esp_transform == HIP_ESP_3DES_MD5)
-		HIP_DEBUG("Algorithm: 3des");
-	else if (esp_transform == HIP_ESP_BLOWFISH_SHA1)
-		HIP_DEBUG("Algorithm: blowfish");
-	else if (esp_transform == HIP_ESP_AES_SHA1)
-		HIP_DEBUG("Algorithm: aes");
-	else 
-		HIP_DEBUG("Algorithm: undefined %d", esp_transform);
-	
-	HIP_DEBUG("Key length: %d", key_len);	
-	HIP_DEBUG_KEY("Key: ", key, key_len);
-	HIP_HEXDUMP("Keyhex: ", key->key, key_len);
-		
-				
+
 	return kea_ep;	
 }
 
 int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 {
-	HIP_DEBUG("Adding kea endpoint");
-	
 	int err = 0;
 	HIP_KEA_EP * temp;
+	
+	HIP_DEBUG("Adding kea endpoint");
 
 	/* if assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&kea_ep->refcnt) <= 1); 
@@ -411,8 +393,6 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 		// set state if needed
 	}
 	
-	
-	
  out_err:
 	return err;
 }
@@ -431,8 +411,7 @@ void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 	//}
 	
 	hip_ht_delete(&kea_endpoints, kea_ep); // refcnt decremented
-	HIP_UNLOCK_HA(kea_ep); 
-	
+	HIP_UNLOCK_HA(kea_ep); 	
 }
 
 
@@ -444,7 +423,6 @@ void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
 
 HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 {
-
 	HIP_KEA_EP_ID * key = NULL;
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
@@ -465,17 +443,11 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc)
 {
-
 	int err = 0;
-	//, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
 	uint32_t update_id_out = 0;
-	//uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
-	//uint32_t new_spi_in = 0;
-	struct hip_common *update_packet = NULL;
+	struct hip_common * update_packet = NULL;
 	struct in6_addr saddr = { 0 }, daddr = { 0 };
-	//uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
 	uint16_t mask = 0;
-	//struct hip_own_addr_list_item *own_address_item, *tmp;
 	struct hip_keys keys_tmp;
 	struct hip_keys * keys = NULL;
 	char * keys_enc = NULL;
@@ -492,11 +464,11 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
 	HIP_DEBUG_HIT("... from", &entry->hit_our);
 
-	HIP_DEBUG_HIT("escrow data hit:", hit);
-	HIP_DEBUG("escrow data spi: %d", spi);
-	HIP_DEBUG("escrow data old spi: %d", old_spi);
-	HIP_DEBUG("escrow data ealg: %d", ealg);
-	HIP_DEBUG("escrow data key length: %d",key_len);
+	_HIP_DEBUG_HIT("escrow data hit:", hit);
+	_HIP_DEBUG("escrow data spi: %d", spi);
+	_HIP_DEBUG("escrow data old spi: %d", old_spi);
+	_HIP_DEBUG("escrow data ealg: %d", ealg);
+	_HIP_DEBUG("escrow data key length: %d",key_len);
 
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
@@ -607,7 +579,6 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	/*** Send UPDATE ***/
 	//hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
-
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending UPDATE packet with escrow data\n");
 	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
@@ -622,12 +593,10 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 	
  out:
-
 	HIP_UNLOCK_HA(entry);
 	if (update_packet)
 		HIP_FREE(update_packet);
 	return err;
-	
 }
 
 

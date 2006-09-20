@@ -89,8 +89,6 @@ void hip_init_keadb(void);
 void hip_uninit_keadb(void);
 
 HIP_KEA *hip_kea_allocate(int gfpmask);
-
-/*! \todo Not ready!! */
 HIP_KEA *hip_kea_create(struct in6_addr *hit1, int gfpmask);
 
 int hip_keadb_add_entry(HIP_KEA *kea);
@@ -128,7 +126,6 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi);
 
 void hip_kea_hold_ep(void *entry);
 void hip_kea_put_ep(void *entry);
-
 
 
 #endif /*ESCROW_H_*/

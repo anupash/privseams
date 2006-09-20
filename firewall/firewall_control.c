@@ -159,6 +159,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 				
 				if (alg == HIP_ESP_3DES_SHA1)
 					auth_len = 24;
+				else if (alg == HIP_ESP_AES_SHA1)
+					auth_len = 32;	
+				else if (alg == HIP_ESP_NULL_SHA1)	
+					auth_len = 32;	
 				else	
 					HIP_DEBUG("Authentication algorithm unsupported\n");
 
