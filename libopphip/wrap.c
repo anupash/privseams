@@ -272,6 +272,70 @@ void hip_translate_to_original(hip_opp_socket_t *entry)
   entry->peer_id_is_translated = 1;
 }
 
+int set_translation(hip_opp_socket_t *entry,
+		    struct sockaddr_in6 *hit,
+		    int is_peer) {
+  int err = 0;
+
+  if (!entry->translated_socket) {
+    int new_socket = socket(AF_INET6, entry->type, 0);
+    if (new_socket <= 0) {
+      err = -1;
+      HIP_ERROR("socket allocation failed\n");
+      goto out_err;
+    }
+    entry->translated_socket = new_socket;
+  }
+
+  if (is_peer) {
+    memcpy(&entry->translated_peer_id, hit, SALEN(hit));
+    entry->translated_peer_id_len = SALEN(hit);
+    entry->peer_id_is_translated = 1;
+  } else {
+    memcpy(&entry->translated_local_id, hit, SALEN(hit));
+    entry->translated_local_id_len = SALEN(hit);
+    entry->local_id_is_translated = 1;
+  }
+
+ out_err:
+  return err;
+
+}
+
+int hip_autobind(hip_opp_socket_t *entry) {
+  struct sockaddr_in6 hit;
+  hip_hit_t *local_hit;
+  int err = 0;
+
+  local_hit = hip_get_local_hits_wrapper();
+  if (!local_hit) {
+    err = -1;
+    HIP_ERROR("Local hit not found\n");
+    goto out_err;
+  }
+  
+  memcpy(&hit.sin6_addr, local_hit, sizeof(hip_hit_t));
+  hit.sin6_family = AF_INET6;
+  do { /* XX FIXME: CHECK UPPER BOUNDARY */
+	   hit.sin6_port = rand();
+  } while(hit.sin6_port < 1024);
+
+  err = set_translation(entry, &hit, 0);
+  if (err)
+    goto out_err;
+
+  err = dl_function_ptr.bind_dlsym(entry->translated_socket,
+				   (struct sockaddr *) &entry->translated_local_id,
+				   sizeof(struct sockaddr_in6));
+  if (err) {
+    HIP_ERROR("bind failed\n");
+    goto out_err;
+  }
+
+ out_err:
+  return err;
+}
+
 int hip_translate_new(hip_opp_socket_t *entry,
 		  const int orig_socket,
 		  const struct sockaddr *orig_id,
@@ -279,7 +343,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		  int is_peer, int is_dgram,
 		  int is_translated, int wrap_applicable)
 {
-  int err = 0, pid = getpid(), port, translated_socket, new_socket;
+  int err = 0, pid = getpid(), port;
   struct sockaddr_in6 src_hit, dst_hit,
     *hit = (is_peer ? &dst_hit : &src_hit);
   socklen_t translated_id_len;
@@ -287,7 +351,14 @@ int hip_translate_new(hip_opp_socket_t *entry,
 
   HIP_DEBUG("Translating new id\n");
 
-  HIP_ASSERT(orig_id);
+  HIP_ASSERT(entry->type == SOCK_STREAM || orig_id);
+
+  if (entry->type == SOCK_STREAM && is_peer &&
+      !entry->local_id_is_translated) {
+    err = hip_autobind(entry);
+    if (err)
+      goto out_err;
+  }
 
   /* hipd requires IPv4 addresses in IPv6 mapped format */
   if (orig_id->sa_family == AF_INET) {
@@ -309,10 +380,6 @@ int hip_translate_new(hip_opp_socket_t *entry,
   _HIP_DEBUG("sin_port=%d\n", ntohs(port));
   _HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
   
-  /* Binding to an interface: assign any HIT */
-  memcpy(&src_hit.sin6_addr, hip_get_local_hits_wrapper(),
-	 sizeof(hip_hit_t));
-
   if (is_peer) {
   /* Request a HIT of the peer from hipd. This will possibly launch an I1
      with NULL HIT that will block until R1 is received. Called e.g. in
@@ -322,6 +389,20 @@ int hip_translate_new(hip_opp_socket_t *entry,
     err = hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 				     &dst_hit.sin6_addr,
 				     &src_hit.sin6_addr);
+    if (err) {
+      HIP_ERROR("Request from hipd failed\n");
+      goto out_err;
+    }
+  } else {
+    hip_hit_t *my_hit = hip_get_local_hits_wrapper();
+    if (!hit) {
+      err = -1;
+      HIP_ERROR("No local HIT\n");
+      goto out_err;
+    }
+    /* Binding to an interface: assign any HIT */
+    memcpy(&src_hit.sin6_addr, hip_get_local_hits_wrapper(),
+	   sizeof(hip_hit_t));
   }
 
   if (err || IN6_IS_ADDR_V4MAPPED(&hit->sin6_addr) ||
@@ -333,28 +414,11 @@ int hip_translate_new(hip_opp_socket_t *entry,
   hit->sin6_family = AF_INET6;
   hit->sin6_port = port;
 
-  /* We have now successfully translated an IP to an HIT. The HIT requires a new socket.
-     Also, we need set the return values correctly */
+  /* We have now successfully translated an IP to an HIT. The HIT requires a
+     new socket. Also, we need set the return values correctly */
+  err = set_translation(entry, hit, is_peer);
 
-  new_socket = socket(AF_INET6, entry->type, 0);
-  if (new_socket <= 0) {
-    err = -1;
-    HIP_ERROR("socket allocation failed\n");
-    goto out_err;
-  }
-
-  entry->translated_socket = new_socket;
-  if (is_peer) {
-    memcpy(&entry->translated_peer_id, hit, SALEN(hit));
-    entry->translated_peer_id_len = SALEN(hit);
-    entry->peer_id_is_translated = 1;
-  } else {
-    memcpy(&entry->translated_local_id, hit, SALEN(hit));
-    entry->translated_local_id_len = SALEN(hit);
-    entry->local_id_is_translated = 1;
-  }
-
-  return 0;
+  return err;
 
  out_err:
   hip_translate_to_original(entry);
