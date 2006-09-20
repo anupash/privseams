@@ -138,6 +138,7 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
     goto out_err;
   }
   HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+  HIP_DEBUG_HIT("phit", &phit);
   
   err = hip_hadb_add_peer_info(&phit, &dst_ip);
   ha = hip_hadb_find_byhits(&hit_our, &phit);

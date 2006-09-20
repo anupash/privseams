@@ -19,7 +19,7 @@
 HIP_HASHTABLE socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
-int exists_translation(int pid, int socket)
+int hip_exists_translation(int pid, int socket)
 {
   hip_opp_socket_t *entry = NULL;
 
