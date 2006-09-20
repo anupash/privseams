@@ -56,20 +56,20 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 				/** @todo How to know which source and
 				    destination ports to use? */
 				entry->hadb_xmit_func->
-					hip_nat_send_udp(&entry->hip_msg_retrans.saddr,
-							 &entry->hip_msg_retrans.daddr,
-							 0, HIP_NAT_UDP_PORT,
-							 entry->hip_msg_retrans.buf,
-							 entry, 0);
+					hip_send_udp(&entry->hip_msg_retrans.saddr,
+						     &entry->hip_msg_retrans.daddr,
+						     0, HIP_NAT_UDP_PORT,
+						     entry->hip_msg_retrans.buf,
+						     entry, 0);
 			}
 			/* If NAT status is off, raw HIP is used. */
 			else {
 				err = entry->hadb_xmit_func->
-					hip_csum_send(&entry->hip_msg_retrans.saddr,
-						      &entry->hip_msg_retrans.daddr,
-						      0,0,
-						      entry->hip_msg_retrans.buf,
-						      entry, 0);
+					hip_send_raw(&entry->hip_msg_retrans.saddr,
+						     &entry->hip_msg_retrans.daddr,
+						     0,0,
+						     entry->hip_msg_retrans.buf,
+						     entry, 0);
 			}
 
 			/* Set entry state, if previous state was unassosiated

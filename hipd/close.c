@@ -69,16 +69,16 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	if(entry->nat_mode)
 	{
 		HIP_IFE(entry->hadb_xmit_func->
-			hip_nat_send_udp(NULL, &entry->preferred_address,0,
-					 entry->peer_udp_port,
-					 close, entry, 0), -1);
+			hip_send_udp(NULL, &entry->preferred_address,0,
+				     entry->peer_udp_port,
+				     close, entry, 0), -1);
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else
 	{
 		HIP_IFE(entry->hadb_xmit_func->
-			hip_csum_send(NULL,&entry->preferred_address,0,0,
-				      close, entry, 0), -1);
+			hip_send_raw(NULL,&entry->preferred_address,0,0,
+				     close, entry, 0), -1);
 	}
 	
 	entry->state = HIP_STATE_CLOSING;
@@ -133,16 +133,16 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	if(entry->nat_mode)
 	{
 		HIP_IFE(entry->hadb_xmit_func->
-			hip_nat_send_udp(NULL, &entry->preferred_address,0,
-					 entry->peer_udp_port,
-					 close_ack, entry, 0), -1);
+			hip_send_udp(NULL, &entry->preferred_address,0,
+				     entry->peer_udp_port,
+				     close_ack, entry, 0), -1);
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else
 	{
 		HIP_IFE(entry->hadb_xmit_func->
-			hip_csum_send(NULL,&entry->preferred_address,0,0,
-				      close_ack, entry, 0), -1);
+			hip_send_raw(NULL,&entry->preferred_address,0,0,
+				     close_ack, entry, 0), -1);
 	}
 	
 	entry->state = HIP_STATE_CLOSED;

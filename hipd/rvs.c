@@ -68,11 +68,16 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  * from the parameter host association into it.
  * 
  * @param  ha      a pointer to a host association from where from to copy.
- * @param  gfpmask memory allocation mask.
+ * @param send_pkt a function pointer to a function to be used for relaying I1
+ *                 packet.
  * @return         a pointer to a newly allocated rendezvous association or
  *                 NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int (*send_pkt)
+			(struct in6_addr *,struct in6_addr *,
+			 in_port_t, in_port_t,
+			 struct hip_common*, hip_ha_t *,
+			 int))
 {
 	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
@@ -81,7 +86,7 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
-	if((rva = hip_rvs_allocate(gfpmask)) == NULL) {
+	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
 	}
@@ -89,6 +94,9 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 	/* Incremented the refrerence count of the new rendezvous association. */
 	hip_hold_rva(rva);
 	
+	/* Lock the host association while copying values from it. */
+	HIP_LOCK_HA(ha);
+
 	/* Copy the client udp port. */
 	if(ha->peer_udp_port != 0) {
 		rva->client_udp_port = ha->peer_udp_port;
@@ -97,9 +105,6 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 		rva->client_udp_port = 0;
 	}
 	
-	/* Lock the host association copying values from it. */
-	HIP_LOCK_HA(ha);
-
 	/* Copy peer hit as the client hit. */
 	ipv6_addr_copy(&rva->hit, &ha->hit_peer);
 	
@@ -107,6 +112,9 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 	
+	/* Set xmit-function. */
+	rva->send_pkt = send_pkt;
+
 	/* If the host association has a preferred address, copy it as the
 	   first IP address of the rendezvous association. */
 	if (!ipv6_addr_any(&ha->preferred_address)) {
@@ -506,27 +514,19 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 						   &rva->hmac_our), -1,
 		 "Building of RVS_HMAC failed.\n");
 	
-	/* If the client is behind NAT, the I1 packet is relayed on UDP. If
-	   there is no NAT, the packet is relayed on raw HIP. Note that we
-	   use NULL as source IP address instead of i1_daddr. A source address
-	   is selected in the corresponding send function. */
-	if(rva->client_udp_port == 0) {
-		HIP_IFEL(hip_csum_send(NULL, &final_dst,
-				       i1_info->src_port, i1_info->dst_port,
-				       i1_to_be_relayed, NULL, 0), -1,
-			 "Relaying I1 on raw HIP failed.\n");
-		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on raw HIP to",
-			      &final_dst);
-	}
-	else {
-		HIP_IFEL(hip_nat_send_udp(NULL, &final_dst,
-					 HIP_NAT_UDP_PORT, rva->client_udp_port,
-					  i1_to_be_relayed, NULL, 0), -1,
-			 "Relaying I1 on UDP failed.\n");
-		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 on UDP to",
-			      &final_dst);
-	}
-		
+	/* If the client is behind NAT the I1 packet is relayed on UDP. If
+	   there is no NAT the packet is relayed on raw HIP. We don't have to
+	   take care of which send-function to use, as the rva->send_pkt was
+	   initiated with correct value in hip_rvs_ha2rva() when the rva was
+	   created. Note that we use NULL as source IP address instead of
+	   i1_daddr. A source address is selected in the corresponding
+	   send-function. */
+	HIP_IFEL(rva->send_pkt(NULL, &final_dst, HIP_NAT_UDP_PORT,
+			       rva->client_udp_port, i1_to_be_relayed, NULL, 0),
+		 -ECOMM, "Relaying I1 failed.\n");
+	
+	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
+
  out_err:
 	if(i1_to_be_relayed)
 	{

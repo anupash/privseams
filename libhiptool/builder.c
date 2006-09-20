@@ -1284,7 +1284,7 @@ int hip_build_user_hdr(struct hip_common *msg,
  * 
  * This function does not write the header length into the message. It should
  * be written by the build_param_functions. The checksum field is not written
- * either because it is done in hip_csum_send() and hip_nat_send_udp().
+ * either because it is done in hip_send_raw() and hip_send_udp().
  * 
  * @param msg          the message where the HIP network should be written
  * @param type_hdr     the type of the HIP header as specified in the drafts

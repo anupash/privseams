@@ -62,15 +62,15 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if(entry->nat_mode) {
 		/** @todo Source port should be NAT-P. */
 		err = entry->hadb_xmit_func->
-			hip_nat_send_udp(&entry->local_address, &daddr,
-					 0, HIP_NAT_UDP_PORT,
-					 (struct hip_common*) &i1, entry, 1);
+			hip_send_udp(&entry->local_address, &daddr,
+				     0, HIP_NAT_UDP_PORT,
+				     (struct hip_common*) &i1, entry, 1);
 	}
 	/* If NAT mode is off, raw HIP is used. */
 	else {
 		err = entry->hadb_xmit_func->
-			hip_csum_send(&entry->local_address, &daddr, 0, 0,
-				      (struct hip_common*) &i1, entry, 1);
+			hip_send_raw(&entry->local_address, &daddr, 0, 0,
+				     (struct hip_common*) &i1, entry, 1);
 	}
 
 	HIP_DEBUG("err after sending: %d.\n", err);
@@ -328,14 +328,14 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		/* Source port of I1 becomes the destination port of R1, and the
 		   source port of R1 is set as 50500. */
-		HIP_IFEL(hip_nat_send_udp(own_addr, dst_addr, HIP_NAT_UDP_PORT,
-					  i1_info->src_port, r1pkt, NULL, 0),
+		HIP_IFEL(hip_send_udp(own_addr, dst_addr, HIP_NAT_UDP_PORT,
+				      i1_info->src_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
 	/* Else R1 is send on raw HIP. */
 	else {
-		HIP_IFEL(hip_csum_send(own_addr, dst_addr, 0, 0, r1pkt, NULL,
-				       0),
+		HIP_IFEL(hip_send_raw(own_addr, dst_addr, 0, 0, r1pkt, NULL,
+				      0),
 			 -ECOMM, "Sending R1 packet on raw HIP failed.\n");
 	}
 	
@@ -364,15 +364,15 @@ void hip_send_notify(hip_ha_t *entry)
 	if(entry->nat_mode) {
 		/** @todo How to know which source port to use? */
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_nat_send_udp(NULL, &daddr, 0, entry->peer_udp_port,
-					  notify_packet, entry, 0),
+			 hip_send_udp(NULL, &daddr, 0, entry->peer_udp_port,
+				      notify_packet, entry, 0),
 			 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(NULL, &daddr, 0,0, notify_packet, entry,
-				       0),
+			 hip_send_raw(NULL, &daddr, 0,0, notify_packet, entry,
+				      0),
 			 -ECOMM, "Sending NOTIFY packet on raw HIP failed.\n");
 	}
 	
@@ -448,7 +448,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 }
 
 /**
- * Sends a HIP message using raw HIP-packets.
+ * Sends a HIP message using raw HIP.
  *
  * Sends a HIP message to the peer on HIP/IP. This function calculates the
  * HIP packet checksum. 
@@ -467,19 +467,19 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  * @return           zero on success, or negative error value on error.
  * @todo             Ports are used nowhere, remove them from argument list.
  */
-int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		  in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
-		  hip_ha_t *entry, int retransmit)
+int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
+		 hip_ha_t *entry, int retransmit)
 {
-	HIP_DEBUG("hip_csum_send() invoked.\n");
+	HIP_DEBUG("hip_send_raw() invoked.\n");
 	
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr && msg);
-
+	
 	HIP_DEBUG("Sending %s packet on raw HIP.\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
-	HIP_DEBUG_IN6ADDR("hip_csum_send(): local_addr", local_addr);
-	HIP_DEBUG_IN6ADDR("hip_csum_send(): peer_addr", peer_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_raw(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_raw(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 
 	int err = 0, sa_size, sent, len, dupl, try_bind_again;
@@ -654,6 +654,143 @@ int hip_csum_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+/**
+ * Sends a HIP message using User Datagram Protocol (UDP).
+ *
+ * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
+ * there are no IPv6 NATs deployed in the Internet yet. If either @c local_addr
+ * or @c peer_addr is pure (not a IPv4-in-IPv6 format IPv4 address) IPv6
+ * address, no message is send. IPv4-in-IPv6 format IPv4 addresses are mapped to
+ * pure IPv4 addresses. In case of transmission error, this function tries to
+ * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times and sleeps for
+ * @c HIP_NAT_SLEEP_TIME seconds between retransmissions. The HIP packet
+ * checksum is set to zero.  
+ * 
+ * Used protocol suite is <code>IPv4(UDP(HIP))</code>.
+ * 
+ * @param local_addr a pointer to our IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   source port number to be used in the UDP packet header.
+ * @param dst_port   destination port number to be used in the UDP packet header.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ */ 
+int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
+{
+	HIP_DEBUG("hip_send_udp() invoked.\n");
+	
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr && msg);
+	
+	HIP_DEBUG("Sending %s packet on UDP.\n",
+		  hip_message_type_name(hip_get_msg_type(msg)));
+	HIP_DEBUG_IN6ADDR("hip_send_udp(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_udp(): peer_addr", peer_addr);
+	HIP_DEBUG("Source port: %d, destination port: %d.\n",
+		  src_port, dst_port);
+	
+	int sockfd = 0, err = 0, xmit_count = 0;
+	/* IPv4 Internet socket addresses. */
+	struct sockaddr_in src4, dst4;
+	/* Length of the HIP message. */
+	uint16_t packet_length = 0;
+	/* Number of characters sent. */
+	ssize_t chars_sent = 0;
+	/* If local address is not given, we fetch one here. */
+	struct in6_addr my_addr;
+	
+	/* Currently only IPv4 is supported, so we set internet address family
+	   accordingly and map IPv6 addresses to IPv4 addresses. */
+	src4.sin_family = dst4.sin_family = AF_INET;
+	
+        /* Source address. */
+        if (local_addr) {
+		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
+		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
+			 "Local address is pure IPv6 address, IPv6 address "\
+			 "family is currently not supported on UDP/HIP.\n");
+		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
+	} else {
+		HIP_DEBUG("Local address is NOT given, selecting one.\n");
+		HIP_IFEL(hip_select_source_address(
+				 &my_addr, peer_addr), -EADDRNOTAVAIL,
+			 "Cannot find local address.\n");
+		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
+		HIP_DEBUG_IN6ADDR("Selected local address", &my_addr);
+	}
+	
+        /* Destination address. */
+	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
+		 "Peer address is pure IPv6 address, IPv6 address family is "\
+		 "currently not supported on UDP/HIP.\n");
+	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	
+        /* Source port */
+	if(src_port != 0) {
+		src4.sin_port = htons(src_port);
+	}
+	else {
+		src4.sin_port = 0;
+	}
+	
+	/* Destination port. */
+	if(dst_port != 0) {
+		dst4.sin_port = htons(dst_port);
+	}
+	else {
+		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
+	}
+
+	/* Zero message HIP checksum. */
+	hip_zero_msg_checksum(msg);
+	
+	/* Get the packet total length for sendto(). */
+	packet_length = hip_get_msg_total_len(msg);
+	
+	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
+		  "destination port: %u.\n",
+		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
+	
+	/* Try to send the data. */
+	do{
+		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
+				     (struct sockaddr *) &dst4, sizeof(dst4));
+		/* Failure. */
+		if(chars_sent < 0)
+		{
+			HIP_DEBUG("Problem in sending UDP packet. Sleeping for "\
+				  "%d seconds and trying again.\n",
+				  HIP_NAT_SLEEP_TIME);
+			sleep(HIP_NAT_SLEEP_TIME);
+		}
+		/* Success. */
+		else
+		{
+			break;
+		}
+		xmit_count++;
+	}while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
+
+	/* Verify that the message was sent completely. */
+	HIP_IFEL((chars_sent != packet_length), -ECOMM,
+		 "Error while sending data on UDP: %d bytes of %d sent.)\n",
+		 chars_sent, packet_length);
+
+	HIP_DEBUG("Packet sent successfully over UDP, characters sent: %u, "\
+		  "packet length: %u.\n", chars_sent, packet_length);
+
+ out_err:
+	if (sockfd)
+		close(sockfd);
+	return err;
+}
+
 #ifdef CONFIG_HIP_HI3
 /**
  * The callback for i3 "no matching id" callback.
@@ -674,19 +811,31 @@ static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
 /** 
  * Hi3 outbound traffic processing.
  * 
- * @param src_addr  a pointer to...
- * @param peer_addr a pointer to...
- * @param msg       a pointer to...
+ * @param src_addr  a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param not_used  source port number. Not in use.
+ * @param not_used2 destination port number. Not in use.
+ * @param msg       a pointer to a HIP packet common header with source and
+ *                  destination HITs.
+ * @param not_used3 a pointer to the current host association database state.
+ *                  Not in use.
+ * @param not_used4 a boolean value indicating if this is a retransmission
+ *                  (@b zero if this is @b not a retransmission). Not in use.
+ * @note            There are four parameters not used anywhere. However, these
+ *                  parameters must exist in the function parameter list
+ *                  because all the send-functions must have a uniform parameter
+ *                  list as dictated by @c hip_hadb_xmit_func_set.
  * @todo            For now this supports only serialiazation of IPv6 addresses
  *                  to Hi3 header.
  * @todo            This function is outdated. Does not support in6 mapped
  *                  addresses and retransmission queues -mk
- * @todo            If there's a NAT between this host and the peer, UDP should
- *                  be used.
+ * @todo            Does this support NAT travelsal? Or is it even supposed to
+ *                  support it?
+ * 
  */
-int hip_csum_send_i3(struct in6_addr *src_addr, 
-		  struct in6_addr *peer_addr,
-		  struct hip_common *msg)
+int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
+		hip_ha_t *not_used3, int not_used4)
 {
 	ID id;
 	cl_buf *clb;

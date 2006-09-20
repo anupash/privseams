@@ -60,8 +60,12 @@
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 
 /** @todo remove HIP_HASTATE_SPIOK */
-typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
-	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
+typedef enum { 
+	HIP_HASTATE_INVALID = 0,
+	HIP_HASTATE_SPIOK = 1,
+	HIP_HASTATE_HITOK = 2,
+	HIP_HASTATE_VALID = 3
+} hip_hastate_t;
 
 /**
  * A data structure for storing the source and destination ports of an incoming
@@ -454,17 +458,17 @@ struct hip_hadb_misc_func_set{
     data on wire. */
 struct hip_hadb_xmit_func_set{
 	/** A function pointer for sending data on TCP. */
-	int  (*hip_csum_send)(struct in6_addr *local_addr,
-			      struct in6_addr *peer_addr,
-			      in_port_t src_port, in_port_t dst_port,
-			      struct hip_common* msg, hip_ha_t *entry,
-			      int retransmit);
+	int  (*hip_send_raw)(struct in6_addr *local_addr,
+			     struct in6_addr *peer_addr,
+			     in_port_t src_port, in_port_t dst_port,
+			     struct hip_common* msg, hip_ha_t *entry,
+			     int retransmit);
 	/** A function pointer for sending data on UDP. */
-	int (*hip_nat_send_udp)(struct in6_addr *local_addr,
-				struct in6_addr *peer_addr,
-				in_port_t src_port, in_port_t dst_port,
-				struct hip_common* msg, hip_ha_t *entry,
-				int retransmit);
+	int (*hip_send_udp)(struct in6_addr *local_addr,
+			    struct in6_addr *peer_addr,
+			    in_port_t src_port, in_port_t dst_port,
+			    struct hip_common* msg, hip_ha_t *entry,
+			    int retransmit);
 };
 
 struct hip_hadb_input_filter_func_set { 

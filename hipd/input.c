@@ -770,22 +770,17 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	  }
 #endif // CONFIG_HIP_OPPORTUNISTIC
-	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg,
-										       src_addr,
-										       dst_addr,
-										       entry,
-										       msg_info);
+	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->
+		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
 	  break;
 		
 	case HIP_I2:
 		// possibly state
 		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
 		if(entry){
-			err = entry->hadb_rcv_func->hip_receive_i2(msg,
-							src_addr,
-							dst_addr,
-							entry,
-							msg_info);
+			err = entry->hadb_rcv_func->
+				hip_receive_i2(msg, src_addr, dst_addr, entry,
+					       msg_info);
 		} else {
 			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
 		}
@@ -1225,14 +1220,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   destination port of I2 is set as 50500. */
 		/** @todo Source port should be NAT-P'. */
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_nat_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
-					  HIP_NAT_UDP_PORT, i2, entry, 0),
+			 hip_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
+				      HIP_NAT_UDP_PORT, i2, entry, 0),
 			 -ECOMM, "Sending I2 packet on UDP failed.\n");
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(r1_daddr, &daddr, 0, 0, i2, entry, 0),
+			 hip_send_raw(r1_daddr, &daddr, 0, 0, i2, entry, 0),
 			 -ECOMM, "Sending I2 packet on raw HIP failed.\n");
 	}
 
@@ -1587,8 +1582,9 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/* Just swap the addresses to use the I2's destination HIT as
 	 * the R2's source HIT */
-	entry->hadb_misc_func->hip_build_network_hdr(r2, HIP_R2, mask,
-			      &entry->hit_our, &entry->hit_peer);
+	entry->hadb_misc_func->
+		hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
+				      &entry->hit_peer);
 
  	/********** ESP_INFO **********/
 	//barrier();
@@ -1597,7 +1593,6 @@ int hip_create_r2(struct hip_context *ctx,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
-	
 	/* Check if the incoming I2 has a REG_REQUEST parameter. */
 
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
@@ -1662,15 +1657,15 @@ int hip_create_r2(struct hip_context *ctx,
  	/* If the peer is behind a NAT, UDP is used. */
 	if(entry->nat_mode) {
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_nat_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
-					  entry->peer_udp_port, r2, entry, 0),
+			 hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+				      entry->peer_udp_port, r2, entry, 0),
 			 -ECOMM, "Sending R2 packet on UDP failed.\n");
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
 		/** @todo remove ports. */
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
+			 hip_send_raw(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
 			 -ECOMM, "Sending R2 packet on raw HIP failed.\n");
 	}
 
@@ -1686,11 +1681,23 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_DEBUG("Added kea entry");
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	/* Insert rendezvous association to rendezvous database. */
+	/* Insert rendezvous association with appropriate xmit-function to
+	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
 	HIP_RVA *rva;
-	HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	if(entry->nat_mode) {
+		HIP_IFE(!(rva =
+			  hip_rvs_ha2rva(entry,
+					 entry->hadb_xmit_func->hip_send_udp)),
+			-ENOSYS);
+	}
+	else {
+		HIP_IFE(!(rva =
+			  hip_rvs_ha2rva(entry,
+					 entry->hadb_xmit_func->hip_send_raw)),
+			-ENOSYS);
+	}
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */

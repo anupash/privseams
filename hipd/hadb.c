@@ -1352,17 +1352,17 @@ int hip_update_send_echo(hip_ha_t *entry,
 	/** @todo Functionality on UDP has not been tested. */
 	if(entry->nat_mode) {
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_nat_send_udp(&entry->local_address, &addr->address,
-					  0, entry->peer_udp_port,
-					  update_packet, entry, 1), -ECOMM,
+			 hip_send_udp(&entry->local_address, &addr->address,
+				      0, entry->peer_udp_port,
+				      update_packet, entry, 1), -ECOMM,
 			 "Sending UPDATE packet with echo data on UDP "\
 			 "failed.\n");
 	}
 	/* If there's no NAT between, raw HIP is used. */
 	else {
 		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_csum_send(&entry->local_address, &addr->address,
-				       0, 0, update_packet, entry, 0), -ECOMM,
+			 hip_send_raw(&entry->local_address, &addr->address,
+				      0, 0, update_packet, entry, 0), -ECOMM,
 			 "Sending UPDATE packet with echo data on raw HIP "\
 			 "failed.\n");
 	}
@@ -1820,17 +1820,18 @@ void hip_init_hadb(void)
 	/* insert your alternative function sets here!*/ 
 	
 	/* initialize default function pointer sets for update functions*/
-	default_update_func_set.hip_handle_update_plain_locator   = hip_handle_update_plain_locator;
+	default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
 	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
 	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
 	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
-	/* xmit function set */
-	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
-	default_xmit_func_set.hip_nat_send_udp	           = hip_nat_send_udp;
 
+	/* xmit function set */
+	default_xmit_func_set.hip_send_raw = hip_send_raw;
+	default_xmit_func_set.hip_send_udp = hip_send_udp;
+	
 	/* filter function sets */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
 	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;

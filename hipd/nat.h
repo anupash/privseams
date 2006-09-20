@@ -39,7 +39,7 @@
     debugging purposes we use a smaller value here.
     @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 3
-/** Number of retransmissions to try if hip_nat_send_udp() fails. */
+/** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Amount of time to sleep between transmission and retransmissions. */
 #define HIP_NAT_SLEEP_TIME 1
@@ -73,8 +73,6 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				       struct in6_addr *,
 				       struct hip_stateless_info *);
-int hip_nat_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
-		     struct hip_common*, hip_ha_t *, int);
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
 #endif /* __NAT_H__ */
