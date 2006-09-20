@@ -500,16 +500,16 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 							kea->spi_out = *spi;		
 					}
 					else {
-						HIP_DEBUG("keastate not valid - not sending update");
+						HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
 					}
 				}
 				else {
-					HIP_DEBUG("No server entry found");
+					HIP_DEBUG("No server entry found\n");
 					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
 				}
 			}
 			else {
-				HIP_DEBUG("Escrow not in use - not sending update");
+				HIP_DEBUG("Escrow not in use - not sending update\n");
 			}
 		}
 		else {

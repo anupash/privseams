@@ -915,6 +915,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_diffie_hellman *dh_req;
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask = 0;
+	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 	HIP_DEBUG("\n");
 
@@ -987,7 +988,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not find acceptable hip transform suite\n");
-
+	entry->hip_transform = transform_hip_suite;
+	
 	/* Select only one transform */
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_HIP_TRANSFORM,
 					   &transform_hip_suite, 1), -1, 
@@ -1116,7 +1118,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/** @todo This is just a temporary kludge until something more 
 	    elegant is build. Rationalize this. */
-	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
 #ifdef CONFIG_HIP_RVS	
 	/* RVS */
@@ -1208,7 +1209,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
-	entry->hip_transform = transform_hip_suite;
+	
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -1304,7 +1305,6 @@ int hip_handle_r1(struct hip_common *r1,
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 
 	if (reg_info) {
-		
 		int i;
 		uint8_t current_reg_type = 0;
 		uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
@@ -1372,7 +1372,7 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
 		HIP_KEA *kea;
 		kea = hip_kea_find(&entry->hit_our);
-		if (kea)
+		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
 			kea->keastate = HIP_KEASTATE_INVALID;
 	}
 #endif /* CONFIG_HIP_ESCROW */
@@ -1890,6 +1890,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		_HIP_DEBUG("HA entry created.");
 	}
+	entry->hip_transform = hip_tfm;
 	
 	/* FIXME: the above should not be done if signature fails...
 	   or it should be cancelled */
@@ -2022,7 +2023,7 @@ int hip_handle_i2(struct hip_common *i2,
 	entry->default_spi_out = spi_out;
 	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
 
-	entry->hip_transform = hip_tfm;
+	
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
 	hip_hadb_insert_state(entry);
@@ -2347,7 +2348,7 @@ int hip_handle_r2(struct hip_common *r2,
  * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
  * <ul>
  * <li>If one ore more @c FROM parameters are found, there must also be a
- * @c RVS_HMAC parameter present. This HMAC is first verified. If verification
+ * @c RVS_HMAC parameter present. This hmac is first verified. If verification
  * succeeds, the IP addresses obtained from the parameters are passed to
  * hip_xmit_r1() as an array. In hip_xmit_r1() this array is used create a
  * @c VIA_RVS parameter. If the verification fails, a negative error value is

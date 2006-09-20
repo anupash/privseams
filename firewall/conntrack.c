@@ -424,6 +424,8 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       //check that old spi is found
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
+      new_esp->new_spi = 0;
+      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
       new_esp->dst_addr_list = NULL;
       new_esp->dec_data = NULL;
@@ -474,6 +476,8 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
     {
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
+      new_esp->new_spi = 0;
+      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
       new_esp->dec_data = NULL;
       
@@ -481,7 +485,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
 	  
       memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr)); 
 
-      esp_address->update_id == NULL;
+      esp_address->update_id = NULL;
       new_esp->dst_addr_list = NULL;
       new_esp->dst_addr_list = (struct GSList *)g_slist_append((struct _GSList *)new_esp->dst_addr_list, 
 							       (gpointer) esp_address);
@@ -686,6 +690,8 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
   if (!esp_tuple) {
   	esp_tuple = malloc(sizeof(struct esp_tuple));
   	esp_tuple->spi = ntohl(spi->new_spi);
+  	esp_tuple->new_spi = 0;
+  	esp_tuple->spi_update_id = 0;
 	esp_tuple->dst_addr_list = NULL;
   	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
 						&ip6_hdr->ip6_src, NULL);
@@ -749,7 +755,8 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
   if (!esp_tuple) {
   	esp_tuple = malloc(sizeof(struct esp_tuple));
   	esp_tuple->spi = ntohl(spi->new_spi);
-
+	esp_tuple->new_spi = 0;
+	esp_tuple->spi_update_id = 0;
   	esp_tuple->dst_addr_list = NULL;
   	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
 						&ip6_hdr->ip6_src, NULL);
@@ -1129,8 +1136,6 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
  * the sending party wishes to close HIP association.
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
- *
- * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
 int handle_close(const struct ip6_hdr * ip6_hdr, 
 		 const struct hip_common * common, 
@@ -1155,8 +1160,6 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
  * the sending party agrees to close HIP association.
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
- *
- * NOT YET IN THE HIPL IMPLEMENTATION. 
  */
 int handle_close_ack(const struct ip6_hdr * ip6_hdr, 
 		 const struct hip_common * common, 
@@ -1321,8 +1324,8 @@ int filter_esp_state(const struct in6_addr * dst_addr,
 	// END_TEST
 
 	/* TODO: Decrypt contents */
-	//if (esp_tuple && esp_tuple->dec_data)
-	//	decrypt_packet(dst_addr, esp_tuple, esp);
+	if (esp_tuple && esp_tuple->dec_data)
+		decrypt_packet(dst_addr, esp_tuple, esp);
 
   // connection exists and rule is for established connection
   //if rule has options for hits, match them first
@@ -1521,6 +1524,8 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 		else
     		other_dir = &tuple->connection->original;
   		esp_tuple->spi = spi;
+  		esp_tuple->new_spi = 0;
+  		esp_tuple->spi_update_id = 0;
   		esp_tuple->dst_addr_list = NULL;
   		esp_tuple->dec_data = NULL;
   		esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 

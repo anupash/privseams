@@ -1389,6 +1389,82 @@ out_err:
 
 #endif //CONFIG_HIP_ESCROW
 
+int hip_handle_encrypted(hip_ha_t *entry, 
+	struct hip_tlv_common *enc)
+{
+	int err = 0;
+	char * tmp_enc = NULL;
+	struct hip_tlv_common * enc_param = NULL;
+	uint16_t crypto_len;
+	unsigned char *iv;
+	int param_type;
+	
+	HIP_DEBUG("hip_handle_encrypted\n");
+
+	HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc),
+					GFP_KERNEL)), -ENOMEM,
+		 "No memory for temporary parameter\n");
+
+	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
+
+	/* Decrypt ENCRYPTED field*/
+	_HIP_HEXDUMP("Recv. Key", &entry->hip_enc_in.key, 24);
+
+	switch (entry->hip_transform) {
+	case HIP_HIP_AES_SHA1:
+ 		enc_param = (struct hip_tlv_common *)
+		  (tmp_enc + sizeof(struct hip_encrypted_aes_sha1));
+ 		iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
+ 		/* 4 = reserved, 16 = iv */
+ 		crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
+		HIP_DEBUG("aes crypto len: %d\n", crypto_len);
+		break;
+	case HIP_HIP_3DES_SHA1:
+ 		enc_param = (struct hip_tlv_common *)
+		  (tmp_enc + sizeof(struct hip_encrypted_3des_sha1));
+ 		iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
+ 		/* 4 = reserved, 8 = iv */
+ 		crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
+		break;
+	case HIP_HIP_NULL_SHA1:
+		enc_param = (struct hip_tlv_common *)
+			(tmp_enc + sizeof(struct hip_encrypted_null_sha1));
+ 		iv = NULL;
+ 		/* 4 = reserved */
+ 		crypto_len = hip_get_param_contents_len(enc) - 4;
+		break;
+	default:
+		HIP_IFEL(1, -EINVAL, "Unknown HIP transform: %d\n", entry->hip_transform);
+	}
+
+	HIP_DEBUG("Crypto encrypted\n");
+	_HIP_HEXDUMP("IV: ", iv, 16); /* Note: iv can be NULL */
+	
+	HIP_IFEL(hip_crypto_encrypted(enc_param, iv, entry->hip_transform,
+				      crypto_len, &entry->hip_enc_in.key,
+				      HIP_DIRECTION_DECRYPT), -EINVAL,
+		 "Decryption of encrypted parameter failed\n");
+	
+	param_type = hip_get_param_type(enc_param);
+	
+	/* Handling contents */
+	 switch (param_type) {
+	 case HIP_PARAM_KEYS:
+#ifdef CONFIG_HIP_ESCROW
+	 	HIP_IFEL(hip_handle_escrow_parameter(entry, (struct hip_keys *)enc_param), -1, "Error while handling hip_keys parameter\n");
+#endif
+	 	break;
+	 default:
+	 	HIP_IFEL(1, -EINVAL, "Unknown update paramer type in encrypted %d\n", param_type);
+	 }	
+
+out_err:
+	if (err)
+		HIP_DEBUG("Error while handling encrypted parameter\n");		
+	if (tmp_enc)
+		HIP_FREE(tmp_enc);	
+	return err;
+}
 
 int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
 
@@ -1510,8 +1586,9 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_echo_response *echo_response = NULL;
 	struct in6_addr *src_ip, *dst_ip;
 #ifdef CONFIG_HIP_ESCROW
-	struct hip_keys *keys;
+	struct hip_keys *keys = NULL;
 #endif //CONFIG_HIP_ESCROW	
+	struct hip_tlv_common *encrypted = NULL;
 	
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
 
@@ -1550,6 +1627,7 @@ int hip_receive_update(struct hip_common *msg,
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
 
 #ifdef CONFIG_HIP_ESCROW
 	keys = hip_get_param(msg, HIP_PARAM_KEYS);
@@ -1573,6 +1651,8 @@ int hip_receive_update(struct hip_common *msg,
 		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
 	if (seq)
 		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
+	if (encrypted)
+		HIP_DEBUG("ENCRYPTED found\n");
 	
         /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -1603,12 +1683,10 @@ int hip_receive_update(struct hip_common *msg,
 		hip_update_handle_echo_response(entry, echo_response, src_ip);
 	}
 	
-#ifdef CONFIG_HIP_ESCROW
-	if (keys) {
-		//handle escrow parameter
-		hip_handle_escrow_parameter(entry, keys);
+	if (encrypted) {
+		// handle encrypted parameter
+		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1, "Error in processing encrypted parameter\n");
 	}
-#endif //CONFIG_HIP_ESCROW	
 	
 	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
