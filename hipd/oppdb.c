@@ -14,6 +14,44 @@
 HIP_HASHTABLE oppdb;
 static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 
+int hip_handle_opp_fallback(hip_opp_blocking_request_entry *entry,
+			    void *unused) {
+  int err = 0;
+
+  XX_FIXME;
+
+ out_err:
+  return err;
+}
+
+int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
+		     void *opaque)
+{
+	int i = 0, fail = 0;
+	hip_opp_block_t *this, *tmp;
+
+	if (!func)
+		return -EINVAL;
+
+	HIP_LOCK_HT(&opp_db);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+		_HIP_DEBUG("The %d list is empty? %d\n", i,
+			   list_empty(&oppdb_list[i]));
+		list_for_each_entry_safe(this, tmp, &oppdb_list[i],next_entry)
+		{
+			_HIP_DEBUG("List_for_each_entry_safe\n");
+			hip_hold_ha(this);
+			fail = func(this, opaque);
+			hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
+			if (fail)
+				break;
+		}
+		if (fail)
+			break;
+	}
+	HIP_UNLOCK_HT(&opp_db);
+	return fail;
+}
 
 inline void hip_oppdb_hold_entry(void *entry)
 {

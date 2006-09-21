@@ -2311,7 +2311,6 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	return fail;
 }
 
-
 /** Enumeration for hip_count_open_connections */
 int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {

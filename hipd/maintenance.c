@@ -76,6 +76,17 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	return err;
 }
 
+int hip_scan_opp_fallback()
+{
+	int err = 0;
+	time_t current_time;
+	time(&current_time);
+	HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback), 0, 
+		 "for_each_ha err.\n");
+ out_err:
+	return err;
+}
+
 /**
  * Find packets, that should be retransmitted.
  */
@@ -386,6 +397,14 @@ int periodic_maintenance()
 		retrans_counter = HIP_RETRANSMIT_INIT;
 	} else {
 		retrans_counter--;
+	}
+
+	if (opp_fallback_counter < 0) {
+		HIP_IFEL(hip_scan_opp_fallback(), -1,
+			 "retransmission scan failed\n");
+		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
+	} else {
+		opp_fallback_counter_counter--;
 	}
 
 	if (precreate_counter < 0) {
