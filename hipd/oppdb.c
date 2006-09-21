@@ -14,11 +14,14 @@
 HIP_HASHTABLE oppdb;
 static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 
-int hip_handle_opp_fallback(hip_opp_blocking_request_entry *entry,
-			    void *unused) {
+int hip_handle_opp_fallback(hip_opp_block_t *entry, void *current_time) {
   int err = 0;
+  time_t *now = (time_t*) current_time;	
 
-  XX_FIXME;
+  if(*now - HIP_OPP_WAIT > entry->creation_time) {
+    // send IP to the application and unblock it
+    // free the entry
+  }
 
  out_err:
   return err;
@@ -83,6 +86,8 @@ void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 hip_opp_block_t *hip_create_opp_block_entry() 
 {
   hip_opp_block_t * entry = NULL;
+  time_t current_time;
+  time(&current_time);
 
   entry = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));
   if (!entry){
@@ -91,6 +96,8 @@ hip_opp_block_t *hip_create_opp_block_entry()
   }
   
   memset(entry, 0, sizeof(*entry));
+
+  entry->creation_time = current_time;
   
   INIT_LIST_HEAD(&entry->next_entry);
   
