@@ -67,6 +67,11 @@ typedef enum {
 	HIP_HASTATE_VALID = 3
 } hip_hastate_t;
 
+/** A typedefinition for a functionpointer to a transmitfunction introduced in
+    @c hip_xmit_func_set_t. */
+typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
+			       in_port_t, struct hip_common*, hip_ha_t *, int);
+
 /**
  * A data structure for storing the source and destination ports of an incoming
  * packet. 

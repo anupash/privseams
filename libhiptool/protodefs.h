@@ -630,10 +630,9 @@ struct hip_from_nat {
 	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
 	uint8_t address[16];
 	/** Port number. */
-	uint16_t port;
+	in_port_t port;
 } __attribute__ ((packed));
 /* End of parameters related to rendezvous service. */
-
 
 /** Parameter containing the IP addresses and source ports of traversed
     rendezvous servers. */

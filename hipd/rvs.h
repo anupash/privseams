@@ -62,8 +62,7 @@ typedef struct hip_rendezvous_association
 	struct hip_crypto_key hmac_peer;
         /** A function pointer to the function to be used for relaying the I1
 	    packet. */
-	int    (*send_pkt)    (struct in6_addr *, struct in6_addr *, in_port_t,
-			       in_port_t, struct hip_common*, hip_ha_t *, int);
+	hip_xmit_func_t       send_pkt;
 }HIP_RVA;
 
 /* FUNCTION PROTOTYPES */
@@ -78,11 +77,7 @@ int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
 int hip_rvs_relay_i1(struct hip_common*, struct in6_addr*,struct in6_addr*,
 		     HIP_RVA*, struct hip_stateless_info*);
 //HIP_RVA *hip_rvs_ha2rva(hip_ha_t*);
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int (*send_pkt)
-			(struct in6_addr *,struct in6_addr *,
-			 in_port_t, in_port_t,
-			 struct hip_common*, hip_ha_t *,
-			 int));
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt);
 HIP_RVA *hip_rvs_allocate(int);
 HIP_RVA *hip_rvs_get(struct in6_addr*);
 HIP_RVA *hip_rvs_get_valid(struct in6_addr*);

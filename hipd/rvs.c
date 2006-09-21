@@ -73,11 +73,7 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  * @return         a pointer to a newly allocated rendezvous association or
  *                 NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int (*send_pkt)
-			(struct in6_addr *,struct in6_addr *,
-			 in_port_t, in_port_t,
-			 struct hip_common*, hip_ha_t *,
-			 int))
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
 	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
@@ -502,7 +498,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	if (!from_added)
 	{
 		HIP_DEBUG("No parameters found, adding a new FROM.\n");
-		hip_build_param_from(i1_to_be_relayed, i1_saddr);
+		hip_build_param_from_nat(i1_to_be_relayed, i1_saddr, 12345);
 	}
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed

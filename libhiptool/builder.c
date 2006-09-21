@@ -423,7 +423,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
-                        HIP_PARAM_FROM, /** @todo Remove? */
+                        HIP_PARAM_FROM,
+			HIP_PARAM_FROM_NAT,
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -441,7 +442,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_REG_RESPONSE,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
-                        HIP_PARAM_VIA_RVS /** @todo Remove? */
+                        HIP_PARAM_VIA_RVS,
+			HIP_PARAM_VIA_RVS_NAT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -868,6 +870,7 @@ char* hip_param_type_name(uint16_t param_type){
 	case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
 	case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
 	case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
+	case HIP_PARAM_FROM_NAT: return "HIP_PARAM_FROM_NAT";
 	case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
 	case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
 	case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
@@ -894,10 +897,10 @@ char* hip_param_type_name(uint16_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
+	case HIP_PARAM_VIA_RVS_NAT: return "HIP_PARAM_VIA_RVS_NAT";
 	}
 	return "UNDEFINED";
 }
-	
 
 /**
  * hip_check_userspace msg - check userspace message for integrity
@@ -1679,13 +1682,45 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr)
 {
 	struct hip_from from;
-	int err;
+	int err = 0;
 	
 	hip_set_param_type(&from, HIP_PARAM_FROM);
 	memcpy((struct in6_addr *)&from.address, addr, 16);
 
 	hip_calc_generic_param_len(&from, sizeof(struct hip_from), 0);
 	err = hip_build_param(msg, &from);
+	return err;
+}
+
+/**
+ * Builds a @c FROM_NAT parameter.
+ *
+ * Builds a @c FROM_NAT parameter to the HIP packet @c msg.
+ *
+ * @param msg  a pointer to a HIP packet common header
+ * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param port port number.
+ * @return     zero on success, or negative error value on error.
+ * @see        <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
+ *             draft-schmitt-hip-nat-traversal-01</a> section 3.1.4.
+ */
+int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
+			     in_port_t port)
+{
+	struct hip_from_nat from_nat;
+	int err = 0;
+	hip_tlv_len_t padding[3];
+	memset(padding, 0, sizeof(padding));
+	
+	hip_set_param_type(&from_nat, HIP_PARAM_FROM_NAT);
+	memcpy((struct in6_addr *)&from_nat.address, addr, 16);
+	from_nat.port = htons(port);
+
+	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat),
+				   sizeof(padding));
+	err = hip_build_generic_param(msg, &from_nat,
+				      sizeof(struct hip_from_nat),
+				      (void *)padding);
 	return err;
 }
 
