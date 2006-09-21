@@ -54,13 +54,21 @@ void *dl_function_name[] =
   {"socket", "bind", "connect", "send", "sendto",
    "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept"};
 
-inline hip_hit_t *hip_get_local_hits_wrapper()
+int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
+  int err = 0;
   struct gaih_addrtuple *at = NULL;
   struct gaih_addrtuple **pat = &at;
   
-  get_local_hits(NULL, pat);
-  return (hip_hit_t *)(&at->addr);
+  err = get_local_hits(NULL, pat);
+  if (err)
+    HIP_ERROR("getting local hit failed\n");
+  else
+    memcpy(hit, &at->addr, sizeof(hip_hit_t));
+
+  HIP_FREE(*pat);
+
+  return err;
 }
 
 inline int hip_domain_is_pf_inet6(int domain)
@@ -302,25 +310,14 @@ int set_translation(hip_opp_socket_t *entry,
 
 }
 
-int hip_autobind(hip_opp_socket_t *entry) {
-  struct sockaddr_in6 hit;
-  hip_hit_t *local_hit;
+int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
   int err = 0;
 
-  local_hit = hip_get_local_hits_wrapper();
-  if (!local_hit) {
-    err = -1;
-    HIP_ERROR("Local hit not found\n");
-    goto out_err;
-  }
-  
-  memcpy(&hit.sin6_addr, local_hit, sizeof(hip_hit_t));
-  hit.sin6_family = AF_INET6;
   do { /* XX FIXME: CHECK UPPER BOUNDARY */
-	   hit.sin6_port = rand();
-  } while(hit.sin6_port < 1024);
+	   hit->sin6_port = rand();
+  } while(hit->sin6_port < 1024);
 
-  err = set_translation(entry, &hit, 0);
+  err = set_translation(entry, hit, 0);
   if (err)
     goto out_err;
 
@@ -353,9 +350,16 @@ int hip_translate_new(hip_opp_socket_t *entry,
 
   HIP_ASSERT(entry->type == SOCK_STREAM || orig_id);
 
+  err = hip_get_local_hit_wrapper(&src_hit.sin6_addr);
+  if (err) {
+    HIP_ERROR("No local HIT: is hipd running?\n");
+    src_hit.sin6_family = AF_INET6;
+    goto out_err;
+  }
+
   if (entry->type == SOCK_STREAM && is_peer &&
       !entry->local_id_is_translated) {
-    err = hip_autobind(entry);
+    err = hip_autobind(entry, &src_hit);
     if (err)
       goto out_err;
   }
@@ -373,9 +377,10 @@ int hip_translate_new(hip_opp_socket_t *entry,
   } else {
     HIP_ASSERT("Not an IPv4/IPv6 socket: wrapping_is_applicable failed?\n");
   }
-
   mapped_addr.sin6_family = orig_id->sa_family;
   mapped_addr.sin6_port = port;
+
+  hit->sin6_port = port;
 
   _HIP_DEBUG("sin_port=%d\n", ntohs(port));
   _HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
@@ -387,32 +392,21 @@ int hip_translate_new(hip_opp_socket_t *entry,
      IP address instead of a HIT */
     HIP_DEBUG("requesting hit from hipd\n");
     err = hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
-				     &dst_hit.sin6_addr,
-				     &src_hit.sin6_addr);
+					 &dst_hit.sin6_addr,
+					 &src_hit.sin6_addr);
     if (err) {
       HIP_ERROR("Request from hipd failed\n");
       goto out_err;
     }
-  } else {
-    hip_hit_t *my_hit = hip_get_local_hits_wrapper();
-    if (!hit) {
-      err = -1;
-      HIP_ERROR("No local HIT\n");
-      goto out_err;
-    }
-    /* Binding to an interface: assign any HIT */
-    memcpy(&src_hit.sin6_addr, hip_get_local_hits_wrapper(),
-	   sizeof(hip_hit_t));
+    dst_hit.sin6_family = AF_INET6;
+  } else if (!entry->local_id_is_translated) {
   }
 
   if (err || IN6_IS_ADDR_V4MAPPED(&hit->sin6_addr) ||
       !ipv6_addr_is_hit(&hit->sin6_addr)) {
-    HIP_DEBUG("Localhost or peer does not support HIP, falling back to plain IP\n");
+    HIP_DEBUG("Localhost/peer does not support HIP, falling back to IP\n");
     goto out_err;
   }
-
-  hit->sin6_family = AF_INET6;
-  hit->sin6_port = port;
 
   /* We have now successfully translated an IP to an HIT. The HIT requires a
      new socket. Also, we need set the return values correctly */
@@ -691,7 +685,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   int socket = 0;
   int pid = 0;
   ssize_t charnum = 0;
-  hip_hit_t *local_hit = NULL;
+  hip_hit_t local_hit;
   hip_opp_socket_t *entry = NULL;
   struct in6_addr *id = NULL;
   struct sockaddr *is = NULL;
@@ -763,10 +757,10 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
   is = (struct sockaddr *)(msg->msg_name);
   HIP_HEXDUMP("msg->msgname", is, sizeof(struct sockaddr));
  
-  local_hit = hip_get_local_hits_wrapper();
-  HIP_ASSERT(local_hit);
+  err = hip_get_local_hit_wrapper(&local_hit);
+  HIP_ASSERT(!err);
 
-  //err = cache_translation(&socket, local_hit, id, NULL, is);
+  //err = cache_translation(&socket, &local_hit, id, NULL, is);
   
   if(err){
     HIP_ERROR("sendmsg cache_translation call failed: %s\n", strerror(err));
