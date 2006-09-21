@@ -376,7 +376,7 @@ int periodic_maintenance()
 #ifdef CONFIG_HIP_AGENT
 	if (hip_agent_is_alive())
 	{
-		//hip_agent_send_remote_hits();
+		hip_agent_send_remote_hits();
 	}
 #endif
 	

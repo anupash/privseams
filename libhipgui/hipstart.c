@@ -222,8 +222,6 @@ gboolean list_select(void *w1, void *w2, void *w3, void *w4)
 
 		/* Execute daemon. */
 		err = exec_application("xterm", "xterm", "-T", "HIP daemon", "-e", "hipd", NULL);
-		/* Wait for daemon to start properly. */
-		sleep(3);
 		
 		/* Execute agent as server, client or plain. */
 		if (b == TRUE)
@@ -303,9 +301,11 @@ int main(void)
 {
 	/* Variables. */
 	int err = 0;
-
+	char str[320];
+	
 	HIP_IFEL(gui_init() < 0, -1, "Failed to initialize GUI!\n");
-	HIP_IFE(settings_read("/etc/hip/hipstart"), -1);
+	sprintf(str, "%s/hipstart.conf", HIP_GUI_DATADIR);
+	HIP_IFE(settings_read(str), -1);
 
 	gtk_main();
 
