@@ -82,6 +82,16 @@ struct hip_stateless_info
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
 };
 
+/** 
+ * A binder structure for storing an IPv6 address and transport layer port
+ * number. This structure is used in hip_build_param_via_rvs_nat().
+ */
+struct hip_in6_addr_port
+{
+	struct in6_addr sin6_addr; /**< IPv6 address. */
+	in_port_t       sin6_port; /**< Transport layer port number. */
+};
+
 struct hip_context
 {
 	//struct sk_buff *skb_in;         /* received skbuff */

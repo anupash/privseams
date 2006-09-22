@@ -625,7 +625,7 @@ struct hip_via_rvs {
 struct hip_from_nat {
 	/** Type code for the parameter. */
 	hip_tlv_type_t type;
-	/** Length (@b 16) of the parameter contents in bytes. */
+	/** Length (@b 18) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
 	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
 	uint8_t address[16];

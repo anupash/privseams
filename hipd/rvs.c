@@ -1,10 +1,12 @@
 /** @file
  * This file defines a rendezvous extension for the Host Identity Protocol
- * (HIP). The rendezvous extension extends HIP and the HIP registration
- * extension for initiating communication between HIP nodes via HIP
- * rendezvous servers. The rendezvous server (RVS) serves as an initial contact
- * point ("rendezvous point") for its clients.  The clients of an RVS are HIP
- * nodes that use the HIP Registration Protocol
+ * (HIP).
+ * 
+ * The rendezvous extension extends HIP and the HIP registration extension for
+ * initiating communication between HIP nodes via HIP rendezvous servers. The
+ * rendezvous server (RVS) serves as an initial contact point ("rendezvous
+ * point") for its clients.  The clients of an RVS are HIP nodes that use the
+ * HIP Registration Protocol
  * [<a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-registration-02.txt">
  * draft-ietf-hip-registration-02</a>] to register their HIT->IP address mappings
  * with the RVS. After this registration, other HIP nodes can initiate a base
@@ -498,7 +500,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	if (!from_added)
 	{
 		HIP_DEBUG("No parameters found, adding a new FROM.\n");
-		hip_build_param_from_nat(i1_to_be_relayed, i1_saddr, 12345);
+		hip_build_param_from(i1_to_be_relayed, i1_saddr);
 	}
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed

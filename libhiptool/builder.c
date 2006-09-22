@@ -1,48 +1,59 @@
-/*
- * Building and parsing functions for hipconf and HIP kernel module messages.
- * These functions work both in the userspace and in the kernel. Keep in mind
- * the following things when using the builder:
- * - Never access members of hip_common and hip_tlv_common directly. Use
- *   the accessor functions to hide byte ordering and length manipulation.
- * - Remember always to use __attribute__ ((packed)) (see hip.h) with builder
- *   because compiler adds padding into the structures.
- * - This file is shared between userspace and kernel: do not put any memory
- *   allocations or other kernel/userspace specific stuff into here!
- * - If you build more functions like build_signature2_contents(), remember
- *   to use hip_build_generic_param() in them!
- * - Macros for doing ntohs() and htons() conversion? Currently they are
- *   used in a platform dependent way.
- * - Why does build network header return void whereas build daemon does not?
- * - There is a small TODO list in hip_build_network_hdr()
- *
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
- * - Tobias Heer <heer@tobibox.de>
- *
- * USAGE EXAMPLES:
- * - sender of "add mapping", i.e. the hip module in kernel
- *   - struct hip_common *msg = k/malloc(HIP_MAX_PACKET);
- *   - hip_msg_init(msg);
- *   - err = hip_build_user_hdr(msg, SO_HIP_ADD_MAP_HIT_IP, 0);
- *   - err = hip_build_param_contents(msg, &hit,
- *             HIP_PARAM_HIT, sizeof(struct in6_addr));
- *   - err = hip_build_param_contents(msg, &ip,
- *             HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
- *   - send the message to user space
- * - receiver of "add mapping", i.e. the daemon
- *   - struct hip_common *msg = k/malloc(HIP_MAX_PACKET);
- *   - receive the message from kernel
- *   - if (msg->err) goto_error_handler;
- *   - hit = (struct in6addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
- *     - note: hit can be null, if the param was not found
- *   - ip = (struct in6addr *) hip_get_param_object(msg, HIP_PARAM_IPV6ADDR);
- *     - note: hit can be null
- * - note: in network packets, you should use hip_build_network_hdr()
- *   instead of hip_build_user_hdr() !
- *
+/** @file
+ * This file defines building and parsing functions for Host Identity Protocol
+ * (HIP) kernel module and user messages <span style="color:#f00">(Update the
+ * comments of this file)</span>.
+ * 
+ * These functions work both in the userspace and in the kernel.
+ * 
+ * Keep in mind the following things when using the builder:
+ * <ul>
+ * <li>Never access members of @c hip_common and @c hip_tlv_common directly. Use
+ * the accessor functions to hide byte ordering and length manipulation.</li>
+ * <li>Remember always to use <code>__attribute__ ((packed))</code> (see hip.h)
+ * with builder because compiler adds padding into the structures.</li>
+ * <li>This file is shared between userspace and kernel: do not put any memory
+ * allocations or other kernel/userspace specific stuff into here.</li>
+ * <li>If you build more functions like build_signature2_contents(), remember
+ * to use hip_build_generic_param() in them.</li>
+ * </ul>
+ * 
+ * Usage examples:
+ * <ul>
+ * <li>sender of "add mapping", i.e. the hip module in kernel</li>
+ * <ul>
+ * <li>struct hip_common *msg = k/malloc(HIP_MAX_PACKET);</li>
+ * <li>hip_msg_init(msg);</li>
+ * <li>err = hip_build_user_hdr(msg, SO_HIP_ADD_MAP_HIT_IP, 0);</li>
+ * <li>err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+ * sizeof(struct in6_addr));</li>
+ * <li>err = hip_build_param_contents(msg, &ip, HIP_PARAM_IPV6_ADDR,
+ * sizeof(struct in6_addr));</li>
+ * <li>send the message to user space.</li>
+ * </ul>
+ * <li>receiver of "add mapping", i.e. the daemon</li>
+ * <ul>
+ * <li>struct hip_common *msg = k/malloc(HIP_MAX_PACKET);</li>
+ * <li>receive the message from kernel.</li>
+ * <li>if (msg->err) goto_error_handler;</li>
+ * <li>hit = (struct in6addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);</li>
+ * <li>note: hit can be null, if the param was not found.</li>
+ * <li>ip = (struct in6addr *) hip_get_param_object(msg, HIP_PARAM_IPV6ADDR);
+ * </li>
+ * <li>note: hit can be null.</li>
+ * </ul>
+ * </ul>
+ * @author Miika Komu <miika_iki.fi>
+ * @author Mika Kousa <mkousa_cc.hut.fi>
+ * @author Tobias Heer <heer_tobibox.de>
+ * @note   In network packets @c hip_build_network_hdr() should be used instead
+ *         of @c hip_build_user_hdr().
+ * @todo Macros for doing @c ntohs() and @c htons() conversion? Currently they are
+ * used in a platform dependent way.
+ * @todo Why does build network header return void whereas build daemon does
+ *       not?
+ * @todo There is a small TODO list in @c hip_build_network_hdr()
+ * @todo <span style="color:#f00">Update the comments of this file.</span>
  */
-
 #include "builder.h"
 
 /**
@@ -806,6 +817,11 @@ void hip_dump_msg(const struct hip_common *msg)
 {
 	struct hip_tlv_common *current_param = NULL;
 	void *contents = NULL;
+	/* The value of the "Length"-field in current parameter. */
+	hip_tlv_len_t len = 0;
+	/* Total length of the parameter (type+length+value+padding), and the
+	   length of padding. */
+	size_t total_len = 0, pad_len = 0;
 	HIP_DEBUG("--------------- MSG START-------------------\n");
 	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
 	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
@@ -813,13 +829,21 @@ void hip_dump_msg(const struct hip_common *msg)
 	
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		HIP_DEBUG("Param: type:%s (%d), len=%d\n",
-			 hip_param_type_name(hip_get_param_type(current_param)),
-			 hip_get_param_type(current_param),
-			 hip_get_param_contents_len(current_param));
+		len = hip_get_param_contents_len(current_param);
+		/* Formula from base draft section 5.2.1. */
+		total_len = 11 + len - (len +3) % 8;
+		pad_len = total_len - len - sizeof(hip_tlv_type_t)
+			- sizeof(hip_tlv_len_t);
 		contents = hip_get_param_contents_direct(current_param);
-		HIP_HEXDUMP("Contents:", contents,
-			    hip_get_param_contents_len(current_param));
+		HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+"\
+			  "length, %d content, %d padding).\n",
+			  hip_param_type_name(hip_get_param_type(current_param)),
+			  hip_get_param_type(current_param),
+			  total_len,
+			  len,
+			  pad_len);
+		HIP_HEXDUMP("Contents:", contents, len);
+		HIP_HEXDUMP("Padding:", contents + len , pad_len);
 	}
 	HIP_DEBUG("---------------- MSG END --------------------\n");
 }
@@ -1183,20 +1207,24 @@ int hip_build_param_contents(struct hip_common *msg,
 }
 
 /**
- * hip_build_param - append a complete parameter into message
- * @param msg the message where the parameter will be appended
- * @param tlv_common pointer to the network byte ordered parameter that will be
- *              appended into the message
- *
- * This function differs from hip_build_param_contents() and
+ * Appends a complete parameter into a HIP message.
+ * 
+ * Appends a complete network byte ordered parameter @c tlv_common into a HIP
+ * message @c msg. This function differs from hip_build_param_contents() and
  * hip_build_generic_param() because it takes a complete network byte ordered
- * parameter as its input. It means that this function can be used for
- * e.g. copying a parameter from a message to another.
+ * parameter as its input. It means that this function can be used for e.g.
+ * copying a parameter from a message to another.
  *
  * This function updates the message header length to keep the next free
- * parameter slot quickly accessible for faster writing of the parameters.
+ * parameter slot quickly accessible for faster writing of the parameters. This
+ * function automagically adds zero filled paddign to the parameter, to keep its
+ * total length in multiple of 8 bytes.
  *
- * @return zero on success, or negative on error
+ * @param msg        a pointer to a message where the parameter will be
+ *                   appended.
+ * @param tlv_common a pointer to the network byte ordered parameter that will
+ *                   be appended into the message
+ * @return           zero on success, or negative error value on error.
  */
 int hip_build_param(struct hip_common *msg, const void *tlv_common)
 {
@@ -1221,11 +1249,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 }
 
 /**
- * hip_build_user_hdr - build header for userspace-kernel communication
- * @param msg the message where the userspace header is to be written
- * @param base_type the type of the message
- * @param err_val a positive error value to be communicated for the receiver
- *             (usually just zero for no errors)
+ * Builds a header for userspace-kernel communication.
  * 
  * This function builds the header that can be used for HIP kernel-userspace
  * communication. It is commonly used by the daemon, hipconf, resolver or
@@ -1235,7 +1259,11 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
  * This function does not write the header length into the message. It should
  * be written by the build_param_functions. 
  *
- * @return zero on success, or negative on error
+ * @param msg       the message where the userspace header is to be written.
+ * @param base_type the type of the message.
+ * @param err_val   a positive error value to be communicated for the receiver
+ *                  (usually just zero for no errors).
+ * @return          zero on success, or negative on error.
  */
 int hip_build_user_hdr(struct hip_common *msg,
 			 hip_hdr_type_t base_type,
@@ -1709,18 +1737,14 @@ int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
 {
 	struct hip_from_nat from_nat;
 	int err = 0;
-	hip_tlv_len_t padding[3];
-	memset(padding, 0, sizeof(padding));
 	
 	hip_set_param_type(&from_nat, HIP_PARAM_FROM_NAT);
 	memcpy((struct in6_addr *)&from_nat.address, addr, 16);
 	from_nat.port = htons(port);
+	
+	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat), 0);
+	err = hip_build_param(msg, &from_nat);
 
-	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat),
-				   sizeof(padding));
-	err = hip_build_generic_param(msg, &from_nat,
-				      sizeof(struct hip_from_nat),
-				      (void *)padding);
 	return err;
 }
 
@@ -1734,7 +1758,6 @@ int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
  *                      format IPv4 addresses.
  * @param address_count number of addresses in @c rvs_addresses.
  * @return              zero on success, or negative error value on error.
- * @author              Lauri Silvennoinen
  * @see                 <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                      draft-ietf-hip-rvs-05</a> section 4.2.3.
  */
@@ -1751,6 +1774,36 @@ int hip_build_param_via_rvs(struct hip_common *msg,
 				   address_count * sizeof(struct in6_addr));
 	err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
 				      (void *)rvs_addresses);
+	return err;
+}
+
+/**
+ * Builds a @c VIA_RVS_NAT parameter.
+ *
+ * Builds a @c VIA_RVS_NAT parameter to the HIP packet @c msg.
+ *
+ * @param msg            a pointer to a HIP packet common header
+ * @param rvs_addr_ports a pointer to rendezvous server IPv6 or IPv4-in-IPv6
+ *                       format IPv4 addresses.
+ * @param address_count  number of address port combinations in @c rvs_addr_ports.
+ * @return               zero on success, or negative error value on error.
+ * @see                  <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
+ *                       draft-schmitt-hip-nat-traversal-01</a> section 3.1.5.
+ */
+int hip_build_param_via_rvs_nat(struct hip_common *msg,
+				const struct hip_in6_addr_port rvs_addr_ports[],
+				const int address_count)
+{
+	HIP_DEBUG("hip_build_param_rvs_nat() invoked.\n");
+	int err = 0;
+	struct hip_via_rvs_nat viarvsnat;
+	
+	hip_set_param_type(&viarvsnat, HIP_PARAM_VIA_RVS_NAT);
+	hip_calc_generic_param_len(&viarvsnat, sizeof(struct hip_via_rvs_nat),
+				   address_count * sizeof(struct hip_in6_addr_port));
+	/* Add ports to the content. */
+	err = hip_build_generic_param(msg, &viarvsnat, sizeof(struct hip_via_rvs_nat),
+				      (void *)rvs_addr_ports);
 	return err;
 }
 
