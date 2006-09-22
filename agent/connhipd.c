@@ -18,6 +18,8 @@ int hip_agent_sock = 0;
 int hip_agent_thread_started = 0;
 /** Connection pthread holder. */
 pthread_t connhipd_pthread;
+/** Determine whether we are connected to daemon or not. */
+int hip_agent_connected = 0;
 
 
 /******************************************************************************/
@@ -50,20 +52,15 @@ int connhipd_init(void)
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
 
-	/* Test connection. */
-	hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
-	n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
-	HIP_IFEL(n < 0, -1 , "Could not send ping to daemon.\n");
-
-	bzero(&agent_addr, sizeof(agent_addr));
+/*	bzero(&agent_addr, sizeof(agent_addr));
 	alen = sizeof(agent_addr);
 	n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), 0,
 	             (struct sockaddr *)&agent_addr, &alen);
 	HIP_IFEL(n < 0, -1,  "Did not receive ping reply from daemon.\n");
 
 	/* Start thread for connection handling. */
-	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
-	          "Starting thread for HIP daemon connection handling\n", n);
+/*	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
+	          "Starting thread for HIP daemon connection handling\n", n);*/
 
 	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
@@ -120,7 +117,19 @@ int connhipd_handle_msg(struct hip_common *msg,
 
 	type = hip_get_msg_type(msg);
 
-	if (type == HIP_ADD_DB_HI)
+	if (type == HIP_AGENT_PING_REPLY)
+	{
+		term_print("Received ping reply from daemon. Connection to daemon established.\n");
+		gui_set_info("Connection do daemon established.");
+		hip_agent_connected = 1;
+	}
+	else if (type == HIP_DAEMON_QUIT)
+	{
+		term_print("Daemon quit. Waiting daemon to wake up again...\n");
+		gui_set_info("Connection do daemon lost.");
+		hip_agent_connected = 0;
+	}
+	else if (type == HIP_ADD_DB_HI)
 	{
 		HIP_DEBUG("Message received successfully from daemon with type"
 		          " HIP_ADD_DB_HI (%d).\n", type);
@@ -138,7 +147,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			}
 		}
 	}
-	if (type == HIP_UPDATE_HIU)
+	else if (type == HIP_UPDATE_HIU)
 	{
 		n = 0;
 		
@@ -355,6 +364,18 @@ int connhipd_thread(void *data)
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
+		if (hip_agent_connected < 1)
+		{
+			/* Test connection. */
+			HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
+			HIP_DEBUG("Pinging daemon...\n");
+			hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
+			n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
+			if (n < 0) HIP_DEBUG("Could not send ping to daemon, timeout in %d seconds.\n",
+			                     60 + hip_agent_connected);
+			hip_agent_connected--;
+		}
+		
 		/* Wait for incoming packets. */
 		if (select(max_fd + 1, &read_fdset, NULL,NULL, &tv) == -1)
 		{
@@ -363,10 +384,8 @@ int connhipd_thread(void *data)
 			goto out_err;
 		}
 
-		if (!FD_ISSET(hip_agent_sock, &read_fdset))
-		{
-			continue;
-		}
+		if (!hip_agent_thread_started) continue;
+		if (!FD_ISSET(hip_agent_sock, &read_fdset)) continue;
 
 		bzero(&agent_addr, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
@@ -403,7 +422,7 @@ int connhipd_thread(void *data)
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, HIP_AGENT_QUIT, 0);
-	n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
+	n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 
 	if (hip_agent_sock) close(hip_agent_sock);

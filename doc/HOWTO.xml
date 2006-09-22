@@ -523,7 +523,13 @@
     </para>
   </chapter>
   <chapter>
+
     <title> How to Use HIP in Other C Based Applications?</title>
+
+    <para>You need to execute first "make install" in the top directory if
+          you have not done it before. Otherwise you have to configure
+          library paths using LD_LIBRARY_PATH environment variable.
+    </para>
     <para>
       Use one the following methods:
     </para>
@@ -558,13 +564,10 @@
       http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
     </para>
     <para>
-	E.g. "env 
-LD_PRELOAD=~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so 
- firefox hipserver.infrahip.net"
-        Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so and 
-LD_LIBRARY_PATH=~/hipl--main--2.6/libhiptool/.libs/:~/hipl--main--2.6/libinet6/.libs/
+	E.g. "env  LD_PRELOAD=libinet6.so:libhiptool.so firefox hipserver.infrahip.net"
+        Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so
     </para>
-    <para>If you have installed the library using make install, you should reference /usr/lib instead of your home directory.
+    <para>If you have installed the library using make install, you should reference /usr/local/lib instead of your home directory.
     </para>
     <para>
 Make sure that libinet6 is compiled with 
@@ -598,7 +601,7 @@ using getaddrinfo: ping, ping6, tla, svn.
     a. hipconf run opp &lt;EXECUTABLE&gt;
     </para>
     <para>
-    b. export LD_PRELOAD=~/hipl--main--2.6//libopphip/.libs/libopphip.so:~/hipl--main--2.6/libinet6/.libs/libinet6.so:~/hipl--main--2.6/libhiptool/.libs/libhiptool.so
+    b. export LD_PRELOAD=libopphip.so:libhiptool.so
     </para>
     <para>
     6. Use HIP agent GUI to run the application. This is a new, not very well
@@ -811,6 +814,10 @@ using getaddrinfo: ping, ping6, tla, svn.
         <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
 
+        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
+              to one, if you want your firewall to forward IPv6 traffic.
+              Remember to configure IPv6 routes to the hosts.</para>
+
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
               is path of the file containing the firewall rules and
@@ -881,8 +888,8 @@ using getaddrinfo: ping, ping6, tla, svn.
               can be tested.</para>
 
         <para>If you get "No buffer space available" errors, please disable
-              all of the firewall debug messages (./configure --disable-debug
-              && make clean all). This can
+              all of the firewall debug messages (./configure --disable-debug;
+              make clean all). This can
               occur when moving large files and the firewall cannot serve
               with sufficient speed when it has to display debug messages.
         </para>
