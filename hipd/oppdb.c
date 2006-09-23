@@ -20,7 +20,8 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry, void *current_time) {
 
   if(*now - HIP_OPP_WAIT > entry->creation_time) {
     // send IP to the application and unblock it
-    // free the entry
+    // free the opp entry and peer entry
+    XX_FIXME;
   }
 
  out_err:

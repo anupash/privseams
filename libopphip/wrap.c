@@ -211,51 +211,29 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
   int err = 0;
   int ret = 0;
 
-  if(ipv6_addr_any(peer_ip)) {
-    err = -1;
-    goto out_err;
-  }
+  HIP_IFE(ipv6_addr_any(peer_ip), -1);
 
-  msg = malloc(HIP_MAX_PACKET);
-  if (!msg){
-    HIP_ERROR("malloc failed\n");
-    goto out_err;
-  }	
+  HIP_IFE(!(msg = malloc(HIP_MAX_PACKET)), -1);
   hip_msg_init(msg);
   
-  err = hip_build_param_contents(msg, (void *)(local_hit), HIP_PARAM_HIT,
-				 sizeof(struct in6_addr));
-  if (err) {
-    HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
-    goto out_err;
-  }
-  err = hip_build_param_contents(msg, (void *)(peer_ip), HIP_PARAM_IPV6_ADDR,
-				 sizeof(struct in6_addr));
-  if (err) {
-      HIP_ERROR("build param HIP_PARAM_IPV6_ADDR  failed: %s\n", strerror(err));
-      goto out_err;
-  }
+  HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit), HIP_PARAM_HIT,
+				    sizeof(struct in6_addr)), -1,
+	   "build param HIP_PARAM_HIT  failed\n");
+  HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
+				    HIP_PARAM_IPV6_ADDR,
+				    sizeof(struct in6_addr)), -1,
+	   "build param HIP_PARAM_IPV6_ADDR  failed\n");
   
   /* build the message header */
-  err = hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0);
-  if (err) {
-    HIP_ERROR("build hdr failed: %s\n", strerror(err));
-    goto out_err;
-  }
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
+	   "build hdr failed\n");
   
   /* send and receive msg to/from hipd */
-  err = hip_send_recv_daemon_info(msg);
-  if (err) {
-    HIP_ERROR("send_recv msg failed\n");
-    goto out_err;
-  }
+  HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
   HIP_DEBUG("send_recv msg succeed\n");
   
   /* check error value */
-  err = hip_get_msg_err(msg);
-  if (err) {
-    goto out_err;
-  }
+  HIP_IFE(hip_get_msg_err(msg), -1);
   
   ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
   HIP_DEBUG_HIT("ptr", ptr);
@@ -317,10 +295,7 @@ int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	   hit->sin6_port = rand();
   } while(hit->sin6_port < 1024);
 
-  err = set_translation(entry, hit, 0);
-  if (err)
-    goto out_err;
-
+  HIP_IFE(set_translation(entry, hit, 0), -1);
   err = dl_function_ptr.bind_dlsym(entry->translated_socket,
 				   (struct sockaddr *) &entry->translated_local_id,
 				   sizeof(struct sockaddr_in6));
@@ -359,9 +334,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 
   if (entry->type == SOCK_STREAM && is_peer &&
       !entry->local_id_is_translated) {
-    err = hip_autobind(entry, &src_hit);
-    if (err)
-      goto out_err;
+    HIP_IFE(hip_autobind(entry, &src_hit), -1);
   }
 
   /* hipd requires IPv4 addresses in IPv6 mapped format */
@@ -391,13 +364,10 @@ int hip_translate_new(hip_opp_socket_t *entry,
      connect() or sendto(). If opportunistic HIP fails, it can return an
      IP address instead of a HIT */
     HIP_DEBUG("requesting hit from hipd\n");
-    err = hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
-					 &dst_hit.sin6_addr,
-					 &src_hit.sin6_addr);
-    if (err) {
-      HIP_ERROR("Request from hipd failed\n");
-      goto out_err;
-    }
+    HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
+					    &dst_hit.sin6_addr,
+					    &src_hit.sin6_addr), -1,
+	     "Request from hipd failed\n");
     dst_hit.sin6_family = AF_INET6;
   } else if (!entry->local_id_is_translated) {
   }
@@ -410,7 +380,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 
   /* We have now successfully translated an IP to an HIT. The HIT requires a
      new socket. Also, we need set the return values correctly */
-  err = set_translation(entry, hit, is_peer);
+  HIP_IFE(set_translation(entry, hit, is_peer), -1);
 
   return err;
 

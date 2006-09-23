@@ -101,29 +101,18 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
   hip_opp_block_t *entry = NULL;
   hip_ha_t *ha = NULL;
 
-  if(!opportunistic_mode)
-    {
-      hip_msg_init(msg);
-      err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
-      if (err) {
-	HIP_ERROR("build user header failed: %s\n", strerror(err));
-	goto out_err;
-      } 
-      n = hip_sendto(msg, src);
-      if(n < 0){
-	HIP_ERROR("hip_sendto() failed.\n");
-	err = -1;
-      }
-      goto out_err;
+  if(!opportunistic_mode) {
+    hip_msg_init(msg);
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+	     "Building of user header failed\n");
+    n = hip_sendto(msg, src);
+    if(n < 0){
+      HIP_ERROR("hip_sendto() failed.\n");
+      err = -1;
     }
-  // hip_hadb_find_byhits(SRC_HIT, PHIT);
-  // if (exists(hashtable(SRC_HIT, DST_PHIT)) { // two consecutive base exchanges
-  //   msg = REAL_DST_HIT
-  //   sendto(src, msg);
-  // } else {
-  //   add_to_hash_table(index=XOR(SRC_HIT, DST_PHIT), value=src);
-  //   hip_send_i1(SRC_HIT, PHIT);
-  // }
+    goto out_err;
+  }
+
   memset(&hit_our, 0, sizeof(struct in6_addr));
   ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
   memcpy(&hit_our, ptr, sizeof(hit_our));
@@ -133,10 +122,8 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
   memcpy(&dst_ip, ptr, sizeof(dst_ip));
   HIP_DEBUG_HIT("dst_ip=", &dst_ip);
   
-  err = hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH100);
-  if(err){
-    goto out_err;
-  }
+  HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit, HIP_HIT_TYPE_HASH100),
+	   -1, "Opp HIT conversion failed\n");
   HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
   HIP_DEBUG_HIT("phit", &phit);
   
@@ -150,48 +137,37 @@ int hip_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
     HIP_DEBUG("oppdb initialized\n");
     oppdb_exist = 1;
 
-    err = hip_oppdb_add_entry(&phit, &hit_our, src);
-    if(err){
-      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
-      goto out_err;
-    }
-    hip_send_i1(&hit_our, &phit, ha);
-    // first call, not consecutive base exchange. So we do not execute the following code
-    goto out_err;
+    HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, src), -1,
+	     "failed to add entry to oppdb\n");
+    HIP_IFEL(hip_send_i1(&hit_our, &phit, ha). -1,
+	     "Sending of first I1 failed\n");
+    /* first call, not consecutive base exchange */
+    goto send_i1;
   }
   
   entry = hip_oppdb_find_byhits(&phit, &hit_our);
-  
-  if(entry){ // two consecutive base exchanges
-    //DST_HIT = from database list;
+  if(entry){  /* two consecutive base exchanges */
     hip_msg_init(msg);
-    err = hip_build_param_contents(msg, (void *)(&entry->peer_real_hit), HIP_PARAM_HIT,
-				   sizeof(struct in6_addr));
-    if (err) {
-      HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
-      goto out_err;
-    }
-    err = hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0);
-    if (err) {
-      HIP_ERROR("build user header failed: %s\n", strerror(err));
-      goto out_err;
-    } 
+    HIP_IFEL(hip_build_param_contents(msg, (void *)(&entry->peer_real_hit),
+				   HIP_PARAM_HIT,
+				      sizeof(struct in6_addr)), -1,
+	     "build param HIP_PARAM_HIT  failed: %s\n");
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+	     "Building of msg header failed\n");
     
     n = hip_sendto(msg, src);
     if(n < 0){
       HIP_ERROR("hip_sendto() failed.\n");
       err = -1;
     }
-    
-    goto out_err;
+    goto out_err; /* No need to force I1, retransmissions should handle it */
   } else {
-    err = hip_oppdb_add_entry(&phit, &hit_our, src);
-    if(err){
-      HIP_ERROR("failed to add entry to oppdb: %s\n", strerror(err));
-      goto out_err;
-    }
-    hip_send_i1(&hit_our, &phit, ha);
+    HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, src), -1, "Add db failed\n");
   }
+
+ send_i1:
+    HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1, "sending of I1 failed\n");
+
  out_err:
    return err;
 }
@@ -208,37 +184,28 @@ int hip_get_pseudo_hit(struct hip_common *msg)
   struct in6_addr *ptr = NULL;
 
   memset(&hit, 0, sizeof(struct in6_addr));
-  if(opportunistic_mode){
-    ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-    memcpy(&ip, ptr, sizeof(ip));
-    HIP_DEBUG_HIT("dst ip=", &ip);
-    
-    err = hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH100);
-    if(err){
-      goto out_err;
-    }
-    HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
-
-    hip_msg_init(msg);
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PSEUDO_HIT,
-				   sizeof(struct in6_addr));
-    if (err) {
-      HIP_ERROR("build param hit failed: %s\n", strerror(err));
-      goto out_err;
-    }
-
-    err = hip_build_user_hdr(msg, SO_HIP_SET_PSEUDO_HIT, 0);
-    if (err) {
-      HIP_ERROR("build user header failed: %s\n", strerror(err));
-      goto out_err;
-    } 
-    err = hip_hadb_add_peer_info(&hit, &ip);
-
-    if (err) {
-      HIP_ERROR("add peer info failed: %s\n", strerror(err));
-      goto out_err;
-    }
+  if(!opportunistic_mode) {
+    HIP_DEBUG("Opp mode disabled\n");
+    goto out_err;
   }
+
+  ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+  memcpy(&ip, ptr, sizeof(ip));
+  HIP_DEBUG_HIT("dst ip=", &ip);
+  
+  HIP_IFEL(hip_opportunistic_ipv6_to_hit(&ip, &hit, HIP_HIT_TYPE_HASH100),
+	     -1, "Opp HIP conversion failed\n");
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&hit)); 
+  
+  hip_msg_init(msg);
+  HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PSEUDO_HIT,
+				    sizeof(struct in6_addr)), -1,
+	   "build param hit failed\n");
+  
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PSEUDO_HIT, 0), -1,
+	   "build user header failed\n");
+  HIP_IFEL(hip_hadb_add_peer_info(&hit, &ip), -1,
+	   "add peer info failed\n");
 
  out_err:
    return err;
@@ -254,18 +221,13 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
 
   hip_msg_init(msg);
   
-  err = hip_build_param_contents(msg, (void *) &opp_mode, HIP_PARAM_UINT,
-				 sizeof(unsigned int));
-  if (err) {
-    HIP_ERROR("build param opp_mode failed: %s\n", strerror(err));
-    goto out_err;
-  }
+  HIP_IFEL(hip_build_param_contents(msg, (void *) &opp_mode, HIP_PARAM_UINT,
+				    sizeof(unsigned int)), -1,
+	   "build param opp_mode failed\n");
   
-  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0);
-  if (err) {
-    HIP_ERROR("build user header failed: %s\n", strerror(err));
-    goto out_err;
-  } 
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY, 0),
+	   -1, "build user header failed\n");
+
  out_err:
   return err;
 }
@@ -291,18 +253,13 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
     mapping = 0;
 
   hip_msg_init(msg);
-  err = hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
-				 sizeof(unsigned int));
-  if (err) {
-    HIP_ERROR("build param mapping failed: %s\n", strerror(err));
-    goto out_err;
-  }
+  HIP_IFEL(hip_build_param_contents(msg, (void *) &mapping, HIP_PARAM_UINT,
+				    sizeof(unsigned int)), -1,
+	   "build param mapping failed\n");
   
-  err = hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0);
-  if (err) {
-    HIP_ERROR("build user header failed: %s\n", strerror(err));
-    goto out_err;
-  } 
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY, 0),
+	   -1, "build user header failed\n");
+
  out_err:
   return err;
 }

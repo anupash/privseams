@@ -104,16 +104,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	      HIP_ERROR("get pseudo hit failed.\n");
 	      goto out_err;
 	    }
-	    // PHIT = calculate a pseudo hit
-	    // hip_hadb_add_peer_info(PHIT, IP) -> SP: INIT_SRC_HIT + RESP_PSEUDO_HIT
-	    // hip_hadb_find_byhits(SRC_HIT, PHIT);
-	    // if (exists(hashtable(SRC_HIT, DST_PHIT)) { // two consecutive base exchanges
-	    //   msg = REAL_DST_HIT
-	    //   sendto(src, msg);
-	    // } else {
-	    //   add_to_hash_table(index=XOR(SRC_HIT, DST_PHIT), value=src);
-	    //   hip_send_i1(SRC_HIT, PHIT);
-	    // }
 	  }
 	  break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
