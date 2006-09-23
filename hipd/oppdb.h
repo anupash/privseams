@@ -21,6 +21,7 @@
 #define HIP_LOCK_OPP(entry)  
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
+#define HIP_OPP_WAIT 5
 
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
