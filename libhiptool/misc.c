@@ -1256,4 +1256,19 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   return err;
 }
 
+int hip_any_sa_to_hit_sa(const struct sockaddr *from,
+		     const hip_hit_t *use_hit,
+		     struct sockaddr_in6 *to) {
+	to->sin6_family = AF_INET6;
+	ipv6_addr_copy(&to->sin6_addr, use_hit);
+	if (from->sa_family == AF_INET)
+		to->sin6_port = ((struct sockaddr_in *) from)->sin_port;
+	else if (from->sa_family == AF_INET6)
+		to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_port;
+	else
+		return -1;
+	
+	return 0;
+}
+
 #endif /* ! __KERNEL__ */
