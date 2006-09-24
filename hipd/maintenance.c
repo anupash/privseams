@@ -15,6 +15,7 @@
 
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
+float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
@@ -72,6 +73,18 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		}
 	}
 
+ out_err:
+	return err;
+}
+
+int hip_scan_opp_fallback()
+{
+	int err = 0;
+	time_t current_time;
+	time(&current_time);
+
+	HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback, &current_time), 0, 
+		 "for_each_ha err.\n");
  out_err:
 	return err;
 }
@@ -358,15 +371,11 @@ int periodic_maintenance()
 {
 	int err = 0;
 	
-	if (hipd_get_state() == HIPD_STATE_CLOSING)
-	{
-		if (force_exit_counter > 0)
-		{
+	if (hipd_get_state() == HIPD_STATE_CLOSING) {
+		if (force_exit_counter > 0) {
 			err = hip_count_open_connections();
 			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
-		}
-		else
-		{
+		} else {
 			hip_exit(signal);
 			exit(signal);
 		}
@@ -386,6 +395,14 @@ int periodic_maintenance()
 		retrans_counter = HIP_RETRANSMIT_INIT;
 	} else {
 		retrans_counter--;
+	}
+
+	if (opp_fallback_counter < 0) {
+		HIP_IFEL(hip_scan_opp_fallback(), -1,
+			 "retransmission scan failed\n");
+		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
+	} else {
+		opp_fallback_counter--;
 	}
 
 	if (precreate_counter < 0) {
