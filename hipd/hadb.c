@@ -158,9 +158,9 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
         hip_hit_t key;
         hip_xor_hits(&key, hit, hit2);
-	HIP_HEXDUMP("hit is: ", hit, 16);
-	HIP_HEXDUMP("hit2 is: ", hit2, 16);
-	HIP_HEXDUMP("the computed key is: ", &key, 16);
+	HIP_DEBUG_HIT("hit1", hit);
+	HIP_DEBUG_HIT("hit2", hit2);
+	HIP_DEBUG_HIT("xor", &key);
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
@@ -2310,7 +2310,6 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	HIP_UNLOCK_HT(&hadb_hit);
 	return fail;
 }
-
 
 /** Enumeration for hip_count_open_connections */
 int hip_count_one_entry(hip_ha_t *entry, void *cntr)

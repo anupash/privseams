@@ -26,18 +26,10 @@
 #include <sys/time.h>
 #include <time.h>
 
-int create_socket(int proto, int port) {
+int create_socket(int type, int port) {
   int fd;
 
-  if (proto == IPPROTO_TCP) {
-    fd = socket(AF_INET6, SOCK_STREAM, 0);
-  } else if (proto == IPPROTO_UDP)  {
-    fd = socket(AF_INET6, SOCK_DGRAM, 0);
-  } else {
-    perror("unhandled proto");
-    exit(1);
-  }
-
+  fd = socket(AF_INET6, type, 0);
   if (fd < 0) {
     perror("socket");
     exit(1);
@@ -60,7 +52,7 @@ int main(int argc,char *argv[]) {
   int recvnum, sendnum;
   int datalen = 0;
   int port = 0;
-  int proto;
+  int type;
   int datasent = 0;
   int datareceived = 0;
   int ch;
@@ -71,9 +63,9 @@ int main(int argc,char *argv[]) {
   }
 
   if (strcmp(argv[2], "tcp") == 0) {
-    proto = IPPROTO_TCP;
+    type = SOCK_STREAM;
   } else if (strcmp(argv[2], "udp") == 0) {
-    proto = IPPROTO_UDP;
+    type = SOCK_DGRAM;
   } else {
     fprintf(stderr, "error: proto != tcp|udp\n");
     exit(1);
@@ -85,7 +77,7 @@ int main(int argc,char *argv[]) {
     exit(1);
   }
 
-  sock = create_socket(proto, port);
+  sock = create_socket(type, port);
 
   /* set server info */
   bzero(&peeraddr, sizeof(peeraddr));
@@ -113,7 +105,7 @@ int main(int argc,char *argv[]) {
 
 
   /* send and receive data */
-  if (proto == IPPROTO_TCP || proto == IPPROTO_UDP) {
+  if (type == SOCK_STREAM || proto == SOCK_DGRAM) {
     
     gettimeofday(&stats_before, NULL);
     if (connect(sock, (struct sockaddr *) &peeraddr, sizeof(peeraddr)) < 0) {
