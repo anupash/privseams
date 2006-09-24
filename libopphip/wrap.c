@@ -826,10 +826,10 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 }
 int close(int fd)
 {
-	int err = 0. pid = 0;
+	int err = 0, pid = 0;
 	hip_opp_socket_t *entry = NULL;
 	void *dp = NULL;
-	char *error = NULL. *name = "close";
+	char *error = NULL, *name = "close";
 	
 	if(!hip_db_exist)
 		goto out_err;
