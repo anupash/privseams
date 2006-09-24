@@ -189,14 +189,17 @@ void hip_copy_orig_to_translated(hip_opp_socket_t *entry)
 }
 
 inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
-				      struct in6_addr *peer_hit,
-				      const struct in6_addr *local_hit)
+					  struct in6_addr *peer_hit,
+					  const struct in6_addr *local_hit,
+					  int *fallback)
 {
 	struct hip_common *msg = NULL;
 	struct in6_addr *hit_recv = NULL;
 	hip_hit_t *ptr = NULL;
 	int err = 0;
 	int ret = 0;
+
+	*fallback = 1;
 	
 	HIP_IFE(ipv6_addr_any(peer_ip), -1);
 	
@@ -223,10 +226,11 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	HIP_IFE(hip_get_msg_err(msg), -1);
 	
 	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
-	HIP_DEBUG_HIT("ptr", ptr);
-	HIP_ASSERT(ptr);
-	memcpy(peer_hit, ptr, sizeof(hip_hit_t));
-	HIP_DEBUG_HIT("peer_hit", peer_hit);
+	if (ptr) {
+		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+		HIP_DEBUG_HIT("peer_hit", peer_hit);
+		*fallback = 0;
+	}
 	
  out_err:
 	
@@ -349,6 +353,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
 	
 	if (is_peer) {
+		int fallback;
 		/* Request a HIT of the peer from hipd. This will possibly
 		   launch an I1 with NULL HIT that will block until R1 is
 		   received. Called e.g. in connect() or sendto(). If
@@ -357,8 +362,13 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		HIP_DEBUG("requesting hit from hipd\n");
 		HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 							&dst_hit.sin6_addr,
-							&src_hit.sin6_addr),
+							&src_hit.sin6_addr,
+							&fallback),
 			 -1, "Request from hipd failed\n");
+		if (fallback) {
+			HIP_DEBUG("Peer does not support HIP, fallback\n");
+			goto out_err;
+		}
 		dst_hit.sin6_family = AF_INET6;
 	} else if (!entry->local_id_is_translated) {
 		HIP_DEBUG("Local id already translated\n");

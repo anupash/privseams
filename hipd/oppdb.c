@@ -40,8 +40,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 	
 	if(*now - HIP_OPP_WAIT > entry->creation_time) {
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
-		err = hip_opp_unblock_app(&entry->caller,
-					  &entry->peer_real_hit);
+		err = hip_opp_unblock_app(&entry->caller, NULL);
 		HIP_DEBUG("Unblock returned %d\n", err);
 		err = hip_oppdb_entry_clean_up(entry);
 	}
@@ -51,32 +50,31 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 }
 
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
-		     void *opaque)
-{
-	int i = 0, fail = 0;
-	hip_opp_block_t *this, *tmp;
+                    void *opaque) {
+       int i = 0, fail = 0;
+       hip_opp_block_t *this, *tmp;
+       
+       if (!func)
+               return -EINVAL;
 
-	if (!func)
-		return -EINVAL;
-
-	HIP_LOCK_HT(&opp_db);
-	for(i = 0; i < HIP_OPPDB_SIZE; i++) {
-		_HIP_DEBUG("The %d list is empty? %d\n", i,
-			   list_empty(&oppdb_list[i]));
-		list_for_each_entry_safe(this, tmp, &oppdb_list[i],next_entry)
-		{
-			_HIP_DEBUG("List_for_each_entry_safe\n");
-			hip_hold_ha(this);
-			fail = func(this, opaque);
-			hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
-			if (fail)
-				break;
-		}
-		if (fail)
-			break;
-	}
-	HIP_UNLOCK_HT(&opp_db);
-	return fail;
+       HIP_LOCK_HT(&opp_db);
+       for(i = 0; i < HIP_OPPDB_SIZE; i++) {
+               _HIP_DEBUG("The %d list is empty? %d\n", i,
+                          list_empty(&oppdb_list[i]));
+               list_for_each_entry_safe(this, tmp, &oppdb_list[i],next_entry)
+               {
+                       _HIP_DEBUG("List_for_each_entry_safe\n");
+                       hip_hold_ha(this);
+                       fail = func(this, opaque);
+                       //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
+                       if (fail)
+                               break;
+               }
+               if (fail)
+                       break;
+       }
+       HIP_UNLOCK_HT(&opp_db);
+       return fail;
 }
 
 inline void hip_oppdb_hold_entry(void *entry)
@@ -104,7 +102,7 @@ void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 	HIP_LOCK_OPP(entry);
 	hip_ht_delete(&oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
-	HIP_FREE(entry);
+	//HIP_FREE(entry);
 }
 
 int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused) {
@@ -126,6 +124,27 @@ hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_
 	return (hip_opp_block_t *)hip_ht_find(&oppdb, (void *)&key);
 }
 
+hip_opp_block_t *hip_create_opp_block_entry() 
+{
+	hip_opp_block_t * entry = NULL;
+
+	entry = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));
+	if (!entry){
+		HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
+		return NULL;
+	}
+  
+	memset(entry, 0, sizeof(*entry));
+  
+	INIT_LIST_HEAD(&entry->next_entry);
+  
+	HIP_LOCK_OPP_INIT(entry);
+	atomic_set(&entry->refcnt,0);
+	time(&entry->creation_time);
+	HIP_UNLOCK_OPP_INIT(entry);
+ out_err:
+        return entry;
+}
 
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_oppdb_add_entry(const hip_hit_t *hit_peer, 
@@ -138,17 +157,14 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 	hip_opp_block_t *tmp = NULL;
 	hip_opp_block_t *new_item = NULL;
 	
-	new_item = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));   
+	new_item = hip_create_opp_block_entry();
 	if (!new_item) {
 		HIP_ERROR("new_item malloc failed\n");                   
 		err = -ENOMEM;                                               
 		return err;
 	}                                    
 
-	memset(new_item, 0, sizeof(hip_opp_block_t));
-	
 	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
-	time(&new_item->creation_time);
 
 	ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);

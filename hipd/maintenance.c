@@ -82,6 +82,7 @@ int hip_scan_opp_fallback()
 	int err = 0;
 	time_t current_time;
 	time(&current_time);
+
 	HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback, &current_time), 0, 
 		 "for_each_ha err.\n");
  out_err:
