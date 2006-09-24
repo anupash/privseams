@@ -560,6 +560,9 @@ int hip_receive_close(struct hip_common *close,
 	return err;
 }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+#endif
+
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -579,12 +582,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* No entry found, let's check if it was opportunistic connection */
-	if (!entry) {
-		entry = hip_get_opp_hadb_entry(&msg->hits, src_addr);
-		HIP_DEBUG("Fetched opp entry %p\n", entry);
-	}
+	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1)
+	    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
+						   msg_info);
 #endif
 
         if (entry) {
@@ -606,19 +608,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* no state */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	  if(hit_is_opportunistic_null(&msg->hitr)){
-		  struct gaih_addrtuple *at = NULL;
-		  struct gaih_addrtuple **pat = &at;
-	    
-		  get_local_hits(NULL, pat);
-		  HIP_DEBUG_HIT("The local HIT =", &at->addr);
-		  HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-		  
-		  memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-		  HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
-	  }
-#endif // CONFIG_HIP_OPPORTUNISTIC
 	  err = ((hip_rcv_func_set_t *)
 		 hip_get_rcv_default_func_set())->hip_receive_i1(msg,
 								 src_addr,

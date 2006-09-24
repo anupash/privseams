@@ -272,8 +272,8 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 }
 
 
-hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
-				 struct in6_addr *resp_addr)
+hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *resp_hit,
+				   struct in6_addr *resp_addr)
 {
 	hip_ha_t *entry_tmp = NULL;
 	hip_hit_t nullhit;
@@ -291,6 +291,39 @@ hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 
  out_err:
 	return entry_tmp;
+}
+
+hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
+					struct in6_addr *src_addr,
+					struct in6_addr *dst_addr,
+					struct hip_stateless_info *msg_info)
+{
+	hip_hdr_type_t type = hip_get_msg_type(msg);
+	hip_ha_t *entry = NULL;
+
+	if (type == HIP_I1) {
+		struct gaih_addrtuple *at = NULL;
+		struct gaih_addrtuple **pat = &at;
+
+		if(!hit_is_opportunistic_null(&msg->hitr)){
+			goto out_err;
+		}
+			
+		/* Rewrite responder HIT of i1  */
+		get_local_hits(NULL, pat);
+		HIP_DEBUG_HIT("The local HIT =", &at->addr);
+		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
+		
+		memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
+		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
+	} else if (type == HIP_R1) {
+		entry = hip_get_opp_hadb_entry(&msg->hits, src_addr);
+	} else {
+		HIP_ASSERT(0);
+	}
+
+ out_err:
+	return entry;
 }
 
 int hip_receive_opp_r1(struct hip_common *msg,
@@ -380,9 +413,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
 	
-	hip_msg_init(msg);
-
 	if(!opportunistic_mode) {
+		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
 		n = hip_sendto(msg, src);
@@ -430,6 +462,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
 		goto out_err;
 	} else {
+		hip_msg_init(msg);
 		/* Two applications connecting consequtively: let's just return
 		   the real HIT instead of sending I1 */
 		HIP_IFEL(hip_build_param_contents(msg,

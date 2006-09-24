@@ -200,8 +200,7 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	
 	HIP_IFE(ipv6_addr_any(peer_ip), -1);
 	
-	HIP_IFE(!(msg = malloc(HIP_MAX_PACKET)), -1);
-	hip_msg_init(msg);
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
 					  HIP_PARAM_HIT,
