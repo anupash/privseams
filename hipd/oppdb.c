@@ -272,21 +272,21 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 }
 
 
-hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *resp_hit,
+hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 				   struct in6_addr *resp_addr)
 {
 	hip_ha_t *entry_tmp = NULL;
-	hip_hit_t nullhit;
+	hip_hit_t phit;
 	int err = 0;
 
 	HIP_DEBUG_HIT("resp_addr=", resp_addr);
-	HIP_IFEL(hip_opportunistic_ipv6_to_hit(resp_addr, &nullhit,
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(resp_addr, &phit,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "hip_opportunistic_ipv6_to_hit failed\n");
 
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
+	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
 	
-	entry_tmp = hip_hadb_find_byhits(&nullhit, resp_hit);
+	entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
 	HIP_ASSERT(entry_tmp);
 
  out_err:
@@ -317,7 +317,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 		memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
 		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	} else if (type == HIP_R1) {
-		entry = hip_oppdb_get_hadb_entry(&msg->hits, src_addr);
+		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	} else {
 		HIP_ASSERT(0);
 	}
