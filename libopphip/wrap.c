@@ -561,8 +561,11 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 
 int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
+	int err = 0;
+	err = dl_function_ptr.accept_dlsym(orig_socket, orig_id, orig_id_len);
 	// XX TODO: REMEMBER THAT OADDR CAN BE NULL
-	return -1;
+	HIP_DEBUG("Accept called\n");
+	return err;
 }
 
 int connect(int orig_socket, const struct sockaddr *orig_id,
@@ -659,96 +662,8 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
  */
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
-	int err;
-	int socket = 0;
-	int pid = 0;
-	ssize_t charnum = 0;
-	hip_hit_t local_hit;
-	hip_opp_socket_t *entry = NULL;
-	struct in6_addr *id = NULL;
-	struct sockaddr *is = NULL;
-	void *dp = NULL;
-	char *error = NULL;
-	char *name = "sendmsg";
-	union {
-		struct in_pktinfo *pktinfo_in4;
-		struct in6_pktinfo *pktinfo_in6;
-	} pktinfo;
-	struct cmsghdr *cmsg = NULL;
-	int cmsg_level, cmsg_type;
-	struct msghdr *tmp_msg;
-	
-	return -1; // XX FIXME
-	
-	err = 0;
-	socket = a;
-	
-	pktinfo.pktinfo_in4 = NULL;
-	pktinfo.pktinfo_in6 = NULL;
-	//is_ipv4 = 1;
-	cmsg_level = IPPROTO_IP;
-	cmsg_type = IP_PKTINFO; //IPV6_2292PKTINFO;
-	tmp_msg = (struct msghdr *)(msg);
-	for (cmsg=CMSG_FIRSTHDR(tmp_msg); cmsg;
-	     cmsg=CMSG_NXTHDR(tmp_msg,cmsg)){
-		if ((cmsg->cmsg_level == cmsg_level) && 
-		    (cmsg->cmsg_type == cmsg_type)) {
-			/* The structure is a union, so this fills also the
-			   pktinfo_in6 pointer */
-			pktinfo.pktinfo_in4 =
-				(struct in_pktinfo*)CMSG_DATA(cmsg);
-			//      gotip = 1;
-			break;
-		}
-	}
-	if(!(pktinfo.pktinfo_in4)){ // try ipv6
-		cmsg_level = IPPROTO_IPV6;
-		cmsg_type = IPV6_PKTINFO; //IPV6_2292PKTINFO;
-		for (cmsg=CMSG_FIRSTHDR(tmp_msg); cmsg;
-		     cmsg=CMSG_NXTHDR(tmp_msg,cmsg)){
-			if ((cmsg->cmsg_level == cmsg_level) && 
-			    (cmsg->cmsg_type == cmsg_type)) {
-				pktinfo.pktinfo_in4 =
-					(struct in_pktinfo*)CMSG_DATA(cmsg);
-				//gotip = 1;
-				break;
-			}
-		}
-	}
-	
-	pid = getpid();
-	entry = hip_socketdb_find_entry(pid, socket);
-	if(entry){
-		int domain = entry->domain;
-		int type = entry->type;
-		int protocol = entry->protocol;
-		
-		if(hip_check_domain_type_protocol(domain, type, protocol) ||
-		   hip_check_msg_name(msg) ||
-		   (!pktinfo.pktinfo_in4) ){
-			charnum = dl_function_ptr.sendmsg_dlsym(socket, msg,
-								flags);
-			dlclose(dp);
-			HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
-			return charnum;
-		}
-	}
-	HIP_ASSERT(pktinfo.pktinfo_in6);
-	HIP_HEXDUMP("pktinfo", &pktinfo.pktinfo_in6->ipi6_addr,
-		    sizeof(struct in6_addr));
-	HIP_ASSERT(msg->msg_name);
-	is = (struct sockaddr *)(msg->msg_name);
-	HIP_HEXDUMP("msg->msgname", is, sizeof(struct sockaddr));
-	
-	err = hip_get_local_hit_wrapper(&local_hit);
-	HIP_ASSERT(!err);
-	
-	//err = cache_translation(&socket, &local_hit, id, NULL, is);
-	
-	if(err){
-		HIP_ERROR("sendmsg cache_translation call failed: %s\n", strerror(err));
-		return errno;
-	}
+	int charnum;
+	// XX TODO
 	charnum = dl_function_ptr.sendmsg_dlsym(socket, msg, flags);
 	
 	HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
@@ -827,8 +742,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	char *error = NULL;
 	char *name = "recvmsg";
 	
-	return -1; // XX TODO
-	
+	// XX TODO
 	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
 	
 	HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n",
