@@ -14,20 +14,18 @@
 HIP_HASHTABLE oppdb;
 static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 
-int hip_opp_entry_clean_up(hip_opp_block_t *opp_entry) {
+int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	hip_ha_t *hadb_entry;
+	int err = 0;
 
 	/* XX FIXME: this does not support multiple multiple opp
 	   connections: a better solution might be trash collection  */
 
 	HIP_ASSERT(opp_entry);
-
-	hadb_entry = hip_get_opp_hadb_entry(&opp_entry->peer_real_hit,
-					    &opp_entry->peer_real_ip);
-	if (hadb_entry)
-		err = hip_del_peer_info();
-	err = hip_oppdb_del_entry_by_entry(opp_entry);
-
+	hip_oppdb_del_entry_by_entry(opp_entry);
+	err = hip_del_peer_info(&opp_entry->peer_real_hit,
+				&opp_entry->our_real_hit,
+				&opp_entry->peer_ip);
 	return err;
 }
 
@@ -153,7 +151,7 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 	hip_opp_block_t *new_item = NULL;
 	
 	new_item = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));   
-	if (!new_item) {                                                     
+	if (!new_item) {
 		HIP_ERROR("new_item malloc failed\n");                   
 		err = -ENOMEM;                                               
 		return err;
@@ -238,11 +236,11 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hit_hit_t *hit) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 	struct hip_common *message = NULL;
-	int err = 0;
+	int err = 0, n;
 
-	HIP_IFE(!(message = HIP_MSG_ALLOC(HIP_MAX_PACKET)), -1);
+	HIP_IFE(!(message = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
 	if (hit) {
@@ -252,7 +250,6 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hit_hit_t *hit) {
 			 "build param HIP_PARAM_HIT  failed\n");
 	}
 	n = hip_sendto(message, app_id);
-	message = NULL;
 	if(n < 0){
 	  HIP_ERROR("hip_sendto() failed.\n");
 	  err = -1;
@@ -264,13 +261,15 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hit_hit_t *hit) {
 	return err;
 }
 
+
 hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 				 struct in6_addr *resp_addr)
 {
 	hip_ha_t *entry_tmp = NULL;
 	hip_hit_t nullhit;
+	int err = 0;
 
-	HIP_DEBUG_HIT("src_addr=", src_addr);
+	HIP_DEBUG_HIT("resp_addr=", resp_addr);
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(resp_addr, &nullhit,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "hip_opportunistic_ipv6_to_hit failed\n");
@@ -284,16 +283,15 @@ hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 	return entry_tmp;
 }
 
-int hip_check_hip_r1_opportunistic_mode(struct hip_common *msg,
-					struct in6_addr *src_addr,
-					struct in6_addr *dst_addr,
-					struct hip_stateless_info *msg_info,
-					hip_ha_t *entry)
+int hip_receive_opp_r1(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       struct hip_stateless_info *msg_info,
+		       hip_ha_t *opp_entry)
 {
 	hip_opp_block_t *block_entry = NULL;
-	//hip_hit_t *peer_hit = NULL;
-	hip_ha_t *entry_tmp = NULL;
-	hip_ha_t *pEntry;
+	hip_ha_t *entry_tmp = NULL, *entry;
+	hip_hit_t nullhit;
 	int n = 0;
 	int err = 0;
 	
@@ -309,8 +307,8 @@ int hip_check_hip_r1_opportunistic_mode(struct hip_common *msg,
 	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
-	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+	HIP_DEBUG_IN6ADDR("!!!! peer addr=", src_addr);
+	HIP_DEBUG_IN6ADDR("!!!! local addr=", dst_addr);
 	
 	HIP_IFEL(hip_hadb_add_peer_info_complete(&msg->hitr, &msg->hits,
 						 dst_addr, src_addr), -1,
@@ -318,37 +316,23 @@ int hip_check_hip_r1_opportunistic_mode(struct hip_common *msg,
 	
 	// we should get entry by both real hits
 	//	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(pEntry);
-	if(pEntry)
-	  memcpy(entry, pEntry, sizeof(hip_ha_t));
-	
-	if (!entry) {
-		HIP_ERROR("Cannot find the added HA entry\n");
-		err = -1;
-		goto out_err;
-	}
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	HIP_ASSERT(entry);
 
 	// Bing, we need entry->our_pub and our_priv, so init_us
-	HIP_IFEL(hip_init_us(entry, &entry->hit_our), -1,
+	HIP_IFEL(hip_init_us(entry, &msg->hitr), -1,
 		 "hip_init_us failed\n");
 	// old HA has state 2, new HA has state 1, so copy it
-	entry->state = entry_tmp->state;
+	entry->state = opp_entry->state;
 
-	// delete nullhit HA
-	entry_tmp = NULL;
-	HIP_IFEL(hip_del_peer_info(&msg->hitr, &nullhit, src_addr), -1,
-		 "Failed to delete mapping\n");
-	
-	// hashtable=hip_opp_blocking_request_entry
-	// ent = find_opp_entry_from_hashtable(SRC_HIT, DST_PHIT)
-	// msg = REAL_DST_HIT
-	// memcpy(ent->real_peer_hit, real_dst_hit);
-	// sendto(entry->caller, msg);
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
 	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &nullhit,
+					       HIP_HIT_TYPE_HASH100), -1,
+		 "pseudo hit conversion failed\n");
 	
 	block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
 	//HIP_ASSERT(entry);
@@ -356,27 +340,19 @@ int hip_check_hip_r1_opportunistic_mode(struct hip_common *msg,
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
 		 "unblock failed\n");
 	// we should still get entry after delete old nullhit HA
-	pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(pEntry);
-	memcpy(entry, pEntry, sizeof(hip_ha_t));
+        entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	HIP_ASSERT(entry_tmp);
 
-	if (!entry)
-		goto out_err;
-	
-	err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
-	if (err == -ENOENT) {
-		HIP_DEBUG("No agent running, continuing\n");
-		err = 0;
-	} else if (err == 0) {
-		HIP_DEBUG("Agent accepted packet\n");
-	} else if (err) {
-		HIP_ERROR("Agent reject packet\n");
-	}
-
+	HIP_IFCS(entry,
+		 err = entry->hadb_rcv_func->hip_receive_r1(msg,
+							    src_addr,
+							    dst_addr,
+							    entry,
+							    msg_info))
  out_err:
-	if (err && block_entry) {
+	if (block_entry) {
 		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
-		hip_opp_entry_clean_up(block_entry);
+		hip_oppdb_entry_clean_up(block_entry);
 	}
 	return err;
 }

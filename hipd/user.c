@@ -97,9 +97,9 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
-	case SO_HIP_GET_PEER_HIT: // we get try to get real hit instead of phit
+	case SO_HIP_GET_PEER_HIT:
 	  { 
-	    err = hip_get_peer_hit(msg, src);
+	    err = hip_opp_get_peer_hit(msg, src);
 	    if(err){
 	      HIP_ERROR("get pseudo hit failed.\n");
 	      goto out_err;

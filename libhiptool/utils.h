@@ -39,7 +39,10 @@ struct hip_opp_blocking_request_entry {
 
   time_t                creation_time;
   struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
-  struct in6_addr       peer_real_hit;
+  hip_hit_t             our_real_hit;
+  hip_hit_t             peer_real_hit;
+  struct in6_addr       peer_ip;
+  struct in6_addr       our_ip;
   struct sockaddr_un    caller;
 };
 

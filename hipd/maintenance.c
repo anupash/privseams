@@ -15,6 +15,7 @@
 
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
+float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
 float opendht_counter = OPENDHT_REFRESH_INIT;
@@ -404,7 +405,7 @@ int periodic_maintenance()
 			 "retransmission scan failed\n");
 		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 	} else {
-		opp_fallback_counter_counter--;
+		opp_fallback_counter--;
 	}
 
 	if (precreate_counter < 0) {

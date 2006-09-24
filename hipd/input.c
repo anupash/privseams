@@ -566,7 +566,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	                       struct hip_stateless_info *msg_info)
 {
 	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
-	hip_ha_t tmp;
+	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
@@ -578,21 +578,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-
-        if (entry)
-		err = entry->hadb_input_filter_func->hip_input_filter(msg);
-        else if(type == HIP_R1){ /* check if it uses opportunistic mode */
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_ha_t oppEntry;
-		entry = &oppEntry;
-		HIP_IFEL(hip_check_hip_r1_opportunistic_mode(msg, src_addr,
-							     dst_addr,
-							     msg_info, entry),
-			 -1, "hip_check_hip_ri_opportunistic_mode failed\n");
-#endif    
+	/* No entry found, let's check if it was opportunistic connection */
+	if (!entry) {
+		entry = hip_get_opp_hadb_entry(&msg->hits, src_addr);
+		HIP_DEBUG("Fetched opp entry %p\n", entry);
+	}
+#endif
+
+        if (entry) {
+		err = entry->hadb_input_filter_func->hip_input_filter(msg);
         } else {
-		err = ((hip_input_filter_func_set_t *)
+	        err = ((hip_input_filter_func_set_t *)
 		       hip_get_input_filter_default_func_set())->hip_input_filter(msg);
 	}
 	
