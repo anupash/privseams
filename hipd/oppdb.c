@@ -23,10 +23,11 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	   connections: a better solution might be trash collection  */
 
 	HIP_ASSERT(opp_entry);
-	hip_oppdb_del_entry_by_entry(opp_entry);
 	err = hip_del_peer_info(&opp_entry->peer_real_hit,
 				&opp_entry->our_real_hit,
 				&opp_entry->peer_ip);
+	HIP_DEBUG("Del peer info returned %d\n", err);
+	hip_oppdb_del_entry_by_entry(opp_entry);
 	return err;
 }
 
@@ -34,6 +35,8 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
 	int err = 0;
 	time_t *now = (time_t*) current_time;	
+
+	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 	
 	if(*now - HIP_OPP_WAIT > entry->creation_time) {
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
@@ -113,31 +116,6 @@ void hip_oppdb_uninit() {
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
 
-hip_opp_block_t *hip_create_opp_block_entry() 
-{
-	hip_opp_block_t * entry = NULL;
-	time_t current_time;
-	time(&current_time);
-	
-	entry = (hip_opp_block_t *)malloc(sizeof(hip_opp_block_t));
-	if (!entry){
-		HIP_ERROR("hip_opp_block_t memory allocation failed.\n");
-		return NULL;
-	}
-	
-	memset(entry, 0, sizeof(*entry));
-	
-	entry->creation_time = current_time;
-	
-	INIT_LIST_HEAD(&entry->next_entry);
-	
-	HIP_LOCK_OPP_INIT(entry);
-	atomic_set(&entry->refcnt,0);
-	HIP_UNLOCK_OPP_INIT(entry);
- out_err:
-	return entry;
-}
-
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
 {
 	hip_hit_t key;
@@ -166,8 +144,11 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 		err = -ENOMEM;                                               
 		return err;
 	}                                    
+
+	memset(new_item, 0, sizeof(hip_opp_block_t));
 	
 	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
+	time(&new_item->creation_time);
 
 	ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
@@ -334,11 +315,10 @@ int hip_receive_opp_r1(struct hip_common *msg,
 {
 	hip_opp_block_t *block_entry = NULL;
 	hip_ha_t *entry_tmp = NULL, *entry;
-	hip_hit_t nullhit;
-	int n = 0;
-	int err = 0;
+	hip_hit_t phit;
+	int n = 0, err = 0;
 	
-	entry_tmp = hip_oppdb_get_hadb_entry(src_addr, &msg->hitr);
+	entry_tmp = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	if (!entry_tmp){
 		HIP_ERROR("Cannot find HA entry after receive r1\n");
 		err = -1;
@@ -373,19 +353,21 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
 	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
 
-	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &nullhit,
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
+	block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr);
 	//HIP_ASSERT(entry);
-	memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
+	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
 		 "unblock failed\n");
-	// we should still get entry after delete old nullhit HA
+	// we should still get entry after delete old phit HA
         entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
 
+	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
+	entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	HIP_IFCS(entry,
 		 err = entry->hadb_rcv_func->hip_receive_r1(msg,
 							    src_addr,

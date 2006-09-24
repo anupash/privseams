@@ -370,15 +370,11 @@ int periodic_maintenance()
 {
 	int err = 0;
 	
-	if (hipd_get_state() == HIPD_STATE_CLOSING)
-	{
-		if (force_exit_counter > 0)
-		{
+	if (hipd_get_state() == HIPD_STATE_CLOSING) {
+		if (force_exit_counter > 0) {
 			err = hip_count_open_connections();
 			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
-		}
-		else
-		{
+		} else {
 			hip_exit(signal);
 			exit(signal);
 		}
@@ -386,8 +382,7 @@ int periodic_maintenance()
 	}
 	
 #ifdef CONFIG_HIP_AGENT
-	if (hip_agent_is_alive())
-	{
+	if (hip_agent_is_alive()) {
 		//hip_agent_send_remote_hits();
 	}
 #endif

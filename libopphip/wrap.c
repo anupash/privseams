@@ -277,6 +277,9 @@ int set_translation(hip_opp_socket_t *entry,
 
 int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
+	pid_t pid = getpid();
+
+	srand(pid);
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
 		hit->sin6_port = rand();
