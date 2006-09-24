@@ -75,12 +75,12 @@ int main(int argc, char *argv[])
 			else
 				peer_name = optarg;
 			sprintf(buf, "%d",DEFAULT_PORT);
-			main_client_gai(IPPROTO_TCP, SOCK_STREAM, peer_name, buf, AI_HIP);
+			main_client_gai(SOCK_STREAM, peer_name, buf, AI_HIP);
 			break;
 		case 'r':
 			printf("Responder mode\n");
 			/* Base Exchange Responder */
-			main_server(IPPROTO_TCP, DEFAULT_PORT);
+			main_server(SOCK_STREAM, DEFAULT_PORT);
 			break;
 		case 's':
 			/* Base Exchange SSH  */
