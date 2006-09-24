@@ -581,50 +581,52 @@ int hip_receive_control_packet(struct hip_common *msg,
 	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
         if (entry)
-          err = entry->hadb_input_filter_func->hip_input_filter(msg);
-        // XX TODO BING: ISOLATE TO A SEPARATE FUNCTION
-        else if(type == HIP_R1){ // check if it uses opportunistic mode
+		err = entry->hadb_input_filter_func->hip_input_filter(msg);
+        else if(type == HIP_R1){ /* check if it uses opportunistic mode */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-          hip_ha_t oppEntry;
-          entry = &oppEntry;
-          HIP_IFEL(hip_check_hip_r1_opportunistic_mode(msg, src_addr, dst_addr,
-						       msg_info, entry), -1,
-		   "hip_check_hip_ri_opportunistic_mode failed\n");
+		hip_ha_t oppEntry;
+		entry = &oppEntry;
+		HIP_IFEL(hip_check_hip_r1_opportunistic_mode(msg, src_addr,
+							     dst_addr,
+							     msg_info, entry),
+			 -1, "hip_check_hip_ri_opportunistic_mode failed\n");
 #endif    
-        } // end else if(type == HIP_R1)
-	else
-	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+        } else {
+		err = ((hip_input_filter_func_set_t *)
+		       hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	}
 	
 	if (err == -ENOENT) {
-	  HIP_DEBUG("No agent running, continuing\n");
-	  err = 0;
+		HIP_DEBUG("No agent running, continuing\n");
+		err = 0;
 	} else if (err == 0) {
-	  HIP_DEBUG("Agent accepted packet\n");
+		HIP_DEBUG("Agent accepted packet\n");
 	} else if (err) {
-	  HIP_ERROR("Agent reject packet\n");
+		HIP_ERROR("Agent reject packet\n");
 	}
 	
 	switch(type) {
 	case HIP_I1:
-	  // no state
+		/* no state */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	  if(hit_is_opportunistic_null(&msg->hitr)){
-	    struct gaih_addrtuple *at = NULL;
-	    struct gaih_addrtuple **pat = &at;
+		  struct gaih_addrtuple *at = NULL;
+		  struct gaih_addrtuple **pat = &at;
 	    
-	    get_local_hits(NULL, pat);
-	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
-	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-
-	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
+		  get_local_hits(NULL, pat);
+		  HIP_DEBUG_HIT("The local HIT =", &at->addr);
+		  HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
+		  
+		  memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
+		  HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	  }
 #endif // CONFIG_HIP_OPPORTUNISTIC
-	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i1(msg,
-										       src_addr,
-										       dst_addr,
-										       entry,
-										       msg_info);
+	  err = ((hip_rcv_func_set_t *)
+		 hip_get_rcv_default_func_set())->hip_receive_i1(msg,
+								 src_addr,
+								 dst_addr,
+								 entry,
+								 msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -637,7 +639,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 							entry,
 							msg_info);
 		} else {
-			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
+			err = ((hip_rcv_func_set_t *)
+			   hip_get_rcv_default_func_set())->hip_receive_i2(msg,
+								     src_addr,
+								     dst_addr,
+								     entry,
+								     msg_info);
 		}
 		break;
 		
