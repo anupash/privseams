@@ -14,6 +14,10 @@
 #include "input.h"
 #include "util.h"
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+extern unsigned int opportunistic_mode;
+#endif
+
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
 /*
@@ -584,7 +588,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1)
+	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
 	    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
 						   msg_info);
 #endif

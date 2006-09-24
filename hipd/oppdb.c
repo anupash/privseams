@@ -13,7 +13,7 @@
 
 HIP_HASHTABLE oppdb;
 static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
-extern int opportunistic_mode;
+extern unsigned int opportunistic_mode;
 
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	hip_ha_t *hadb_entry;
@@ -317,7 +317,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 		memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
 		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	} else if (type == HIP_R1) {
-		entry = hip_get_opp_hadb_entry(&msg->hits, src_addr);
+		entry = hip_oppdb_get_hadb_entry(&msg->hits, src_addr);
 	} else {
 		HIP_ASSERT(0);
 	}
@@ -338,7 +338,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	int n = 0;
 	int err = 0;
 	
-	entry_tmp = hip_get_opp_hadb_entry(src_addr, &msg->hitr);
+	entry_tmp = hip_oppdb_get_hadb_entry(src_addr, &msg->hitr);
 	if (!entry_tmp){
 		HIP_ERROR("Cannot find HA entry after receive r1\n");
 		err = -1;
