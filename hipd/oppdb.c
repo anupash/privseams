@@ -13,6 +13,7 @@
 
 HIP_HASHTABLE oppdb;
 static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
+extern int opportunistic_mode;
 
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	hip_ha_t *hadb_entry;
@@ -101,6 +102,15 @@ void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 	hip_ht_delete(&oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
 	HIP_FREE(entry);
+}
+
+int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused) {
+	hip_oppdb_del_entry_by_entry(entry);
+	return 0;
+}
+
+void hip_oppdb_uninit() {
+	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
 
 hip_opp_block_t *hip_create_opp_block_entry() 
@@ -286,8 +296,8 @@ hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
-		       struct hip_stateless_info *msg_info,
-		       hip_ha_t *opp_entry)
+		       hip_ha_t *opp_entry,
+		       struct hip_stateless_info *msg_info)
 {
 	hip_opp_block_t *block_entry = NULL;
 	hip_ha_t *entry_tmp = NULL, *entry;
@@ -354,6 +364,94 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
 		hip_oppdb_entry_clean_up(block_entry);
 	}
+	return err;
+}
+
+/**
+ * No description.
+ */
+int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
+{
+	int n = 0;
+	int err = 0;
+	int alen = 0;
+	struct in6_addr phit, dst_ip, hit_our;
+	struct in6_addr *ptr = NULL;
+	hip_opp_block_t *entry = NULL;
+	hip_ha_t *ha = NULL;
+	
+	hip_msg_init(msg);
+
+	if(!opportunistic_mode) {
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+			 "Building of user header failed\n");
+		n = hip_sendto(msg, src);
+		if(n < 0){
+			HIP_ERROR("hip_sendto() failed.\n");
+			err = -1;
+		}
+		goto out_err;
+	}
+
+	/* Create an opportunistic HIT from the peer's IP  */
+	
+	memset(&hit_our, 0, sizeof(struct in6_addr));
+	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	HIP_IFEL(!ptr, -1, "No hit in msg\n");
+	memcpy(&hit_our, ptr, sizeof(hit_our));
+	HIP_DEBUG_HIT("hit_our=", &hit_our);
+	
+	ptr = (struct in6_addr *)
+		hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	HIP_IFEL(!ptr, -1, "No ip in msg\n");
+	memcpy(&dst_ip, ptr, sizeof(dst_ip));
+	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+	
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
+					       HIP_HIT_TYPE_HASH100),
+		 -1, "Opp HIT conversion failed\n");
+	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+	HIP_DEBUG_HIT("phit", &phit);
+	
+	err = hip_hadb_add_peer_info(&phit, &dst_ip);
+	ha = hip_hadb_find_byhits(&hit_our, &phit);
+	HIP_ASSERT(ha);
+
+	/* Override the receiving function */
+	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+	
+	entry = hip_oppdb_find_byhits(&phit, &hit_our);
+	if(!entry) {
+		HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
+					     src), -1,
+			 "Add db failed\n");
+	} else if (ipv6_addr_any(&entry->peer_real_hit)) {
+		/* Two simultaneously connecting applications */
+		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
+		goto out_err;
+	} else {
+		/* Two applications connecting consequtively: let's just return
+		   the real HIT instead of sending I1 */
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&entry->peer_real_hit),
+					       HIP_PARAM_HIT,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
+		n = hip_sendto(msg, src);
+		if(n < 0){
+			HIP_ERROR("hip_sendto() failed.\n");
+			err = -1;
+		}
+		goto out_err;
+	}
+	
+ send_i1:
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+		 "sending of I1 failed\n");
+	
+ out_err:
 	return err;
 }
 

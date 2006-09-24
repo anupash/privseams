@@ -45,8 +45,9 @@ void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
 int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
-		       struct hip_stateless_info *msg_info,
-		       hip_ha_t *opp_entry);
-
+		       hip_ha_t *opp_entry,
+		       struct hip_stateless_info *msg_info);
+hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+				       const hip_hit_t *hit_our);
 
 #endif /* HIP_HADB_H */
