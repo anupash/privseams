@@ -3,7 +3,7 @@
  * $DATE$
  * Purpose: Prototype declaration for tracker.c
  */
-
+#include <netinet/in.h>
 
 int updateHIT(char*, char*);
 

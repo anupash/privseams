@@ -10,7 +10,11 @@
 
 /** @defgroup params TODOs for parameters */
 
-/** @defgroup hip_msg HIP daemon message types */
+/**
+ * @defgroup hip_msg HIP daemon message types
+ * @note DONT MAKE THESE VALUES HIGHER THAN 255.
+ *       The variable, which stores this type, is 8 bits.
+ */
 
 /** @defgroup hip_so HIP socket options */
 
