@@ -26,6 +26,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 
 	if (addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *a = SA2IP(addr);
+		HIP_DEBUG_INADDR("IPv6 addr", &a->sin6_addr);
 		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
@@ -35,9 +36,11 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(&a->sin6_addr))
+		    ipv6_addr_is_hit(&a->sin6_addr)) {
 			return 0;
-		return 1;
+		} else {
+			return 1;
+		}
 	}
 
 	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
@@ -47,13 +50,17 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	if (addr->sa_family == AF_INET)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		if (a == INADDR_ANY ||
-                    a == INADDR_LOOPBACK ||
-		    a == INADDR_BROADCAST ||
+		HIP_DEBUG_INADDR("IPv4 addr", &a);
+		a = ntohl(a);
+		if ((a == INADDR_ANY) ||
+                    (a == INADDR_LOOPBACK) ||
+		    (a == INADDR_BROADCAST) ||
 			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
-			IS_LSI32(a))
-				return 0;
-		return 1;
+		    IS_LSI32(a)) {
+			return 0;
+		} else {
+			return 1;
+		}
 	}
 	/* add more filtering tests here */
 	return 0;
