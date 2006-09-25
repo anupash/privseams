@@ -814,6 +814,10 @@ using getaddrinfo: ping, ping6, tla, svn.
         <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
         <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
 
+        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
+              to one, if you want your firewall to forward IPv6 traffic.
+              Remember to configure IPv6 routes to the hosts.</para>
+
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
               is path of the file containing the firewall rules and

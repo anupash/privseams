@@ -14,6 +14,10 @@
 #include "input.h"
 #include "util.h"
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+extern unsigned int opportunistic_mode;
+#endif
+
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
 /*
@@ -561,151 +565,7 @@ int hip_receive_close(struct hip_common *close,
 }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
-					struct in6_addr *src_addr,
-					struct in6_addr *dst_addr,
-					struct hip_stateless_info *msg_info,
-					hip_ha_t *entry){
-  
-  	hip_hit_t nullhit;
-	//hip_hit_t *peer_hit = NULL;
-	hip_ha_t *entry_tmp = NULL;
-	hip_ha_t *pEntry;
-	struct hip_common *message = NULL;
-	int n = 0;
-	int err = 0;
-	
-	HIP_DEBUG_HIT("src_addr=", src_addr);
-	err = hip_opportunistic_ipv6_to_hit(src_addr, &nullhit, HIP_HIT_TYPE_HASH100);
-	if(err){
-	  HIP_ERROR("hip_opportunistic_ipv6_to_hit failed\n");
-	  goto out_err;
-	}
-
-
-	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&nullhit));
-	
-	entry_tmp = hip_hadb_find_byhits(&nullhit, &msg->hitr);
-	HIP_ASSERT(entry_tmp);
-	if (entry_tmp){
-	  // add new HA with real hit
-	  //err = hip_hadb_add_peer_info(&msg->hits, src_addr);
-	  
-	  HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
-	  HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-	  HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
-	  HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
-	  
-	  err = hip_hadb_add_peer_info_complete(&msg->hitr,
-						&msg->hits,
-						dst_addr,
-						src_addr);
-	  if (err) {
-	    HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
-	    goto out_err;
-	  }
-	  
-	  // we should get entry by both real hits
-	  //	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	  pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	  HIP_ASSERT(pEntry);
-	  if(pEntry)
-	    memcpy(entry, pEntry, sizeof(hip_ha_t));
-
-	  if (entry){
-	    // Bing, we need entry->our_pub and our_priv, so init_us
-	    err= hip_init_us(entry, &entry->hit_our);
-	    if(err){
-	      HIP_ERROR("hip_init_us failed\n");
-	      goto out_err;
-	    }
-	    // old HA has state 2, new HA has state 1, so copy it
-	    entry->state = entry_tmp->state;
-	    
-	  }
-	  else {
-	    HIP_ERROR("Cannot find the added HA entry\n");
-	    goto out_err;
-	  }
-	  // delete nullhit HA
-	  entry_tmp = NULL;
-	  err = hip_del_peer_info(&msg->hitr, &nullhit, src_addr);
-	  if (err) {
-	    HIP_ERROR("Failed to delete mapping\n");
-	    goto out_err;
-	  }
-	} //  end if (entry_tmp)
-	else { 
-	  HIP_ERROR("Cannot find HA entry after receive r1\n");
-	  goto out_err;
-	}
-	
-	// hashtable=hip_opp_blocking_request_entry
-	// ent = find_opp_entry_from_hashtable(SRC_HIT, DST_PHIT)
-	// msg = REAL_DST_HIT
-	// memcpy(ent->real_peer_hit, real_dst_hit);
-	// sendto(entry->caller, msg);
-	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
-	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
-	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
-	
-	hip_opp_block_t *block_entry = NULL;
-	block_entry = hip_oppdb_find_byhits(&nullhit, &msg->hitr);
-	//HIP_ASSERT(entry);
-	message = malloc(HIP_MAX_PACKET);
-	if (!message){
-	  HIP_ERROR("malloc failed\n");
-	  goto out_err;
-	}	
-	
-	hip_msg_init(message);
-	err = hip_build_param_contents(message, (void *)(&msg->hits), HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-	  HIP_ERROR("build param HIP_PARAM_HIT  failed: %s\n", strerror(err));
-	  goto out_err;
-	}
-	err = hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0);
-	if (err) {
-	  HIP_ERROR("build user header failed: %s\n", strerror(err));
-	  goto out_err;
-	} 
-	memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
-	n = hip_sendto(message, &block_entry->caller);
-	free(message);
-	message = NULL;
-	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
-	}
-	
-	// we should still get entry after delete old nullhit HA
-	pEntry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(pEntry);
-	memcpy(entry, pEntry, sizeof(hip_ha_t));
-	
-	if (entry){
-	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
-	  if (err == -ENOENT) {
-	    HIP_DEBUG("No agent running, continuing\n");
-	    err = 0;
-	  } else if (err == 0) {
-	    HIP_DEBUG("Agent accepted packet\n");
-	  } else if (err) {
-	    HIP_ERROR("Agent reject packet\n");
-	  }
-	  if(err){
-	    //HIP_ERROR("hip_get_input_filter_default_func_set failed\n");
-	    //goto out_err;
-	  }
-	}
-	
- out_err:
-	return err;
-}
-#endif // CONFIG_HIP_OPPORTUNISTIC
+#endif
 
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
@@ -713,7 +573,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	                       struct hip_stateless_info *msg_info)
 {
 	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
-	hip_ha_t tmp;
+	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
@@ -725,53 +585,39 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	hip_ha_t *entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
-	if (entry)
-	  err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	/** @todo Isolate to a separate function. */
-	else if(type == HIP_R1){ // check if it uses opportunistic mode
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	  hip_ha_t oppEntry;
-	  entry = &oppEntry;
-	  err = hip_check_hip_ri_opportunistic_mode(msg, src_addr, dst_addr, msg_info, entry);
-	  if(err){
-	    HIP_ERROR("hip_check_hip_ri_opportunistic_mode failed\n");
-	    HIP_ASSERT(0);
-	    goto out_err;
-	  }
-#endif	  
-	} // end else if(type == HIP_R1)
-	else
-	  err = ((hip_input_filter_func_set_t *)hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
+	    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
+						   msg_info);
+#endif
+
+        if (entry) {
+		err = entry->hadb_input_filter_func->hip_input_filter(msg);
+        } else {
+	        err = ((hip_input_filter_func_set_t *)
+		       hip_get_input_filter_default_func_set())->hip_input_filter(msg);
+	}
 	
 	if (err == -ENOENT) {
-	  HIP_DEBUG("No agent running, continuing\n");
-	  err = 0;
+		HIP_DEBUG("No agent running, continuing\n");
+		err = 0;
 	} else if (err == 0) {
-	  HIP_DEBUG("Agent accepted packet\n");
+		HIP_DEBUG("Agent accepted packet\n");
 	} else if (err) {
-	  HIP_ERROR("Agent reject packet\n");
+		HIP_ERROR("Agent reject packet\n");
 	}
 	
 	switch(type) {
 	case HIP_I1:
-	  // no state
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	  if(hit_is_opportunistic_null(&msg->hitr)){
-	    struct gaih_addrtuple *at = NULL;
-	    struct gaih_addrtuple **pat = &at;
-	    
-	    get_local_hits(NULL, pat);
-	    HIP_DEBUG_HIT("The local HIT =", &at->addr);
-	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-
-	    memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-	    HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
-	  }
-#endif // CONFIG_HIP_OPPORTUNISTIC
-	  err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->
-		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
+		/* no state */
+	  err = ((hip_rcv_func_set_t *)
+		 hip_get_rcv_default_func_set())->hip_receive_i1(msg,
+								 src_addr,
+								 dst_addr,
+								 entry,
+								 msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -782,7 +628,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
 					       msg_info);
 		} else {
-			err = ((hip_rcv_func_set_t *)hip_get_rcv_default_func_set())->hip_receive_i2(msg, src_addr, dst_addr, entry, msg_info);
+			err = ((hip_rcv_func_set_t *)
+			   hip_get_rcv_default_func_set())->hip_receive_i2(msg,
+								     src_addr,
+								     dst_addr,
+								     entry,
+								     msg_info);
 		}
 		break;
 		

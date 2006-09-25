@@ -99,15 +99,11 @@ int updateMAPS(char *fqdn, char *hit, char *ip)
   //end informative part
 
   //upload mapping fqdn->hit->ip to the DHT
-  printf("Upload mapping (fqdn->hit, %s->%s)\n", fqdn, hit);
-  //HIP_DEBUG("Upload mapping (fqdn->hit, %s->%s)\n", fqdn, hit);
   if ( ret = opendhtputhit(fqdn,hit) )
   {
     printf("Error: Put (fqdn->hit) failed with return value %d\n", ret);
     //HIP_DEBUG("Error: Put (fqdn->hit) failed with return value %d\n", ret); 
   }
-  printf("Upload mapping (hit->ip, %s->%s)\n", hit, ip);
-  //HIP_DEBUG("Upload mapping (hit->ip, %s->%s)\n", hit, ip);
   if ( ret = opendhtputhit(hit,ip) )
   {
     printf("Error: Put (hit->ip) failed with return value %d\n", ret);

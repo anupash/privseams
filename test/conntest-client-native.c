@@ -37,8 +37,8 @@
 #include "conntest.h"
 
 int main(int argc,char *argv[]) {
-	char *proto_name, *peer_port_name, *peer_name;
-	int proto, socktype;
+	char *type_name, *peer_port_name, *peer_name;
+	int socktype;
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
@@ -49,20 +49,18 @@ int main(int argc,char *argv[]) {
 	}
   
 	peer_name = argv[1];
-	proto_name = argv[2];
+	type_name = argv[2];
 	peer_port_name = argv[3];
   
 	/* Set transport protocol */
-	if (strcmp(proto_name, "tcp") == 0) {
-		proto = IPPROTO_TCP;
+	if (strcmp(type_name, "tcp") == 0) {
 		socktype = SOCK_STREAM;
-	} else if (strcmp(proto_name, "udp") == 0) {
-		proto = IPPROTO_UDP;
+	} else if (strcmp(type_name, "udp") == 0) {
 		socktype = SOCK_DGRAM;
 	} else {
 		HIP_ERROR("Error: only TCP and UDP supported.\n");
 		return(1);
 	}
 
-	return(main_client_native(proto, socktype, peer_name, peer_port_name));
+	return(main_client_native(socktype, peer_name, peer_port_name));
 }

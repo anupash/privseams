@@ -51,6 +51,10 @@ int hipd_init(int flush_ipsec)
 	cl_init(i3_config);
 #endif
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		hip_init_opp_db();
+#endif
+
 	/* Resolve our current addresses, afterwards the events from kernel
 	   will maintain the list This needs to be done before opening
 	   NETLINK_ROUTE! See the comment about address_count global var. */
@@ -405,6 +409,10 @@ void hip_exit(int signal)
 
 	/* This is needed only if RVS or escrow is in use. */
 	hip_uninit_services();
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	hip_oppdb_uninit();
+#endif
 
 #ifdef CONFIG_HIP_HI3
 	cl_exit();
