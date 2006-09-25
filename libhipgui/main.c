@@ -161,6 +161,8 @@ void gui_set_info(const char *string, ...)
 	char *str[2048];
 	va_list args;
 	
+	gdk_threads_enter();
+	
 	/* Get args. */
 	va_start(args, string);
 
@@ -173,6 +175,8 @@ void gui_set_info(const char *string, ...)
 
 	/* End args. */
 	va_end(args);
+
+	gdk_threads_leave();
 }
 /* END OF FUNCTION */
 

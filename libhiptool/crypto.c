@@ -330,14 +330,17 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out) {
 }
 
 /**
- * hip_write_hmac - calculate hmac
- * @param type Type (digest algorithm) of HMAC
- * @param key Pointer to the key used for HMAC
- * @param in Input buffer pointer
- * @param in_len Length of buffer
- * @param out Output buffer pointer. For SHA1-HMAC this is 160bits
- *
- * Returns true, if ok.
+ * Calculates a hmac.
+ * 
+ * @param type   type (digest algorithm) of hmac.
+ * @param key    a pointer to the key used for hmac.
+ * @param in     a pointer to the input buffer.
+ * @param in_len the length of the input buffer @c in.
+ * @param out    a pointer to the output buffer. For SHA1-HMAC this is 160bits.
+ * @return       1 if ok, zero otherwise.
+ * @warning      This function returns 1 for success which is against the policy
+ *               defined in @c /doc/HACKING.
+ * @todo         Should this function return zero for success?
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {

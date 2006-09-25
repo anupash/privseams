@@ -110,6 +110,7 @@ CLIENT *clnt;
 bamboo_get_args get_args;
 bamboo_get_res  *get_result;
 char host[] =  "planetlab1.diku.dk";
+//char host[] = "opendht.nyuld.net";
 int port = 5852;
 char key[] = "01928491824091";
 int ttl = 100;

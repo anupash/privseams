@@ -48,7 +48,6 @@ int hip_services_add(int service_type)
 		goto out_err;
 	}
 	
-	
 	HIP_SERVICE *service;
 	service = HIP_MALLOC(sizeof(struct hip_reg_service), GFP_KERNEL);
 	

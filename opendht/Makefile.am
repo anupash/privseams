@@ -4,10 +4,13 @@ CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 EXTRA_DIST = rpcif.x
-CLEANFILES = rpcif.h rpcif_client.c rpcif_xdr.c
 
 XDR=rpcgen
 XDRCONFIG=rpcif.x
+
+if HIP_OPENDHT
+
+CLEANFILES = rpcif.h rpcif_client.c rpcif_xdr.c
 
 lib_LTLIBRARIES = libdhtresolver.la libdhttracker.la
 libdhtresolver_la_SOURCES  = resolver.c opendht_interface.c rpcif_client.c rpcif_xdr.c
@@ -36,3 +39,13 @@ client.c: rpcif.h
 opendht_interface.c: rpcif.h
 rpcif_client.c: rpcif.h
 
+else
+
+# Workaround for "make dist" to succeed;
+# the generatable c files are problematic.
+rpcif_client.c:
+	touch  rpcif_client.c
+rpcif_xdr.c:
+	touch  rpcif_xdr.c
+
+endif

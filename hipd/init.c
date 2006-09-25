@@ -50,6 +50,10 @@ int hipd_init(int flush_ipsec)
 	cl_init(i3_config);
 #endif
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+		hip_init_opp_db();
+#endif
+
 	/* Resolve our current addresses, afterwards the events from kernel
 	   will maintain the list This needs to be done before opening
 	   NETLINK_ROUTE! See the comment about address_count global var. */
@@ -390,6 +394,8 @@ void hip_close(int signal)
  */
 void hip_exit(int signal)
 {
+	int alen;
+	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
 	//hip_delete_default_prefix_sp_pair();
@@ -406,6 +412,10 @@ void hip_exit(int signal)
 	/* This is needed only if RVS or escrow is in use. */
 	hip_uninit_services();
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	hip_oppdb_uninit();
+#endif
+
 #ifdef CONFIG_HIP_HI3
 	cl_exit();
 #endif
@@ -416,8 +426,11 @@ void hip_exit(int signal)
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
 	hip_uninit_kea_endpoints();
-	hip_uninit_services();
 #endif
+
+	msg = hip_msg_alloc();
+	if (!msg) HIP_ERROR("Failed to allocate memory for message. Could cause problems later.\n");
+	hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
 
 	// hip_uninit_host_id_dbs();
         // hip_uninit_hadb();
@@ -437,7 +450,12 @@ void hip_exit(int signal)
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
 	if (hip_agent_sock)
+	{
+		alen = sizeof(hip_agent_addr);
+		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
+		       (struct sockaddr *)&hip_agent_addr, alen);
 		close(hip_agent_sock);
+	}
 }
 
 /**
