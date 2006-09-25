@@ -96,6 +96,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	return err;
 }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_scan_opp_fallback()
 {
 	int err = 0;
@@ -107,6 +108,7 @@ int hip_scan_opp_fallback()
  out_err:
 	return err;
 }
+#endif
 
 /**
  * Find packets, that should be retransmitted.
@@ -416,6 +418,7 @@ int periodic_maintenance()
 		retrans_counter--;
 	}
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (opp_fallback_counter < 0) {
 		HIP_IFEL(hip_scan_opp_fallback(), -1,
 			 "retransmission scan failed\n");
@@ -423,6 +426,7 @@ int periodic_maintenance()
 	} else {
 		opp_fallback_counter--;
 	}
+#endif
 
 	if (precreate_counter < 0) {
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
