@@ -55,4 +55,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					 struct in6_addr *src_addr,
 					 struct in6_addr *dst_addr,
 					 struct hip_stateless_info *msg_info);
+int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
+		     void *opaque);
 #endif /* HIP_HADB_H */
