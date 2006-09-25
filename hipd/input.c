@@ -957,6 +957,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	esp_info->new_spi = htonl(spi_in);
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits, 
+        &ctx->input->hitr, &spi_in, transform_esp_suite, &ctx->esp_in, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }             
+#endif //CONFIG_HIP_ESCROW
+				      
 
 	/* Check if the incoming R1 has a REG_REQUEST parameter. */
 
@@ -1819,6 +1828,16 @@ int hip_handle_i2(struct hip_common *i2,
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(i2_saddr, i2_daddr, &ctx->input->hits, 
+        &ctx->input->hitr, &spi_in, esp_tfm, &ctx->esp_in, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW
+                          
+
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
@@ -1846,6 +1865,15 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 	/* XXX: Check if err = -EAGAIN... */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
+
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(i2_daddr, i2_saddr, &ctx->input->hitr, 
+        &ctx->input->hits, &spi_out, esp_tfm, &ctx->esp_out, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
@@ -2109,6 +2137,15 @@ int hip_handle_r2(struct hip_common *r2,
 	}
 	/* XXX: Check for -EAGAIN */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
+
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(r2_daddr, r2_saddr, &ctx->input->hitr, 
+        &ctx->input->hits, &spi_recvd, tfm, &ctx->esp_out, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW                          
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */

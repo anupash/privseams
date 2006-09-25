@@ -66,6 +66,10 @@ typedef struct hip_kea_endpoint HIP_KEA_EP;
 
 /************** ESCROW  ****************/
 
+int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
+    struct in6_addr *src_hit, struct in6_addr *dst_hit, uint32_t *spi, 
+    int ealg, struct hip_crypto_key *enckey, int operation);
+
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
 	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc);

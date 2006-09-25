@@ -49,6 +49,8 @@
 #define HIP_FIREWALL_QUIT			82
 /** Daemon sends escrow data to firewall with this message. */
 #define HIP_ADD_ESCROW_DATA			83
+/** Daemon tells firewall to remove escrow data with this message. */
+#define HIP_DELETE_ESCROW_DATA		84
 
 /**
  * Daemon should send this message to other processes, when quiting.

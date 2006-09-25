@@ -440,6 +440,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 /******************************/
 
 
+
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
 	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc)
@@ -598,6 +599,57 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	if (update_packet)
 		HIP_FREE(update_packet);
 	return err;
+}
+
+/* Deliver SA data to escrow server */
+int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
+                            struct in6_addr *src_hit, struct in6_addr *dst_hit,
+                            uint32_t *spi, int ealg, struct hip_crypto_key *enckey, 
+                            int operation)
+{
+    int err = 0;
+    HIP_KEA * kea = NULL;
+    hip_ha_t * entry = NULL;
+    hip_ha_t * server_entry = NULL;
+    
+    HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1, 
+        "Could not find ha_state entry");   
+    if (entry->escrow_used) {
+        int enckey_len;     
+        HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "Could not find kea base entry");
+        HIP_DEBUG_HIT("escrow_server_hit ", &entry->escrow_server_hit);
+        HIP_DEBUG_HIT("kea base entry server_hit", &kea->server_hit);
+        HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit)),
+            -1, "No server entry found");
+        
+        if (kea->keastate == HIP_KEASTATE_VALID) {
+            // TODO: Fix values. Spi usage needs to be checked. 
+            // direction should propably be checked
+            enckey_len = hip_enc_key_length(ealg);
+            err = hip_send_escrow_update(server_entry, operation, 
+                daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
+        
+            if (ipv6_addr_cmp(&kea->hit, dst_hit))
+                kea->spi_in = *spi;
+            else 
+                kea->spi_out = *spi;        
+        }
+        else {
+            HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
+        }
+    }
+    else {
+        HIP_DEBUG("Escrow not in use\n");
+    }
+
+out_err:
+    if (kea)
+        hip_keadb_put_entry(kea);
+    if (entry)
+        hip_put_ha(entry);
+    if (server_entry)
+        hip_put_ha(server_entry);        
+    return err;   
 }
 
 
