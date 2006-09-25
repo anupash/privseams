@@ -413,13 +413,16 @@ void hip_rvs_remove(HIP_RVA *rva)
  * Relays an incoming I1 packet.
  *
  * This function relays an incoming I1 packet to the next node on path
- * to receiver and inserts a @c FROM parameter encapsulating the source IP address.
- * Next node on path is typically the responder, but if the message is to travel
- * multiple rendezvous servers en route to responder, next node can also be
- * another rendezvous server. In this case the @c FROM parameter is appended after
- * the existing ones. Thus current RVS appends the address of previous RVS
- * and the final RVS (n) sends @c FROM:I, @c FROM:RVS1, ... ,
- * <code>FROM:RVS(n-1)</code>.
+ * to receiver and inserts a @c FROM parameter encapsulating the source IP
+ * address. In case there is a NAT between the sender (the initiator or previous
+ * RVS) of the I1 packet, a @c FROM_NAT parameter is inserted instead of a
+ * @c FROM parameter. Next node on path is typically the responder, but if the
+ * message is to travel multiple rendezvous servers en route to responder, next
+ * node can also be another rendezvous server. In this case the @c FROM
+ * (@c FROM_NAT) parameter is appended after the existing ones. Thus current RVS
+ * appends the address of previous RVS and the final RVS (n) in the RVS chain
+ * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code> or in case of
+ * NAT @c FROM_NAT:I, @c FROM_NAT:RVS1, ... , <code>FROM_NAT:RVS(n-1)</code>.
  * 
  * @param i1       a pointer to the I1 HIP packet common header with source and
  *                 destination HITs.
@@ -432,6 +435,9 @@ void hip_rvs_remove(HIP_RVA *rva)
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @note           This code has not been tested thoroughly with multiple RVSes.
+ * @warning        This code does not work correctly if there are multiple
+ *                 RVSes of which some are behind NAT and others are not.
  */
 int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
@@ -449,6 +455,22 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
 	struct in6_addr final_dst, local_addr;
+	hip_tlv_type_t param_type = 0;
+	/* A function pointer to either hip_build_param_from() or
+	   hip_build_param_from_nat(). */
+	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
+				 in_port_t not_used);
+
+	/* If the incoming I1 packet was destined to port 50500, we know that
+	   there is a NAT between (I->NAT->RVS->R). */
+	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
+		builder_function = hip_build_param_from_nat;
+		param_type = HIP_PARAM_FROM_NAT;
+	}
+	else {
+		builder_function = hip_build_param_from;
+		param_type = HIP_PARAM_FROM;
+	}
 
 	/* Get the destination IP address which the client has registered from
 	   the rendezvous association. */
@@ -463,44 +485,47 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	hip_build_network_hdr(i1_to_be_relayed, HIP_I1, 0,
 			      &(i1->hits), &(i1->hitr));
 
-	/* Adding FROM parameter. Loop through all the parameters in the
-	   received I1 packet, and insert a new FROM parameter after the last
-	   found FROM parameter. Notice that in most cases the incoming I1 has
-	   no paramaters at all, and this "while" loop is skipped. Multiple
-	   rvses en route to responder is one (and only?) case when the incoming
-	   I1 packet has parameters. */
+	/* Adding FROM (FROM_NAT) parameter. Loop through all the parameters in
+	   the received I1 packet, and insert a new FROM (FROM_NAT) parameter
+	   after the last found FROM (FROM_NAT) parameter. Notice that in most
+	   cases the incoming I1 has no paramaters at all, and this "while" loop
+	   is skipped. Multiple rvses en route to responder is one (and only?)
+	   case when the incoming I1 packet has parameters. */
 	while ((current_param = hip_get_next_param(i1, current_param)) != NULL)
 	{
 		HIP_DEBUG("Found parameter in I1.\n");
-		/* Copy while type is smaller than or equal to FROM or a 
-		   new FROM has already been added. */
-		/** @todo Could use hip_get_param_type() here. */
-		if (from_added || ntohs(current_param->type) <= HIP_PARAM_FROM)
+		/* Copy while type is smaller than or equal to FROM (FROM_NAT)
+		   or a new FROM (FROM_NAT) has already been added. */
+		if (from_added || hip_get_param_type(current_param) <= param_type)
 		{
 			HIP_DEBUG("Copying existing parameter to I1 packet "\
 				  "to be relayed.\n");
 			hip_build_param(i1_to_be_relayed,current_param);
 			continue;
 		}
-		/* Parameter under inspections has greater type than FROM
-		   parameter: insert a new FROM parameter between the last
-		   found FROM parameter and "current_param". */
+		/* Parameter under inspection has greater type than FROM
+		   (FROM_NAT) parameter: insert a new FROM (FROM_NAT) parameter
+		   between the last found FROM (FROM_NAT) parameter and
+		   "current_param". */
 		else
 		{
-			HIP_DEBUG("Created new FROM and copied "\
-				  "current parameter to relayed I1.\n");
-			hip_build_param_from(i1_to_be_relayed, i1_saddr);
+			HIP_DEBUG("Created new %s and copied "\
+				  "current parameter to relayed I1.\n",
+				  hip_param_type_name(param_type));
+			builder_function(i1_to_be_relayed, i1_saddr,
+					 i1_info->src_port);
 			hip_build_param(i1_to_be_relayed, current_param);
 			from_added = 1;
 		}
 	}
 
-	/* If the incoming I1 had no parameters after the existing FROM
-	   parameters, new FROM parameter is not added until here. */
+	/* If the incoming I1 had no parameters after the existing FROM (FROM_NAT)
+	   parameters, new FROM (FROM_NAT) parameter is not added until here. */
 	if (!from_added)
 	{
-		HIP_DEBUG("No parameters found, adding a new FROM.\n");
-		hip_build_param_from(i1_to_be_relayed, i1_saddr);
+		HIP_DEBUG("No parameters found, adding a new %s.\n",
+			  hip_param_type_name(param_type));
+		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
 	}
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed

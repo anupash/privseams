@@ -2253,6 +2253,8 @@ int hip_handle_r2(struct hip_common *r2,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code does not work correctly if there are @b both
+ *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
@@ -2270,18 +2272,37 @@ int hip_handle_i1(struct hip_common *i1,
 
 #ifdef CONFIG_HIP_RVS
 	
-	/* We have three cases:
-	   1. One FROM parameter was found.
-	   2. Multiple FROM parameters were found.
-	   3. FROM parameter was not found. */
+	/* Note that this code effectively takes place at the responder of
+	   I->RVS->R hierachy, not at the RVS itself. 
+
+	   We have three cases:
+	   1. One FROM (or FROM_NAT) parameter was found.
+	   2. Multiple FROM (or FROM_NAT) parameters were found.
+	   3. FROM (nor FROM_NAT) parameter was not found. */
 	
+	/* Check if the incoming I1 packet has a FROM_NAT parameter. */
+	struct hip_from_nat *from_nat = hip_get_param(i1, HIP_PARAM_FROM_NAT);
 	/* Check if the incoming I1 packet has a FROM parameter. */
 	struct hip_from *from = hip_get_param(i1, HIP_PARAM_FROM);
-	if (from) {
+
+	if (from || from_nat) {
 
 		/* Case 1. */
-		HIP_DEBUG("Found FROM parameter in I1.\n");
-
+		HIP_DEBUG("Found %s parameter in I1.\n",
+			  from ? "FROM" : "FROM_NAT");
+		
+		struct hip_tlv_common *current_param = NULL;
+		hip_tlv_type_t param_type = 0;
+		
+		if(from_nat) {
+			param_type = HIP_PARAM_FROM_NAT;
+			current_param = (struct hip_tlv_common *)from_nat;
+		}
+		else {
+			param_type = HIP_PARAM_FROM;
+			current_param = (struct hip_tlv_common *)from;
+		}
+		
 		/* The relayed I1 packet has the initiators HIT as source HIT,
 		   and the responder HIT as destination HIT. We would like to
 		   verify the HMAC againts the host association that was created
@@ -2305,28 +2326,42 @@ int hip_handle_i1(struct hip_common *i1,
 		/* First FROM parameter has the destination IP (Initiator). */
 		dstip = (struct in6_addr *)&from->address;
 
-		/* Check if there are multiple FROM parameters. Rest of the FROM
-		   parameters have the IP addresses of the traversed RVSes. */
-		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
-		while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
-			if(ntohs(current_param->type) == HIP_PARAM_FROM){
+		/* Check if there are multiple FROM (FROM_NAT) parameters. Rest
+		   of the FROM (FROM_NAT) parameters have the IP addresses of
+		   the traversed RVSes. */
+		while ((current_param = hip_get_next_param(i1, current_param))
+		       != NULL) {
+			if(hip_get_param_type(current_param) == param_type){
 				/* Case 2. */
 				via_rvs_count++;
-				HIP_DEBUG("Found multiple FROM parameters in I1.\n");
+				HIP_DEBUG("Found multiple %s parameters in I1.\n",
+					  (param_type == HIP_PARAM_FROM_NAT) ?
+					  "FROM_NAT" : "FROM");
 			}
 			else {
 				break;
 			}
 		}
-		/* Now that it is known how many FROM parameters there are, memory
-		   can be allocated for the rvs_addresses array. */
-		HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
-				   (via_rvs_count + 1) * sizeof(struct in6_addr), 0)),
-			 -ENOMEM, "Not enough memory to rvs_addresses.");
-		
+		/* Now that it is known how many FROM (FROM_NAT) parameters
+		   there are, memory can be allocated for the rvs_addresses
+		   array. */
+		if(param_type == HIP_PARAM_FROM_NAT) {
+			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
+					   (via_rvs_count + 1) *
+					   (sizeof(struct in6_addr) +
+					    sizeof(in_port_t)), 0)),
+				 -ENOMEM, "Not enough memory to rvs_addresses.");
+		}
+		else {
+			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
+					   (via_rvs_count + 1) *
+					   sizeof(struct in6_addr), 0)),
+				 -ENOMEM, "Not enough memory to rvs_addresses.");
+		}
 		/* Copy traversed rvsaddresses to an array. RVS addresses are
 		   the addresses in FROM parameters 2...n + source IP in the
 		   incoming I1 packet. */
+		/** @todo Move this inside the malloc() if, and it will work... */
 		current_param = (struct hip_tlv_common *)from;
 		int i;
 		for(i = 0; i < via_rvs_count; i++)

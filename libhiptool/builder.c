@@ -561,17 +561,18 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 }
 
 /**
- * hip_get_param - get the first parameter of the given type
- * @param msg pointer to the beginning of the message header
- * @param param_type the type of the parameter to be searched from msg
- *              (in host byte order)
- *
+ * Gets  the first parameter of the given type.
+  *
  * If there are multiple parameters of the same type, one should use
- * hip_get_next_param after calling this function to iterate through
+ * hip_get_next_param() after calling this function to iterate through
  * them all.
- *
- * @return a pointer to the first parameter of the type param_type, or
- *          NULL if no parameters of the type param_type were not found. 
+ 
+ * @param msg        a pointer to the beginning of the message header.
+ * @param param_type the type of the parameter to be searched from msg
+ *                   (in host byte order)
+ * @return           a pointer to the first parameter of the type param_type,
+ *                   or NULL if no parameters of the type param_type were not
+ *                   found. 
  */
 void *hip_get_param(const struct hip_common *msg,
 		    hip_tlv_type_t param_type)
@@ -581,7 +582,8 @@ void *hip_get_param(const struct hip_common *msg,
 
 	_HIP_DEBUG("searching for type %d\n", param_type);
 
-/* XXX: Optimize: stop when next parameter's type is greater than the searched one */
+       /** @todo Optimize: stop when next parameter's type is greater than the
+	   searched one. */
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
@@ -1077,21 +1079,24 @@ int hip_check_network_msg(const struct hip_common *msg)
 }
 
 /**
- * hip_build_generic_param - build and insert a parameter into the message
- * @param msg the message where the parameter is to be appended
- * @param parameter_hdr pointer to the header of the parameter
+ * Builds and inserts a parameter into the message.
+ *
+ * This is the root function of all parameter building functions.
+ * hip_build_param() and hip_build_param_contents() both  use this function to
+ * actually append the parameter into the HIP message. This function updates the
+ * message header length to keep the next free parameter slot quickly accessible
+ * for faster writing of the parameters. This function also automagically adds
+ * zero filled paddign to the parameter, to keep its total length in multiple of
+ * 8 bytes.
+ * 
+ * @param msg            the message where the parameter is to be appended
+ * @param parameter_hdr  pointer to the header of the parameter
  * @param param_hdr_size size of parameter_hdr structure (in host byte order)
- * @param contents the contents of the parameter; the data to be inserted
- *                  after the parameter_hdr (in host byte order)
- *
- * This to function should be used by other parameter builder functions
- * to append parameters into a message. Do not do that manually or you will
- * break the builder system.
- *
- * This function updates the message header length to keep the next free
- * parameter slot quickly accessible for faster writing of the parameters.
- *
- * @return zero on success, or negative on error
+ * @param contents       the contents of the parameter; the data to be inserted
+ *                       after the parameter_hdr (in host byte order)
+ * @return               zero on success, or negative on error
+ * @see                  hip_build_param().
+ * @see                  hip_build_param_contents().
  */
 int hip_build_generic_param(struct hip_common *msg,
 			    const void *parameter_hdr,
@@ -1177,19 +1182,22 @@ int hip_build_generic_param(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_contents - build and append parameter contents into message
- * @param msg the message where the parameter will be appended
- * @param contents the data after the type and length fields
- * @param param_type the type of the parameter (in host byte order)
- * @param contents_size the size of contents (in host byte order)
- *
+ * Builds and appends parameter contents into message
+ * 
  * This function differs from hip_build_generic_param only because it
  * assumes that the parameter header is just sizeof(struct hip_tlv_common).
- *
  * This function updates the message header length to keep the next free
  * parameter slot quickly accessible for faster writing of the parameters.
+ * This function automagically adds zero filled paddign to the parameter,
+ * to keep its total length in multiple of 8 bytes.
  *
- * @return zero on success, or negative on error
+ * @param msg           the message where the parameter will be appended.
+ * @param contents      the data after the type and length fields.
+ * @param param_type    the type of the parameter (in host byte order).
+ * @param contents_size the size of contents (in host byte order).
+ * @return              zero on success, or negative on error.
+ * @see                 hip_build_generic_param().
+ * @see                 hip_build_param().
  */
 int hip_build_param_contents(struct hip_common *msg,
 			     const void *contents,
@@ -1223,8 +1231,10 @@ int hip_build_param_contents(struct hip_common *msg,
  * @param msg        a pointer to a message where the parameter will be
  *                   appended.
  * @param tlv_common a pointer to the network byte ordered parameter that will
- *                   be appended into the message
+ *                   be appended into the message.
  * @return           zero on success, or negative error value on error.
+ * @see              hip_build_generic_param().
+ * @see              hip_build_param_contents().
  */
 int hip_build_param(struct hip_common *msg, const void *tlv_common)
 {
@@ -1701,13 +1711,16 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  *
  * Builds a @c FROM parameter to the HIP packet @c msg.
  *
- * @param msg  a pointer to a HIP packet common header
- * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @return     zero on success, or negative error value on error.
- * @see        <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
- *             draft-ietf-hip-rvs-05</a> section 4.2.2.
+ * @param msg      a pointer to a HIP packet common header
+ * @param addr     a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param not_used this parameter is not used, but it is needed to make the
+ *                 parameter list uniform with hip_build_param_from_nat().
+ * @return         zero on success, or negative error value on error.
+ * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr)
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
+			 in_port_t not_used)
 {
 	struct hip_from from;
 	int err = 0;
@@ -1801,7 +1814,6 @@ int hip_build_param_via_rvs_nat(struct hip_common *msg,
 	hip_set_param_type(&viarvsnat, HIP_PARAM_VIA_RVS_NAT);
 	hip_calc_generic_param_len(&viarvsnat, sizeof(struct hip_via_rvs_nat),
 				   address_count * sizeof(struct hip_in6_addr_port));
-	/* Add ports to the content. */
 	err = hip_build_generic_param(msg, &viarvsnat, sizeof(struct hip_via_rvs_nat),
 				      (void *)rvs_addr_ports);
 	return err;

@@ -298,7 +298,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	/* UDP port numbers */
 	if (is_ipv4) {
-		/** @todo Store the destination port also. */
+		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);

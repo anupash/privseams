@@ -166,7 +166,8 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *puzzle,
 
 int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation);
 
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr);
+int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
+			 in_port_t not_used);
 int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
 			     in_port_t port);
 int hip_build_param_via_rvs(struct hip_common *msg,
