@@ -23,7 +23,7 @@ client_teststub_SOURCES = client-teststub.c
 tracker_teststub_SOURCES = tracker-teststub.c
 dht_dnsd_SOURCES = conf.c base64.c dns.c hex.c sha.c validator.c
 
-LDADD = .libs/libdhttracker.a .libs/libdhtresolver.a ../libinet6/.libs/libinet6.a
+LDADD = .libs/libdhttracker.a .libs/libdhtresolver.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 ../libinet6/.libs/libinet6.a:
 	$(MAKE) -C $(HIPL)/libinet6
