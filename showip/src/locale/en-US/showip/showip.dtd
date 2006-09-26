@@ -1,0 +1,27 @@
+<!ENTITY copytoclipboard "Copy to clipboard">
+
+<!ENTITY pref.title      "ShowIP Settings">
+<!ENTITY pref.services   "Services">
+<!ENTITY pref.ui   "User Interface">
+<!ENTITY pref.Title   "Title">
+<!ENTITY pref.URL   "URL">
+<!ENTITY pref.Host   "Host">
+<!ENTITY pref.newentry   "Add new Entry">
+<!ENTITY pref.placeholder   "placeholder">
+<!ENTITY pref.Add   "Add">
+<!ENTITY pref.Update   "Update">
+<!ENTITY pref.Delete   "Delete">
+<!ENTITY pref.StyleV4   "IPv4 Address Style">
+<!ENTITY pref.StyleV4decimal   "Decimal">
+<!ENTITY pref.StyleV4octal   "Octal">
+<!ENTITY pref.StyleV4hex   "Hex">
+<!ENTITY pref.StyleV4dword   "DWord">
+
+<!ENTITY pref.help "Use ## as wildcard in the URL for the current IP or Hostname, depending on the context. ### represents the full URL, #D# just the domain name. URLs starting with ! are assumed to be local programs and called with the current IP or hostname as the first parameter">
+
+<!ENTITY pref.Openin   "Open queries in">
+<!ENTITY pref.OpeninTab   "Open queries in new tab">
+<!ENTITY pref.OpeninHiddenTab   "Open queries in new background tab">
+<!ENTITY pref.Colors   "Colors">
+<!ENTITY pref.cdefault   "Default">
+
