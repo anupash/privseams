@@ -13,6 +13,7 @@
 
 #include "init.h"
 
+extern struct hip_common *msg;
 
 /**
  * Main initialization function for HIP daemon.
@@ -402,6 +403,9 @@ void hip_exit(int signal)
 
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
+	if (msg)
+	  HIP_FREE(msg);
 	
 	hip_delete_all_sp();
 

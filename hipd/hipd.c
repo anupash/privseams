@@ -13,6 +13,10 @@
 
 #include "hipd.h" 
 
+/* Defined as a global just to allow freeing in exit(). Do not use outside
+   of this file! */
+struct hip_common *hip_msg = NULL;
+
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
@@ -97,7 +101,6 @@ int main(int argc, char *argv[]) {
 	struct timeval timeout;
 	struct hip_work_order ping;
 
-	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
