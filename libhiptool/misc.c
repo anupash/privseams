@@ -1255,6 +1255,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     free(dsa_filenamebase_pub);
   if (rsa_filenamebase_pub)
     free(rsa_filenamebase_pub);
+  if (endpoint_dsa_hip)
+    free(endpoint_dsa_hip);
+  if (endpoint_rsa_hip)
+    free(endpoint_rsa_hip);
+  if (endpoint_dsa_pub_hip)
+    free(endpoint_dsa_pub_hip);
+  if (endpoint_rsa_pub_hip)
+    free(endpoint_rsa_pub_hip);
   
   return err;
 }
