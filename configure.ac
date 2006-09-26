@@ -4,7 +4,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_INIT(hipl, main, hipl-users@freelists.org, hipl-main.tar.gz)
-AC_CONFIG_SRCDIR([tools/hipconf.c])
+AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
 # Checks for programs.
