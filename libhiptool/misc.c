@@ -742,7 +742,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 }
 
 void change_key_file_perms(char *filenamebase) {
-  char *pubfilename;
+  char *pubfilename = NULL;
   int pubfilename_len;
 
   pubfilename_len =
@@ -761,6 +761,9 @@ void change_key_file_perms(char *filenamebase) {
   chmod(pubfilename, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
 
  out_err:
+  if (pubfilename)
+    HIP_FREE(pubfilename);
+
   return;
 }
 
