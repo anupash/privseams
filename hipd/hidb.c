@@ -343,6 +343,8 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	/* free the dynamically reserved memory and
 	   set host_id to null to signal that it is free */
+	if (id->r1)
+		hip_uninit_r1(id->r1);
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;

@@ -497,7 +497,7 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 int hip_iproute_modify(struct rtnl_handle *rth,
 		       int cmd, int flags, int family, char *ip,
-		       char *dev, struct idxmap **idxmap)
+		       char *dev)
 {
         struct {
                 struct nlmsghdr         n;
@@ -505,9 +505,13 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                 char                    buf[1024];
         } req1;
         inet_prefix dst;
+	struct idxmap *idxmap[16];
         int dst_ok = 0, err;
-        int idx;
+        int idx, i;
+
         memset(&req1, 0, sizeof(req1));
+	for (i = 0; i < 16; i++)
+	  idxmap[i] = NULL;
 
         req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
         req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
@@ -544,6 +548,9 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 		"netlink_talk failed\n");
 
  out_err:
+	for (i = 0; i < 16; i++)
+	  if (idxmap[i])
+	    HIP_FREE(idxmap[i]);
 
         return 0;
 }
