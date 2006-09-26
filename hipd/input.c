@@ -1322,6 +1322,8 @@ int hip_handle_r1(struct hip_common *r1,
  * @param r1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code does not work correctly if there are @b both
+ *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_r1(struct hip_common *r1,
 		   struct in6_addr *r1_saddr,
@@ -2268,7 +2270,8 @@ int hip_handle_i1(struct hip_common *i1,
 	HIP_DUMP_MSG(i1);
 
 	int err = 0, via_rvs_count = 0;
-	struct in6_addr *dstip = NULL, *rvs_addresses = NULL;
+	struct in6_addr *dstip = NULL;
+	void *rvs_addresses = NULL;
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -2345,6 +2348,8 @@ int hip_handle_i1(struct hip_common *i1,
 		/* Now that it is known how many FROM (FROM_NAT) parameters
 		   there are, memory can be allocated for the rvs_addresses
 		   array. */
+
+		/* VIA_RVS_NAT */
 		if(param_type == HIP_PARAM_FROM_NAT) {
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
@@ -2352,29 +2357,35 @@ int hip_handle_i1(struct hip_common *i1,
 					    sizeof(in_port_t)), 0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
 		}
+		
+		/* VIA_RVS */
 		else {
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
 					   sizeof(struct in6_addr), 0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
+			
+			rvs_addresses = (struct in6_addr *) rvs_addresses;
+			/* Copy traversed rvsaddresses to an array. RVS addresses are
+			   the addresses in FROM parameters 2...n + source IP in the
+			   incoming I1 packet. */
+			current_param = (struct hip_tlv_common *)from;
+			int i;
+			for(i = 0; i < via_rvs_count; i++)
+			{
+				current_param = hip_get_next_param(i1, current_param);
+				memcpy(&rvs_addresses[i],
+				       hip_get_param_contents_direct(current_param),
+				       sizeof(struct in6_addr));
+			}
+			
+			/* Append source IP address from I1 to RVS addresses. */
+			memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
+			via_rvs_count++;
 		}
-		/* Copy traversed rvsaddresses to an array. RVS addresses are
-		   the addresses in FROM parameters 2...n + source IP in the
-		   incoming I1 packet. */
-		/** @todo Move this inside the malloc() if, and it will work... */
-		current_param = (struct hip_tlv_common *)from;
-		int i;
-		for(i = 0; i < via_rvs_count; i++)
-		{
-			current_param = hip_get_next_param(i1, current_param);
-			memcpy(&rvs_addresses[i],
-			       hip_get_param_contents_direct(current_param),
-			       sizeof(struct in6_addr));
-		}
-
-		/* Append source IP address from I1 to RVS addresses. */
-		memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
-		via_rvs_count++;
+		
+		
+		
 	}
 	else {
 		/* Case 3. */
@@ -2424,6 +2435,8 @@ int hip_handle_i1(struct hip_common *i1,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code does not work correctly if there are @b both
+ *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_i1(struct hip_common *i1,
 		   struct in6_addr *i1_saddr,

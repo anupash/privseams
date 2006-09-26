@@ -51,12 +51,13 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
 		HIP_DEBUG_INADDR("IPv4 addr", &a);
+		HIP_DEBUG("%x %x %x %x\n", a, INADDR_ANY, INADDR_LOOPBACK, INADDR_BROADCAST);
 		a = ntohl(a);
 		if ((a == INADDR_ANY) ||
                     (a == INADDR_LOOPBACK) ||
-		    (a == INADDR_BROADCAST) ||
 			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
-		    IS_LSI32(a)) {
+		    (a == INADDR_BROADCAST) ||
+			IS_LSI32(a)) {
 			return 0;
 		} else {
 			return 1;
