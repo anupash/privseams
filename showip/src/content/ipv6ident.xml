@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!DOCTYPE bindings SYSTEM "chrome://ipv6ident/locale/showip.dtd">
+<bindings id="ipv6identBindings"
+xmlns="http://www.mozilla.org/xbl"
+xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+xmlns:html="http://www.w3.org/1999/xhtml">
+
+<!--
+<binding id="ipv6identloadmechanism" display="xul:button">
+<implementation>
+<constructor>
+<![CDATA[
+
+]]>
+</constructor>
+</implementation>
+</binding>
+-->
+<binding id="statusbarpanel" display="xul:button">
+<content>
+	<xul:popup id="showip_ipmenu" onpopupshowing="showipExt.AddIPItems(this);" position="after_start">
+		<xul:menuitem id="showip_currentip" label="0.0.0.0" disabled="true"/>
+		<xul:menuseparator/>
+		<xul:menuitem label="&copytoclipboard;" oncommand="showipExt.copytoclip(showipExt.gethostip());"/>
+	</xul:popup>
+
+	<!-- left mouse button - query by name -->
+	<xul:popup id="showip_hostmenu" onpopupshowing="showipExt.AddHostItems(this);" position="after_start">
+		<xul:menuitem id="showip_currenthost" label="world" disabled="true"/>
+		<xul:menuseparator/> 
+		<xul:menuitem label="&copytoclipboard;" oncommand="showipExt.copytoclip(showipExt.gethostname());"/>
+	</xul:popup>
+<!--	
+<xul:popup id="iii_test">
+	<xul:menuitem label="ficken"/>
+</xul:popup>
+-->
+<xul:spacer flex="1"/>
+<xul:label id="showip_status_text" value="ShowIP" class="statusbarpanel-text" popup="showip_hostmenu" context="showip_ipmenu"/>
+<xul:spacer flex="1"/>
+</content>
+
+<implementation>
+<constructor>
+<![CDATA[
+// alert('test');
+
+
+	]]>
+	</constructor>
+</implementation>
+<!--
+<handlers>
+	<handler button="0" event="click" clickcount="1" action="alert('left');IPV6_showpopup(0);"/>
+	<handler button="2" event="click" clickcount="1" action="alert('right');IPV6_showpopup(2);"/>
+</handlers>
+-->
+</binding>
+
+</bindings>
+
+
