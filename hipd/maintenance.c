@@ -378,7 +378,8 @@ int periodic_maintenance()
 			err = hip_count_open_connections();
 			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
 		} else {
-			hip_close(SIGINT);
+			hip_exit(SIGINT);
+			exit(SIGINT);
 		}
 		force_exit_counter--;
 	}
