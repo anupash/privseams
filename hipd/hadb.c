@@ -405,7 +405,7 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
-
+	
 	err = hip_hadb_add_peer_info(hit, ip);
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
@@ -2266,6 +2266,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	hip_hadb_delete_outbound_spi(ha, 0);
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
+	//if (ha->hip_msg_retrans.buf)
+	//  HIP_FREE(ha->hip_msg_retrans.buf);
 	HIP_FREE(ha);
 }
 
