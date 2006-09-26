@@ -1027,10 +1027,11 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
   HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key)); // shouldn't this be NULL also?
 
-  HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
-  HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
-  HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-  HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
+  /* notice that these functions allocate memory */
+  _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
+  _HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
+  _HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
+  _HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
 
   /* ***** is use of BN_num_bytes ok ? ***** */
   t = (BN_num_bytes(dsa->p) - 64) / 8;
@@ -1153,7 +1154,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
     free(*dsa_key_rr);
 
  out_err:
-  if (bn_buf )
+  if (bn_buf)
     free(bn_buf);
   return dsa_key_rr_len;
 }

@@ -968,7 +968,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
 {
         int h;
         struct ifinfomsg *ifi = NLMSG_DATA(n);
-        struct idxmap *im, **imp;
+        struct idxmap *im = NULL, **imp;
 	struct idxmap **idxmap = (struct idxmap **) arg;
         struct rtattr *tb[IFLA_MAX+1];
 
@@ -1012,6 +1012,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
                 memset(im->addr, 0, sizeof(im->addr));
         }
         strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
+
         return 0;
 }
 

@@ -47,6 +47,8 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
+		if (tmp->r1)
+			hip_uninit_r1(tmp->r1);
 		if (tmp->host_id)
 			HIP_FREE(tmp->host_id);
 		HIP_FREE(tmp);
@@ -147,8 +149,9 @@ int hip_add_host_id(struct hip_db_struct *db,
 	HIP_ASSERT(&lhi->hit != NULL);
 	_HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
-								      GFP_KERNEL)), -ENOMEM,
+								      0)), -ENOMEM,
 		 "No memory available for host id\n");
+	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 	len = hip_get_param_total_len(host_id);
 	HIP_IFEL(!(id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
 		 -ENOMEM, "lhost_id mem alloc failed\n");
