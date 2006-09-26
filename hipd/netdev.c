@@ -693,11 +693,14 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
-	int err = 0;
+	int err = 0, i;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+	char *rtnl_rtdsfield_tab[HIP_RTDS_TAB_LEN];
 	struct idxmap *idxmap[16] = { 0 };
+
+	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
+		rtnl_rtdsfield_tab[i] = NULL;
 
 	/* rtnl_rtdsfield_initialize() */
         rtnl_rtdsfield_init = 1;
@@ -710,6 +713,9 @@ int hip_select_source_address(struct in6_addr *src,
 
 	HIP_DEBUG_IN6ADDR("src", src);
  out_err:
+	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
+		if (rtnl_rtdsfield_tab[i])
+			HIP_FREE(rtnl_rtdsfield_tab[i]);
 
 	return err;
 }
