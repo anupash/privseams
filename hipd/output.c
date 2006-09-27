@@ -20,7 +20,7 @@
  *
  * @return 0 on success, otherwise < 0 on error.
  */
-int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry, int from_agent)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -32,6 +32,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 
+	if (!from_agent)
+	{
+//		entry = hip_hadb_find_byhits(src_hit, dst_hit);
+/*		err = entry->hadb_output_filter_func->hip_output_filter(msg);
+		if (err == 1)
+		{
+			err = 0;
+			goto out_err;
+		}*/
+	}
+	
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
@@ -514,12 +525,12 @@ int hip_csum_send(struct in6_addr *local_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	if (!retransmit && hip_get_msg_type(msg) == HIP_I1)
+/*	if (!retransmit) //&& hip_get_msg_type(msg) == HIP_I1)
 	{
 		HIP_DEBUG("Retransmit of I1, no filtering required.\n");
 		err = -ENOENT;
 	}
-	else if (entry)
+/*	else if (entry)
 	{
 		err = entry->hadb_output_filter_func->hip_output_filter(msg);
 	}
@@ -528,7 +539,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
 	}
 
-	if (err == -ENOENT)
+/*	if (err == -ENOENT)
 	{
 		err = 0;
     }
@@ -559,7 +570,7 @@ int hip_csum_send(struct in6_addr *local_addr,
 	{
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
-	}	
+	}*/
 
 	/* Note! that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind

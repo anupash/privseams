@@ -175,7 +175,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!\n");
 		}
 		
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		/** @todo Not filtering I1, when handling escrow user message! */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
 			 -1, "sending i1 failed\n");
 	
 		break;
@@ -224,7 +225,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 			 -1, "setting of rvs request flag failed\n");
 
 		/* Send a I1 packet to rvs. */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		/** @todo Not filtering I1, when handling rvs message! */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
 			 -1, "sending i1 failed\n");
 		break;
 	

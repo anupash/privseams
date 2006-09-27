@@ -287,7 +287,7 @@ int hip_agent_filter(struct hip_common *msg)
 		If message is type I1, then user action might be needed to filter the packet.
 		Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1)
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;

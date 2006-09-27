@@ -36,7 +36,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr,
 		struct hip_stateless_info *i1_info,
 		const struct in6_addr *traversed_rvs,
 		const int rvs_count);
-int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
+int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *, int);
 void hip_send_notify_all(void);
 
 #endif /* HIP_OUTPUT_H */
