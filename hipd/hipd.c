@@ -13,6 +13,10 @@
 
 #include "hipd.h" 
 
+/* Defined as a global just to allow freeing in exit(). Do not use outside
+   of this file! */
+struct hip_common *hipd_msg = NULL;
+
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
@@ -97,7 +101,6 @@ int main(int argc, char *argv[]) {
 	struct timeval timeout;
 	struct hip_work_order ping;
 
-	struct hip_common *hip_msg = NULL;
 	struct msghdr sock_msg;
         /* The flushing is enabled by default. The reason for this is that
 	   people are doing some very experimental features on some branches
@@ -160,7 +163,7 @@ int main(int argc, char *argv[]) {
 				   hip_nat_sock_udp, hip_firewall_sock);
 
 	/* Allocate user message. */
-	HIP_IFE(!(hip_msg = hip_msg_alloc()), 1);
+	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
 
 	HIP_DEBUG("Daemon running. Entering select loop.\n");
 	/* Enter to the select-loop */
@@ -198,14 +201,14 @@ int main(int argc, char *argv[]) {
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
 
-			hip_msg_init(hip_msg);
+			hip_msg_init(hipd_msg);
 		
-			if (hip_read_control_msg_v6(hip_raw_sock_v6, hip_msg,
+			if (hip_read_control_msg_v6(hip_raw_sock_v6, hipd_msg,
 						    1, &saddr, &daddr,
 						    &pkt_info, 0))
 				HIP_ERROR("Reading network msg failed\n");
 			else
-				err = hip_receive_control_packet(hip_msg,
+				err = hip_receive_control_packet(hipd_msg,
 								 &saddr,
 								 &daddr,
 								 &pkt_info);
@@ -214,11 +217,11 @@ int main(int argc, char *argv[]) {
 			struct hip_stateless_info pkt_info;
 			//int src_port = 0;
 
-			hip_msg_init(hip_msg);
+			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
 			/* Assuming that IPv4 header does not include any
 			   options */
-			if (hip_read_control_msg_v4(hip_raw_sock_v4, hip_msg,
+			if (hip_read_control_msg_v4(hip_raw_sock_v4, hipd_msg,
 						    1, &saddr, &daddr,
 						    &pkt_info, IPV4_HDR_SIZE))
 				HIP_ERROR("Reading network msg failed\n");
@@ -226,12 +229,12 @@ int main(int argc, char *argv[]) {
 			{
 			  /* For some reason, the IPv4 header is always
 			     included. Let's remove it here. */
-			  memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
+			  memmove(hipd_msg, ((char *)hipd_msg) + IPV4_HDR_SIZE,
 				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
 
 			  pkt_info.src_port = 0;
 	
-			  err = hip_receive_control_packet(hip_msg, &saddr,
+			  err = hip_receive_control_packet(hipd_msg, &saddr,
 							   &daddr, &pkt_info);
 			}
 		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)){
@@ -241,18 +244,18 @@ int main(int argc, char *argv[]) {
 			struct hip_stateless_info pkt_info;
 			//int src_port = 0;
 
-			hip_msg_init(hip_msg);
+			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on udp\n");	
 
 		//	if (hip_read_control_msg_udp(hip_nat_sock_udp, hip_msg, 1,
                   //                                 &saddr, &daddr))
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hip_msg,
+        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
 						    1, &saddr, &daddr,
 						    &pkt_info, 0))
                                 HIP_ERROR("Reading network msg failed\n");
                         else
                         {
-				err =  hip_receive_control_packet_udp(hip_msg,
+				err =  hip_receive_control_packet_udp(hipd_msg,
                                                                  &saddr,
                                                                  &daddr,
 								 &pkt_info);
@@ -268,12 +271,12 @@ int main(int argc, char *argv[]) {
 		  //  	struct sockaddr_storage app_src;
 			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
-			hip_msg_init(hip_msg);
+			hip_msg_init(hipd_msg);
 
-			if (hip_read_user_control_msg(hip_user_sock, hip_msg, &app_src))
+			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
 			else
-				err = hip_handle_user_msg(hip_msg, &app_src);
+				err = hip_handle_user_msg(hipd_msg, &app_src);
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			int n;
 			socklen_t alen;
@@ -284,7 +287,7 @@ int main(int argc, char *argv[]) {
 			
 			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 			alen = sizeof(hip_agent_addr);
-			n = recvfrom(hip_agent_sock, hip_msg, sizeof(struct hip_common), 0,
+			n = recvfrom(hip_agent_sock, hipd_msg, sizeof(struct hip_common), 0,
 			             (struct sockaddr *) &hip_agent_addr, &alen);
 			if (n < 0)
 			{
@@ -293,14 +296,14 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			
-			msg_type = hip_get_msg_type(hip_msg);
+			msg_type = hip_get_msg_type(hipd_msg);
 			
 			if (msg_type == HIP_AGENT_PING)
 			{
-				memset(hip_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hip_msg, HIP_AGENT_PING_REPLY, 0);
+				memset(hipd_msg, 0, sizeof(struct hip_common));
+				hip_build_user_hdr(hipd_msg, HIP_AGENT_PING_REPLY, 0);
 				alen = sizeof(hip_agent_addr);                    
-				n = sendto(hip_agent_sock, hip_msg, sizeof(struct hip_common),
+				n = sendto(hip_agent_sock, hipd_msg, sizeof(struct hip_common),
 				           0, (struct sockaddr *) &hip_agent_addr, alen);
 				if (n < 0)
 				{
@@ -327,7 +330,7 @@ int main(int argc, char *argv[]) {
 			else if (msg_type == HIP_I1)
 			{
 				hip_ha_t *ha;
- 				ha = hip_hadb_find_byhits(&hip_msg->hits, &hip_msg->hitr);
+ 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
 				if (ha)
 				{
 					ha->state = HIP_STATE_UNASSOCIATED;
@@ -338,7 +341,7 @@ int main(int argc, char *argv[]) {
 			else if (msg_type == HIP_I1_REJECT)
 			{
 				hip_ha_t *ha;
-				ha = hip_hadb_find_byhits(&hip_msg->hits, &hip_msg->hitr);
+				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
 				if (ha)
 				{
 					ha->state = HIP_STATE_UNASSOCIATED;
@@ -356,7 +359,7 @@ int main(int argc, char *argv[]) {
 			
 			bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
 			alen = sizeof(hip_firewall_addr);
-			n = recvfrom(hip_firewall_sock, hip_msg, sizeof(struct hip_common), 0,
+			n = recvfrom(hip_firewall_sock, hipd_msg, sizeof(struct hip_common), 0,
 			             (struct sockaddr *) &hip_firewall_addr, &alen);
 			if (n < 0)
 			{
@@ -365,15 +368,15 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			
-			msg_type = hip_get_msg_type(hip_msg);
+			msg_type = hip_get_msg_type(hipd_msg);
 			
 			if (msg_type == HIP_FIREWALL_PING)
 			{
 				HIP_DEBUG("Received ping from firewall\n");
-				memset(hip_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hip_msg, HIP_FIREWALL_PING_REPLY, 0);
+				memset(hipd_msg, 0, sizeof(struct hip_common));
+				hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
 				alen = sizeof(hip_firewall_addr);                    
-				n = hip_sendto(hip_msg, &hip_firewall_addr);
+				n = hip_sendto(hipd_msg, &hip_firewall_addr);
 				if (n < 0)
 				{
 					HIP_ERROR("Sendto() failed.\n");

@@ -107,7 +107,7 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
 
-#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+#define IS_LSI32(a) ((a & 0xFF000000) == 0x01000000)
 
 #define HIT_IS_LSI(a) \
         ((((__const uint32_t *) (a))[0] == 0)                                 \
