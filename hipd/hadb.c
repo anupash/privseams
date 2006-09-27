@@ -1666,6 +1666,11 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	int len = hip_get_param_total_len(peer); 
 	struct in6_addr hit;
 
+	if (entry->peer_pub) {
+		HIP_DEBUG("Not initializing peer host id, old exists\n");
+		goto out_err;
+	}
+
 	/* Verify sender HIT */
  	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
