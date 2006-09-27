@@ -13,7 +13,7 @@
 
 #include "init.h"
 
-extern struct hip_common *msg;
+extern struct hip_common *hipd_msg;
 
 /**
  * Main initialization function for HIP daemon.
@@ -404,8 +404,8 @@ void hip_exit(int signal)
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
-	if (msg)
-	  HIP_FREE(msg);
+	if (hipd_msg)
+		HIP_FREE(hipd_msg);
 	
 	hip_delete_all_sp();
 
@@ -466,7 +466,7 @@ void hip_exit(int signal)
 	close(hip_agent_sock);
 
 	if (msg)
-	  free(msg);
+		free(msg);
 	
 	return;
 }

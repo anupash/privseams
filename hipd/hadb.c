@@ -1666,9 +1666,8 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
  	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
-	//	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
-	//	 "No HOST_ID found in R1\n");
-	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM, "Out of memory\n");
+	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
+		 "Out of memory\n");
 	memcpy(entry->peer_pub, peer, len);
 	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
@@ -2266,8 +2265,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	hip_hadb_delete_outbound_spi(ha, 0);
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
-	//if (ha->hip_msg_retrans.buf)
-	//  HIP_FREE(ha->hip_msg_retrans.buf);
+	if (ha->hip_msg_retrans.buf)
+		HIP_FREE(ha->hip_msg_retrans.buf);
+	if (ha->peer_pub)
+		HIP_FREE(ha->peer_pub);
 	HIP_FREE(ha);
 }
 
