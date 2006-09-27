@@ -2269,6 +2269,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->hip_msg_retrans.buf);
 	if (ha->peer_pub)
 		HIP_FREE(ha->peer_pub);
+	if (ha->our_priv)
+		HIP_FREE(ha->our_priv);
+	if (ha->our_pub)
+		HIP_FREE(ha->our_pub);
 	HIP_FREE(ha);
 }
 

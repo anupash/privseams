@@ -511,7 +511,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
         memset(&req1, 0, sizeof(req1));
 	for (i = 0; i < 16; i++)
-	  idxmap[i] = NULL;
+		idxmap[i] = NULL;
 
         req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
         req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
@@ -994,9 +994,10 @@ int ll_remember_index(const struct sockaddr_nl *who,
         h = ifi->ifi_index&0xF;
 
         for (imp=&idxmap[h]; (im=*imp)!=NULL; imp = &im->next)
-                if (im->index == ifi->ifi_index)
+		if (im->index == ifi->ifi_index)
                         break;
 
+        /* the malloc leaks memory */
         if (im == NULL) {
                 im = malloc(sizeof(*im));
                 if (im == NULL)
@@ -1053,7 +1054,9 @@ int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
                 return -1;
         }
 
-        if (rtnl_dump_filter(rth, ll_remember_index, idxmap, NULL, NULL) < 0) {
+        if (rtnl_dump_filter(rth,
+			     ll_remember_index,
+			     idxmap, NULL, NULL) < 0) {
                 HIP_ERROR("Dump terminated\n");
                 return -1;
         }
@@ -1233,7 +1236,7 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
 
                 h = (struct nlmsghdr*)buf;
                 while (NLMSG_OK(h, status)) {
-                        int err;
+                        int err = 0;
 
                         if (nladdr.nl_pid != 0 ||
                             h->nlmsg_pid != rth->local.nl_pid ||
@@ -1258,7 +1261,8 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
                                 }
                                 return -1;
                         }
-                        err = filter(&nladdr, h, arg1);
+			if (filter)
+				err = filter(&nladdr, h, arg1);
                         if (err < 0)
                                 return err;
 
