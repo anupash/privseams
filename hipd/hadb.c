@@ -775,7 +775,11 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
 		hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
 				       IPPROTO_ESP, 1);
-		hip_db_put_ha(ha, hip_hadb_delete_state);
+		/* Not going to "put" the entry because it has been removed
+		   from the hashtable already (hip_exit won't find it
+		   anymore). */
+		hip_hadb_delete_state(ha);
+		//hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
 		hip_hadb_delete_peer_addrlist_one(ha, addr);
