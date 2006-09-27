@@ -13,6 +13,7 @@
 
 #include "init.h"
 
+extern struct hip_common *hipd_msg;
 
 /**
  * Main initialization function for HIP daemon.
@@ -400,6 +401,9 @@ void hip_exit(int signal)
 
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
+	if (hipd_msg)
+		HIP_FREE(hipd_msg);
 	
 	hip_delete_all_sp();
 
@@ -426,13 +430,6 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	msg = hip_msg_alloc();
-	if (!msg) HIP_ERROR("Failed to allocate memory for message. Could cause problems later.\n");
-	hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-
-	// hip_uninit_host_id_dbs();
-        // hip_uninit_hadb();
-	// hip_uninit_beetdb();
 	if (hip_raw_sock_v6)
 		close(hip_raw_sock_v6);
 	if (hip_raw_sock_v4)
@@ -447,13 +444,29 @@ void hip_exit(int signal)
 		rtnl_close(&hip_nl_ipsec);
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
-	if (hip_agent_sock)
+
+        hip_uninit_hadb();
+	hip_uninit_host_id_dbs();
+
+	msg = hip_msg_alloc();
+	if (msg) {
+	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
+	} else {
+	  HIP_ERROR("Failed to allocate memory for message\n");
+	}
+
+	if (msg && hip_agent_sock)
 	{
 		alen = sizeof(hip_agent_addr);
 		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
 		       (struct sockaddr *)&hip_agent_addr, alen);
-		close(hip_agent_sock);
 	}
+	close(hip_agent_sock);
+
+	if (msg)
+		free(msg);
+	
+	return;
 }
 
 /**

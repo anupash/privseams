@@ -18,6 +18,8 @@
 #include "list.h"
 #include "debug.h"
 
+#define HIP_RTDS_TAB_LEN 256
+
 extern int address_count;
 extern struct list_head addresses;
 struct rtnl_handle;
