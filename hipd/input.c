@@ -1731,7 +1731,7 @@ int hip_handle_i2(struct hip_common *i2,
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
 		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
-			 "if_index NOT determined");
+			 "if_index NOT determined\n");
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
