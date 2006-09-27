@@ -635,7 +635,7 @@ using getaddrinfo: ping, ping6, tla, svn.
     ./configure --enable-rvs
   </para>
   <para>
-   The hipconf tool must support the a) "rvs" and b) "service" options:
+   The hipconf tool supports the a) "rvs" and b) "service" options:
   </para>
   <para>
    a) hipconf add rvs &lt;HIT&gt; &lt;IP&gt;
@@ -1035,7 +1035,7 @@ using getaddrinfo: ping, ping6, tla, svn.
     </para>
     <para>Use "insmod hipsock.ko" to activate the kernel module.
           Check dmesg for messages. Use "rmmod hipsock.ko" to 
-	  remove the module from the kernel. If you get the error
+          remove the module from the kernel. If you get the error
           "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
           format", you have to specify the path of the kernel source (using
           LINUX variable) for the system in which you are going to use the
@@ -1137,6 +1137,30 @@ using getaddrinfo: ping, ping6, tla, svn.
     <para>
     &nbsp; Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in Chapter 6. 
     </para>
+  </chapter>
+  <chapter>
+    <title>Mozilla/firefox showip addon</title>
+    <para>
+		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
+		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
+		IP-address information trough HIP prefix. If using opportunistic mode, detecting
+		whether using HIP or not wont work.
+	</para>
+	<para>
+		&nbsp; If you got HIPL from .tar-package or from arch:
+		To install addon, open firefox and browse to folder where you have 
+		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
+		(example: "file:///home/user/hipl--main--2.6/showip/showip-hipmod-0.8.02-fx-mz.xpi").
+		Firefox should now prompt you with installation instructions.
+	</para>
+	<para>
+		&nbsp; Another way to get showip-package, is to download it from:
+		http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi.
+		After download, firefox should prompt you with installation instructions.
+	</para>
+	<para>
+		Original showip-package: https://addons.mozilla.org/firefox/590/
+	</para>
   </chapter>
 </book>    
 

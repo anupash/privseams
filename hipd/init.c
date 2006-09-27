@@ -13,7 +13,7 @@
 
 #include "init.h"
 
-extern struct hip_common *msg;
+extern struct hip_common *hipd_msg;
 
 /**
  * Main initialization function for HIP daemon.
@@ -404,8 +404,8 @@ void hip_exit(int signal)
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
-	if (msg)
-	  HIP_FREE(msg);
+	if (hipd_msg)
+		HIP_FREE(hipd_msg);
 	
 	hip_delete_all_sp();
 
@@ -432,9 +432,6 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	// hip_uninit_host_id_dbs();
-        // hip_uninit_hadb();
-	// hip_uninit_beetdb();
 	if (hip_raw_sock_v6)
 		close(hip_raw_sock_v6);
 	if (hip_raw_sock_v4)
@@ -449,6 +446,9 @@ void hip_exit(int signal)
 		rtnl_close(&hip_nl_ipsec);
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
+
+        hip_uninit_hadb();
+	hip_uninit_host_id_dbs();
 
 	msg = hip_msg_alloc();
 	if (msg) {
@@ -466,7 +466,7 @@ void hip_exit(int signal)
 	close(hip_agent_sock);
 
 	if (msg)
-	  free(msg);
+		free(msg);
 	
 	return;
 }
