@@ -742,7 +742,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 }
 
 void change_key_file_perms(char *filenamebase) {
-  char *pubfilename;
+  char *pubfilename = NULL;
   int pubfilename_len;
 
   pubfilename_len =
@@ -761,6 +761,9 @@ void change_key_file_perms(char *filenamebase) {
   chmod(pubfilename, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
 
  out_err:
+  if (pubfilename)
+    HIP_FREE(pubfilename);
+
   return;
 }
 
@@ -1252,6 +1255,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     free(dsa_filenamebase_pub);
   if (rsa_filenamebase_pub)
     free(rsa_filenamebase_pub);
+  if (endpoint_dsa_hip)
+    free(endpoint_dsa_hip);
+  if (endpoint_rsa_hip)
+    free(endpoint_rsa_hip);
+  if (endpoint_dsa_pub_hip)
+    free(endpoint_dsa_pub_hip);
+  if (endpoint_rsa_pub_hip)
+    free(endpoint_rsa_pub_hip);
   
   return err;
 }

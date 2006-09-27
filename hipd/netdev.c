@@ -26,6 +26,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 
 	if (addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *a = SA2IP(addr);
+		HIP_DEBUG_INADDR("IPv6 addr", &a->sin6_addr);
 		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
@@ -35,9 +36,11 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(&a->sin6_addr))
+		    ipv6_addr_is_hit(&a->sin6_addr)) {
 			return 0;
-		return 1;
+		} else {
+			return 1;
+		}
 	}
 
 	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
@@ -47,13 +50,17 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	if (addr->sa_family == AF_INET)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		if (a == INADDR_ANY ||
-                    a == INADDR_LOOPBACK ||
-		    a == INADDR_BROADCAST ||
+		HIP_DEBUG_INADDR("IPv4 addr", &a);
+		a = ntohl(a);
+		if ((a == INADDR_ANY) ||
+                    (a == INADDR_LOOPBACK) ||
+		    (a == INADDR_BROADCAST) ||
 			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
-			IS_LSI32(a))
-				return 0;
-		return 1;
+		    IS_LSI32(a)) {
+			return 0;
+		} else {
+			return 1;
+		}
 	}
 	/* add more filtering tests here */
 	return 0;
@@ -658,13 +665,12 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char *hit_str = NULL;
-	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
+				   AF_INET6, hit_str, HIP_HIT_DEV),
 		-1);
 
  out_err:
@@ -678,7 +684,6 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 {
 	int err = 0;
-	struct idxmap *idxmap[16] = {0};
 	char lsi_str[INET_ADDRSTRLEN+5];
 
 	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))),
@@ -686,7 +691,7 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	HIP_DEBUG("Adding local LSI route: %s\n", lsi_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
+				   AF_INET, lsi_str, HIP_HIT_DEV),
 		-1);
 
  out_err:
@@ -697,11 +702,14 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
-	int err = 0;
+	int err = 0, i;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+	char *rtnl_rtdsfield_tab[HIP_RTDS_TAB_LEN];
 	struct idxmap *idxmap[16] = { 0 };
+
+	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
+		rtnl_rtdsfield_tab[i] = NULL;
 
 	/* rtnl_rtdsfield_initialize() */
         rtnl_rtdsfield_init = 1;
@@ -714,6 +722,9 @@ int hip_select_source_address(struct in6_addr *src,
 
 	HIP_DEBUG_IN6ADDR("src", src);
  out_err:
+	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
+		if (rtnl_rtdsfield_tab[i])
+			HIP_FREE(rtnl_rtdsfield_tab[i]);
 
 	return err;
 }

@@ -415,6 +415,11 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0;
 	int len = hip_get_msg_total_len(msg);
 
+	/* Not reusing the old entry as the new packet may have
+	   different length */
+	if (entry->hip_msg_retrans.buf)
+		HIP_FREE(entry->hip_msg_retrans.buf);
+
 	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -1);
 	memcpy(entry->hip_msg_retrans.buf, msg, len);
 	memcpy(&entry->hip_msg_retrans.saddr, src_addr,

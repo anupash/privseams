@@ -635,7 +635,7 @@ using getaddrinfo: ping, ping6, tla, svn.
     ./configure --enable-rvs
   </para>
   <para>
-   The hipconf tool must support the a) "rvs" and b) "service" options:
+   The hipconf tool supports the a) "rvs" and b) "service" options:
   </para>
   <para>
    a) hipconf add rvs &lt;HIT&gt; &lt;IP&gt;

@@ -405,7 +405,7 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
-
+	
 	err = hip_hadb_add_peer_info(hit, ip);
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
@@ -775,7 +775,11 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
 		hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
 				       IPPROTO_ESP, 1);
-		hip_db_put_ha(ha, hip_hadb_delete_state);
+		/* Not going to "put" the entry because it has been removed
+		   from the hashtable already (hip_exit won't find it
+		   anymore). */
+		hip_hadb_delete_state(ha);
+		//hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
 		hip_hadb_delete_peer_addrlist_one(ha, addr);
@@ -1662,13 +1666,17 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	int len = hip_get_param_total_len(peer); 
 	struct in6_addr hit;
 
+	if (entry->peer_pub) {
+		HIP_DEBUG("Not initializing peer host id, old exists\n");
+		goto out_err;
+	}
+
 	/* Verify sender HIT */
  	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
-	//	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
-	//	 "No HOST_ID found in R1\n");
-	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM, "Out of memory\n");
+	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
+		 "Out of memory\n");
 	memcpy(entry->peer_pub, peer, len);
 	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
@@ -2266,6 +2274,14 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	hip_hadb_delete_outbound_spi(ha, 0);
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
+	if (ha->hip_msg_retrans.buf)
+		HIP_FREE(ha->hip_msg_retrans.buf);
+	if (ha->peer_pub)
+		HIP_FREE(ha->peer_pub);
+	if (ha->our_priv)
+		HIP_FREE(ha->our_priv);
+	if (ha->our_pub)
+		HIP_FREE(ha->our_pub);
 	HIP_FREE(ha);
 }
 
