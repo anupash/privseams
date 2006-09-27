@@ -2353,8 +2353,8 @@ int hip_handle_i1(struct hip_common *i1,
 		if(param_type == HIP_PARAM_FROM_NAT) {
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
-					   (sizeof(struct in6_addr) +
-					    sizeof(in_port_t)), 0)),
+					   (sizeof(struct hip_in6_addr_port)),
+					   0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
 		}
 		
@@ -2383,9 +2383,6 @@ int hip_handle_i1(struct hip_common *i1,
 			memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
 			via_rvs_count++;
 		}
-		
-		
-		
 	}
 	else {
 		/* Case 3. */

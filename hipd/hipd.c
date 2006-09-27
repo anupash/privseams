@@ -231,7 +231,6 @@ int main(int argc, char *argv[]) {
 			struct in6_addr saddr, daddr;
 			struct hip_stateless_info pkt_info;
 
-			hip_msg_init(hip_msg);
 			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
 

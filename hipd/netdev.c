@@ -54,8 +54,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		a = ntohl(a);
 		if ((a == INADDR_ANY) ||
                     (a == INADDR_LOOPBACK) ||
+		    //IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    (a == INADDR_BROADCAST) ||
-			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    IS_LSI32(a)) {
 			return 0;
 		} else {

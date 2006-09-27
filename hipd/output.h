@@ -1,3 +1,12 @@
+/** @file
+ * A header file for output.c.
+ * 
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef HIP_OUTPUT_H
 #define HIP_OUTPUT_H
 

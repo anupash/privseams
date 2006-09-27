@@ -1,24 +1,26 @@
-/*
- * HIP output
- *
- * Licence: GNU/GPL
- * Authors: Janne Lundberg <jlu@tcs.hut.fi>
- *          Miika Komu <miika@iki.fi>
- *          Mika Kousa <mkousa@cc.hut.fi>
- *          Kristian Slavov <kslavov@hiit.fi>
- *
+/** @file
+ * This file defines handling functions for outgoing packets for the Host
+ * Identity Protocol (HIP).
+ * 
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
 #include "output.h"
 
 /**
- * hip_send_i1 - send an I1 packet to the responder
- * @param entry the HIP database entry reserved for the peer
- *
+ * Sends an I1 packet to the peer.
+ * 
  * Send an I1 packet to the responder if an IPv6 address for the peer
  * is known.
- *
- * @return 0 on success, otherwise < 0 on error.
+ * 
+ * @param src_hit a pointer to source host identity tag.
+ * @param dst_hit a pointer to destination host identity tag.
+ * @param entry   a pointer to a host association database state reserved for
+ *                the peer.
+ * @return        zero on success, or negative error value on error.
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
@@ -87,10 +89,15 @@ out_err:
 }
 
 /**
- * hip_create_r1 - construct a new R1-payload
- * @param src_hit source HIT used in the packet
- *
- * Returns 0 on success, or negative on error
+ * Constructs a new R1 packet payload.
+ * 
+ * @param src_hit      a pointer to the source host identity tag used in the
+ *                     packet.
+ * @param sign         a funtion pointer to a signature funtion.
+ * @param host_id_priv a pointer to ...
+ * @param host_id_pub  a pointer to ...
+ * @param cookie       a pointer to ...
+ * @return             zero on success, or negative error value on error.
  */
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
@@ -345,6 +352,11 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	return err;
 }
 
+/**
+ * Sends a NOTIFY packet to peer.
+ *
+ * @param entry    a pointer to the current host association database state.
+ */ 
 void hip_send_notify(hip_ha_t *entry)
 {
 	int err = 0; /* actually not needed, because we can't do
@@ -382,12 +394,22 @@ void hip_send_notify(hip_ha_t *entry)
 	return;
 }
 
+/** Temporary kludge for escrow service.
+    @todo remove this kludge. */
 struct hip_rea_kludge {
 	hip_ha_t **array;
 	int count;
 	int length;
 };
 
+/**
+ * ...
+ *
+ * @param entry a pointer to the current host association database state.
+ * @param op    a pointer to...
+ * @return      ...
+ * @todo        Comment this function properly.
+ */
 static int hip_get_all_valid(hip_ha_t *entry, void *op)
 {
 	struct hip_rea_kludge *rk = op;
@@ -405,6 +427,10 @@ static int hip_get_all_valid(hip_ha_t *entry, void *op)
 	return 0;
 }
 
+/**
+ * Sends a NOTIFY packet to all peer hosts.
+ *
+ */
 void hip_send_notify_all(void)
 {
         int err = 0, i;
@@ -428,7 +454,16 @@ void hip_send_notify_all(void)
         return;
 }
 
-
+/**
+ * ...
+ *
+ * @param src_addr  a pointer to the packet source address.
+ * @param peer_addr a pointer to the packet destination address.
+ * @param msg       a pointer to a HIP packet common header with source and
+ *                  destination HITs.
+ * @param entry     a pointer to the current host association database state.
+ * @return          zero on success, or negative error value on error.
+ */
 int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		     struct hip_common* msg, hip_ha_t *entry)
 {
