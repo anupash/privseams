@@ -356,6 +356,8 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
                 }
         }
 
+	/* XX FIXME: having more that one NETLINK socket open at the same
+	   time is bad! See hipd.c:addresses comments */
         return if_nametoindex(name);
 }
 
@@ -1055,7 +1057,7 @@ int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
         }
 
         if (rtnl_dump_filter(rth,
-			     ll_remember_index,
+			     /*ll_remember_index*/ NULL,
 			     idxmap, NULL, NULL) < 0) {
                 HIP_ERROR("Dump terminated\n");
                 return -1;
