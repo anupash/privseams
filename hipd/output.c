@@ -62,10 +62,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	
 	/* If NAT mode is on, UDP is used. */
 	if(entry->nat_mode) {
-		/** @todo Source port should be NAT-P. */
 		err = entry->hadb_xmit_func->
 			hip_send_udp(&entry->local_address, &daddr,
-				     0, HIP_NAT_UDP_PORT,
+				     hip_nat_get_rand_port1(), HIP_NAT_UDP_PORT,
 				     (struct hip_common*) &i1, entry, 1);
 	}
 	/* If NAT mode is off, raw HIP is used. */

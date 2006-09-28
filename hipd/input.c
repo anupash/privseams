@@ -12,7 +12,6 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "input.h"
-#include "util.h"
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -2351,26 +2350,49 @@ int hip_handle_i1(struct hip_common *i1,
 
 		/* VIA_RVS_NAT */
 		if(param_type == HIP_PARAM_FROM_NAT) {
+			int i;
+			
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
 					   (sizeof(struct hip_in6_addr_port)),
 					   0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
+			
+			rvs_addresses = (struct hip_in6_addr_port *) rvs_addresses;
+			current_param = (struct hip_tlv_common *) from_nat;
+			
+			/* Copy traversed rvs addresses and port numbers to an
+			   array. RVS addresses and port numbers are the
+			   addresses in FROM_NAT parameters 2...n + source IP in
+			   the incoming I1 packet. */
+			for(i = 0; i < via_rvs_count; i++)
+			{
+				current_param = hip_get_next_param(i1, current_param);
+				memcpy(&rvs_addresses[i],
+				       hip_get_param_contents_direct(current_param),
+				       sizeof(struct hip_in6_addr_port));
+			}
+			
+			/* Append source IP address from I1 to RVS addresses. */
+			memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
+			via_rvs_count++;
 		}
 		
 		/* VIA_RVS */
 		else {
+			int i;
+			
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
 					   sizeof(struct in6_addr), 0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
 			
 			rvs_addresses = (struct in6_addr *) rvs_addresses;
-			/* Copy traversed rvsaddresses to an array. RVS addresses are
-			   the addresses in FROM parameters 2...n + source IP in the
-			   incoming I1 packet. */
-			current_param = (struct hip_tlv_common *)from;
-			int i;
+			current_param = (struct hip_tlv_common *) from;
+			
+			/* Copy traversed rvs addresses to an array. RVS
+			   addresses are the addresses in FROM parameters 2...n
+			   + source IP in the incoming I1 packet. */
 			for(i = 0; i < via_rvs_count; i++)
 			{
 				current_param = hip_get_next_param(i1, current_param);

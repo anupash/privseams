@@ -27,6 +27,15 @@
  */ 
 #include "nat.h"
 
+/** Port used for NAT travelsal NAT-P random port simulation.
+    If random port simulation is of, 50500 is used. */
+static in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
+/** Port used for NAT travelsal NAT-P' random port simulation.
+    If random port simulation is of, 50500 is used. */
+static in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
+/** File descriptor of socket used for hip control packet NAT traversal on
+    UDP/IPv4. Defined in hipd.c */
+
 /**
  * Sets NAT status "on".
  * 
@@ -41,7 +50,9 @@
 int hip_nat_on()
 {
 	int err = 0;
-
+#if HIP_UDP_PORT_RANDOMIZING 
+	hip_nat_randomize_nat_ports();
+#endif
 	hip_nat_status = 1;
 	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
 		 "Error from for_each_ha().\n");
@@ -304,4 +315,46 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 		HIP_FREE(update_packet);
 	}
 	return err;
+}
+
+#if HIP_UDP_PORT_RANDOMIZING
+/**
+ * Randomizes @b source ports NAT-P and NAT-P'.
+ *
+ * This function randomizes ports @c hip_nat_rand_port1 and
+ * @c hip_nat_rand_port2 used in NAT-travelsal. NATs choose randomly a port
+ * when HIP control traffic goes through them. Internet Draft 
+ * [draft-schmitt-hip-nat-traversal-01] defines these random chosen ports as
+ * NAT-P and NAT-P'. This function serves as a helper function to simulate
+ * these random chosen ports in a non-NATed environment where UPD encapsulation
+ * is used.
+ *
+ * @note According to [draft-schmitt-hip-nat-traversal-01] HIP daemons use
+ *       one random port and NATs use two random ports. The value of
+ *       @c hip_nat_rand_port1 can be considered as the random port of
+ *       HIP daemon also. A scenario where HIP daemons use random source port
+ *       and real life NATs randomize the NAT-P and NAT-P' ports is achieved by
+ *       removing the @c hip_nat_rand_port2 randomization from this function.
+ */ 
+void hip_nat_randomize_nat_ports()
+{
+	HIP_DEBUG("Randomizing UDP ports to be used.\n");
+	unsigned int secs_since_epoch = (unsigned int) time(NULL);
+	srand(secs_since_epoch);
+	hip_nat_rand_port1 = HIP_UDP_PORT_RAND_MIN + (int)
+		(((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) * 
+		  rand()) / (RAND_MAX + 1.0));
+#if HIP_SIMULATE_NATS
+	hip_nat_rand_port2 = HIP_UDP_PORT_RAND_MIN + (int)
+		(((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
+		  rand()) / (RAND_MAX + 1.0));
+#endif
+	HIP_DEBUG("Randomized ports are NAT-P: %u, NAT-P': %u.\n",
+		  hip_nat_rand_port1, hip_nat_rand_port2);
+}
+#endif
+
+in_port_t hip_nat_get_rand_port1(void){
+	HIP_DEBUG("RETURNS: %u.\n", hip_nat_rand_port1);
+	return hip_nat_rand_port1;
 }

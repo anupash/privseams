@@ -36,7 +36,7 @@
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
     @note According to [draft-schmitt-hip-nat-traversal-01], the default
     keep-alive interval for control channels must be 20 seconds. However, for
-    debugging purposes we use a smaller value here.
+    debugging purposes a smaller value is used here.
     @todo Change this value. */
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 3
 /** Number of retransmissions to try if hip_send_udp() fails. */
@@ -53,14 +53,28 @@
 #define HIP_UDP_ENCAP_ESPINUDP 2
 /** UDP encapsulation type. */ 
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
+/** Boolean which indicates if random port simulation is on.
+    <ul>
+    <li>0: port randomizing is off.</li>
+    <li>1: port randomizing is on.</li>
+    </ul>*/
+#define HIP_UDP_PORT_RANDOMIZING 1
+/** Boolean to indicate if a NATed network is simulated.
+    <ul>
+    <li>0: NATed network is not simulated, real life NATs exist in the network.
+    </li>
+    <li>1: NATed network is simulated, real life NATs do not exist in the
+    network, but UDP encapsulation is still used.</li>
+    </ul>
+    @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off*/
+#define HIP_SIMULATE_NATS 1
+/** Minimum port number a NAT can randomize.
+    Has to be float as it is used in rand(). */
+#define HIP_UDP_PORT_RAND_MIN 1024.0
+/** Maximum port number a NAT can randomize.
+    Has to be float as it is used in rand(). */
+#define HIP_UDP_PORT_RAND_MAX 65535.0
 
-/** Port used for NAT travelsal NAT-P random port simulation. */
-static in_port_t HIP_NAT_DEBUG_PORT1 = 2222;
-/** Port used for NAT travelsal NAT-P' random port simulation. */
-static in_port_t HIP_NAT_DEBUG_PORT2 = 3333;
-
-/** File descriptor of socket used for hip control packet NAT traversal on
-    UDP/IPv4. Defined in hipd.c */
 extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
@@ -70,6 +84,7 @@ int hip_nat_on();
 int hip_nat_off();
 int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
+void hip_nat_randomize_nat_ports();
 int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				       struct in6_addr *,
 				       struct hip_stateless_info *);
