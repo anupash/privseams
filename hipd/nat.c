@@ -29,12 +29,10 @@
 
 /** Port used for NAT travelsal NAT-P random port simulation.
     If random port simulation is of, 50500 is used. */
-static in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
+in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
 /** Port used for NAT travelsal NAT-P' random port simulation.
     If random port simulation is of, 50500 is used. */
-static in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
-/** File descriptor of socket used for hip control packet NAT traversal on
-    UDP/IPv4. Defined in hipd.c */
+in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
 
 /**
  * Sets NAT status "on".
@@ -335,6 +333,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
  *       HIP daemon also. A scenario where HIP daemons use random source port
  *       and real life NATs randomize the NAT-P and NAT-P' ports is achieved by
  *       removing the @c hip_nat_rand_port2 randomization from this function.
+ * @note Not used currently.
  */ 
 void hip_nat_randomize_nat_ports()
 {
@@ -348,13 +347,10 @@ void hip_nat_randomize_nat_ports()
 	hip_nat_rand_port2 = HIP_UDP_PORT_RAND_MIN + (int)
 		(((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) *
 		  rand()) / (RAND_MAX + 1.0));
+#else
+	hip_nat_rand_port2 = hip_nat_rand_port1;
 #endif
 	HIP_DEBUG("Randomized ports are NAT-P: %u, NAT-P': %u.\n",
 		  hip_nat_rand_port1, hip_nat_rand_port2);
 }
 #endif
-
-in_port_t hip_nat_get_rand_port1(void){
-	HIP_DEBUG("RETURNS: %u.\n", hip_nat_rand_port1);
-	return hip_nat_rand_port1;
-}

@@ -59,12 +59,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
-	
+
 	/* If NAT mode is on, UDP is used. */
 	if(entry->nat_mode) {
 		err = entry->hadb_xmit_func->
 			hip_send_udp(&entry->local_address, &daddr,
-				     hip_nat_get_rand_port1(), HIP_NAT_UDP_PORT,
+				     0, HIP_NAT_UDP_PORT,
 				     (struct hip_common*) &i1, entry, 1);
 	}
 	/* If NAT mode is off, raw HIP is used. */
@@ -287,7 +287,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, struct in6_addr *dst_ip,
 		struct in6_addr *dst_hit, struct hip_stateless_info *i1_info,
-		const struct in6_addr *traversed_rvs, const int rvs_count)
+		const void *traversed_rvs, const int rvs_count,
+		const int is_via_rvs_nat)
 {
 	HIP_DEBUG("hip_xmit_r1() invoked.\n");
 
@@ -296,20 +297,22 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	int err = 0;
 
 	own_addr = i1_daddr;
-
+	
 	/* Get the destination address. */
 	dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 
 	/* dst_addr is the IP address of the Initiator... */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// it sould not be null hit, null hit has been replaced by real local hit
-	HIP_DEBUG_HIT("src_hit ", src_hit);
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
 	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
 	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
 	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", own_addr);
 	HIP_DEBUG_HIT("hip_xmit_r1(): Destination address", dst_addr);
+	HIP_DEBUG("hip_xmit_r1(): rvs_count %d.\n", rvs_count);
+	HIP_DEBUG("hip_xmit_r1(): is_via_rvs_nat %d.\n", is_via_rvs_nat);
+
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
 		 "No precreated R1\n");
 
@@ -325,7 +328,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	{
 		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
-		hip_build_param_via_rvs(r1pkt, traversed_rvs, rvs_count);
+		hip_build_param_via_rvs(r1pkt, (struct in6_addr *)traversed_rvs,
+					rvs_count);
 	}
 #endif
 	HIP_DUMP_MSG(r1pkt);

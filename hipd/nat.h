@@ -46,7 +46,7 @@
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 /** Port number for NAT travelsal of UDP data traffic. */
-#define HIP_UDP_DATA_PORT 54500
+#define HIP_UDP_DATA_PORT 54500 /** @todo remove */
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
@@ -57,8 +57,9 @@
     <ul>
     <li>0: port randomizing is off.</li>
     <li>1: port randomizing is on.</li>
-    </ul>*/
-#define HIP_UDP_PORT_RANDOMIZING 1
+    </ul>
+    @note Not used currently. */
+#define HIP_UDP_PORT_RANDOMIZING 0
 /** Boolean to indicate if a NATed network is simulated.
     <ul>
     <li>0: NATed network is not simulated, real life NATs exist in the network.
@@ -66,15 +67,17 @@
     <li>1: NATed network is simulated, real life NATs do not exist in the
     network, but UDP encapsulation is still used.</li>
     </ul>
-    @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off*/
-#define HIP_SIMULATE_NATS 1
+    @note This has no effect if HIP_UDP_PORT_RANDOMIZING is off 
+    @note Not used currently. */
+#define HIP_SIMULATE_NATS 0
 /** Minimum port number a NAT can randomize.
     Has to be float as it is used in rand(). */
 #define HIP_UDP_PORT_RAND_MIN 1024.0
 /** Maximum port number a NAT can randomize.
     Has to be float as it is used in rand(). */
 #define HIP_UDP_PORT_RAND_MAX 65535.0
-
+/** File descriptor of socket used for hip control packet NAT traversal on
+    UDP/IPv4. Defined in hipd.c */
 extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */

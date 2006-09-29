@@ -2268,9 +2268,28 @@ int hip_handle_i1(struct hip_common *i1,
 	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
 	HIP_DUMP_MSG(i1);
 
-	int err = 0, via_rvs_count = 0;
-	struct in6_addr *dstip = NULL;
+	/* The rvs address are store in rvs_addresses as void. To allow the
+	   increment operation to advance a correct steps, pointers addresses
+	   and addr_ports are used. */
+	int err = 0, via_rvs_count = 0, is_via_rvs_nat = 0;
+	struct in6_addr *dstip = NULL, *addresses = NULL;
 	void *rvs_addresses = NULL;
+	struct hip_in6_addr_port *addr_ports = NULL;
+
+	/*
+	struct in6_addr *i6_p;
+	void *v_p;
+	
+	i6_p = malloc(sizeof(struct in6_addr));
+	v_p = i6_p;
+	
+	HIP_DEBUG("v_p: %p, i6_p: %p, v_p+1: %p, i6_p+1: %p\n",
+		  v_p, i6_p, v_p+1, i6_p+1);
+	
+	if(i6_p)
+		free (i6_p);
+	*/
+	
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -2351,16 +2370,22 @@ int hip_handle_i1(struct hip_common *i1,
 		/* VIA_RVS_NAT */
 		if(param_type == HIP_PARAM_FROM_NAT) {
 			int i;
-			
+			struct hip_in6_addr_port our_addr_port;
+
+			HIP_DEBUG("ONE.\n");
+			is_via_rvs_nat = 1;
 			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
 					   (sizeof(struct hip_in6_addr_port)),
 					   0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
 			
-			rvs_addresses = (struct hip_in6_addr_port *) rvs_addresses;
+			HIP_DEBUG("TWO.\n");
+			/* Set the void pointer to point to the allocated
+			   memory region. */
+			addr_ports = rvs_addresses;
 			current_param = (struct hip_tlv_common *) from_nat;
-			
+			HIP_DEBUG("THREE.\n");
 			/* Copy traversed rvs addresses and port numbers to an
 			   array. RVS addresses and port numbers are the
 			   addresses in FROM_NAT parameters 2...n + source IP in
@@ -2368,13 +2393,21 @@ int hip_handle_i1(struct hip_common *i1,
 			for(i = 0; i < via_rvs_count; i++)
 			{
 				current_param = hip_get_next_param(i1, current_param);
-				memcpy(&rvs_addresses[i],
+				memcpy(addr_ports + i,
 				       hip_get_param_contents_direct(current_param),
 				       sizeof(struct hip_in6_addr_port));
 			}
+			HIP_DEBUG("FOUR.\n");
+			/* Make a temporary hip_in6_addr_port. */
+			/*memcpy(&our_addr_port.sin6_addr, i1_saddr,
+			       sizeof(struct in6_addr));
+			our_addr_port.sin6_port = i1_info->src_port;
 			
-			/* Append source IP address from I1 to RVS addresses. */
-			memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
+			// Append source IP address from I1 to RVS addresses.
+			memcpy(addr_ports + i, &our_addr_port,
+			       sizeof(struct hip_in6_addr_port));
+			HIP_DEBUG("FIVE.\n");*/
+			
 			via_rvs_count++;
 		}
 		
@@ -2382,12 +2415,14 @@ int hip_handle_i1(struct hip_common *i1,
 		else {
 			int i;
 			
-			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
+			HIP_IFEL(!(addresses = HIP_MALLOC(
 					   (via_rvs_count + 1) *
 					   sizeof(struct in6_addr), 0)),
 				 -ENOMEM, "Not enough memory to rvs_addresses.");
 			
-			rvs_addresses = (struct in6_addr *) rvs_addresses;
+			/* Set the void pointer to point to the allocated
+			   memory region. */
+			rvs_addresses = addresses;
 			current_param = (struct hip_tlv_common *) from;
 			
 			/* Copy traversed rvs addresses to an array. RVS
@@ -2396,13 +2431,13 @@ int hip_handle_i1(struct hip_common *i1,
 			for(i = 0; i < via_rvs_count; i++)
 			{
 				current_param = hip_get_next_param(i1, current_param);
-				memcpy(&rvs_addresses[i],
+				memcpy(addresses + i,
 				       hip_get_param_contents_direct(current_param),
 				       sizeof(struct in6_addr));
 			}
 			
 			/* Append source IP address from I1 to RVS addresses. */
-			memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
+			memcpy(addresses + i, i1_saddr, sizeof(struct in6_addr));
 			via_rvs_count++;
 		}
 	}
@@ -2413,7 +2448,8 @@ int hip_handle_i1(struct hip_common *i1,
 #endif
 
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-			  &i1->hits, i1_info, rvs_addresses, via_rvs_count);
+			  &i1->hits, i1_info, rvs_addresses, via_rvs_count,
+			  is_via_rvs_nat);
  out_err:
 	if(rvs_addresses) {
 		HIP_FREE(rvs_addresses);

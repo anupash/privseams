@@ -22,6 +22,7 @@
 #include "close.h"
 #include "user.h"
 #include "string.h"
+#include "nat.h"
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
@@ -39,8 +40,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie);
 int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *, 
 		struct in6_addr *, struct in6_addr *,
-		struct hip_stateless_info *, const struct in6_addr *,
-		const int);
+		struct hip_stateless_info *, const void *,
+		const int, const int);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 
