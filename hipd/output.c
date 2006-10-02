@@ -291,16 +291,21 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		const int is_via_rvs_nat)
 {
 	HIP_DEBUG("hip_xmit_r1() invoked.\n");
+	HIP_DEBUG_HIT("i1_saddr", i1_saddr);
+	HIP_DEBUG_HIT("i1_daddr", i1_daddr);	
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_HIT("dst_ip", dst_ip); /* THIS SEGFAULTS */
 
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *own_addr, *dst_addr;
 	int err = 0;
-
+	
 	own_addr = i1_daddr;
 	
 	/* Get the destination address. */
 	dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
-
+	
 	/* dst_addr is the IP address of the Initiator... */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// it sould not be null hit, null hit has been replaced by real local hit

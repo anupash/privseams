@@ -472,6 +472,8 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		param_type = HIP_PARAM_FROM;
 	}
 
+	/** @todo Zero HIP message checksum when R is behind NAT. */
+
 	/* Get the destination IP address which the client has registered from
 	   the rendezvous association. */
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */

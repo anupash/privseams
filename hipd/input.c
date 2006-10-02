@@ -2317,10 +2317,12 @@ int hip_handle_i1(struct hip_common *i1,
 		
 		if(from_nat) {
 			param_type = HIP_PARAM_FROM_NAT;
+			dstip = (struct in6_addr *)&from_nat->address;
 			current_param = (struct hip_tlv_common *)from_nat;
 		}
 		else {
 			param_type = HIP_PARAM_FROM;
+			dstip = (struct in6_addr *)&from->address;
 			current_param = (struct hip_tlv_common *)from;
 		}
 		
@@ -2345,7 +2347,7 @@ int hip_handle_i1(struct hip_common *i1,
 			 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
 
 		/* First FROM parameter has the destination IP (Initiator). */
-		dstip = (struct in6_addr *)&from->address;
+		//dstip = (struct in6_addr *)&current_param->address;
 
 		/* Check if there are multiple FROM (FROM_NAT) parameters. Rest
 		   of the FROM (FROM_NAT) parameters have the IP addresses of
@@ -2446,7 +2448,7 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
 	}
 #endif
-
+	
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
 			  &i1->hits, i1_info, rvs_addresses, via_rvs_count,
 			  is_via_rvs_nat);

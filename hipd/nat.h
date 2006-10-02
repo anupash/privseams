@@ -72,7 +72,7 @@
 #define HIP_SIMULATE_NATS 0
 /** Minimum port number a NAT can randomize.
     Has to be float as it is used in rand(). */
-#define HIP_UDP_PORT_RAND_MIN 1024.0
+#define HIP_UDP_PORT_RAND_MIN 49152.0
 /** Maximum port number a NAT can randomize.
     Has to be float as it is used in rand(). */
 #define HIP_UDP_PORT_RAND_MAX 65535.0
