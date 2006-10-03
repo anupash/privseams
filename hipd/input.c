@@ -2232,19 +2232,21 @@ int hip_handle_r2(struct hip_common *r2,
 /**
  * Handles an incoming I1 packet.
  *
- * Handles an incoming I1 packet and parses @c FROM or @c FROM_NAT parameters
- * from the packet. If one or more @c FROM or @c FROM_NAT parameters are found,
- * there must also be a @c RVS_HMAC parameter present. This hmac is first
- * verified. If the verification fails, a negative error value is returned and
- * hip_xmit_r1() is not invoked. If verification succeeds,
+ * Handles an incoming I1 packet and parses @c FROM or @c FROM_NAT parameter
+ * from the packet. If a @c FROM or a @c FROM_NAT parameter is found, there must
+ * also be a @c RVS_HMAC parameter present. This hmac is first verified. If the
+ * verification fails, a negative error value is returned and hip_xmit_r1() is
+ * not invoked. If verification succeeds,
  * <ol>
- * <li>and one or more @c FROM parameters are found, the IP addresses obtained
- * from the parameters are passed to hip_xmit_r1() as an array. In hip_xmit_r1()
- * this array is used create a @c VIA_RVS parameter.</li>
- * <li>and one or more @c FROM_NAT parameters are found, the IP addresses and
- * port numbers obtained from the parameters are passed to hip_xmit_r1() as an
- * array. In hip_xmit_r1() this array is used create a @c VIA_RVS_NAT parameter.
- * </li>
+ * <li>and a @c FROM parameter is found, the IP address obtained from the
+ * parameter is passed to hip_xmit_r1() as the destination IP address. The
+ * source IP address of the received I1 packet is passed to hip_xmit_r1() as
+ * the IP of RVS.</li>
+ * <li>and a @c FROM_NAT parameter is found, the IP address and
+ * port number obtained from the parameter is passed to hip_xmit_r1() as the
+ * destination IP address and destination port. The source IP address and source
+ * port of the received I1 packet is passed to hip_xmit_r1() as the IP and port
+ * of RVS.</li>
  * <li>If no @c FROM or @c FROM_NAT parameters are found, this function does
  * nothing else but calls hip_xmit_r1().</li>
  * </ol>
@@ -2259,8 +2261,12 @@ int hip_handle_r2(struct hip_common *r2,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
- * @warning        This code does not work correctly if there are @b both
- *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
+ * @warning        This code only handles a single @c FROM or @c FROM_NAT
+ *                 parameter. If there is a mix of @c FROM and @c FROM_NAT
+ *                 parameters, only the first @c FROM parameter is parsed. Also,
+ *                 if there are multiple @c FROM or @c FROM_NAT parameters
+ *                 present in the incoming I1 packet, only the first of a kind
+ *                 is parsed.
  */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
@@ -2275,17 +2281,10 @@ int hip_handle_i1(struct hip_common *i1,
 		  i1_info->src_port, i1_info->dst_port);
 	HIP_DUMP_MSG(i1);
 
-	/* Traversed rvs addresses and ports are passed to hip_xmit_r1() in
-	   "rvs_addresses". Because rvs_addresses can have either only IP
-	   addresses or both IP addresses and ports, the storage type is void.
-	   Pointers "addresses" and "addr_ports" are set to point to the same
-	   memory region as rvs_addresses, once the type of rvs_addresses is
-	   clear. These pointers allow the increment operation to advance
-	   correct size of steps. */
-	int err = 0, via_rvs_count = 0, is_via_rvs_nat = 0;
-	struct in6_addr *dstip = NULL, *addresses = NULL;
-	void *rvs_addresses = NULL;
-	struct hip_in6_addr_port *addr_ports = NULL;
+	int err = 0, is_via_rvs_nat = 0;
+	struct in6_addr *dst_ip = NULL;
+	in_port_t dst_port = 0;
+	void *rvs_address = NULL;
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -2293,10 +2292,10 @@ int hip_handle_i1(struct hip_common *i1,
 	   I->RVS->R hierachy, not at the RVS itself. 
 
 	   We have five cases:
-	   1. One FROM parameter was found.
-	   2. One FROM_NAT parameter was found.
-	   3. Multiple FROM parameters were found.
-	   4. Multiple FROM_NAT parameters were found.
+	   1. I1 was received on UDP and a FROM parameter was found.
+	   2. I1 was received on raw HIP and a FROM parameter was found.
+	   3. I1 was received on UDP and a FROM_NAT parameter was found.
+	   4. I1 was received on raw HIP and a FROM_NAT parameter was found.
 	   5. Neither FROM nor FROM_NAT parameter was not found. */
 	
 	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
@@ -2308,22 +2307,19 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_DEBUG("Found %s parameter in I1.\n",
 			  from ? "FROM" : "FROM_NAT");
 		
-		struct hip_tlv_common *current_param = NULL;
 		hip_tlv_type_t param_type = 0;
 		hip_ha_t *rvs_ha_entry = NULL;
-		int i;
-
+		
 		if(from) {
-			/* Cases 1. & 3. */
+			/* Cases 1. & 2. */
 			param_type = HIP_PARAM_FROM;
-			dstip = (struct in6_addr *)&from->address;
-			current_param = (struct hip_tlv_common *)from;
+			dst_ip = (struct in6_addr *)&from->address;
 		}
 		else {
-			/* Cases 2. & 4. */
+			/* Cases 3. & 4. */
 			param_type = HIP_PARAM_FROM_NAT;
-			dstip = (struct in6_addr *)&from_nat->address;
-			current_param = (struct hip_tlv_common *)from_nat;
+			dst_ip = (struct in6_addr *)&from_nat->address;
+			dst_port = ntohs(from_nat->port);
 		}
 		
 		/* The relayed I1 packet has the initiators HIT as source HIT,
@@ -2345,99 +2341,42 @@ int hip_handle_i1(struct hip_common *i1,
 		HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
 			 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
 
-		/* Check if there are multiple FROM (FROM_NAT) parameters. Rest
-		   of the FROM (FROM_NAT) parameters have the IP addresses of
-		   the traversed RVSes. */
-		while ((current_param = hip_get_next_param(i1, current_param))
-		       != NULL) {
-			if(hip_get_param_type(current_param) == param_type){
-				/* Case 3. & 4. */
-				via_rvs_count++;
-				HIP_DEBUG("Found multiple %s parameters in I1.\n",
-					  (param_type == HIP_PARAM_FROM_NAT) ?
-					  "FROM_NAT" : "FROM");
-			}
-			else {
-				break;
-			}
-		}
-		
-		/* Now that it is known how many FROM (FROM_NAT) parameters
-		   there are, memory can be allocated for the rvs_addresses
-		   array. */
-
-		/* Cases 1. & 3. */
-		//i1_info->src_port != HIP_NAT_UDP_PORT) {
-		
-		if(param_type == HIP_PARAM_FROM) {
-		   			
-			HIP_IFEL(!(addresses = HIP_MALLOC(
-					   (via_rvs_count + 1) *
-					   sizeof(struct in6_addr), 0)),
-				 -ENOMEM, "Not enough memory to rvs_addresses.");
+		/* I1 packet was received on UDP destined to port 50500.
+		   R1 packet will have a VIA_RVS_NAT parameter.
+		   Cases 1. & 3. */
+		if(i1_info->src_port == HIP_NAT_UDP_PORT) {
 			
-			/* Set the in6_addr pointer to point to the allocated
-			   memory region. */
-			rvs_addresses = addresses;
-			current_param = (struct hip_tlv_common *) from;
-			
-			/* Copy traversed rvs addresses to an array. RVS
-			   addresses are the addresses in FROM parameters 2...n
-			   + source IP in the incoming I1 packet. */
-			for(i = 0; i < via_rvs_count; i++)
-			{
-				current_param = hip_get_next_param(i1, current_param);
-				memcpy(addresses + i,
-				       hip_get_param_contents_direct(current_param),
-				       sizeof(struct in6_addr));
-			}
-			
-			/* Append source IP address from the received I1 packet
-			   to RVS addresses. */
-			memcpy(addresses + i, i1_saddr, sizeof(struct in6_addr));
-			via_rvs_count++;
-		}
-		
-		/* Cases 2. & 4. */
-		else {
-
 			struct hip_in6_addr_port our_addr_port;
-
 			is_via_rvs_nat = 1;
-			HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
-					   (via_rvs_count + 1) *
-					   (sizeof(struct hip_in6_addr_port)),
-					   0)),
-				 -ENOMEM, "Not enough memory to rvs_addresses.");
 			
-			/* Set the hip_in6_addr_port pointer to point to the
-			   allocated memory region. */
-			addr_ports = rvs_addresses;
-			current_param = (struct hip_tlv_common *) from_nat;
+			HIP_IFEL(!(rvs_address = 
+				   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
+					      0)),
+				 -ENOMEM, "Not enough memory to rvs_address.");
 			
-			/* Copy traversed rvs addresses and port numbers to an
-			   array. RVS addresses and port numbers are the
-			   addresses in FROM_NAT parameters 2...n + source IP in
-			   the incoming I1 packet. */
-			for(i = 0; i < via_rvs_count; i++)
-			{
-				current_param = hip_get_next_param(i1, current_param);
-				memcpy(addr_ports + i,
-				       hip_get_param_contents_direct(current_param),
-				       sizeof(struct hip_in6_addr_port));
-			}
-
-			/* Append source IP address and source port from the
-			   received I1 packet to RVS addresses. For this purpose
+			/* Insert source IP address and source port from the
+			   received I1 packet to "rvs_address". For this purpose
 			   a temporary hip_in6_addr_port struct is needed. */
 			memcpy(&our_addr_port.sin6_addr, i1_saddr,
 			       sizeof(struct in6_addr));
 			our_addr_port.sin6_port = htons(i1_info->src_port);
-			memcpy(addr_ports + i, &our_addr_port,
+			
+			memcpy(rvs_address, &our_addr_port,
 			       sizeof(struct hip_in6_addr_port));
-			via_rvs_count++;
 		}
-		
+			
+		/* I1 packet was received on raw IP/HIP.
+		   Cases 2. & 4. */
+		else {
+			
+			HIP_IFEL(!(rvs_address = 
+				   HIP_MALLOC(sizeof(struct in6_addr), 0)),
+				 -ENOMEM, "Not enough memory to rvs_address.");
+			
+			/* Insert source IP address from the received I1 packet
+			   to "rvs_address". */
+			memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
+		}
 	}
 	else {
 		/* Case 5. */
@@ -2445,12 +2384,11 @@ int hip_handle_i1(struct hip_common *i1,
 	}
 #endif
 	
-	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-			  &i1->hits, i1_info, rvs_addresses, via_rvs_count,
-			  is_via_rvs_nat);
+	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
+			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat);
  out_err:
-	if(rvs_addresses) {
-		HIP_FREE(rvs_addresses);
+	if(rvs_address) {
+		HIP_FREE(rvs_address);
 	}
 	
 	return err;

@@ -286,78 +286,76 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  */
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, struct in6_addr *dst_ip,
-		struct in6_addr *dst_hit, struct hip_stateless_info *i1_info,
-		const void *traversed_rvs, const int rvs_count,
-		const int is_via_rvs_nat)
+		const in_port_t dst_port, struct in6_addr *dst_hit,
+		struct hip_stateless_info *i1_info, const void *traversed_rvs,
+		const int is_via_rvs_nat) 
 {
 	HIP_DEBUG("hip_xmit_r1() invoked.\n");
-	HIP_DEBUG_HIT("i1_saddr", i1_saddr);
-	HIP_DEBUG_HIT("i1_daddr", i1_daddr);	
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	HIP_DEBUG_HIT("dst_hit", dst_hit);
-	HIP_DEBUG_HIT("dst_ip", dst_ip); /* THIS SEGFAULTS */
 
 	struct hip_common *r1pkt = NULL;
-	struct in6_addr *own_addr, *dst_addr;
+	struct in6_addr *r1_dst_addr;
+	in_port_t r1_dst_port = 0;
 	int err = 0;
 	
-	own_addr = i1_daddr;
-	
-	/* Get the destination address. */
-	dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
-	
-	/* dst_addr is the IP address of the Initiator... */
+	/* Get the destination address and port. If destination port is zero,
+	   the source port of I1 becomes the destination port of R1.*/
+	r1_dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
+	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	// it sould not be null hit, null hit has been replaced by real local hit
+	/* It sould not be null hit, null hit has been replaced by real local
+	   hit. */
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
 	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
 	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
-	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", own_addr);
-	HIP_DEBUG_HIT("hip_xmit_r1(): Destination address", dst_addr);
-	HIP_DEBUG("hip_xmit_r1(): rvs_count %d.\n", rvs_count);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
+	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
+	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
 	HIP_DEBUG("hip_xmit_r1(): is_via_rvs_nat %d.\n", is_via_rvs_nat);
-
-	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT, 
-		 "No precreated R1\n");
+	
+	HIP_IFEL(!(r1pkt =
+		   hip_get_r1(r1_dst_addr, i1_daddr, src_hit, dst_hit)),
+		 -ENOENT, "No precreated R1\n");
 
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
+	
 	HIP_DEBUG_HIT("hip_xmit_r1(): ripkt->hitr", &r1pkt->hitr);
 	
-	/* Build VIA_RVS parameter if the I1 packet was relayed through a rvs. */
+	/* Build VIA_RVS or VIA_RVS_NAT parameter if the I1 packet was relayed
+	   through a rvs. */
 #ifdef CONFIG_HIP_RVS
-	if(rvs_count > 0)
+	if(traversed_rvs)
 	{
 		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
 		if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 			hip_build_param_via_rvs_nat(
-				r1pkt, (struct hip_in6_addr_port *)traversed_rvs,
-				rvs_count);
+				r1pkt,
+				(struct hip_in6_addr_port *)traversed_rvs, 1);
 		}
 		else {
 			hip_build_param_via_rvs(
-				r1pkt, (struct in6_addr *)traversed_rvs,
-				rvs_count);
+				r1pkt, (struct in6_addr *)traversed_rvs, 1);
 		}
 	}
 #endif
 	HIP_DUMP_MSG(r1pkt);
 
-	/* If I1 was destined to 50500, UDP is used for sending R1. */
-	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		/* Source port of I1 becomes the destination port of R1, and the
-		   source port of R1 is set as 50500. */
-		HIP_IFEL(hip_send_udp(own_addr, dst_addr, HIP_NAT_UDP_PORT,
-				      i1_info->src_port, r1pkt, NULL, 0),
+	/* R1 is send on UPD if R1 destination port is 50500. This is if:
+	   a) the I1 was received on UDP.
+	   b) the received I1 packet had a FROM_NAT parameter. */
+	if(r1_dst_port == HIP_NAT_UDP_PORT) {
+		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
+				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
 	/* Else R1 is send on raw HIP. */
 	else {
-		HIP_IFEL(hip_send_raw(own_addr, dst_addr, 0, 0, r1pkt, NULL,
+		HIP_IFEL(hip_send_raw(i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL,
 				      0),
 			 -ECOMM, "Sending R1 packet on raw HIP failed.\n");
 	}
