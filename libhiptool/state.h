@@ -85,12 +85,15 @@ struct hip_stateless_info
 /** 
  * A binder structure for storing an IPv6 address and transport layer port
  * number. This structure is used in hip_build_param_via_rvs_nat().
+ * 
+ * @note This has to be packed since it is used in building @c FROM_NAT and
+ *       @c VIA_RVS_NAT parameters.
  */
 struct hip_in6_addr_port
 {
 	struct in6_addr sin6_addr; /**< IPv6 address. */
 	in_port_t       sin6_port; /**< Transport layer port number. */
-};
+} __attribute__ ((packed));
 
 struct hip_context
 {

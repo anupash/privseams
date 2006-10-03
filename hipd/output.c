@@ -333,8 +333,16 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	{
 		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
-		hip_build_param_via_rvs(r1pkt, (struct in6_addr *)traversed_rvs,
-					rvs_count);
+		if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
+			hip_build_param_via_rvs_nat(
+				r1pkt, (struct hip_in6_addr_port *)traversed_rvs,
+				rvs_count);
+		}
+		else {
+			hip_build_param_via_rvs(
+				r1pkt, (struct in6_addr *)traversed_rvs,
+				rvs_count);
+		}
 	}
 #endif
 	HIP_DUMP_MSG(r1pkt);

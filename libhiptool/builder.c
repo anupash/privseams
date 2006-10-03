@@ -1808,6 +1808,7 @@ int hip_build_param_via_rvs_nat(struct hip_common *msg,
 				const int address_count)
 {
 	HIP_DEBUG("hip_build_param_rvs_nat() invoked.\n");
+	HIP_DEBUG("sizeof(struct hip_in6_addr_port): %u.\n", sizeof(struct hip_in6_addr_port));
 	int err = 0;
 	struct hip_via_rvs_nat viarvsnat;
 	
