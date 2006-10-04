@@ -1369,7 +1369,7 @@ int hip_create_r2(struct hip_context *ctx,
  next_hmac:
 #endif
 
-#if CONFIG_HIP_BLIND
+#ifdef CONFIG_HIP_BLIND
 	if (entry->blind) {
 		// XX TODO KARTHIK: create_i2
 	}
@@ -1627,7 +1627,7 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 	
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_on() && i2->control & HIP_CONTROL_BLIND)
+	if (hip_blind_get_status() && i2->control & HIP_CONTROL_BLIND)
 		entry->blind = 1;
 #endif
 
@@ -2118,10 +2118,10 @@ int hip_handle_i1_blind(struct hip_common *i1,
 									//
         HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
                  "Unable to unblind the responder HIT");
-
+#ifdef CONFIG_HIP_BLINDED
 	HIP_IFEL(!(r1pkt = hip_get_r1_blinded(dst_addr, own_addr, &hitr_plain, dst_hit)), -ENOENT,
                    "No precreated R1\n");
-
+#endif
 	if (dst_hit)
 	        ipv6_addr_copy(&r1pkt->hitr, dst_hit);
 	else

@@ -27,7 +27,7 @@ int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
 }
 
 
-int hip_blind_on(struct hip_common *msg)
+int hip_set_blind_on(void)
 {
         int err = 0;
 
@@ -39,7 +39,7 @@ int hip_blind_on(struct hip_common *msg)
         return err;
 }
 
-int hip_blind_off(struct hip_common *msg)
+int hip_set_blind_off(void)
 {
         int err = 0;
 
@@ -51,10 +51,12 @@ int hip_blind_off(struct hip_common *msg)
         return err;
 }
 
-int hip_get_blind(void)
+
+int hip_blind_get_status(void)
 {
-	return hip_blind_on;
+	return hip_blind_status;
 }
+/*
 
 /**
  * hip_create_r1 - construct a new R1-payload
@@ -103,9 +105,9 @@ struct hip_common *hip_create_blinded_r1(const struct in6_addr *src_hit,
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
 
-#ifdef CONFIG_HIP_BLIND
+
 	mask |= HIP_CONTROL_BLIND;
-#endif
+
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/* TODO: TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
@@ -195,7 +197,7 @@ struct hip_common *hip_create_blinded_r1(const struct in6_addr *src_hit,
   	return NULL;
 }
 
-int hip_precreate_blinded_r1(struct hip_r1entry *r1table, struct in6_addr *hit, 
+int hip_precreate_blinded_r1(struct hip_r1entry *r1table_blinded, struct in6_addr *hit, 
 			     int (*sign)(struct hip_host_id *p, struct hip_common *m),
 			     struct hip_host_id *privkey, struct hip_host_id *pubkey)
 {
@@ -221,12 +223,12 @@ int hip_precreate_blinded_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 	return 0;
 }
 
-struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
+struct hip_common *hip_get_r1_blinded(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			      struct in6_addr *our_hit,
 			      struct in6_addr *peer_hit)
 {
 	struct hip_common *err = NULL, *r1 = NULL;
-	struct hip_r1entry * hip_r1table;
+	struct hip_r1entry * r1table_blinded;
 	struct hip_host_id_entry *hid;
 	int idx, len;
 
@@ -235,7 +237,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO)), 
 		 NULL, "Requested source HIT no more available.\n");
 	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
-	hip_r1table = hid->r1;
+	r1table_blinded = hid->r1;
 
 	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
 	HIP_DEBUG("Calculated index: %d\n", idx);
@@ -246,9 +248,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	*/
 
 	/* Create a copy of the found entry */
-	len = hip_get_msg_total_len(hip_r1table_blinded[idx].r1);
+	len = hip_get_msg_total_len(r1table_blinded[idx].r1);
 	r1 = HIP_MALLOC(len, GFP_KERNEL);
-	memcpy(r1, hip_r1table_blinded[idx].r1, len);
+	memcpy(r1, r1table_blinded[idx].r1, len);
 	err = r1;
 
  out_err:	

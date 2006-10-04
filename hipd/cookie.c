@@ -347,7 +347,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_on() && hdr->control & HIP_CONTROL_BLIND)
+	if (hip_blind_get_status() && hdr->control & HIP_CONTROL_BLIND)
 		result = &hid->blind_r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 #endif
 

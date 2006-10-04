@@ -22,6 +22,7 @@
 #include "pk.h"
 #include "rvs.h"
 #include "netdev.h"
+#include "blind.h"
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer,
