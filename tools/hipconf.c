@@ -27,7 +27,7 @@ const char *usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow hit\n"
 #endif
-"add|del map hit ipv6\n"
+"add|del map hit ip_addr\n"
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"

@@ -779,7 +779,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		   from the hashtable already (hip_exit won't find it
 		   anymore). */
 		hip_hadb_delete_state(ha);
-		//hip_db_put_ha(ha, hip_hadb_delete_state);
+		hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
 		hip_hadb_delete_peer_addrlist_one(ha, addr);

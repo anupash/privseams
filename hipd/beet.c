@@ -574,7 +574,9 @@ void hip_delete_default_prefix_sp_pair() {
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
+	struct in6_addr ip;
 #if 0
+	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
@@ -582,7 +584,7 @@ int hip_setup_default_sp_prefix_pair() {
 	set_hit_prefix(&src_hit);
 	set_hit_prefix(&dst_hit);
 
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
 		-1);
 #endif
  out_err:
