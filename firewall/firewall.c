@@ -167,12 +167,14 @@ int filter_esp(const struct in6_addr * dst_addr,
 	  {
 	    //the entire rule os passed as argument as hits can only be 
 	    //filtered whit the state information
-	    if(!filter_esp_state(dst_addr, esp, rule))//rule->state, rule->accept))
+	    if(!filter_esp_state(dst_addr, esp, rule)) {//rule->state, rule->accept))
 	      match = 0;
 	    _HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n", 
 		      rule->state->int_opt.value,
 		      rule->state->int_opt.boolean, 
 		      match);
+                break;
+            }
 	  }
 	// if a match, no need to check further rules
 	if(match){
@@ -188,7 +190,7 @@ int filter_esp(const struct in6_addr * dst_addr,
       ret_val = rule->accept; 
     }
   else
-    ret_val = 1; 
+    ret_val = 0; 
   //release rule list
   read_rules_exit(0);
   //return the target of the the matched rule or true if no rule matched
@@ -304,7 +306,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
       ret_val = rule->accept; 
     }
   else
-    ret_val = 1; 
+    ret_val = 0; 
   //release rule list
   read_rules_exit(0);
   // if packet will be accepted and connection tracking is used

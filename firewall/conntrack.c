@@ -1339,10 +1339,17 @@ int filter_esp_state(const struct in6_addr * dst_addr,
 		esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
 		if (!esp_tuple) {
 			HIP_DEBUG("Could not find corresponding esp_tuple\n");
-		}
+                }
 		/* Decrypt contents */
-		if (esp_tuple && esp_tuple->dec_data)
+		if (esp_tuple && esp_tuple->dec_data) {
 			decrypt_packet(dst_addr, esp_tuple, esp);
+                }
+                else {
+                        // If contents cannot be decrypted, drop packet
+                        // TODO: Is this what we want?
+                        return_value = 0;
+                        goto out;    
+                }        
     }
     
   // if packet accepted, update time stamp of the connection
@@ -1357,7 +1364,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
       HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found, but packet dropped, removing connection\n",
 		addr_to_numeric(dst_addr), spi);
       remove_connection(tuple->connection);
-      return_value = 1;
+      return_value = 0;
     }
  out:
   g_mutex_unlock(connectionTableMutex);
