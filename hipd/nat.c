@@ -47,11 +47,13 @@ in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
  */ 
 int hip_nat_on()
 {
+	HIP_DEBUG("hip_nat_on().\n");
 	int err = 0;
 #if HIP_UDP_PORT_RANDOMIZING 
 	hip_nat_randomize_nat_ports();
 #endif
 	hip_nat_status = 1;
+	
 	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
 		 "Error from for_each_ha().\n");
  out_err:
@@ -102,6 +104,7 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);

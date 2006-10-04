@@ -544,7 +544,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				//	locators[i].reserved =
 				//		i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
- i++;
+					i++;
 				}
 				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,

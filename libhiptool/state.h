@@ -1,10 +1,11 @@
+/** @file
+ * This file defines Host Identity Protocol (HIP) header and parameter related
+ * constants and structures.
+ *
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef _HIP_STATE
 #define _HIP_STATE
-
-/*
- * HIP header and parameter related constants and structures.
- *
- */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -475,7 +476,7 @@ struct hip_hadb_misc_func_set{
 /** A data structure containing function pointers to functions used for sending
     data on wire. */
 struct hip_hadb_xmit_func_set{
-	/** A function pointer for sending data on TCP. */
+	/** A function pointer for sending data on raw HIP. */
 	int  (*hip_send_raw)(struct in6_addr *local_addr,
 			     struct in6_addr *peer_addr,
 			     in_port_t src_port, in_port_t dst_port,
@@ -483,6 +484,12 @@ struct hip_hadb_xmit_func_set{
 			     int retransmit);
 	/** A function pointer for sending data on UDP. */
 	int (*hip_send_udp)(struct in6_addr *local_addr,
+			    struct in6_addr *peer_addr,
+			    in_port_t src_port, in_port_t dst_port,
+			    struct hip_common* msg, hip_ha_t *entry,
+			    int retransmit);
+	/** A function pointer for sending packet on wire. */
+	int (*hip_send_pkt)(struct in6_addr *local_addr,
 			    struct in6_addr *peer_addr,
 			    in_port_t src_port, in_port_t dst_port,
 			    struct hip_common* msg, hip_ha_t *entry,

@@ -2,10 +2,10 @@
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
  * 
- * @author  Janne Lundberg <jlu_tcs.hut.fi>
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_cc.hut.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
+ * @author  Janne Lundberg
+ * @author  Miika Komu
+ * @author  Mika Kousa
+ * @author  Kristian Slavov
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "output.h"
@@ -28,7 +28,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct in6_addr daddr;
 	int mask = 0;
 	int err = 0;
-
+		
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -59,21 +59,34 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
+	
+	/*
+	err = hip_send_pkt_stateless(&entry->local_address, &daddr, 0, 
+				     HIP_NAT_UDP_PORT, (struct hip_common*) &i1,
+				     entry, 1);
+	*/
+	
+	HIP_DEBUG("entry->nat_mode: %u.\n", entry->nat_mode);
 
-	/* If NAT mode is on, UDP is used. */
+	err = entry->hadb_xmit_func->
+		hip_send_pkt(&entry->local_address, &daddr,
+			     0, HIP_NAT_UDP_PORT,
+			     (struct hip_common*) &i1, entry, 1);
+
+	/*
 	if(entry->nat_mode) {
-		err = entry->hadb_xmit_func->
-			hip_send_udp(&entry->local_address, &daddr,
-				     0, HIP_NAT_UDP_PORT,
-				     (struct hip_common*) &i1, entry, 1);
+	err = entry->hadb_xmit_func->
+	hip_send_udp(&entry->local_address, &daddr,
+	0, HIP_NAT_UDP_PORT,
+	(struct hip_common*) &i1, entry, 1);
 	}
-	/* If NAT mode is off, raw HIP is used. */
+	
 	else {
 		err = entry->hadb_xmit_func->
 			hip_send_raw(&entry->local_address, &daddr, 0, 0,
 				     (struct hip_common*) &i1, entry, 1);
 	}
-
+	*/
 	HIP_DEBUG("err after sending: %d.\n", err);
 	
 	if (!err) {
@@ -519,7 +532,12 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  * @param retransmit a boolean value indicating if this is a retransmission
  *                   (@b zero if this is @b not a retransmission).
  * @return           zero on success, or negative error value on error.
- * @todo             Ports are used nowhere, remove them from argument list.
+ * @note             This function should never be used directly. Use
+ *                   hip_send_pkt_stateless() or the host association send
+ *                   function pointed by the function pointer
+ *                   hadb_xmit_func->send_pkt instead.
+ * @see              hip_send_udp
+ * @see              hip_send_pkt_stateless
  */
 int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
@@ -655,15 +673,16 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
 	}	
-
+	
 	/* Note! that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind
 	   can fail the first time during mobility events (duplicate address
 	   detection). */
+	
 	if (retransmit)
 		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
 					  msg, entry), -1, "queue failed\n");
-
+	
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
 	for (try_bind_again = 0; try_bind_again < 2; try_bind_again++) {
@@ -728,14 +747,21 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * @param dst_port   destination port number to be used in the UDP packet header.
  * @param msg        a pointer to a HIP packet common header with source and
  *                   destination HITs.
- * @param entry      a pointer to the current host association database state.
+ * @param not_used   a pointer to the current host association database state.
+ *                   Not in use.
  * @param retransmit a boolean value indicating if this is a retransmission
  *                   (@b zero if this is @b not a retransmission).
  * @return           zero on success, or negative error value on error.
+ * @note             This function should never be used directly. Use
+ *                   hip_send_pkt_stateless() or the host association send
+ *                   function pointed by the function pointer
+ *                   hadb_xmit_func->send_pkt instead.
+ * @see              hip_send_raw
+ * @see              hip_send_pkt_stateless
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
+		 struct hip_common* msg, hip_ha_t *not_used, int retransmit)
 {
 	HIP_DEBUG("hip_send_udp() invoked.\n");
 	
@@ -844,6 +870,49 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		close(sockfd);
 	return err;
 }
+
+
+/**
+ * Sends a HIP message using a send function selected using the the global
+ * variable @c hip_nat_status as selector.
+ *
+ * This function should only be used for stateless sending of HIP packets. That
+ * is, sending of packets in a state before succesful handling of I2 packet.
+ * 
+ * @param local_addr a pointer to our IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv6 or IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   source port number to be used in the UDP packet header.
+ * @param dst_port   destination port number to be used in the UDP packet header.
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @todo             Add support for i3.
+ * @see              hip_send_raw
+ * @see              hip_send_udp
+ */
+int hip_send_pkt_stateless(struct in6_addr *local_addr,
+			   struct in6_addr *peer_addr,
+			   in_port_t src_port, in_port_t dst_port,
+			   struct hip_common* msg, hip_ha_t *entry,
+			   int retransmit)
+{
+	HIP_DEBUG("hip_send_pkt_stateless() invoked.\n");
+	int err = 0;
+	
+	if(hip_nat_status || (entry && entry->nat_mode)) {
+		err = hip_send_udp(local_addr, peer_addr, src_port, dst_port,
+				   msg, entry, retransmit);
+	}
+	else {
+		err = hip_send_raw(local_addr, peer_addr, src_port, dst_port,
+				   msg, entry, retransmit);
+	}
+	return err;
+}
+
 
 #ifdef CONFIG_HIP_HI3
 /**

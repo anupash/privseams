@@ -42,9 +42,9 @@
  * <li>note: hit can be null.</li>
  * </ul>
  * </ul>
- * @author Miika Komu <miika_iki.fi>
- * @author Mika Kousa <mkousa_cc.hut.fi>
- * @author Tobias Heer <heer_tobibox.de>
+ * @author Miika Komu
+ * @author Mika Kousa
+ * @author Tobias Heer
  * @note   In network packets @c hip_build_network_hdr() should be used instead
  *         of @c hip_build_user_hdr().
  * @todo Macros for doing @c ntohs() and @c htons() conversion? Currently they are
@@ -824,7 +824,7 @@ void hip_dump_msg(const struct hip_common *msg)
 	/* Total length of the parameter (type+length+value+padding), and the
 	   length of padding. */
 	size_t total_len = 0, pad_len = 0;
-	HIP_DEBUG("--------------- MSG START-------------------\n");
+	HIP_DEBUG("--------------- MSG START ------------------\n");
 	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
 	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
 	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
@@ -1740,7 +1740,7 @@ int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
  *
  * @param msg  a pointer to a HIP packet common header
  * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
- * @param port port number.
+ * @param port port number (host byte order).
  * @return     zero on success, or negative error value on error.
  * @see        <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
  *             draft-schmitt-hip-nat-traversal-01</a> section 3.1.4.
@@ -1754,7 +1754,7 @@ int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
 	hip_set_param_type(&from_nat, HIP_PARAM_FROM_NAT);
 	memcpy((struct in6_addr *)&from_nat.address, addr, 16);
 	from_nat.port = htons(port);
-	
+	HIP_DEBUG("FROM_NAT: htons port: %u\n", from_nat.port);
 	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat), 0);
 	err = hip_build_param(msg, &from_nat);
 
