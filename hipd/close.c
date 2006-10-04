@@ -130,13 +130,60 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	/* by now, if everything is according to plans, the refcnt should
 	   be 1 */
-	hip_put_ha(entry);
+	//hip_put_ha(entry);
 
  out_err:
 
 	if (close_ack)
 		HIP_FREE(close_ack);
 
+	return err;
+}
+
+int hip_receive_close(struct hip_common *close,
+		      hip_ha_t 		*entry) 
+{
+	int state = 0;
+	int err = 0;
+	uint16_t mask = HIP_CONTROL_HIT_ANON;
+
+	/* XX FIX: CHECK THE SIGNATURE */
+
+	HIP_DEBUG("\n");
+	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
+		 "Received NULL receiver HIT in CLOSE. Dropping\n");
+
+	if (!hip_controls_sane(ntohs(close->control), mask)) {
+		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
+			  ntohs(close->control));
+		goto out_err;
+	}
+
+	if (!entry) {
+		HIP_DEBUG("No HA for the received close\n");
+		goto out_err;
+	} else {
+		barrier();
+		HIP_LOCK_HA(entry);
+		state = entry->state;
+	}
+
+ 	switch(state) {
+ 	case HIP_STATE_ESTABLISHED:
+	case HIP_STATE_CLOSING:
+		err = entry->hadb_handle_func->hip_handle_close(close, entry);
+		break;
+	default:
+		HIP_ERROR("Internal state (%d) is incorrect\n", state);
+		break;
+	}
+
+	if (entry) {
+		/* XX CHECK: is the put done twice? once already in handle? */
+		HIP_UNLOCK_HA(entry);
+		//hip_put_ha(entry);
+	}
+ out_err:
 	return err;
 }
 
@@ -178,7 +225,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	/* by now, if everything is according to plans, the refcnt should
 	   be 1 */
-	hip_put_ha(entry);
+	//hip_put_ha(entry);
 
  out_err:
 
