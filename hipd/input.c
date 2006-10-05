@@ -516,56 +516,6 @@ int hip_produce_keying_material(struct hip_common *msg,
  *                           PACKET/PROTOCOL HANDLING                        *
  *****************************************************************************/
 
-int hip_receive_close(struct hip_common *close,
-		      hip_ha_t 		*entry) 
-{
-	int state = 0;
-	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
-
-	/* XX FIX: CHECK THE SIGNATURE */
-
-	HIP_DEBUG("\n");
-	HIP_IFEL(ipv6_addr_any(&close->hitr), -1,
-		 "Received NULL receiver HIT in CLOSE. Dropping\n");
-
-	if (!hip_controls_sane(ntohs(close->control), mask)) {
-		HIP_ERROR("Received illegal controls in CLOSE: 0x%x. Dropping\n",
-			  ntohs(close->control));
-		goto out_err;
-	}
-
-	if (!entry) {
-		HIP_DEBUG("No HA for the received close\n");
-		goto out_err;
-	} else {
-		barrier();
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
-
- 	switch(state) {
- 	case HIP_STATE_ESTABLISHED:
-	case HIP_STATE_CLOSING:
-		err = entry->hadb_handle_func->hip_handle_close(close, entry);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
-
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
- out_err:
-	return err;
-}
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-#endif
-
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -2274,6 +2224,15 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
+	int err = 0, is_via_rvs_nat = 0;
+	struct in6_addr *dst_ip = NULL;
+	in_port_t dst_port = 0;
+	void *rvs_address = NULL;
+	hip_tlv_type_t param_type = 0;
+	hip_ha_t *rvs_ha_entry = NULL;
+	struct hip_from_nat *from_nat;
+	struct hip_from *from;
+		
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
 	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
@@ -2281,16 +2240,11 @@ int hip_handle_i1(struct hip_common *i1,
 		  i1_info->src_port, i1_info->dst_port);
 	HIP_DUMP_MSG(i1);
 
-	int err = 0, is_via_rvs_nat = 0;
-	struct in6_addr *dst_ip = NULL;
-	in_port_t dst_port = 0;
-	void *rvs_address = NULL;
-
 #ifdef CONFIG_HIP_RVS
 	
 	/* Note that this code effectively takes place at the responder of
 	   I->RVS->R hierachy, not at the RVS itself. 
-
+	   
 	   We have five cases:
 	   1. I1 was received on UDP and a FROM parameter was found.
 	   2. I1 was received on raw HIP and a FROM parameter was found.
@@ -2300,88 +2254,83 @@ int hip_handle_i1(struct hip_common *i1,
 	
 	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
 	   all. */
-	struct hip_from_nat *from_nat = hip_get_param(i1, HIP_PARAM_FROM_NAT);
-	struct hip_from *from = hip_get_param(i1, HIP_PARAM_FROM);
-
-	if (from || from_nat) {
-		HIP_DEBUG("Found %s parameter in I1.\n",
-			  from ? "FROM" : "FROM_NAT");
-		
-		hip_tlv_type_t param_type = 0;
-		hip_ha_t *rvs_ha_entry = NULL;
-		
-		if(from) {
-			/* Cases 1. & 2. */
-			param_type = HIP_PARAM_FROM;
-			dst_ip = (struct in6_addr *)&from->address;
-		}
-		else {
-			/* Cases 3. & 4. */
-			param_type = HIP_PARAM_FROM_NAT;
-			dst_ip = (struct in6_addr *)&from_nat->address;
-			dst_port = ntohs(from_nat->port);
-		}
-		
-		/* The relayed I1 packet has the initiators HIT as source HIT,
-		   and the responder HIT as destination HIT. We would like to
-		   verify the HMAC againts the host association that was created
-		   when the responder registered to the rvs. That particular
-		   host association has the responders HIT as source HIT and the
-		   rvs' HIT as destination HIT. Let's get that host association
-		   using the responder's HIT and the IP address of the RVS as
-		   search keys. */
-		HIP_IFEL(((rvs_ha_entry =
-			   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
-			  -1, "A matching host association was not found for "\
-			  "responder HIT / RVS IP.");
-		
-		HIP_DEBUG("RVS host association entry found.\n");
-		
-		/* Verify the RVS hmac. */
-		HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
-			 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
-
-		/* I1 packet was received on UDP destined to port 50500.
-		   R1 packet will have a VIA_RVS_NAT parameter.
-		   Cases 1. & 3. */
-		if(i1_info->src_port == HIP_NAT_UDP_PORT) {
-			
-			struct hip_in6_addr_port our_addr_port;
-			is_via_rvs_nat = 1;
-			
-			HIP_IFEL(!(rvs_address = 
-				   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
-					      0)),
-				 -ENOMEM, "Not enough memory to rvs_address.");
-			
-			/* Insert source IP address and source port from the
-			   received I1 packet to "rvs_address". For this purpose
-			   a temporary hip_in6_addr_port struct is needed. */
-			memcpy(&our_addr_port.sin6_addr, i1_saddr,
-			       sizeof(struct in6_addr));
-			our_addr_port.sin6_port = htons(i1_info->src_port);
-			
-			memcpy(rvs_address, &our_addr_port,
-			       sizeof(struct hip_in6_addr_port));
-		}
-			
-		/* I1 packet was received on raw IP/HIP.
-		   Cases 2. & 4. */
-		else {
-			
-			HIP_IFEL(!(rvs_address = 
-				   HIP_MALLOC(sizeof(struct in6_addr), 0)),
-				 -ENOMEM, "Not enough memory to rvs_address.");
-			
-			/* Insert source IP address from the received I1 packet
-			   to "rvs_address". */
-			memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
-		}
-	}
-	else {
+	from_nat = hip_get_param(i1, HIP_PARAM_FROM_NAT);
+	from = hip_get_param(i1, HIP_PARAM_FROM);
+	
+	if (!(from || from_nat)) {
 		/* Case 5. */
 		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
+		goto skip_nat;
 	}
+	
+	HIP_DEBUG("Found %s parameter in I1.\n",
+		  from ? "FROM" : "FROM_NAT");
+	
+	if(from) {
+		/* Cases 1. & 2. */
+		param_type = HIP_PARAM_FROM;
+		dst_ip = (struct in6_addr *)&from->address;
+	}
+	else {
+		/* Cases 3. & 4. */
+		param_type = HIP_PARAM_FROM_NAT;
+		dst_ip = (struct in6_addr *)&from_nat->address;
+		dst_port = ntohs(from_nat->port);
+	}
+	
+	/* The relayed I1 packet has the initiators HIT as source HIT,
+	   and the responder HIT as destination HIT. We would like to
+	   verify the HMAC againts the host association that was created
+	   when the responder registered to the rvs. That particular
+	   host association has the responders HIT as source HIT and the
+	   rvs' HIT as destination HIT. Let's get that host association
+	   using the responder's HIT and the IP address of the RVS as
+	   search keys. */
+	HIP_IFEL(((rvs_ha_entry =
+		   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
+		 -1, "A matching host association was not found for "\
+		 "responder HIT / RVS IP.");
+	
+	HIP_DEBUG("RVS host association entry found.\n");
+	
+	/* Verify the RVS hmac. */
+	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
+		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
+	
+	/* I1 packet was received on UDP destined to port 50500.
+	   R1 packet will have a VIA_RVS_NAT parameter.
+	   Cases 1. & 3. */
+	if(i1_info->src_port == HIP_NAT_UDP_PORT) {
+		
+		struct hip_in6_addr_port our_addr_port;
+		is_via_rvs_nat = 1;
+		
+		HIP_IFEL(!(rvs_address = 
+			   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
+				      0)),
+			 -ENOMEM, "Not enough memory to rvs_address.");
+		
+		/* Insert source IP address and source port from the
+		   received I1 packet to "rvs_address". For this purpose
+		   a temporary hip_in6_addr_port struct is needed. */
+		memcpy(&our_addr_port.sin6_addr, i1_saddr,
+		       sizeof(struct in6_addr));
+		our_addr_port.sin6_port = htons(i1_info->src_port);
+		
+		memcpy(rvs_address, &our_addr_port,
+		       sizeof(struct hip_in6_addr_port));
+	} else {
+		/* I1 packet was received on raw IP/HIP.
+		   Cases 2. & 4. */
+		HIP_IFEL(!(rvs_address = 
+			   HIP_MALLOC(sizeof(struct in6_addr), 0)),
+			 -ENOMEM, "Not enough memory to rvs_address.");
+		
+		/* Insert source IP address from the received I1 packet
+		   to "rvs_address". */
+		memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
+	}
+ skip_nat:
 #endif
 	
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
