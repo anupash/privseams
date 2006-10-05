@@ -32,7 +32,7 @@ HIP_INIT_DB(hip_local_hostid_db, "local_hid");
 
 /**
  * hip_uninit_hostid_db - uninitialize local/peer Host Id table
- * @db: Database structure to delete. 
+ * @param db Database structure to delete. 
  *
  * All elements of the @db are deleted. Since local and peer host id databases
  * include dynamically allocated host_id element, it is also freed.
@@ -47,6 +47,8 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
+		if (tmp->r1)
+			hip_uninit_r1(tmp->r1);
 		if (tmp->host_id)
 			HIP_FREE(tmp->host_id);
 		HIP_FREE(tmp);
@@ -57,27 +59,30 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 
 /**
  * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
- * @db: Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
- * @lhi: the local host id to be searched 
+ * @param db Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
+ * @param lhi the local host id to be searched 
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  *
  * If lhi is null, finds the first used host id. 
  * If algo is HIP_ANY_ALGO, ignore algore comparison.
  *
- * Returns: %NULL, if failed or non-NULL if succeeded.
+ * @return %NULL, if failed or non-NULL if succeeded.
  */
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
 							       const struct in6_addr *hit,
-							       int algo)
+							       int algo, int anon)
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(*(&id_entry->host_id)));
+		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
-		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
+		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
+		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
 	HIP_DEBUG("***************RETURNING NULL***************\n");
 	return NULL;
+
 }
 
 /*
@@ -114,9 +119,9 @@ void hip_uninit_host_id_dbs(void)
 
 /**
  * hip_add_host_id - add the given HI into the database 
- * @db: Database structure
- * @lhi: HIT
- * @host_id: HI
+ * @param db Database structure
+ * @param lhi HIT
+ * @param host_id HI
  * @insert the handler to call right after the host id is added
  * @remove the handler to call right before the host id is removed
  * @arg argument passed for the handlers
@@ -139,13 +144,14 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey = NULL;
 	unsigned long lf;
 
-	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
 	HIP_ASSERT(&lhi->hit != NULL);
-	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
+	_HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
-								      GFP_KERNEL)), -ENOMEM,
+								      0)), -ENOMEM,
 		 "No memory available for host id\n");
+	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 	len = hip_get_param_total_len(host_id);
 	HIP_IFEL(!(id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
 		 -ENOMEM, "lhost_id mem alloc failed\n");
@@ -162,7 +168,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	/* check for duplicates */
 	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
-							 HIP_ANY_ALGO);
+							 HIP_ANY_ALGO, -1);
 	if (old_entry != NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("Trying to add duplicate lhi\n");
@@ -176,7 +182,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	list_add(&id_entry->next, &db->db_head);
 
-	HIP_DEBUG("Generating a new R1 set.\n");
+	_HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
 	
 	pubkey = hip_get_public_key(pubkey);
@@ -203,7 +209,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 		HIP_FREE(pubkey);
 
 #ifdef CONFIG_HIP_AGENT
-	/* XX TODO:
+	/*! \todo
 		Send HIT to agent here.
 	*/
 /*	if (hip_agent_is_alive())
@@ -228,9 +234,9 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 /**
  * hip_handle_local_add_hi - handle adding of a localhost host identity
- * @input: contains the hi parameter in fqdn format (includes private key)
+ * @param input contains the hi parameter in fqdn format (includes private key)
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_handle_add_local_hi(const struct hip_common *input)
 {
@@ -275,7 +281,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		       hip_get_param_total_len(host_identity));
 	  
 	  HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
-					      HIP_HIT_TYPE_HASH120),
+					      HIP_HIT_TYPE_HASH100),
 		   -EFAULT,
 		   "Host id to hit conversion failed\n");
 	  
@@ -293,12 +299,16 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
 	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
+#if 0 /* LSIs are not supported yet  */
 	  hip_add_iface_local_route_lsi(lsi_tmp);
+#endif
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+#if 0 /* LSIs are not supported yet  */
 	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
 		   "Failed to add LSI to the device\n");
+#endif
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
@@ -309,12 +319,12 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 /**
  * hip_del_host_id - delete the given HI (network byte order) from the database.
- * @db: Database from which to delete
- * @lhi: the HIT to be deleted from the database
+ * @param db Database from which to delete
+ * @param lhi the HIT to be deleted from the database
  *
  * Matches HIs based on the HIT
  *
- * Returns: returns 0, otherwise returns negative.
+ * @return returns 0, otherwise returns negative.
  */
 int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 {
@@ -326,7 +336,7 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	HIP_WRITE_LOCK_DB(db);
 
-	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO);
+	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO, -1);
 	if (id == NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("lhi not found\n");
@@ -345,6 +355,8 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	/* free the dynamically reserved memory and
 	   set host_id to null to signal that it is free */
+	if (id->r1)
+		hip_uninit_r1(id->r1);
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
@@ -354,9 +366,9 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 /**
  * hip_socket_handle_del_local_hi - handle deletion of a localhost host
  * identity
- * @msg: the message containing the hit to be deleted
+ * @param msg the message containing the hit to be deleted
  *
- * Returns: zero on success, or negative error value on failure
+ * @return zero on success, or negative error value on failure
  */
 int hip_handle_del_local_hi(const struct hip_common *input)
 {
@@ -385,7 +397,7 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 		goto out_err;
         }
         
-	/* XX TODO: remove associations from hadb & beetdb by the deleted HI */
+	/*! \todo remove associations from hadb & beetdb by the deleted HI */
 
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
 
@@ -397,12 +409,13 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 /**
  * hip_get_any_localhost_hit - Copy to the @target the first
  * local HIT that is found.
- * @target: Placeholder for the target
- * @algo: the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @param target Placeholder for the target
+ * @param algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  *
  * Returns 0 if ok, and negative if failed.
  */
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
+int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
@@ -410,7 +423,8 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
 	
-	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,NULL,algo);
+	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+						     NULL, algo, anon);
 	if (!entry) {
 		err=-ENOENT;
 		goto out;
@@ -455,7 +469,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 
 	HIP_READ_LOCK_DB(db);
 
-	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo);
+	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_ERROR("No host id found\n");
@@ -568,7 +582,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	uint16_t dilen;
 	char *from, *to;
 
-	/* XX TODO: check some value in the RSA key? */
+	/*! \todo check some value in the RSA key? */
       
 	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
 	
@@ -634,7 +648,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	if (!res)
 		HIP_FREE(tmp);
 	else {
-		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH120);
+		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH100);
 		HIP_HEXDUMP("--->peer_hit:", &peer_hit, 16);
 	}
 	  
@@ -660,7 +674,7 @@ struct hip_host_id *hip_get_public_key(struct hip_host_id *hid)
 
 /**
  * hip_get_any_localhost_public_key - Self documenting.
- * @algo: algorithm to use
+ * @param algo algorithm to use
  *
  * NOTE: Remember to free the return value.
  *
@@ -686,8 +700,8 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 
 /**
  * hip_for_each_hi - List every hit in database.
- * @func: Mapper function
- * @opaque: Opaque data for the mapper function.
+ * @param func Mapper function
+ * @param opaque Opaque data for the mapper function.
  *
  * Works like hip_for_each_ha().
  */

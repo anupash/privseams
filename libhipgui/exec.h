@@ -15,6 +15,10 @@
 #include <gtk/gtk.h>
 #include "main.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINE */
@@ -34,7 +38,10 @@ void exec_quit(void);
 void exec_application(void);
 int exec_empty_pid(void);
 void *exec_timer_thread(void *);
+int execdlg_create_content(void);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

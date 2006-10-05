@@ -15,9 +15,10 @@
 #include <netinet/ip6.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "list.h"
 #include "debug.h"
+
+#define HIP_RTDS_TAB_LEN 256
 
 extern int address_count;
 extern struct list_head addresses;

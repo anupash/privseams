@@ -17,7 +17,7 @@ DH *dh_table[HIP_MAX_DH_GROUP_ID] = {0};
  * hip_insert_dh - Insert the current DH-key into the buffer
  *
  * If a DH-key does not exist, we will create one.
- * Returns: >0 if ok, -1 if errors
+ * @return >0 if ok, -1 if errors
  */
 int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 {
@@ -60,17 +60,17 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * hip_calculate_shared_secret - Creates a shared secret based on the
  * public key of the peer (passed as an argument) and own DH private key
  * (created beforehand).
- * public_value: Peer's Diffie-Hellman public key
- * group_id: the Diffie-Hellman group ID
- * len: the length of the public value
- * @buffer: Buffer that holds enough space for the shared secret.
- * @bufsize: size of the buffer
+ * @param public_value Peer's Diffie-Hellman public key
+ * @param group_id the Diffie-Hellman group ID
+ * @param len the length of the public value
+ * @param buffer Buffer that holds enough space for the shared secret.
+ * @param bufsize size of the buffer
  *
  * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id, signed int len, u8* buffer, 
-				int bufsize)
+int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
+                                signed int len, u8* buffer, int bufsize)
 {
 	int err;
 
@@ -95,7 +95,7 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id, signed 
 
 /**
  * hip_regen_dh_keys - Regenerate Diffie-Hellman keys for HIP
- * @bitmask: Mask of groups to generate.
+ * @param bitmask Mask of groups to generate.
  *
  * Use only this function to generate DH keys.
  */

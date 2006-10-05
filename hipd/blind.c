@@ -58,6 +58,64 @@ int hip_blind_get_status(void)
 }
 /*
 
+int hip_handle_i1_blind(struct hip_common *i1,
+			struct in6_addr *i1_saddr,
+			struct in6_addr *i1_daddr,
+			hip_ha_t *entry,
+			struct hip_stateless_info *i1_info) {
+	struct hip_common *r1pkt = NULL;
+	struct hip_blind_nonce *nonce = NULL;
+	struct in6_addr hitr_plain;
+	int hashalgo;//just to send it in the function to follow;
+	//hashalgo should be SHA1();
+	struct in6_addr *own_addr, *dst_addr;
+	struct hip_tlv_common *puzzle = NULL;
+	int err = 0;
+
+	/**
+	 * if blind we have to get the puzzle from the precreated r1 s and 
+	 * construct a new r1 which has to be sent...
+	 */
+	
+	HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
+	
+	//XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
+	
+	HIP_DEBUG("\n");
+	own_addr = i1_daddr;
+	dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
+	
+	HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
+		 "Unable to unblind the responder HIT");
+	
+	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT,
+		 "No precreated R1\n");
+	
+	if (dst_hit)
+		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
+	else
+		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
+	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
+	
+	/* set cookie state to used (more or less temporary solution ?) */
+	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
+	
+	
+	// get puzzle: hip_get_param(r1, HIP_PARAM_PUZZLE)
+	puzzle = (struct hip_tlv_common *)hip_get_param(i1, HIP_PARAM_PUZZLE);
+	
+	// create_r1: hip_create_r1()
+	// modify create_r1:
+	// * add int flags and set a bit for blinded mode
+	// * if (flag & BLIND_MODE) then skip HOST_ID building
+	//XX-- most of the work in this func hip_xmit_ has been done.. so.. wud just make hip_cum_send call
+	// REMEMBER TO DEALLOCATE MEMORY IN THE END
+
+ out_err:
+	return err;
+}
+
+
 /**
  * hip_create_r1 - construct a new R1-payload
  * @src_hit: source HIT used in the packet
@@ -260,3 +318,4 @@ struct hip_common *hip_get_r1_blinded(struct in6_addr *ip_i, struct in6_addr *ip
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;
 }
+

@@ -4,14 +4,14 @@
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
- * @cmd: command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
- * @tmpl_saddr: source IP address
- * @tmpl_daddr: dst IP address
- * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param tmpl_saddr source IP address
+ * @param tmpl_daddr dst IP address
+ * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
@@ -147,11 +147,11 @@ int hip_flush_all_sa() {
 
 /**
  * hip_xfrm_policy_delete - delete the Security Policy
- * @dir: SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
+ * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
@@ -195,13 +195,13 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 /**
  * hip_xfrm_state_modify - modify the Security Association
- * @cmd: command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
- * @tmpl_saddr: source IP address
- * @tmpl_daddr: dst IP address
+ * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param tmpl_saddr source IP address
+ * @param tmpl_daddr dst IP address
  *
- * Returns: 0 if successful, else < 0
+ * @return 0 if successful, else < 0
  */
 int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int cmd, struct in6_addr *saddr,
@@ -262,10 +262,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			  // /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 128,
-			   /*IPPROTO_ESP*/ 0, /*HIP_HIT_PREFIX_LEN*/ 0,
-			   0,0, AF_INET6), -1);
-			   //preferred_family), -1);
+			   0, 0, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -328,10 +325,10 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 /**
  * hip_xfrm_state_delete - delete the Security Association
- * @peer_addr: Peer IP address
- * @spi: Security Parameter Index
+ * @param peer_addr Peer IP address
+ * @param spi Security Parameter Index
  *
- * Returns: 0 if successful
+ * @return 0 if successful
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
 			  struct in6_addr *peer_addr, __u32 spi,
@@ -393,6 +390,43 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
 
+#ifdef CONFIG_HIP_ESCROW
+	{
+		HIP_KEA *kea;
+		hip_ha_t *entry = hip_hadb_try_to_find_by_peer_hit(peer_addr);	
+		if (entry) {
+			if (entry->escrow_used) {
+				hip_ha_t *server_entry = 
+					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
+				kea = hip_kea_find(&server_entry->hit_our);	
+				if (server_entry && kea) {
+					int err;
+					// TODO: check correctness
+					if (spi == kea->spi_out)		
+						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
+							peer_addr, &entry->hit_peer, 0, spi, 0, 0, 0);
+					else
+						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
+							&entry->local_address, &entry->hit_our, 0, spi, 0, 0, 0);
+						
+				}
+				else {
+					HIP_DEBUG("No server entry or kea base found");
+					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
+				}
+			}
+			else {
+				HIP_DEBUG("Escrow not in use - not sending update");
+			}
+		}
+		else {
+			HIP_DEBUG("Could not find ha_state entry");
+		}
+	} 		
+
+#endif //CONFIG_HIP_ESCROW
+	
+
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
@@ -441,6 +475,50 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
 				      sport, dport), -1);
+
+#ifdef CONFIG_HIP_ESCROW
+	{
+		HIP_KEA *kea;
+		hip_ha_t *entry = hip_hadb_find_byhits(src_hit, dst_hit);	
+		if (entry) {
+			if (entry->escrow_used) {
+				hip_ha_t *server_entry = 
+					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
+				if (server_entry) {
+					int err;
+					kea = hip_kea_find(&server_entry->hit_our);
+					if (kea->keastate == HIP_KEASTATE_VALID) {
+						// TODO: Fix values. Spi usage needs to be checked. 
+						// direction should propably be checked
+						err = hip_send_escrow_update(server_entry, 
+							(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
+							daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
+					
+						if (ipv6_addr_cmp(&kea->hit, dst_hit))
+							kea->spi_in = *spi;
+						else 
+							kea->spi_out = *spi;		
+					}
+					else {
+						HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
+					}
+				}
+				else {
+					HIP_DEBUG("No server entry found\n");
+					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
+				}
+			}
+			else {
+				HIP_DEBUG("Escrow not in use - not sending update\n");
+			}
+		}
+		else {
+			HIP_DEBUG("Could not find ha_state entry");
+		}
+	} 		
+
+#endif //CONFIG_HIP_ESCROW
+				      
  out_err:
 	return err;
 }
@@ -487,8 +565,8 @@ void hip_delete_default_prefix_sp_pair() {
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* See the comment in hip_setup_sp_prefix_pair() */
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
 	hip_delete_hit_sp_pair(&src_hit, &dst_hit, 0, 0);
 }
@@ -496,16 +574,17 @@ void hip_delete_default_prefix_sp_pair() {
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
+	struct in6_addr ip;
 #if 0
+	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
+	set_hit_prefix(&src_hit);
+	set_hit_prefix(&dst_hit);
 
-	src_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-	dst_hit.s6_addr32[0] = htons(HIP_HIT_PREFIX);
-
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
 		-1);
 #endif
  out_err:

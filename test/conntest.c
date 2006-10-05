@@ -1,52 +1,19 @@
 #include "conntest.h"
 
-
-/**
- * create_socket - create a socket given the protocol
- * @proto: type of protocol
- *
- * Returns: the socket id,
- * exits on error.
- */
-int create_socket(int proto) {
-	int fd;
-
-	if (proto == IPPROTO_TCP) {
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-	} else if (proto == IPPROTO_UDP)  {
-		fd = socket(AF_INET6, SOCK_DGRAM, 0);
-	} else {
-		perror("unhandled proto");
-		exit(1);
-	}
-
-	if (fd < 0) {
-		perror("socket");
-		exit(1);
-	}
-
-	return(fd);
-}
-
-
 /**
  * create_serversocket - given the port and the protocol
  * it binds the socket and listen to it
- * @proto: type of protocol
- * @port: the kind of protocol
+ * @param proto type of protocol
+ * @param port the kind of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
-int create_serversocket(int proto, int port) {
+int create_serversocket(int type, int port) {
 	int fd, on = 1;
 	struct sockaddr_in6 addr;
-  
-	if (proto == IPPROTO_TCP) {
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-	} else {
-		fd = socket(AF_INET6, SOCK_DGRAM, 0);
-	}
+	
+	fd = socket(AF_INET6, type, 0);
 	if (fd < 0) {
 		perror("socket");
 		exit(1);
@@ -69,7 +36,7 @@ int create_serversocket(int proto, int port) {
 		exit(1);
 	}
 
-	if (proto == IPPROTO_TCP) {
+	if (type == SOCK_STREAM) {
 		if (listen(fd, 1) < 0) {
 			perror("listen");
 			close(fd);
@@ -83,13 +50,13 @@ int create_serversocket(int proto, int port) {
 /**
  * main_server - given the port and the protocol
  * it handles the functionality of the responder
- * @proto: type of protocol
- * @port: the kind of protocol
+ * @param proto type of protocol
+ * @param port the kind of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
-int main_server(int proto, int port)
+int main_server(int type, int port)
 {
 	int serversock;
 	int peer;
@@ -99,13 +66,13 @@ int main_server(int proto, int port)
 	int recvnum, sendnum;
 	char addrstr[INET6_ADDRSTRLEN];
 	
-	serversock = create_serversocket(proto, port);
+	serversock = create_serversocket(type, port);
   
 	peerlen = sizeof(struct sockaddr_in6);
   
 	while(1) {
     
-		if (proto == IPPROTO_TCP) {
+		if (type == SOCK_STREAM) {
 		  peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
 			if (peer < 0) {
 				perror("accept");
@@ -162,12 +129,13 @@ int main_server(int proto, int port)
 
 /**
  * hip_connect_func - allows to connect to the addresses specified by res
- * @proto: type of protocol
- * @res: list containing the peers addresses
+ * @param proto type of protocol
+ * @param res list containing the peers addresses
+ * @param filename ?
  *
- * Returns: 0 on error, the sockid on success
+ * @return 0 on error, the sockid on success
  */
-int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
+int hip_connect_func(struct addrinfo *res, const char* filename)
 {
 	struct addrinfo *ai, hints;
 	int sock = 0;
@@ -183,29 +151,20 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 	/* connect */
 
 	for(ai = res; ai != NULL; ai = ai->ai_next) {
-		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ai->ai_addr;
+		struct sockaddr_in6 *sin6 =
+			(struct sockaddr_in6 *) ai->ai_addr;
+		struct sockaddr_in *sin =
+			(struct sockaddr_in *) ai->ai_addr;
 		char addr_str[INET6_ADDRSTRLEN];
 		int e;
 		
 		/* Currently only IPv6 socket structures are supported */
-		HIP_ASSERT(ai->ai_family == AF_INET6);
-		sock = create_socket(proto);
+		sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 		if (sock < 0) {
 			sock = 0;
 			printf("socket creation failed\n");
 			goto out_err;
 		}
-		HIP_HEXDUMP("before ai->ai_addr 110\n", ai->ai_addr, 110);
-		HIP_HEXDUMP("before ai->ai_addr sockaddr\n", ai->ai_addr, sizeof(struct sockaddr));
-		HIP_HEXDUMP("before ai->ai_addr sockaddr_in6\n", ai->ai_addr, sizeof(struct sockaddr_in6));
-
-	       	HIP_HEXDUMP("before ai_flags\n", &ai->ai_flags, 8);
-		HIP_HEXDUMP("before ai_family\n", &ai->ai_family, sizeof(int));
-		HIP_HEXDUMP("before ai_socktype\n", &ai->ai_socktype, sizeof(int));
-		HIP_HEXDUMP("before ai_protocol\n", &ai->ai_protocol, sizeof(int));
-		HIP_HEXDUMP("before ai_addrlen\n", &ai->ai_addrlen, sizeof(size_t));
-		if(ai->ai_canonname)
-		  HIP_HEXDUMP("before ai_canonname\n",(char*)ai->ai_canonname, 64);
 				
 		HIP_DEBUG("ai_flags %d\n",ai->ai_flags );
 		HIP_DEBUG("ai_family %d\n",ai->ai_family); 
@@ -213,66 +172,46 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 		HIP_DEBUG("ai_protocol%d\n",ai->ai_protocol); 
 		HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
 		HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
-		HIP_DEBUG("ai->ai_addr %x\n", *ai->ai_addr); 
-		/*
-		sin6->sin6_addr.s6_addr[0] = (0x11);
-		sin6->sin6_addr.s6_addr[1] = (0x59);
-		sin6->sin6_addr.s6_addr[2] = (0x01);
-		sin6->sin6_addr.s6_addr[3] = (0xb5);
-		sin6->sin6_addr.s6_addr[4] = (0xa6);
-		sin6->sin6_addr.s6_addr[5] = (0x53);
-		sin6->sin6_addr.s6_addr[6] = (0xdb);
-		sin6->sin6_addr.s6_addr[7] = (0x63);
-		sin6->sin6_addr.s6_addr[8] = (0x41);
-		sin6->sin6_addr.s6_addr[9] = (0xa2);
-		sin6->sin6_addr.s6_addr[10] = (0xcd);
-		sin6->sin6_addr.s6_addr[11] = (0xe4);
-		sin6->sin6_addr.s6_addr[12] = (0xbf);
-		sin6->sin6_addr.s6_addr[13] = (0x5b);
-		sin6->sin6_addr.s6_addr[14] = (0xac);
-		sin6->sin6_addr.s6_addr[15] = (0x8e);
-		HIP_HEXDUMP("after ai->ai_addr\n", ai->ai_addr, 110);
-		 */
+
 		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
 			       sizeof(addr_str))) {
-			perror("inet_ntop\n");
-			goto out_err;
+			if (!inet_ntop(AF_INET, (char *) &sin->sin_addr,
+				       addr_str, sizeof(addr_str))) {
+				perror("inet_ntop\n");
+				goto out_err;
+			}
 		}
 		
-		if ((sin6->sin6_addr.s6_addr32[0] | sin6->sin6_addr.s6_addr32[1] | 
-		     sin6->sin6_addr.s6_addr32[2] | sin6->sin6_addr.s6_addr32[3] ) != 0) {
-			
-			printf("Trying to connect to %s\n", addr_str);
-			gettimeofday(&stats_before, NULL);
-			// Bing, failed with phit
-			e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-			printf("After call conntest.c: connect to %s\n", addr_str);
-
-			gettimeofday(&stats_after, NULL);
-			stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-			stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-			
-			printf("connect ret=%d errno=%d\n", e, errno);
-			if (e < 0) {
-			  	strerror(errno);
-				close(sock);
-				sock = 0;
-				printf("trying next\n");
-				continue; /* Try next address */
-			} else {
+		printf("Trying to connect to %s\n", addr_str);
+		gettimeofday(&stats_before, NULL);
+		// Bing, failed with phit
+		e = connect(sock, ai->ai_addr, ai->ai_addrlen);
+		printf("After call conntest.c: connect to %s\n", addr_str);
+		
+		gettimeofday(&stats_after, NULL);
+		stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
+		stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
+		
+		printf("connect ret=%d errno=%d\n", e, errno);
+		if (e < 0) {
+			strerror(errno);
+			close(sock);
+			sock = 0;
+			printf("trying next\n");
+			continue; /* Try next address */
+		} else {
+			printf("connect took %.3f sec\n",
+			       (stats_diff_sec+stats_diff_usec) / 1000000.0);
+			if (filename)
+				fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
+			else
 				printf("connect took %.3f sec\n",
-					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				if (filename)
-					fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				else
-					printf("connect took %.3f sec\n",
-					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				break; /* Connect succeeded and data can be sent/received. */
-			}
-			//break; /* Connect succeeded and data can be sent/received. */
+				       (stats_diff_sec+stats_diff_usec) / 1000000.0);
+			break; /* Connect succeeded and data can be sent/received. */
 		}
+		//break; /* Connect succeeded and data can be sent/received. */
 	}
-
+	
 	if (sock == 0) {
 		printf("failed to connect\n");
 		goto out_err;
@@ -287,14 +226,14 @@ out_err:
 
 /**
  * main_client_gai - it handles the functionality of the client-gai
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int flags)
 {
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
@@ -305,13 +244,12 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	/* lookup host */
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = AI_HIP;
+	hints.ai_flags = flags;
 	/* If peer_name is not specified the destination is looked in the hadb */
 	if (!peer_name)
 		hints.ai_flags |= AI_KERNEL_LIST;
 	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = socktype;
-	hints.ai_protocol = proto;
 	
 	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	
@@ -335,7 +273,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
 	HIP_INFO("!!!! conntest.c Connecting...\n");
-	sock = hip_connect_func(proto, res, NULL);
+	sock = hip_connect_func(res, NULL);
 	if (!sock)
 		goto out_err;
 	HIP_INFO("!!!! conntest.c got sock\n");
@@ -390,14 +328,14 @@ out_err:
 
 /**
  * main_client_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
-int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
 	struct endpointinfo hints, *epinfo, *res = NULL;
 	struct timeval stats_before, stats_after;
@@ -523,12 +461,10 @@ out:
 
 /**
  * main_server_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param socktype the type of socket
+ * @param port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
 int main_server_native(int socktype, char *port_name)
 {

@@ -257,45 +257,41 @@ or production build):
 DOCUMENTATION
 =============
 
-This section is currently deprecated.
+Doxygen is now used for documenting HIPL. Manual for how to use doxygen
+documentation, is found from here:
+http://www.stack.nl/~dimitri/doxygen/manual.html
 
-The list of available HIPL documentation is listed in README. Both the
-kernel and the userspace API are documented in Linux kernel docbook
-format (see hipl/linux/Documentation/DocBook). Here is an example how
-docbook style comments should be used for commenting functions:
+To create doxygen documentation in HTML format, execute "make doxygen". Doxygen will create documentation under doc/doxy/html.
+
+Simple example, how to use some doxygen features:
+
+/** Description of a #define. */
+#define HIP_ENABLED 1
 
 /**
- * sum2 - sum the given two integers
- * @a: the first integer to be summed
- * @b: the second integer to be summed
- *
- * the freeform longer description goes here (may
- * span multiple lines)
- *
- * Returns: the sum of @a and @b.
- *
+ * Description of a global variable.
+ * This can continue also to multiple lines,
+ * just like previous #define description.
  */
-int sum2(int a, int b) {
-  return a + b;
+int hip_sock = -1;
+
+/**
+ * This is a function description. Parameter documentation is in
+ * form "@param <param_name> description". Return value is documented
+ * using "@return description". Todos are documented using
+ * "/*! \todo description */". Then the todos are listed in doxygen
+ * created documentation as list.
+ *
+ * @param name This is a function parameter description.
+ * @return This is a return value description.
+ */
+int test(char *name)
+{
+	/*! \todo
+	 * Make contents for this function!!!
+	 */
 }
 
-
-NOTE!
-
-- The first two stars are REQUIRED. Otherwise docbook does not
-  include the function in its output.
-- The summary line may be just ONE line.
-- The description of the parameters must begin IMMEDIATELY on the
-  next line after the function summary. Otherwise you will experience    
-  odd docbook behaviour (the descriptions appear twice in the text).
-- Please use the following indentation type for the parameters:
-    @test:   blah blah
-    @foobar: description of foobar
-             continues to the next line
-- You can refence other functions by adding empty brackets() after the
-  function name.
-- see Documentation/kernel-doc-nano-HOWTO.txt for more details on
-  documentation styles
 
 SUBMITTING PATCHES
 ==================
@@ -388,8 +384,8 @@ and can be found under directory test/packaging/hipl-1.0-deb-src/
 HOW TO CREATE KERNEL PACKAGES
 =============================
 
-Debian
-------
+Debian/Ubuntu
+-------------
 
 To create the package from vanilla sources for Debian distribution
 or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
@@ -404,10 +400,10 @@ by typing adduser my_username src
 * cp /boot/config-something .config
 
 In order to build the binary package type the following:
-* fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_image
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
 
 Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
-* fakeroot make-kpkg --append-to-version=.hipl --revision=1.0 kernel_source
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source
 
 After the kernel has been successfully compiled, you will find the
 debian packages in the top directory.

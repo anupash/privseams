@@ -7,36 +7,54 @@
  *
  */
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
 #ifndef HIP_OPPDB_H
 #define HIP_OPPDB_H
 
-//#include "keymat.h"
-//#include "pk.h"
-#include "hip.h"
+#include <sys/un.h>
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"
 #include "builder.h"
-//#include "input.h" 	// required for declaration of receive functions
-//#include "update.h"	// required for declaration of update function
+#include "util.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)
 #define HIP_LOCK_OPP(entry)  
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
+#define HIP_OPP_WAIT 5
+
+typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
 void hip_init_opp_db();
 //void hip_uninit_opp_db();
 hip_opp_block_t *hip_create_opp_block_entry();
+int hip_handle_opp_fallback(hip_opp_block_t *entry,
+			    void *current_time);
 void hip_oppdb_dump();
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_t *hit_our);
-int hip_oppdb_add_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our,
+int hip_oppdb_add_entry(const hip_hit_t *hit_peer, 
+			const hip_hit_t *hit_our,
+			const struct in6_addr *ip_peer,
+			const struct in6_addr *ip_our,
 			const struct sockaddr_un *caller);
+hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
+				 struct in6_addr *resp_addr);
 int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our);
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry);
+int hip_receive_opp_r1(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       hip_ha_t *opp_entry,
+		       struct hip_stateless_info *msg_info);
+hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
+				       const hip_hit_t *hit_our);
 
+hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
+					 struct in6_addr *src_addr,
+					 struct in6_addr *dst_addr,
+					 struct hip_stateless_info *msg_info);
+int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
+		     void *opaque);
 #endif /* HIP_HADB_H */
-#endif /* CONFIG_HIP_OPPORTUNISTIC */
