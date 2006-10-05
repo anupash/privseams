@@ -2175,13 +2175,13 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
+	int err = 0, via_rvs_count = 0;
+	struct in6_addr *dstip = NULL, *rvs_addresses = NULL;
+
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
 	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
 	HIP_DUMP_MSG(i1);
-
-	int err = 0, via_rvs_count = 0;
-	struct in6_addr *dstip = NULL, *rvs_addresses = NULL;
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -2192,74 +2192,74 @@ int hip_handle_i1(struct hip_common *i1,
 	
 	/* Check if the incoming I1 packet has a FROM parameter. */
 	struct hip_from *from = hip_get_param(i1, HIP_PARAM_FROM);
-	if (from) {
-
-		/* Case 1. */
-		HIP_DEBUG("Found FROM parameter in I1.\n");
-
-		/* The relayed I1 packet has the initiators HIT as source HIT,
-		   and the responder HIT as destination HIT. We would like to
-		   verify the HMAC againts the host association that was created
-		   when the responder registered to the rvs. That particular
-		   host association has the responders HIT as source HIT and the
-		   rvs' HIT as destination HIT. Let's get that host association
-		   using the responder's HIT and the IP address of the RVS as
-		   search keys. */
-		
-		hip_ha_t *rvs_ha_entry = NULL;
-		HIP_IFEL((rvs_ha_entry = 
-			  hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL,
-			  -1, "A matching host association was not found for "\
-			  "responder HIT / RVS IP.");
-		
-		HIP_DEBUG("RVS host association entry found.\n");
-		
-		HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
-			 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
-
-		/* First FROM parameter has the destination IP (Initiator). */
-		dstip = (struct in6_addr *)&from->address;
-
-		/* Check if there are multiple FROM parameters. Rest of the FROM
-		   parameters have the IP addresses of the traversed RVSes. */
-		struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
-		while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
-			if(ntohs(current_param->type) == HIP_PARAM_FROM){
-				/* Case 2. */
-				via_rvs_count++;
-				HIP_DEBUG("Found multiple FROM parameters in I1.\n");
-			}
-			else {
-				break;
-			}
-		}
-		/* Now that it is known how many FROM parameters there are, memory
-		   can be allocated for the rvs_addresses array. */
-		HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
-				   (via_rvs_count + 1) * sizeof(struct in6_addr), 0)),
-			 -ENOMEM, "Not enough memory to rvs_addresses.");
-		
-		/* Copy traversed rvsaddresses to an array. RVS addresses are
-		   the addresses in FROM parameters 2...n + source IP in the
-		   incoming I1 packet. */
-		current_param = (struct hip_tlv_common *)from;
-		int i;
-		for(i = 0; i < via_rvs_count; i++)
-		{
-			current_param = hip_get_next_param(i1, current_param);
-			memcpy(&rvs_addresses[i],
-			       hip_get_param_contents_direct(current_param),
-			       sizeof(struct in6_addr));
-		}
-
-		/* Append source IP address from I1 to RVS addresses. */
-		memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
-		via_rvs_count++;
-	}
-	else {
+	if (!from) {
 		/* Case 3. */
 		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
+		goto skip_from;
 	}
+
+	/* Case 1. */
+	HIP_DEBUG("Found FROM parameter in I1.\n");
+	
+	/* The relayed I1 packet has the initiators HIT as source HIT,
+	   and the responder HIT as destination HIT. We would like to
+	   verify the HMAC againts the host association that was created
+	   when the responder registered to the rvs. That particular
+	   host association has the responders HIT as source HIT and the
+	   rvs' HIT as destination HIT. Let's get that host association
+	   using the responder's HIT and the IP address of the RVS as
+	   search keys. */
+	
+	hip_ha_t *rvs_ha_entry = NULL;
+	HIP_IFEL((rvs_ha_entry = 
+		  hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL,
+		 -1, "A matching host association was not found for "\
+		 "responder HIT / RVS IP.");
+	
+	HIP_DEBUG("RVS host association entry found.\n");
+	
+	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
+		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
+	
+	/* First FROM parameter has the destination IP (Initiator). */
+	dstip = (struct in6_addr *)&from->address;
+	
+	/* Check if there are multiple FROM parameters. Rest of the FROM
+	   parameters have the IP addresses of the traversed RVSes. */
+	struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
+	while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
+		if(ntohs(current_param->type) == HIP_PARAM_FROM){
+			/* Case 2. */
+			via_rvs_count++;
+			HIP_DEBUG("Found multiple FROM parameters in I1.\n");
+		}
+		else {
+			break;
+		}
+	}
+	/* Now that it is known how many FROM parameters there are, memory
+	   can be allocated for the rvs_addresses array. */
+	HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
+			   (via_rvs_count + 1) * sizeof(struct in6_addr), 0)),
+		 -ENOMEM, "Not enough memory to rvs_addresses.");
+	
+	/* Copy traversed rvsaddresses to an array. RVS addresses are
+	   the addresses in FROM parameters 2...n + source IP in the
+	   incoming I1 packet. */
+	current_param = (struct hip_tlv_common *)from;
+	int i;
+	for(i = 0; i < via_rvs_count; i++)
+	{
+		current_param = hip_get_next_param(i1, current_param);
+		memcpy(&rvs_addresses[i],
+		       hip_get_param_contents_direct(current_param),
+		       sizeof(struct in6_addr));
+	}
+	
+	/* Append source IP address from I1 to RVS addresses. */
+	memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
+	via_rvs_count++;
+ skip_from:
 #endif
 
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
