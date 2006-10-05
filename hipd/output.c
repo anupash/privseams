@@ -745,8 +745,10 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * 
  * @param local_addr a pointer to our IPv4-in-IPv6 format IPv4 address.
  * @param peer_addr  a pointer to peer IPv4-in-IPv6 format IPv4 address.
- * @param src_port   source port number to be used in the UDP packet header.
+ * @param src_port   source port number to be used in the UDP packet header
+ *                   (host byte order) 
  * @param dst_port   destination port number to be used in the UDP packet header.
+ *                   (host byte order).
  * @param msg        a pointer to a HIP packet common header with source and
  *                   destination HITs.
  * @param not_used   a pointer to the current host association database state.
