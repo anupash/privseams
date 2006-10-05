@@ -26,21 +26,24 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	struct hip_common *close = NULL;
 
 	if (peer)
-		HIP_DEBUG_HIT("peer HIT to be closed", peer);
+		HIP_DEBUG_HIT("Peer HIT to be closed", peer);
 
 	if (peer && !ipv6_addr_any(peer) &&
 	    memcmp(&entry->hit_peer, peer, sizeof(hip_hit_t))) {
-		HIP_DEBUG("Peer HIT did not match, ignoring\n");
+		HIP_DEBUG("Peer HIT did not match, ignoring.\n");
 		goto out_err;
 	}
 
         if (!(entry->state == HIP_STATE_ESTABLISHED)) {
-		HIP_ERROR("State %d, not sending CLOSE\n");
+		HIP_ERROR("Not sending CLOSE message, invalid hip state "\
+			  "in current host association. State is %s.\n", 
+			  hip_state_str(entry->state));
 		goto out_err;
 	}
 
-	HIP_DEBUG("Sending close to peer\n");
-
+	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
+		  "CLOSE message to peer.\n");
+	
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
 	entry->hadb_misc_func->hip_build_network_hdr(close, HIP_CLOSE, mask, &entry->hit_our,
@@ -51,21 +54,33 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	get_random_bytes(entry->echo_data, sizeof(entry->echo_data));
 	HIP_IFEL(hip_build_param_echo(close, entry->echo_data,
 				      sizeof(entry->echo_data), 1, 1), -1,
-		 "Failed to build echo param\n");
+		 "Failed to build echo param.\n");
 
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(close,
 					       &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed\n");
+		 -1, "Building of HMAC failed.\n");
 
 	/********** Signature **********/
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
-		 "Could not create signature\n");
+		 "Could not create signature.\n");
 	
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,0,0,
-						     close, entry, 0), -1);
-
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode)
+	{
+		HIP_IFE(entry->hadb_xmit_func->
+			hip_send_udp(NULL, &entry->preferred_address,0,
+				     entry->peer_udp_port,
+				     close, entry, 0), -1);
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else
+	{
+		HIP_IFE(entry->hadb_xmit_func->
+			hip_send_raw(NULL,&entry->preferred_address,0,0,
+				     close, entry, 0), -1);
+	}
+	
 	entry->state = HIP_STATE_CLOSING;
 
  out_err:
@@ -84,17 +99,17 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	/* verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
-		 -ENOENT, "HMAC validation on close failed\n");
+		 -ENOENT, "HMAC validation on close failed.\n");
 
 	/* verify signature */
 	HIP_IFEL(entry->verify(entry->peer_pub, close), -EINVAL,
-		 "Verification of close signature failed\n");
+		 "Verification of close signature failed.\n");
 
 	HIP_IFE(!(close_ack = hip_msg_alloc()), -ENOMEM);
 
 	HIP_IFEL(!(request =
 		   hip_get_param(close, HIP_PARAM_ECHO_REQUEST_SIGN)),
-		 -1, "No echo request under signature\n");
+		 -1, "No echo request under signature.\n");
 	echo_len = hip_get_param_contents_len(request);
 
 	entry->hadb_misc_func->hip_build_network_hdr(close_ack, HIP_CLOSE_ACK,
@@ -103,30 +118,40 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_IFEL(hip_build_param_echo(close_ack, request + 1,
 				      echo_len, 1, 0), -1,
-		 "Failed to build echo param\n");
+		 "Failed to build echo param.\n");
 
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(close_ack,
 					       &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed\n");
+		 -1, "Building of HMAC failed.\n");
 
 	/********** Signature **********/
 	HIP_IFEL(entry->sign(entry->our_priv, close_ack), -EINVAL,
-		 "Could not create signature\n");
-
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(NULL,
-						     &entry->preferred_address,0,0,
-						     close_ack, entry, 0), -1);
-
+		 "Could not create signature.\n");
+	
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode)
+	{
+		HIP_IFE(entry->hadb_xmit_func->
+			hip_send_udp(NULL, &entry->preferred_address,0,
+				     entry->peer_udp_port,
+				     close_ack, entry, 0), -1);
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else
+	{
+		HIP_IFE(entry->hadb_xmit_func->
+			hip_send_raw(NULL,&entry->preferred_address,0,0,
+				     close_ack, entry, 0), -1);
+	}
+	
 	entry->state = HIP_STATE_CLOSED;
 
-	HIP_DEBUG("CLOSED\n");
+	HIP_DEBUG("CLOSED.\n");
 
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
-				   "Deleting peer info failed\n");
-	//hip_hadb_remove_state(entry);
-	//hip_delete_esp(entry);
+				   "Deleting peer info failed.\n");
 
 	/* by now, if everything is according to plans, the refcnt should
 	   be 1 */

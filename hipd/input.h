@@ -32,6 +32,8 @@
 #include "pk.h"
 #include "netdev.h"
 #include "beet.h"
+#include "util.h"
+#include "state.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 

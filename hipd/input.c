@@ -12,7 +12,6 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "input.h"
-#include "util.h"
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 extern unsigned int opportunistic_mode;
@@ -82,7 +81,7 @@ u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 	}
 
 	/* one's complement sum 16-bit words of data */
-	HIP_DEBUG("checksumming %d bytes of data.\n", length);
+	HIP_DEBUG("Checksumming %d bytes of data.\n", length);
 	count = length;
 	p = (unsigned short*) data;
 	while (count > 1) {
@@ -517,9 +516,6 @@ int hip_produce_keying_material(struct hip_common *msg,
  *                           PACKET/PROTOCOL HANDLING                        *
  *****************************************************************************/
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-#endif
-
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -534,7 +530,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG("Received packet type %d\n", type);
 	_HIP_DUMP_MSG(msg);
 	_HIP_HEXDUMP("dumping packet", msg,  40);
-	// XX FIXME: CHECK PACKET CSUM
+	/** @todo Check packet csum.*/
 
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
@@ -577,11 +573,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 		// possibly state
 		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
 		if(entry){
-			err = entry->hadb_rcv_func->hip_receive_i2(msg,
-							src_addr,
-							dst_addr,
-							entry,
-							msg_info);
+			err = entry->hadb_rcv_func->
+				hip_receive_i2(msg, src_addr, dst_addr, entry,
+					       msg_info);
 		} else {
 			err = ((hip_rcv_func_set_t *)
 			   hip_get_rcv_default_func_set())->hip_receive_i2(msg,
@@ -675,13 +669,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 		err = -ENOSYS;
 	}
 
-	HIP_DEBUG("Done with control packet (%d).\n", err);
-	HIP_HEXDUMP("msg->hits=", &msg->hits, 16);
-	HIP_HEXDUMP("msg->hitr=", &msg->hitr, 16);
-
+	HIP_DEBUG("Done with control packet, err is %d.\n", err);
+	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hits", &msg->hits);
+	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hitr", &msg->hitr);
+	
 	if (err)
 		goto out_err;
-	
 
  out_err:
 
@@ -1021,9 +1014,22 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
-	HIP_IFE(entry->hadb_xmit_func->hip_csum_send(r1_daddr, &daddr, r1_info->src_port, 
-						     r1_info->dst_port, i2,
-						     entry, 0), -1);
+	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		/* Destination port of R1 becomes the source port of I2, and the
+		   destination port of I2 is set as 50500. */
+		/** @todo Source port should be NAT-P'. */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
+				      HIP_NAT_UDP_PORT, i2, entry, 0),
+			 -ECOMM, "Sending I2 packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_raw(r1_daddr, &daddr, 0, 0, i2, entry, 0),
+			 -ECOMM, "Sending I2 packet on raw HIP failed.\n");
+	}
 
  out_err:
 	if (i2)
@@ -1265,6 +1271,8 @@ int hip_handle_r1(struct hip_common *r1,
  * @param r1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code does not work correctly if there are @b both
+ *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_r1(struct hip_common *r1,
 		   struct in6_addr *r1_saddr,
@@ -1376,8 +1384,9 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/* Just swap the addresses to use the I2's destination HIT as
 	 * the R2's source HIT */
-	entry->hadb_misc_func->hip_build_network_hdr(r2, HIP_R2, mask,
-			      &entry->hit_our, &entry->hit_peer);
+	entry->hadb_misc_func->
+		hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
+				      &entry->hit_peer);
 
  	/********** ESP_INFO **********/
 	//barrier();
@@ -1386,7 +1395,6 @@ int hip_create_r2(struct hip_context *ctx,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
-	
 	/* Check if the incoming I2 has a REG_REQUEST parameter. */
 
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
@@ -1448,12 +1456,20 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
- 	/* Send the packet */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(i2_daddr, i2_saddr, i2_info->dst_port,
-							i2_info->src_port,
-						      r2, entry, 0), -1,
-		 "Failed to send r2\n")
-	/* Here we reverse the src port and dst port !! For obvious reason ! --Abi*/
+ 	/* If the peer is behind a NAT, UDP is used. */
+	if(entry->nat_mode) {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+				      entry->peer_udp_port, r2, entry, 0),
+			 -ECOMM, "Sending R2 packet on UDP failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		/** @todo remove ports. */
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_raw(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
+			 -ECOMM, "Sending R2 packet on raw HIP failed.\n");
+	}
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database
@@ -1467,11 +1483,23 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_DEBUG("Added kea entry");
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	/* Insert rendezvous association to rendezvous database. */
+	/* Insert rendezvous association with appropriate xmit-function to
+	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
 	HIP_RVA *rva;
-	HIP_IFE(!(rva = hip_rvs_ha2rva(entry, GFP_KERNEL)), -ENOSYS);
+	if(entry->nat_mode) {
+		HIP_IFE(!(rva =
+			  hip_rvs_ha2rva(entry,
+					 entry->hadb_xmit_func->hip_send_udp)),
+			-ENOSYS);
+	}
+	else {
+		HIP_IFE(!(rva =
+			  hip_rvs_ha2rva(entry,
+					 entry->hadb_xmit_func->hip_send_raw)),
+			-ENOSYS);
+	}
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
@@ -1651,23 +1679,23 @@ int hip_handle_i2(struct hip_common *i2,
 	 * storage and nobody uses the data in the original packet.
 	 */
 
-	/* Create state (if not previously done) */
+	/* Create host association state (if not previously done). */
 	if (!entry) {
 		int if_index;
 		struct sockaddr_storage ss_addr;
 		struct sockaddr *addr;
 		addr = (struct sockaddr*) &ss_addr;
 		/* we have no previous infomation on the peer, create
-		 * a new HIP HA */
+		   a new HIP HA */
 		HIP_DEBUG("No entry, creating new\n");
 		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 			 "Failed to create or find entry\n");
 
 		/* the rest of the code assume already locked entry,
-		 * so lock the newly created entry as well */
+		   so lock the newly created entry as well */
 		HIP_LOCK_HA(entry);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
+		/* ipv6_addr_copy(&entry->hit_our, &i2->hitr); */
 		hip_init_us(entry, &i2->hitr);
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
@@ -1677,12 +1705,19 @@ int hip_handle_i2(struct hip_common *i2,
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
 		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
-		add_address_to_list(addr, if_index);//if_index = addr2ifindx(entry->local_address);
-		/*FIXME : This is a temporary fix. Need to think on this a bit ! --Abi*/
-		//Add other info here
-		if(i2_info->src_port != 0 || i2_info->dst_port != 0)
+		add_address_to_list(addr, if_index);
+                /* if_index = addr2ifindx(entry->local_address); */
+
+		/* If the incoming I2 packet has a source other than zero, we
+		   set "on" the NAT state of current machine (the responder)
+		   and store the source port of the incoming I2 packet. This
+		   port is the NAT-P' of [draft-schmitt-hip-nat-traversal-01]
+		   section 3.3.1. */
+		/** @todo This is a temporary fix. Need to think on this a bit.
+		    Add other info here. --Abi */
+		if(i2_info->src_port != 0)
 		{
-			entry->nat = 1;
+			entry->nat_mode = 1;
 			entry->peer_udp_port = i2_info->src_port;
 		}
 
@@ -1693,8 +1728,8 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 	entry->hip_transform = hip_tfm;
 	
-	/* FIXME: the above should not be done if signature fails...
-	   or it should be cancelled */
+	/** @todo the above should not be done if signature fails...
+	    or it should be cancelled. */
 	
 	/* Store peer's public key and HIT to HA */
 	HIP_IFEL(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL,
@@ -1839,8 +1874,9 @@ int hip_handle_i2(struct hip_common *i2,
 	/* we cannot do this outside (in hip_receive_i2) since we don't have
 	   the entry there and looking it up there would be unneccesary waste
 	   of cycles */
-//	if (!ha && entry) {
-		HIP_DEBUG("state is %d\n", entry->state);
+
+	HIP_DEBUG("state is %d\n", entry->state);
+	
 	if (entry) {
 		wmb();
 #ifdef CONFIG_HIP_RVS
@@ -2146,17 +2182,24 @@ int hip_handle_r2(struct hip_common *r2,
 /**
  * Handles an incoming I1 packet.
  *
- * Handles an incoming I1 packet and parses @c FROM parameters from the packet.
- * <ul>
- * <li>If one ore more @c FROM parameters are found, there must also be a
- * @c RVS_HMAC parameter present. This hmac is first verified. If verification
- * succeeds, the IP addresses obtained from the parameters are passed to
- * hip_xmit_r1() as an array. In hip_xmit_r1() this array is used create a
- * @c VIA_RVS parameter. If the verification fails, a negative error value is
- * returned. </li>
- * <li>If no @c FROM parameters are found, this function does nothing else but
- * calls hip_xmit_r1().</li>
- * </ul>
+ * Handles an incoming I1 packet and parses @c FROM or @c FROM_NAT parameter
+ * from the packet. If a @c FROM or a @c FROM_NAT parameter is found, there must
+ * also be a @c RVS_HMAC parameter present. This hmac is first verified. If the
+ * verification fails, a negative error value is returned and hip_xmit_r1() is
+ * not invoked. If verification succeeds,
+ * <ol>
+ * <li>and a @c FROM parameter is found, the IP address obtained from the
+ * parameter is passed to hip_xmit_r1() as the destination IP address. The
+ * source IP address of the received I1 packet is passed to hip_xmit_r1() as
+ * the IP of RVS.</li>
+ * <li>and a @c FROM_NAT parameter is found, the IP address and
+ * port number obtained from the parameter is passed to hip_xmit_r1() as the
+ * destination IP address and destination port. The source IP address and source
+ * port of the received I1 packet is passed to hip_xmit_r1() as the IP and port
+ * of RVS.</li>
+ * <li>If no @c FROM or @c FROM_NAT parameters are found, this function does
+ * nothing else but calls hip_xmit_r1().</li>
+ * </ol>
  *
  * @param i1       a pointer to the received I1 HIP packet common header with
  *                 source and destination HITs.
@@ -2168,6 +2211,12 @@ int hip_handle_r2(struct hip_common *r2,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code only handles a single @c FROM or @c FROM_NAT
+ *                 parameter. If there is a mix of @c FROM and @c FROM_NAT
+ *                 parameters, only the first @c FROM parameter is parsed. Also,
+ *                 if there are multiple @c FROM or @c FROM_NAT parameters
+ *                 present in the incoming I1 packet, only the first of a kind
+ *                 is parsed.
  */
 int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
@@ -2175,31 +2224,59 @@ int hip_handle_i1(struct hip_common *i1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i1_info)
 {
-	int err = 0, via_rvs_count = 0;
-	struct in6_addr *dstip = NULL, *rvs_addresses = NULL;
-
+	int err = 0, is_via_rvs_nat = 0;
+	struct in6_addr *dst_ip = NULL;
+	in_port_t dst_port = 0;
+	void *rvs_address = NULL;
+	hip_tlv_type_t param_type = 0;
+	hip_ha_t *rvs_ha_entry = NULL;
+	struct hip_from_nat *from_nat;
+	struct hip_from *from;
+		
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
 	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
+	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
+		  i1_info->src_port, i1_info->dst_port);
 	HIP_DUMP_MSG(i1);
 
 #ifdef CONFIG_HIP_RVS
 	
-	/* We have three cases:
-	   1. One FROM parameter was found.
-	   2. Multiple FROM parameters were found.
-	   3. FROM parameter was not found. */
+	/* Note that this code effectively takes place at the responder of
+	   I->RVS->R hierachy, not at the RVS itself. 
+	   
+	   We have five cases:
+	   1. I1 was received on UDP and a FROM parameter was found.
+	   2. I1 was received on raw HIP and a FROM parameter was found.
+	   3. I1 was received on UDP and a FROM_NAT parameter was found.
+	   4. I1 was received on raw HIP and a FROM_NAT parameter was found.
+	   5. Neither FROM nor FROM_NAT parameter was not found. */
 	
-	/* Check if the incoming I1 packet has a FROM parameter. */
-	struct hip_from *from = hip_get_param(i1, HIP_PARAM_FROM);
-	if (!from) {
-		/* Case 3. */
+	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
+	   all. */
+	from_nat = hip_get_param(i1, HIP_PARAM_FROM_NAT);
+	from = hip_get_param(i1, HIP_PARAM_FROM);
+	
+	if (!(from || from_nat)) {
+		/* Case 5. */
 		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
-		goto skip_from;
+		goto skip_nat;
 	}
-
-	/* Case 1. */
-	HIP_DEBUG("Found FROM parameter in I1.\n");
+	
+	HIP_DEBUG("Found %s parameter in I1.\n",
+		  from ? "FROM" : "FROM_NAT");
+	
+	if(from) {
+		/* Cases 1. & 2. */
+		param_type = HIP_PARAM_FROM;
+		dst_ip = (struct in6_addr *)&from->address;
+	}
+	else {
+		/* Cases 3. & 4. */
+		param_type = HIP_PARAM_FROM_NAT;
+		dst_ip = (struct in6_addr *)&from_nat->address;
+		dst_port = ntohs(from_nat->port);
+	}
 	
 	/* The relayed I1 packet has the initiators HIT as source HIT,
 	   and the responder HIT as destination HIT. We would like to
@@ -2209,64 +2286,58 @@ int hip_handle_i1(struct hip_common *i1,
 	   rvs' HIT as destination HIT. Let's get that host association
 	   using the responder's HIT and the IP address of the RVS as
 	   search keys. */
-	
-	hip_ha_t *rvs_ha_entry = NULL;
-	HIP_IFEL((rvs_ha_entry = 
-		  hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL,
+	HIP_IFEL(((rvs_ha_entry =
+		   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
 		 -1, "A matching host association was not found for "\
 		 "responder HIT / RVS IP.");
 	
 	HIP_DEBUG("RVS host association entry found.\n");
 	
+	/* Verify the RVS hmac. */
 	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
 		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
 	
-	/* First FROM parameter has the destination IP (Initiator). */
-	dstip = (struct in6_addr *)&from->address;
-	
-	/* Check if there are multiple FROM parameters. Rest of the FROM
-	   parameters have the IP addresses of the traversed RVSes. */
-	struct hip_tlv_common *current_param = (struct hip_tlv_common *)from;
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
-		if(ntohs(current_param->type) == HIP_PARAM_FROM){
-			/* Case 2. */
-			via_rvs_count++;
-			HIP_DEBUG("Found multiple FROM parameters in I1.\n");
-		}
-		else {
-			break;
-		}
-	}
-	/* Now that it is known how many FROM parameters there are, memory
-	   can be allocated for the rvs_addresses array. */
-	HIP_IFEL(!(rvs_addresses = HIP_MALLOC(
-			   (via_rvs_count + 1) * sizeof(struct in6_addr), 0)),
-		 -ENOMEM, "Not enough memory to rvs_addresses.");
-	
-	/* Copy traversed rvsaddresses to an array. RVS addresses are
-	   the addresses in FROM parameters 2...n + source IP in the
-	   incoming I1 packet. */
-	current_param = (struct hip_tlv_common *)from;
-	int i;
-	for(i = 0; i < via_rvs_count; i++)
-	{
-		current_param = hip_get_next_param(i1, current_param);
-		memcpy(&rvs_addresses[i],
-		       hip_get_param_contents_direct(current_param),
+	/* I1 packet was received on UDP destined to port 50500.
+	   R1 packet will have a VIA_RVS_NAT parameter.
+	   Cases 1. & 3. */
+	if(i1_info->src_port == HIP_NAT_UDP_PORT) {
+		
+		struct hip_in6_addr_port our_addr_port;
+		is_via_rvs_nat = 1;
+		
+		HIP_IFEL(!(rvs_address = 
+			   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
+				      0)),
+			 -ENOMEM, "Not enough memory to rvs_address.");
+		
+		/* Insert source IP address and source port from the
+		   received I1 packet to "rvs_address". For this purpose
+		   a temporary hip_in6_addr_port struct is needed. */
+		memcpy(&our_addr_port.sin6_addr, i1_saddr,
 		       sizeof(struct in6_addr));
+		our_addr_port.sin6_port = htons(i1_info->src_port);
+		
+		memcpy(rvs_address, &our_addr_port,
+		       sizeof(struct hip_in6_addr_port));
+	} else {
+		/* I1 packet was received on raw IP/HIP.
+		   Cases 2. & 4. */
+		HIP_IFEL(!(rvs_address = 
+			   HIP_MALLOC(sizeof(struct in6_addr), 0)),
+			 -ENOMEM, "Not enough memory to rvs_address.");
+		
+		/* Insert source IP address from the received I1 packet
+		   to "rvs_address". */
+		memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
 	}
-	
-	/* Append source IP address from I1 to RVS addresses. */
-	memcpy(&rvs_addresses[i], i1_saddr, sizeof(struct in6_addr));
-	via_rvs_count++;
- skip_from:
+ skip_nat:
 #endif
-
-	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dstip,
-			  &i1->hits, i1_info, rvs_addresses, via_rvs_count);
+	
+	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
+			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat);
  out_err:
-	if(rvs_addresses) {
-		HIP_FREE(rvs_addresses);
+	if(rvs_address) {
+		HIP_FREE(rvs_address);
 	}
 	
 	return err;
@@ -2304,6 +2375,8 @@ int hip_handle_i1(struct hip_common *i1,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @warning        This code does not work correctly if there are @b both
+ *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_i1(struct hip_common *i1,
 		   struct in6_addr *i1_saddr,
@@ -2323,7 +2396,6 @@ int hip_receive_i1(struct hip_common *i1,
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
-	
 	
 	if (entry) {
 		wmb();

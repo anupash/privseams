@@ -132,13 +132,14 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+		err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
 
-	//FIXME: Miika .. please test this. I doubt there are some extra packets sent --Abi
+	/** @todo: Miika, please test this. I doubt there are some extra packets
+	    sent. --Abi */
 
 	/**************SENDING ON IPv4*****************/
 	/* Use All Nodes Addresses (link-local) from RFC2373 */
@@ -150,7 +151,11 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_csum_send(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+		/** @todo Add NAT support. If we're behind a NAT,
+		    we need to use UDP. NAT support is not needed for IPv6,
+		    because IPv6 NATs do not exists yet. Check if we're behind
+		    NAT from the global hip_nat_status. */
+		err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}

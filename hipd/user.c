@@ -69,12 +69,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_send_bos(msg);
 		break;
 	case SO_HIP_SET_NAT_ON:
-		HIP_DEBUG("Nat on!!\n");
-		err = hip_nat_on(msg);
+		/* Sets a flag for each host association that the current
+		   machine is behind a NAT. */
+		HIP_DEBUG("Handling NAT ON user message.\n");
+		HIP_IFEL(hip_nat_on(), -1,
+			 "Error when setting daemon NAT status to \"on\"\n");
 		break;
 	case SO_HIP_SET_NAT_OFF:
-		HIP_DEBUG("Nat off!!\n");
-		err = hip_nat_off(msg);
+		/* Removes the NAT flag from each host association. */
+		HIP_DEBUG("Handling NAT OFF user message.\n");
+		HIP_IFEL(hip_nat_off(), -1,
+			 "Error when setting daemon NAT status to \"on\"\n");
 		break;
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
@@ -193,13 +198,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	/* draft-ietf-hip-registration-02 RVS registration.
-	   Responder (of I,RVS,R hierarchy) handles this message. Message
-	   indicates that the current machine wants to register to a rvs server.
-	   This message is received from hipconf. */
-	case SO_HIP_ADD_RENDEZVOUS:
 		
-		/* Lauri: if(nat_status == 1) */ 
+	case SO_HIP_ADD_RENDEZVOUS:
+		/* draft-ietf-hip-registration-02 RVS registration. Responder
+		   (of I,RVS,R hierarchy) handles this message. Message
+		   indicates that the current machine wants to register to a rvs
+		   server. This message is received from hipconf. */
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
 		/* Get rvs ip and hit given as commandline parameters to hipconf. */
@@ -213,12 +217,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
 		
-                /* Lauri: if(entry->nat_status == 1) 
-		   {
-		   Now what?
-		   }
-		*/ 
-
 		/* Set a rvs request flag. */
 		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
 			 -1, "setting of rvs request flag failed\n");
@@ -228,11 +226,11 @@ int hip_handle_user_msg(struct hip_common *msg,
 			 -1, "sending i1 failed\n");
 		break;
 	
-	/* draft-ietf-hip-registration-02 RVS registration.
-	   Rendezvous server handles this message. Message indicates that the
-	   current machine is willing to offer rendezvous service. This message
-	   is received from hipconf. */
 	case SO_HIP_OFFER_RENDEZVOUS:
+		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
+		   server handles this message. Message indicates that the
+		   current machine is willing to offer rendezvous service. This
+		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
 		HIP_IFE(hip_services_add(HIP_RENDEZVOUS_SERVICE), -1);
