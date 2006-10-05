@@ -40,13 +40,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 struct hip_host_id *src_privkey,
 				 const struct hip_host_id *src_pubkey,
 				 int cookie);
-int hip_xmit_r1(struct in6_addr *i1_saddr,
-		struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit, 
-		struct in6_addr *dst_ip, struct in6_addr *dst_hit, 
-		struct hip_stateless_info *i1_info,
-		const struct in6_addr *traversed_rvs,
-		const int rvs_count);
+int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
+                struct in6_addr *, const in_port_t, struct in6_addr *,
+                struct hip_stateless_info *, const void *, const int);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *, int);
 void hip_send_notify_all(void);
 
