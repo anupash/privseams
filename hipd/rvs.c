@@ -443,14 +443,6 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
 		     struct hip_stateless_info *i1_info)
 {
-	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
-	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
-	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
-	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
-	HIP_DEBUG("Rendezvous association port: %d.\n", rva->client_udp_port);
-	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
-		  i1_info->src_port, i1_info->dst_port);
-		
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
@@ -461,6 +453,14 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
 				 in_port_t not_used);
 
+	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
+	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
+	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
+	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
+	HIP_DEBUG("Rendezvous association port: %d.\n", rva->client_udp_port);
+	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
+		  i1_info->src_port, i1_info->dst_port);
+		
 	/* If the incoming I1 packet was destined to port 50500, we know that
 	   there is a NAT between (I->NAT->RVS->R). */
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
