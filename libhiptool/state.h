@@ -1,10 +1,11 @@
+/** @file
+ * This file defines Host Identity Protocol (HIP) header and parameter related
+ * constants and structures.
+ *
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef _HIP_STATE
 #define _HIP_STATE
-
-/*
- * HIP header and parameter related constants and structures.
- *
- */
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -22,14 +23,13 @@
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-//#define HIP_STATE_REKEYING          6      /*! \todo REMOVE */
-/* when adding new states update debug.c hip_state_str */
+/* when adding new states update debug.h hip_state_str() */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
-#define HIP_STATE_FILTERING			10
+#define HIP_STATE_FILTERING	    10
 
-#define HIP_UPDATE_STATE_REKEYING    1      /*! \todo REMOVE */
+#define HIP_UPDATE_STATE_REKEYING    1      /** @todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
 
 #define PEER_ADDR_STATE_UNVERIFIED 1
@@ -60,45 +60,65 @@
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 
-/*! \todo remove HIP_HASTATE_SPIOK */
-typedef enum { HIP_HASTATE_INVALID=0, HIP_HASTATE_SPIOK=1,
-	       HIP_HASTATE_HITOK=2, HIP_HASTATE_VALID=3 } hip_hastate_t;
+/** @todo remove HIP_HASTATE_SPIOK */
+typedef enum { 
+	HIP_HASTATE_INVALID = 0,
+	HIP_HASTATE_SPIOK = 1,
+	HIP_HASTATE_HITOK = 2,
+	HIP_HASTATE_VALID = 3
+} hip_hastate_t;
 
-/*
- * hip stateless info: Used to send parameters 
- * across function calls carrying stateless info
+/** A typedefinition for a functionpointer to a transmitfunction introduced in
+    @c hip_xmit_func_set_t. */
+typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
+			       in_port_t, struct hip_common*, hip_ha_t *, int);
+
+/**
+ * A data structure for storing the source and destination ports of an incoming
+ * packet. 
  */
 struct hip_stateless_info 
 {
-	uint32_t src_port;
-	uint32_t dst_port;
+	in_port_t src_port; /**< The source port of an incoming packet. */
+	in_port_t dst_port; /**< The destination port of an incoming packet. */
 };
+
+/** 
+ * A binder structure for storing an IPv6 address and transport layer port
+ * number. This structure is used in hip_build_param_via_rvs_nat().
+ * 
+ * @note This has to be packed since it is used in building @c FROM_NAT and
+ *       @c VIA_RVS_NAT parameters.
+ */
+struct hip_in6_addr_port
+{
+	struct in6_addr sin6_addr; /**< IPv6 address. */
+	in_port_t       sin6_port; /**< Transport layer port number. */
+} __attribute__ ((packed));
 
 struct hip_context
 {
 	//struct sk_buff *skb_in;         /* received skbuff */
-	struct hip_common *input;       /* received packet */
-	struct hip_common *output;      /* packet to be built and sent */
-
+	struct hip_common *input;       /**< Received packet. */
+	struct hip_common *output;      /**< Packet to be built and sent. */
 	struct hip_crypto_key hip_enc_out;
 	struct hip_crypto_key hip_hmac_out;
 	struct hip_crypto_key esp_out;
 	struct hip_crypto_key auth_out;
-
 	struct hip_crypto_key hip_enc_in;
 	struct hip_crypto_key hip_hmac_in;
 	struct hip_crypto_key esp_in;
 	struct hip_crypto_key auth_in;
-
 	char   *dh_shared_key;
 	size_t dh_shared_key_len;
 
-	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
+	uint16_t current_keymat_index; /**< The byte offset index in draft
+					  chapter HIP KEYMAT */
 	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
-	uint8_t keymat_calc_index; /* the one byte index number used
-				    * during the keymat calculation */
-	uint16_t keymat_index; /* KEYMAT offset */
-	uint16_t esp_keymat_index; /* pointer to the esp keymat index */
+	uint8_t keymat_calc_index; /**< The one byte index number used
+				      during the keymat calculation. */
+	uint16_t keymat_index; /**< KEYMAT offset. */
+	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 };
 
 struct hip_peer_addr_list_item
@@ -186,27 +206,32 @@ struct hip_host_id_entry {
 	void *arg;
 };
 
+/** A data structure defining host association database state. */
 struct hip_hadb_state
 {
 	struct list_head     next_hit;
 	spinlock_t           lock;
 	atomic_t             refcnt;
-
 	hip_hastate_t        hastate;
 	int                  state;
 	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
-	hip_hit_t            hit_our;        /* The HIT we use with this host */
-	hip_hit_t            hit_peer;       /* Peer's HIT */
-	hip_hit_t            hash_key;       /* hit_our XOR hit_peer */
-	struct list_head     spis_in;        /* SPIs for inbound SAs,  hip_spi_in_item  */
-	struct list_head     spis_out;       /* SPIs for outbound SAs, hip_spi_out_item */
+	/** The HIT we use with this host. */
+	hip_hit_t            hit_our;
+	/** Peer's HIT. */
+	hip_hit_t            hit_peer;
+	/** @c hit_our XOR @c hit_peer. */
+	hip_hit_t            hash_key;
+	/** SPIs for inbound SAs, hip_spi_in_item. */
+	struct list_head     spis_in;
+	/** SPIs for outbound SAs, hip_spi_out_item */
+	struct list_head     spis_out;
 	uint32_t             default_spi_out;
-	struct in6_addr      preferred_address; /* preferred peer address to use when
-						 * sending data to peer */
-        struct  in6_addr     local_address;   /* Our IP address */
-  //	struct in6_addr      bex_address;    /* test, for storing address during the base exchange */
+	/** Preferred peer address to use when sending data to peer. */
+	struct in6_addr      preferred_address;
+	/** Our IP address. */
+        struct  in6_addr     local_address;
 	hip_lsi_t            lsi_peer;
 	hip_lsi_t            lsi_our;
 	int                  esp_transform;
@@ -214,47 +239,53 @@ struct hip_hadb_state
 	uint64_t             birthday;
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
-
-	uint16_t	     nat;    /* 1, if this hadb_state is behind nat */
-	uint32_t	     peer_udp_port;    /* NAT mangled port */
-	//struct in6_addr      peer_udp_address; /* NAT address */
+	/** A boolean value indicating whether there is a NAT between this
+	    host and the peer. */
+	uint8_t	             nat_mode;
+        /** NAT mangled port (source port of I2 packet). */
+	in_port_t	     peer_udp_port;
         int                  escrow_used;
 	struct in6_addr	     escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
-	 * here in the mean time.
-	 */
-	struct hip_crypto_key hip_enc_out; /* outgoing HIP packets */
+	 * here in the mean time. */
+	/** Outgoing HIP packets. */
+	struct hip_crypto_key hip_enc_out;
 	struct hip_crypto_key hip_hmac_out;
-	struct hip_crypto_key esp_out;  /* outgoing ESP packets */
+	/** Outgoing ESP packets. */
+	struct hip_crypto_key esp_out;
 	struct hip_crypto_key auth_out;
-	struct hip_crypto_key hip_enc_in; /* incoming HIP packets */
+	/** Incoming HIP packets. */
+	struct hip_crypto_key hip_enc_in;
 	struct hip_crypto_key hip_hmac_in;
-	struct hip_crypto_key esp_in; /* incoming ESP packets */
+	/** Incoming ESP packets. */
+	struct hip_crypto_key esp_in;
 	struct hip_crypto_key auth_in;
-
-	uint16_t current_keymat_index; /* the byte offset index in draft chapter HIP KEYMAT */
-	uint8_t keymat_calc_index; /* the one byte index number used
-				    * during the keymat calculation */
-	uint16_t esp_keymat_index; /* for esp_info */
-	unsigned char current_keymat_K[HIP_AH_SHA_LEN]; /* last Kn, where n is keymat_calc_index */
-	uint32_t update_id_out; /* stored outgoing UPDATE ID counter */
-	uint32_t update_id_in; /* stored incoming UPDATE ID counter */
-
+	/** The byte offset index in draft chapter HIP KEYMAT. */
+	uint16_t current_keymat_index;
+	/** The one byte index number used during the keymat calculation. */
+	uint8_t keymat_calc_index;
+	/** For @c esp_info. */
+	uint16_t esp_keymat_index;
+	/* Last Kn, where n is @c keymat_calc_index. */
+	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
+	/** Stored outgoing UPDATE ID counter. */
+	uint32_t update_id_out;
+	/** Stored incoming UPDATE ID counter. */
+	uint32_t update_id_in;
 	/* Our host identity functions */
 	struct hip_host_id *our_pub;
 	struct hip_host_id *our_priv;
 	int (*sign)(struct hip_host_id *, struct hip_common *);
-	
 	/* Peer host identity functions */
         struct hip_host_id *peer_pub;
  	int (*verify)(struct hip_host_id *, struct hip_common *);
-
-        uint64_t puzzle_solution; /* For retransmission */
-	uint64_t puzzle_i;        /* For retransmission */
-
-	char echo_data[4]; /* For base exchange or CLOSE, not for UPDATE */
-
+	/** For retransmission. */
+        uint64_t puzzle_solution;
+	/** For retransmission. */
+	uint64_t puzzle_i;
+	/** For base exchange or CLOSE. @b Not for UPDATE. */
+	char echo_data[4];
 	struct {
 		int count;
 		time_t last_transmit;
@@ -289,6 +320,9 @@ struct hip_hadb_state
 	hip_output_filter_func_set_t *hadb_output_filter_func;
 };
 
+/** @addtogroup hadb_func
+ * @{
+ */
 struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
 			      struct in6_addr *, 
@@ -439,13 +473,27 @@ struct hip_hadb_misc_func_set{
 				      const struct in6_addr *hit_receiver);
 };
 
-struct hip_hadb_xmit_func_set{ 
-	int  (*hip_csum_send)(struct in6_addr *local_addr,
-			      struct in6_addr *peer_addr,
-			      uint32_t src_port, uint32_t dst_port,
-			      struct hip_common* msg,
-			      hip_ha_t *entry,
-			      int retransmit);
+/** A data structure containing function pointers to functions used for sending
+    data on wire. */
+struct hip_hadb_xmit_func_set{
+	/** A function pointer for sending data on raw HIP. */
+	int  (*hip_send_raw)(struct in6_addr *local_addr,
+			     struct in6_addr *peer_addr,
+			     in_port_t src_port, in_port_t dst_port,
+			     struct hip_common* msg, hip_ha_t *entry,
+			     int retransmit);
+	/** A function pointer for sending data on UDP. */
+	int (*hip_send_udp)(struct in6_addr *local_addr,
+			    struct in6_addr *peer_addr,
+			    in_port_t src_port, in_port_t dst_port,
+			    struct hip_common* msg, hip_ha_t *entry,
+			    int retransmit);
+	/** A function pointer for sending packet on wire. */
+	int (*hip_send_pkt)(struct in6_addr *local_addr,
+			    struct in6_addr *peer_addr,
+			    in_port_t src_port, in_port_t dst_port,
+			    struct hip_common* msg, hip_ha_t *entry,
+			    int retransmit);
 };
 
 struct hip_hadb_input_filter_func_set { 
@@ -456,6 +504,7 @@ struct hip_hadb_output_filter_func_set {
 	int (*hip_output_filter)(struct hip_common *msg);
 };
 
+/* @} */
 
 #endif /* _HIP_STATE */
 
