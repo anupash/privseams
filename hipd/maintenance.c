@@ -17,7 +17,7 @@
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
@@ -46,27 +46,46 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
+
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-	    	entry->state != HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Retransmit packet\n");
-			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-								   &entry->hip_msg_retrans.daddr,
-									0,0, /*need to correct it*/
-								   entry->hip_msg_retrans.buf,
-								   entry, 0);
-			/* Set entry state, if previous state was unassosiated and type is I1. */
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
-			{
-				HIP_DEBUG("Send I1 succcesfully after acception.\n");
+		    entry->state != HIP_STATE_ESTABLISHED) {
+			
+			/* If NAT status is on, UDP is used. */
+			if(hip_nat_status) {
+				/** @todo How to know which source and
+				    destination ports to use? */
+				entry->hadb_xmit_func->
+					hip_send_udp(&entry->hip_msg_retrans.saddr,
+						     &entry->hip_msg_retrans.daddr,
+						     0, HIP_NAT_UDP_PORT,
+						     entry->hip_msg_retrans.buf,
+						     entry, 0);
+			}
+			/* If NAT status is off, raw HIP is used. */
+			else {
+				err = entry->hadb_xmit_func->
+					hip_send_raw(&entry->hip_msg_retrans.saddr,
+						     &entry->hip_msg_retrans.daddr,
+						     0,0,
+						     entry->hip_msg_retrans.buf,
+						     entry, 0);
+			}
+
+			/* Set entry state, if previous state was unassosiated
+			   and type is I1. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_I1) {
+				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		} else {
+		}
+		else {
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
@@ -425,11 +444,11 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
-
+	/* Send an UPDATE message to NAT to keep the port open. */
 	if(nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_keep_alive(), -1, 
-			"Failed to send out keepalives\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+		HIP_IFEL(hip_nat_refresh_port(), -1, 
+			 "Failed to refresh NAT port state.\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 	} else {
 		nat_keep_alive_counter--;
 	}	

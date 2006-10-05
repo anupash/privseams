@@ -4,8 +4,6 @@
 
 /*! \addtogroup ife
  * @{
- * HIP IFE-macros.
- *
  */
 
 #define GOTO_OUT -3

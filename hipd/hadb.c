@@ -309,8 +309,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	
 	/* Set the nat status here */
 	if(hip_nat_status)
-		entry->nat = 1;	
-		
+	{
+		entry->nat_mode = 1;	
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	}
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */
 	
@@ -637,7 +639,7 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 }
 
 /**
- * hip_hadb_add_peer_addr - add a new peer IPv6 address to the entry's list of peer addresses
+ * Adds a new peer IPv6 address to the entry's list of peer addresses.
  * @param entry corresponding hadb entry of the peer
  * @param new_addr IPv6 address to be added
  * @param spi outbound SPI to which the @c new_addr is related to
@@ -672,7 +674,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		goto out_err;
 	}
 
-	/* todo: replace following with hip_hadb_get_spi_list */
+	/** @todo replace following with hip_hadb_get_spi_list */
         list_for_each_entry_safe(spi_out, tmp, &entry->spis_out, list) {
 		if (spi_out->spi == spi) {
 			found_spi_list = 1;
@@ -688,14 +690,14 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 
 	err = hip_hadb_get_peer_addr_info(entry, new_addr, &prev_spi, NULL, NULL);
 	if (err) {
-		/* todo: validate previous vs. new interface id for 
-		 * the new_addr ? */
+		/** @todo validate previous vs. new interface id for 
+		    the new_addr ? */
 		if (prev_spi != spi)
 			HIP_DEBUG("todo: SPI changed: prev=%u new=%u\n", prev_spi,
 				  spi);
 
 		HIP_DEBUG("duplicate address not added (todo: update address lifetime ?)\n");
-		/* todo: update address lifetime ? */
+		/** @todo update address lifetime ? */
 		err = 0;
 		goto out_err;
 	}
@@ -779,7 +781,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		   from the hashtable already (hip_exit won't find it
 		   anymore). */
 		hip_hadb_delete_state(ha);
-		//hip_db_put_ha(ha, hip_hadb_delete_state);
+		hip_db_put_ha(ha, hip_hadb_delete_state);
 		/* and now zero --> deleted*/
 	} else {
 		hip_hadb_delete_peer_addrlist_one(ha, addr);
@@ -1350,15 +1352,26 @@ int hip_update_send_echo(hip_ha_t *entry,
 
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, 
 					    &entry->hit_peer, &entry->hit_our),
-		 -1, "Building Echo  Packet failed\n");
+		 -1, "Building Echo Packet failed\n");
 
-	/* test: send all addr check from same address */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &addr->address,
-						      0, 0, update_packet,
-						      entry, 0), -1,
-		 "csum_send failed\n");
-
+	/* If the peer is behind a NAT, UDP is used. */
+	/** @todo Functionality on UDP has not been tested. */
+	if(entry->nat_mode) {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_udp(&entry->local_address, &addr->address,
+				      0, entry->peer_udp_port,
+				      update_packet, entry, 1), -ECOMM,
+			 "Sending UPDATE packet with echo data on UDP "\
+			 "failed.\n");
+	}
+	/* If there's no NAT between, raw HIP is used. */
+	else {
+		HIP_IFEL(entry->hadb_xmit_func->
+			 hip_send_raw(&entry->local_address, &addr->address,
+				      0, 0, update_packet, entry, 0), -ECOMM,
+			 "Sending UPDATE packet with echo data on raw HIP "\
+			 "failed.\n");
+	}
  out_err:
 	return err;
 
@@ -1733,12 +1746,12 @@ void hip_hadb_dump_hs_ht(void)
                 if (!list_empty(&hadb_byspi_list[i])) {
                         _HIP_DEBUG("HT[%d]\n", i);
                         list_for_each_entry_safe(hs, tmp_hs, &hadb_byspi_list[i]
-, list) {
+						 , list) {
                                 hip_hadb_hold_hs(hs);
                                 hip_in6_ntop(&hs->hit_peer, str);
                                 HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
                                           str, hs->spi, atomic_read(&hs->refcnt)
-);
+					);
                                 hip_hadb_put_hs(hs);
                         }
                 }
@@ -1817,16 +1830,25 @@ void hip_init_hadb(void)
 	/* insert your alternative function sets here!*/ 
 	
 	/* initialize default function pointer sets for update functions*/
-	default_update_func_set.hip_handle_update_plain_locator   = hip_handle_update_plain_locator;
+	default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
 	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
 	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
 	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
 	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
 	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
-	/* xmit function set */
-	default_xmit_func_set.hip_csum_send	           = hip_csum_send;
 
+	/* xmit function set */
+	default_xmit_func_set.hip_send_raw = hip_send_raw;
+	default_xmit_func_set.hip_send_udp = hip_send_udp;
+	
+        /** @todo Add support for i3. */
+	if(hip_nat_status) {
+		default_xmit_func_set.hip_send_pkt = hip_send_udp;
+	}
+	else {
+		default_xmit_func_set.hip_send_pkt = hip_send_raw;
+	}
 	/* filter function sets */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
 	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
@@ -1889,7 +1911,7 @@ int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 				     hip_handle_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_handle_func = new_func_set;
 		return 0;
@@ -1908,7 +1930,7 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 				   hip_misc_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+	/** @todo add check whether all function pointers are set. */
 	if( entry ){
 		entry->hadb_misc_func = new_func_set;
 		return 0;

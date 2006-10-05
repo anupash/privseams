@@ -54,8 +54,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		a = ntohl(a);
 		if ((a == INADDR_ANY) ||
                     (a == INADDR_LOOPBACK) ||
+		    //IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    (a == INADDR_BROADCAST) ||
-			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    IS_LSI32(a)) {
 			return 0;
 		} else {
@@ -555,7 +555,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				//	locators[i].reserved =
 				//		i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
- i++;
+					i++;
 				}
 				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
@@ -699,6 +699,16 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
+/**
+ * Selects a source IP address.
+ *
+ * Selection criteria is explained in [RFC1122] for IPv4 and in [RFC3484] for
+ * IPv6.
+ *
+ * @param src 
+ * @param dst
+ * @return zero on success, or negative error value on error.
+ */ 
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
