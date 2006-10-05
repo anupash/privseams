@@ -117,7 +117,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
- 	HIP_DEBUG("hip_create_r1() invoked.\n");
 	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
@@ -132,6 +131,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
+ 	HIP_DEBUG("hip_create_r1() invoked.\n");
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
@@ -303,13 +303,13 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct hip_stateless_info *i1_info, const void *traversed_rvs,
 		const int is_via_rvs_nat) 
 {
-	HIP_DEBUG("hip_xmit_r1() invoked.\n");
-
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 	
+	HIP_DEBUG("hip_xmit_r1() invoked.\n");
+
 	/* Get the destination address and port. If destination port is zero,
 	   the source port of I1 becomes the destination port of R1.*/
 	r1_dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
@@ -765,6 +765,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common* msg, hip_ha_t *not_used, int retransmit)
 {
+	int sockfd = 0, err = 0, xmit_count = 0;
+	/* IPv4 Internet socket addresses. */
+	struct sockaddr_in src4, dst4;
+	/* Length of the HIP message. */
+	uint16_t packet_length = 0;
+	/* Number of characters sent. */
+	ssize_t chars_sent = 0;
+	/* If local address is not given, we fetch one here. */
+	struct in6_addr my_addr;
+	
 	HIP_DEBUG("hip_send_udp() invoked.\n");
 	
 	/* Verify the existence of obligatory parameters. */
@@ -776,16 +786,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG_IN6ADDR("hip_send_udp(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port: %d, destination port: %d.\n",
 		  src_port, dst_port);
-	
-	int sockfd = 0, err = 0, xmit_count = 0;
-	/* IPv4 Internet socket addresses. */
-	struct sockaddr_in src4, dst4;
-	/* Length of the HIP message. */
-	uint16_t packet_length = 0;
-	/* Number of characters sent. */
-	ssize_t chars_sent = 0;
-	/* If local address is not given, we fetch one here. */
-	struct in6_addr my_addr;
 	
 	/* Currently only IPv4 is supported, so we set internet address family
 	   accordingly and map IPv6 addresses to IPv4 addresses. */
@@ -901,9 +901,10 @@ int hip_send_pkt_stateless(struct in6_addr *local_addr,
 			   struct hip_common* msg, hip_ha_t *entry,
 			   int retransmit)
 {
-	HIP_DEBUG("hip_send_pkt_stateless() invoked.\n");
 	int err = 0;
 	
+	HIP_DEBUG("hip_send_pkt_stateless() invoked.\n");
+
 	if(hip_nat_status || (entry && entry->nat_mode)) {
 		err = hip_send_udp(local_addr, peer_addr, src_port, dst_port,
 				   msg, entry, retransmit);

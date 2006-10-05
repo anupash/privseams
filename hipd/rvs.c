@@ -77,12 +77,13 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  */
 HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
-	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
-	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
+
+	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
+	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 
 	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
