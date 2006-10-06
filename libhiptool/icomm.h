@@ -65,6 +65,8 @@
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	134
 #define SO_HIP_GET_PEER_HIT			136
 #define SO_HIP_SET_PEER_HIT			137
+#define SO_HIP_SET_BLIND_ON                     138
+#define SO_HIP_SET_BLIND_OFF                    139
 /** @} */
 
 #endif /* _HIP_ICOMM */

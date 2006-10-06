@@ -350,7 +350,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status() && hdr->control & HIP_CONTROL_BLIND)
-		result = &hid->blind_r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+	  //result = &hid->blind_r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 #endif
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);

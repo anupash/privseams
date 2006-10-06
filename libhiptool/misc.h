@@ -80,4 +80,10 @@ int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
 
+#ifdef CONFIG_HIP_BLIND
+int hip_blind_fingerprints(hip_ha_t *entry);
+int hip_plain_fingerprints(hip_ha_t *entry);
+#endif
+
+
 #endif /* HIP_MISC_H */

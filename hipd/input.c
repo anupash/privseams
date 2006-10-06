@@ -433,6 +433,10 @@ int hip_produce_keying_material(struct hip_common *msg,
 	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	_HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
 	_HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
+
+#ifdef HIP_CONFIG_BLIND
+	/*Laura: jos on blind moodi päällä, niin vaihdetaan hit-parametrit blindattuihin*/
+#endif
 	hip_make_keymat(dh_shared_key, dh_shared_len,
 			&km, keymat, keymat_len,
 			&msg->hits, &msg->hitr, &ctx->keymat_calc_index, I, J);
@@ -1298,7 +1302,7 @@ int hip_receive_r1(struct hip_common *r1,
 	mask |= HIP_CONTROL_RVS_CAPABLE; /** @todo: Fix this kludge. */
 #endif
 #ifdef CONFIG_HIP_BLIND
-	mask |= HIP_CONTROL_BLIND
+	mask |= HIP_CONTROL_BLIND;
 #endif
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
@@ -1620,7 +1624,7 @@ int hip_handle_i2(struct hip_common *i2,
 	// XX TODO KARTHIK: if entry->blind then r1.hitr should be converted to plain hit
 #endif
 	   
-	   TH: I'm not sure if this could be replaced with a function pointer
+	/*  TH: I'm not sure if this could be replaced with a function pointer
 	   which is set from hadb. Usually you shouldn'y have state here, right?*/
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
@@ -2435,7 +2439,7 @@ int hip_receive_i1(struct hip_common *i1,
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 #ifdef CONFIG_HIP_BLIND
-	mask | = HIP_CONTROL_BLIND
+	mask |= HIP_CONTROL_BLIND;
 #endif
 	HIP_DEBUG("hip_receive_i1() invoked.\n");
 	HIP_IFEL(ipv6_addr_any(&i1->hitr), -EPROTONOSUPPORT, 

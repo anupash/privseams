@@ -43,7 +43,7 @@ const char *usage =
 "new|add hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
-        "hip blind on|off\n"
+        "set blind on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
@@ -67,7 +67,7 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_opp,
 	handle_escrow,
 	handle_service,
-	handle_blind
+	handle_blind,
 };
 
 /**
@@ -161,8 +161,6 @@ int get_type(char *text) {
 		ret = TYPE_BOS;
 	else if (!strcmp("nat", text))
 		ret = TYPE_NAT;
-	else if (!strcmp("blind", text))
-		ret = TYPE_BLIND;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
 	else if (!strcmp("service", text))
@@ -172,6 +170,10 @@ int get_type(char *text) {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
+#endif
+#ifdef CONFIG_HIP_BLIND
+	else if (!strcmp("blind", text))
+		ret = TYPE_BLIND;
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	else if (!strcmp("escrow", text))
@@ -740,12 +742,10 @@ int handle_opp(struct hip_common *msg, int action,
 int handle_blind(struct hip_common *msg, int action,
                const char *opt[], int optc)
 {
-	int err;
+	int err = 0;
 	int status = 0;
-	int ret;
-	struct in6_addr hit;
-	
-	HIP_DEBUG("Blind setting. Options:%s\n", opt[0]);
+
+	HIP_DEBUG("hipconf: using blind\n");
 
 	if (optc != 1) {
 		HIP_ERROR("Missing arguments\n");
@@ -754,29 +754,12 @@ int handle_blind(struct hip_common *msg, int action,
 	}
 
 	if (!strcmp("on",opt[0])) {
-		memset(&hit,0,sizeof(struct in6_addr));
 		status = SO_HIP_SET_BLIND_ON; 
 	} else if (!strcmp("off",opt[0])) {
-		memset(&hit,0,sizeof(struct in6_addr));
                 status = SO_HIP_SET_BLIND_OFF;
 	} else {
-		ret = inet_pton(AF_INET6, opt[0], &hit);
-		if (ret < 0 && errno == EAFNOSUPPORT) {
-			HIP_PERROR("inet_pton: not a valid address family\n");
-			err = -EAFNOSUPPORT;
-			goto out;
-		} else if (ret == 0) {
-			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-			err = -EINVAL;
-			goto out;
-		}
-		status = SO_HIP_SET_BLIND_ON;
-	}
-
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	        HIP_PERROR("not a valid blind mode\n");
+	        err = -EAFNOSUPPORT;
 		goto out;
 	}
 
@@ -953,7 +936,7 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
 		goto out;
 	}
-	_HIP_INFO("action=%d\n", action);
+	HIP_INFO("action=%d\n", action);
 	
 	if (argc-2 < check_action_argc(action)) {
 		err = -EINVAL;
@@ -974,7 +957,7 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
 		goto out;
 	}
-	_HIP_INFO("type=%d\n", type);
+	HIP_INFO("type=%d\n", type);
 
 	if (action == ACTION_RUN)
 	{

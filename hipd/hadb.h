@@ -11,6 +11,10 @@
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 
+#ifdef CONFIG_HIP_BLIND
+#include "blind.h"
+#endif
+
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
@@ -62,6 +66,9 @@ hip_misc_func_set_t default_misc_func_set;
 #endif
 
 extern int hip_nat_status;
+#ifdef CONFIG_HIP_BLIND
+extern int hip_blind_status;
+#endif
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);

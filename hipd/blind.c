@@ -1,81 +1,75 @@
 #include "blind.h"
 
-
-
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
-        int err = 0;
-
-        if(entry)
-        {
-                entry->blind = 1;
-        }
+  int err = 0;
+  
+  if(entry) {
+    entry->blind = 1;
+  }
  out_err:
-        return err;
+  return err;
 }
+
 int hip_set_blind_off_sa(hip_ha_t *entry, void *not_used)
 {
-        int err = 0;
-
-        if(entry)
-        {
-                entry->blind = 0;
-                HIP_DEBUG("*******Setting blind off blind: %d\n", entry->blind);
-        }
+  int err = 0;
+  
+  if(entry) {
+    entry->blind = 0;
+  }
  out_err:
-        return err;
+  return err;
 }
-
 
 int hip_set_blind_on(void)
 {
-        int err = 0;
-
-        hip_blind_status = 1;
-        HIP_IFEL(hip_for_each_ha(hip_set_blind_on_sa, NULL), 0,
-                         "for_each_ha err.\n");
-
+  int err = 0;
+  
+  hip_blind_status = 1;
+  HIP_IFEL(hip_for_each_ha(hip_set_blind_on_sa, NULL), 0,
+	   "for_each_ha err.\n");
+  
  out_err:
-        return err;
+  return err;
 }
 
 int hip_set_blind_off(void)
 {
-        int err = 0;
-
-        hip_blind_status = 0;
-        HIP_IFEL(hip_for_each_ha(hip_set_blind_off_sa, NULL), 0,
-                         "for_each_ha err.\n");
-
+  int err = 0;
+  
+  hip_blind_status = 0;
+  HIP_IFEL(hip_for_each_ha(hip_set_blind_off_sa, NULL), 0,
+	   "for_each_ha err.\n");
+  
  out_err:
-        return err;
+  return err;
 }
 
 
 int hip_blind_get_status(void)
 {
-	return hip_blind_status;
+  return hip_blind_status;
 }
-/*
 
 int hip_handle_i1_blind(struct hip_common *i1,
 			struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr,
 			hip_ha_t *entry,
 			struct hip_stateless_info *i1_info) {
-	struct hip_common *r1pkt = NULL;
-	struct hip_blind_nonce *nonce = NULL;
-	struct in6_addr hitr_plain;
-	int hashalgo;//just to send it in the function to follow;
-	//hashalgo should be SHA1();
-	struct in6_addr *own_addr, *dst_addr;
-	struct hip_tlv_common *puzzle = NULL;
-	int err = 0;
+  struct hip_common *r1pkt = NULL;
+  struct hip_blind_nonce *nonce = NULL;
+  struct in6_addr hitr_plain;
+  int hashalgo;//just to send it in the function to follow;
+  //hashalgo should be SHA1();
+  struct in6_addr *own_addr, *dst_addr;
+  struct hip_tlv_common *puzzle = NULL;
+  int err = 0;
 
-	/**
-	 * if blind we have to get the puzzle from the precreated r1 s and 
-	 * construct a new r1 which has to be sent...
-	 */
+#if 0	
+	 // if blind we have to get the puzzle from the precreated r1 s and 
+	 //construct a new r1 which has to be sent...
+	 //
 	
 	HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
 	
@@ -97,7 +91,7 @@ int hip_handle_i1_blind(struct hip_common *i1,
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
 	_HIP_DEBUG_HIT("hip_xmit_r1:: ripkt->hitr", &r1pkt->hitr);
 	
-	/* set cookie state to used (more or less temporary solution ?) */
+	//set cookie state to used (more or less temporary solution ?)
 	_HIP_HEXDUMP("R1 pkt", r1pkt, hip_get_msg_total_len(r1pkt));
 	
 	
@@ -111,6 +105,7 @@ int hip_handle_i1_blind(struct hip_common *i1,
 	//XX-- most of the work in this func hip_xmit_ has been done.. so.. wud just make hip_cum_send call
 	// REMEMBER TO DEALLOCATE MEMORY IN THE END
 
+#endif
  out_err:
 	return err;
 }
@@ -128,6 +123,7 @@ struct hip_common *hip_create_blinded_r1(const struct in6_addr *src_hit,
 					 const struct hip_host_id *host_id_pub,
 					 int cookie_k)
 {
+#if 0
  	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
@@ -251,6 +247,7 @@ struct hip_common *hip_create_blinded_r1(const struct in6_addr *src_hit,
  		HIP_FREE(msg);
  	if (dh_data)
  		HIP_FREE(dh_data);
+#endif
 
   	return NULL;
 }
@@ -285,6 +282,8 @@ struct hip_common *hip_get_r1_blinded(struct in6_addr *ip_i, struct in6_addr *ip
 			      struct in6_addr *our_hit,
 			      struct in6_addr *peer_hit)
 {
+
+#if 0
 	struct hip_common *err = NULL, *r1 = NULL;
 	struct hip_r1entry * r1table_blinded;
 	struct hip_host_id_entry *hid;
@@ -317,5 +316,7 @@ struct hip_common *hip_get_r1_blinded(struct in6_addr *ip_i, struct in6_addr *ip
 
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;
+#endif
+	return NULL;
 }
 

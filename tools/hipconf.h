@@ -65,9 +65,9 @@
 #define TYPE_OPP     8
 #define TYPE_ESCROW  9
 #define TYPE_SERVICE 10
+#define TYPE_BLIND   11
 #define TYPE_RUN     12
-#define TYPE_BLIND   13
-#define TYPE_MAX     14 /* exclusive */
+#define TYPE_MAX     13 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

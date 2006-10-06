@@ -35,18 +35,54 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 }
 #endif //CONFIG_HIP_OPPORTUNISTIC
 
-int hip_plain_to_blind_hit(hip_hit_t *plain, hip_hit_t *blind,
-			   hip_blind_nonce_t *nonce, int hash_algo)
+#ifdef CONFIG_HIP_BLIND
+
+/*This function calcutates blinded fingerprints*/
+int hip_blind_fingerprints(hip_ha_t *entry)
 {
-	return -1;
+  int err = 0;
+  char *key_our = NULL, *key_peer = NULL;
+  u8 digest_our[HIP_AH_SHA_LEN], digest_peer[HIP_AH_SHA_LEN];
+  unsigned int key_len = sizeof(struct in6_addr);
+
+  // get nonce
+  get_random_bytes(&entry->blind_nonce_i, sizeof(uint16_t));
+
+  // generate blinded fingerprint = SHA1(nonce|hit_our)
+  HIP_IFEL((key_our = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
+	   -1, "Couldn't allocate memory\n");
+  memcpy(key_our, &entry->hit_our, sizeof(struct in6_addr));
+  memcpy(key_our + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
+  
+  // generate blinded fingerprint = SHA1(nonce|hit_peer)
+  HIP_IFEL((key_peer = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
+	   -1, "Couldn't allocate memory\n");
+  memcpy(key_peer, &entry->hit_peer, sizeof(struct in6_addr));
+  memcpy(key_peer + sizeof(struct in6_addr), &entry->blind_nonce_i, sizeof(uint16_t));
+  
+  // build digests
+  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_our, key_len, digest_our)), 
+	   err, "Building of digest failed\n");
+  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key_peer, key_len, digest_peer)), 
+	   err, "Building of digest failed\n");
+
+  // copy digests to the hip_ha_t entry
+  memcpy(&entry->hit_our_blind, digest_our, sizeof(struct in6_addr));
+  memcpy(&entry->hit_peer_blind, digest_peer, sizeof(struct in6_addr));
+
+ out_err:
+  return err;
 }
 
-int hip_blind_to_plain_hit(hip_hit_t *plain, hip_hit_t *blind,
-	                   hip_blind_nonce_t *nonce, int hash_algo)
+int hip_plain_fingerprints(hip_ha_t *entry)
+	                  
 {
-	return -1;
+  int err = 0;
+ out_err:
+  return err;
 }
 
+#endif
 
 /** hip_timeval_diff - calculate difference between two timevalues
  * @param t1 timevalue 1

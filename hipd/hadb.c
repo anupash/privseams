@@ -307,14 +307,20 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
 	
+	/* Set the nat status here */
+ 	if(hip_nat_status) {
+ 		entry->nat_mode = 1;	
+ 		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+ 	}
+
+
+	if(hip_nat_status)
+		entry->nat_mode = 1;
+
+#ifdef CONFIG_HIP_BLIND
 	if(hip_blind_status)
 		entry->blind = 1;
-
-	/* Set the nat status here */
-	if(hip_nat_status) {
-		entry->nat_mode = 1;	
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
-	}
+#endif
 
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry); /* released at the end */

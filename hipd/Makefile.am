@@ -69,3 +69,4 @@ rvs.c: rvs.h
 spam.c: spam.h
 escrow.c: escrow.h
 reg.c: reg.h
+blind.c: blind.h

@@ -40,25 +40,28 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 
 #ifdef CONFIG_HIP_BLIND
+	if(hip_blind_get_status())
+	  HIP_DEBUG("Blind is ON\n");
+	else
+	  HIP_DEBUG("Blind is OFF\n");
+	
         if (entry->blind)
-                mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_CONTROL_BLIND;
 	
-	get_random_bytes(&entry->blind_nonce_i, sizeof(hip_blind_nonce_t));
-	HIP_IFEL(hip_plain_to_blind_hit(entry->hit_our,entry->hit_our_blind), 
-	-1, "Unable to convert our Plain HIT to Blinded HIT\n");
+	// Get blinded fingerprints
+	HIP_IFEL(hip_blind_fingerprints(entry), -1, "hip_blind_fingerprints failed\n");
 	
-	HIP_IFEL(hip_plain_to_blind_hit(entry->hit_peer,entry->hit_peer_blind),
-	-1, "Unable to convert peer's Plain HIT to Blinded HIT");
-	
-#endif
-
 	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
 						     HIP_I1,
 						     mask,
-                  (entry->blind ? &entry->hit_our_blind : &entry->hit_our),
-                  (entry->blind ? &entry->hit_peer_blind : dst_hit)
-						     );
+						     (entry->blind ? &entry->hit_our_blind : &entry->hit_our),
+						     (entry->blind ? &entry->hit_peer_blind : dst_hit));
 
+	if(entry->blind)
+	  HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
+		   -1,"Unable to attach nonce to the message. \n");
+#endif
+	  
 	/* Eight octet units, not including first */
 	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 
@@ -77,13 +80,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
-#ifdef CONFIG_HIP_BLIND
-if(entry->blind)
-{
-	HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
-	-1,"Unable to attach nonce to the message. \n");
-}
-#endif
+
 	
 	/*
 	err = hip_send_pkt_stateless(&entry->local_address, &daddr, 0, 

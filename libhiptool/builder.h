@@ -196,8 +196,10 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 			   void *notification_data, size_t notification_data_len);
-int hip_build_param_blind_nonce(struct hip_common *msg, 
-				hip_blind_nonce_t opaque);
+
+#ifdef CONFIG_HIP_BLIND
+int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
+#endif	
 
 uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht);
 int hip_build_netlink_dummy_header(struct hip_common *msg);
