@@ -26,7 +26,8 @@ hipstart_CFLAGS = -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
 hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
-libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD) ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
+libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
+#$(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD) ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) $(GTKCFLAGS)
 
