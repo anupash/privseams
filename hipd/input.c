@@ -1457,7 +1457,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
  	/* If the peer is behind a NAT, UDP is used. */
-	if(entry->nat_mode) {
+	if(entry->nat_mode && 0) {
 		HIP_IFEL(entry->hadb_xmit_func->
 			 hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
 				      entry->peer_udp_port, r2, entry, 0),

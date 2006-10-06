@@ -640,12 +640,12 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-/*	if (!retransmit) //&& hip_get_msg_type(msg) == HIP_I1)
+	if (!retransmit && hip_get_msg_type(msg) == HIP_I1)
 	{
 		HIP_DEBUG("Retransmit of I1, no filtering required.\n");
 		err = -ENOENT;
 	}
-/*	else if (entry)
+	else if (entry)
 	{
 		err = entry->hadb_output_filter_func->hip_output_filter(msg);
 	}
@@ -654,7 +654,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
 	}
 
-/*	if (err == -ENOENT)
+	if (err == -ENOENT)
 	{
 		err = 0;
 	}
