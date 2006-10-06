@@ -47,8 +47,8 @@ in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
  */ 
 int hip_nat_on()
 {
-	HIP_DEBUG("hip_nat_on().\n");
 	int err = 0;
+	HIP_DEBUG("hip_nat_on().\n");
 #if HIP_UDP_PORT_RANDOMIZING 
 	hip_nat_randomize_nat_ports();
 #endif
@@ -98,8 +98,8 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	   hip_nat_on() which calls hip_for_each_ha(). hip_for_each_ha()
 	   requires a function pointer as parameter which in turn has two
 	   parameters. */
-	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
 	int err = 0;
+	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
 
 	if(entry)
 	{
@@ -126,8 +126,8 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 {
 	/* Check hip_nat_on_for_ha() for further explanation on "not_used". */
+	int err = 0;
 	HIP_DEBUG("hip_nat_off_for_ha() invoked.\n");
-	 int err = 0;
 
 	if(entry)
 	{
@@ -170,6 +170,10 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 				       struct in6_addr *daddr,
 				       struct hip_stateless_info *info)
 {
+	hip_ha_t *entry;
+        int err = 0, type, skip_sync = 0;
+	struct in6_addr *saddr_public = saddr;
+
         HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_control_packet(): "\
 			  "source address", saddr);
@@ -178,10 +182,6 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 	HIP_DEBUG("Source port: %u, destination port: %u\n",
 		  info->src_port, info->dst_port);
 	HIP_DUMP_MSG(msg);
-
-	hip_ha_t *entry;
-        int err = 0, type, skip_sync = 0;
-	struct in6_addr *saddr_public = saddr;
 
         type = hip_get_msg_type(msg);
         entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -263,14 +263,14 @@ int hip_nat_refresh_port()
  */
 int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+		
 	HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
 	HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
 		  entry, entry->nat_mode);
 	HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
 
-	int err = 0;
-	struct hip_common *update_packet = NULL;
-		
 	/* Check that the host association is in correct state and that there is
 	   a NAT between this host and the peer. Note, that there is no error
 	   (err is set to zero) if the condition does not hold. We just don't
@@ -340,8 +340,8 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
  */ 
 void hip_nat_randomize_nat_ports()
 {
-	HIP_DEBUG("Randomizing UDP ports to be used.\n");
 	unsigned int secs_since_epoch = (unsigned int) time(NULL);
+	HIP_DEBUG("Randomizing UDP ports to be used.\n");
 	srand(secs_since_epoch);
 	hip_nat_rand_port1 = HIP_UDP_PORT_RAND_MIN + (int)
 		(((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) * 

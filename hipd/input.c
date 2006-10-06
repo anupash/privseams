@@ -242,11 +242,12 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
-	HIP_DEBUG("hip_verify_packet_rvs_hmac() invoked.\n");
 	int err = 0, len, orig_len;
 	u8 orig_checksum;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
+
+	HIP_DEBUG("hip_verify_packet_rvs_hmac() invoked.\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RVS_HMAC)),
 		 -ENOMSG, "No HMAC parameter\n");
@@ -293,13 +294,13 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 			    struct hip_crypto_key *crypto_key,
 			    struct hip_host_id *host_id)
 {
-	HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	int err = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac;
 	struct hip_common *msg_copy = NULL;
 	struct hip_esp_info *esp_info;
 
+	HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
 	memcpy(msg_copy, msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
@@ -339,7 +340,6 @@ int hip_produce_keying_material(struct hip_common *msg,
 				uint64_t I,
 				uint64_t J)
 {
-	HIP_DEBUG("hip_produce_keying_material() invoked.\n");
 	char *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
 	int auth_transf_length, esp_transf_length, we_are_HITg = 0;
@@ -353,6 +353,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	uint16_t esp_keymat_index, esp_default_keymat_index;
 	struct hip_diffie_hellman * dhf;
 
+	HIP_DEBUG("hip_produce_keying_material() invoked.\n");
 	/* Perform light operations first before allocating memory or
 	 * using lots of CPU time */
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIP_TRANSFORM)),
@@ -521,10 +522,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr,
 	                       struct hip_stateless_info *msg_info)
 {
-	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
+	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	type = hip_get_msg_type(msg);
 	
 	HIP_DEBUG("Received packet type %d\n", type);
@@ -695,7 +696,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  hip_ha_t *entry,
 	          struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("hip_create_i2() invoked.\n");
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -711,7 +711,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint16_t mask = 0;
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_create_i2() invoked.\n");
 
 	HIP_ASSERT(entry);
 
@@ -1072,17 +1072,17 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("hip_handle_r1() invoked.\n");
-	HIP_DUMP_MSG(r1);
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
-
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
 
 	struct hip_reg_info *reg_info;
+
+	HIP_DEBUG("hip_handle_r1() invoked.\n");
+	HIP_DUMP_MSG(r1);
 
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
@@ -1280,9 +1280,9 @@ int hip_receive_r1(struct hip_common *r1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("hip_receive_r1() invoked.\n");
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; /** @todo: Fix this kludge. */
 #endif
@@ -1368,7 +1368,6 @@ int hip_create_r2(struct hip_context *ctx,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("hip_create_r2() invoked.\n");
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
@@ -1376,6 +1375,7 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+	HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
 	i2 = ctx->input;
 
@@ -1531,7 +1531,6 @@ int hip_handle_i2(struct hip_common *i2,
 		  hip_ha_t *ha,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
@@ -1547,7 +1546,7 @@ int hip_handle_i2(struct hip_common *i2,
 	struct hip_spi_in_item spi_in_data;
 	uint64_t I, J;
 
- 	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 
 	/* Assume already locked ha, if ha is not NULL */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)), -ENOMEM,
@@ -1939,9 +1938,11 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
+
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
+
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
 		 "Received NULL receiver HIT in I2. Dropping\n");
 
@@ -2023,7 +2024,6 @@ int hip_handle_r2(struct hip_common *r2,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("hip_handle_r2() invoked.\n");
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
@@ -2031,6 +2031,7 @@ int hip_handle_r2(struct hip_common *r2,
 	uint32_t spi_recvd, spi_in;
 	int retransmission = 0;
 
+	HIP_DEBUG("hip_handle_r2() invoked.\n");
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
 		HIP_DEBUG("Retransmission\n");
@@ -2384,12 +2385,12 @@ int hip_receive_i1(struct hip_common *i1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *i1_info)
 {
-	HIP_DEBUG("hip_receive_i1() invoked.\n");
        	int err = 0, state, mask = 0;
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
+	HIP_DEBUG("hip_receive_i1() invoked.\n");
 	HIP_IFEL(ipv6_addr_any(&i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 
@@ -2465,10 +2466,10 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int err = 0, state;
 	uint16_t mask = 0;
 
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");
 	
@@ -2526,11 +2527,11 @@ int hip_receive_notify(struct hip_common *hip_common,
 		       struct in6_addr *notity_daddr,
 		       hip_ha_t* entry)
 {
-	HIP_DEBUG("hip_receive_notify() invoked.\n");
 	int err = 0;
 	struct hip_notify *notify_param;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
 
+	HIP_DEBUG("hip_receive_notify() invoked.\n");
 	HIP_HEXDUMP("Incoming NOTIFY", hip_common,
 		    hip_get_msg_total_len(hip_common));
 
@@ -2574,10 +2575,9 @@ int hip_receive_bos(struct hip_common *bos,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *bos_info)
 {
-	HIP_DEBUG("hip_receive_bos() invoked.\n");
 	int err = 0, state = 0;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_receive_bos() invoked.\n");
 
 	HIP_IFEL(ipv6_addr_any(&bos->hits), 0, 
 		 "Received NULL sender HIT in BOS.\n");

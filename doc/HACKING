@@ -53,9 +53,9 @@ CODING CONVENTIONS
   coding style.
 
 - HIPL code should use the prefix "hip_" in all function and global variable
-  definitions to avoid namespace pollution in the kernel. The prefix is
-  not necessary in userspace code, but the same naming conventions might
-  be clearer to use anyway.
+  definitions to avoid namespace pollution, especially in the
+  libraries. The prefix is not necessary in userspace code, but the same
+  naming conventions might be clearer to use anyway.
 
 - The width of one line should be limited to 80 characters in
   userspace code. This rule may be relaxed in the kernel code because
@@ -65,6 +65,36 @@ CODING CONVENTIONS
   zero for success and non-zero for failure.
 
 - Use the HIP_IFE, HIP_IFEL macros to reduce the number of lines of code.
+
+- Do not make unreadable code by nesting code too much:
+
+  if (foo) {
+     if (bar) {
+        if(hello)
+        {
+           confuse_me();
+        }
+     }
+  }
+
+  Instead, join the conditional expressions (foo && bar && hello) or
+  use goto (goto skip;).
+
+- Declare variables right after beginning brace, not in the middle of the code:
+
+  int foo {
+    int i;  /* integers declared in the beginning of the function */
+    char c;
+
+    bar();
+
+    for (i = 0; i < 100; i++) {
+       int x; /* This is fine because it is after the beginning
+                 brace of loop */
+       hello(i, x);
+    }
+  }
+
 
 - Memory (de)allocation procedure is as follows:
  
