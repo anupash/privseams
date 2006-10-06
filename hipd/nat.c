@@ -103,7 +103,9 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 
 	if(entry)
 	{
-		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		/*entry->peer_udp_port = HIP_NAT_UDP_PORT;*/
+		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p at hip_nat_on().\n",
+			  entry);
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
@@ -131,7 +133,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 
 	if(entry)
 	{
-		entry->peer_udp_port = 0;
+		/* entry->peer_udp_port = 0; */
 		entry->nat_mode = 0;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
@@ -170,7 +172,11 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 				       struct in6_addr *daddr,
 				       struct hip_stateless_info *info)
 {
-        HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
+        hip_ha_t *entry;
+        int err = 0, type, skip_sync = 0;
+	struct in6_addr *saddr_public = saddr;
+
+	HIP_DEBUG("hip_nat_receive_udp_control_packet() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_control_packet(): "\
 			  "source address", saddr);
 	HIP_DEBUG_IN6ADDR("hip_nat_receive_udp_control_packet(): "\
@@ -179,22 +185,30 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 		  info->src_port, info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-	hip_ha_t *entry;
-        int err = 0, type, skip_sync = 0;
-	struct in6_addr *saddr_public = saddr;
-
         type = hip_get_msg_type(msg);
         entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-
-	if(entry) {
-		/* XX FIXME: this information is unreliable. We should
-		   be able to cancel it if hip_receive_control_packet fails */
-		entry->nat_mode = 1;
-		entry->peer_udp_port = info->src_port;
-		HIP_DEBUG("entry found src port %d\n",
-			  entry->peer_udp_port);
+	
+	if(entry){
+	HIP_DEBUG("hip_send_raw: %p.\n", hip_send_raw);
+	HIP_DEBUG("hip_send_udp: %p.\n", hip_send_udp);
+	if(entry->hadb_xmit_func->hip_send_pkt != NULL) {
+		HIP_DEBUG("entry->send_pkt: %p.\n", entry->hadb_xmit_func->hip_send_pkt);
 	}
-
+	else {
+		HIP_DEBUG("entry->send_pkt: NULL.\n");
+	}
+	}
+	/*
+	  if(entry) {
+	  HIP_DEBUG("SETTING SOURCE PORT.\n"); */
+	/* XX FIXME: this information is unreliable. We should
+	   be able to cancel it if hip_receive_control_packet fails */
+	/* entry->nat_mode = 1;
+	   entry->peer_udp_port = info->src_port;
+	   HIP_DEBUG("entry found src port %d\n",
+	   entry->peer_udp_port);
+	   }*/
+	
 #ifndef CONFIG_HIP_RVS
 	/* The ip of RVS is taken to be ip of the peer while using RVS server
 	   to relay R1. Hence have removed this part for RVS --Abi */
@@ -230,13 +244,10 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 int hip_nat_refresh_port()
 {
 	int err = 0 ;
-	/** @todo Is this "if" needed? */
-	if(hip_nat_status == 1)
-	{
-		HIP_DEBUG("Sending keepalives\n");
-		HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL), 0,
-        	         "for_each_ha err.\n");
-	}
+	
+	HIP_DEBUG("Sending Keep-Alives to NAT.\n");
+	HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
+		 -1, "for_each_ha() err.\n");
 	
  out_err:
 	return err;
@@ -249,7 +260,7 @@ int hip_nat_refresh_port()
  * preferred address. If the @c entry is @b not in state ESTABLISHED or if there
  * is no NAT between this host and the peer (@c entry->nat_mode = 0), then no
  * packet is sent. The packet is send on UDP with source and destination ports
- * set as @c HIP_NAT_UDP_PORT .
+ * set as @c HIP_NAT_UDP_PORT.
  * 
  * @param entry    a pointer to a host association which links current host and
  *                 the peer.
@@ -263,19 +274,19 @@ int hip_nat_refresh_port()
  */
 int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
+	int err = 0;
+	struct hip_common *update_packet = NULL;
+	
 	HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
 	HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
 		  entry, entry->nat_mode);
 	HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
-
-	int err = 0;
-	struct hip_common *update_packet = NULL;
 		
 	/* Check that the host association is in correct state and that there is
 	   a NAT between this host and the peer. Note, that there is no error
 	   (err is set to zero) if the condition does not hold. We just don't
 	   send the packet in that case. */
-	HIP_IFEL((entry->state != HIP_STATE_ESTABLISHED), 0, 
+	HIP_IFEL((entry->state != HIP_STATE_ESTABLISHED), -1, 
 		 "Not sending NAT keepalive, invalid hip state "\
 		 "in current host association. State is %s.\n", 
 		 hip_state_str(entry->state));
@@ -295,8 +306,8 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	
 	/* Add a HMAC parameter to the UPDATE packet. */
         HIP_IFEL(hip_build_param_hmac_contents(
-			 update_packet, &entry->hip_hmac_out), -1,
-                 "Building of HMAC failed.\n");
+			 update_packet, &entry->hip_hmac_out),
+		 -1, "Building of HMAC failed.\n");
         
 	/* Send the UPDATE packet using 50500 as source and destination ports.
 	   Only outgoing traffic acts refresh the NAT port state. We could
@@ -304,12 +315,10 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   as destination port. However, because it is recommended to use
 	   50500 as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
-		hip_send_udp(&entry->local_address, &entry->preferred_address,
+		hip_send_pkt(&entry->local_address, &entry->preferred_address,
 			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, update_packet,
 			     entry, 0);
 
-	HIP_DEBUG_HIT("hip_nat_send_keep_alive(): Sent UPDATE packet to",
-		      &entry->preferred_address);
  out_err:
 	if(update_packet)
 	{

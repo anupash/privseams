@@ -2,13 +2,13 @@
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
  * 
- * @author  Janne Lundberg <jlu_tcs.hut.fi>
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_cc.hut.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
- * @author  Anthony D. Joseph <adj_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Tobias Heer <heer_tobibox.de>
+ * @author  Janne Lundberg
+ * @author  Miika Komu
+ * @author  Mika Kousa
+ * @author  Kristian Slavov
+ * @author  Anthony D. Joseph
+ * @author  Bing Zhou
+ * @author  Tobias Heer
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "input.h"
@@ -1014,22 +1014,25 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
+	/* R1 packet source port becomes the I2 packet destination port. */
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, 
+			      r1_info->src_port, i2, entry, 0),
+		 -ECOMM, "Sending I2 packet failed.\n");
+	
 	/* If the peer is behind a NAT, UDP is used. */
-	if(entry->nat_mode) {
-		/* Destination port of R1 becomes the source port of I2, and the
-		   destination port of I2 is set as 50500. */
-		/** @todo Source port should be NAT-P'. */
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
-				      HIP_NAT_UDP_PORT, i2, entry, 0),
-			 -ECOMM, "Sending I2 packet on UDP failed.\n");
-	}
+	/*if(entry->nat_mode) {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
+	  HIP_NAT_UDP_PORT, i2, entry, 0),
+	  -ECOMM, "Sending I2 packet on UDP failed.\n");
+	  }*/
 	/* If there's no NAT between, raw HIP is used. */
-	else {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(r1_daddr, &daddr, 0, 0, i2, entry, 0),
-			 -ECOMM, "Sending I2 packet on raw HIP failed.\n");
-	}
+	/*else {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_raw(r1_daddr, &daddr, 0, 0, i2, entry, 0),
+	  -ECOMM, "Sending I2 packet on raw HIP failed.\n");
+	  }*/
 
  out_err:
 	if (i2)
@@ -1097,7 +1100,7 @@ int hip_handle_r1(struct hip_common *r1,
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
 
-	/* according to the section 8.6 of the base draft, we must first check
+	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
 	
 	/* Store the peer's public key to HA and validate it */
@@ -1107,6 +1110,19 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
 	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
+
+	/* R1 packet had destination port 50500, which means that the peer is
+	   behind NAT. We set NAT mode "on" and set the send funtion to 
+	   "hip_send_udp". The client UDP port is not stored until the handling
+	   of R2 packet. Don't know if the entry is allready locked... */
+	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
+		//HIP_LOCK_HA(entry);
+		entry->nat_mode = 1;
+		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from R1 info.\n",
+			  entry);
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		//HIP_UNLOCK_HA(entry);
+	}
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
@@ -1236,6 +1252,7 @@ int hip_handle_r1(struct hip_common *r1,
 	}
 
 	entry->peer_controls = ntohs(r1->control);
+
  	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
 		 "Creation of I2 failed\n");
 
@@ -1295,12 +1312,11 @@ int hip_receive_r1(struct hip_common *r1,
 		 ntohs(r1->control));
 	HIP_IFEL(!entry, -EFAULT, 
 		 "Received R1 with no local state. Dropping\n");
+
 	/* An implicit and insecure REA. If sender's address is different than
-	 * the one that was mapped, then we will overwrite the mapping with
-	 * the newer address.
-	 * This enables us to use the rendezvous server, while not supporting
-	 * the REA TLV.
-	 */
+	 * the one that was mapped, then we will overwrite the mapping with the
+	 * newer address. This enables us to use the rendezvous server, while
+	 * not supporting the REA TLV. */
 	{
 		struct in6_addr daddr;
 		
@@ -1316,11 +1332,10 @@ int hip_receive_r1(struct hip_common *r1,
 		}
 	}
 
-	/* since the entry is in the hit-list and since the previous
-	 * function increments by one, we must have at least 2 references
-	 */
+	/* Since the entry is in the hit-list and since the previous function
+	   increments by one, we must have at least 2 references. */
 	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
-
+	
 	/* I hope wmb() takes care of the locking needs */
 	wmb();
 	state = entry->state;
@@ -1456,20 +1471,25 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, r2, entry, 0),
+		 -ECOMM, "Sending R2 packet failed.\n");
+	
  	/* If the peer is behind a NAT, UDP is used. */
-	if(entry->nat_mode) {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
-				      entry->peer_udp_port, r2, entry, 0),
-			 -ECOMM, "Sending R2 packet on UDP failed.\n");
-	}
+	/*if(entry->nat_mode) {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	  entry->peer_udp_port, r2, entry, 0),
+	  -ECOMM, "Sending R2 packet on UDP failed.\n");
+	  }*/
 	/* If there's no NAT between, raw HIP is used. */
-	else {
-		/** @todo remove ports. */
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
-			 -ECOMM, "Sending R2 packet on raw HIP failed.\n");
-	}
+	/*else {
+		
+	HIP_IFEL(entry->hadb_xmit_func->
+	hip_send_raw(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
+	-ECOMM, "Sending R2 packet on raw HIP failed.\n");
+	}*/
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database
@@ -1488,18 +1508,23 @@ int hip_create_r2(struct hip_context *ctx,
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
 	HIP_RVA *rva;
-	if(entry->nat_mode) {
-		HIP_IFE(!(rva =
-			  hip_rvs_ha2rva(entry,
-					 entry->hadb_xmit_func->hip_send_udp)),
-			-ENOSYS);
-	}
-	else {
-		HIP_IFE(!(rva =
-			  hip_rvs_ha2rva(entry,
-					 entry->hadb_xmit_func->hip_send_raw)),
-			-ENOSYS);
-	}
+	HIP_IFEL(!(rva = hip_rvs_ha2rva(
+			   entry, entry->hadb_xmit_func->hip_send_pkt)),
+		 -1, "Inserting rendezvous association failed..\n");
+	/*
+	  if(entry->nat_mode) {
+	  HIP_IFE(!(rva =
+	  hip_rvs_ha2rva(entry,
+	  entry->hadb_xmit_func->hip_send_udp)),
+	  -ENOSYS);
+	  }
+	  else {
+	  HIP_IFE(!(rva =
+	  hip_rvs_ha2rva(entry,
+	  entry->hadb_xmit_func->hip_send_raw)),
+	  -ENOSYS);
+	  }
+	*/
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
@@ -1515,23 +1540,30 @@ int hip_create_r2(struct hip_context *ctx,
 }
 
 /**
- * hip_handle_i2 - handle incoming I2 packet
- * @param skb sk_buff where the HIP packet is in
- * @param ha HIP HA corresponding to the peer
+ * Handles an incoming I2 packet.
  *
- * This function is the actual point from where the processing of I2
- * is started and corresponding R2 is created.
+ * This function is the actual point from where the processing of I2 is started
+ * and corresponding R2 is created. This function also creates a new host
+ * association in the host association database if no previous association
+ * matching the search key (source HIT XOR destination HIT) was found.
  *
- * On success (I2 payloads are checked and R2 is created and sent) 0 is
- * returned, otherwise < 0.
+ * @param i2       a pointer to the I2 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i2_saddr a pointer to the source address from where the I2 packet was
+ *                 received.
+ * @param i2_daddr a pointer to the destination address where the I2 packet was
+ *                 sent to (own address).
+ * @param ha       host association corresponding to the peer.
+ * @param i2_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error. Success
+ *                 indicates that I2 payloads are checked and R2 is created and
+ *                 sent.
  */
-int hip_handle_i2(struct hip_common *i2,
-		  struct in6_addr *i2_saddr,
-		  struct in6_addr *i2_daddr,		  
-		  hip_ha_t *ha,
+int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
+		  struct in6_addr *i2_daddr, hip_ha_t *ha,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param;
@@ -1546,30 +1578,29 @@ int hip_handle_i2(struct hip_common *i2,
 	uint16_t crypto_len;
 	struct hip_spi_in_item spi_in_data;
 	uint64_t I, J;
+	
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 
- 	HIP_DEBUG("\n");
-
-	/* Assume already locked ha, if ha is not NULL */
-	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)), -ENOMEM,
-		 "Alloc failed\n");
+	/* Assume already locked ha, if ha is not NULL. */
+	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
+		 -ENOMEM, "Alloc failed\n");
 	memset(ctx, 0, sizeof(struct hip_context));
-
-	/* Check packet validity */
-	/* We MUST check that the responder HIT is one of ours. */
-	/* check the generation counter */
-	/* We do not support generation counter (our precreated R1s suck) */
+	
+	/* Check packet validity. We MUST check that the responder HIT is one
+	 of ours. Check the generation counter. We do not support generation
+	 counter (our precreated R1s suck). */
 	ctx->input = i2;
 	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
 
 	/* check solution for cookie */
 	{
 		struct hip_solution *sol;
-		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)), -EINVAL,
-			 "Invalid I2: SOLUTION parameter missing\n");
+		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
+			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
 		I = sol->I;
 		J = sol->J;
-		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol), -ENOMSG,
-			 "Cookie solution rejected\n");
+		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
+			 -ENOMSG, "Cookie solution rejected\n");
 	}
 
  	HIP_DEBUG("Cookie accepted\n");
@@ -1592,21 +1623,21 @@ int hip_handle_i2(struct hip_common *i2,
 			spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	}
 
-	/* Check HIP and ESP transforms, and produce keying material  */
+	/* Check HIP and ESP transforms, and produce keying material. */
 	ctx->dh_shared_key = NULL;
-	/* note: we could skip keying material generation in the case
-	   of a retransmission but then we'd had to fill ctx->hmac etc 
-	   
-	   TH: I'm not sure if this could be replaced with a function pointer
-	   which is set from hadb. Usually you shouldn'y have state here, right?*/
+	
+	/* Note: we could skip keying material generation in the case of a
+	   retransmission but then we'd had to fill ctx->hmac etc. TH: I'm not
+	   sure if this could be replaced with a function pointer which is set
+	   from hadb. Usually you shouldn't have state here, right? */
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
-	/* verify HMAC */
+	/* Verify HMAC. */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
 		 "HMAC validation on i2 failed\n");
 	
-	/* decrypt the HOST_ID and verify it against the sender HIT */
+	/* Decrypt the HOST_ID and verify it against the sender HIT. */
 	HIP_IFEL(!(enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED)),
 		 -ENOENT, "Could not find enc parameter\n");
 
@@ -1614,18 +1645,17 @@ int hip_handle_i2(struct hip_common *i2,
 					GFP_KERNEL)), -ENOMEM,
 		 "No memory for temporary host_id\n");
 
-	/* little workaround...
+	/* Little workaround...
 	 * We have a function that calculates sha1 digest and then verifies the
 	 * signature. But since the sha1 digest in I2 must be calculated over
 	 * the encrypted data, and the signature requires that the encrypted
-	 * data to be decrypted (it contains peer's host identity),
-	 * we are forced to do some temporary copying...
-	 * If ultimate speed is required, then calculate the digest here as
-	 * usual and feed it to signature verifier. 
-	 */
+	 * data to be decrypted (it contains peer's host identity), we are
+	 * forced to do some temporary copying. If ultimate speed is required,
+	 * then calculate the digest here as usual and feed it to signature
+	 * verifier. */
 	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
-
-	/* Decrypt ENCRYPTED field*/
+	
+	/* Decrypt ENCRYPTED field. */
 	_HIP_HEXDUMP("Recv. Key", &ctx->hip_enc_in.key, 24);
 	HIP_IFEL(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), 
 		 -ENOENT, "Did not find HIP transform\n");
@@ -1660,7 +1690,8 @@ int hip_handle_i2(struct hip_common *i2,
 	}
 
 	HIP_DEBUG("Crypto encrypted\n");
-	_HIP_HEXDUMP("IV: ", iv, 16); /* Note: iv can be NULL */
+	/* Note: iv can be NULL */
+	_HIP_HEXDUMP("IV: ", iv, 16);
 	
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
 				      crypto_len, &ctx->hip_enc_in.key,
@@ -1675,24 +1706,23 @@ int hip_handle_i2(struct hip_common *i2,
 	/* HMAC cannot be validated until we draw key material */
 
 	/* NOTE! The original packet has the data still encrypted. But this is
-	 * not a problem, since we have decrypted the data into a temporary
-	 * storage and nobody uses the data in the original packet.
-	 */
-
+	   not a problem, since we have decrypted the data into a temporary
+	   storage and nobody uses the data in the original packet. */
+	
 	/* Create host association state (if not previously done). */
 	if (!entry) {
 		int if_index;
 		struct sockaddr_storage ss_addr;
 		struct sockaddr *addr;
 		addr = (struct sockaddr*) &ss_addr;
-		/* we have no previous infomation on the peer, create
-		   a new HIP HA */
+		/* We have no previous infomation on the peer, create a new HIP
+		   HA. */
 		HIP_DEBUG("No entry, creating new\n");
 		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 			 "Failed to create or find entry\n");
 
-		/* the rest of the code assume already locked entry,
-		   so lock the newly created entry as well */
+		/* The rest of the code assume already locked entry, so lock the
+		   newly created entry as well. */
 		HIP_LOCK_HA(entry);
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		/* ipv6_addr_copy(&entry->hit_our, &i2->hitr); */
@@ -1708,17 +1738,18 @@ int hip_handle_i2(struct hip_common *i2,
 		add_address_to_list(addr, if_index);
                 /* if_index = addr2ifindx(entry->local_address); */
 
-		/* If the incoming I2 packet has a source other than zero, we
-		   set "on" the NAT state of current machine (the responder)
-		   and store the source port of the incoming I2 packet. This
-		   port is the NAT-P' of [draft-schmitt-hip-nat-traversal-01]
-		   section 3.3.1. */
-		/** @todo This is a temporary fix. Need to think on this a bit.
-		    Add other info here. --Abi */
-		if(i2_info->src_port != 0)
+		/* If the incoming I2 packet has 50500 as destination port, NAT
+		   mode is set on for the host association, I2 source port is
+		   stored as the peer UDP port and send function is set to
+		   "hip_send_udp()". Note that we must store the port not until
+		   here, since the source port can be different for I1 and I2. */
+		if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 		{
 			entry->nat_mode = 1;
 			entry->peer_udp_port = i2_info->src_port;
+			HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+				  entry);
+			entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		}
 
 		hip_hadb_insert_state(entry);
@@ -1756,11 +1787,6 @@ int hip_handle_i2(struct hip_common *i2,
 		if (r1cntr)
 			entry->birthday = r1cntr->generation;
 		entry->peer_controls |= ntohs(i2->control);
-		// FIXME: why these are here? tkoponen... HA is found
-		// by XOR(src_hit, dst_hit) soon, no need to write
-		// again.
-		//ipv6_addr_copy(&entry->hit_our, &i2->hitr);
-		//ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 
 		/* move this below setup_sa */
 		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
@@ -1798,7 +1824,8 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
-	/* XXX: Check -EAGAIN */
+
+	/** @todo Check -EAGAIN */
 	
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1828,16 +1855,17 @@ int hip_handle_i2(struct hip_common *i2,
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
-	/* XXX: Check if err = -EAGAIN... */
-	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
+	/* @todo Check if err = -EAGAIN... */
+	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
+	
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
 				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
 		 -1, "Setting up SP pair failed\n");
 
-	/* source IPv6 address is implicitly the preferred
-	 * address after the base exchange */
+	/* Source IPv6 address is implicitly the preferred address after the
+	   base exchange. */
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 
@@ -2280,7 +2308,7 @@ int hip_handle_i1(struct hip_common *i1,
 	
 	/* The relayed I1 packet has the initiators HIT as source HIT,
 	   and the responder HIT as destination HIT. We would like to
-	   verify the HMAC againts the host association that was created
+	   verify the HMAC against the host association that was created
 	   when the responder registered to the rvs. That particular
 	   host association has the responders HIT as source HIT and the
 	   rvs' HIT as destination HIT. Let's get that host association
@@ -2291,8 +2319,16 @@ int hip_handle_i1(struct hip_common *i1,
 		 -1, "A matching host association was not found for "\
 		 "responder HIT / RVS IP.");
 	
-	HIP_DEBUG("RVS host association entry found.\n");
+	HIP_DEBUG("RVS host association entry found: %p.\n", rvs_ha_entry);
 	
+	HIP_DEBUG("hip_send_raw: %p.\n", hip_send_raw);
+	HIP_DEBUG("hip_send_udp: %p.\n", hip_send_udp);
+	if(rvs_ha_entry->hadb_xmit_func->hip_send_pkt != NULL) {
+		HIP_DEBUG("entry->send_pkt: %p.\n", rvs_ha_entry->hadb_xmit_func->hip_send_pkt);
+	}
+	else {
+		HIP_DEBUG("entry->send_pkt: NULL.\n");
+	}
 	/* Verify the RVS hmac. */
 	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
 		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
@@ -2300,7 +2336,7 @@ int hip_handle_i1(struct hip_common *i1,
 	/* I1 packet was received on UDP destined to port 50500.
 	   R1 packet will have a VIA_RVS_NAT parameter.
 	   Cases 1. & 3. */
-	if(i1_info->src_port == HIP_NAT_UDP_PORT) {
+	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		
 		struct hip_in6_addr_port our_addr_port;
 		is_via_rvs_nat = 1;
@@ -2403,7 +2439,7 @@ int hip_receive_i1(struct hip_common *i1,
 		hip_put_ha(entry);
 	} else {
 #ifdef CONFIG_HIP_RVS
-		HIP_DEBUG_HIT("Searching rendezvous association on HIT",
+		HIP_DEBUG_HIT("Searching rendezvous association on HIT ",
 			      &i1->hitr);
  		rva = hip_rvs_get_valid(&i1->hitr);
 		HIP_DEBUG("Valid rendezvous association found: %s \n",

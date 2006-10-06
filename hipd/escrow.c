@@ -576,22 +576,28 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
 
-	/* If the peer is behind a NAT, UDP is used. */
 	/** @todo Functionality on UDP has not been tested. */
-	if(entry->nat_mode) {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(&saddr, &daddr, 0,
-				      entry->peer_udp_port, update_packet,
-				      entry, 1), -ECOMM,
-			 "Sending UPDATE packet on UDP failed.\n");
-	}
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet,
+			      entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+	
+	/* If the peer is behind a NAT, UDP is used. */
+	/*if(entry->nat_mode) {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_udp(&saddr, &daddr, 0,
+	  entry->peer_udp_port, update_packet,
+	  entry, 1), -ECOMM,
+	  "Sending UPDATE packet on UDP failed.\n");
+	  }*/
 	/* If there's no NAT between, raw HIP is used. */
-	else {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(&saddr, &daddr, 0, 0, update_packet,
-				      entry, 1),
-			 -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
-	}
+	/*else {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_raw(&saddr, &daddr, 0, 0, update_packet,
+	  entry, 1),
+	  -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
+	  }*/
 	
 	goto out;
 

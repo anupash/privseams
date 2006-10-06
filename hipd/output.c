@@ -60,32 +60,24 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 	
-	/*
-	err = hip_send_pkt_stateless(&entry->local_address, &daddr, 0, 
-				     HIP_NAT_UDP_PORT, (struct hip_common*) &i1,
-				     entry, 1);
-	*/
-	
-	HIP_DEBUG("entry->nat_mode: %u.\n", entry->nat_mode);
-
 	err = entry->hadb_xmit_func->
 		hip_send_pkt(&entry->local_address, &daddr,
 			     0, HIP_NAT_UDP_PORT,
 			     (struct hip_common*) &i1, entry, 1);
 
 	/*
-	if(entry->nat_mode) {
-	err = entry->hadb_xmit_func->
-	hip_send_udp(&entry->local_address, &daddr,
-	0, HIP_NAT_UDP_PORT,
-	(struct hip_common*) &i1, entry, 1);
-	}
+	  if(entry->nat_mode) {
+	  err = entry->hadb_xmit_func->
+	  hip_send_udp(&entry->local_address, &daddr,
+	  0, HIP_NAT_UDP_PORT,
+	  (struct hip_common*) &i1, entry, 1);
+	  }
 	
-	else {
-		err = entry->hadb_xmit_func->
-			hip_send_raw(&entry->local_address, &daddr, 0, 0,
-				     (struct hip_common*) &i1, entry, 1);
-	}
+	  else {
+	  err = entry->hadb_xmit_func->
+	  hip_send_raw(&entry->local_address, &daddr, 0, 0,
+	  (struct hip_common*) &i1, entry, 1);
+	  }
 	*/
 	HIP_DEBUG("err after sending: %d.\n", err);
 	
@@ -368,8 +360,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	}
 	/* Else R1 is send on raw HIP. */
 	else {
-		HIP_IFEL(hip_send_raw(i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL,
-				      0),
+		HIP_IFEL(hip_send_raw(
+				 i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on raw HIP failed.\n");
 	}
 	
@@ -382,7 +374,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 /**
  * Sends a NOTIFY packet to peer.
  *
- * @param entry    a pointer to the current host association database state.
+ * @param entry a pointer to the current host association database state.
  */ 
 void hip_send_notify(hip_ha_t *entry)
 {
@@ -399,21 +391,29 @@ void hip_send_notify(hip_ha_t *entry)
 
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
 	
+	
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(NULL, &daddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, notify_packet,
+			      entry, 0),
+		 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+	
+	
 	/* If the peer is behind a NAT, UDP is used. */
-	if(entry->nat_mode) {
-		/** @todo How to know which source port to use? */
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(NULL, &daddr, 0, entry->peer_udp_port,
-				      notify_packet, entry, 0),
-			 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
-	}
+	/*
+	  if(entry->nat_mode) {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_udp(NULL, &daddr, 0, entry->peer_udp_port,
+	  notify_packet, entry, 0),
+	  -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+	  }*/
 	/* If there's no NAT between, raw HIP is used. */
-	else {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(NULL, &daddr, 0,0, notify_packet, entry,
-				      0),
-			 -ECOMM, "Sending NOTIFY packet on raw HIP failed.\n");
-	}
+	/*else {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_raw(NULL, &daddr, 0,0, notify_packet, entry,
+	  0),
+	  -ECOMM, "Sending NOTIFY packet on raw HIP failed.\n");
+	  }*/
 	
  out_err:
 	if (notify_packet)
@@ -767,18 +767,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
 		 struct hip_common* msg, hip_ha_t *not_used, int retransmit)
 {
-	HIP_DEBUG("hip_send_udp() invoked.\n");
-	
-	/* Verify the existence of obligatory parameters. */
-	HIP_ASSERT(peer_addr && msg);
-	
-	HIP_DEBUG("Sending %s packet on UDP.\n",
-		  hip_message_type_name(hip_get_msg_type(msg)));
-	HIP_DEBUG_IN6ADDR("hip_send_udp(): local_addr", local_addr);
-	HIP_DEBUG_IN6ADDR("hip_send_udp(): peer_addr", peer_addr);
-	HIP_DEBUG("Source port: %d, destination port: %d.\n",
-		  src_port, dst_port);
-	
 	int sockfd = 0, err = 0, xmit_count = 0;
 	/* IPv4 Internet socket addresses. */
 	struct sockaddr_in src4, dst4;
@@ -789,6 +777,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* If local address is not given, we fetch one here. */
 	struct in6_addr my_addr;
 	
+	HIP_DEBUG("hip_send_udp() invoked.\n");
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr && msg);
+	HIP_DEBUG("Sending %s packet on UDP.\n",
+		  hip_message_type_name(hip_get_msg_type(msg)));
+	HIP_DEBUG_IN6ADDR("hip_send_udp(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_udp(): peer_addr", peer_addr);
+	HIP_DEBUG("Source port: %d, destination port: %d.\n",
+		  src_port, dst_port);
+
 	/* Currently only IPv4 is supported, so we set internet address family
 	   accordingly and map IPv6 addresses to IPv4 addresses. */
 	src4.sin_family = dst4.sin_family = AF_INET;
@@ -806,7 +804,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 				 &my_addr, peer_addr), -EADDRNOTAVAIL,
 			 "Cannot find local address.\n");
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
-		HIP_DEBUG_IN6ADDR("Selected local address", &my_addr);
 	}
 	
         /* Destination address. */
@@ -897,25 +894,25 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * @see              hip_send_raw
  * @see              hip_send_udp
  */
-int hip_send_pkt_stateless(struct in6_addr *local_addr,
-			   struct in6_addr *peer_addr,
-			   in_port_t src_port, in_port_t dst_port,
-			   struct hip_common* msg, hip_ha_t *entry,
-			   int retransmit)
-{
-	HIP_DEBUG("hip_send_pkt_stateless() invoked.\n");
-	int err = 0;
+/*int hip_send_pkt_stateless(struct in6_addr *local_addr,
+  struct in6_addr *peer_addr,
+  in_port_t src_port, in_port_t dst_port,
+  struct hip_common* msg, hip_ha_t *entry,
+  int retransmit)
+  {
+  HIP_DEBUG("hip_send_pkt_stateless() invoked.\n");
+  int err = 0;
 	
-	if(hip_nat_status || (entry && entry->nat_mode)) {
-		err = hip_send_udp(local_addr, peer_addr, src_port, dst_port,
-				   msg, entry, retransmit);
-	}
-	else {
-		err = hip_send_raw(local_addr, peer_addr, src_port, dst_port,
-				   msg, entry, retransmit);
-	}
-	return err;
-}
+  if(hip_nat_status || (entry && entry->nat_mode)) {
+  err = hip_send_udp(local_addr, peer_addr, src_port, dst_port,
+  msg, entry, retransmit);
+  }
+  else {
+  err = hip_send_raw(local_addr, peer_addr, src_port, dst_port,
+  msg, entry, retransmit);
+  }
+  return err;
+  }*/
 
 
 #ifdef CONFIG_HIP_HI3

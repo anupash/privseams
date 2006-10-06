@@ -258,14 +258,15 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		if (kea) {
 			/** @todo Check conditions for escrow associations here 
 			    (for now, there are none). */
-			HIP_DEBUG("Escrow used for this entry: Initializing ha_state escrow fields");
+			HIP_DEBUG("Escrow used for this entry: Initializing "\
+				  "ha_state escrow fields.\n");
 			ha->escrow_used = 1;
 			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
 			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
 			hip_keadb_put_entry(kea);
 		}
 		else {
-			HIP_DEBUG("Escrow not in use");
+			HIP_DEBUG("Escrow not in use.\n");
 		}
 	}
 #endif //CONFIG_HIP_ESCROW
@@ -325,8 +326,16 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	   function is set to hip_send_udp. */
 	if(hip_nat_status)
 	{
-		entry->nat_mode = 1;	
+		entry->nat_mode = 1;
+		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p at hadb_add_peer_info.\n",
+			  entry);
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	}
+	else {
+		entry->nat_mode = 0;
+		entry->peer_udp_port = 0;
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
 	}
 
 	hip_hadb_insert_state(entry);
@@ -532,10 +541,12 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
 		 -1, "Can't set new function pointer set\n");
 
-	HIP_IFEL(hip_hadb_set_input_filter_function_set(entry, &default_input_filter_func_set),
+	HIP_IFEL(hip_hadb_set_input_filter_function_set(
+			 entry, &default_input_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
-	HIP_IFEL(hip_hadb_set_output_filter_function_set(entry, &default_output_filter_func_set),
+	HIP_IFEL(hip_hadb_set_output_filter_function_set(
+			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
  out_err:
@@ -1377,24 +1388,30 @@ int hip_update_send_echo(hip_ha_t *entry,
 					    &entry->hit_peer, &entry->hit_our),
 		 -1, "Building Echo Packet failed\n");
 
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&entry->local_address, &addr->address,
+			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+	
 	/* If the peer is behind a NAT, UDP is used. */
-	/** @todo Functionality on UDP has not been tested. */
-	if(entry->nat_mode) {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(&entry->local_address, &addr->address,
-				      0, entry->peer_udp_port,
-				      update_packet, entry, 1), -ECOMM,
-			 "Sending UPDATE packet with echo data on UDP "\
-			 "failed.\n");
-	}
+	/*
+	  if(entry->nat_mode) {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_udp(&entry->local_address, &addr->address,
+	  0, entry->peer_udp_port,
+	  update_packet, entry, 1), -ECOMM,
+	  "Sending UPDATE packet with echo data on UDP "\
+	  "failed.\n");
+	  }*/
 	/* If there's no NAT between, raw HIP is used. */
-	else {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(&entry->local_address, &addr->address,
-				      0, 0, update_packet, entry, 0), -ECOMM,
-			 "Sending UPDATE packet with echo data on raw HIP "\
-			 "failed.\n");
-	}
+	/*else {
+	  HIP_IFEL(entry->hadb_xmit_func->
+	  hip_send_raw(&entry->local_address, &addr->address,
+	  0, 0, update_packet, entry, 0), -ECOMM,
+	  "Sending UPDATE packet with echo data on raw HIP "\
+	  "failed.\n");
+	  }*/
  out_err:
 	return err;
 
@@ -1862,8 +1879,8 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 
 	/* xmit function set */
-	default_xmit_func_set.hip_send_raw = hip_send_raw;
-	default_xmit_func_set.hip_send_udp = hip_send_udp;
+	/*default_xmit_func_set.hip_send_raw = hip_send_raw;
+	  default_xmit_func_set.hip_send_udp = hip_send_udp;*/
 	
         /** @todo Add support for i3. */
 	if(hip_nat_status) {
