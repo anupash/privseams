@@ -38,9 +38,7 @@ int hipd_init(int flush_ipsec)
 	hip_init_puzzle_defaults();
 
 /* Initialize a hashtable for services, if any service is enabled. */
-#if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	hip_init_services();
-#endif
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
