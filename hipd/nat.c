@@ -27,6 +27,10 @@
  */ 
 #include "nat.h"
 
+/** A transmission function set for NAT traversal. */
+extern hip_xmit_func_set_t nat_xmit_func_set;
+/** A transmission function set for sending raw HIP packets. */
+extern hip_xmit_func_set_t default_xmit_func_set;
 /** Port used for NAT travelsal NAT-P random port simulation.
     If random port simulation is of, 50500 is used. */
 in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
@@ -98,15 +102,12 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	   hip_nat_on() which calls hip_for_each_ha(). hip_for_each_ha()
 	   requires a function pointer as parameter which in turn has two
 	   parameters. */
-	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
 	int err = 0;
+	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
 
 	if(entry)
 	{
-		/*entry->peer_udp_port = HIP_NAT_UDP_PORT;*/
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p at hip_nat_on().\n",
-			  entry);
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
@@ -128,15 +129,14 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 {
 	/* Check hip_nat_on_for_ha() for further explanation on "not_used". */
+	int err = 0;
 	HIP_DEBUG("hip_nat_off_for_ha() invoked.\n");
-	 int err = 0;
 
 	if(entry)
 	{
 		/* entry->peer_udp_port = 0; */
 		entry->nat_mode = 0;
-		HIP_DEBUG("NAT status of host association %p: %d\n",
-			  entry, entry->nat_mode);
+		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
  out_err:
 	return err;

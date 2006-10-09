@@ -7,8 +7,13 @@ HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
-/* default set of miscellaneous function pointers. This has to be in the global scope */
-static hip_xmit_func_set_t default_xmit_func_set;
+/* default set of miscellaneous function pointers. This has to be in the global
+   scope. */
+
+/** A transmission function set for sending raw HIP packets. */
+hip_xmit_func_set_t default_xmit_func_set;
+/** A transmission function set for NAT traversal. */
+hip_xmit_func_set_t nat_xmit_func_set;
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -323,19 +328,16 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	
 	/* If global NAT status is on, that is if the current host is behind
 	   NAT, the NAT status of the host association is set on and the send
-	   function is set to hip_send_udp. */
+	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status)
 	{
 		entry->nat_mode = 1;
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p at hadb_add_peer_info.\n",
-			  entry);
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
 		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
 	}
 
 	hip_hadb_insert_state(entry);
@@ -492,10 +494,8 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 	return err;
 }
 
-
-
 /**
- * Allocates and initializes a new HA structure
+ * Allocates and initializes a new HA structure.
  * 
  * @gfpmask a mask passed directly to HIP_MALLOC().
  * @return NULL if memory allocation failed, otherwise the HA.
@@ -537,7 +537,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 		    
 	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
 		 -1, "Can't set new function pointer set\n");
-
+	/* Set the xmit function set as function set for sending raw HIP. */
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
 		 -1, "Can't set new function pointer set\n");
 
@@ -1879,16 +1879,10 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 
 	/* xmit function set */
-	/*default_xmit_func_set.hip_send_raw = hip_send_raw;
-	  default_xmit_func_set.hip_send_udp = hip_send_udp;*/
+	/** @todo Add support for i3. */
+	default_xmit_func_set.hip_send_pkt = hip_send_raw;
+	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
-        /** @todo Add support for i3. */
-	if(hip_nat_status) {
-		default_xmit_func_set.hip_send_pkt = hip_send_udp;
-	}
-	else {
-		default_xmit_func_set.hip_send_pkt = hip_send_raw;
-	}
 	/* filter function sets */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
 	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;

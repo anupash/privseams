@@ -8,6 +8,10 @@
 
 #include "update.h"
 
+/** A transmission function set for NAT traversal. */
+extern hip_xmit_func_set_t nat_xmit_func_set;
+/** A transmission function set for sending raw HIP packets. */
+extern hip_xmit_func_set_t default_xmit_func_set;
 int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 					  struct hip_locator_info_addr_item *i,
 					  void *opaq),
@@ -1766,6 +1770,7 @@ int hip_receive_update(struct hip_common *msg,
 		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
+		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
 	else{
 		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
@@ -1773,7 +1778,7 @@ int hip_receive_update(struct hip_common *msg,
 		entry->peer_udp_port = sinfo->src_port;
 		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from UPDATE.\n",
 			  entry);
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
 		

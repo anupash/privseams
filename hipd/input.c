@@ -17,6 +17,8 @@
 extern unsigned int opportunistic_mode;
 #endif
 
+/** A function set for NAT travelsal. */
+extern hip_xmit_func_set_t nat_xmit_func_set;
 extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
 			     uint32_t old_spi, uint32_t new_spi);
 /*
@@ -1116,12 +1118,11 @@ int hip_handle_r1(struct hip_common *r1,
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is allready locked... */
 	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
-		//HIP_LOCK_HA(entry);
+		HIP_LOCK_HA(entry);
 		entry->nat_mode = 1;
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from R1 info.\n",
-			  entry);
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
-		//HIP_UNLOCK_HA(entry);
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+		//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		HIP_UNLOCK_HA(entry);
 	}
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
@@ -1747,9 +1748,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		{
 			entry->nat_mode = 1;
 			entry->peer_udp_port = i2_info->src_port;
+			HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
 			HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
 				  entry);
-			entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+			hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+			//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		}
 
 		hip_hadb_insert_state(entry);
@@ -2324,6 +2327,7 @@ int hip_handle_i1(struct hip_common *i1,
 	HIP_DEBUG("hip_send_raw: %p.\n", hip_send_raw);
 	HIP_DEBUG("hip_send_udp: %p.\n", hip_send_udp);
 	if(rvs_ha_entry->hadb_xmit_func->hip_send_pkt != NULL) {
+		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", rvs_ha_entry->hadb_xmit_func);
 		HIP_DEBUG("entry->send_pkt: %p.\n", rvs_ha_entry->hadb_xmit_func->hip_send_pkt);
 	}
 	else {
