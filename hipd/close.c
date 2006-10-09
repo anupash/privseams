@@ -65,36 +65,11 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	/********** Signature **********/
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
 		 "Could not create signature.\n");
-	
-	HIP_DEBUG("hip_send_raw: %p.\n", hip_send_raw);
-	HIP_DEBUG("hip_send_udp: %p.\n", hip_send_udp);
-	if(entry->hadb_xmit_func->hip_send_pkt != NULL) {
-		HIP_DEBUG("entry->send_pkt: %p.\n", entry->hadb_xmit_func->hip_send_pkt);
-	}
-	else {
-		HIP_DEBUG("entry->send_pkt: NULL.\n");
-	}
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(NULL, &entry->preferred_address, HIP_NAT_UDP_PORT,
 			      entry->peer_udp_port, close, entry, 0),
 		 -ECOMM, "Sending CLOSE message failed.\n");
-	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode)
-	  {
-		  HIP_IFE(entry->hadb_xmit_func->
-			  hip_send_udp(NULL, &entry->preferred_address,0,
-				       entry->peer_udp_port,
-				       close, entry, 0), -1);
-				       }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else
-	{
-		HIP_IFE(entry->hadb_xmit_func->
-			hip_send_raw(NULL,&entry->preferred_address,0,0,
-				     close, entry, 0), -1);
-				     }*/
 	
 	entry->state = HIP_STATE_CLOSING;
 
@@ -149,22 +124,6 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 			      entry->peer_udp_port,
 			      close_ack, entry, 0),
 		 -ECOMM, "Sending CLOSE ACK message failed.\n");
-	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode)
-	  {
-	  HIP_IFE(entry->hadb_xmit_func->
-	  hip_send_udp(NULL, &entry->preferred_address,0,
-	  entry->peer_udp_port,
-	  close_ack, entry, 0), -1);
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else
-	  {
-	  HIP_IFE(entry->hadb_xmit_func->
-	  hip_send_raw(NULL,&entry->preferred_address,0,0,
-	  close_ack, entry, 0), -1);
-	  }*/
 	
 	entry->state = HIP_STATE_CLOSED;
 

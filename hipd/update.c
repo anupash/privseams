@@ -532,23 +532,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-		
-	HIP_IFEL(entry->hadb_xmit_func->
-	hip_send_udp(&entry->local_address, src_ip,
-	update_info->dst_port,
-	entry->peer_udp_port, update_packet,
-	entry, 1),
-	-ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	}*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(&entry->local_address, src_ip, 0, 0,
-	  update_packet, entry, 1),
-	  -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
-	  }*/
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
@@ -880,22 +863,6 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(&entry->local_address, &daddr,
-	  0, entry->peer_udp_port,
-	  update_packet, entry, 1),
-	  -ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(&entry->local_address, &daddr,
-	  0, 0,
-	  update_packet, entry, 1),
-	  -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
-	  }*/
  out_err:
 	/* if (err)
 	   TODO: REMOVE IPSEC SAs
@@ -1018,22 +985,6 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 			      entry->peer_udp_port, update_packet, entry, 0),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(src_ip, &addr->address,
-	  0, entry->peer_udp_port,
-	  update_packet, entry, 0),
-	  -ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(src_ip, &addr->address,
-	  0, 0,
-	  update_packet, entry, 0),
-	  -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
-	  }*/
  out_err:
 	return err;
 }
@@ -1190,27 +1141,6 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 			      entry->peer_udp_port, update_packet, entry, 0),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_DEBUG("Sending reply UPDATE packet (address check) on "\
-	  "UDP.\n");
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(dst_ip, src_ip,
-	  0, entry->peer_udp_port,
-	  update_packet, entry, 0),
-	  -ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_DEBUG("Sending reply UPDATE packet (address check) on raw "\
-	  "HIP.\n");
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(dst_ip, src_ip,
-	  0, 0,
-	  update_packet, entry, 0),
-	  -ECOMM, "Sending UPDATE packet on raw HIP failed.\n");
-	  }*/
-
 	HIP_IFEL(set_address_state(entry, src_ip),
 		 -1, "Setting Own address status to ACTIVE failed\n");
 
@@ -1764,7 +1694,8 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1, "Error in processing encrypted parameter\n");
 	}
 	
-	/* Node moves from behind NAT to public internet. */
+	/* Node moves within public Internet or from behind a NAT to public
+	   Internet. */
 	if(sinfo->dst_port != HIP_NAT_UDP_PORT){
 		HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n");
 		entry->nat_mode = 0;
@@ -1772,12 +1703,12 @@ int hip_receive_update(struct hip_common *msg,
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
 		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
+	/* Node moves from public Internet to behind a NAT, stays behind the
+	   same NAT or moves from behind one NAT to behind another NAT. */
 	else{
 		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
 		entry->nat_mode = 1;
 		entry->peer_udp_port = sinfo->src_port;
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from UPDATE.\n",
-			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
@@ -2206,25 +2137,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_DEBUG("Sending initial UPDATE packet on UDP.\n");
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(&saddr, &daddr,
-	  0, entry->peer_udp_port,
-	  update_packet, entry, 1),
-	  -ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_DEBUG("Sending initial UPDATE packet on raw HIP.\n");
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(&saddr, &daddr,
-	  0,0,
-	  update_packet, entry, 1),
-	  -ECOMM, "Sending UPDATE packet on UDP failed.\n");
-	  }*/
-	
 	if (err) {
 		HIP_ERROR("addr list copy failed\n");
 		goto out_err;
@@ -2275,17 +2187,16 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 }
 
 /**
- * hip_send_update_all - send UPDATE packet to every peer
+ * Sends UPDATE packet to every peer.
+ *
+ * UPDATE is sent to the peer only if the peer is in established state. Add
+ * LOCATOR parameter if @c addr_list is non-null. @c ifindex tells which device
+ * caused the network device event.
+ *
  * @param addr_list if non-NULL, LOCATOR parameter is added to the UPDATE
  * @param addr_count number of addresses in @addr_list
  * @param ifindex if non-zero, the ifindex value of the interface which caused the event
  * @param flags flags passed to @hip_send_update
- *
- * UPDATE is sent to the peer only if the peer is in established
- * state.
- *
- * Add LOCATOR parameter if @addr_list is non-null. @ifindex tells which
- * device caused the network device event.
  */
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex, int flags)
@@ -2294,7 +2205,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
-	/*! \todo check UPDATE also with radvd (i.e. same address is added twice). */
+	/** @todo check UPDATE also with radvd (i.e. same address is added
+	    twice). */
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
@@ -2305,7 +2217,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-//AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid ha entries
+        /* AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid
+	ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {

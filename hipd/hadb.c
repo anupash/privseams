@@ -1394,24 +1394,6 @@ int hip_update_send_echo(hip_ha_t *entry,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*
-	  if(entry->nat_mode) {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(&entry->local_address, &addr->address,
-	  0, entry->peer_udp_port,
-	  update_packet, entry, 1), -ECOMM,
-	  "Sending UPDATE packet with echo data on UDP "\
-	  "failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(&entry->local_address, &addr->address,
-	  0, 0, update_packet, entry, 0), -ECOMM,
-	  "Sending UPDATE packet with echo data on raw HIP "\
-	  "failed.\n");
-	  }*/
  out_err:
 	return err;
 

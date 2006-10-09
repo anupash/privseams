@@ -60,25 +60,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
 			
-			/* If NAT status is on, UDP is used. */
-			/*if(hip_nat_status) {
-			  entry->hadb_xmit_func->
-			  hip_send_udp(&entry->hip_msg_retrans.saddr,
-			  &entry->hip_msg_retrans.daddr,
-			  0, HIP_NAT_UDP_PORT,
-			  entry->hip_msg_retrans.buf,
-			  entry, 0);
-			  }*/
-			/* If NAT status is off, raw HIP is used. */
-			/*else {
-			  err = entry->hadb_xmit_func->
-			  hip_send_raw(&entry->hip_msg_retrans.saddr,
-			  &entry->hip_msg_retrans.daddr,
-			  0,0,
-			  entry->hip_msg_retrans.buf,
-			  entry, 0);
-			  }*/
-
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)

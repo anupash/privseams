@@ -523,14 +523,20 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr,
 	                       struct hip_stateless_info *msg_info)
 {
-	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
 	type = hip_get_msg_type(msg);
 	
-	HIP_DEBUG("Received packet type %d\n", type);
-	_HIP_DUMP_MSG(msg);
+	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
+	HIP_DEBUG_IN6ADDR("Source IP", src_addr);
+	HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
+	HIP_DEBUG_HIT("HIT Sender", &msg->hits);
+	HIP_DEBUG_HIT("HIT Receiver", &msg->hitr);
+	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
+		  msg_info->src_port, msg_info->dst_port);
+	HIP_DUMP_MSG(msg);
+
 	_HIP_HEXDUMP("dumping packet", msg,  40);
 	/** @todo Check packet csum.*/
 
@@ -1021,20 +1027,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, 
 			      r1_info->src_port, i2, entry, 0),
 		 -ECOMM, "Sending I2 packet failed.\n");
-	
-	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(r1_daddr, &daddr, r1_info->dst_port, 
-	  HIP_NAT_UDP_PORT, i2, entry, 0),
-	  -ECOMM, "Sending I2 packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_raw(r1_daddr, &daddr, 0, 0, i2, entry, 0),
-	  -ECOMM, "Sending I2 packet on raw HIP failed.\n");
-	  }*/
 
  out_err:
 	if (i2)
@@ -1077,17 +1069,15 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("hip_handle_r1() invoked.\n");
-	HIP_DUMP_MSG(r1);
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
-
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
-
 	struct hip_reg_info *reg_info;
+
+	HIP_DEBUG("hip_handle_r1() invoked.\n");
 
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
@@ -1298,9 +1288,9 @@ int hip_receive_r1(struct hip_common *r1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r1_info)
 {
-	HIP_DEBUG("hip_receive_r1() invoked.\n");
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; /** @todo: Fix this kludge. */
 #endif
@@ -1476,21 +1466,6 @@ int hip_create_r2(struct hip_context *ctx,
 		 hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
 			      entry->peer_udp_port, r2, entry, 0),
 		 -ECOMM, "Sending R2 packet failed.\n");
-	
- 	/* If the peer is behind a NAT, UDP is used. */
-	/*if(entry->nat_mode) {
-	  HIP_IFEL(entry->hadb_xmit_func->
-	  hip_send_udp(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
-	  entry->peer_udp_port, r2, entry, 0),
-	  -ECOMM, "Sending R2 packet on UDP failed.\n");
-	  }*/
-	/* If there's no NAT between, raw HIP is used. */
-	/*else {
-		
-	HIP_IFEL(entry->hadb_xmit_func->
-	hip_send_raw(i2_daddr, i2_saddr, 0, 0, r2, entry, 0),
-	-ECOMM, "Sending R2 packet on raw HIP failed.\n");
-	}*/
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database
@@ -1512,20 +1487,7 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 -1, "Inserting rendezvous association failed..\n");
-	/*
-	  if(entry->nat_mode) {
-	  HIP_IFE(!(rva =
-	  hip_rvs_ha2rva(entry,
-	  entry->hadb_xmit_func->hip_send_udp)),
-	  -ENOSYS);
-	  }
-	  else {
-	  HIP_IFE(!(rva =
-	  hip_rvs_ha2rva(entry,
-	  entry->hadb_xmit_func->hip_send_raw)),
-	  -ENOSYS);
-	  }
-	*/
+
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
@@ -1581,7 +1543,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint64_t I, J;
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
-
+	
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
 		 -ENOMEM, "Alloc failed\n");
@@ -1970,9 +1932,10 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		  struct hip_stateless_info *i2_info)
 {
-	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
+
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
 		 "Received NULL receiver HIT in I2. Dropping\n");
 
@@ -1989,7 +1952,7 @@ int hip_receive_i2(struct hip_common *i2,
 	}
 
 	HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
-
+	
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
@@ -2054,13 +2017,14 @@ int hip_handle_r2(struct hip_common *r2,
 		  hip_ha_t *entry,
 		  struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("hip_handle_r2() invoked.\n");
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
 	int retransmission = 0;
+
+	HIP_DEBUG("hip_handle_r2() invoked.\n");
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
@@ -2077,7 +2041,6 @@ int hip_handle_r2(struct hip_common *r2,
         /* Verify HMAC */
 	HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in, entry->peer_pub), -1, 
 		 "HMAC validation on R2 failed\n");
-	_HIP_DUMP_MSG(r2);
 
 	/* Assign a local private key to HA */
 	//HIP_IFEL(hip_init_our_hi(entry), -EINVAL, "Could not assign a local host id\n");
@@ -2100,7 +2063,6 @@ int hip_handle_r2(struct hip_common *r2,
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
 
-	HIP_DEBUG("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
 	err = hip_add_sa(r2_daddr, r2_saddr,
@@ -2265,12 +2227,7 @@ int hip_handle_i1(struct hip_common *i1,
 	struct hip_from *from;
 		
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
-	HIP_DEBUG_HIT("&i1->hits", &i1->hits);
-	HIP_DEBUG_HIT("&i1->hitr", &i1->hitr);
-	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
-		  i1_info->src_port, i1_info->dst_port);
-	HIP_DUMP_MSG(i1);
-
+		
 #ifdef CONFIG_HIP_RVS
 	
 	/* Note that this code effectively takes place at the responder of
@@ -2324,15 +2281,6 @@ int hip_handle_i1(struct hip_common *i1,
 	
 	HIP_DEBUG("RVS host association entry found: %p.\n", rvs_ha_entry);
 	
-	HIP_DEBUG("hip_send_raw: %p.\n", hip_send_raw);
-	HIP_DEBUG("hip_send_udp: %p.\n", hip_send_udp);
-	if(rvs_ha_entry->hadb_xmit_func->hip_send_pkt != NULL) {
-		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", rvs_ha_entry->hadb_xmit_func);
-		HIP_DEBUG("entry->send_pkt: %p.\n", rvs_ha_entry->hadb_xmit_func->hip_send_pkt);
-	}
-	else {
-		HIP_DEBUG("entry->send_pkt: NULL.\n");
-	}
 	/* Verify the RVS hmac. */
 	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
 		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
@@ -2424,8 +2372,9 @@ int hip_receive_i1(struct hip_common *i1,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *i1_info)
 {
+	int err = 0, state, mask = 0;
 	HIP_DEBUG("hip_receive_i1() invoked.\n");
-       	int err = 0, state, mask = 0;
+
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -2505,9 +2454,10 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   hip_ha_t *entry,
 		   struct hip_stateless_info *r2_info)
 {
-	HIP_DEBUG("hip_receive_i2() invoked.\n");
 	int err = 0, state;
 	uint16_t mask = 0;
+
+	HIP_DEBUG("hip_receive_i2() invoked.\n");
 
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");
