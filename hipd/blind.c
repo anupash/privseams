@@ -56,31 +56,33 @@ int hip_handle_i1_blind(struct hip_common *i1,
 			struct in6_addr *i1_saddr,
 			struct in6_addr *i1_daddr,
 			hip_ha_t *entry,
-			struct hip_stateless_info *i1_info) {
+			struct hip_stateless_info *i1_info) 
+{
   struct hip_common *r1pkt = NULL;
-  struct hip_blind_nonce *nonce = NULL;
   struct in6_addr hitr_plain;
   int hashalgo;//just to send it in the function to follow;
-  //hashalgo should be SHA1();
+               //hashalgo should be SHA1();
   struct in6_addr *own_addr, *dst_addr;
   struct hip_tlv_common *puzzle = NULL;
   int err = 0;
+#if 0
 
-#if 0	
-	 // if blind we have to get the puzzle from the precreated r1 s and 
-	 //construct a new r1 which has to be sent...
-	 //
+  HIP_DEBUG("\n");
+
+  // if blind we have to get the puzzle from the precreated r1 s and 
+  //construct a new r1 which has to be sent...
+  
+
+  
+  //XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
 	
-	HIP_IFEL(!hip_get_param(i1, HIP_PARAM_BLIND_NONCE), -1, "\n");
-	
-	//XX--TODO: SHA1 alone is enough.. so, change the corresponding functions of plain_to_blind and blind_to_plain
-	
-	HIP_DEBUG("\n");
-	own_addr = i1_daddr;
-	dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
-	
-	HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
-		 "Unable to unblind the responder HIT");
+
+  own_addr = i1_daddr;
+  dst_addr = ((!dstip || ipv6_addr_any(dstip)) ? i1_saddr : dstip);
+
+
+  HIP_IFEL(hip_blind_to_plain_hit(i1->hitr, hitr_plain, nonce->nonce, hashalgo),-1,
+	   "Unable to unblind the responder HIT");
 	
 	HIP_IFEL(!(r1pkt = hip_get_r1(dst_addr, own_addr, src_hit, dst_hit)), -ENOENT,
 		 "No precreated R1\n");

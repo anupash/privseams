@@ -526,7 +526,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *dst_addr,
 	                       struct hip_stateless_info *msg_info)
 {
-	hip_ha_t tmp, *entry;
+	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
 
 	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
@@ -538,12 +538,29 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/** @todo Check packet csum.*/
 
 #ifdef CONFIG_HIP_BLIND
-	// XX TODO KARTHIK: UNBLIND THE HITS (if control & blind) AND FEED TO HADB_FIND
+	if(type == HIP_I1) {
+	  if (msg->control & HIP_CONTROL_BLIND) {
+	    HIP_DEBUG("Blinded control packet I1 received\n");
+	    hip_set_blind_on();
+	    HIP_IFEL(hip_plain_fingerprints(msg, entry, HIP_DB_LOCAL_HID), 
+		     -1, "hip_plain_fingerprints failed\n");
+	    if(entry == NULL) {
+	      err = -1;
+	      goto out_err;
+	    }
+	  }
+	}
+	else {
+	  if (msg->control & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	    HIP_DEBUG("Blinded control packet X received\n");
+	    // TODO SOMETHING ELSE
+	  }
+	}
 #endif
-
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	if(entry == NULL)
+	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
