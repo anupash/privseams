@@ -10,26 +10,28 @@
 #define HIP_KEA_EP_SIZE 10
 
 typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_REGISTERING=1, 
-		HIP_KEASTATE_VALID=2 } hip_keastate_t;
+		HIP_KEASTATE_UNREGISTERING=2, HIP_KEASTATE_VALID=3 } hip_keastate_t;
 
 
 
 
 struct hip_key_escrow_association 
 {
-	struct list_head list_hit;
+	struct list_head       list_hit;
 
-	atomic_t	 refcnt;
-	spinlock_t       lock;
-	struct in6_addr	 hit; /* if we are the server, this is client hit,
+	atomic_t               refcnt;
+	spinlock_t             lock;
+	struct in6_addr        hit; /* if we are the server, this is client hit,
 				 if we are the client, this is our own hit */
 	/*! \todo Find better key. Client HIT used for now. */
 	//struct in6_addr       	client_hit; 
-	//struct in6_addr       	peer_hit; //? 
-	struct in6_addr	server_hit;
-	uint32_t 	spi_in;//?
-	uint32_t	spi_out;//?
-	hip_keastate_t	keastate;
+	struct in6_addr        peer_hit; 
+	struct in6_addr        server_hit;
+	
+        struct hip_kea_endpoint *client_end;
+        struct hip_kea_endpoint *peer_end;
+
+        hip_keastate_t          keastate;
 };
 
 // Contains endpoint HIT and SPI
@@ -43,20 +45,20 @@ typedef struct hip_kea_ep_id HIP_KEA_EP_ID;
 
 struct hip_kea_endpoint 
 {
-	struct list_head		list_hit;
+	struct list_head       list_hit;
 	
-	atomic_t				refcnt;
-	spinlock_t            	lock;
+	atomic_t               refcnt;
+	spinlock_t             lock;
 	
 	// Hash key for this
-	HIP_KEA_EP_ID	ep_id;	
+	HIP_KEA_EP_ID          ep_id;	
 	
-	struct in6_addr       	hit;
-	struct in6_addr       	ip;
-	int                  	esp_transform;
-	uint32_t			    spi; 
-	uint16_t				key_len; 	//?
-	struct hip_crypto_key	esp_key;	
+	struct in6_addr        hit;
+	struct in6_addr        ip;
+	int                    esp_transform;
+	uint32_t               spi; 
+	uint16_t               key_len; 	//?
+	struct hip_crypto_key  esp_key;	
 };
 
 
@@ -67,15 +69,18 @@ typedef struct hip_kea_endpoint HIP_KEA_EP;
 /************** ESCROW  ****************/
 
 int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
-    struct in6_addr *src_hit, struct in6_addr *dst_hit, uint32_t *spi, 
-    int ealg, struct hip_crypto_key *enckey, int operation);
+        struct in6_addr *src_hit, struct in6_addr *dst_hit, uint32_t *spi, 
+        int ealg, struct hip_crypto_key *enckey, int operation);
 
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
-	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
-	int ealg, uint16_t key_len, struct hip_crypto_key * enc);
+	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, 
+        uint32_t old_spi, int ealg, uint16_t key_len, 
+        struct hip_crypto_key * enc);
 
 
 int hip_handle_escrow_registration(struct in6_addr *hit);
+
+int hip_cancel_escrow_registration(struct in6_addr *hit);
 
 int hip_remove_escrow_data(hip_ha_t * entry, void * data);
 
@@ -86,10 +91,12 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 
 int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
 	void * server_hit_void);
+int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry, 
+        void * server_hit_void);
+        
+int hip_kea_remove(struct hip_host_id_entry *entry, void *data); 
 
-int hip_kea_remove(struct hip_host_id_entry *entry, void *hit); 
-
-int hip_kea_remove_base_entries(struct in6_addr *hit);
+int hip_kea_remove_base_entries();
 
 void hip_init_keadb(void);
 void hip_uninit_keadb(void);
@@ -124,7 +131,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, int esp
 							  uint32_t spi, uint16_t key_len, 
 							  struct hip_crypto_key * key);
 
-int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep);
+int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep);
 void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep);
 void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep);
 

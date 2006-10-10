@@ -90,7 +90,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
- 	/* Supported HIP and ESP transforms. */
+    int * service_list = NULL;
+    int service_count = 0;
+    
+    /* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
 		HIP_HIP_3DES_SHA1,
@@ -164,27 +167,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
 
-	/* REG_INFO */
-	/* @todo Get service-list from some function which lists all services
-	   offered by this system. */
-	
-	int *list;
-	int count = 0;
-		
-	count = hip_get_services_list(&list);
-	
-	HIP_DEBUG("Amount of services is %d.\n", count);
-	
-	int i;
-	for (i = 0; i < count; i++) {
-		HIP_DEBUG("Service is %d.\n", list[i]);
-	}
-	
-	if (count > 0) {
+	/********** REG_INFO *********/
+	/* Get service list of all services offered by this system */
+	service_count = hip_get_services_list(&service_list);
+	if (service_count > 0) {
 		HIP_DEBUG("Adding REG_INFO parameter.\n");
-		/** @todo Min and max lifetime of registration. */
-		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
-		 	"Building of reg_info failed\n");	
+                HIP_IFEL(hip_build_param_reg_info(msg, hip_get_service_min_lifetime(), 
+                        hip_get_service_max_lifetime(), service_list, service_count), 
+                        -1, "Building of reg_info failed\n");	
 	}
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/

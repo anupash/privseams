@@ -1308,6 +1308,74 @@ out_err:
 	return err;
 }
 
+int hip_handle_reg_request(hip_ha_t * entry, 
+        struct hip_tlv_common * reg, uint8_t *requests, 
+        int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+{
+        int err = 0;
+        uint16_t mask = 0;
+        struct hip_common *update_packet = NULL;
+        uint32_t update_id_out = 0;
+        struct hip_reg_request *reg_request = (struct hip_reg_request *)reg;
+        
+        HIP_DEBUG("Received registration message from client\n");
+        
+        /* Reply with UPDATE-packet containing the response */
+        
+        HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+                 "Out of memory.\n");
+        HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
+        HIP_DEBUG_HIT("... from", &entry->hit_our);
+
+        entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+                                                     mask, &entry->hit_our,
+                                                     &entry->hit_peer);
+        /********** SEQ **********/  
+        entry->update_id_out++;
+        update_id_out = entry->update_id_out;
+        /* todo: handle this case */
+        HIP_IFEL(!update_id_out, -EINVAL,
+                 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+        HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
+                 "Building of SEQ param failed\n");
+            
+        /********** ACK **********/  
+        /* Piggyback ACK of the received message */
+        HIP_IFEL(hip_build_param_ack(update_packet, entry->update_id_in), -1,
+                 "Building of ACK failed\n");
+         
+        /********** REG_RESPONSE/REG_FAILED **********/        
+        /* Check service requests and build reg_response and/or reg_failed */
+        hip_handle_registration_attempt(entry, update_packet, reg_request, 
+               requests, request_count);
+        
+        
+        /********** HMAC **********/
+        HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+                                               &entry->hip_hmac_out), -1,
+                 "Building of HMAC failed\n");
+
+        /********** SIGNATURE **********/
+        HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+                 "Could not sign UPDATE. Failing\n");
+
+        /********** Send UPDATE **********/
+        HIP_DEBUG("Sending UPDATE packet with registration response\n");
+        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip, 0, 0,
+                update_packet, entry, 1), -1, "csum_send failed\n");
+out_err: 
+        return err;
+}
+
+
+
+int hip_handle_reg_info(hip_ha_t * entry, struct hip_tlv_common * reg, 
+        uint8_t *types, int type_count)
+{       
+        struct hip_reg_info *reg_info = (struct hip_reg_info *)reg;
+        /*TODO: Server announces that new services are available. */
+}
+
 
 #ifdef CONFIG_HIP_ESCROW
 
@@ -1342,9 +1410,9 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
 				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
-	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
+	 		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep), 
 	 			"Error while adding endpoint");
-	 		break;
+                        break;
 	 	
 	 	case HIP_ESCROW_OPERATION_MODIFY:
 	 		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1, 
@@ -1353,7 +1421,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
 				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
-	 		HIP_IFEBL(hip_kea_add_endpoint(ep), -1, hip_kea_put_ep(ep), 
+	 		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep), 
 	 			"Error while adding endpoint");	
 	 		break;
 	 	
@@ -1584,10 +1652,11 @@ int hip_receive_update(struct hip_common *msg,
 	struct hip_locator *locator = NULL;
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
+        struct hip_tlv_common *reg_request = NULL;
+        struct hip_tlv_common *reg_response = NULL;
+        struct hip_tlv_common *reg_failed = NULL;
+        struct hip_tlv_common *reg_info = NULL;
 	struct in6_addr *src_ip, *dst_ip;
-#ifdef CONFIG_HIP_ESCROW
-	struct hip_keys *keys = NULL;
-#endif //CONFIG_HIP_ESCROW	
 	struct hip_tlv_common *encrypted = NULL;
 	
 	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
@@ -1628,12 +1697,10 @@ int hip_receive_update(struct hip_common *msg,
 	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
 	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
-
-#ifdef CONFIG_HIP_ESCROW
-	keys = hip_get_param(msg, HIP_PARAM_KEYS);
-	if (keys)
-		HIP_DEBUG("ESCROW found");
-#endif //CONFIG_HIP_ESCROW
+        reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+        reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
+        reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
+        reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
 
 	if(ack)
 		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
@@ -1651,8 +1718,6 @@ int hip_receive_update(struct hip_common *msg,
 		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
 	if (seq)
 		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
-	if (encrypted)
-		HIP_DEBUG("ENCRYPTED found\n");
 	
         /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -1685,9 +1750,41 @@ int hip_receive_update(struct hip_common *msg,
 	
 	if (encrypted) {
 		// handle encrypted parameter
+                HIP_DEBUG("ENCRYPTED found\n");
 		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1, "Error in processing encrypted parameter\n");
+                HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, "Error sending ack\n");
 	}
 	
+        if (reg_request) {
+                //handle registration request
+                uint8_t *types = NULL;
+                int type_count;
+                types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_REQUEST));
+                type_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
+                HIP_IFEL(hip_handle_reg_request(entry, reg_request, 
+                        (uint8_t *)(types + 1), type_count, src_ip, dst_ip), -1,
+                        "Error handling reg_request\n");
+                
+        }
+        if (reg_response || reg_failed) {
+                //handle registration request
+                HIP_IFEL(hip_handle_registration_response(entry, msg), -1, 
+                        "Error handling reg_response\n");
+                HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, 
+                        "Error sending ack\n");
+        }
+        if (reg_info) {
+                //handle reg_info
+                uint8_t *types = NULL;
+                int type_count;
+                types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_INFO));
+                type_count = hip_get_param_contents_len(reg_info) - 2; // leave out lifetime fields
+                
+                HIP_IFEL(hip_handle_reg_info(entry, reg_info, (types + 2), 
+                        type_count), -1, "Error handling reg_info\n");
+        }
+        
+        
 	// NAT stuff
 	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
 		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
@@ -2212,5 +2309,118 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 
 out_err:
 	return;
+}
+
+
+int hip_update_send_ack(hip_ha_t *entry, struct hip_common *msg,
+        struct in6_addr *src_ip, struct in6_addr *dst_ip)
+{
+        int err = 0;
+        struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
+        struct hip_common *update_packet = NULL;
+        struct hip_seq *seq = NULL;
+        struct hip_echo_request *echo = NULL;
+        uint16_t mask = 0;
+
+        /* Assume already locked entry */
+        echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
+        HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
+                 "SEQ not found\n");
+        HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
+                 "Out of memory\n");
+
+
+        entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
+                                                     mask, hitr, hits);
+
+        /* reply with UPDATE(ACK, [ECHO_RESPONSE]) */
+        HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
+                 "Building of ACK failed\n");
+
+        /* Add HMAC */
+        HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+                                               &entry->hip_hmac_out), -1, 
+                 "Building of HMAC failed\n");
+
+        /* Add SIGNATURE */
+        HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+                 "Could not sign UPDATE. Failing\n");
+
+        /* ECHO_RESPONSE (no sign) */
+        if (echo) {
+                HIP_DEBUG("echo opaque data len=%d\n", 
+                        hip_get_param_contents_len(echo));
+                HIP_HEXDUMP("ECHO_REQUEST ",
+                             (void *)echo +
+                             sizeof(struct hip_tlv_common),
+                             hip_get_param_contents_len(echo));
+                HIP_IFEL(hip_build_param_echo(update_packet,
+                                      (void *)echo +
+                                      sizeof(struct hip_tlv_common),
+                                      hip_get_param_contents_len(echo), 0, 0),
+                        -1, "Building of ECHO_RESPONSE failed\n");
+        }
+        
+        HIP_DEBUG("Sending reply UPDATE packet (ack)\n");
+        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip, 0, 0,
+                                                      update_packet, entry, 0),
+                 -1, "csum_send failed\n");
+
+ out_err:
+        if (update_packet)
+                HIP_FREE(update_packet);
+        HIP_DEBUG("end, err=%d\n", err);
+        return err;      
+}                                  
+                                  
+/* op = 0/1 (zero for cancelling registration) */
+int hip_update_send_registration_request(hip_ha_t *entry, 
+        struct in6_addr *server_hit, int *types, int type_count, int op) 
+{
+        int err = 0;
+        struct hip_common *update_packet = NULL;
+        struct hip_seq *seq = NULL;
+        uint16_t mask = 0;
+        struct in6_addr saddr = { 0 }, daddr = { 0 };
+        uint8_t lifetime = 0; 
+        uint32_t update_id_out = 0;
+        
+        /* If not cancelling, requesting maximum lifetime always (255) TODO: fix */        
+        if (op)
+              lifetime = 255;
+                
+        hip_hadb_get_peer_addr(entry, &daddr);
+        memcpy(&saddr, &entry->local_address, sizeof(saddr));
+                
+        HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
+        entry->hadb_misc_func->hip_build_network_hdr(update_packet, 
+                HIP_UPDATE, mask, &entry->hit_our, server_hit);
+        entry->update_id_out++;
+        update_id_out = entry->update_id_out;
+        _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+        /* todo: handle this case */
+        HIP_IFEL(!update_id_out, -EINVAL,
+                "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
+        HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
+                "Building of SEQ param failed\n");
+        
+        HIP_IFEL(hip_build_param_reg_request(update_packet, lifetime, types, 
+                type_count, 1), -1, "Building of REG_REQUEST failed\n");
+
+        /* Add HMAC */
+        HIP_IFEL(hip_build_param_hmac_contents(update_packet,
+                &entry->hip_hmac_out), -1, "Building of HMAC failed\n");
+        /* Add SIGNATURE */
+        HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+                "Could not sign UPDATE. Failing\n");
+        
+        HIP_DEBUG("Sending initial UPDATE packet (reg_request)\n");
+        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr, 0, 0,
+                update_packet, entry, 0), -1, "csum_send failed\n");
+
+out_err:
+        if (update_packet)
+                HIP_FREE(update_packet);
+        return err;
 }
 

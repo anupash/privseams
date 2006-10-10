@@ -92,7 +92,8 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
 }
 
 /**
- * Launches registration to escrow service
+ * Launches registration to escrow service 
+ * op = 0/1 (zero for cancelling registration)
  */
 int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
 	void * server_hit_void)
@@ -107,15 +108,65 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
 	HIP_DEBUG_HIT("Registering to server from ", &entry->hit_our);
 	
-	kea->keastate = HIP_KEASTATE_REGISTERING;
-	hip_keadb_put_entry(kea);
+        kea->keastate = HIP_KEASTATE_REGISTERING;
+        hip_keadb_put_entry(kea);
 	
-	HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry),
-			 -1, "sending i1 failed\n");
+        if (entry->state == HIP_STATE_UNASSOCIATED) {
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
+                        -1, "sending i1 failed\n");
+        }
+        else if (entry->state == HIP_STATE_ESTABLISHED) {
+                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
+                /* Sending registration in update packet. TODO: maybe this
+                 * should be done somewhere else */
+                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
+                        reg_types, 1, 1), -1, "Sending registration on update failed\n");
+        }
 		
 out_err:
+        if (entry)
+                hip_put_ha(entry);
 	return err;		
 }
+
+int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry, 
+        void * server_hit_void)
+{
+        int err = 0;
+        hip_ha_t * entry = NULL;        
+        struct in6_addr * server_hit = server_hit_void;
+        HIP_KEA * kea = NULL;
+        
+        HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
+                         -1, "internal error: no hadb entry found\n");
+        HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
+        HIP_DEBUG_HIT("Cancelling registration of ", &entry->hit_our);
+        
+        kea->keastate = HIP_KEASTATE_UNREGISTERING;
+               
+        hip_keadb_put_entry(kea);
+        
+        if (entry->state == HIP_STATE_UNASSOCIATED) {
+                /* TODO: can this situation ever happen? */
+                HIP_DEBUG("Cancelling registration but state is unassociated!\n");
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
+                        -1, "sending i1 failed\n");
+        }
+        else if (entry->state == HIP_STATE_ESTABLISHED) {
+                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
+                /* Sending registration in update packet. TODO: maybe this
+                 * should be done somewhere else */
+                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
+                        reg_types, 1, 0), -1, 
+                        "Sending registration on update failed\n");
+        }
+                
+out_err:
+        if (entry)
+                hip_put_ha(entry);
+        return err;             
+}
+
 
 int hip_remove_escrow_data(hip_ha_t * entry, void * data)
 {
@@ -126,7 +177,7 @@ out_err:
 }
 
 int hip_kea_remove(struct hip_host_id_entry *entry, 
-	void *hit) 
+	void *data) 
 {
 	int err = 0;
 	HIP_KEA *kea;
@@ -141,12 +192,12 @@ out_err:
 }
 
 // TODO: fix parameter to something meaningful
-int hip_kea_remove_base_entries(struct in6_addr *hit)
+int hip_kea_remove_base_entries()
 {
 	int err = 0;
 	HIP_DEBUG("Removing base entries");
 	// Removing keas
-	HIP_IFEL(hip_for_each_hi(hip_kea_remove, hit), 0, "for_each error");
+	HIP_IFEL(hip_for_each_hi(hip_kea_remove, NULL), 0, "for_each error");
 out_err:
 	return err;	
 }
@@ -185,7 +236,9 @@ HIP_KEA *hip_kea_create(struct in6_addr *hit)
 	
 	ipv6_addr_copy(&kea->hit, hit);
 	kea->keastate = HIP_KEASTATE_VALID;
-	
+	kea->peer_end = NULL;
+        kea->client_end = NULL;
+      
 	return kea;	
 }
 
@@ -366,7 +419,7 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	return kea_ep;	
 }
 
-int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
+int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 {
 	int err = 0;
 	HIP_KEA_EP * temp;
@@ -394,6 +447,11 @@ int hip_kea_add_endpoint(HIP_KEA_EP *kea_ep)
 		// set state if needed
 	}
 	
+        if (ipv6_addr_cmp(&kea->hit, &kea_ep->hit))
+                kea->client_end = kea_ep;
+        else
+                kea->peer_end = kea_ep;
+        
  out_err:
 	return err;
 }
@@ -440,7 +498,11 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 /******************************/
 
 
-
+/**
+ * Send UPDATE to escrow server. Operation can be HIP_ESCROW_OPERATION_ADD, 
+ * HIP_ESCROW_OPERATION_MODIFY or HIP_ESCROW_OPERATION_DELETE. 
+ * Note: Modification and deletion are not tested properly.
+ */
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
 	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc)
@@ -471,6 +533,8 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	_HIP_DEBUG("escrow data old spi: %d", old_spi);
 	_HIP_DEBUG("escrow data ealg: %d", ealg);
 	_HIP_DEBUG("escrow data key length: %d",key_len);
+
+        //HIP_LOCK_HA(entry);
 
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
@@ -579,7 +643,6 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	
 	/*** Send UPDATE ***/
-	//hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
         HIP_DEBUG("Sending UPDATE packet with escrow data\n");
@@ -595,7 +658,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 	
  out:
-	HIP_UNLOCK_HA(entry);
+	//HIP_UNLOCK_HA(entry);
 	if (update_packet)
 		HIP_FREE(update_packet);
 	return err;
@@ -623,16 +686,9 @@ int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
             -1, "No server entry found");
         
         if (kea->keastate == HIP_KEASTATE_VALID) {
-            // TODO: Fix values. Spi usage needs to be checked. 
-            // direction should propably be checked
             enckey_len = hip_enc_key_length(ealg);
             err = hip_send_escrow_update(server_entry, operation, 
                 daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
-        
-            if (ipv6_addr_cmp(&kea->hit, dst_hit))
-                kea->spi_in = *spi;
-            else 
-                kea->spi_out = *spi;        
         }
         else {
             HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
@@ -671,3 +727,46 @@ int hip_handle_escrow_registration(struct in6_addr *hit)
 out_err:	
 	return 0;
 }
+
+
+int hip_cancel_escrow_registration(struct in6_addr *hit)
+{
+        int err = 0;
+        HIP_KEA * kea = NULL;
+        HIP_KEA_EP *client_end = NULL;
+        HIP_KEA_EP *peer_end = NULL;
+        
+        HIP_DEBUG("Cancelling escrow registration\n");
+        HIP_IFEL(!(kea = hip_kea_find(hit)), -1, "Error while finding kea\n");
+
+        client_end = kea->client_end;
+        peer_end = kea->peer_end;
+        
+        if (client_end != NULL) {
+                if (hip_firewall_is_alive()) {
+                        HIP_DEBUG("Firewall alive!\n");
+                        if (hip_firewall_remove_escrow_data(&client_end->ip, client_end->spi))
+                                HIP_DEBUG("Sent remove message to firewall\n");
+                }
+                hip_kea_remove_endpoint(client_end);
+                kea->client_end = NULL;
+        }
+        if (peer_end != NULL) {
+                if (hip_firewall_is_alive()) {
+                        HIP_DEBUG("Firewall alive!\n");
+                        if (hip_firewall_remove_escrow_data(&peer_end->ip, peer_end->spi))
+                                HIP_DEBUG("Sent remove message to firewall\n");
+                }
+                hip_kea_remove_endpoint(peer_end);
+                kea->peer_end = NULL;
+                
+        }
+        
+        hip_keadb_remove_entry(kea);
+        
+out_err:
+        if (kea)
+                hip_keadb_put_entry(kea); 
+        return err;
+}
+

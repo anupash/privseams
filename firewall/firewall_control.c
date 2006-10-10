@@ -178,6 +178,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 	}
 	else if (type == HIP_DELETE_ESCROW_DATA) {
 		//TODO
+                HIP_DEBUG("Received delete message from hipd\n");
 	}
 	return err;
 	
