@@ -34,7 +34,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if (!entry->hip_msg_retrans.buf)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING)
+	if (entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		HIP_DEBUG("Waiting reply from agent...\n");
 		goto out_err;
@@ -46,13 +47,13 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-
+	
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED) {
 			
-			entry->hadb_xmit_func->
+			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     HIP_NAT_UDP_PORT,
@@ -66,6 +67,11 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			    == HIP_I1) {
 				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
+			}
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_R2) {
+				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
+				entry->state = HIP_STATE_ESTABLISHED;
 			}
 			
 			entry->hip_msg_retrans.count--;
@@ -286,7 +292,7 @@ int hip_agent_filter(struct hip_common *msg)
 		err = -1;
 		goto out_err;
 	}
-	
+
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 	/*
@@ -294,6 +300,7 @@ int hip_agent_filter(struct hip_common *msg)
 		Not receiving the packet directly from agent.
 	*/
 	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
