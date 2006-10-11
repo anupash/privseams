@@ -1,5 +1,7 @@
 #include "blind.h"
 
+
+
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
   int err = 0;

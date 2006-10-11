@@ -17,9 +17,7 @@
    of this file! */
 struct hip_common *hipd_msg = NULL;
 
-#ifdef CONFIG_HIP_BLIND
 int hip_blind_status = 0; /* Blind status */
-#endif
 
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;

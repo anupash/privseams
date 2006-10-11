@@ -28,7 +28,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct in6_addr daddr;
 	int mask = 0;
 	int err = 0;
-		
+
+	HIP_DEBUG("\n");
+
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -38,26 +40,27 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 
-
 #ifdef CONFIG_HIP_BLIND
-	if(hip_blind_get_status())
+	if (hip_blind_get_status())
 	  HIP_DEBUG("Blind is ON\n");
 	else
 	  HIP_DEBUG("Blind is OFF\n");
 	
-        if (entry->blind)
+        if (entry->blind) 
 	  mask |= HIP_CONTROL_BLIND;
 	
-	// Get blinded fingerprints
+	// Set blinded fingerprints
 	HIP_IFEL(hip_blind_fingerprints(entry), -1, "hip_blind_fingerprints failed\n");
-	
+#endif	
+	// Build network header by using a either blinded or plain HITs
 	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
 						     HIP_I1,
 						     mask,
 						     (entry->blind ? &entry->hit_our_blind : &entry->hit_our),
 						     (entry->blind ? &entry->hit_peer_blind : dst_hit));
-
-	if(entry->blind)
+#ifdef CONFIG_HIP_BLIND
+	// If needed, add nonce parameter to the message
+	if (entry->blind)
 	  HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
 		   -1,"Unable to attach nonce to the message. \n");
 #endif
@@ -209,7 +212,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
-#ifdef CONFIG_HIP_BLIND
+
 	if(!(mask & HIP_CONTROL_BLIND)){
 	  /********** Host_id **********/
 
@@ -218,7 +221,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 			 "Building of host id failed\n");
 	}
-#endif /* CONFIG_HIP_BLIND */
 
 	/* REG_INFO */
 	/* @todo Get service-list from some function which lists all services
