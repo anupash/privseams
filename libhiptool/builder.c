@@ -1754,7 +1754,6 @@ int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
 	hip_set_param_type(&from_nat, HIP_PARAM_FROM_NAT);
 	ipv6_addr_copy((struct in6_addr *)&from_nat.address, addr);
 	from_nat.port = htons(port);
-	HIP_DEBUG("FROM_NAT: htons port: %u\n", from_nat.port);
 	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat), 0);
 	err = hip_build_param(msg, &from_nat);
 

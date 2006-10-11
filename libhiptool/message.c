@@ -235,7 +235,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct hip_stateless_info *msg_info,
                              int encap_hdr_size, int is_ipv4)
 {
-        HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 	struct sockaddr_storage addr_from;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
 	struct sockaddr_in6 *addr_from6 =
@@ -250,6 +249,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 	int cmsg_level, cmsg_type;
+
+	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);

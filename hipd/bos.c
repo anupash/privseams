@@ -132,7 +132,9 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+		/* Packet is send on raw HIP no matter what is the global NAT
+		   status, because NAT travelsal is not supported for IPv6. */
+		err = hip_send_raw(SA2IP(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
@@ -151,11 +153,15 @@ int hip_send_bos(const struct hip_common *msg)
 
 	list_for_each_entry(n, &addresses, next) {
 		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
-		/** @todo Add NAT support. If we're behind a NAT,
-		    we need to use UDP. NAT support is not needed for IPv6,
-		    because IPv6 NATs do not exists yet. Check if we're behind
-		    NAT from the global hip_nat_status. */
-		err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+		/* If global NAT status is "on", the packet is send on UDP. */
+		if(hip_nat_status) {
+			err = hip_send_udp(SA2IP(&n->addr), &daddr,
+					   HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+					   bos, NULL, 0);
+		}
+		else {
+			err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
+		}
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}

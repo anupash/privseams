@@ -702,6 +702,7 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
+	HIP_DEBUG("hip_select_source_address() invoked.\n");
 	int err = 0, i;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
@@ -719,8 +720,8 @@ int hip_select_source_address(struct in6_addr *src,
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,
 				 family, idxmap), -1,
 		 "Finding ip route failed\n");
-
-	HIP_DEBUG_IN6ADDR("src", src);
+	
+	HIP_DEBUG_IN6ADDR("Source address selected", src);
  out_err:
 	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
 		if (rtnl_rtdsfield_tab[i])
