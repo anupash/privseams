@@ -33,11 +33,11 @@ void hip_uninit_services(void)
  * @returns       zero on success, or negative on error.
  */ 
 int hip_services_add(int service_type)
-{
-	
-	HIP_DEBUG("Adding service.\n");
+{	
 	int err = 0;
 	
+	HIP_DEBUG("Adding service.\n");
+
 	/* Check if the service is already supported. */
 	HIP_SERVICE *tmp = hip_get_service(service_type);
 	if(tmp) {

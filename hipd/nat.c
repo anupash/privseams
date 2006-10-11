@@ -51,8 +51,8 @@ in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
  */ 
 int hip_nat_on()
 {
-	HIP_DEBUG("hip_nat_on().\n");
 	int err = 0;
+	HIP_DEBUG("hip_nat_on().\n");
 #if HIP_UDP_PORT_RANDOMIZING 
 	hip_nat_randomize_nat_ports();
 #endif
@@ -252,7 +252,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
 		  entry, entry->nat_mode);
 	HIP_DEBUG_HIT("&entry->hit_our", &entry->hit_our);
-		
+
 	/* Check that the host association is in correct state and that there is
 	   a NAT between this host and the peer. Note, that there is no error
 	   (err is set to zero) if the condition does not hold. We just don't
@@ -320,8 +320,8 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
  */ 
 void hip_nat_randomize_nat_ports()
 {
-	HIP_DEBUG("Randomizing UDP ports to be used.\n");
 	unsigned int secs_since_epoch = (unsigned int) time(NULL);
+	HIP_DEBUG("Randomizing UDP ports to be used.\n");
 	srand(secs_since_epoch);
 	hip_nat_rand_port1 = HIP_UDP_PORT_RAND_MIN + (int)
 		(((HIP_UDP_PORT_RAND_MAX - HIP_UDP_PORT_RAND_MIN + 1) * 

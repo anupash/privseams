@@ -95,7 +95,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
- 	HIP_DEBUG("hip_create_r1() invoked.\n");
 	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
@@ -110,6 +109,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
+ 	HIP_DEBUG("hip_create_r1() invoked.\n");
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
@@ -281,13 +281,13 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct hip_stateless_info *i1_info, const void *traversed_rvs,
 		const int is_via_rvs_nat) 
 {
-	HIP_DEBUG("hip_xmit_r1() invoked.\n");
-
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 	
+	HIP_DEBUG("hip_xmit_r1() invoked.\n");
+
 	/* Get the destination address and port. If destination port is zero,
 	   the source port of I1 becomes the destination port of R1.*/
 	r1_dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
