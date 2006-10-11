@@ -7,8 +7,13 @@ HIP_HASHTABLE hadb_spi_list;
 
 static struct list_head hadb_byhit[HIP_HADB_SIZE];
 
-/* default set of miscellaneous function pointers. This has to be in the global scope */
-static hip_xmit_func_set_t default_xmit_func_set;
+/* default set of miscellaneous function pointers. This has to be in the global
+   scope. */
+
+/** A transmission function set for sending raw HIP packets. */
+hip_xmit_func_set_t default_xmit_func_set;
+/** A transmission function set for NAT traversal. */
+hip_xmit_func_set_t nat_xmit_func_set;
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -158,9 +163,9 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
         hip_hit_t key;
         hip_xor_hits(&key, hit, hit2);
-	HIP_DEBUG_HIT("hit1", hit);
-	HIP_DEBUG_HIT("hit2", hit2);
-	HIP_DEBUG_HIT("xor", &key);
+	HIP_DEBUG_HIT("HIT1", hit);
+	HIP_DEBUG_HIT("HIT2", hit2);
+	HIP_DEBUG_HIT("XOR", &key);
         return (hip_ha_t *)hip_ht_find(&hadb_hit, (void *)&key);
 }
 
@@ -225,6 +230,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
+	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 	hip_hastate_t st;
 	hip_ha_t *tmp;
 
@@ -257,14 +263,15 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		if (kea) {
 			/** @todo Check conditions for escrow associations here 
 			    (for now, there are none). */
-			HIP_DEBUG("Escrow used for this entry: Initializing ha_state escrow fields");
+			HIP_DEBUG("Escrow used for this entry: Initializing "\
+				  "ha_state escrow fields.\n");
 			ha->escrow_used = 1;
 			ipv6_addr_copy(&ha->escrow_server_hit, &kea->server_hit);
 			HIP_DEBUG_HIT("server hit saved: ", &kea->server_hit);
 			hip_keadb_put_entry(kea);
 		}
 		else {
-			HIP_DEBUG("Escrow not in use");
+			HIP_DEBUG("Escrow not in use.\n");
 		}
 	}
 #endif //CONFIG_HIP_ESCROW
@@ -273,24 +280,36 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-/* Practically called only by when adding a HIT-IP mapping before bex */
+/**
+ * .
+ *
+ * Practically called only by when adding a HIT-IP mapping before base exchange.
+ *
+ * @param  local_hit  a pointer to... 
+ * @param  peer_hit   a pointer to... 
+ * @param  local_addr a pointer to... 
+ * @param  peer_addr  a pointer to... 
+ * @return 
+ * @todo   Allow multiple mappings; base exchange should be initiated to allow
+ *         of them in order to prevent local DoS.
+ * @todo   Create a security policy for triggering base exchange.
+ * @todo   Multiple identities support: alternative a) make generic HIT prefix
+ *         based policy to work alternative b) add SP pair for all local HITs.
+ */ 
 int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 				    hip_hit_t *peer_hit,
 				    struct in6_addr *local_addr,
 				    struct in6_addr *peer_addr)
 {
+	HIP_DEBUG("hip_hadb_add_peer_info_complete() invoked.\n");
+	HIP_DEBUG_HIT("Our HIT", local_hit);
+	HIP_DEBUG_HIT("Peer HIT", peer_hit);
+	HIP_DEBUG_IN6ADDR("Our addr", local_addr);
+	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
+	
 	int err = 0;
 	hip_ha_t *entry;
-
-	/* XX FIXME: allow multiple mappings; base exchange should be
-	   initiated to allow of them in order to prevent local DoS */
-
-	HIP_DEBUG("CALLED hip_hadb_add_peer_info\n\n\n");
-	HIP_DEBUG_HIT("our hit", local_hit);
-	HIP_DEBUG_HIT("peer hit", peer_hit);
-	HIP_DEBUG_IN6ADDR("our addr", local_addr);
-	HIP_DEBUG_IN6ADDR("peer addr", peer_addr);
-
+	
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
 	
@@ -302,21 +321,30 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 	
 	_HIP_DEBUG("created a new sdb entry\n");
-	//ipv6_addr_copy(&entry->hit_peer, peer_hit);
+
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
 	
-	/* Set the nat status here */
+	/* If global NAT status is on, that is if the current host is behind
+	   NAT, the NAT status of the host association is set on and the send
+	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status)
 	{
-		entry->nat_mode = 1;	
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+		entry->nat_mode = 1;
+		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
+	else {
+		entry->nat_mode = 0;
+		entry->peer_udp_port = 0;
+	}
+
 	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry); /* released at the end */
+	/* Released at the end */
+	hip_hold_ha(entry);
 	
-	/* add initial HIT-IP mapping */
+	/* Add initial HIT-IP mapping. */
 	err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
 				     PEER_ADDR_STATE_ACTIVE);
 	if (err) {
@@ -325,31 +353,31 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		goto out_err;
 	}
 
-	/*
-	 * Create a security policy for triggering base exchange.
-	 *
-	 * XX FIX: multiple identities support
-	 * alternative a) make generic HIT prefix based policy to work
-	 * alternative b) add SP pair for all local HITs
-	 *
-	 */
-	HIP_DEBUG_HIT("peer's hit\n", peer_hit);
-	HIP_DEBUG_HIT("our hit\n", &entry->hit_our);
-	HIP_DEBUG_IN6ADDR("our ipv6\n", &entry->local_address);
-	HIP_DEBUG_IN6ADDR("peer's ipv6\n", peer_addr);
+	HIP_DEBUG_HIT("Peer HIT\n", peer_hit);
+	HIP_DEBUG_HIT("Our HIT\n", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("Our IPv6\n", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("Peer IPv6\n", peer_addr);
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-				       local_addr, peer_addr, 0, 1, 0), -1,
-		 "Error in setting the SPs\n");
-
+				       local_addr, peer_addr, 0, 1, 0),
+		 -1, "Error in setting the SPs\n");
+	
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
 	return err;
 }
 
+/**
+ * .
+ *
+ * @param  entry         a pointer to...
+ * @param  peer_map_void a pointer to...
+ * @return ...
+ */ 
 int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
-				void *peer_map_void)
+				   void *peer_map_void)
 {
+	HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
 	struct hip_peer_map_info *peer_map = peer_map_void;
 	int err = 0;
 
@@ -365,8 +393,9 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 {
-	HIP_DEBUG_HIT("hip_hadb_add_peer_info(): peer_hit is: ", peer_hit);
-	HIP_DEBUG_IN6ADDR("hip_hadb_add_peer_info(): peer_addr is: ", peer_addr);
+	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
+	HIP_DEBUG_HIT("Peer HIT", peer_hit);
+	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
@@ -447,8 +476,14 @@ int hip_hadb_del_peer_map(hip_hit_t *hit)
 	return err;
 }
 
-/*
- * XXXXXX Returns: 0 if @spi was added to the inbound SPI list of the HA @ha, otherwise < 0.
+/**
+ * .
+ * 
+ * @param hit_peer a pointer to ...
+ * @param hit_our  a pointer to ...
+ * @param hit_spi  ...
+ * @ returns       0 if @spi was added to the inbound SPI list of the HA @ha,
+ *                  otherwise < 0.
  */
 int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
 				   uint32_t spi)
@@ -459,13 +494,11 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our,
 	return err;
 }
 
-
-
 /**
- * hip_hadb_create_state - Allocates and initializes a new HA structure
- * @gfpmask - passed directly to HIP_MALLOC().
- *
- * Return NULL if memory allocation failed, otherwise the HA.
+ * Allocates and initializes a new HA structure.
+ * 
+ * @gfpmask a mask passed directly to HIP_MALLOC().
+ * @return NULL if memory allocation failed, otherwise the HA.
  */
 hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
@@ -488,12 +521,11 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
 
-        // SYNCH: does it really need to be syncronized to beet-xfrm? -miika
-	// No dst hit.
+        /* SYNCH: does it really need to be syncronized to beet-xfrm? -miika
+	   No dst hit. */
 	
-	/* Function pointer sets which define HIP behavior in respect to the hadb_entry */
-
-	/* choose the set of processing function for the hadb_entry*/
+	/* Function pointer sets which define HIP behavior in respect to the
+	   hadb_entry. */
 	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
 		 -1, "Can't set new function pointer set\n");
 	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
@@ -505,14 +537,16 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 		    
 	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
 		 -1, "Can't set new function pointer set\n");
-
+	/* Set the xmit function set as function set for sending raw HIP. */
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
 		 -1, "Can't set new function pointer set\n");
 
-	HIP_IFEL(hip_hadb_set_input_filter_function_set(entry, &default_input_filter_func_set),
+	HIP_IFEL(hip_hadb_set_input_filter_function_set(
+			 entry, &default_input_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
-	HIP_IFEL(hip_hadb_set_output_filter_function_set(entry, &default_output_filter_func_set),
+	HIP_IFEL(hip_hadb_set_output_filter_function_set(
+			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
  out_err:
@@ -1354,24 +1388,12 @@ int hip_update_send_echo(hip_ha_t *entry,
 					    &entry->hit_peer, &entry->hit_our),
 		 -1, "Building Echo Packet failed\n");
 
-	/* If the peer is behind a NAT, UDP is used. */
-	/** @todo Functionality on UDP has not been tested. */
-	if(entry->nat_mode) {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_udp(&entry->local_address, &addr->address,
-				      0, entry->peer_udp_port,
-				      update_packet, entry, 1), -ECOMM,
-			 "Sending UPDATE packet with echo data on UDP "\
-			 "failed.\n");
-	}
-	/* If there's no NAT between, raw HIP is used. */
-	else {
-		HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_raw(&entry->local_address, &addr->address,
-				      0, 0, update_packet, entry, 0), -ECOMM,
-			 "Sending UPDATE packet with echo data on raw HIP "\
-			 "failed.\n");
-	}
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&entry->local_address, &addr->address,
+			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+	
  out_err:
 	return err;
 
@@ -1839,16 +1861,10 @@ void hip_init_hadb(void)
 	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
 
 	/* xmit function set */
-	default_xmit_func_set.hip_send_raw = hip_send_raw;
-	default_xmit_func_set.hip_send_udp = hip_send_udp;
+	/** @todo Add support for i3. */
+	default_xmit_func_set.hip_send_pkt = hip_send_raw;
+	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
-        /** @todo Add support for i3. */
-	if(hip_nat_status) {
-		default_xmit_func_set.hip_send_pkt = hip_send_udp;
-	}
-	else {
-		default_xmit_func_set.hip_send_pkt = hip_send_raw;
-	}
 	/* filter function sets */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
 	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
