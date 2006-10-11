@@ -52,27 +52,14 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED) {
 			
-			/* If NAT status is on, UDP is used. */
-			if(hip_nat_status) {
-				/** @todo How to know which source and
-				    destination ports to use? */
-				entry->hadb_xmit_func->
-					hip_send_udp(&entry->hip_msg_retrans.saddr,
-						     &entry->hip_msg_retrans.daddr,
-						     0, HIP_NAT_UDP_PORT,
-						     entry->hip_msg_retrans.buf,
-						     entry, 0);
-			}
-			/* If NAT status is off, raw HIP is used. */
-			else {
-				err = entry->hadb_xmit_func->
-					hip_send_raw(&entry->hip_msg_retrans.saddr,
-						     &entry->hip_msg_retrans.daddr,
-						     0,0,
-						     entry->hip_msg_retrans.buf,
-						     entry, 0);
-			}
-
+			entry->hadb_xmit_func->
+				hip_send_pkt(&entry->hip_msg_retrans.saddr,
+					     &entry->hip_msg_retrans.daddr,
+					     HIP_NAT_UDP_PORT,
+					     entry->peer_udp_port,
+					     entry->hip_msg_retrans.buf,
+					     entry, 0);
+			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
@@ -386,7 +373,9 @@ void register_to_dht ()
 }
 
 /**
- * Some periodic maintenance (?).
+ * Periodic maintenance.
+ * 
+ * @return ...
  */
 int periodic_maintenance()
 {
@@ -444,10 +433,10 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
-	/* Send an UPDATE message to NAT to keep the port open. */
-	if(nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_refresh_port(), -1, 
-			 "Failed to refresh NAT port state.\n");
+	/* Sending of NAT Keep-Alives. */
+	if(hip_nat_status && nat_keep_alive_counter < 0){
+		HIP_IFEL(hip_nat_refresh_port(),
+			 -ECOMM, "Failed to refresh NAT port state.\n");
 		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 	} else {
 		nat_keep_alive_counter--;

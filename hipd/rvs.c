@@ -452,7 +452,7 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	/* A function pointer to either hip_build_param_from() or
 	   hip_build_param_from_nat(). */
 	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
-				 in_port_t not_used);
+				 in_port_t port);
 
 	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);

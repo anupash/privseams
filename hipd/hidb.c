@@ -709,7 +709,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
 	{
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
-		HIP_HEXDUMP("Found HIT:", &tmp->lhi.hit, 16);
+		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
 
 		err = func(tmp, opaque);
 		if (err) break;
