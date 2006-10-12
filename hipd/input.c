@@ -552,21 +552,22 @@ int hip_receive_control_packet(struct hip_common *msg,
 						   msg_info);
 #endif
 
-        if (entry) {
+/*	if (entry)
+	{
 		err = entry->hadb_input_filter_func->hip_input_filter(msg);
-        } else {
+	} else {
 	        err = ((hip_input_filter_func_set_t *)
 		       hip_get_input_filter_default_func_set())->hip_input_filter(msg);
 	}
 	
-	if (err == -ENOENT) {
+/*	if (err == -ENOENT) {
 		HIP_DEBUG("No agent running, continuing\n");
 		err = 0;
 	} else if (err == 0) {
 		HIP_DEBUG("Agent accepted packet\n");
 	} else if (err) {
 		HIP_ERROR("Agent reject packet\n");
-	}
+	}*/
 	
 	switch(type) {
 	case HIP_I1:
@@ -1466,10 +1467,10 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
-			      entry->peer_udp_port, r2, entry, 0),
-		 -ECOMM, "Sending R2 packet failed.\n");
+	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	                                          entry->peer_udp_port, r2, entry, 1);
+	if (err == 1) err = 0;
+	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
 #ifdef CONFIG_HIP_ESCROW
 	// Add escrow association to database
@@ -1875,7 +1876,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	HIP_DEBUG("state is %d\n", entry->state);
 	
-	if (entry) {
+	if (entry && entry->state != HIP_STATE_FILTERING_R2)
+	{
 		wmb();
 #ifdef CONFIG_HIP_RVS
 		/* XX FIX: this should be dynamic (the rvs information should

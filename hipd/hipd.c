@@ -359,9 +359,18 @@ int main(int argc, char *argv[]) {
  				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
 				if (ha)
 				{
-					ha->state = HIP_STATE_UNASSOCIATED;
-					HIP_HEXDUMP("HA: ", ha, 4);
+					ha->state = HIP_STATE_FILTERED_I1;
 					HIP_DEBUG("Agent accepted I1.\n");
+				}
+			}
+			else if (msg_type == HIP_R2)
+			{
+				hip_ha_t *ha;
+ 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
+				if (ha)
+				{
+					ha->state = HIP_STATE_FILTERED_R2;
+					HIP_DEBUG("Agent accepted R2.\n");
 				}
 			}
 			else if (msg_type == HIP_I1_REJECT)

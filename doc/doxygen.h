@@ -177,6 +177,8 @@
 
 /** @defgroup daemon_states HIP daemon states */
 
+/** @defgroup exec_app_types Execute application types */
+
 /** 
  * Type values used in Host Identity Protocol (HIP) parameters.
  * 

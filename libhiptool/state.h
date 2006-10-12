@@ -27,7 +27,10 @@
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
-#define HIP_STATE_FILTERING	    10
+#define HIP_STATE_FILTERING_I1	    10
+#define HIP_STATE_FILTERING_R2		11
+#define HIP_STATE_FILTERED_I1	    12
+#define HIP_STATE_FILTERED_R2		13
 
 #define HIP_UPDATE_STATE_REKEYING    1      /** @todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
