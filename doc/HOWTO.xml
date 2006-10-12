@@ -1147,10 +1147,10 @@ using getaddrinfo: ping, ping6, tla, svn.
 		whether using HIP or not wont work.
 	</para>
 	<para>
-		&nbsp; If you got HIPL from .tar-package or from arch:
+		&nbsp; If you have HIPL source code:
 		To install addon, open firefox and browse to folder where you have 
 		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
-		(example: "file:///home/user/hipl--main--2.6/showip/showip-hipmod-0.8.02-fx-mz.xpi").
+		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
 		Firefox should now prompt you with installation instructions.
 	</para>
 	<para>
