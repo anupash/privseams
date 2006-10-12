@@ -37,9 +37,8 @@ int hipd_init(int flush_ipsec)
 
 	hip_init_puzzle_defaults();
 
-	/* This is needed only if RVS or escrow is in use. */
+/* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
-
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
@@ -269,12 +268,12 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
+	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
 	int on = 1, err = 0;
 	int off = 0;
-	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE;
+	int encap_on = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
         struct sockaddr_in myaddr;
 
-	HIP_DEBUG("----------Opening udp socket !--------------\n");
 	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
         {
                 HIP_ERROR("Can not open socket for UDP\n");
@@ -285,17 +284,16 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	/* see bug id 212 why RECV_ERR is off */
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off,
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on,
                    sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on,
 			    sizeof(encap_on)), -1,
 		 "setsockopt udp reuseaddr failed\n");
 
         myaddr.sin_family=AF_INET;
-        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+	/** @todo Change this inaddr_any -- Abi */
+        myaddr.sin_addr.s_addr = INADDR_ANY;
         myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
-
-        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
 
         if( bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
         {
@@ -303,10 +301,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
                 err = -1;
 		goto out_err;
         }
-	HIP_DEBUG("socket done\n");
-        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
-        return 0;
 
+	HIP_DEBUG_INADDR("UDP socket created and binded to addr",
+			 &myaddr.sin_addr.s_addr);
+        return 0;
 
  out_err:
 	return err;
@@ -318,38 +316,36 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
  */
 int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
 {
-	int on = UDP_ENCAP_ESPINUDP, err = 0;
+	HIP_DEBUG("hip_init_nat_sock_udp_data() invoked.\n");
+	int on = HIP_UDP_ENCAP_ESPINUDP, err = 0;
 	int off = 0;
 	
-	HIP_DEBUG("----------Opening udp socket !--------------\n");
 	if((*hip_nat_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
         {
                 HIP_ERROR("Can not open socket for UDP\n");
                 return -1;
         }
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, UDP_ENCAP, &on,
-		   sizeof(on)), -1, "setsockopt udp encap failed\n");
-
-
+	
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, HIP_UDP_ENCAP, &on,
+			    sizeof(on)), -1, "setsockopt udp encap failed\n");
+	
         struct sockaddr_in myaddr;
+	
+        myaddr.sin_family = AF_INET;
+	/** @todo Change this inaddr_any -- Abi */
+        myaddr.sin_addr.s_addr = INADDR_ANY;
+        myaddr.sin_port=htons(HIP_UDP_DATA_PORT);
 
-
-        myaddr.sin_family=AF_INET;
-        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
-        myaddr.sin_port=htons(HIP_NAT_UDP_DATA_PORT);
-
-        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
-
-        if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+	if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
         {
                 HIP_ERROR("Unable to bind udp socket to port\n");
                 err = -1;
 		goto out_err;
         }
-	HIP_DEBUG("socket done\n");
-        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+	
+        HIP_DEBUG_INADDR("UDP data socket created and binded to addr",
+			 &myaddr.sin_addr);
         return 0;
-
 
  out_err:
 	return err;

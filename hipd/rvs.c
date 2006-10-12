@@ -1,10 +1,12 @@
 /** @file
  * This file defines a rendezvous extension for the Host Identity Protocol
- * (HIP). The rendezvous extension extends HIP and the HIP registration
- * extension for initiating communication between HIP nodes via HIP
- * rendezvous servers. The rendezvous server (RVS) serves as an initial contact
- * point ("rendezvous point") for its clients.  The clients of an RVS are HIP
- * nodes that use the HIP Registration Protocol
+ * (HIP).
+ * 
+ * The rendezvous extension extends HIP and the HIP registration extension for
+ * initiating communication between HIP nodes via HIP rendezvous servers. The
+ * rendezvous server (RVS) serves as an initial contact point ("rendezvous
+ * point") for its clients.  The clients of an RVS are HIP nodes that use the
+ * HIP Registration Protocol
  * [<a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-registration-02.txt">
  * draft-ietf-hip-registration-02</a>] to register their HIT->IP address mappings
  * with the RVS. After this registration, other HIP nodes can initiate a base
@@ -23,7 +25,8 @@
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
  * @date    24.08.2006
- * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ * @note    Related draft:
+ *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Version 1.0 was document scarcely and the comments regarding
@@ -66,35 +69,51 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  * Allocates memory for a new rendezvous association and copies information
  * from the parameter host association into it.
  * 
- * @param  ha      a host association from where from to copy. 
- * @param  gfpmask memory allocation mask.
+ * @param  ha      a pointer to a host association from where from to copy.
+ * @param send_pkt a function pointer to a function to be used for relaying I1
+ *                 packet.
  * @return         a pointer to a newly allocated rendezvous association or
  *                 NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
-	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	HIP_RVA *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
-	if((rva = hip_rvs_allocate(gfpmask)) == NULL) {
+	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
+	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
+
+	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
 	}
 	
 	/* Incremented the refrerence count of the new rendezvous association. */
 	hip_hold_rva(rva);
+	
+	/* Lock the host association while copying values from it. */
 	HIP_LOCK_HA(ha);
 
+	/* Copy the client udp port. */
+	if(ha->peer_udp_port != 0) {
+		rva->client_udp_port = ha->peer_udp_port;
+	}
+	else {
+		rva->client_udp_port = 0;
+	}
+	
 	/* Copy peer hit as the client hit. */
 	ipv6_addr_copy(&rva->hit, &ha->hit_peer);
-
+	
 	/* Copy HMACs. */
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
  	memcpy(&rva->hmac_peer, &ha->hip_hmac_out, sizeof(rva->hmac_peer));
 	
+	/* Set xmit-function. */
+	rva->send_pkt = send_pkt;
+
 	/* If the host association has a preferred address, copy it as the
 	   first IP address of the rendezvous association. */
 	if (!ipv6_addr_any(&ha->preferred_address)) {
@@ -127,7 +146,7 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, int gfpmask)
 /**
  * Gets a rendezvous association from the rendezvous association hashtable.
  *
- * Gets a rendezvous association matching the argument @c hit.If
+ * Gets a rendezvous association matching the argument @c hit. If
  * a rendezvous association is found, it is automatically holded (refcnt
  * incremented).
  *
@@ -395,20 +414,31 @@ void hip_rvs_remove(HIP_RVA *rva)
  * Relays an incoming I1 packet.
  *
  * This function relays an incoming I1 packet to the next node on path
- * to receiver and inserts a @c FROM parameter encapsulating the source IP address.
- * Next node on path is typically the responder, but if the message is to travel
- * multiple rendezvous servers en route to responder, next node can also be
- * another rendezvous server. In this case the @c FROM parameter is appended after
- * the existing ones. Thus current RVS appends the address of previous RVS
- * and the final RVS (n) sends @c FROM:I, @c FROM:RVS1, ... ,
- * <code>FROM:RVS(n-1)</code>.
+ * to receiver and inserts a @c FROM parameter encapsulating the source IP
+ * address. In case there is a NAT between the sender (the initiator or previous
+ * RVS) of the I1 packet, a @c FROM_NAT parameter is inserted instead of a
+ * @c FROM parameter. Next node on path is typically the responder, but if the
+ * message is to travel multiple rendezvous servers en route to responder, next
+ * node can also be another rendezvous server. In this case the @c FROM
+ * (@c FROM_NAT) parameter is appended after the existing ones. Thus current RVS
+ * appends the address of previous RVS and the final RVS (n) in the RVS chain
+ * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code> or in case of
+ * NAT @c FROM_NAT:I, @c FROM_NAT:RVS1, ... , <code>FROM_NAT:RVS(n-1)</code>.
  * 
- * @param i1       HIP packet common header with source and destination HITs.
- * @param i1_saddr the source address from where the I1 packet was received.
- * @param i1_daddr the destination address where the I1 packet was sent to (own address).
- * @param rva      rendezvous association matching the HIT of next hop.
- * @param i1_info  the source and destination ports (when NAT is in use).
+ * @param i1       a pointer to the I1 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param i1_daddr a pointer to the destination address where the I1 packet was
+ *                 sent to (own address).
+ * @param rva      a pointer to a rendezvous association matching the HIT of
+ *                 next hop.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
  * @return         zero on success, or negative error value on error.
+ * @note           This code has not been tested thoroughly with multiple RVSes.
+ * @warning        This code does not work correctly if there are multiple
+ *                 RVSes of which some are behind NAT and others are not.
  */
 int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
@@ -417,17 +447,36 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
-	struct in6_addr final_dst;
+	struct in6_addr final_dst, local_addr;
+	hip_tlv_type_t param_type = 0;
+	/* A function pointer to either hip_build_param_from() or
+	   hip_build_param_from_nat(). */
+	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
+				 in_port_t port);
 
-	_HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
-	_HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
-	_HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
-	_HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
-	_HIP_DEBUG("I1 source port: %u, destination port: %u\n",
+	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
+	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
+	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
+	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
+	HIP_DEBUG("Rendezvous association port: %d.\n", rva->client_udp_port);
+	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
+		
+	/* If the incoming I1 packet was destined to port 50500, we know that
+	   there is a NAT between (I->NAT->RVS->R). */
+	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
+		builder_function = hip_build_param_from_nat;
+		param_type = HIP_PARAM_FROM_NAT;
+	}
+	else {
+		builder_function = hip_build_param_from;
+		param_type = HIP_PARAM_FROM;
+	}
 
-	/* Get the destination IP address the client has registered from the
-	   rendezvous association. */
+	/** @todo Zero HIP message checksum when R is behind NAT. */
+
+	/* Get the destination IP address which the client has registered from
+	   the rendezvous association. */
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &final_dst, 0);
 
@@ -439,43 +488,47 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	hip_build_network_hdr(i1_to_be_relayed, HIP_I1, 0,
 			      &(i1->hits), &(i1->hitr));
 
-	/* Adding FROM parameter. Loop through all the parameters in the
-	   received I1 packet, and insert a new FROM parameter after the last
-	   found FROM parameter. Notice that in most cases the incoming I1 has
-	   no paramaters at all, and this "while" loop is skipped. Multiple
-	   rvses en route to responder is one (and only?) case when the incoming
-	   I1 packet has parameters. */
+	/* Adding FROM (FROM_NAT) parameter. Loop through all the parameters in
+	   the received I1 packet, and insert a new FROM (FROM_NAT) parameter
+	   after the last found FROM (FROM_NAT) parameter. Notice that in most
+	   cases the incoming I1 has no paramaters at all, and this "while" loop
+	   is skipped. Multiple rvses en route to responder is one (and only?)
+	   case when the incoming I1 packet has parameters. */
 	while ((current_param = hip_get_next_param(i1, current_param)) != NULL)
 	{
 		HIP_DEBUG("Found parameter in I1.\n");
-		/* Copy while type is smaller than or equal to FROM or a 
-		   new FROM has already been added. */
-		if (from_added || ntohs(current_param->type) <= HIP_PARAM_FROM)
+		/* Copy while type is smaller than or equal to FROM (FROM_NAT)
+		   or a new FROM (FROM_NAT) has already been added. */
+		if (from_added || hip_get_param_type(current_param) <= param_type)
 		{
 			HIP_DEBUG("Copying existing parameter to I1 packet "\
 				  "to be relayed.\n");
 			hip_build_param(i1_to_be_relayed,current_param);
 			continue;
 		}
-		/* Parameter under inspections has greater type than FROM
-		   parameter: insert a new FROM parameter between the last
-		   found FROM parameter and "current_param". */
+		/* Parameter under inspection has greater type than FROM
+		   (FROM_NAT) parameter: insert a new FROM (FROM_NAT) parameter
+		   between the last found FROM (FROM_NAT) parameter and
+		   "current_param". */
 		else
 		{
-			HIP_DEBUG("Created new FROM and copied "\
-				  "current parameter to relayed I1.\n");
-			hip_build_param_from(i1_to_be_relayed, i1_saddr);
+			HIP_DEBUG("Created new %s and copied "\
+				  "current parameter to relayed I1.\n",
+				  hip_param_type_name(param_type));
+			builder_function(i1_to_be_relayed, i1_saddr,
+					 i1_info->src_port);
 			hip_build_param(i1_to_be_relayed, current_param);
 			from_added = 1;
 		}
 	}
 
-	/* If the incoming I1 had no parameters after the existing FROM
-	   parameters, new FROM parameter is not added until here. */
+	/* If the incoming I1 had no parameters after the existing FROM (FROM_NAT)
+	   parameters, new FROM (FROM_NAT) parameter is not added until here. */
 	if (!from_added)
 	{
-		HIP_DEBUG("No parameters found, adding a new FROM.\n");
-		hip_build_param_from(i1_to_be_relayed, i1_saddr);
+		HIP_DEBUG("No parameters found, adding a new %s.\n",
+			  hip_param_type_name(param_type));
+		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
 	}
 
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed
@@ -483,17 +536,22 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   whose type value is greater than RVS_HMAC in the incoming I1
 	   packet. */
 	HIP_DEBUG("Adding a new RVS_HMAC parameter as the last parameter.\n");
-	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed, &rva->hmac_our), -1,
-		 "Building of HMAC failed\n");
+	HIP_IFEL(hip_build_param_rvs_hmac_contents(i1_to_be_relayed,
+						   &rva->hmac_our), -1,
+		 "Building of RVS_HMAC failed.\n");
 	
-	err = hip_csum_send(NULL, &final_dst, i1_info->src_port,
-			    i1_info->dst_port, i1_to_be_relayed, NULL, 0); 
+	/* If the client is behind NAT the I1 packet is relayed on UDP. If
+	   there is no NAT the packet is relayed on raw HIP. We don't have to
+	   take care of which send-function to use, as the rva->send_pkt was
+	   initiated with correct value in hip_rvs_ha2rva() when the rva was
+	   created. Note that we use NULL as source IP address instead of
+	   i1_daddr. A source address is selected in the corresponding
+	   send-function. */
+	HIP_IFEL(rva->send_pkt(NULL, &final_dst, HIP_NAT_UDP_PORT,
+			       rva->client_udp_port, i1_to_be_relayed, NULL, 0),
+		 -ECOMM, "Relaying I1 failed.\n");
 	
-	if (err)
-		HIP_ERROR("Relaying I1 failed: %d\n",err);
-	else {
-		HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
-	}
+	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
 
  out_err:
 	if(i1_to_be_relayed)

@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include <unistd.h>
-#include "../tools/hipconf.h"
+#include "hipconftool.h"
 #include "conntest.h"
 #include "debug.h"
 #include "crypto.h"
