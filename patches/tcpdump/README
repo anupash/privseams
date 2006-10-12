@@ -19,9 +19,10 @@ Change to the newly created directory: cd tcpdump-3.8.3
 Patch tcpdump: patch -p1 < /location/of/tcpdump-3.8.3-hip.patch
 
 Edit Makefile.in: find line "INCLS = .." (somewhere near line 45).
-Add "-I" and the location of linux/include within the HIPL installation directory,
-e.g. "-I/somewhere/hipl/linux/include". The resulting line should be something like
-this: INCLS = -I. -I/somewhere/hipl/linux/include @V_INCLS@
+Add "-I" and the location of hipl/libhiptool within the HIPL
+installation directory, e.g. "-I/hipl/libhiptool". The
+resulting line should be something like this: INCLS =
+-I. -Ihipl/include @V_INCLS@
 
 The rest of the installation proceeds as is written in the tcpdump
 INSTALL file. Remember to give option --enable-ipv6 to configure.
