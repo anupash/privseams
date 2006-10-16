@@ -9,6 +9,7 @@
  * @author  Anthony D. Joseph
  * @author  Bing Zhou
  * @author  Tobias Heer
+ * @author  Laura Takkinen //blind code
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "input.h"
@@ -354,6 +355,10 @@ int hip_produce_keying_material(struct hip_common *msg,
 	struct hip_tlv_common *param = NULL;
 	uint16_t esp_keymat_index, esp_default_keymat_index;
 	struct hip_diffie_hellman * dhf;
+	hip_ha_t *blind_entry;
+	int type = 0;
+	uint16_t nonce;
+	struct in6_addr *plain_local_hit = NULL;
 
 	HIP_DEBUG("hip_produce_keying_material() invoked.\n");
 	/* Perform light operations first before allocating memory or
@@ -432,17 +437,42 @@ int hip_produce_keying_material(struct hip_common *msg,
 							      dh_shared_key,
 							      dh_shared_len)) < 0,
 		 -EINVAL, "Calculation of shared secret failed\n");
-	_HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
-	_HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
-	_HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
+	HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
+	HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
+	HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
 
-#ifdef HIP_CONFIG_BLIND
-	/*Laura: jos on blind moodi päällä, niin vaihdetaan hit-parametrit blindattuihin*/
+#ifdef CONFIG_HIP_BLIND
+	HIP_DEBUG_HIT("key_material msg->hits (responder)", &msg->hits);
+	HIP_DEBUG_HIT("key_material msg->hitr (local)", &msg->hitr);
+	
+	if (ntohs(msg->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	  type = hip_get_msg_type(msg);
+	  if(type == HIP_R1) {
+	    HIP_DEBUG("produce keying material for creating I2\n");
+	    HIP_IFEL((blind_entry = hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits)) == NULL, 
+		     -1, "Could not found blinded hip_ha_t entry\n");
+	    hip_make_keymat(dh_shared_key, dh_shared_len,
+			    &km, keymat, keymat_len,
+			    &blind_entry->hit_peer, &msg->hitr, &ctx->keymat_calc_index, I, J);
+	  } else if(type == HIP_I2) {
+	    HIP_DEBUG("produce keying material for handling I2\n");
+	    HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+		     -1, "Couldn't allocate memory\n");
+	    HIP_IFEL(hip_blind_get_nonce(msg, &nonce), -1, "hip_blind_get_nonce failed\n");
+	    HIP_IFEL(hip_plain_fingerprint(&nonce, &msg->hitr, plain_local_hit),
+		     -1, "hip_plain_fingerprint failed\n");
+	    HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
+	    hip_make_keymat(dh_shared_key, dh_shared_len,
+			    &km, keymat, keymat_len,
+			    &msg->hits, plain_local_hit, &ctx->keymat_calc_index, I, J);
+	  }
+	}
 #endif
-	hip_make_keymat(dh_shared_key, dh_shared_len,
-			&km, keymat, keymat_len,
-			&msg->hits, &msg->hitr, &ctx->keymat_calc_index, I, J);
-
+	if (!hip_blind_get_status()) {
+	  hip_make_keymat(dh_shared_key, dh_shared_len,
+			  &km, keymat, keymat_len,
+			  &msg->hits, &msg->hitr, &ctx->keymat_calc_index, I, J);
+	}
 	/* draw from km to keymat, copy keymat to dst, length of
 	 * keymat is len */
 
@@ -514,7 +544,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 		HIP_FREE(dh_shared_key);
 	if (keymat)
 		HIP_FREE(keymat);
-
+	if (plain_local_hit)
+	  HIP_FREE(plain_local_hit);
 	return err;
 }
 
@@ -530,6 +561,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
+	uint16_t controls;
+	uint16_t *nonce;
+	struct in6_addr *local_plain_tmp = NULL, *peer_plain_tmp = NULL;
 
 	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	type = hip_get_msg_type(msg);
@@ -547,29 +581,33 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/** @todo Check packet csum.*/
 
 #ifdef CONFIG_HIP_BLIND
+	controls = ntohs(msg->control);
 	if(type == HIP_I1) {
-	  if (msg->control & HIP_CONTROL_BLIND) {
+	  if (controls & HIP_CONTROL_BLIND) {
 	    HIP_DEBUG("Blinded control packet I1 received\n");
 	    hip_set_blind_on();
-	    HIP_IFEL(hip_plain_fingerprints(msg, entry, HIP_DB_LOCAL_HID), 
-		     -1, "hip_plain_fingerprints failed\n");
-	    if(entry == NULL) {
-	      err = -1;
-	      goto out_err;
-	    }
+	    // Precreate r1 packets, (host_id parameter cannot be included);
+	    hip_recreate_all_precreated_r1_packets();
 	  }
-	}
-	else {
-	  if (msg->control & HIP_CONTROL_BLIND && hip_blind_get_status()) {
-	    HIP_DEBUG("Blinded control packet X received\n");
-	    // TODO SOMETHING ELSE
+	} else if (type == HIP_R1){
+	  if (controls & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	    HIP_DEBUG("Blinded control packet R1 received\n");
+	    entry = hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits);
 	  }
-	}
+	} else if (type == HIP_I2) {
+	  if (controls & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	    HIP_DEBUG("Blinded control packet I2 received\n");
+	  }
+	} else if (type == HIP_R2) {
+	  if (controls & HIP_CONTROL_BLIND && hip_blind_get_status())
+	    HIP_DEBUG("Blinded control packet R2 received\n");
+	} else
+	  //TODO UPDATE, NOTICY...
 #endif
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	if(entry == NULL)
 	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
@@ -712,7 +750,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		goto out_err;
 
  out_err:
-
+	if (local_plain_tmp)
+	  HIP_FREE(local_plain_tmp);
+	if (peer_plain_tmp)
+	  HIP_FREE(peer_plain_tmp);
 	return err;
 }
 
@@ -765,10 +806,22 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
 
-	/* create I2 */
-	entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
-			      &(ctx->input->hitr),
-			      &(ctx->input->hits));
+#ifdef CONFIG_HIP_BLIND
+	if (entry->blind && hip_blind_get_status()) {
+	  HIP_DEBUG("Build blinded I2\n");
+	  mask |= HIP_CONTROL_BLIND;
+	  // Build network header by using blinded HITs
+	  entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
+						       &entry->hit_our_blind,
+						       &entry->hit_peer_blind);
+#endif
+
+	if (!(entry->blind && hip_blind_get_status())) {
+	  /* create I2 */
+	  entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
+						       &(ctx->input->hitr),
+						       &(ctx->input->hits));
+	}
 
 	/********** ESP_INFO **********/
 	/* SPI is set below */
@@ -833,6 +886,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
+
+	/******** NONCE *************************/
+#ifdef CONFIG_HIP_BLIND
+	HIP_DEBUG("add nonce to the message\n");
+	HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
+		 -1, "Unable to attach nonce to the message.\n");
+	}
+#endif
 
 	/************ Encrypted ***********/
 	switch (transform_hip_suite) {
@@ -1104,8 +1165,6 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_reg_info *reg_info;
 
 	HIP_DEBUG("hip_handle_r1() invoked.\n");
-
-	HIP_DEBUG("hip_handle_r1() invoked.\n");
 	HIP_DUMP_MSG(r1);
 
 	if (entry->state == HIP_STATE_I2_SENT) {
@@ -1115,7 +1174,6 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_DEBUG("Not a retransmission\n");
 	}
 
-	HIP_DEBUG("\n");
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM,
 		 "Could not allocate memory for context\n");
 	memset(ctx, 0, sizeof(struct hip_context));
@@ -1124,14 +1182,19 @@ int hip_handle_r1(struct hip_common *r1,
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
 	
-	/* Store the peer's public key to HA and validate it */
-	/** @todo Do not store the key if the verification fails. */
-	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
-		 "No HOST_ID found in R1\n");
-	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
-	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
-		 "Verification of R1 signature failed\n");
-
+	/* Blinded R1 packets do not contain HOST ID parameters,
+	 * so the verification must be delayd to the R2
+	 */
+	if (!entry->blind) {
+	  HIP_DEBUG("entry is not blinded\n");
+	  /* Store the peer's public key to HA and validate it */
+	  /** @todo Do not store the key if the verification fails. */
+	  HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
+		   "No HOST_ID found in R1\n");
+	  HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
+	  HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		   "Verification of R1 signature failed\n");
+	}
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
@@ -1254,9 +1317,9 @@ int hip_handle_r1(struct hip_common *r1,
 		solved_puzzle = entry->puzzle_solution;
 	}
 
-#ifdef CONFIG_HIP_BLIND
+	//#ifdef CONFIG_HIP_BLIND
 	// XX TODO KARTHIK: if msg->control & BLIND then r1.hitr should be converted to plain hit
-#endif
+	//#endif
 
 	/* calculate shared secret and create keying material */
 	ctx->dh_shared_key = NULL;
@@ -1265,19 +1328,21 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
 								solved_puzzle),
 			 -EINVAL, "Could not produce keying material\n");
-
-	/* Everything ok, save host id to HA */
-	{
-		char *str;
-		int len;
-		HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
-		HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-			  str, len, hip_get_param_host_id_hostname(peer_host_id));
+	
+	/* Blinded R1 packets do not contain HOST ID parameters,
+	 * so the saving peer's HOST ID mus be delayd to the R2
+	 */
+	if (!entry->blind) {
+	  /* Everything ok, save host id to HA */
+	  {
+	    char *str;
+	    int len;
+	    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
+	    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
+		      str, len, hip_get_param_host_id_hostname(peer_host_id));
+	  }
 	}
 
-#ifdef CONFIG_HIP_BLIND
-	// XX TODO KARTHIK: if msg->control & BLIND then r1.hitr should be converted back to blinded hit???
-#endif
 	entry->peer_controls = ntohs(r1->control);
 
  	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
@@ -1586,7 +1651,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint16_t crypto_len;
 	struct hip_spi_in_item spi_in_data;
 	uint64_t I, J;
-	
+	struct in6_addr *plain_peer_hit = NULL, *plain_local_hit = NULL;
+	uint16_t nonce;
+
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
 	/* Assume already locked ha, if ha is not NULL. */
@@ -1634,9 +1701,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	/* Check HIP and ESP transforms, and produce keying material. */
 	ctx->dh_shared_key = NULL;
-#ifdef CONFIG_HIP_BLIND
+	
+	//#ifdef CONFIG_HIP_BLIND
 	// XX TODO KARTHIK: if entry->blind then r1.hitr should be converted to plain hit
-#endif
+	//#endif
+	
 	/* Note: we could skip keying material generation in the case of a
 	   retransmission but then we'd had to fill ctx->hmac etc. TH: I'm not
 	   sure if this could be replaced with a function pointer which is set
@@ -1715,6 +1784,25 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
 		     hip_get_param_total_len(host_id_in_enc));
 
+#ifdef CONFIG_HIP_BLIND
+	if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	  // Peer's plain hit
+	  HIP_IFEL((plain_peer_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+		   -1, "Couldn't allocate memory\n");
+	  HIP_IFEL(hip_host_id_to_hit(host_id_in_enc, plain_peer_hit, HIP_HIT_TYPE_HASH100), 
+		   -1, "hip_host_id_to_hit faile\n");
+	  // Local plain hit
+	  HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+		   -1, "Couldn't allocate memory\n");
+	  HIP_IFEL(hip_blind_get_nonce(i2, &nonce), 
+		   -1, "hip_blind_get_nonce failed\n");
+	  HIP_IFEL(hip_plain_fingerprint(&nonce, &i2->hitr, plain_local_hit),
+		   -1, "hip_plain_fingerprint failed\n");
+	  HIP_IFEL(hip_blind_verify(&nonce, plain_peer_hit, &i2->hits) != 0, 
+		   -1, "hip_blind_verify failed\n");
+	}
+#endif
+
 	/* HMAC cannot be validated until we draw key material */
 
 	/* NOTE! The original packet has the data still encrypted. But this is
@@ -1736,9 +1824,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		/* The rest of the code assume already locked entry, so lock the
 		   newly created entry as well. */
 		HIP_LOCK_HA(entry);
-		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		/* ipv6_addr_copy(&entry->hit_our, &i2->hitr); */
-		hip_init_us(entry, &i2->hitr);
+		if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
+		  hip_init_us(entry, plain_local_hit);
+		}
+		else {
+		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		  hip_init_us(entry, &i2->hitr);
+		}
 
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
 		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
@@ -1757,7 +1850,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		   here, since the source port can be different for I1 and I2. */
 		if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 		{
-	HIP_DEBUG("hep\n");
 			entry->nat_mode = 1;
 			entry->peer_udp_port = i2_info->src_port;
 			HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
@@ -1775,8 +1867,12 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status() && i2->control & HIP_CONTROL_BLIND)
-		entry->blind = 1;
+	if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+	  entry->hit_our_blind = &i2->hitr;
+	  entry->hit_peer_blind = &i2->hits;
+	  entry->blind_nonce_i = nonce;
+	  entry->blind = 1;
+	}
 #endif
 
 	/** @todo the above should not be done if signature fails...
@@ -1965,6 +2061,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
 		HIP_FREE(ctx);
+	if (plain_local_hit)
+	  HIP_FREE(plain_local_hit);
+	if (plain_peer_hit)
+	  HIP_FREE(plain_peer_hit);
 
 	return err;
 }
@@ -2269,8 +2369,7 @@ int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
 		  hip_ha_t *entry,
-		  struct hip_stateless_info *i1_info
-)
+		  struct hip_stateless_info *i1_info)
 {
 	int err = 0, is_via_rvs_nat = 0;
 	struct in6_addr *dst_ip = NULL;
@@ -2280,6 +2379,7 @@ int hip_handle_i1(struct hip_common *i1,
 	hip_ha_t *rvs_ha_entry = NULL;
 	struct hip_from_nat *from_nat;
 	struct hip_from *from;
+	uint16_t nonce = 0;
 		
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 		
@@ -2307,8 +2407,11 @@ int hip_handle_i1(struct hip_common *i1,
 	
 	/* @todo: how to the handle the blind code with RVS?? */
 #ifdef CONFIG_HIP_BLIND
-	if (i1->control & HIP_CONTROL_BLIND)
+	if (i1->control & HIP_CONTROL_BLIND) {
+	  HIP_IFEL(hip_blind_get_nonce(i1, nonce), 
+		   -1, "hip_blind_get_nonce failed\n");
 		goto skip_nat;
+	}
 #endif
 
 	HIP_DEBUG("Found %s parameter in I1.\n",
@@ -2383,17 +2486,11 @@ int hip_handle_i1(struct hip_common *i1,
 	}
  skip_nat:
 #endif
-	
-#ifdef CONFIG_HIP_BLIND
-	if (i1->control & HIP_CONTROL_BLIND) {
-		HIP_IFEL(hip_handle_i1_blind(i1, i1_saddr, i1_daddr, entry, i1_info),
-			 -1, "handle_i1_blind failed\n");
-	}
-#endif
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
-			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat);
+			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat, nonce);
+	
  out_err:
-	if(rvs_address) {
+	if (rvs_address) {
 		HIP_FREE(rvs_address);
 	}
 	
@@ -2442,15 +2539,17 @@ int hip_receive_i1(struct hip_common *i1,
 		   struct hip_stateless_info *i1_info)
 {
 	int err = 0, state, mask = 0;
-	HIP_DEBUG("hip_receive_i1() invoked.\n");
+	HIP_DEBUG("\n");
+
 #ifdef CONFIG_HIP_RVS
  	HIP_RVA *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
+
 #ifdef CONFIG_HIP_BLIND
 	mask |= HIP_CONTROL_BLIND;
 #endif
-	HIP_DEBUG("hip_receive_i1() invoked.\n");
+
 	HIP_IFEL(ipv6_addr_any(&i1->hitr), -EPROTONOSUPPORT, 
 		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
 

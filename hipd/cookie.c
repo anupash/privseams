@@ -340,18 +340,33 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
 	int err = 1;
-
-	/* Find the proper R1 table */
-	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
-		 0, "Requested source HIT not (any more) available.\n");
-
-	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+	uint16_t nonce;
+	struct in6_addr *plain_local_hit;
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status() && hdr->control & HIP_CONTROL_BLIND)
-	  //result = &hid->blind_r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+	if (hip_blind_get_status() && ntohs(hdr->control) & HIP_CONTROL_BLIND) {
+	  HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+		   -1, "Couldn't allocate memory\n");
+	  HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
+	  HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
+		   -1, "hip_plain_fingerprint failed\n");
+	  HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
+
+	  /* Find the proper R1 table, use plain hit */
+	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
+		   0, "Requested source HIT not (any more) available.\n");
+	}
 #endif
+
+	/* Find the proper R1 table, no blind used */
+	if (!(hip_blind_get_status() && ntohs(hdr->control) & HIP_CONTROL_BLIND)) {
+	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
+		   0, "Requested source HIT not (any more) available.\n");
+	}
+
+	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
@@ -402,6 +417,8 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 		 "Puzzle incorrectly solved\n");
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
+	if(plain_local_hit)
+	  HIP_FREE(plain_local_hit);
 	return err;
 }
 

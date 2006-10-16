@@ -580,14 +580,14 @@ void *hip_get_param(const struct hip_common *msg,
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
 
-	_HIP_DEBUG("searching for type %d\n", param_type);
+	HIP_DEBUG("searching for type %d\n", param_type);
 
        /** @todo Optimize: stop when next parameter's type is greater than the
 	   searched one. */
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		_HIP_DEBUG("current param %d\n",
+		HIP_DEBUG("current param %d\n",
 			   hip_get_param_type(current_param));
 		if (hip_get_param_type(current_param) == param_type) {
 			matched = current_param;
@@ -2788,9 +2788,9 @@ int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 	struct hip_blind_nonce param;
 	int err = 0;
 
-	param.nonce = nonce;
 	hip_set_param_type(&param, HIP_PARAM_BLIND_NONCE);
-	hip_calc_generic_param_len(&param, sizeof(param), 0);
+	hip_calc_generic_param_len(&param, sizeof(param), 0);	
+	param.nonce = htons(nonce);
 	err = hip_build_param(msg, &param);
 
 	return err;

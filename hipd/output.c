@@ -24,13 +24,14 @@
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
-	struct hip_common i1;
-	struct in6_addr daddr;
-	int mask = 0;
-	int err = 0;
-
-	HIP_DEBUG("\n");
-
+  struct hip_common i1;
+  struct hip_common *i1_blind;
+  struct in6_addr daddr;
+  int mask = 0;
+  int err = 0;
+  
+  HIP_DEBUG("\n");
+  
 #ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
 		mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -41,35 +42,24 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		 "Could not assign a local host id\n");
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
-	  HIP_DEBUG("Blind is ON\n");
-	else
-	  HIP_DEBUG("Blind is OFF\n");
-	
-        if (entry->blind) 
-	  mask |= HIP_CONTROL_BLIND;
-	
-	// Set blinded fingerprints
-	HIP_IFEL(hip_blind_fingerprints(entry), -1, "hip_blind_fingerprints failed\n");
+        if (entry->blind) {
+	  // Build i1 message: use blind HITs and put nonce in the message 
+	  HIP_IFEL((i1_blind = hip_build_blinded_i1(entry, &mask)) == NULL, 
+		   -1, "hip_build_blinded_i1() failed\n");
+	  HIP_DUMP_MSG(i1_blind);
+	}
 #endif	
-	// Build network header by using a either blinded or plain HITs
-	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
-						     HIP_I1,
-						     mask,
-						     (entry->blind ? &entry->hit_our_blind : &entry->hit_our),
-						     (entry->blind ? &entry->hit_peer_blind : dst_hit));
-#ifdef CONFIG_HIP_BLIND
-	// If needed, add nonce parameter to the message
-	if (entry->blind)
-	  HIP_IFEL(hip_build_param_blind_nonce(&i1,entry->blind_nonce_i), 
-		   -1,"Unable to attach nonce to the message. \n");
-#endif
+	// Build network header
+	if (!entry->blind) {
+	  entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
+						       HIP_I1, mask, 
+						       &entry->hit_our, dst_hit);
+	  /* Eight octet units, not including first */
+	  i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
 	  
-	/* Eight octet units, not including first */
-	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
-
-	HIP_HEXDUMP("HIT source", &i1.hits, sizeof(struct in6_addr));
-	HIP_HEXDUMP("HIT dest", &i1.hitr, sizeof(struct in6_addr));
+	  HIP_HEXDUMP("HIT source ", &i1.hits, sizeof(struct in6_addr));
+	  HIP_HEXDUMP("HIT dest ", &i1.hitr, sizeof(struct in6_addr));
+	}
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
@@ -83,23 +73,35 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
-
-	
-	err = entry->hadb_xmit_func->
-		hip_send_pkt(&entry->local_address, &daddr,
-			     0, HIP_NAT_UDP_PORT,
-			     (struct hip_common*) &i1, entry, 1);
-
+#ifdef CONFIG_HIP_BLIND
+	// Send blinded i1
+	if (entry->blind) {
+	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
+						    &daddr, 0, 
+						    HIP_NAT_UDP_PORT,
+						    i1_blind, entry, 1);
+	}
+#endif
+	// Send normal i1
+	if (!entry->blind) {
+	err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
+						  &daddr, 0, 
+						  HIP_NAT_UDP_PORT,
+						  (struct hip_common*) &i1, 
+						  entry, 1);
+	}
 	HIP_DEBUG("err after sending: %d.\n", err);
 	
 	if (!err) {
-		HIP_LOCK_HA(entry);
-		entry->state = HIP_STATE_I1_SENT;
-		HIP_UNLOCK_HA(entry);
+	  HIP_LOCK_HA(entry);
+	  entry->state = HIP_STATE_I1_SENT;
+	  HIP_UNLOCK_HA(entry);
 	}
 	else if (err == 1) err = 0;
-
+	
 out_err:
+	if (i1_blind)
+	  HIP_FREE(i1_blind);
 	return err;
 }
 
@@ -155,6 +157,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
 #endif
+
+#ifdef CONFIG_HIP_BLIND
+	mask |= HIP_CONTROL_BLIND;
+#endif
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/*! \todo TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
@@ -191,10 +197,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
 
-	if(!(mask & HIP_CONTROL_BLIND)){
+	if(!(mask & HIP_CONTROL_BLIND && hip_blind_get_status())){
 	  /********** Host_id **********/
 
-		_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+		HIP_DEBUG("This HOST ID belongs to: %s\n", 
 			   hip_get_param_host_id_hostname(host_id_pub));
 		HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 			 "Building of host id failed\n");
@@ -306,10 +312,10 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, struct in6_addr *dst_ip,
 		const in_port_t dst_port, struct in6_addr *dst_hit,
 		struct hip_stateless_info *i1_info, const void *traversed_rvs,
-		const int is_via_rvs_nat) 
+		const int is_via_rvs_nat, uint16_t *nonce) 
 {
 	struct hip_common *r1pkt = NULL;
-	struct in6_addr *r1_dst_addr;
+	struct in6_addr *r1_dst_addr, *local_plain_tmp = NULL;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 	
@@ -325,16 +331,34 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	   hit. */
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
-	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
-	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit); // blindattu
+	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit); // blindattu
 	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
 	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
 	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
 	HIP_DEBUG("hip_xmit_r1(): is_via_rvs_nat %d.\n", is_via_rvs_nat);
-	
+
+		
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	  HIP_DEBUG("blind on\n");
+	  HIP_IFEL((local_plain_tmp = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
+		   -1, "Couldn't allocate memory\n");
+	  HIP_IFEL(hip_plain_fingerprint(nonce, src_hit, local_plain_tmp), 
+		   -1, "hip_plain_fingerprints failed\n");
+	  HIP_IFEL(!(r1pkt =
+		     hip_get_r1(r1_dst_addr, i1_daddr, local_plain_tmp, dst_hit)),
+		   -ENOENT, "No precreated R1\n");
+	  // replace the plain hit with the blinded hit
+	  ipv6_addr_copy(&r1pkt->hits, src_hit);
+	}
+
+#endif
+	if (!hip_blind_get_status()) {
 	HIP_IFEL(!(r1pkt =
 		   hip_get_r1(r1_dst_addr, i1_daddr, src_hit, dst_hit)),
 		 -ENOENT, "No precreated R1\n");
+	}
 
 	if (dst_hit)
 		ipv6_addr_copy(&r1pkt->hitr, dst_hit);

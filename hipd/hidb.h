@@ -103,5 +103,8 @@ int hip_handle_del_local_hi(const struct hip_common *input);
 
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
+//#ifdef CONFIG_HIP_BLIND
+int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit, struct in6_addr *local_hit);
+//#endif
 
 #endif /* _HIP_DB */

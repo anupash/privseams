@@ -266,5 +266,8 @@ int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
+hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
+				      hip_hit_t *peer_blind_hit);
+
 
 #endif /* HIP_HADB_H */
