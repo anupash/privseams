@@ -76,8 +76,9 @@ int hip_rvs_put_rva(HIP_RVA*);
 int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
 int hip_rvs_relay_i1(struct hip_common*, struct in6_addr*,struct in6_addr*,
 		     HIP_RVA*, struct hip_stateless_info*);
-//HIP_RVA *hip_rvs_ha2rva(hip_ha_t*);
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt);
+int hip_rvs_reply_with_notify(struct hip_common *, struct in6_addr *, HIP_RVA *,
+			      struct hip_stateless_info *);
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *, hip_xmit_func_t);
 HIP_RVA *hip_rvs_allocate(int);
 HIP_RVA *hip_rvs_get(struct in6_addr*);
 HIP_RVA *hip_rvs_get_valid(struct in6_addr*);

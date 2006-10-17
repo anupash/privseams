@@ -722,7 +722,7 @@ void *hip_find_free_param(const struct hip_common *msg)
  * hip_calc_hdr_len - update messsage header length
  * @param msg pointer to the beginning of the message header
  *
- * This function is called always when a parameter has added or the
+ * This function is called always when a parameter has been added or the
  * daemon/network header was written. This functions writes the new
  * header length directly into the message.
  */

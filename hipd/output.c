@@ -382,7 +382,7 @@ void hip_send_notify(hip_ha_t *entry)
 		 hip_send_pkt(NULL, &daddr, HIP_NAT_UDP_PORT,
 			      entry->peer_udp_port, notify_packet,
 			      entry, 0),
-		 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+		 -ECOMM, "Sending NOTIFY packet failed.\n");
 	
  out_err:
 	if (notify_packet)

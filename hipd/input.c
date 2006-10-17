@@ -1080,9 +1080,6 @@ int hip_handle_r1(struct hip_common *r1,
 
 	HIP_DEBUG("hip_handle_r1() invoked.\n");
 
-	HIP_DEBUG("hip_handle_r1() invoked.\n");
-	HIP_DUMP_MSG(r1);
-
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
 		retransmission = 1;
@@ -2402,7 +2399,17 @@ int hip_receive_i1(struct hip_common *i1,
 		HIP_DEBUG("Valid rendezvous association found: %s \n",
 			  (rva ? "yes" : "no"));
  		if (rva) {
-			err = hip_rvs_relay_i1(i1, i1_saddr, i1_daddr, rva, i1_info);
+			if(rva->client_udp_port == 0 &&
+			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
+				HIP_DEBUG("Replying to Initiator with a "\
+					  "NOTIFY packet.\n");
+				hip_rvs_reply_with_notify(i1, i1_saddr, rva,
+							  i1_info);
+			}
+			else {
+				err = hip_rvs_relay_i1(i1, i1_saddr, i1_daddr,
+						       rva, i1_info);
+			}
 			return err;
  		}
 #endif

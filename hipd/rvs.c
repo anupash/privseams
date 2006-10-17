@@ -422,8 +422,9 @@ void hip_rvs_remove(HIP_RVA *rva)
  * node can also be another rendezvous server. In this case the @c FROM
  * (@c FROM_NAT) parameter is appended after the existing ones. Thus current RVS
  * appends the address of previous RVS and the final RVS (n) in the RVS chain
- * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code> or in case of
- * NAT @c FROM_NAT:I, @c FROM_NAT:RVS1, ... , <code>FROM_NAT:RVS(n-1)</code>.
+ * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code>. If initiator
+ * is located behind a NAT, the first @c FROM parameter is replaced with a
+ * @c FROM_NAT parameter.
  * 
  * @param i1       a pointer to the I1 HIP packet common header with source and
  *                 destination HITs.
@@ -437,11 +438,9 @@ void hip_rvs_remove(HIP_RVA *rva)
  *                 in use).
  * @return         zero on success, or negative error value on error.
  * @note           This code has not been tested thoroughly with multiple RVSes.
- * @warning        This code does not work correctly if there are multiple
- *                 RVSes of which some are behind NAT and others are not.
  */
 int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
+		     struct in6_addr *i1_daddr, HIP_RVA *rva,
 		     struct hip_stateless_info *i1_info)
 {
 	struct hip_common *i1_to_be_relayed = NULL;
@@ -472,8 +471,6 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		builder_function = hip_build_param_from;
 		param_type = HIP_PARAM_FROM;
 	}
-
-	/** @todo Zero HIP message checksum when R is behind NAT. */
 
 	/* Get the destination IP address which the client has registered from
 	   the rendezvous association. */
@@ -531,6 +528,9 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
 	}
 
+	/* Zero message HIP checksum. */
+	hip_zero_msg_checksum(i1_to_be_relayed);
+
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
 	   whose type value is greater than RVS_HMAC in the incoming I1
@@ -561,6 +561,43 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	return err;
 }
 
+
+/**
+ * Sends a NOTIFY packet to the initiator.
+ *
+ * @param entry a pointer to the current host association database state.
+ */ 
+int hip_rvs_reply_with_notify(struct hip_common *i1, struct in6_addr *i1_saddr,
+			      HIP_RVA *rva, struct hip_stateless_info *i1_info)
+{
+	int err = 0; 
+	struct hip_common *notify_packet = NULL;
+	struct in6_addr responder_ip;
+	
+	HIP_IFEL(!(notify_packet = hip_msg_alloc()), -ENOMEM,
+		 "No memory to create a NOTIFY packet.\n");	
+	
+	/* Get the destination IP address which the client has registered from
+	   the rendezvous association. */
+	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
+	hip_rvs_get_ip(rva, &responder_ip, 0);
+	
+	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0, &(i1->hits),
+			      &(i1->hitr));
+	
+	hip_build_param_via_rvs(notify_packet, &responder_ip, 1);
+	
+	HIP_IFEL(hip_send_udp(NULL, i1_saddr, HIP_NAT_UDP_PORT,
+			      i1_info->src_port, notify_packet,
+			      NULL, 0),
+		 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+	
+ out_err:
+	if (notify_packet)
+		HIP_FREE(notify_packet);
+	return err;
+}
+
 /**
  * Set a rendezvous server request flag for a host association.
  *
@@ -576,11 +613,11 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
  *         not found.
  */ 
 int hip_rvs_set_request_flag(hip_hit_t *src_hit,
-			      hip_hit_t *dst_hit)
+			     hip_hit_t *dst_hit)
 {
 	int err = 0;
 	hip_ha_t *entry;
-
+	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
 		 -1, "Could not set RVS request bit\n");
 

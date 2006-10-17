@@ -275,11 +275,9 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 				      0, &entry->hit_our,
 				      &entry->hit_peer);
 	
-	/* Add a HMAC parameter to the UPDATE packet. */
-        HIP_IFEL(hip_build_param_hmac_contents(
-			 update_packet, &entry->hip_hmac_out),
-		 -1, "Building of HMAC failed.\n");
-        
+	/* Calculate the HIP header length */
+	hip_calc_hdr_len(update_packet);
+
 	/* Send the UPDATE packet using 50500 as source and destination ports.
 	   Only outgoing traffic acts refresh the NAT port state. We could
 	   choose to use other than 50500 as source port, but we must use 50500
