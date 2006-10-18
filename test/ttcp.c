@@ -117,32 +117,31 @@ extern int errno;
 extern int optind;
 extern char *optarg;
 
-char Usage[] = "\
-Usage: ttcp -t [-options] host [ < in ]\n\
-       ttcp -r [-options] [multicast-group][ > out]\n\
-Common options:\n\
-	-4	use IPv4\n\
-	-6	use IPv6\n\
-	-l ##	length of bufs read from or written to network (default 8192)\n\
-	-u	use UDP instead of TCP\n\
-	-p ##	port number to send to or listen at (default 5001)\n\
-	-s	-t: source a pattern to network\n\
-		-r: sink (discard) all data from network\n\
-	-A ##	align the start of buffers to this modulus (default 16384)\n\
-	-O ##	start buffers at this offset from the modulus (default 0)\n\
-	-v	verbose: print more statistics\n\
-	-d	set SO_DEBUG socket option\n\
-	-b ##	set socket buffer size (if supported)\n\
-	-f X	format for rate: k,K = kilo{bit,byte}; m,M = mega; g,G = giga\n\
-Options specific to -t:\n\
-	-n ##	number of source bufs written to network (default 2048)\n\
-	-D	don't buffer TCP writes (sets TCP_NODELAY socket option)\n\
-	-w ##	number of microseconds to wait between each write\n\
-Options specific to -r:\n\
-	-B	for -s, only output full blocks as specified by -l (for TAR)\n\
-	-T	\"touch\": access each byte as it's read\n\
-        -I if   Specify the network interface (e.g. eth0) to use  
-";	
+char Usage[] =
+"Usage: ttcp -t [-options] host [ < in ]\n"
+"ttcp -r [-options] [multicast-group][ > out]\n"
+"Common options:\n"
+"	-4	use IPv4\n"
+"	-6	use IPv6\n"
+"	-l ##	length of bufs read from or written to network (default 8192)\n"
+"	-u	use UDP instead of TCP\n"
+"	-p ##	port number to send to or listen at (default 5001)\n"
+"	-s	-t: source a pattern to network\n"
+"		-r: sink (discard) all data from network\n"
+"	-A ##	align the start of buffers to this modulus (default 16384)\n"
+"	-O ##	start buffers at this offset from the modulus (default 0)\n"
+"	-v	verbose: print more statistics\n"
+"	-d	set SO_DEBUG socket option\n"
+"	-b ##	set socket buffer size (if supported)\n"
+"	-f X	format for rate: k,K = kilo{bit,byte}; m,M = mega; g,G = giga\n"
+"Options specific to -t:\n"
+"	-n ##	number of source bufs written to network (default 2048)\n"
+"	-D	don't buffer TCP writes (sets TCP_NODELAY socket option)\n"
+"	-w ##	number of microseconds to wait between each write\n"
+"Options specific to -r:\n"
+"	-B	for -s, only output full blocks as specified by -l (for TAR)\n"
+"	-T	\"touch\": access each byte as it's read\n"
+"        -I if   Specify the network interface (e.g. eth0) to use\n";	
 
 char stats[128];
 double nbytes;			/* bytes on net */
