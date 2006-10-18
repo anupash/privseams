@@ -199,6 +199,7 @@ struct hip_host_id_entry {
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 	struct hip_r1entry *r1; /* precreated R1s */
+	struct hip_r1entry *blindr1; /* precreated R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
 	int (*insert)(struct hip_host_id_entry *, void **arg);
 	/* Handler to call before remove with an argument, return 0 if OK*/

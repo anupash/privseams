@@ -2782,7 +2782,7 @@ int hip_build_netlink_dummy_header(struct hip_common *msg)
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
 }
 
-#ifdef CONFIG_HIP_BLIND
+
 int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 {
 	struct hip_blind_nonce param;
@@ -2795,4 +2795,4 @@ int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 
 	return err;
 }
-#endif
+

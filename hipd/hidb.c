@@ -50,6 +50,11 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
 		if (tmp->r1)
 			hip_uninit_r1(tmp->r1);
+#ifdef CONFIG_HIP_BLIND
+		if (tmp->blindr1)
+		        hip_uninit_r1(tmp->blindr1);
+#endif			
+		
 		if (tmp->host_id)
 			HIP_FREE(tmp->host_id);
 		HIP_FREE(tmp);
@@ -184,20 +189,16 @@ int hip_add_host_id(struct hip_db_struct *db,
 	list_add(&id_entry->next, &db->db_head);
 
 	HIP_DEBUG("Generating a new R1 set.\n");
-	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
-	
+	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
 	pubkey = hip_get_public_key(pubkey);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
-
-
-#if 0 //CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-	  HIP_IFEL(!hip_precreate_blinded_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
-					     (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
-					     id_entry->host_id, pubkey), -ENOENT, "Unable to precreate blinded R1s.\n");
-	}
+#ifdef CONFIG_HIP_BLIND
+	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
+        HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
+			           (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+			            id_entry->host_id, pubkey), -ENOENT, "Unable to precreate blind R1s.\n");
 #endif
 
 	/* Called while the database is locked, perhaps not the best
@@ -359,6 +360,10 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	   set host_id to null to signal that it is free */
 	if (id->r1)
 		hip_uninit_r1(id->r1);
+#ifdef CONFIG_HIP_BLIND
+	if (id->blindr1)
+	  hip_uninit_r1(id->blindr1);
+#endif
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
