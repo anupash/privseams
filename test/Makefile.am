@@ -46,10 +46,12 @@ sbin_PROGRAMS = modtest
 bin_PROGRAMS += cookietest
 bin_PROGRAMS += keygentest
 bin_PROGRAMS += sha1ime_test
+bin_PROGRAMS += ttcp
 #bin_PROGRAMS += hipconf
 
 #sbin_SCRIPTS = hipsetup
 
+ttcp_SOURCES = ttcp.c
 conntest_client_SOURCES = conntest-client.c  conntest.c
 conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
