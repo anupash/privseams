@@ -2749,7 +2749,8 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_notify - build the HIP NOTIFY parameter
+ * Builds a NOTIFY parameter.
+ * 
  * @param msg the message where the parameter will be appended
  * @param msgtype Notify Message Type
  * @param notification_data the Notification data that will contained in the HIP NOTIFY

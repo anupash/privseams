@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 				  hip_raw_sock_v6);
 			
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			hip_msg_init(hipd_msg);
 		
@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
 				  hip_raw_sock_v4);
 
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
 			   destination addresses and ports of the incoming
 			   packet. */
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			/* The NAT socket is bound on port 50500, thus packets
 			   received from NAT socket must have had 50500 as

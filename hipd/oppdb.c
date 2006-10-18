@@ -293,7 +293,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					struct in6_addr *src_addr,
 					struct in6_addr *dst_addr,
-					struct hip_stateless_info *msg_info)
+					hip_portpair_t *msg_info)
 {
 	hip_hdr_type_t type = hip_get_msg_type(msg);
 	hip_ha_t *entry = NULL;
@@ -327,7 +327,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
-		       struct hip_stateless_info *msg_info)
+		       hip_portpair_t *msg_info)
 {
 	hip_opp_block_t *block_entry = NULL;
 	hip_ha_t *entry_tmp = NULL, *entry;

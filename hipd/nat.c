@@ -169,7 +169,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 				       struct in6_addr *saddr,
 				       struct in6_addr *daddr,
-				       struct hip_stateless_info *info)
+				       hip_portpair_t *info)
 {
         hip_ha_t *entry;
         int err = 0, type, skip_sync = 0;

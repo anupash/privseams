@@ -522,7 +522,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
-	                       struct hip_stateless_info *msg_info)
+	                       hip_portpair_t *msg_info)
 {
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
@@ -570,7 +570,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	
 	switch(type) {
 	case HIP_I1:
-		/* no state */
+		/* No state. */
 	  err = ((hip_rcv_func_set_t *)
 		 hip_get_rcv_default_func_set())->hip_receive_i1(msg,
 								 src_addr,
@@ -580,7 +580,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  break;
 		
 	case HIP_I2:
-		// possibly state
+		/* Possibly state. */
 		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
 		if(entry){
 			err = entry->hadb_rcv_func->
@@ -597,7 +597,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_R1:
-	  	// state
+	  	/* State. */
 	  	HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
 		HIP_ASSERT(entry);
 		HIP_IFCS(entry,
@@ -606,9 +606,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 							dst_addr,
 							entry,
 							msg_info))
-
-		//err = hip_receive_r1(msg, src_addr, dst_addr);
-		break;
+			
+			break;
 		
 	case HIP_R2:
 		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
@@ -618,7 +617,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 							dst_addr,
 							entry,
 							msg_info))
-		//err = hip_receive_r2(msg, src_addr, dst_addr);
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
 		
@@ -635,11 +633,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_NOTIFY:
 		HIP_DEBUG("\n-- RECEIVED Notify message --\n");
 		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_notify(
-							msg,
-							src_addr,
-							dst_addr,
-							entry))
+			 err = entry->hadb_rcv_func->
+			 hip_receive_notify(msg, src_addr, dst_addr, entry))
 		break;
 		
 	case HIP_BOS:
@@ -680,14 +675,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
-	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hits", &msg->hits);
-	HIP_DEBUG_HIT("hip_receive_control_packet(): msg->hitr", &msg->hitr);
 	
 	if (err)
 		goto out_err;
-
+	
  out_err:
-
+	
 	return err;
 }
 
@@ -703,7 +696,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry,
-	          struct hip_stateless_info *r1_info)
+	          hip_portpair_t *r1_info)
 {
 	int err = 0, dh_size = 0, written, host_id_in_enc_len;
 	uint32_t spi_in = 0;
@@ -1068,7 +1061,7 @@ int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry,
-		  struct hip_stateless_info *r1_info)
+		  hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle;
@@ -1287,7 +1280,7 @@ int hip_receive_r1(struct hip_common *r1,
 		   struct in6_addr *r1_saddr,
 		   struct in6_addr *r1_daddr,
 		   hip_ha_t *entry,
-		   struct hip_stateless_info *r1_info)
+		   hip_portpair_t *r1_info)
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
@@ -1373,7 +1366,7 @@ int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
 		  hip_ha_t *entry,
-		  struct hip_stateless_info *i2_info)
+		  hip_portpair_t *i2_info)
 {
 	uint32_t spi_in;
  	struct hip_common *r2 = NULL, *i2;
@@ -1484,7 +1477,7 @@ int hip_create_r2(struct hip_context *ctx,
 	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
-	HIP_RVA *rva;
+	hip_rva_t *rva;
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 -1, "Inserting rendezvous association failed..\n");
@@ -1526,7 +1519,7 @@ int hip_create_r2(struct hip_context *ctx,
  */
 int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr, hip_ha_t *ha,
-		  struct hip_stateless_info *i2_info)
+		  hip_portpair_t *i2_info)
 {
 	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
@@ -1932,7 +1925,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
 		   struct in6_addr *i2_daddr,
 		   hip_ha_t *entry,
-		  struct hip_stateless_info *i2_info)
+		  hip_portpair_t *i2_info)
 {
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
@@ -2017,7 +2010,7 @@ int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,
 		  hip_ha_t *entry,
-		  struct hip_stateless_info *r2_info)
+		  hip_portpair_t *r2_info)
 {
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
@@ -2216,7 +2209,7 @@ int hip_handle_i1(struct hip_common *i1,
 		  struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr,
 		  hip_ha_t *entry,
-		  struct hip_stateless_info *i1_info)
+		  hip_portpair_t *i1_info)
 {
 	int err = 0, is_via_rvs_nat = 0;
 	struct in6_addr *dst_ip = NULL;
@@ -2367,16 +2360,14 @@ int hip_handle_i1(struct hip_common *i1,
  * @warning        This code does not work correctly if there are @b both
  *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
-int hip_receive_i1(struct hip_common *i1,
-		   struct in6_addr *i1_saddr,
-		   struct in6_addr *i1_daddr,
-		   hip_ha_t *entry,
-		   struct hip_stateless_info *i1_info)
+int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+		   struct in6_addr *i1_daddr, hip_ha_t *entry,
+		   hip_portpair_t *i1_info)
 {
 	int err = 0, state, mask = 0;
 	HIP_DEBUG("hip_receive_i1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
- 	HIP_RVA *rva;
+ 	hip_rva_t *rva;
 	mask |= HIP_CONTROL_RVS_CAPABLE;
 #endif
 	HIP_DEBUG("hip_receive_i1() invoked.\n");
@@ -2463,7 +2454,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
 		   hip_ha_t *entry,
-		   struct hip_stateless_info *r2_info)
+		   hip_portpair_t *r2_info)
 {
 	int err = 0, state;
 	uint16_t mask = 0;
@@ -2514,38 +2505,43 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 
 /**
- * hip_receive_notify - receive NOTIFY packet
- * @param skb sk_buff where the HIP packet is in
+ * Determines the action to be executed for an incoming NOTIFY packet.
  *
- * This is the initial function which is called when an NOTIFY packet is
- * received.
+ * This function is called when a HIP control packet is received by
+ * hip_receive_control_packet()-function and the packet is detected to be
+ * an NOTIFY packet.
  *
- * @return 0 if R2 was processed succesfully, < 0 otherwise.
+ * @param notify       a pointer to the received NOTIFY HIP packet common header
+ *                     with source and destination HITs.
+ * @param notify_saddr a pointer to the source address from where the NOTIFY
+ *                     packet was received.
+ * @param notify_daddr a pointer to the destination address where to the NOTIFY
+ *                     packet was sent to (own address).
+ * @param entry        a pointer to the current host association database state.
  */
-int hip_receive_notify(struct hip_common *hip_common,
-		       struct in6_addr *notify_saddr,
-		       struct in6_addr *notity_daddr,
+int hip_receive_notify(const struct hip_common *notify,
+		       const struct in6_addr *notify_saddr,
+		       const struct in6_addr *notify_daddr,
 		       hip_ha_t* entry)
 {
 	int err = 0;
 	struct hip_notify *notify_param;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
-
+	uint16_t mask = HIP_CONTROL_HIT_ANON, notify_controls = 0;
+	
 	HIP_DEBUG("hip_receive_notify() invoked.\n");
-	HIP_HEXDUMP("Incoming NOTIFY", hip_common,
-		    hip_get_msg_total_len(hip_common));
-
-	HIP_IFEL(!hip_controls_sane(ntohs(hip_common->control), mask), -1, 
-		 "Received illegal controls in NOTIFY: 0x%x. Dropping\n",
-		 ntohs(hip_common->control));
-	HIP_IFEL( !entry , -EFAULT, "Received NOTIFY by unknown sender\n");
-
-	/* lock here */
-	/* todo: check state */
-
-	/* while (notify_param = hip_get_nth_param(msg, HIP_PARAM_NOTIFY, i)) { .. */
-
-	notify_param = hip_get_param(hip_common, HIP_PARAM_NOTIFY);
+	
+	HIP_IFEL(entry == NULL , -EFAULT,
+		 "Received a NOTIFY packet from an unknown sender, ignoring "\
+		 "the packet.\n");
+	
+	notify_controls = ntohs(notify->control);
+	
+	HIP_IFEL(!hip_controls_sane(notify_controls, mask), -EPROTO, 
+		 "Received a NOTIFY packet with illegal controls: 0x%x, ignoring "\
+		 "the packet.\n", notify_controls);
+	
+	notify_param = hip_get_param(notify, HIP_PARAM_NOTIFY);
+	
 	if (notify_param) {
 		HIP_DEBUG("NOTIFY parameter:\n");
 		HIP_DEBUG(" msgtype=%u\n", ntohs(notify_param->msgtype));
@@ -2554,7 +2550,16 @@ int hip_receive_notify(struct hip_common *hip_common,
  out_err:
 	if (entry)
 		hip_put_ha(entry);
+	
+	return err;
+}
 
+int hip_handle_notify(const struct hip_common *notify,
+		      const struct in6_addr *notify_saddr,
+		      const struct in6_addr *notify_daddr,
+		      hip_ha_t* entry)
+{
+	int err = 0;
 	return err;
 }
 
@@ -2570,10 +2575,10 @@ int hip_receive_notify(struct hip_common *hip_common,
  * TODO: check if it is correct to return always 0 
  */
 int hip_receive_bos(struct hip_common *bos,
-		   struct in6_addr *bos_saddr,
-		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry,
-		  struct hip_stateless_info *bos_info)
+		    struct in6_addr *bos_saddr,
+		    struct in6_addr *bos_daddr,
+		    hip_ha_t *entry,
+		    hip_portpair_t *bos_info)
 {
 	int err = 0, state = 0;
 

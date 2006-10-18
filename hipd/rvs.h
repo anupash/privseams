@@ -63,25 +63,27 @@ typedef struct hip_rendezvous_association
         /** A function pointer to the function to be used for relaying the I1
 	    packet. */
 	hip_xmit_func_t       send_pkt;
-}HIP_RVA;
+}hip_rva_t;
 
 /* FUNCTION PROTOTYPES */
 void hip_rvs_init_rvadb(void);
-void hip_rvs_free_rva(HIP_RVA*);
-void hip_rvs_get_ip(HIP_RVA*, struct in6_addr*, unsigned int);
-void hip_rvs_put_ip(HIP_RVA*, struct in6_addr*, unsigned int);
-void hip_rvs_remove(HIP_RVA*);
+void hip_rvs_free_rva(hip_rva_t*);
+void hip_rvs_get_ip(hip_rva_t*, struct in6_addr*, unsigned int);
+void hip_rvs_put_ip(hip_rva_t*, struct in6_addr*, unsigned int);
+void hip_rvs_remove(hip_rva_t*);
 void hip_rvs_uninit_rvadb(void);
-int hip_rvs_put_rva(HIP_RVA*);
+int hip_rvs_put_rva(hip_rva_t*);
 int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
-int hip_rvs_relay_i1(struct hip_common*, struct in6_addr*,struct in6_addr*,
-		     HIP_RVA*, struct hip_stateless_info*);
-int hip_rvs_reply_with_notify(struct hip_common *, struct in6_addr *, HIP_RVA *,
-			      struct hip_stateless_info *);
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *, hip_xmit_func_t);
-HIP_RVA *hip_rvs_allocate(int);
-HIP_RVA *hip_rvs_get(struct in6_addr*);
-HIP_RVA *hip_rvs_get_valid(struct in6_addr*);
+int hip_rvs_relay_i1(const struct hip_common*, const struct in6_addr*,
+		     const struct in6_addr*, const hip_rva_t*,
+		     const hip_portpair_t*);
+int hip_rvs_reply_with_notify(const struct hip_common *,
+			      const struct in6_addr *, const hip_rva_t *,
+			      const hip_portpair_t *);
+hip_rva_t *hip_rvs_ha2rva(hip_ha_t *, hip_xmit_func_t);
+hip_rva_t *hip_rvs_allocate(int);
+hip_rva_t *hip_rvs_get(struct in6_addr*);
+hip_rva_t *hip_rvs_get_valid(struct in6_addr*);
 
 /* MACRO DEFINITIONS */
 /**

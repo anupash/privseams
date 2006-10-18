@@ -89,8 +89,7 @@ int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();
 int hip_nat_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
-				       struct in6_addr *,
-				       struct hip_stateless_info *);
+				       struct in6_addr *, hip_portpair_t *);
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
 #endif /* __NAT_H__ */

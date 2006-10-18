@@ -77,11 +77,11 @@ typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
  * A data structure for storing the source and destination ports of an incoming
  * packet. 
  */
-struct hip_stateless_info 
+typedef struct hip_stateless_info 
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
-};
+} hip_portpair_t;
 
 /** 
  * A binder structure for storing an IPv6 address and transport layer port
@@ -328,13 +328,13 @@ struct hip_hadb_rcv_func_set {
 			      struct in6_addr *, 
 			      struct in6_addr *,
 			      hip_ha_t*,
-			      struct hip_stateless_info *);
+			      hip_portpair_t *);
 
 	int (*hip_receive_r1)(struct hip_common *,
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*,
-			      struct hip_stateless_info *);
+			      hip_portpair_t *);
 				 
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
@@ -343,19 +343,19 @@ struct hip_hadb_rcv_func_set {
 				 struct in6_addr *, 
 				 struct in6_addr *,
 				 hip_ha_t*,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 				 
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 				 
 	int (*hip_receive_update)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*,
-				  struct hip_stateless_info *);
+				  hip_portpair_t *);
 				     
 	int (*hip_receive_notify)(struct hip_common *,
 				  struct in6_addr *,
@@ -366,7 +366,7 @@ struct hip_hadb_rcv_func_set {
 			       struct in6_addr *,
 			       struct in6_addr *,
 			       hip_ha_t*,
-			       struct hip_stateless_info *);
+			       hip_portpair_t *);
 				     
 	int (*hip_receive_close)(struct hip_common *,
 				 hip_ha_t*);
@@ -381,13 +381,13 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 
 	int (*hip_handle_r1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 			     
 	/* as there is possibly no state established when i2
 	   messages are received, the hip_handle_i2 function pointer
@@ -396,18 +396,18 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *ha,
-			     struct hip_stateless_info *i2_info);
+			     hip_portpair_t *i2_info);
 			     
 	int (*hip_handle_r2)(struct hip_common *r2,
 			     struct in6_addr *r2_saddr,
 			     struct in6_addr *r2_daddr,
 			     hip_ha_t *ha,
-			     struct hip_stateless_info *r2_info);
+			     hip_portpair_t *r2_info);
 	int (*hip_handle_bos)(struct hip_common *bos,
 			      struct in6_addr *r2_saddr,
 			      struct in6_addr *r2_daddr,
 			      hip_ha_t *ha,
-			      struct hip_stateless_info *);
+			      hip_portpair_t *);
 	int (*hip_handle_close)(struct hip_common *close,
 				hip_ha_t *entry);
 	int (*hip_handle_close_ack)(struct hip_common *close_ack,
@@ -434,7 +434,7 @@ struct hip_hadb_update_func_set{
 					     struct hip_common *msg,
 					     struct in6_addr *src_ip,
 					     struct in6_addr *dst_ip,
-					     struct hip_stateless_info *);
+					     hip_portpair_t *);
 	int (*hip_handle_update_rekeying)(hip_ha_t *entry,
 					  struct hip_common *msg,
 					  struct in6_addr *src_ip);
@@ -461,12 +461,12 @@ struct hip_hadb_misc_func_set{
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 	int (*hip_create_r2)(struct hip_context *ctx,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry,
-			     struct hip_stateless_info *);
+			     hip_portpair_t *);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,

@@ -278,7 +278,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, struct in6_addr *dst_ip,
 		const in_port_t dst_port, struct in6_addr *dst_hit,
-		struct hip_stateless_info *i1_info, const void *traversed_rvs,
+		hip_portpair_t *i1_info, const void *traversed_rvs,
 		const int is_via_rvs_nat) 
 {
 	struct hip_common *r1pkt = NULL;

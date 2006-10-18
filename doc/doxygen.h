@@ -201,7 +201,7 @@
  * <li>64512-65535 are reserved.</li>
  * </ul>
  * 
- * @defgroup hip_param_type_numbers HIP Parameter Type Values
+ * @defgroup hip_param_type_numbers HIP parameter type values
  * @see      hip_tlv
  * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
@@ -227,6 +227,28 @@
  * sending, receiving and handling data and modifying host assosiation state.
  * 
  * @defgroup hadb_func HIP host assosiation function sets
+ */
+
+/** 
+ * Functions for receiving HIP control packets.
+ * 
+ * These functions are called after a HIP control packet is received by
+ * hip_receive_control_packet()-function and the packet is detected to be a HIP
+ * control packet. The purpose of these functions is to decide whether to
+ * handle the packet at all. This decision is based first and foremost on the
+ * state of the current host association. If the packet is to be handled, all
+ * handling should be done in respective handle-function.
+ * 
+ * @defgroup receive_functions HIP receive functions
+ */
+
+/** 
+ * Functions for handling HIP control packets.
+ *
+ * These functions do the actual handling of the packet. These functions are
+ * called from the corresponding receive functions. 
+ * 
+ * @defgroup handle_functions HIP handle functions
  */
 
 #endif /* _DOXYGEN_H */

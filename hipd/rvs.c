@@ -46,9 +46,9 @@ static struct list_head rvadb[HIP_RVA_SIZE];
  * @return        a pointer to a newly allocated and initialized rendezvous 
  *                association structure or NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_allocate(int gfpmask)
+hip_rva_t *hip_rvs_allocate(int gfpmask)
 {
-	HIP_RVA *res;
+	hip_rva_t *res;
 
 	if((res = HIP_MALLOC(sizeof(*res), gfpmask)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
@@ -75,9 +75,9 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  * @return         a pointer to a newly allocated rendezvous association or
  *                 NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
+hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
-	HIP_RVA *rva;
+	hip_rva_t *rva;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
@@ -154,9 +154,9 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
  * @return    a pointer to a matching rendezvous association or NULL if
  *            a matching rendezvous association was not found.
  */
-HIP_RVA *hip_rvs_get(struct in6_addr *hit)
+hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
- 	return (HIP_RVA*)hip_ht_find(&rva_table, hit);
+ 	return (hip_rva_t*)hip_ht_find(&rva_table, hit);
 }
 
 /**
@@ -172,9 +172,9 @@ HIP_RVA *hip_rvs_get(struct in6_addr *hit)
  * @return a pointer to a matching valid rendezvous association or NULL if
  *         a matching valid rendezvous association was not found.
  */
-HIP_RVA *hip_rvs_get_valid(struct in6_addr *hit)
+hip_rva_t *hip_rvs_get_valid(struct in6_addr *hit)
 {
-	HIP_RVA *rva;
+	hip_rva_t *rva;
 
  	rva = hip_ht_find(&rva_table, hit);
  	if (rva) {
@@ -202,7 +202,7 @@ HIP_RVA *hip_rvs_get_valid(struct in6_addr *hit)
  * @param ip    the IP address to insert.
  * @param index the index of the IP address to be modified.
  */
-void hip_rvs_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
+void hip_rvs_put_ip(hip_rva_t *rva, struct in6_addr *ip, unsigned int index)
 {
 	HIP_ASSERT(rva);
  	HIP_ASSERT(index < HIP_RVA_MAX_IPS);
@@ -223,7 +223,7 @@ void hip_rvs_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
  * @param dst   a pointer to a buffer where to put the IP address.
  * @param index the index of the IP address to get.
  */
-void hip_rvs_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
+void hip_rvs_get_ip(hip_rva_t *rva, struct in6_addr *dst, unsigned int index)
 {
 	HIP_ASSERT(rva);
 	HIP_ASSERT(dst);
@@ -245,7 +245,7 @@ void hip_rvs_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
  * @param rva the rendezvous association to be added into the hashtable.
  * @return    zero on success, or negative error value on error.
  */
-int hip_rvs_put_rva(HIP_RVA *rva)
+int hip_rvs_put_rva(hip_rva_t *rva)
 {
 	int err;
 	HIP_DEBUG_HIT("hip_rvs_put_rva(): Inserting rendezvous association "\
@@ -279,7 +279,7 @@ int hip_rvs_put_rva(HIP_RVA *rva)
  */
 static void hip_rvs_hold_entry(void *entry)
 {
-	HIP_RVA *rva = entry;
+	hip_rva_t *rva = entry;
 
 	HIP_ASSERT(entry);
 	atomic_inc(&rva->refcnt);
@@ -296,7 +296,7 @@ static void hip_rvs_hold_entry(void *entry)
  */
 static void hip_rvs_put_entry(void *entry)
 {
-	HIP_RVA *rva = entry;
+	hip_rva_t *rva = entry;
 
 	HIP_ASSERT(entry);
 	if (atomic_dec_and_test(&rva->refcnt)) {
@@ -323,7 +323,7 @@ static void hip_rvs_put_entry(void *entry)
  */
 static void *hip_rvs_get_key(void *entry)
 {
-	return (void *)&(((HIP_RVA *)entry)->hit);
+	return (void *)&(((hip_rva_t *)entry)->hit);
 }
 
 /**
@@ -343,7 +343,7 @@ void hip_rvs_init_rvadb()
 
 	rva_table.head = rvadb;
 	rva_table.hashsize = HIP_RVA_SIZE;
-	rva_table.offset = offsetof(HIP_RVA, list_hit);
+	rva_table.offset = offsetof(hip_rva_t, list_hit);
 	rva_table.hash = hip_hash_hit;
 	rva_table.compare = hip_match_hit;
 	rva_table.hold = hip_rvs_hold_entry;
@@ -377,7 +377,7 @@ void hip_rvs_uninit_rvadb()
  * @note      this function should be called only after the last reference to
  *            the parameter @c rva is deleted. 
  */ 
-void hip_rvs_free_rva(HIP_RVA *rva)
+void hip_rvs_free_rva(hip_rva_t *rva)
 {
 	HIP_FREE(rva);
 }
@@ -390,7 +390,7 @@ void hip_rvs_free_rva(HIP_RVA *rva)
  *
  * @param rva the rendezvous association to remove.
  */ 
-void hip_rvs_remove(HIP_RVA *rva)
+void hip_rvs_remove(hip_rva_t *rva)
 {
 	HIP_ASSERT(rva);
 
@@ -439,9 +439,10 @@ void hip_rvs_remove(HIP_RVA *rva)
  * @return         zero on success, or negative error value on error.
  * @note           This code has not been tested thoroughly with multiple RVSes.
  */
-int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		     struct in6_addr *i1_daddr, HIP_RVA *rva,
-		     struct hip_stateless_info *i1_info)
+int hip_rvs_relay_i1(const struct hip_common *i1,
+		     const struct in6_addr *i1_saddr,
+		     const struct in6_addr *i1_daddr, const hip_rva_t *rva,
+		     const hip_portpair_t *i1_info)
 {
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
@@ -563,17 +564,31 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 
 /**
- * Sends a NOTIFY packet to the initiator.
+ * Sends a UDP encapsulated NOTIFY packet to the initiator.
+ * 
+ * Sends a UDP encapsulated NOTIFY packet with responder's IP address in a
+ * @c VIA_RVS parameter to the initiator located at @c i1_saddr.
  *
- * @param entry a pointer to the current host association database state.
+ * @param i1       a pointer to the I1 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param rva      a pointer to a rendezvous association matching the HIT of
+ *                 next hop.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error.
  */ 
-int hip_rvs_reply_with_notify(struct hip_common *i1, struct in6_addr *i1_saddr,
-			      HIP_RVA *rva, struct hip_stateless_info *i1_info)
+int hip_rvs_reply_with_notify(const struct hip_common *i1,
+			      const struct in6_addr *i1_saddr,
+			      const hip_rva_t *rva,
+			      const hip_portpair_t *i1_info)
 {
 	int err = 0; 
 	struct hip_common *notify_packet = NULL;
 	struct in6_addr responder_ip;
-	
+	HIP_DEBUG("hip_rvs_reply_with_notify() invoked.\n");
+
 	HIP_IFEL(!(notify_packet = hip_msg_alloc()), -ENOMEM,
 		 "No memory to create a NOTIFY packet.\n");	
 	
