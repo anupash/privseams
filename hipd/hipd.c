@@ -190,6 +190,10 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_firewall_sock, &read_fdset);
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
+
+		/*  XX FIXME: it is possible to have several FDs in
+		    SELECT open at the same time. Currently only one is
+		    handled and the rest are discarded. */
 		
 		_HIP_DEBUG("select loop\n");
 		/* wait for socket activity */
