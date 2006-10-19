@@ -3,6 +3,8 @@
                   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
 <book>
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
+  <!-- http://www.ibiblio.org/godoy/sgml/docbook/howto/writing-docbook.html -->
+  <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <title>HIPL User Manual</title>
   <chapter>
     <title>Warning</title>
@@ -17,7 +19,7 @@
     <para>
      It is recommended that you get the latest source and compile it yourself.
      As an alternative, you may download frozen, binary releases of the kernel
-     from http://hipl.hiit.fi/hipl/release/. However, before reporting any
+     from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
      because the bug may already have been resolved upstream. There is also a
      Knoppix based live cd available from the HIPL download pages.
@@ -212,7 +214,7 @@
       See "./configure --help" for a full list of options.
     </para>
   </chapter>
-  <chapter>
+  <chapter id="basictest">
     <title>Testing a HIP connection between two hosts</title>
     <para>
       HIPL developers test HIP using two machines called crash (3ffe::1) and
@@ -296,8 +298,8 @@
       &nbsp;tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
-      It is also possible to use DNS or OpenDHT for the mappings. See the
-      relevant sections from this document.
+      It is also possible to use DNS or OpenDHT (<xref linkend="opendht" />)
+      for the mappings.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -325,7 +327,7 @@
       "hipconf hip rst all" to close all SAs. 
      </para>
   </chapter>
-  <chapter>
+  <chapter id="handover">
     <title>Testing Handover</title>
     <para>
       The handover code is based on draft-nikander-hip-mm-00
@@ -339,8 +341,7 @@
       The example is based on IPv6 addresses but you can also use IPv4.
     </para>
     <para>
-      &nbsp;&lt;first, establish a HIP connection as intructed in the previous
-      section&gt;
+      &nbsp;&lt;first, establish a HIP connection as intructed in <xref linkend="basictest" />&gt;
       </para>
     <para>
       &nbsp;oops  # nc6 -l -p 12345
@@ -438,7 +439,7 @@
     </para>
     <para>
       You should have setup your networking environment as explained in
-      section "Testing a HIP Connection Between Two Hosts", that is, you
+      <xref linkend="basictest" />, that is, you
       should have configured your /etc/hosts and /etc/hip/hosts
       properly. However, hipd will automatically create your public keys,
       so you don't have to worry about them.
@@ -524,91 +525,93 @@
   </chapter>
   <chapter>
 
-    <title> How to Use HIP in Other C Based Applications?</title>
+    <title> How to Use HIP with Applications?</title>
 
     <para>You need to execute first "make install" in the top directory if
           you have not done it before. Otherwise you have to configure
           library paths using LD_LIBRARY_PATH environment variable.
     </para>
+    <para>There are several methods of using HIP in applications. We have
+          categorized the methods to "easy" and "advanced" here. 
+    </para>
+    <section>
+    <title>Easy Methods</title>
     <para>
-      Use one the following methods:
+    1. Use the opportunistic mode as described in
+       <xref linkend="opportunistic" />. This method works with both IPv4 and
+       IPv6 applications. It does not require HIT configuration at all.
     </para>
     <para>
-      1. Port it to use the native HIP API. See the telnet code for a
-      practical example. The API is documented in url:
-      http://hipl.hiit.fi/hipl/hip-native-api-final.pdf
+    a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
     </para>
     <para>
-      2. Relink the application to use the libinet6 library provided in the HIPL
-      software bundle. Then, use either of the following methods:
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
     </para>
     <para>
-      a) Set the AI_HIP flag in the getaddrinfo call. This will make the
-      getaddrinfo function to return only HITs in the place of IP addresses
-      (no IP addresses are returned). Also, the getaddrinfo function sends
-      the HIT-to-IP-address mapping to the kernel.
-      </para>
-    <para>
-      b) You are using the transparent mode in the resolver (see the
-      HIP_TRANSPARENT_API compilation flag in libinet6/Makefile.in). Only
-      relinking is required, no changes are needed in the application.
+      2. Override the resolver library dynamically:
     </para>
     <para>
-      3. Override the resolver library dynamically:
+      a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
     </para>
+      <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
+
     <para>
-      a. Give the binary as an argument to hipconf: "hipconf run normal &lt;EXECUTABLE&gt;"
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so</emphasis>
     </para>
+
     <para>
-      b. Override the getaddrinfo function from the command line:
-      http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
-    </para>
-    <para>
-	E.g. "env  LD_PRELOAD=libinet6.so:libhiptool.so firefox hipserver.infrahip.net"
-        Or add to .bash_profile LD_PRELOAD=libinet6.so:libhiptool.so
-    </para>
-    <para>If you have installed the library using make install, you should reference /usr/local/lib instead of your home directory.
-    </para>
-    <para>
-Make sure that libinet6 is compiled with 
-HIP_TRANSPARENT_API on in libinet6/Makefile.in
-CFLAGS += -DHIP_TRANSPARENT_API
-    </para>
-    <para>
-      Note! Methods two and three assume two prequisites! First, the
-      application must be IPv6-enabled in order to support HITs. Second, the 
-      application must really use the getaddrinfo interface because 
-      otherwise the getaddrinfo hack (i.e. sending HIT-to-IPv6 mapping 
-      to the HIP module) does not work.
-    </para>
-    <para>
-	Following applications use getaddrinfo on FC4: telnet, firefox, 
-lynx, ssh. Not 
-using getaddrinfo: ping, ping6, tla, svn.
-    </para>
-    <para>
-    4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add map HIT IP". This is the
-       quick-and-dirty method...
-    </para>
-    <para>
-    5. Use the opportunistic mode as described in section "opportunistic mode".
-    Remember that you need to link the application to libopphip, libinet6 and
-    libhiptool (in that particular order). Use /usr/lib prefix for the libs or
-    as follows (in case you did not make install):
-    </para>
-    <para>
-    a. hipconf run opp &lt;EXECUTABLE&gt;
-    </para>
-    <para>
-    b. export LD_PRELOAD=libopphip.so:libhiptool.so
-    </para>
-    <para>
-    6. Use HIP agent GUI to run the application. This is a new, not very well
-       tested feature, but it should work. You can execute applications
+    3. Use HIP agent GUI to run the application. You can execute applications
        with GUI and edit their library-path as you like. Also you should be
        able to see list of processes you have executed from GUI.
     </para>
+    <para>
+    4. You can also use HITs directly in the application. Insert the HIT of
+       the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
+       the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
+       do e.g. "ping6 PEER_HIT".
+    </para>
+
+    </section>
+    <section>
+    <title>Advanced Methods</title>
+    <para>These methods assume that you have the source code available
+          for the application and the application is IPv6 enabled. You have
+          to relink the application to use the HIP libraries and,
+          in some methods, to modify the source code.
+    </para>
+    <para>
+	Following applications are IPv6 enabled (and use getaddrinfo for name
+        resolution): telnet, firefox, lynx, ssh. Not using getaddrinfo: ping,
+        ping6, tla, svn.
+    </para>
+    <para>
+      5. Relink the application to use the libinet6 library provided in the
+      HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
+      add the corresponding address to /etc/hosts. Then, use either of the
+      following methods:
+    </para>
+    <para>
+      a) Run the application by using the hostname you just configured to
+         the hosts files. It will use HIP for those hostnames. For hostnames
+         that are not present in /etc/hip/hosts, the application will just
+         use normal IPv4 or IPv6 connectivity. Good for environments where
+         the are both HIP and non-HIP enabled hosts, and backwards
+         compatibility is more important that the security of the connections.
+    </para>
+    <para>
+      b) Set the AI_HIP flag in the getaddrinfo call and recompile the
+         application (see test/conntest.c). This will make the getaddrinfo
+         function to return <emphasis>only</emphasis> HITs in the place of IP
+         addresses (no IP addresses are returned). This option good for
+         security critical applications for which you want to force the
+         use of HIP.
+      </para>
+    <para>
+      c. Port it to use the native HIP API. See the telnet code for a
+      practical example. The API is documented in url:
+      <ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
+    </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
@@ -883,8 +886,8 @@ using getaddrinfo: ping, ping6, tla, svn.
               for verifying signatures in the packets. With
               --accept_mobile option, the firewall may establish state
               for existing connection when a mobile host enters the
-              network protected by the firewall. Please see the
-              corresponding section on mobility to see how mobility events
+              network protected by the firewall. Please see
+              <xref linkend="handover" /> to see how mobility events
               can be tested.</para>
 
         <para>If you get "No buffer space available" errors, please disable
@@ -1042,7 +1045,7 @@ using getaddrinfo: ping, ping6, tla, svn.
           kernel module.
      </para>
    </chapter>
-  <chapter>
+  <chapter id="opendht">
     <title>OpenDHT Support (Experimental!)</title>
     <para>
     &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
@@ -1060,16 +1063,16 @@ using getaddrinfo: ping, ping6, tla, svn.
         should work without additional actions.
     </para>
     <para> May need a change of contact OpenDHT server, currently 
-	running list is at http://www.opendht.org/servers.txt.
+	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
 	For documentation, please also check 
-        http://kom.aau.dk/group/05gr680/
+        <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
   </chapter>
 
   <chapter>
     <title>Hi3 Support (Experimental!)</title>
     <para>
-    &nbsp; unpack http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz in the top directory (hipl--main--2.6)
+    &nbsp; unpack <ulink url="http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz" /> in the top directory (hipl--main--2.6)
     </para>
     <para>
     &nbsp; make sure that the link "hipl--main--2.6/i3" points to
@@ -1081,11 +1084,11 @@ using getaddrinfo: ping, ping6, tla, svn.
     <para>
     &nbsp; Not tested for a long time. To work, needs to use some set of
 	i3 servers started locally from i3 distro or running on 
-        PlanetLab. See e.g. http://hipl.infrahip.net/i3_status.html or 
+        PlanetLab. See e.g. <ulink url="http://hipl.infrahip.net/i3_status.html or" /> 
 	http://rose.cs.berkeley.edu:8080/i3_status.html
     </para>
   </chapter>
-  <chapter>
+  <chapter id="opportunistic">
     <title>Using Opportunistic mode</title>
     <para>
     &nbsp; Opportunistic mode has two benefits. First, you don't have to know
@@ -1155,11 +1158,11 @@ using getaddrinfo: ping, ping6, tla, svn.
 	</para>
 	<para>
 		&nbsp; Another way to get showip-package, is to download it from:
-		http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi.
+		<ulink url="http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi" />.
 		After download, firefox should prompt you with installation instructions.
 	</para>
 	<para>
-		Original showip-package: https://addons.mozilla.org/firefox/590/
+		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
 	</para>
   </chapter>
 </book>    
