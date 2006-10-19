@@ -240,6 +240,7 @@
  * handling should be done in respective handle-function.
  * 
  * @defgroup receive_functions HIP receive functions
+ * @see      handle_functions
  */
 
 /** 
@@ -249,6 +250,7 @@
  * called from the corresponding receive functions. 
  * 
  * @defgroup handle_functions HIP handle functions
+ * @see      receive_functions
  */
 
 #endif /* _DOXYGEN_H */

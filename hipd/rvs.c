@@ -492,8 +492,8 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 	   cases the incoming I1 has no paramaters at all, and this "while" loop
 	   is skipped. Multiple rvses en route to responder is one (and only?)
 	   case when the incoming I1 packet has parameters. */
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL)
-	{
+	while ((current_param = hip_get_next_param(i1, current_param)) != NULL){
+		
 		HIP_DEBUG("Found parameter in I1.\n");
 		/* Copy while type is smaller than or equal to FROM (FROM_NAT)
 		   or a new FROM (FROM_NAT) has already been added. */

@@ -539,17 +539,16 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-	_HIP_HEXDUMP("dumping packet", msg,  40);
 	/** @todo Check packet csum.*/
-
+	
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
-	    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
-						   msg_info);
+		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
+						       msg_info);
 #endif
 
         if (entry) {
@@ -572,82 +571,63 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_I1:
 		/* No state. */
 	  err = ((hip_rcv_func_set_t *)
-		 hip_get_rcv_default_func_set())->hip_receive_i1(msg,
-								 src_addr,
-								 dst_addr,
-								 entry,
-								 msg_info);
+		 hip_get_rcv_default_func_set())->
+		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
 	  break;
 		
 	case HIP_I2:
 		/* Possibly state. */
-		HIP_DEBUG("\n-- RECEIVED I2. State: %d--\n");
+		HIP_DEBUG("\n-- Received I2. --\n");
 		if(entry){
 			err = entry->hadb_rcv_func->
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
 					       msg_info);
 		} else {
 			err = ((hip_rcv_func_set_t *)
-			   hip_get_rcv_default_func_set())->hip_receive_i2(msg,
-								     src_addr,
-								     dst_addr,
-								     entry,
-								     msg_info);
+			       hip_get_rcv_default_func_set())->
+				hip_receive_i2(msg, src_addr, dst_addr, entry,
+					       msg_info);
 		}
 		break;
 		
 	case HIP_R1:
 	  	/* State. */
-	  	HIP_DEBUG("\n-- RECEIVED R1. State: %d--\n");
+	  	HIP_DEBUG("\n-- Received R1. --\n");
 		HIP_ASSERT(entry);
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_r1(msg,
-			 				src_addr,
-							dst_addr,
-							entry,
-							msg_info))
-			
-			break;
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_r1(msg, src_addr, dst_addr, entry,
+					msg_info));
+		break;
 		
 	case HIP_R2:
-		HIP_DEBUG("\n-- RECEIVED R2. State: %d--\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_r2(msg,
-			 				src_addr,
-							dst_addr,
-							entry,
-							msg_info))
+		HIP_DEBUG("\n-- Received R2. --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_r2(msg, src_addr, dst_addr, entry,
+					msg_info));
 		HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
 		
 	case HIP_UPDATE:
-		HIP_DEBUG("\n-- RECEIVED Update message. State: %d--\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_update(msg,
-			 				src_addr,
-							dst_addr,
-							entry,
-							msg_info))
+		HIP_DEBUG("\n-- Received UPDATE message. --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_update(msg, src_addr, dst_addr, entry,
+					    msg_info));
 		break;
 		
 	case HIP_NOTIFY:
-		HIP_DEBUG("\n-- RECEIVED Notify message --\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->
-			 hip_receive_notify(msg, src_addr, dst_addr, entry))
+		HIP_DEBUG("\n-- Received NOTIFY message --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_notify(msg, src_addr, dst_addr, entry));
 		break;
 		
 	case HIP_BOS:
-		HIP_DEBUG("\n-- RECEIVED BOS message --\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_bos(msg,
-							src_addr,
-							dst_addr,
-							entry,
-							msg_info))
+		HIP_DEBUG("\n-- Received BOS message --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_bos(msg, src_addr, dst_addr, entry,
+					 msg_info));
 		/*In case of BOS the msg->hitr is null, therefore it is replaced
 		  with our own HIT, so that the beet state can also be
-		  synchronized */
+		  synchronized. */
 		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
 		hip_init_us(&tmp, NULL);
 		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
@@ -655,25 +635,22 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_CLOSE:
-		HIP_DEBUG("\n-- RECEIVED CLOSE message --\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_close(msg,
-							entry))
+		HIP_DEBUG("\n-- Received CLOSE message --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_close(msg, entry));
 		break;
 		
 	case HIP_CLOSE_ACK:
-		HIP_DEBUG("\n-- RECEIVED CLOSE_ACK message --\n");
-		HIP_IFCS(entry,
-			 err = entry->hadb_rcv_func->hip_receive_close_ack(
-							msg,
-							entry))
+		HIP_DEBUG("\n-- Received CLOSE_ACK message --\n");
+		HIP_IFCS(entry, err = entry->hadb_rcv_func->
+			 hip_receive_close_ack(msg, entry));
 		break;
 		
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
 	}
-
+	
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
 	
 	if (err)
@@ -2205,10 +2182,8 @@ int hip_handle_r2(struct hip_common *r2,
  *                 present in the incoming I1 packet, only the first of a kind
  *                 is parsed.
  */
-int hip_handle_i1(struct hip_common *i1,
-		  struct in6_addr *i1_saddr,
-		  struct in6_addr *i1_daddr,
-		  hip_ha_t *entry,
+int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
+		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
 	int err = 0, is_via_rvs_nat = 0;
@@ -2407,7 +2382,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		state = HIP_STATE_NONE;
 	}
 
-	HIP_DEBUG("HIP_LOCK_HA ?\n");
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 
 	switch(state) {
@@ -2435,7 +2409,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
 	}
 
-	HIP_DEBUG("HIP_UNLOCK_HA ?\n");
  out_err:
 	return err;
 }
@@ -2503,7 +2476,6 @@ int hip_receive_r2(struct hip_common *hip_common,
 	return err;
 }
 
-
 /**
  * Determines the action to be executed for an incoming NOTIFY packet.
  *
@@ -2539,13 +2511,8 @@ int hip_receive_notify(const struct hip_common *notify,
 	HIP_IFEL(!hip_controls_sane(notify_controls, mask), -EPROTO, 
 		 "Received a NOTIFY packet with illegal controls: 0x%x, ignoring "\
 		 "the packet.\n", notify_controls);
-	
-	notify_param = hip_get_param(notify, HIP_PARAM_NOTIFY);
-	
-	if (notify_param) {
-		HIP_DEBUG("NOTIFY parameter:\n");
-		HIP_DEBUG(" msgtype=%u\n", ntohs(notify_param->msgtype));
-	}
+
+	err = hip_handle_notify(notify, notify_saddr, notify_daddr, entry);
 
  out_err:
 	if (entry)
@@ -2554,12 +2521,49 @@ int hip_receive_notify(const struct hip_common *notify,
 	return err;
 }
 
+/**
+ * Handles an incoming NOTIFY packet.
+ *
+ * Handles an incoming NOTIFY packet and parses @c NOTIFY parameters and
+ * @c VIA_RVS parameter from the packet.
+ * 
+ * @param notify       a pointer to the received NOTIFY HIP packet common header
+ *                     with source and destination HITs.
+ * @param notify_saddr a pointer to the source address from where the NOTIFY
+ *                     packet was received.
+ * @param notify_daddr a pointer to the destination address where to the NOTIFY
+ *                     packet was sent to (own address).
+ * @param entry        a pointer to the current host association database state.
+ */
 int hip_handle_notify(const struct hip_common *notify,
 		      const struct in6_addr *notify_saddr,
 		      const struct in6_addr *notify_daddr,
 		      hip_ha_t* entry)
 {
 	int err = 0;
+	struct hip_tlv_common *current_param = NULL;
+	hip_tlv_type_t param_type = 0;
+
+	HIP_DEBUG("hip_receive_notify() invoked.\n");
+	
+	/* Loop through all the parameters in the received I1 packet. */
+	while ((current_param = 
+		hip_get_next_param(notify, current_param)) != NULL) {
+		
+		param_type = hip_get_param_type(current_param);
+		
+		if (param_type == HIP_PARAM_NOTIFY) {
+			HIP_DEBUG("Found NOTIFY parameter in NOTIFY packet.\n");
+		}
+		else if(param_type == HIP_PARAM_VIA_RVS) {
+			HIP_DEBUG("Found VIA_RVS parameter in NOTIFY packet.\n");
+		}
+		else {
+			HIP_DEBUG("Found unsupported parameter in NOTIFY "\
+				  "packet.\n");
+		}
+	}
+	
 	return err;
 }
 
