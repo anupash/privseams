@@ -27,7 +27,7 @@ gpointer run_control_thread(gpointer data)
 	fd_set read_fdset;
 	struct timeval tv;
 
-	HIP_DEBUG("Waiting messages...\n");
+	HIP_DEBUG("Waiting messages...\n\n");
 
 	/* Start handling. */
 	control_thread_started = 1;
@@ -50,7 +50,7 @@ gpointer run_control_thread(gpointer data)
 		}
 		else if (FD_ISSET(hip_firewall_sock, &read_fdset))
 		{
-			HIP_DEBUG("****** Received HIPD packet ******\n");
+			HIP_DEBUG("****** Received HIPD message ******\n");
 			bzero(&sock_addr, sizeof(sock_addr));
 			alen = sizeof(sock_addr);
 			n = recvfrom(hip_firewall_sock, msg, sizeof(struct hip_common), MSG_PEEK,
@@ -62,11 +62,11 @@ gpointer run_control_thread(gpointer data)
 				goto out_err;
 			}
 
-			HIP_DEBUG("Header received successfully\n");
+			_HIP_DEBUG("Header received successfully\n");
 			alen = sizeof(sock_addr);
 			len = hip_get_msg_total_len(msg);
 
-			HIP_DEBUG("Receiving message (%d bytes)\n", len);
+			_HIP_DEBUG("Receiving message (%d bytes)\n", len);
 			n = recvfrom(hip_firewall_sock, msg, len, 0,
 		             (struct sockaddr *)&sock_addr, &alen);
 
@@ -115,7 +115,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 	int err = 0;
 	
 
-	HIP_DEBUG("Handling message from hipd\n");
+	_HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
 	
 	if (type == HIP_ADD_ESCROW_DATA)
@@ -124,15 +124,12 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 		struct in6_addr * hit_s = NULL;
 		struct in6_addr * hit_r = NULL;
 		
-		HIP_DEBUG("Message received successfully from daemon with type" 
-			" SO_HIP_ADD_ESCROW_DATA (%d).\n", type);
-
 		while((param = hip_get_next_param(msg, param)))
 		{
 			
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
-				HIP_DEBUG("Handling HIP_PARAM_HIT\n");
+				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
 				if (!hit_s)
 					hit_s = hip_get_param_contents_direct(param);
 				else 
@@ -140,7 +137,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 			}
 			if (hip_get_param_type(param) == HIP_PARAM_KEYS)
 			{
-				HIP_DEBUG("Handling HIP_PARAM_KEYS\n");	
+				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");	
 				int alg;
 				int auth_len;
 				int key_len;
@@ -172,15 +169,46 @@ int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
 		     		HIP_ERROR("Adding esp decryption data failed");
 		     		goto out_err;
 		     	}
-				HIP_DEBUG("Successfully added esp decryption data\n");	
+				_HIP_DEBUG("Successfully added esp decryption data\n");	
 			}
 		}
 	}
 	else if (type == HIP_DELETE_ESCROW_DATA) {
-		//TODO
-                HIP_DEBUG("Received delete message from hipd\n");
+                HIP_DEBUG("Received delete message from hipd\n\n");
+                struct in6_addr * addr = NULL;
+                uint32_t * spi = NULL;
+                
+                while((param = hip_get_next_param(msg, param)))
+                {
+                        
+                        if (hip_get_param_type(param) == HIP_PARAM_HIT)
+                        {
+                                HIP_DEBUG("Handling HIP_PARAM_HIT\n");
+                                addr = hip_get_param_contents_direct(param);
+                        }
+                        if (hip_get_param_type(param) == HIP_PARAM_UINT)
+                        {
+                                HIP_DEBUG("Handling HIP_PARAM_UINT\n");
+                                spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
+                        }
+                }
+                if ((addr != NULL) && (spi != NULL)) {
+                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
+                                "Error while removing decryption data\n");
+                }
+                
 	}
-	return err;
+        else if (type == HIP_SET_ESCROW_ACTIVE) {
+                HIP_DEBUG("Received activate escrow message from hipd\n\n");
+                set_escrow_active(1);
+                
+        }
+        else if (type == HIP_SET_ESCROW_INACTIVE) {
+                HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
+                set_escrow_active(0);
+        }
+        
+        
 	
 out_err:	
 	return err;

@@ -805,17 +805,25 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	int err = 0;
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"service\".\n");
 	HIP_IFEL((optc < 1), -1, "Missing arguments\n");
 	HIP_IFEL((optc > 1), -1, "Too many arguments\n");
 	
 	if (strcmp(opt[0], "escrow") == 0) {
-		HIP_INFO("Adding escrow service.\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-			 "build hdr failed\n");
+                if (action == ACTION_ADD) { 
+                        HIP_INFO("Adding escrow service.\n");
+                        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
+			     "build hdr failed\n");
+                }
+                else if (action == ACTION_DEL) {
+                        HIP_INFO("Deleting escrow service.\n");
+                        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CANCEL_ESCROW, 0), -1,
+                             "build hdr failed\n");
+                }
 	}
 	else if (strcmp(opt[0], "rvs") == 0) {
+                HIP_IFEL((action != ACTION_ADD), -1,
+                 "Only action \"add\" is supported for rendezvous service.\n");
+                
 		HIP_INFO("Adding rvs service.\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
 			 "build hdr failed\n");

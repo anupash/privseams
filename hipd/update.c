@@ -1308,7 +1308,7 @@ out_err:
 	return err;
 }
 
-int hip_handle_reg_request(hip_ha_t * entry, 
+int hip_create_reg_response(hip_ha_t * entry, 
         struct hip_tlv_common * reg, uint8_t *requests, 
         int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
@@ -1316,9 +1316,12 @@ int hip_handle_reg_request(hip_ha_t * entry,
         uint16_t mask = 0;
         struct hip_common *update_packet = NULL;
         uint32_t update_id_out = 0;
-        struct hip_reg_request *reg_request = (struct hip_reg_request *)reg;
+        struct hip_reg_request *reg_request = NULL;
         
-        HIP_DEBUG("Received registration message from client\n");
+        if (reg != NULL) {
+                reg_request = (struct hip_reg_request *)reg;
+                HIP_DEBUG("Received registration message from client\n");
+        }
         
         /* Reply with UPDATE-packet containing the response */
         
@@ -1341,9 +1344,10 @@ int hip_handle_reg_request(hip_ha_t * entry,
             
         /********** ACK **********/  
         /* Piggyback ACK of the received message */
-        HIP_IFEL(hip_build_param_ack(update_packet, entry->update_id_in), -1,
-                 "Building of ACK failed\n");
-         
+        if (reg_request) {
+                HIP_IFEL(hip_build_param_ack(update_packet, entry->update_id_in), -1,
+                        "Building of ACK failed\n");
+        }
         /********** REG_RESPONSE/REG_FAILED **********/        
         /* Check service requests and build reg_response and/or reg_failed */
         hip_handle_registration_attempt(entry, update_packet, reg_request, 
@@ -1361,7 +1365,7 @@ int hip_handle_reg_request(hip_ha_t * entry,
 
         /********** Send UPDATE **********/
         HIP_DEBUG("Sending UPDATE packet with registration response\n");
-        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip, 0, 0,
+        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip, dst_ip, 0, 0,
                 update_packet, entry, 1), -1, "csum_send failed\n");
 out_err: 
         return err;
@@ -1761,8 +1765,8 @@ int hip_receive_update(struct hip_common *msg,
                 int type_count;
                 types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_REQUEST));
                 type_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
-                HIP_IFEL(hip_handle_reg_request(entry, reg_request, 
-                        (uint8_t *)(types + 1), type_count, src_ip, dst_ip), -1,
+                HIP_IFEL(hip_create_reg_response(entry, reg_request, 
+                        (uint8_t *)(types + 1), type_count, dst_ip, src_ip), -1,
                         "Error handling reg_request\n");
                 
         }

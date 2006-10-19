@@ -15,6 +15,7 @@
 
 struct ipq_handle *h = NULL;
 int statefulFiltering = 1; 
+int escrow_active = 0;
 
 
 //currently done at all times, rule_management 
@@ -27,6 +28,53 @@ void set_stateful_filtering(int v)
 int get_stateful_filtering()
 {
   return statefulFiltering;
+}
+
+void set_escrow_active(int active)
+{
+        escrow_active = active;
+}
+
+int is_escrow_active()
+{
+        return escrow_active;
+}
+
+/*----------------INIT/EXIT FUNCTIONS----------------------*/
+
+int firewall_init()
+{
+        HIP_DEBUG("Initializing firewall\n");
+        /* Register signal handlers */
+        signal(SIGINT, firewall_close);
+        signal(SIGTERM, firewall_close);
+        system("ip6tables -I FORWARD -p 253 -j QUEUE");
+        system("ip6tables -I FORWARD -p 50 -j QUEUE");
+        system("ip6tables -I INPUT -p 253 -j QUEUE");
+        system("ip6tables -I INPUT -p 50 -j QUEUE");
+        system("ip6tables -I OUTPUT -p 253 -j QUEUE");
+        system("ip6tables -I OUTPUT -p 50 -j QUEUE");
+        
+        return 0;
+}
+
+void firewall_close(int signal)
+{
+        HIP_DEBUG("Closing firewall...\n");
+        firewall_exit();
+        exit(signal);
+}
+
+void firewall_exit()
+{
+        //TODO: uninit 
+        HIP_DEBUG("Firewall exit\n");
+        system("ip6tables -D FORWARD -p 253 -j QUEUE");
+        system("ip6tables -D FORWARD -p 50 -j QUEUE");
+        system("ip6tables -D INPUT -p 253 -j QUEUE");
+        system("ip6tables -D INPUT -p 50 -j QUEUE");
+        system("ip6tables -D OUTPUT -p 253 -j QUEUE");
+        system("ip6tables -D OUTPUT -p 50 -j QUEUE");
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
@@ -52,14 +100,14 @@ int match_hi(struct hip_host_id * hi,
   
   if(packet->type_hdr == HIP_I1)
     {
-      HIP_DEBUG("match_hi: I1\n");
+      _HIP_DEBUG("match_hi: I1\n");
     return 1;
     }
   value = verify_packet_signature(hi, packet);
   if(value == 0)
-    HIP_DEBUG("match_hi: verify ok\n");
+    _HIP_DEBUG("match_hi: verify ok\n");
   else
-    HIP_DEBUG("match_hi: verify failed\n");
+    _HIP_DEBUG("match_hi: verify failed\n");
   if(value == 0)
     return 1;
   return 0;
@@ -88,7 +136,7 @@ static void die(struct ipq_handle *h)
   HIP_DEBUG("dying\n");
   ipq_perror("passer");
   ipq_destroy_handle(h);
-  exit(1);
+  firewall_close(1);
 }
 
 int is_hip_packet(const struct ip6_hdr * ip6_hdr)
@@ -123,14 +171,16 @@ int filter_esp(const struct in6_addr * dst_addr,
   int ret_val = 0;
   uint32_t spi = esp->esp_data->esp_spi;	
 
-  HIP_DEBUG("filter_esp:\n");
+  _HIP_DEBUG("filter_esp:\n");
   while (list != NULL)
     {
       match = 1;
       rule = (struct rule *) list->data;
       _HIP_DEBUG("   filter_esp: checking for:\n");     
-      print_rule(rule);
-
+      //print_rule(rule);
+       HIP_DEBUG_HIT("dst addr: ", dst_addr);
+       HIP_DEBUG("SPI: %d\n", ntohl(spi)); 
+        
       //type not valid with ESP packets
       if(rule->type)
 	  {
@@ -186,7 +236,7 @@ int filter_esp(const struct in6_addr * dst_addr,
   //was there a rule matching the packet
   if(rule && match)
     {
-      HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
+      _HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
       ret_val = rule->accept; 
     }
   else
@@ -217,17 +267,31 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
   //if dynamically changing rules possible 
   //int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
   //+ filter_state käsittelemään myös esp paketit
-  HIP_DEBUG("filter_hip: \n");
+  _HIP_DEBUG("filter_hip: \n");
   while (list != NULL)
     {
       match = 1;
       rule = (struct rule *) list->data;
-      HIP_DEBUG("   filter_hip: checking for \n");     
-      print_rule(rule);
+      _HIP_DEBUG("   filter_hip: checking for \n");     
+      //print_rule(rule);
+        if (buf->type_hdr == HIP_I1)
+                HIP_DEBUG("packet type: I1\n");
+        else if (buf->type_hdr == HIP_R1)
+                HIP_DEBUG("packet type: R1\n");
+        else if (buf->type_hdr == HIP_I2)
+                HIP_DEBUG("packet type: I2\n");
+        else if (buf->type_hdr == HIP_R2)
+                HIP_DEBUG("packet type: R2\n");
+        else if (buf->type_hdr == HIP_UPDATE)
+                HIP_DEBUG("packet type: UPDATE\n");
+
+                          
+        HIP_DEBUG_HIT("src hit: ", &buf->hits);
+        HIP_DEBUG_HIT("dst hit: ", &buf->hitr);
 
       if(match && rule->src_hit)
 	  {
-	    HIP_DEBUG("filter_hip: src_hit ");
+	    _HIP_DEBUG("filter_hip: src_hit ");
 	    if(!match_hit(rule->src_hit->value, 
 			  buf->hits, 
 			  rule->src_hit->boolean))
@@ -235,14 +299,14 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	    //if HIT has matched and HI defined, verify signature 
 	    if(match && rule->src_hi)
 	      {
-		HIP_DEBUG("filter_hip: src_hi \n");
+		_HIP_DEBUG("filter_hip: src_hi \n");
 		if(!match_hi(rule->src_hi, buf))
 		  match = 0;	
 	      }
 	  }
       if(match && rule->dst_hit)
 	  {
-	    HIP_DEBUG("filter_hip: dst_hit \n");
+	    _HIP_DEBUG("filter_hip: dst_hit \n");
 	    if(!match_hit(rule->dst_hit->value, 
 			  buf->hitr, 
 			  rule->dst_hit->boolean))
@@ -250,12 +314,12 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	  }
       if(match && rule->type)
 	  {
-	    HIP_DEBUG("filter_hip: type ");
+	    _HIP_DEBUG("filter_hip: type ");
 	    if(!match_int(rule->type->value, 
 			  buf->type_hdr, 
 			  rule->type->boolean))
 	      match = 0;	
-	    HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
+	    _HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
 		      rule->type->value, 
 		      buf->type_hdr,
 		      rule->type->boolean,
@@ -266,7 +330,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	  {
 	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->in_if->value, 
 		      in_if, rule->in_if->boolean, match);
 	  }
@@ -276,7 +340,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 			     out_if, 
 			     rule->out_if->boolean))
 	      match = 0;
-	    HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+	    _HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 		      rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  }
 	
@@ -287,14 +351,14 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
 	      match = 0;
 	    else
 	      conntracked = 1;
-	    HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
+	    _HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
 		      rule->state->int_opt.value,
 		      rule->state->int_opt.boolean, 
 		      match);
 	  }
 	// if a match, no need to check further rules
 	if(match){
-	  HIP_DEBUG("filter_hip: match found\n");
+	  _HIP_DEBUG("filter_hip: match found\n");
 	  break;
  	}
       list = list->next;
@@ -302,7 +366,7 @@ int filter_hip(const struct ip6_hdr * ip6_hdr,
   //was there a rule matching the packet
   if(rule && match)
     {
-      HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
+      _HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
       ret_val = rule->accept; 
     }
   else
@@ -333,6 +397,7 @@ int main(int argc, char **argv)
   struct hip_common * hip_common = NULL;
   struct hip_esp * esp_data = NULL;
  struct hip_esp_packet * esp = NULL;
+  int escrow_active = 0;
   
   if(argc != 3)
     {
@@ -359,7 +424,8 @@ int main(int argc, char **argv)
   if (status < 0)
     die(h);
 
-
+        firewall_init();
+        
 #ifdef G_THREADS_IMPL_POSIX
       HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
 #endif //G_THREADS_IMPL_POSIX
@@ -373,7 +439,7 @@ int main(int argc, char **argv)
       g_thread_init(NULL);
   
   init_timeout_checking(timeout);
-  control_thread_init();	
+  control_thread_init();
 
   do{
     status = ipq_read(h, buf, BUFSIZE, 0);
@@ -397,12 +463,12 @@ int main(int argc, char **argv)
 	int packet_length = 0;
 	if (m->data_len <= (BUFSIZE - sizeof(struct ip6_hdr))){
 	  	packet_length = m->data_len - sizeof (struct ip6_hdr); 	
-	  	HIP_DEBUG("HIP packet size smaller than buffer size\n");
+	  	_HIP_DEBUG("HIP packet size smaller than buffer size\n");
 	  }
 	  else { 
 	  	packet_length = BUFSIZE - sizeof(struct ip6_hdr);	
 	 
-	  	HIP_DEBUG("HIP packet size greater than buffer size\n");
+	  	_HIP_DEBUG("HIP packet size greater than buffer size\n");
 	  }
 	hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
 	/*hip_common = (struct hip_common*) (m->payload + 
@@ -424,13 +490,13 @@ int main(int argc, char **argv)
 	  {
 	    status = ipq_set_verdict(h, m->packet_id,
 				     NF_ACCEPT, 0, NULL);
-	    HIP_DEBUG("packet accepted\n");
+	    HIP_DEBUG("Packet accepted\n\n");
 	  }
 	else
 	  {
 	    status = ipq_set_verdict(h, m->packet_id,
 				     NF_DROP, 0, NULL);
-	    HIP_DEBUG("packet dropped\n");
+	    HIP_DEBUG("Packet dropped\n\n");
 	  }
       } 
       else if (is_esp_packet(ip6_hdr))
@@ -473,13 +539,13 @@ int main(int argc, char **argv)
 	    {
 	      status = ipq_set_verdict(h, m->packet_id,
 				       NF_ACCEPT, 0, NULL);
-	      HIP_DEBUG("esp packet accepted \n"); 
+	      HIP_DEBUG("ESP packet accepted \n\n"); 
 	    }
 	  else
 	    {
 	      status = ipq_set_verdict(h, m->packet_id,
 				       NF_DROP, 0, NULL);
-	      HIP_DEBUG("esp packet dropped \n"); 
+	      HIP_DEBUG("ESP packet dropped \n\n"); 
 	    }
 	    if (esp) {
 	    	if (esp_data) {
@@ -493,7 +559,7 @@ int main(int argc, char **argv)
 	HIP_DEBUG("****** Received Unknown packet ******\n");
       	status = ipq_set_verdict(h, m->packet_id,
 				 NF_DROP, 0, NULL);
-	HIP_DEBUG("packet dropped \n");	
+	HIP_DEBUG("Packet dropped \n\n");	
       }
       if (status < 0)
 	die(h);
@@ -517,5 +583,6 @@ out_err:
 	    free(esp);
 	}
   ipq_destroy_handle(h);
+  firewall_exit();
   return 0;
 }

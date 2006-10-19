@@ -51,6 +51,10 @@
 #define HIP_ADD_ESCROW_DATA			83
 /** Daemon tells firewall to remove escrow data with this message. */
 #define HIP_DELETE_ESCROW_DATA		        84
+/** Daemon tells firewall that escrow is active with this message. */
+#define HIP_SET_ESCROW_ACTIVE                   85
+/** Daemon tells firewall that escrow is inactive with this message. */
+#define HIP_SET_ESCROW_INACTIVE                 86
 
 /**
  * Daemon should send this message to other processes, when quiting.

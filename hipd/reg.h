@@ -35,6 +35,10 @@ struct hip_reg_service {
 	// TODO: add local hit
 	int (*handle_registration)(struct in6_addr *hit);
         int (*cancel_registration)(struct in6_addr *hit);
+        
+        /* Cancel the service offer. This function is called when the service 
+         * is removed so all data related to that service should be freed */
+        int (*cancel_service)(void);
 };
 
 typedef struct hip_reg_service HIP_SERVICE;
@@ -73,6 +77,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 
 int hip_handle_registration(struct in6_addr *hit);
 int hip_cancel_registration(struct in6_addr *hit);
+int hip_cancel_service(void);
+
 /***/
 
 uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime);

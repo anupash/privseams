@@ -532,3 +532,30 @@ out_err:
         return err;        
 }
 
+
+int hip_firewall_set_escrow_active(int activate)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending activate msg to firewall (value=%d)\n", activate);                        
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, 
+                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                -1, "Build hdr failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0) {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else {
+                HIP_DEBUG("Sendto firewall OK.\n");
+        }  
+out_err:
+        return err;        
+}
+

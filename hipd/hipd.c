@@ -394,6 +394,13 @@ int main(int argc, char *argv[]) {
 					}
 					hip_firewall_status = 1;
 				}
+                                
+                                if (hip_services_is_active(HIP_ESCROW_SERVICE))
+                                        HIP_DEBUG("Escrow service is now active.\n");
+                
+                                if (hip_firewall_is_alive()) {
+                                        hip_firewall_set_escrow_active(1);
+                                }
 			}
 			else if (msg_type == HIP_FIREWALL_QUIT)
 			{

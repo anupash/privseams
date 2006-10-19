@@ -65,6 +65,7 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
                 service->cancel_registration = hip_cancel_escrow_registration;
+                service->cancel_service = hip_cancel_escrow_service;
 		
 	} else if (service_type == HIP_RENDEZVOUS_SERVICE) {
 		service->service_type = HIP_RENDEZVOUS_SERVICE;
@@ -72,6 +73,7 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
                 service->cancel_registration = hip_cancel_registration;
+                service->cancel_service = hip_cancel_service;
 	} else {
 		HIP_ERROR("Unknown service type.\n");
 		err = -1;
@@ -116,6 +118,8 @@ int hip_services_remove(int service)
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
 			HIP_DEBUG("Removing service %d.\n", service);
+                        
+                        s->cancel_service();
 			list_del(&s->list);
 			HIP_FREE(s);
 		}
@@ -246,9 +250,17 @@ int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg,
         uint8_t lifetime;
                 
         HIP_DEBUG("handle_registration_attempt\n");    
-               
+        
+        /* If reg_request parameter is NULL, the server itself is cancelling registration 
+         * -> send reg_response with zero lifetime */
+        if (!reg_request) {
+                lifetime = 0;
+                HIP_DEBUG("Building REG_RESPONSE parameter.\n");
+                HIP_IFEL(hip_build_param_reg_request(msg, lifetime, requests, 
+                        request_count, 0), -1, "Building of REG_RESPONSE failed\n");
+        }
         /* Check if this is a cancel message (lifetime=0) */
-        if (reg_request->lifetime == 0) {
+        else if (reg_request->lifetime == 0) {
                 int i = 0;
                 int accept_count = 0;
                 HIP_SERVICE *s;
@@ -324,6 +336,13 @@ int hip_handle_registration(struct in6_addr *hit)
 // Default func
 int hip_cancel_registration(struct in6_addr *hit) 
 {
+        return 0;
+}
+
+// Default func
+int hip_cancel_service(void)
+{
+        // TODO: notify registered clients (REG_RESPONSE with zero lifetime) 
         return 0;
 }
 
@@ -454,10 +473,18 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
                         }     
                 }       
         }
-        else if (rresp && (rresp->lifetime != 0)) {
+        else if (rresp && (rresp->lifetime == 0)) {
                 /* Server is cancelling registration or responding to cancellation
                  */
+                 // TODO: tell the user!
+                HIP_KEA *kea;
                 HIP_DEBUG("Received cancel-registration message from server\n");
+                HIP_DEBUG("REGISTRATION TO ESCROW SERVICE CANCELLED!\n");
+                HIP_IFEL(hip_remove_escrow_data(entry, NULL), 0, "for_each_hi err.\n");       
+                HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
+                HIP_DEBUG("Found kea base entry");
+                hip_keadb_remove_entry(kea);
+                hip_keadb_put_entry(kea); 
         }
                 
         /* Checking REG_FAILED */

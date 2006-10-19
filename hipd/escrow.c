@@ -447,10 +447,14 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		// set state if needed
 	}
 	
-        if (ipv6_addr_cmp(&kea->hit, &kea_ep->hit))
+        if (ipv6_addr_cmp(&kea->hit, &kea_ep->hit)) {
+                HIP_DEBUG("This is client endpoint\n");
                 kea->client_end = kea_ep;
-        else
+        }
+        else {
+                HIP_DEBUG("This is peer endpoint\n");
                 kea->peer_end = kea_ep;
+        }
         
  out_err:
 	return err;
@@ -743,6 +747,7 @@ int hip_cancel_escrow_registration(struct in6_addr *hit)
         peer_end = kea->peer_end;
         
         if (client_end != NULL) {
+                HIP_DEBUG("Client end\n");
                 if (hip_firewall_is_alive()) {
                         HIP_DEBUG("Firewall alive!\n");
                         if (hip_firewall_remove_escrow_data(&client_end->ip, client_end->spi))
@@ -752,6 +757,7 @@ int hip_cancel_escrow_registration(struct in6_addr *hit)
                 kea->client_end = NULL;
         }
         if (peer_end != NULL) {
+                HIP_DEBUG("Peer end\n");
                 if (hip_firewall_is_alive()) {
                         HIP_DEBUG("Firewall alive!\n");
                         if (hip_firewall_remove_escrow_data(&peer_end->ip, peer_end->spi))
@@ -770,3 +776,37 @@ out_err:
         return err;
 }
 
+
+int hip_cancel_escrow_service(void)
+{
+        // - notify all registered clients with REG_RESPONSE
+        // - free all kea and kea_ep data
+        int err = 0;
+        HIP_KEA *kea, *tmp;
+        hip_ha_t *entry;
+        struct in6_addr saddr = { 0 }, daddr = { 0 };
+        uint8_t services[1] = { HIP_ESCROW_SERVICE };
+        int i = 0;
+        
+        // Send update to all registered clients
+        for (i = 0; i < HIP_KEA_SIZE; i++) {
+        
+                list_for_each_entry_safe(kea, tmp, &keadb[i], list_hit) {
+                        hip_keadb_hold_entry(kea);
+                        //HIP_DEBUG_HIT("Sending cancel to client\n", kea->hit);
+                        HIP_DEBUG("Sending cancel to client\n");
+                        HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(&kea->hit)), 
+                                -1, "Could not find client entry\n");
+                        hip_hadb_get_peer_addr(entry, &daddr);
+                        memcpy(&saddr, &entry->local_address, sizeof(saddr));
+                        hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr);
+                        hip_keadb_put_entry(kea);
+                        hip_cancel_escrow_registration(&entry->hit_peer);
+                }
+        }
+        hip_uninit_kea_endpoints();
+        hip_uninit_keadb();
+       
+out_err:       
+        return err;
+}

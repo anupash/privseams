@@ -801,18 +801,17 @@ using getaddrinfo: ping, ping6, tla, svn.
         <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
-              queued in the user-space.  These rules must be inserted
-              so that they precede any other firewall rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50).
-              If ESP packet filtering is not necessary the ip6tables
-              rules concerning ESP packets can be left out.</para>
+              queued in the user-space.  These rules are inserted
+              automatically at the head of each chain. Other rules that might
+              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              inserted before them.</para>
 
-        <para>ip6tables -A FORWARD -p 253 -j QUEUE</para>
-        <para>ip6tables -A FORWARD -p 50 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 253 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 253 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
+        <para>ip6tables -I FORWARD -p 253 -j QUEUE</para>
+        <para>ip6tables -I FORWARD -p 50 -j QUEUE</para>
+        <para>ip6tables -I INPUT -p 253 -j QUEUE</para>
+        <para>ip6tables -I INPUT -p 50 -j QUEUE</para>
+        <para>ip6tables -I OUTPUT -p 253 -j QUEUE</para>
+        <para>ip6tables -I OUTPUT -p 50 -j QUEUE</para>
 
         <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
               to one, if you want your firewall to forward IPv6 traffic.

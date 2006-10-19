@@ -723,7 +723,7 @@ struct rule * parse_rule(char * string)
   char * token;
   int option_found = NO_OPTION;
   
-  HIP_DEBUG("parse rule string: %s\n", string);
+  _HIP_DEBUG("parse rule string: %s\n", string);
   token = (char *) strtok(string, " ");
   if(token == NULL)
     return NULL;
@@ -865,7 +865,7 @@ struct rule * parse_rule(char * string)
 		  return NULL;
 		}
 	      rule->state->decrypt_contents = 1;
-	      HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
+	      _HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
 	    }  
 	  else if(!strcmp(token, IN_IF_STR))
 	    {
@@ -1028,8 +1028,8 @@ struct rule * parse_rule(char * string)
       return NULL;
     }
   
-  HIP_DEBUG("done with parsing rule ");
-  print_rule(rule);
+  _HIP_DEBUG("done with parsing rule ");
+  //print_rule(rule);
   return rule;
 }
 

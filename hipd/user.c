@@ -186,7 +186,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 		
 	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling escrow service user message.\n");
+		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
 		HIP_IFE(hip_services_add(HIP_ESCROW_SERVICE), -1);
 	
@@ -194,7 +194,24 @@ int hip_handle_user_msg(struct hip_common *msg,
 		if (hip_services_is_active(HIP_ESCROW_SERVICE))
 			HIP_DEBUG("Escrow service is now active.\n");
 		err = hip_recreate_all_precreated_r1_packets();	
+                
+                if (hip_firewall_is_alive()) {
+                         hip_firewall_set_escrow_active(1);
+                }
+                
 		break;
+                
+        case SO_HIP_CANCEL_ESCROW:
+                HIP_DEBUG("Handling del escrow service -user message.\n");
+                // ?????
+                if (hip_firewall_is_alive()) {
+                         hip_firewall_set_escrow_active(0);
+                }
+                
+                HIP_IFE(hip_services_remove(HIP_ESCROW_SERVICE), -1);
+                err = hip_recreate_all_precreated_r1_packets(); 
+                
+                break;                
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
