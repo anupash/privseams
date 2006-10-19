@@ -117,6 +117,14 @@ extern int errno;
 extern int optind;
 extern char *optarg;
 
+
+#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        (void*)&((struct sockaddr_in*)x)->sin_addr : \
+        (void*)&((struct sockaddr_in6*)x)->sin6_addr
+#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
+#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+
 char Usage[] =
 "Usage: ttcp -t [-options] host [ < in ]\n"
 "ttcp -r [-options] [multicast-group][ > out]\n"
@@ -141,7 +149,8 @@ char Usage[] =
 "Options specific to -r:\n"
 "	-B	for -s, only output full blocks as specified by -l (for TAR)\n"
 "	-T	\"touch\": access each byte as it's read\n"
-"        -I if   Specify the network interface (e.g. eth0) to use\n";	
+"       -I if   Specify the network interface (e.g. eth0) to use\n"
+"       -W bind to wildcard address\n";	
 
 char stats[128];
 double nbytes;			/* bytes on net */
@@ -169,11 +178,12 @@ main(int argc, char **argv)
 {
 	char *device = NULL;
 	int maf = 0;		/* Address family if multicast, else 0 */
+	int wildcard = 0, reuse = 1;
 	int c;
 
 	if (argc < 2) goto usage;
 
-	while ((c = getopt(argc, argv, "46drstuvBDTb:f:l:n:p:w:A:O:I:")) != -1) {
+	while ((c = getopt(argc, argv, "46drstuvBDTWb:f:l:n:p:w:A:O:I:")) != -1) {
 		switch (c) {
 		case '4':
 			af = AF_INET;
@@ -244,6 +254,9 @@ main(int argc, char **argv)
 			break;
 		case 'T':
 			touchdata = 1;
+			break;
+		case 'W':
+			wildcard = 1;
 			break;
 		default:
 			goto usage;
@@ -347,6 +360,10 @@ main(int argc, char **argv)
 			err("socket");
 	}
 	
+	if (!trans && (setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &reuse,
+				   sizeof (reuse)) < 0))
+		err("reuseaddr");
+
 	if (device) {
 		if (maf == AF_INET) {
 			/* Not supported, using struct ip_mreq we need to find IP
@@ -394,6 +411,16 @@ main(int argc, char **argv)
 	}
 
 	if (!trans) {
+		if (wildcard) {
+			/* Covers both AF_INET and AF_INET6 */
+			struct in6_addr any = IN6ADDR_ANY_INIT;
+			if (!(res->ai_family == AF_INET ||
+			      res->ai_family == AF_INET6))
+				err("wildcard");
+			memcpy(SA2IP(res->ai_addr), &any,
+			       SAIPLEN(res->ai_addr));
+		}
+
 		if (bind(fd, res->ai_addr, res->ai_addrlen) < 0)
 			err("bind");
 	}
