@@ -90,7 +90,6 @@ int hipd_init(int flush_ipsec)
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
-	//HIP_IFEL(hip_init_nat_sock_udp_data(&hip_nat_sock_udp_data), -1, "raw sock udp for data\n");
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
@@ -312,48 +311,6 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 }
 
 /**
- * Init udp socket for nat data usage.
- */
-int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
-{
-	HIP_DEBUG("hip_init_nat_sock_udp_data() invoked.\n");
-	int on = HIP_UDP_ENCAP_ESPINUDP, err = 0;
-	int off = 0;
-	
-	if((*hip_nat_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
-        {
-                HIP_ERROR("Can not open socket for UDP\n");
-                return -1;
-        }
-	
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, HIP_UDP_ENCAP, &on,
-			    sizeof(on)), -1, "setsockopt udp encap failed\n");
-	
-        struct sockaddr_in myaddr;
-	
-        myaddr.sin_family = AF_INET;
-	/** @todo Change this inaddr_any -- Abi */
-        myaddr.sin_addr.s_addr = INADDR_ANY;
-        myaddr.sin_port=htons(HIP_UDP_DATA_PORT);
-
-	if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
-        {
-                HIP_ERROR("Unable to bind udp socket to port\n");
-                err = -1;
-		goto out_err;
-        }
-	
-        HIP_DEBUG_INADDR("UDP data socket created and binded to addr",
-			 &myaddr.sin_addr);
-        return 0;
-
- out_err:
-	return err;
-
-}
-
-
-/**
  * Start closing HIP daemon.
  */
 void hip_close(int signal)
@@ -432,8 +389,6 @@ void hip_exit(int signal)
 		close(hip_raw_sock_v4);
 	if(hip_nat_sock_udp)
 		close(hip_nat_sock_udp);
-	if(hip_nat_sock_udp_data)
-		close(hip_nat_sock_udp_data);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)

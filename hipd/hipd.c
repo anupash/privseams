@@ -20,11 +20,9 @@ struct hip_common *hipd_msg = NULL;
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-/** File descriptor of socket used for hip control packet NAT traversal on
+/** File descriptor of the socket used for hip control packet NAT traversal on
     UDP/IPv4. */
 int hip_nat_sock_udp = 0;
-/** File descriptor of socket used for data packet NAT traversal on UDP/IPv4. */
-int hip_nat_sock_udp_data = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;

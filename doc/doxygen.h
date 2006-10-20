@@ -253,4 +253,75 @@
  * @see      receive_functions
  */
 
+/** 
+ * HIP NOTIFY parameter error values.
+ *
+ * NOTIFY parameter error types used in the "Notify Message Type"-field of
+ * NOTIFY parameter as specified in section 5.2.16. of draft-ietf-hip-base-06
+ * 
+ * @defgroup notify_errors NOTIFY parameter error types
+ * @see      hip_notify 
+ */
+
+/**
+ * @file libhiptool/protodefs.h
+ * @def  HIP_NTFE_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
+ *       Sent if the parameter type has the "critical" bit set and the
+ *       parameter type is not recognized.  Notification Data contains the two
+ *       octet parameter type.
+ * @def  HIP_NTFE_INVALID_SYNTAX
+ *       Indicates that the HIP message received was invalid because
+ *       some type, length, or value was out of range or because the
+ *       request was rejected for policy reasons.  To avoid a denial of
+ *       service attack using forged messages, this status may only be
+ *       returned for packets whose HMAC (if present) and SIGNATURE have
+ *       been verified.  This status MUST be sent in response to any
+ *       error not covered by one of the other status types, and should
+ *       not contain details to avoid leaking information to someone
+ *       probing a node.  To aid debugging, more detailed error
+ *       information SHOULD be written to a console or log.
+ * @def  HIP_NTFE_NO_DH_PROPOSAL_CHOSEN
+ *       None of the proposed group IDs was acceptable.
+ * @def  HIP_NTFE_INVALID_DH_CHOSEN
+ *       The D-H Group ID field does not correspond to one offered
+ *       by the Responder.
+ * @def  HIP_NTFE_NO_HIP_PROPOSAL_CHOSEN
+ *       None of the proposed HIP Transform crypto suites was
+ *       acceptable.
+ * @def  HIP_NTFE_INVALID_HIP_TRANSFORM_CHOSEN
+ *       The HIP Transform crypto suite does not correspond to
+ *       one offered by the Responder.
+ * @def  HIP_NTFE_AUTHENTICATION_FAILED
+ *       Sent in response to a HIP signature failure, except when
+ *       the signature verification fails in a NOTIFY message.
+ * @def  HIP_NTFE_CHECKSUM_FAILED
+ *       Sent in response to a HIP checksum failure.
+ * @def  HIP_NTFE_HMAC_FAILED
+ *       Sent in response to a HIP HMAC failure.
+ * @def  HIP_NTFE_ENCRYPTION_FAILED
+ *       The Responder could not successfully decrypt the
+ *       ENCRYPTED parameter.
+ * @def  HIP_NTFE_INVALID_HIT
+ *       Sent in response to a failure to validate the peer's
+ *       HIT from the corresponding HI.
+ * @def  HIP_NTFE_BLOCKED_BY_POLICY
+ *       The Responder is unwilling to set up an association
+ *       for some policy reason (e.g.\ received HIT is NULL
+ *       and policy does not allow opportunistic mode).
+ * @def  HIP_NTFE_SERVER_BUSY_PLEASE_RETRY
+ *       The Responder is unwilling to set up an association
+ *       as it is suffering under some kind of overload and
+ *       has chosen to shed load by rejecting your request.
+ *       You may retry if you wish, however you MUST find
+ *       another (different) puzzle solution for any such
+ *       retries.  Note that you may need to obtain a new
+ *       puzzle with a new I1/R1 exchange.
+ * @def  HIP_NTFE_I2_ACKNOWLEDGEMENT
+ *       The Responder has received your I2 but had to queue
+ *       the I2 for processing.  The puzzle was correctly solved
+ *       and the Responder is willing to set up an association
+ *       but has currently a number of I2s in processing queue.
+ *       R2 will be sent after the I2 has been processed.
+ */
+
 #endif /* _DOXYGEN_H */

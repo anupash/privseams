@@ -2,7 +2,8 @@
 #define _HIP_IFE
 
 
-/*! \addtogroup ife
+/** 
+ * @addtogroup ife
  * @{
  */
 

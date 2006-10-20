@@ -597,8 +597,8 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &responder_ip, 0);
 	
-	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0, &(i1->hits),
-			      &(i1->hitr));
+	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0, &(i1->hitr),
+			      &(i1->hits));
 	
 	hip_build_param_via_rvs(notify_packet, &responder_ip, 1);
 	

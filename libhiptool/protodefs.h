@@ -10,7 +10,6 @@
 /** @addtogroup hip_msg
  * @{
  */
-
 #define HIP_I1         1
 #define HIP_R1         2
 #define HIP_I2         3
@@ -27,7 +26,6 @@
 #define HIP_PSIG 20 /* lightweight HIP pre signature */
 #define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
-
 /** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
 /** Daemon should reply to @c HIP_AGENT_PING with this one. */
@@ -40,7 +38,6 @@
 #define HIP_I1_REJECT				74
 /** Daemon sends remote HITs in use with this message to agent. */
 #define HIP_UPDATE_HIU				75
-
 /** Firewall can ping daemon with this message. */
 #define HIP_FIREWALL_PING			80
 /** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
@@ -49,19 +46,16 @@
 #define HIP_FIREWALL_QUIT			82
 /** Daemon sends escrow data to firewall with this message. */
 #define HIP_ADD_ESCROW_DATA			83
-
 /**
  * Daemon should send this message to other processes, when quiting.
  * Currently sending to:
  *    agent
  */
 #define HIP_DAEMON_QUIT				127
-
 /*
  * DONT MAKE THESE VALUES HIGHER THAN 255
  * The variable, which stores this type, is 8 bits
  */
-
 /* @} */
 
 
@@ -142,6 +136,25 @@
  * @note exclusive
  */
 #define HIP_PARAM_MAX             65536
+/* @} */
+
+/** @addtogroup notify_errors
+ * @{ 
+ */
+#define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
+#define HIP_NTF_INVALID_SYNTAX                      7
+#define HIP_NTF_NO_DH_PROPOSAL_CHOSEN               14
+#define HIP_NTF_INVALID_DH_CHOSEN                   15
+#define HIP_NTF_NO_HIP_PROPOSAL_CHOSEN              16
+#define HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN        17
+#define HIP_NTF_AUTHENTICATION_FAILED               24
+#define HIP_NTF_CHECKSUM_FAILED                     26
+#define HIP_NTF_HMAC_FAILED                         28
+#define HIP_NTF_ENCRYPTION_FAILED                   32
+#define HIP_NTF_INVALID_HIT                         40
+#define HIP_NTF_BLOCKED_BY_POLICY                   42
+#define HIP_NTF_SERVER_BUSY_PLEASE_RETRY            44
+#define HIP_NTF_I2_ACKNOWLEDGEMENT                  46
 /* @} */
 
 #define HIP_HIP_RESERVED                0
@@ -530,24 +543,23 @@ struct hip_sig2 {
 struct hip_seq {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint32_t update_id;
 } __attribute__ ((packed));
 
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint32_t peer_update_id; /* n items */
 } __attribute__ ((packed));
 
 struct hip_notify {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint16_t reserved;
 	uint16_t msgtype;
-	/* end of fixed part */
+	/** A short cut pointer to the memory region where the notification data
+	    is to be put. */
+	uint8_t notification[0];
 } __attribute__ ((packed));
 
 struct hip_locator {

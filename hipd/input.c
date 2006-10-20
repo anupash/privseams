@@ -527,9 +527,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
-	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
-	type = hip_get_msg_type(msg);
-	
+	/* Debug printing of received packet information. All received HIP
+	   control packets are first passed to this function. Therefore printing
+	   packet data here works for all packets. To avoid excessive debug
+	   printing do not print this information inside the individual receive
+	   or handle functions. */
 	HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	HIP_DEBUG_IN6ADDR("Source IP", src_addr);
 	HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
@@ -538,6 +540,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
+
+	type = hip_get_msg_type(msg);
 
 	/** @todo Check packet csum.*/
 	
@@ -577,7 +581,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_I2:
 		/* Possibly state. */
-		HIP_DEBUG("\n-- Received I2. --\n");
 		if(entry){
 			err = entry->hadb_rcv_func->
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
@@ -592,7 +595,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
-	  	HIP_DEBUG("\n-- Received R1. --\n");
 		HIP_ASSERT(entry);
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
@@ -600,7 +602,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_R2:
-		HIP_DEBUG("\n-- Received R2. --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
@@ -608,20 +609,17 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_UPDATE:
-		HIP_DEBUG("\n-- Received UPDATE message. --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_update(msg, src_addr, dst_addr, entry,
 					    msg_info));
 		break;
 		
 	case HIP_NOTIFY:
-		HIP_DEBUG("\n-- Received NOTIFY message --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_notify(msg, src_addr, dst_addr, entry));
 		break;
 		
 	case HIP_BOS:
-		HIP_DEBUG("\n-- Received BOS message --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_bos(msg, src_addr, dst_addr, entry,
 					 msg_info));
@@ -635,13 +633,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_CLOSE:
-		HIP_DEBUG("\n-- Received CLOSE message --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close(msg, entry));
 		break;
 		
 	case HIP_CLOSE_ACK:
-		HIP_DEBUG("\n-- Received CLOSE_ACK message --\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close_ack(msg, entry));
 		break;
@@ -1082,7 +1078,6 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_LOCK_HA(entry);
 		entry->nat_mode = 1;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		HIP_UNLOCK_HA(entry);
 	}
 
@@ -1250,8 +1245,6 @@ int hip_handle_r1(struct hip_common *r1,
  * @param r1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
- * @warning        This code does not work correctly if there are @b both
- *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_r1(struct hip_common *r1,
 		   struct in6_addr *r1_saddr,
@@ -2211,8 +2204,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	
 	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
 	   all. */
-	from_nat = hip_get_param(i1, HIP_PARAM_FROM_NAT);
-	from = hip_get_param(i1, HIP_PARAM_FROM);
+	from_nat = (struct hip_from_nat *)hip_get_param(i1, HIP_PARAM_FROM_NAT);
+	from = (struct hip_from *)hip_get_param(i1, HIP_PARAM_FROM);
 	
 	if (!(from || from_nat)) {
 		/* Case 5. */
@@ -2363,12 +2356,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			      &i1->hitr);
  		rva = hip_rvs_get_valid(&i1->hitr);
 		HIP_DEBUG("Valid rendezvous association found: %s \n",
-			  (rva ? "yes" : "no"));
+			  (rva != NULL ? "yes" : "no"));
  		if (rva) {
 			if(rva->client_udp_port == 0 &&
 			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
-				HIP_DEBUG("Replying to Initiator with a "\
-					  "NOTIFY packet.\n");
 				hip_rvs_reply_with_notify(i1, i1_saddr, rva,
 							  i1_info);
 			}
@@ -2542,7 +2533,10 @@ int hip_handle_notify(const struct hip_common *notify,
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
+	struct hip_notify *notify_param = NULL;
+	struct hip_via_rvs *via_rvs = NULL;
 	hip_tlv_type_t param_type = 0;
+	uint16_t msgtype = 0;
 
 	HIP_DEBUG("hip_receive_notify() invoked.\n");
 	
@@ -2554,6 +2548,31 @@ int hip_handle_notify(const struct hip_common *notify,
 		
 		if (param_type == HIP_PARAM_NOTIFY) {
 			HIP_DEBUG("Found NOTIFY parameter in NOTIFY packet.\n");
+			notify_param = (struct hip_notify *)current_param;
+
+			if(hip_check_notify_param_type(notify_param) != 0) {
+				HIP_INFO("Invalid notify message type.\n");
+			}
+
+			msgtype = ntohs(notify_param->msgtype);
+			/* Action to be taken for each notification type. */
+			switch(msgtype) {
+			case HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE:
+			case HIP_NTF_INVALID_SYNTAX:
+			case HIP_NTF_NO_DH_PROPOSAL_CHOSEN:
+			case HIP_NTF_INVALID_DH_CHOSEN:
+			case HIP_NTF_NO_HIP_PROPOSAL_CHOSEN:
+			case HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN:
+			case HIP_NTF_AUTHENTICATION_FAILED:
+			case HIP_NTF_CHECKSUM_FAILED:
+			case HIP_NTF_HMAC_FAILED:
+			case HIP_NTF_ENCRYPTION_FAILED:
+			case HIP_NTF_INVALID_HIT:
+			case HIP_NTF_BLOCKED_BY_POLICY:
+			case HIP_NTF_SERVER_BUSY_PLEASE_RETRY:
+			case HIP_NTF_I2_ACKNOWLEDGEMENT:
+			default:;
+			}
 		}
 		else if(param_type == HIP_PARAM_VIA_RVS) {
 			HIP_DEBUG("Found VIA_RVS parameter in NOTIFY packet.\n");
@@ -2595,8 +2614,8 @@ int hip_receive_bos(struct hip_common *bos,
 	HIP_DEBUG("Entered in hip_receive_bos...\n");
 	state = entry ? entry->state : HIP_STATE_UNASSOCIATED;
 
-	/*! \todo If received BOS packet from already known sender
-           should return right now */
+	/** @todo If received BOS packet from already known sender should return
+	    right now */
 	HIP_DEBUG("Received BOS packet in state %s\n", hip_state_str(state));
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:

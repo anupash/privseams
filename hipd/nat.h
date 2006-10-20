@@ -45,8 +45,6 @@
 #define HIP_NAT_SLEEP_TIME 1
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
-/** Port number for NAT travelsal of UDP data traffic. */
-#define HIP_UDP_DATA_PORT 54500 /** @todo remove */
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */

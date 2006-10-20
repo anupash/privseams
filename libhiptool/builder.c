@@ -407,15 +407,20 @@ int hip_check_userspace_param_type(const struct hip_tlv_common *param)
 }
 
 /**
- * hip_check_network_param_type - check network parameter type
- * @param param the network parameter
+ * Checks the network parameter type.
+ * 
+ * Optional parameters are not checked, because the code just does not
+ * use them if they are not supported.
  *
+ * @param param the network parameter
  * @return 1 if parameter type is valid, or 0 if parameter type
  * is not valid. "Valid" means all optional and non-optional parameters
  * in the HIP draft.
- *
- * Optional parameters are not checked, because the code just does not
- * use them if they are not supported.
+ * @todo Clarify the functionality and explanation of this function. Should
+ *       new parameters be added to the checked parameters list as they are
+ *       introduced in extensions drafts (RVS, NAT, Registration...), or should
+ *       here only be the parameters listed in Sections 5.2.3 through Section
+ *       5.2.18 of the draft-ietf-hip-base-06?
  */
 int hip_check_network_param_type(const struct hip_tlv_common *param)
 {
@@ -423,6 +428,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
+			
+
 			HIP_PARAM_ACK,
                         HIP_PARAM_CERT,
                         HIP_PARAM_DIFFIE_HELLMAN,
@@ -434,8 +441,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
-                        HIP_PARAM_FROM,
-			HIP_PARAM_FROM_NAT,
+                        //HIP_PARAM_FROM,
+			//HIP_PARAM_FROM_NAT,
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -447,14 +454,14 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_NOTIFY,
                         HIP_PARAM_PUZZLE,
                         HIP_PARAM_R1_COUNTER,
-                        HIP_PARAM_REG_FAILED,
-                        HIP_PARAM_REG_INFO,
-                        HIP_PARAM_REG_REQUEST,
-                        HIP_PARAM_REG_RESPONSE,
+                        //HIP_PARAM_REG_FAILED,
+                        //HIP_PARAM_REG_INFO,
+                        //HIP_PARAM_REG_REQUEST,
+                        //HIP_PARAM_REG_RESPONSE,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
-                        HIP_PARAM_VIA_RVS,
-			HIP_PARAM_VIA_RVS_NAT
+                        //HIP_PARAM_VIA_RVS,
+			//HIP_PARAM_VIA_RVS_NAT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -471,16 +478,16 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 }
 
 /**
- * hip_check_param_contents_len - check validity of parameter contents length
- * @param msg pointer to the beginning of the message
- * @param param pointer to the parameter to be checked for contents length
+ * Checks the validity of parameter contents length.
  * 
  * The msg is passed also in to check to the parameter will not cause buffer
  * overflows.
- *
- * @return 1 if the length of the parameter contents length was valid
- *          (the length was not too small or too large to fit into the
- *          message). Zero is returned on invalid contents length.
+ * 
+ * @param msg   a pointer to the beginning of the message
+ * @param param a pointer to the parameter to be checked for contents length
+ * @return      1 if the length of the parameter contents length was valid
+ *              (the length was not too small or too large to fit into the
+ *              message). Zero is returned on invalid contents length.
  */
 int hip_check_param_contents_len(const struct hip_common *msg,
 				 const struct hip_tlv_common *param) {
@@ -505,21 +512,19 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 }
 
 /**
- * hip_get_next_param - iterate to the next parameter
- * @param msg pointer to the beginning of the message header
- * @param current_param pointer to the current parameter, or NULL if the msg
- *                 is to be searched from the beginning
- *
- * @return the next parameter after the current_param in msg, or NULL
- *          if no parameters were found
+ * Iterates to the next parameter.
+ * 
+ * @param msg           a pointer to the beginning of the message header
+ * @param current_param a pointer to the current parameter, or NULL if the msg
+ *                      is to be searched from the beginning.
+ * @return              the next parameter after the current_param in msg, or
+ *                      NULL if no parameters were found.
  */
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
-				   const struct hip_tlv_common *current_param)
+					  const struct hip_tlv_common *current_param)
 {
 	struct hip_tlv_common *next_param = NULL;
 	void *pos = (void *) current_param;
-
-	_HIP_DEBUG("\n");
 
 	if (!msg) {
 		HIP_ERROR("msg null\n");
@@ -851,26 +856,27 @@ void hip_dump_msg(const struct hip_common *msg)
 }
 
 /**
- * hip_message_type_name - returns a string for a given parameter type number
+ * Returns a string for a given parameter type number.
+ * 
  * @param msg_type message type number
- * @return name of the message type
+ * @return         name of the message type
  **/
-char* hip_message_type_name(uint8_t msg_type){
-	switch (msg_type){
-	case HIP_I1: return "HIP_I1";
-	case HIP_R1: return "HIP_R1";
-	case HIP_I2: return "HIP_I2";
-	case HIP_R2: return "HIP_R2";
-	case HIP_CER: return "HIP_CER";
-	case HIP_UPDATE: return "HIP_UPDATE";
-	case HIP_NOTIFY: return "HIP_NOTIFY";
-	case HIP_CLOSE: return "HIP_CLOSE";
+char* hip_message_type_name(const uint8_t msg_type){
+	switch (msg_type) {
+	case HIP_I1:        return "HIP_I1";
+	case HIP_R1:        return "HIP_R1";
+	case HIP_I2:        return "HIP_I2";
+	case HIP_R2:        return "HIP_R2";
+	case HIP_CER:       return "HIP_CER";
+	case HIP_UPDATE:    return "HIP_UPDATE";
+	case HIP_NOTIFY:    return "HIP_NOTIFY";
+	case HIP_CLOSE:     return "HIP_CLOSE";
 	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_BOS: return "HIP_BOS";
-	case HIP_PSIG: return "HIP_PSIG";
-	case HIP_TRIG: return "HIP_TRIG";
+	case HIP_BOS:       return "HIP_BOS";
+	case HIP_PSIG:      return "HIP_PSIG";
+	case HIP_TRIG:      return "HIP_TRIG";
+	default:            return "UNDEFINED";
 	}
-	return "UNDEFINED";
 }
 
 /**
@@ -878,7 +884,7 @@ char* hip_message_type_name(uint8_t msg_type){
  * @param param_type parameter type number
  * @return name of the message type
  **/
-char* hip_param_type_name(uint16_t param_type){
+char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
@@ -1077,6 +1083,41 @@ int hip_check_network_msg(const struct hip_common *msg)
  out:
 	return err;
 }
+
+/**
+ * Checks the "Notify Message Type" field in a NOTIFY parameter.
+ *
+ * This function checks that the value of "Notify Message Type" field is one of
+ * the values defined in Chapter 5.2.16 of draft-ietf-hip-base-06.
+ * 
+ * @param notify a pointer to a NOTIFY-parameter (values in network byte order).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_check_notify_param_type(const struct hip_notify *notify) {
+	
+	int err = 0;
+	uint16_t msgtype = ntohs(notify->msgtype);
+	
+	HIP_IFE(msgtype != HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE &&
+		msgtype != HIP_NTF_INVALID_SYNTAX &&
+		msgtype != HIP_NTF_NO_DH_PROPOSAL_CHOSEN &&
+		msgtype != HIP_NTF_INVALID_DH_CHOSEN &&
+		msgtype != HIP_NTF_NO_HIP_PROPOSAL_CHOSEN &&
+		msgtype != HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN &&
+		msgtype != HIP_NTF_AUTHENTICATION_FAILED &&
+		msgtype != HIP_NTF_CHECKSUM_FAILED &&
+		msgtype != HIP_NTF_HMAC_FAILED &&
+		msgtype != HIP_NTF_ENCRYPTION_FAILED &&
+		msgtype != HIP_NTF_INVALID_HIT &&
+		msgtype != HIP_NTF_BLOCKED_BY_POLICY &&
+		msgtype != HIP_NTF_SERVER_BUSY_PLEASE_RETRY &&
+		msgtype != HIP_NTF_I2_ACKNOWLEDGEMENT,
+		-EINVAL);
+	
+ out_err:
+	return err;
+}
+
 
 /**
  * Builds and inserts a parameter into the message.
