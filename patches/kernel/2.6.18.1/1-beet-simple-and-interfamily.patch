@@ -1,6 +1,6 @@
 diff -urN linux-2.6.18.1/include/linux/in.h linux-2.6.18.1.beet/include/linux/in.h
 --- linux-2.6.18.1/include/linux/in.h	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/include/linux/in.h	2006-10-21 14:42:40.000000000 +0300
++++ linux-2.6.18.1.beet/include/linux/in.h	2006-10-21 14:59:54.000000000 +0300
 @@ -40,6 +40,7 @@
  
    IPPROTO_ESP = 50,            /* Encapsulation Security Payload protocol */
@@ -11,7 +11,7 @@ diff -urN linux-2.6.18.1/include/linux/in.h linux-2.6.18.1.beet/include/linux/in
    IPPROTO_COMP   = 108,                /* Compression Header protocol */
 diff -urN linux-2.6.18.1/include/linux/ip.h linux-2.6.18.1.beet/include/linux/ip.h
 --- linux-2.6.18.1/include/linux/ip.h	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/include/linux/ip.h	2006-10-21 14:42:40.000000000 +0300
++++ linux-2.6.18.1.beet/include/linux/ip.h	2006-10-21 14:59:54.000000000 +0300
 @@ -79,6 +79,8 @@
  #define	IPOPT_TS_TSANDADDR	1		/* timestamps and addresses */
  #define	IPOPT_TS_PRESPEC	3		/* specified modules only */
@@ -35,7 +35,7 @@ diff -urN linux-2.6.18.1/include/linux/ip.h linux-2.6.18.1.beet/include/linux/ip
  #endif	/* _LINUX_IP_H */
 diff -urN linux-2.6.18.1/include/linux/ipsec.h linux-2.6.18.1.beet/include/linux/ipsec.h
 --- linux-2.6.18.1/include/linux/ipsec.h	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/include/linux/ipsec.h	2006-10-21 14:42:40.000000000 +0300
++++ linux-2.6.18.1.beet/include/linux/ipsec.h	2006-10-21 14:59:54.000000000 +0300
 @@ -12,7 +12,8 @@
  enum {
  	IPSEC_MODE_ANY		= 0,	/* We do not support this for SA */
@@ -48,24 +48,33 @@ diff -urN linux-2.6.18.1/include/linux/ipsec.h linux-2.6.18.1.beet/include/linux
  enum {
 diff -urN linux-2.6.18.1/include/linux/xfrm.h linux-2.6.18.1.beet/include/linux/xfrm.h
 --- linux-2.6.18.1/include/linux/xfrm.h	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/include/linux/xfrm.h	2006-10-21 14:42:40.000000000 +0300
-@@ -122,6 +122,13 @@
- #define XFRM_MODE_TUNNEL 1
- #define XFRM_MODE_MAX 2
++++ linux-2.6.18.1.beet/include/linux/xfrm.h	2006-10-21 15:53:34.000000000 +0300
+@@ -43,6 +43,12 @@
+ #define XFRM_SC_ALG_RESERVED 0
+ #define XFRM_SC_ALG_SELINUX 1
  
-+enum
-+{
-+	XFRM_MODE_TRANSPORT = 0,
-+	XFRM_MODE_TUNNEL,
-+	XFRM_MODE_BEET
-+};
++/* Transport layer flag  passed to xfrm_lookup. If set, the userspace
++   process sleeps in a waitqueue until key management daemon has 
++   finished setting up security associations. This workaround exists 
++   until we have queues for outgoing IPsec packets. */
++#define XFRM_LOOKUP_SLEEP (!in_atomic() && !in_softirq())
 +
+ /* Selector, used as selector both on policy rules (SPD) and SAs. */
+ 
+ struct xfrm_selector
+@@ -120,7 +126,8 @@
+ 
+ #define XFRM_MODE_TRANSPORT 0
+ #define XFRM_MODE_TUNNEL 1
+-#define XFRM_MODE_MAX 2
++#define XFRM_MODE_BEET 2
++#define XFRM_MODE_MAX 3
+ 
  /* Netlink configuration messages.  */
  enum {
- 	XFRM_MSG_BASE = 0x10,
 diff -urN linux-2.6.18.1/include/net/xfrm.h linux-2.6.18.1.beet/include/net/xfrm.h
 --- linux-2.6.18.1/include/net/xfrm.h	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/include/net/xfrm.h	2006-10-21 14:42:40.000000000 +0300
++++ linux-2.6.18.1.beet/include/net/xfrm.h	2006-10-21 14:59:54.000000000 +0300
 @@ -297,6 +297,10 @@
  /* Source address of tunnel. Ignored, if it is not a tunnel. */
  	xfrm_address_t		saddr;
@@ -79,7 +88,7 @@ diff -urN linux-2.6.18.1/include/net/xfrm.h linux-2.6.18.1.beet/include/net/xfrm
  /* Mode: transport/tunnel */
 diff -urN linux-2.6.18.1/net/ipv4/ah4.c linux-2.6.18.1.beet/net/ipv4/ah4.c
 --- linux-2.6.18.1/net/ipv4/ah4.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/ah4.c	2006-10-21 14:42:46.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/ah4.c	2006-10-21 14:59:54.000000000 +0300
 @@ -253,8 +253,10 @@
  		goto error;
  	
@@ -94,7 +103,7 @@ diff -urN linux-2.6.18.1/net/ipv4/ah4.c linux-2.6.18.1.beet/net/ipv4/ah4.c
  	return 0;
 diff -urN linux-2.6.18.1/net/ipv4/esp4.c linux-2.6.18.1.beet/net/ipv4/esp4.c
 --- linux-2.6.18.1/net/ipv4/esp4.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/esp4.c	2006-10-21 14:42:49.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/esp4.c	2006-10-21 14:59:54.000000000 +0300
 @@ -237,7 +237,8 @@
  		 *    as per draft-ietf-ipsec-udp-encaps-06,
  		 *    section 3.1.2
@@ -152,7 +161,7 @@ diff -urN linux-2.6.18.1/net/ipv4/esp4.c linux-2.6.18.1.beet/net/ipv4/esp4.c
  
 diff -urN linux-2.6.18.1/net/ipv4/ipcomp.c linux-2.6.18.1.beet/net/ipv4/ipcomp.c
 --- linux-2.6.18.1/net/ipv4/ipcomp.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/ipcomp.c	2006-10-21 14:42:51.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/ipcomp.c	2006-10-21 14:59:54.000000000 +0300
 @@ -176,7 +176,7 @@
  	return 0;
  
@@ -194,7 +203,7 @@ diff -urN linux-2.6.18.1/net/ipv4/ipcomp.c linux-2.6.18.1.beet/net/ipv4/ipcomp.c
  			goto error_tunnel;
 diff -urN linux-2.6.18.1/net/ipv4/xfrm4_input.c linux-2.6.18.1.beet/net/ipv4/xfrm4_input.c
 --- linux-2.6.18.1/net/ipv4/xfrm4_input.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/xfrm4_input.c	2006-10-21 14:42:53.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/xfrm4_input.c	2006-10-21 14:59:54.000000000 +0300
 @@ -109,6 +109,84 @@
  		if (x->props.mode) {
  			decaps = 1;
@@ -282,7 +291,7 @@ diff -urN linux-2.6.18.1/net/ipv4/xfrm4_input.c linux-2.6.18.1.beet/net/ipv4/xfr
  		if ((err = xfrm_parse_spi(skb, skb->nh.iph->protocol, &spi, &seq)) < 0)
 diff -urN linux-2.6.18.1/net/ipv4/xfrm4_output.c linux-2.6.18.1.beet/net/ipv4/xfrm4_output.c
 --- linux-2.6.18.1/net/ipv4/xfrm4_output.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/xfrm4_output.c	2006-10-21 14:42:53.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/xfrm4_output.c	2006-10-21 14:59:54.000000000 +0300
 @@ -54,7 +54,7 @@
  			goto error_nolock;
  	}
@@ -294,7 +303,7 @@ diff -urN linux-2.6.18.1/net/ipv4/xfrm4_output.c linux-2.6.18.1.beet/net/ipv4/xf
  			goto error_nolock;
 diff -urN linux-2.6.18.1/net/ipv4/xfrm4_policy.c linux-2.6.18.1.beet/net/ipv4/xfrm4_policy.c
 --- linux-2.6.18.1/net/ipv4/xfrm4_policy.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/xfrm4_policy.c	2006-10-21 14:42:55.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/xfrm4_policy.c	2006-10-21 14:59:54.000000000 +0300
 @@ -16,6 +16,8 @@
  static struct dst_ops xfrm4_dst_ops;
  static struct xfrm_policy_afinfo xfrm4_policy_afinfo;
@@ -405,7 +414,7 @@ diff -urN linux-2.6.18.1/net/ipv4/xfrm4_policy.c linux-2.6.18.1.beet/net/ipv4/xf
  error:
 diff -urN linux-2.6.18.1/net/ipv4/xfrm4_tunnel.c linux-2.6.18.1.beet/net/ipv4/xfrm4_tunnel.c
 --- linux-2.6.18.1/net/ipv4/xfrm4_tunnel.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv4/xfrm4_tunnel.c	2006-10-21 14:42:55.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv4/xfrm4_tunnel.c	2006-10-21 14:59:54.000000000 +0300
 @@ -28,13 +28,20 @@
  
  static int ipip_init_state(struct xfrm_state *x)
@@ -433,7 +442,7 @@ diff -urN linux-2.6.18.1/net/ipv4/xfrm4_tunnel.c linux-2.6.18.1.beet/net/ipv4/xf
  }
 diff -urN linux-2.6.18.1/net/ipv6/ah6.c linux-2.6.18.1.beet/net/ipv6/ah6.c
 --- linux-2.6.18.1/net/ipv6/ah6.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/ah6.c	2006-10-21 14:42:55.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/ah6.c	2006-10-21 14:59:54.000000000 +0300
 @@ -387,8 +387,10 @@
  		goto error;
  	
@@ -448,7 +457,7 @@ diff -urN linux-2.6.18.1/net/ipv6/ah6.c linux-2.6.18.1.beet/net/ipv6/ah6.c
  	return 0;
 diff -urN linux-2.6.18.1/net/ipv6/esp6.c linux-2.6.18.1.beet/net/ipv6/esp6.c
 --- linux-2.6.18.1/net/ipv6/esp6.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/esp6.c	2006-10-21 14:42:56.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/esp6.c	2006-10-21 14:59:54.000000000 +0300
 @@ -344,8 +344,10 @@
  	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
  		goto error;
@@ -463,7 +472,7 @@ diff -urN linux-2.6.18.1/net/ipv6/esp6.c linux-2.6.18.1.beet/net/ipv6/esp6.c
  
 diff -urN linux-2.6.18.1/net/ipv6/ipcomp6.c linux-2.6.18.1.beet/net/ipv6/ipcomp6.c
 --- linux-2.6.18.1/net/ipv6/ipcomp6.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/ipcomp6.c	2006-10-21 14:42:57.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/ipcomp6.c	2006-10-21 14:59:54.000000000 +0300
 @@ -416,8 +416,10 @@
  		goto out;
  
@@ -487,7 +496,7 @@ diff -urN linux-2.6.18.1/net/ipv6/ipcomp6.c linux-2.6.18.1.beet/net/ipv6/ipcomp6
  			goto error_tunnel;
 diff -urN linux-2.6.18.1/net/ipv6/xfrm6_input.c linux-2.6.18.1.beet/net/ipv6/xfrm6_input.c
 --- linux-2.6.18.1/net/ipv6/xfrm6_input.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/xfrm6_input.c	2006-10-21 14:42:59.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/xfrm6_input.c	2006-10-21 14:59:54.000000000 +0300
 @@ -75,6 +75,79 @@
  		if (x->props.mode) { /* XXX */
  			decaps = 1;
@@ -570,7 +579,7 @@ diff -urN linux-2.6.18.1/net/ipv6/xfrm6_input.c linux-2.6.18.1.beet/net/ipv6/xfr
  		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
 diff -urN linux-2.6.18.1/net/ipv6/xfrm6_output.c linux-2.6.18.1.beet/net/ipv6/xfrm6_output.c
 --- linux-2.6.18.1/net/ipv6/xfrm6_output.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/xfrm6_output.c	2006-10-21 14:42:59.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/xfrm6_output.c	2006-10-21 14:59:54.000000000 +0300
 @@ -16,6 +16,7 @@
  #include <linux/netfilter_ipv6.h>
  #include <net/ipv6.h>
@@ -590,7 +599,7 @@ diff -urN linux-2.6.18.1/net/ipv6/xfrm6_output.c linux-2.6.18.1.beet/net/ipv6/xf
  			goto error_nolock;
 diff -urN linux-2.6.18.1/net/ipv6/xfrm6_policy.c linux-2.6.18.1.beet/net/ipv6/xfrm6_policy.c
 --- linux-2.6.18.1/net/ipv6/xfrm6_policy.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/ipv6/xfrm6_policy.c	2006-10-21 14:42:59.000000000 +0300
++++ linux-2.6.18.1.beet/net/ipv6/xfrm6_policy.c	2006-10-21 14:59:54.000000000 +0300
 @@ -22,6 +22,8 @@
  static struct dst_ops xfrm6_dst_ops;
  static struct xfrm_policy_afinfo xfrm6_policy_afinfo;
@@ -690,7 +699,7 @@ diff -urN linux-2.6.18.1/net/ipv6/xfrm6_policy.c linux-2.6.18.1.beet/net/ipv6/xf
  error:
 diff -urN linux-2.6.18.1/net/key/af_key.c linux-2.6.18.1.beet/net/key/af_key.c
 --- linux-2.6.18.1/net/key/af_key.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/key/af_key.c	2006-10-21 14:42:59.000000000 +0300
++++ linux-2.6.18.1.beet/net/key/af_key.c	2006-10-21 14:59:54.000000000 +0300
 @@ -1166,7 +1166,8 @@
  		/* Nobody uses this, but we try. */
  		x->sel.family = pfkey_sadb_addr2xfrm_addr(addr, &x->sel.saddr);
@@ -743,7 +752,7 @@ diff -urN linux-2.6.18.1/net/key/af_key.c linux-2.6.18.1.beet/net/key/af_key.c
  	t->aalgos = t->ealgos = t->calgos = ~0;
 diff -urN linux-2.6.18.1/net/xfrm/xfrm_policy.c linux-2.6.18.1.beet/net/xfrm/xfrm_policy.c
 --- linux-2.6.18.1/net/xfrm/xfrm_policy.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/xfrm/xfrm_policy.c	2006-10-21 14:42:59.000000000 +0300
++++ linux-2.6.18.1.beet/net/xfrm/xfrm_policy.c	2006-10-21 14:59:54.000000000 +0300
 @@ -782,6 +782,7 @@
  		if (tmpl->mode) {
  			remote = &tmpl->id.daddr;
@@ -754,7 +763,7 @@ diff -urN linux-2.6.18.1/net/xfrm/xfrm_policy.c linux-2.6.18.1.beet/net/xfrm/xfr
  		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
 diff -urN linux-2.6.18.1/net/xfrm/xfrm_user.c linux-2.6.18.1.beet/net/xfrm/xfrm_user.c
 --- linux-2.6.18.1/net/xfrm/xfrm_user.c	2006-10-14 06:34:03.000000000 +0300
-+++ linux-2.6.18.1.beet/net/xfrm/xfrm_user.c	2006-10-21 14:43:00.000000000 +0300
++++ linux-2.6.18.1.beet/net/xfrm/xfrm_user.c	2006-10-21 14:59:54.000000000 +0300
 @@ -173,8 +173,9 @@
  
  	err = -EINVAL;

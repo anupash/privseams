@@ -488,10 +488,11 @@ void hip_probe_kernel_modules()
 	int count;
 	char cmd[40];
         /* update also this if you add more modules */
-	const int mod_total = 10;
+	const int mod_total = 12;
 	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
 			    "xfrm_user", "dummy", "esp6", "esp4",
-			    "ipv6", "aes", "crypto_null", "des"};
+			    "ipv6", "aes", "crypto_null", "des",
+			    "xfrm4_mode_beet", "xfrm6_mode_beet"};
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
