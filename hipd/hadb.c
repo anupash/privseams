@@ -2232,7 +2232,6 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	int counter = 0;
 
-
 	list_for_each_entry_safe(item, tmp, &entry->spis_in, list){ 
 	  	if (!spi || item->spi == spi) {
 		  	HIP_DEBUG("deleting SPI_in=0x%x SPI_in_new=0x%x from "
@@ -2310,6 +2309,7 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	/* Delete SAs */
 	hip_hadb_delete_inbound_spi(ha, 0);
 	hip_hadb_delete_outbound_spi(ha, 0);
+
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
 	if (ha->hip_msg_retrans.buf)
@@ -2320,7 +2320,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_priv);
 	if (ha->our_pub)
 		HIP_FREE(ha->our_pub);
-	HIP_FREE(ha);
+	if (ha)
+		HIP_FREE(ha);
 }
 
 
