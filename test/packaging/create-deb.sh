@@ -1,6 +1,8 @@
 #!/bin/sh
 # This script allows for building binary and source debian packages
 
+# XX FIXME: ADD OPP + RVS OPTIONS
+
 #Default debian package is BINARY
 TYPE=binary
 

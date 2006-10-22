@@ -28,8 +28,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-#./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --bindir=%{buildroot}/%{prefix}/%{_bindir} --sbindir=%{buildroot}/%{prefix}/%{_sbindir} --datadir=%{buildroot}/%{prefix}/%{_datadir} --sysconfdir=%{buildroot}/%{prefix}/%{_sysconfdir} --libdir=%{buildroot}/%{prefix}/%{_libdir} --includedir=%{buildroot}/%{prefix}/%{_includedir} --infodir=%{buildroot}/%{prefix}/%{_infodir} --mandir=%{buildroot}/%{prefix}/%{_bindir} && make
-./configure --prefix=%{buildroot}/%{prefix} && make
+./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
