@@ -7,7 +7,7 @@ CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-#include_HEADERS = hipconf.h
+include_HEADERS = hipconftool.h
 
 if HIP_OPENDHT
  INCLUDES += -I../hip-dht/tracker -I../hip-dht/dnsd -I../hip-dht/clientlib

@@ -42,7 +42,7 @@ CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL -DLIB_DIR=\"$(libdir)\"
 
 include_HEADERS =  builder.h crypto.h debug.h dh.h kerncompat.h list.h
 include_HEADERS += message.h misc.h nlink.h pk.h sha1ime.h hashtable.h
-include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h
+include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h hipconf.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
