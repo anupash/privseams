@@ -498,6 +498,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
 	
         memcpy((**pat)->addr, &hit, sizeof(struct in6_addr));		
         *pat = &((**pat)->next);				     	
+#if 0 /* Disabled as this is not support by the daemon yet -miika*/
 	/* AG: add LSI as well */					
         if (**pat == NULL) {						
 	  **pat = malloc(sizeof(struct gaih_addrtuple));
@@ -507,6 +508,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
         (**pat)->family = AF_INET;					
         memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
         *pat = &((**pat)->next);					      
+#endif
       }									
     } // end of if 
     destroy(&list);                                                     
@@ -542,7 +544,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
     
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
       if (at_ip->family == AF_INET && 
-	  IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
+	  IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
 	continue;
       if (at_ip->family == AF_INET6 &&
 	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
@@ -575,7 +577,7 @@ get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 
   for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
     if (at_ip->family == AF_INET && 
-	IS_LSI32(((struct in_addr *) at_ip->addr)->s_addr))
+	IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
       continue;
     if (at_ip->family == AF_INET6 &&
 	ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
@@ -998,7 +1000,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  /* do not remove LSI if request is IPv4 */
 	  if (req->ai_family == AF_INET && 
 	      a->family == AF_INET && 
-	      IS_LSI32( ((struct in_addr *)a->addr)->s_addr))
+	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr)))
 	    goto leave;
 	  
 	  if ( p != NULL ) 

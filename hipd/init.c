@@ -13,6 +13,7 @@
 
 #include "init.h"
 
+extern struct hip_common *hipd_msg;
 
 /**
  * Main initialization function for HIP daemon.
@@ -36,9 +37,8 @@ int hipd_init(int flush_ipsec)
 
 	hip_init_puzzle_defaults();
 
-	/* This is needed only if RVS or escrow is in use. */
+/* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
-
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
@@ -102,10 +102,8 @@ int hipd_init(int flush_ipsec)
 	}
 
 	HIP_DEBUG("Setting SP\n");
-	/*
 	hip_delete_default_prefix_sp_pair();
 	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
-	*/
 
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
@@ -270,12 +268,12 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
+	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
 	int on = 1, err = 0;
 	int off = 0;
-	int encap_on = UDP_ENCAP_ESPINUDP_NONIKE;
+	int encap_on = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
         struct sockaddr_in myaddr;
 
-	HIP_DEBUG("----------Opening udp socket !--------------\n");
 	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
         {
                 HIP_ERROR("Can not open socket for UDP\n");
@@ -286,17 +284,16 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	/* see bug id 212 why RECV_ERR is off */
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off,
                    sizeof(on)), -1, "setsockopt udp recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, UDP_ENCAP, &encap_on,
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on,
                    sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
 	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on,
 			    sizeof(encap_on)), -1,
 		 "setsockopt udp reuseaddr failed\n");
 
         myaddr.sin_family=AF_INET;
-        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
+	/** @todo Change this inaddr_any -- Abi */
+        myaddr.sin_addr.s_addr = INADDR_ANY;
         myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
-
-        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
 
         if( bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
         {
@@ -304,10 +301,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
                 err = -1;
 		goto out_err;
         }
-	HIP_DEBUG("socket done\n");
-        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
-        return 0;
 
+	HIP_DEBUG_INADDR("UDP socket created and binded to addr",
+			 &myaddr.sin_addr.s_addr);
+        return 0;
 
  out_err:
 	return err;
@@ -319,38 +316,36 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
  */
 int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
 {
-	int on = UDP_ENCAP_ESPINUDP, err = 0;
+	HIP_DEBUG("hip_init_nat_sock_udp_data() invoked.\n");
+	int on = HIP_UDP_ENCAP_ESPINUDP, err = 0;
 	int off = 0;
 	
-	HIP_DEBUG("----------Opening udp socket !--------------\n");
 	if((*hip_nat_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
         {
                 HIP_ERROR("Can not open socket for UDP\n");
                 return -1;
         }
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, UDP_ENCAP, &on,
-		   sizeof(on)), -1, "setsockopt udp encap failed\n");
-
-
+	
+	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, HIP_UDP_ENCAP, &on,
+			    sizeof(on)), -1, "setsockopt udp encap failed\n");
+	
         struct sockaddr_in myaddr;
+	
+        myaddr.sin_family = AF_INET;
+	/** @todo Change this inaddr_any -- Abi */
+        myaddr.sin_addr.s_addr = INADDR_ANY;
+        myaddr.sin_port=htons(HIP_UDP_DATA_PORT);
 
-
-        myaddr.sin_family=AF_INET;
-        myaddr.sin_addr.s_addr = INADDR_ANY;	//FIXME: Change this inaddr_any -- Abi
-        myaddr.sin_port=htons(HIP_NAT_UDP_DATA_PORT);
-
-        //memcpy(nl_udp->local ,&myaddr, sizeof(myaddr));
-
-        if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
+	if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
         {
                 HIP_ERROR("Unable to bind udp socket to port\n");
                 err = -1;
 		goto out_err;
         }
-	HIP_DEBUG("socket done\n");
-        HIP_DEBUG_INADDR("Socket created and binded to port to addr :",&myaddr.sin_addr);
+	
+        HIP_DEBUG_INADDR("UDP data socket created and binded to addr",
+			 &myaddr.sin_addr);
         return 0;
-
 
  out_err:
 	return err;
@@ -402,6 +397,9 @@ void hip_exit(int signal)
 
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
+	if (hipd_msg)
+		HIP_FREE(hipd_msg);
 	
 	hip_delete_all_sp();
 
@@ -428,13 +426,6 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	msg = hip_msg_alloc();
-	if (!msg) HIP_ERROR("Failed to allocate memory for message. Could cause problems later.\n");
-	hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-
-	// hip_uninit_host_id_dbs();
-        // hip_uninit_hadb();
-	// hip_uninit_beetdb();
 	if (hip_raw_sock_v6)
 		close(hip_raw_sock_v6);
 	if (hip_raw_sock_v4)
@@ -449,13 +440,29 @@ void hip_exit(int signal)
 		rtnl_close(&hip_nl_ipsec);
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
-	if (hip_agent_sock)
+
+        hip_uninit_hadb();
+	hip_uninit_host_id_dbs();
+
+	msg = hip_msg_alloc();
+	if (msg) {
+	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
+	} else {
+	  HIP_ERROR("Failed to allocate memory for message\n");
+	}
+
+	if (msg && hip_agent_sock)
 	{
 		alen = sizeof(hip_agent_addr);
 		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
 		       (struct sockaddr *)&hip_agent_addr, alen);
-		close(hip_agent_sock);
 	}
+	close(hip_agent_sock);
+
+	if (msg)
+		free(msg);
+	
+	return;
 }
 
 /**
@@ -481,10 +488,11 @@ void hip_probe_kernel_modules()
 	int count;
 	char cmd[40];
         /* update also this if you add more modules */
-	const int mod_total = 10;
+	const int mod_total = 12;
 	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
 			    "xfrm_user", "dummy", "esp6", "esp4",
-			    "ipv6", "aes", "crypto_null", "des"};
+			    "ipv6", "aes", "crypto_null", "des",
+			    "xfrm4_mode_beet", "xfrm6_mode_beet"};
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {

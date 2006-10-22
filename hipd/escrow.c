@@ -575,11 +575,13 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-        HIP_DEBUG("Sending UPDATE packet with escrow data\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
-						      update_packet, entry, 1),
-		 -1, "csum_send failed\n");
 
+	/** @todo Functionality on UDP has not been tested. */
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet,
+			      entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
 	goto out;
 

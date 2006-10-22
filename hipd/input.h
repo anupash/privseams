@@ -1,13 +1,13 @@
 /** @file
  * A header file for input.c.
  * 
- * @author  Janne Lundberg <jlu_tcs.hut.fi>
- * @author  Miika Komu <miika_iki.fi>
- * @author  Mika Kousa <mkousa_cc.hut.fi>
- * @author  Kristian Slavov <kslavov_hiit.fi>
- * @author  Anthony D. Joseph <adj_hiit.fi>
- * @author  Bing Zhou <bingzhou_cc.hut.fi>
- * @author  Tobias Heer <heer_tobibox.de>
+ * @author  Janne Lundberg
+ * @author  Miika Komu
+ * @author  Mika Kousa
+ * @author  Kristian Slavov
+ * @author  Anthony D. Joseph
+ * @author  Bing Zhou
+ * @author  Tobias Heer
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #ifndef HIP_INPUT_H
@@ -32,6 +32,8 @@
 #include "pk.h"
 #include "netdev.h"
 #include "beet.h"
+#include "util.h"
+#include "state.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 

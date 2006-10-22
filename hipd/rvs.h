@@ -5,7 +5,8 @@
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
  * @date    25.08.2006
- * @draft   <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ * @note    Related draft:
+ *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Version 1.0 was document scarcely and the comments regarding
@@ -53,10 +54,15 @@ typedef struct hip_rendezvous_association
 	/** An array of client IP addresses.
 	    @todo Indicate what is the preferred IP addresses. */
 	struct in6_addr       ip_addrs[HIP_RVA_MAX_IPS];
+	/** Client UDP port received in I2 packet of registration. */
+	in_port_t             client_udp_port;
 	/** Our HMAC. */
 	struct hip_crypto_key hmac_our;
 	/** Client HMAC. */
 	struct hip_crypto_key hmac_peer;
+        /** A function pointer to the function to be used for relaying the I1
+	    packet. */
+	hip_xmit_func_t       send_pkt;
 }HIP_RVA;
 
 /* FUNCTION PROTOTYPES */
@@ -70,7 +76,8 @@ int hip_rvs_put_rva(HIP_RVA*);
 int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
 int hip_rvs_relay_i1(struct hip_common*, struct in6_addr*,struct in6_addr*,
 		     HIP_RVA*, struct hip_stateless_info*);
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t*, int);
+//HIP_RVA *hip_rvs_ha2rva(hip_ha_t*);
+HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt);
 HIP_RVA *hip_rvs_allocate(int);
 HIP_RVA *hip_rvs_get(struct in6_addr*);
 HIP_RVA *hip_rvs_get_valid(struct in6_addr*);
