@@ -57,7 +57,7 @@ void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
  "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept",
- "write", "read", "open"};
+ "write", "read"};
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
@@ -167,6 +167,77 @@ void hip_initialize_db_when_not_exist()
 		hip_db_exist = 1;
 	}
 }
+
+#if 0
+/* Some unfinished code for msg header handling. We probably need a complete
+   msghdr in opp entry. Consider that pktinfo may be for IPv4 communications
+   and we need to wrap it to IPv6. */
+int hip_get_pktinfo_addr(struct msghdr *msg, int is_ipv4,
+			 struct in6_addr **saddr,
+			 struct in6_addr **daddr)
+{
+	struct sockaddr_storage addr_from;
+	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
+	struct sockaddr_in6 *addr_from6 =
+		((struct sockaddr_in6 *) &addr_from);
+        struct cmsghdr *cmsg;
+        //struct msghdr msg;
+	union {
+		struct in_pktinfo *pktinfo_in4;
+		struct in6_pktinfo *pktinfo_in6;
+	} pktinfo;
+        int err = 0;
+	int cmsg_level, cmsg_type;
+
+	pktinfo.pktinfo_in4 = NULL;
+
+	cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
+	cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
+
+	/* destination address comes from ancillary data passed
+	 * with msg due to IPV6_PKTINFO socket option */
+	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
+		if ((cmsg->cmsg_level == cmsg_level) && 
+		    (cmsg->cmsg_type == cmsg_type)) {
+			/* The structure is a union, so this fills also the
+			   pktinfo_in6 pointer */
+			pktinfo.pktinfo_in4 =
+				(struct in_pktinfo*)CMSG_DATA(cmsg);
+			break;
+		}
+	}
+        
+	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
+	   hip_init_raw_sock_v6 */
+	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
+		 "Could not determine dst addr, dropping\n");
+
+	/* IPv4 addresses */
+	if (is_ipv4) {
+		if (saddr)
+			IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, saddr);
+		if (daddr)
+			IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr,
+					 daddr);
+	} else {
+		/* IPv6 addresses */
+		if (saddr)
+			memcpy(saddr, &addr_from6->sin6_addr,
+			       sizeof(struct in6_addr));
+		if (daddr)
+			memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+			       sizeof(struct in6_addr));
+	}
+
+	if (saddr)
+		HIP_DEBUG_IN6ADDR("src", saddr);
+	if (daddr)
+		HIP_DEBUG_IN6ADDR("dst", daddr);
+
+ out_err:
+	return err;
+}
+#endif
 
 void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int socket,
 			    const struct sockaddr *sa, const socklen_t sa_len)
@@ -732,7 +803,7 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
 	int charnum;
-	// XX TODO
+	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.sendmsg_dlsym(a, msg, flags);
 	
 	HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
@@ -843,7 +914,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	char *error = NULL;
 	char *name = "recvmsg";
 	
-	// XX TODO
+	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
 	
 	HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n",
