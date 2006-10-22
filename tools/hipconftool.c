@@ -31,11 +31,7 @@ const char *usage =
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
-#ifdef CONFIG_HIP_SPAM
 "get|set|inc|dec|new puzzle all|hit\n"
-#else
-"get|set|inc|dec|new puzzle all\n"
-#endif
 "hip bos\n"
 "hip nat on|off|peer_hit\n"
 "hip rst all|peer_hit\n"
@@ -633,7 +629,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 
 	all = !strcmp("all", opt[0]);
 
-#ifdef CONFIG_HIP_SPAM
 	if (!all) {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
@@ -646,13 +641,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 			goto out;
 		}
 	}
-#else
-	if (!all) {
-		err = -1;
-		HIP_ERROR("Only 'all' is supported\n");
-		goto out;
-	}
-#endif /* CONFIG_HIP_SPAM */
 
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
