@@ -177,6 +177,8 @@
     </para></listitem>
     <listitem><para>
             [*] The IPv6 protocol (EXPERIMENTAL)
+            [*] IPv4: IPsec BEET mode (2.6.19 and above)
+            [*] IPv6: IPsec BEET mode (2.6.19 and above)
     </para></listitem>
     </itemizedlist>
     <para>

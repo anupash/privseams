@@ -31,7 +31,7 @@ int hip_db_exist = 0;
 
 
 // used for dlsym_util
-#define NUMBER_OF_DLSYM_FUNCTIONS 10
+#define NUMBER_OF_DLSYM_FUNCTIONS 12
 
 struct {
 	int (*socket_dlsym)(int domain, int type, int protocol);
@@ -49,12 +49,15 @@ struct {
 	int (*close_dlsym)(int fd);
 	int (*accept_dlsym)(int sockfd, struct sockaddr *addr,
 			    socklen_t *addrlen);
+	ssize_t (*write_dlsym)(int fd, const void *buf, size_t count);
+	ssize_t (*read_dlsym)(int fd, void *buf, size_t count);
 } dl_function_ptr;
 
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
- "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept"};
+ "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept",
+ "write", "read", "open"};
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
@@ -428,6 +431,34 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 	}
 }
 
+hip_opp_socket_t *hip_create_untranslatable_entry(int pid, const int fd) {
+	hip_opp_socket_t *entry = NULL;
+	int err = 0;
+
+	/* This function is almost identical with socket() */
+	
+	hip_initialize_db_when_not_exist();
+	
+	if (!hip_exists_translation(pid, fd))
+		err = hip_socketdb_add_entry(pid, fd);
+	if(err) {
+		HIP_ERROR("Could not add entry\n");
+		goto out_err;
+	}
+
+	entry = hip_socketdb_find_entry(pid, fd);
+	HIP_ASSERT(entry);
+	/* PF_LOCAL guarantees that the socket won't be translated */
+	entry->domain = PF_LOCAL;
+	entry->type = 0;
+	entry->protocol = 0;
+	
+ out_err:
+	HIP_DEBUG("Called socket_dlsym fd=%d\n", fd);  
+
+	return entry;
+}
+
 int hip_translate_socket(const int *orig_socket,
 		     const struct sockaddr *orig_id,
 		     const socklen_t *orig_id_len,
@@ -437,11 +468,17 @@ int hip_translate_socket(const int *orig_socket,
 		     int is_peer, int is_dgram)
 {
 	int err = 0, pid = getpid(), is_translated, wrap_applicable;
-	hip_opp_socket_t *entry;
+	hip_opp_socket_t * entry;
 	
-	entry = hip_socketdb_find_entry(pid, *orig_socket);
-	HIP_ASSERT(entry);
 	HIP_ASSERT(orig_socket);
+	entry = hip_socketdb_find_entry(pid, *orig_socket);
+	if (!entry) {
+		/* Can happen in the case of read() or write() on a fd;
+		   we are not wrapping open() or creat() calls which means
+		   that we don't have an entry for them. */
+		entry = hip_create_untranslatable_entry(pid, *orig_socket);
+	}
+	HIP_ASSERT(entry);
 	
 	is_translated =
 		(is_peer ? entry->peer_id_is_translated :
@@ -499,7 +536,7 @@ int hip_translate_socket(const int *orig_socket,
 int socket(int domain, int type, int protocol)
 {
 	int pid = 0;
-	int socket_fd = 0;
+	int socket_fd = -1;
 	int err = 0;
 	hip_opp_socket_t *entry = NULL;
 	
@@ -507,30 +544,31 @@ int socket(int domain, int type, int protocol)
 	
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
 	
-	if(socket_fd != -1){
-		pid = getpid();    
-		if(hip_exists_translation(pid, socket_fd)){
-			HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
-		} else {
-			err = hip_socketdb_add_entry(pid, socket_fd);
-			if(err)
-				return err;
-			
-			entry = hip_socketdb_find_entry(pid, socket_fd);
-			HIP_ASSERT(entry);
-			if(entry){
-				entry->domain = domain;
-				entry->type = type;
-				entry->protocol = protocol;
-			}
-		} 
+	if(socket_fd == -1){
+		HIP_ERROR("Socket error\n");
+		goto out_err;
 	}
-	else{
-		HIP_ASSERT(0);
+
+	pid = getpid();    
+	if(hip_exists_translation(pid, socket_fd)){
+		HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
+		goto out_err;
 	}
+
+	err = hip_socketdb_add_entry(pid, socket_fd);
+	if(err)
+		goto out_err;
+	
+	entry = hip_socketdb_find_entry(pid, socket_fd);
+	HIP_ASSERT(entry);
+	entry->domain = domain;
+	entry->type = type;
+	entry->protocol = protocol;
+
+  out_err:
 	HIP_DEBUG("Called socket_dlsym socket_fd=%d\n", socket_fd);  
-	return socket_fd;
-}
+	 return socket_fd;
+ }
 
 int bind(int orig_socket, const struct sockaddr *orig_id,
 	 socklen_t orig_id_len)
@@ -622,6 +660,37 @@ ssize_t send(int orig_socket, const void * b, size_t c, int flags)
 	return err;
 }
 
+ssize_t write(int orig_socket, const void * b, size_t c)
+{
+	int err = 0, *translated_socket;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	
+	/* This functions is almost identical with send() */
+
+	HIP_DEBUG("\n");
+	
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+	
+	err = dl_function_ptr.write_dlsym(*translated_socket, b, c);
+	
+	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", err);
+	
+ out_err:
+	
+	return err;
+}
+
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
  * Untested.
@@ -664,7 +733,7 @@ ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
 	int charnum;
 	// XX TODO
-	charnum = dl_function_ptr.sendmsg_dlsym(socket, msg, flags);
+	charnum = dl_function_ptr.sendmsg_dlsym(a, msg, flags);
 	
 	HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
 	
@@ -692,6 +761,38 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	}
 	
 	err = dl_function_ptr.recv_dlsym(*translated_socket, b, c, flags);
+	
+	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", err);
+	
+ out_err:
+	
+	return err;
+}
+
+
+ssize_t read(int orig_socket, void *b, size_t c)
+{
+	int err = 0, *translated_socket;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	
+	/* This functions is almost identical with recv() */
+
+	HIP_DEBUG("\n");
+	
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+	
+	err = dl_function_ptr.read_dlsym(*translated_socket, b, c);
 	
 	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", err);
 	
@@ -750,6 +851,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	
 	return charnum;
 }
+
 int close(int fd)
 {
 	int err = 0, pid = 0;
@@ -789,7 +891,6 @@ int close(int fd)
 	
   return err;
 }
-
 
 // used to test socketdb
 void test_db(){
