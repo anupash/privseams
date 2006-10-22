@@ -21,7 +21,7 @@ LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 LDFLAGS = -lcrypto
 
-bin_PROGRAMS = hipconf
+sbin_PROGRAMS = hipconf
 hipconf_SOURCES = hipconftool.c
 
 # The sources depend on builder, but it is located elsewhere. Linking is
