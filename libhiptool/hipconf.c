@@ -42,12 +42,12 @@ int handle_exec_application(int type, char *argv[], int argc)
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
-			path = LIB_DIR "/libinet6.so:" LIB_DIR "/libhiptool.so";
+			path = "libinet6.so:libhiptool.so";
 			setenv("LD_PRELOAD", path, 1);
 		}
 		else
 		{
-			path = LIB_DIR "/libopphip.so:" LIB_DIR "/libinet6.so:" LIB_DIR "/libhiptool.so";
+			path = "libopphip.so:libinet6.so:libhiptool.so";
 			setenv("LD_PRELOAD", path, 1);
 		}
 
