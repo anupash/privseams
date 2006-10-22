@@ -31,7 +31,11 @@ const char *usage =
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
+#ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
+#else
+"get|set|inc|dec|new puzzle all\n"
+#endif
 "hip bos\n"
 "hip nat on|off|peer_hit\n"
 "hip rst all|peer_hit\n"
