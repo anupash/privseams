@@ -26,14 +26,15 @@
  * @param argc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_exec_application(int type, char *argv[], int argc)
+int handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
 	char *path;
 	va_list args;
 	int err = 0;
 
-	err = fork();
+	if (do_fork)
+		err = fork();
 
 	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
 	else if (err > 0) err = 0;
