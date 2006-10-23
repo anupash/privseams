@@ -357,9 +357,9 @@ struct hip_hadb_rcv_func_set {
 				  hip_ha_t*,
 				  hip_portpair_t *);
 				     
-	int (*hip_receive_notify)(struct hip_common *,
-				  struct in6_addr *,
-				  struct in6_addr *,
+	int (*hip_receive_notify)(const struct hip_common *,
+				  const struct in6_addr *,
+				  const struct in6_addr *,
 				  hip_ha_t*);
   
 	int (*hip_receive_bos)(struct hip_common *,

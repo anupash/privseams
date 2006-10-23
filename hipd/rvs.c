@@ -441,18 +441,19 @@ void hip_rvs_remove(hip_rva_t *rva)
  */
 int hip_rvs_relay_i1(const struct hip_common *i1,
 		     const struct in6_addr *i1_saddr,
-		     const struct in6_addr *i1_daddr, const hip_rva_t *rva,
+		     const struct in6_addr *i1_daddr, hip_rva_t *rva,
 		     const hip_portpair_t *i1_info)
 {
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
-	struct in6_addr final_dst, local_addr;
+	struct in6_addr final_dst;
 	hip_tlv_type_t param_type = 0;
 	/* A function pointer to either hip_build_param_from() or
 	   hip_build_param_from_nat(). */
-	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
-				 in_port_t port);
+	int (*builder_function) (struct hip_common *msg,
+				 const struct in6_addr *addr,
+				 const in_port_t port);
 
 	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
@@ -580,8 +581,8 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
  * @return         zero on success, or negative error value on error.
  */ 
 int hip_rvs_reply_with_notify(const struct hip_common *i1,
-			      const struct in6_addr *i1_saddr,
-			      const hip_rva_t *rva,
+			      struct in6_addr *i1_saddr,
+			      hip_rva_t *rva,
 			      const hip_portpair_t *i1_info)
 {
 	int err = 0; 

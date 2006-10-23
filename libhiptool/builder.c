@@ -736,8 +736,6 @@ void hip_calc_hdr_len(struct hip_common *msg)
 	struct hip_tlv_common *param = NULL;
 	void *pos = (void *) msg;
 
-	_HIP_DEBUG("\n");
-
 	/* We cannot call get_next() or get_free() because they need a valid
 	   header length which is to be (possibly) calculated now. So, the
 	   header length must be calculated manually here. */
@@ -1085,41 +1083,6 @@ int hip_check_network_msg(const struct hip_common *msg)
 }
 
 /**
- * Checks the "Notify Message Type" field in a NOTIFY parameter.
- *
- * This function checks that the value of "Notify Message Type" field is one of
- * the values defined in Chapter 5.2.16 of draft-ietf-hip-base-06.
- * 
- * @param notify a pointer to a NOTIFY-parameter (values in network byte order).
- * @return       zero on success, or negative error value on error.
- */
-int hip_check_notify_param_type(const struct hip_notify *notify) {
-	
-	int err = 0;
-	uint16_t msgtype = ntohs(notify->msgtype);
-	
-	HIP_IFE(msgtype != HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE &&
-		msgtype != HIP_NTF_INVALID_SYNTAX &&
-		msgtype != HIP_NTF_NO_DH_PROPOSAL_CHOSEN &&
-		msgtype != HIP_NTF_INVALID_DH_CHOSEN &&
-		msgtype != HIP_NTF_NO_HIP_PROPOSAL_CHOSEN &&
-		msgtype != HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN &&
-		msgtype != HIP_NTF_AUTHENTICATION_FAILED &&
-		msgtype != HIP_NTF_CHECKSUM_FAILED &&
-		msgtype != HIP_NTF_HMAC_FAILED &&
-		msgtype != HIP_NTF_ENCRYPTION_FAILED &&
-		msgtype != HIP_NTF_INVALID_HIT &&
-		msgtype != HIP_NTF_BLOCKED_BY_POLICY &&
-		msgtype != HIP_NTF_SERVER_BUSY_PLEASE_RETRY &&
-		msgtype != HIP_NTF_I2_ACKNOWLEDGEMENT,
-		-EINVAL);
-	
- out_err:
-	return err;
-}
-
-
-/**
  * Builds and inserts a parameter into the message.
  *
  * This is the root function of all parameter building functions.
@@ -1373,31 +1336,26 @@ int hip_build_user_hdr(struct hip_common *msg,
  * @param control      HIP control bits in host byte order
  * @param hit_sender   source HIT in network byte order
  * @param hit_receiver destination HIT in network byte order
+ * @todo build HIP network header in the same fashion as in build_daemon_hdr().
+ * <ul>
+ * <li>Write missing headers in the header using accessor functions
+ * (see hip_get/set_XXX() functions in the beginning of this file). You have to
+ * create couple of new ones, but daemon and network messages use the same
+ * locations for storing len and type (hip_common->err is stored in the
+ * hip_common->checksum) and they can be used as they are.</li>
+ * <li>payload_proto.</li>
+ * <li>payload_len: see how build_daemon_hdr() works.</li>
+ * <li>ver_res.</li>
+ * <li>checksum (move the checksum function from hip.c to this file
+ *     because this file is shared by kernel and userspace).</li>
+ * <li>write the parameters of this function into the message.</li>
+ * </ul>
+ * @note Use @b only accessors to hide byte order and size conversion issues!
  */
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 			   uint16_t control, const struct in6_addr *hit_sender,
 			   const struct in6_addr *hit_receiver)
 {
-	/*
-	 * XX TODO: build HIP network header in the same fashion as in
-	 * build_daemon_hdr().
-	 * - Write missing headers in the header using accessor functions
-	 *   (see hip_get/set_XXX() functions in the beginning of this file).
-	 *   You have to create couple of new ones, but daemon and network
-	 *   messages use the same locations for storing len and type
-	 *   (hip_common->err is stored in the hip_common->checksum) and
-	 *   they can be used as they are.
-	 *   - payload_proto
-	 *   - payload_len: see how build_daemon_hdr() works
-	 *   - ver_res
-	 *   - checksum (move the checksum function from hip.c to this file
-	 *     because this file is shared by kernel and userspace)
-	 * - write the parameters of this function into the message
-	 * - couple of notes:
-	 *   - use _only_ accessors to hide byte order and size conversion
-	 *     issues!!!
-	 */
-
 	msg->payload_proto = IPPROTO_NONE; /* 1 byte, no htons()    */
 	/* Do not touch the length; it is written by param builders */
 	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */
@@ -1760,8 +1718,8 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
-			 in_port_t not_used)
+int hip_build_param_from(struct hip_common *msg, const struct in6_addr *addr,
+			 const in_port_t not_used)
 {
 	struct hip_from from;
 	int err = 0;
@@ -1786,8 +1744,8 @@ int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
  * @see        <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
  *             draft-schmitt-hip-nat-traversal-01</a> section 3.1.4.
  */
-int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
-			     in_port_t port)
+int hip_build_param_from_nat(struct hip_common *msg, const struct in6_addr *addr,
+			     const in_port_t port)
 {
 	struct hip_from_nat from_nat;
 	int err = 0;
@@ -2792,16 +2750,17 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 /**
  * Builds a NOTIFY parameter.
  * 
- * @param msg the message where the parameter will be appended
- * @param msgtype Notify Message Type
- * @param notification_data the Notification data that will contained in the HIP NOTIFY
- *           parameter
- * @param notification_data_len length of notification_data
+ * @param msg              a pointer to the message where the parameter will be
+ *                         appended
+ * @param msgtype          NOTIFY message type
+ * @param notification     the Notification data that will contained in the HIP
+ *                         NOTIFY parameter
+ * @param notification_len length of @c notification_data
  *
  * @return zero on success, or negative on failure
  */
 int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
-			   void *notification_data, size_t notification_data_len)
+			   void *notification, size_t notification_len)
 {
 	int err = 0;
 	struct hip_notify notify;
@@ -2809,13 +2768,13 @@ int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
 	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
 	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
 			   sizeof(struct hip_tlv_common) +
-			   notification_data_len);
+			   notification_len);
 	notify.reserved = 0;
 	notify.msgtype = htons(msgtype);
 
 	err = hip_build_generic_param(msg, &notify,
 				      sizeof(struct hip_notify),
-				      notification_data);
+				      notification);
 	return err;
 }
 

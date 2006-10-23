@@ -19,15 +19,19 @@ extern unsigned int opportunistic_mode;
 
 /** A function set for NAT travelsal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
-extern int hip_build_param_esp_info(struct hip_common *msg, uint16_t keymat_index,
-			     uint32_t old_spi, uint32_t new_spi);
-/*
- * function checksum_packet() 
+extern int hip_build_param_esp_info(struct hip_common *msg,
+				    uint16_t keymat_index, uint32_t old_spi,
+				    uint32_t new_spi);
+/**
+ * Calculates the checksum of a HIP packet with pseudo-header.
+ * 
+ * @c src and @c dst are IPv4 or IPv6 addresses in network byte order.
  *
- * Calculates the checksum of a HIP packet with pseudo-header
- * src and dst are IPv4 or IPv6 addresses in network byte order
- *
- * Checksumming is from Boeing's HIPD.
+ * @param data a pointer to...
+ * @param src  a pointer to...
+ * @param dst  a pointer to...
+ * @note       Checksumming is from Boeing's HIPD.
+ * @return     ...
  */
 u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 {
@@ -104,7 +108,8 @@ u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
 }
 
 int hip_verify_network_header(struct hip_common *hip_common,
-			      struct sockaddr *src, struct sockaddr *dst, int len)
+			      struct sockaddr *src, struct sockaddr *dst,
+			      int len)
 {
 	int err = 0;
 
@@ -1880,22 +1885,25 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 }
 
 /**
- * hip_receive_i2 - receive I2 packet
- * @param skb sk_buff where the HIP packet is in
+ * Receive I2 packet.
  *
- * This is the initial function which is called when an I2 packet is
- * received. If we are in correct state, the packet is handled to
- * hip_handle_i2() for further processing.
+ * This is the initial function which is called when an I2 packet is received.
+ * If we are in correct state, the packet is handled to hip_handle_i2() for
+ * further processing.
  *
- * Returns always 0.
- *
- * TODO: check if it is correct to return always 0 
+ * @param i2       a pointer to...
+ * @param i2_saddr a pointer to...
+ * @param i2_daddr a pointer to...
+ * @param entry    a pointer to...
+ * @param i2_info  a pointer to...
+ * @return         always zero
+ * @todo   Check if it is correct to return always 0 
  */
 int hip_receive_i2(struct hip_common *i2,
 		   struct in6_addr *i2_saddr,
 		   struct in6_addr *i2_daddr,
 		   hip_ha_t *entry,
-		  hip_portpair_t *i2_info)
+		   hip_portpair_t *i2_info)
 {
 	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
@@ -2484,8 +2492,7 @@ int hip_receive_r2(struct hip_common *hip_common,
  */
 int hip_receive_notify(const struct hip_common *notify,
 		       const struct in6_addr *notify_saddr,
-		       const struct in6_addr *notify_daddr,
-		       hip_ha_t* entry)
+		       const struct in6_addr *notify_daddr, hip_ha_t* entry)
 {
 	int err = 0;
 	struct hip_notify *notify_param;
@@ -2528,15 +2535,21 @@ int hip_receive_notify(const struct hip_common *notify,
  */
 int hip_handle_notify(const struct hip_common *notify,
 		      const struct in6_addr *notify_saddr,
-		      const struct in6_addr *notify_daddr,
-		      hip_ha_t* entry)
+		      const struct in6_addr *notify_daddr, hip_ha_t* entry)
 {
 	int err = 0;
+	struct hip_common i1;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_notify *notify_param = NULL;
 	struct hip_via_rvs *via_rvs = NULL;
+	struct in6_addr dst;
 	hip_tlv_type_t param_type = 0;
+	hip_tlv_len_t param_len = 0;
 	uint16_t msgtype = 0;
+
+	/* draft-ietf-hip-base-06, Section 6.13: Processing NOTIFY packets is
+	   OPTIONAL. If processed, any errors in a received NOTIFY parameter
+	   SHOULD be logged. */
 
 	HIP_DEBUG("hip_receive_notify() invoked.\n");
 	
@@ -2547,39 +2560,121 @@ int hip_handle_notify(const struct hip_common *notify,
 		param_type = hip_get_param_type(current_param);
 		
 		if (param_type == HIP_PARAM_NOTIFY) {
-			HIP_DEBUG("Found NOTIFY parameter in NOTIFY packet.\n");
+			HIP_INFO("Found NOTIFY parameter in NOTIFY packet.\n");
 			notify_param = (struct hip_notify *)current_param;
-
-			if(hip_check_notify_param_type(notify_param) != 0) {
-				HIP_INFO("Invalid notify message type.\n");
-			}
-
+			
+			param_len = hip_get_param_contents_len(current_param);
 			msgtype = ntohs(notify_param->msgtype);
-			/* Action to be taken for each notification type. */
+						
 			switch(msgtype) {
 			case HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "UNSUPPORTED_CRITICAL_PARAMETER_TYPE.\n");
+				break;
 			case HIP_NTF_INVALID_SYNTAX:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "INVALID_SYNTAX.\n");
+				break;
 			case HIP_NTF_NO_DH_PROPOSAL_CHOSEN:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "NO_DH_PROPOSAL_CHOSEN.\n");
+				break;
 			case HIP_NTF_INVALID_DH_CHOSEN:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "INVALID_DH_CHOSEN.\n");
+				break;
 			case HIP_NTF_NO_HIP_PROPOSAL_CHOSEN:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "NO_HIP_PROPOSAL_CHOSEN.\n");
+				break;
 			case HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "INVALID_HIP_TRANSFORM_CHOSEN.\n");
+				break;
 			case HIP_NTF_AUTHENTICATION_FAILED:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "AUTHENTICATION_FAILED.\n");
+				break;
 			case HIP_NTF_CHECKSUM_FAILED:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "CHECKSUM_FAILED.\n");
+				break;
 			case HIP_NTF_HMAC_FAILED:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "HMAC_FAILED.\n");
+				break;
 			case HIP_NTF_ENCRYPTION_FAILED:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "ENCRYPTION_FAILED.\n");
+				break;
 			case HIP_NTF_INVALID_HIT:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "INVALID_HIT.\n");
+				break;
 			case HIP_NTF_BLOCKED_BY_POLICY:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "BLOCKED_BY_POLICY.\n");
+				break;
 			case HIP_NTF_SERVER_BUSY_PLEASE_RETRY:
+				HIP_INFO("NOTIFY parameter type is "\
+					 "SERVER_BUSY_PLEASE_RETRY.\n");
+				break;
 			case HIP_NTF_I2_ACKNOWLEDGEMENT:
-			default:;
+				HIP_INFO("NOTIFY parameter type is "\
+					 "I2_ACKNOWLEDGEMENT.\n");
+				break;
+			default:
+				HIP_INFO("Unrecognized NOTIFY parameter type.\n");
+				break;
 			}
+			HIP_HEXDUMP("NOTIFY parameter notification data:",
+				    notify_param->notification,
+				    param_len 
+				    - sizeof(notify_param->reserved)
+				    - sizeof(notify_param->msgtype)
+				);
+			msgtype = 0;
 		}
+		/* If there is a VIA_RVS parameter in the NOTIFY message, the
+		   message was sent by an RVS. This means, that we have to send
+		   a new I1 packet to the address in the VIA_RVS parameter.
+		   However, this packet must be send only once, and all
+		   retransmissions MUST be made through the original RVS
+		   location. Therefore we set the retransmission boolean as true
+		   in hip_send_pkt(). If the retransmission handler/packet
+		   queing is changed, care should be taken that the code below
+		   still works as intended. That is, the packet is still send
+		   only once. */
 		else if(param_type == HIP_PARAM_VIA_RVS) {
-			HIP_DEBUG("Found VIA_RVS parameter in NOTIFY packet.\n");
+			HIP_INFO("Found VIA_RVS parameter in NOTIFY packet.\n");
+			via_rvs = (struct hip_via_rvs *)current_param;
+			
+			ipv6_addr_copy(&dst,
+				       (struct in6_addr *)via_rvs->address);
+			
+			/* We don't need to use hip_msg_alloc(), since the I1
+			   packet is just the size of struct hip_common. */ 
+			memset(&i1, 0, sizeof(i1)); 
+
+			entry->hadb_misc_func->
+				hip_build_network_hdr(&i1, HIP_I1,
+						      entry->local_controls,
+						      &entry->hit_our,
+						      &entry->hit_peer);
+			
+			/* Calculate the HIP header length */
+			hip_calc_hdr_len(&i1);
+			
+			/* Entry cannot be NULL here, because it is checked at
+			   hip_receive_notify(). */
+			err = entry->hadb_xmit_func->
+				hip_send_pkt(&entry->local_address, &dst,
+					     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+					     &i1, entry, 1);
 		}
 		else {
-			HIP_DEBUG("Found unsupported parameter in NOTIFY "\
-				  "packet.\n");
+			HIP_INFO("Found unsupported parameter in NOTIFY "\
+				 "packet.\n");
 		}
 	}
 	
@@ -2587,15 +2682,18 @@ int hip_handle_notify(const struct hip_common *notify,
 }
 
 /**
- * hip_receive_bos - receive BOS packet
- * @param skb sk_buff where the HIP packet is in
- *
+ * Receive BOS packet.
+ * 
  * This function is called when a BOS packet is received. We add the
  * received HIT and HOST_ID to the database.
- *
- * Returns always 0.
- *
- * TODO: check if it is correct to return always 0 
+ * 
+ * @param bos       a pointer to...
+ * @param bos_saddr a pointer to...
+ * @param bos_daddr a pointer to...
+ * @param entry     a pointer to...
+ * @param bos_info  a pointer to...
+ * @return          always zero.
+ * @todo Check if it is correct to return always zero.
  */
 int hip_receive_bos(struct hip_common *bos,
 		    struct in6_addr *bos_saddr,

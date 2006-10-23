@@ -26,25 +26,30 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	int mask = 0;
+	uint16_t mask = 0;
 	int err = 0;
 		
 #ifdef CONFIG_HIP_RVS
-	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS))
+	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS)) {
 		mask |= HIP_CONTROL_RVS_CAPABLE;
+	}
 #endif
 
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
-
-	entry->hadb_misc_func->hip_build_network_hdr((struct hip_common* ) &i1,
-						     HIP_I1,
-						     mask, &entry->hit_our,
-						     dst_hit);
-	/* Eight octet units, not including first */
-	i1.payload_len = (sizeof(struct hip_common) >> 3) - 1;
-
+	
+	/* We don't need to use hip_msg_alloc(), since the I1
+	   packet is just the size of struct hip_common. */ 
+	memset(&i1, 0, sizeof(i1)); 
+			
+	entry->hadb_misc_func->
+		hip_build_network_hdr(&i1, HIP_I1,
+				      mask, &entry->hit_our, dst_hit);
+	
+	/* Calculate the HIP header length */
+	hip_calc_hdr_len(&i1);
+	
 	HIP_HEXDUMP("HIT source", &i1.hits, sizeof(struct in6_addr));
 	HIP_HEXDUMP("HIT dest", &i1.hitr, sizeof(struct in6_addr));
 
@@ -62,9 +67,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	
 	err = entry->hadb_xmit_func->
 		hip_send_pkt(&entry->local_address, &daddr,
-			     0, HIP_NAT_UDP_PORT,
-			     (struct hip_common*) &i1, entry, 1);
-
+			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+			     &i1, entry, 1);
+	
 	HIP_DEBUG("err after sending: %d.\n", err);
 	
 	if (!err) {
@@ -466,6 +471,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0;
 	int len = hip_get_msg_total_len(msg);
 
+	HIP_DEBUG("hip_queue_packet() invoked.\n");
 	/* Not reusing the old entry as the new packet may have
 	   different length */
 	if (entry->hip_msg_retrans.buf) {
@@ -525,7 +531,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG("hip_send_raw() invoked.\n");
 	
 	/* Verify the existence of obligatory parameters. */
-	HIP_ASSERT(peer_addr && msg);
+	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 	
 	HIP_DEBUG("Sending %s packet on raw HIP.\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
@@ -623,8 +629,8 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	else if (err == 1)
 	{
 		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
-		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
-					  msg, entry), -1, "queue failed\n");
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1,
+			 "Queueing failed.\n");
 		err = 1;
 		entry->state = HIP_STATE_FILTERING;
 		HIP_HEXDUMP("HA: ", entry, 4);
@@ -651,8 +657,8 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   detection). */
 	
 	if (retransmit)
-		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr,
-					  msg, entry), -1, "queue failed\n");
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1,
+			 "Queueing failed.\n");
 	
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
@@ -720,8 +726,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                   (host byte order).
  * @param msg        a pointer to a HIP packet common header with source and
  *                   destination HITs.
- * @param not_used   a pointer to the current host association database state.
- *                   Not in use.
+ * @param entry      a pointer to the current host association database state.
  * @param retransmit a boolean value indicating if this is a retransmission
  *                   (@b zero if this is @b not a retransmission).
  * @return           zero on success, or negative error value on error.
@@ -733,7 +738,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common* msg, hip_ha_t *not_used, int retransmit)
+		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	int sockfd = 0, err = 0, xmit_count = 0;
 	/* IPv4 Internet socket addresses. */
@@ -747,7 +752,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	HIP_DEBUG("hip_send_udp() invoked.\n");
 	/* Verify the existence of obligatory parameters. */
-	HIP_ASSERT(peer_addr && msg);
+	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 	HIP_DEBUG("Sending %s packet on UDP.\n",
 		  hip_message_type_name(hip_get_msg_type(msg)));
 	HIP_DEBUG_IN6ADDR("hip_send_udp(): local_addr", local_addr);
@@ -760,7 +765,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	src4.sin_family = dst4.sin_family = AF_INET;
 	
         /* Source address. */
-        if (local_addr) {
+        if (local_addr != NULL) {
 		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
 		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
 			 "Local address is pure IPv6 address, IPv6 address "\
@@ -806,6 +811,20 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  "destination port: %u.\n",
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
 	
+	/* If this is a retransmission, the packet is queued before sending. */
+	if (entry != NULL && retransmit) {
+		if (local_addr != NULL) {
+			HIP_IFEL(hip_queue_packet(local_addr, peer_addr, msg,
+						  entry),
+				 -1, "Queueing failed.\n");
+		}
+		else {
+			HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg,
+						  entry),
+				 -1, "Queueing failed.\n");
+		}
+	}
+	
 	/* Try to send the data. */
 	do{
 		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
@@ -847,7 +866,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * @param ctx_data a pointer to...
  * @param data     a pointer to...
  * @param fun_ctx  a pointer to...
- * @todo           tkoponen, should this somehow trigger the timeout for waiting
+ * @todo           tkoponen: should this somehow trigger the timeout for waiting
  *                 outbound traffic (state machine)?
  */
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
