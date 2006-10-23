@@ -7,7 +7,7 @@ CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-#include_HEADERS = hipconf.h
+include_HEADERS = hipconftool.h
 
 if HIP_OPENDHT
  INCLUDES += -I../hip-dht/tracker -I../hip-dht/dnsd -I../hip-dht/clientlib
@@ -21,7 +21,7 @@ LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 LDFLAGS = -lcrypto
 
-bin_PROGRAMS = hipconf
+sbin_PROGRAMS = hipconf
 hipconf_SOURCES = hipconftool.c
 
 # The sources depend on builder, but it is located elsewhere. Linking is

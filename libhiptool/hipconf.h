@@ -106,7 +106,7 @@
 #define OPT_HI_FILE 2
 
 
-int handle_exec_application(int type, char **argv, int argc);
+int handle_exec_application(int fork, int type, char **argv, int argc);
 
 
 #endif /* HIPCONF */
