@@ -31,7 +31,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	int err = 0;
 	time_t *now = (time_t*) current_time;	
 
-	if (!entry->hip_msg_retrans.buf)
+	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
 	if (entry->state == HIP_STATE_FILTERING)
@@ -40,9 +40,9 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		goto out_err;
 	}
 	
-	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
- 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
-		   entry->hip_msg_retrans.count, entry->state);
+	HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
+		  entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		  entry->hip_msg_retrans.count, hip_state_str(entry->state));
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);

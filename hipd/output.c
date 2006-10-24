@@ -473,13 +473,13 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("hip_queue_packet() invoked.\n");
 	/* Not reusing the old entry as the new packet may have
-	   different length */
-	if (entry->hip_msg_retrans.buf) {
+	   different length. */
+	if (entry->hip_msg_retrans.buf != NULL) {
 		HIP_FREE(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf= NULL;
 	}
 
-	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -1);
+	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -ENOMEM);
 	memcpy(entry->hip_msg_retrans.buf, msg, len);
 	memcpy(&entry->hip_msg_retrans.saddr, src_addr,
 	       sizeof(struct in6_addr));
@@ -747,8 +747,9 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	uint16_t packet_length = 0;
 	/* Number of characters sent. */
 	ssize_t chars_sent = 0;
-	/* If local address is not given, we fetch one here. */
-	struct in6_addr my_addr;
+	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
+	   points to the final source address (my_addr or local_addr). */
+	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	
 	HIP_DEBUG("hip_send_udp() invoked.\n");
 	/* Verify the existence of obligatory parameters. */
@@ -770,12 +771,14 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
 			 "Local address is pure IPv6 address, IPv6 address "\
 			 "family is currently not supported on UDP/HIP.\n");
+		my_addr_ptr = local_addr;
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
 		HIP_IFEL(hip_select_source_address(
 				 &my_addr, peer_addr), -EADDRNOTAVAIL,
 			 "Cannot find local address.\n");
+		my_addr_ptr = &my_addr;
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
 	}
 	
@@ -812,17 +815,18 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
 	
 	/* If this is a retransmission, the packet is queued before sending. */
+	/** @todo make sure &entry->hip_msg_retrans.daddr is != NULL before
+	    calling this function. */
 	if (entry != NULL && retransmit) {
-		if (local_addr != NULL) {
-			HIP_IFEL(hip_queue_packet(local_addr, peer_addr, msg,
-						  entry),
-				 -1, "Queueing failed.\n");
+		struct in6_addr *retrans_dst_addr = NULL;
+		if(&(entry->hip_msg_retrans.daddr) != INADDR_ANY) {
+			retrans_dst_addr = &(entry->hip_msg_retrans.daddr);
 		}
 		else {
-			HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg,
-						  entry),
-				 -1, "Queueing failed.\n");
+			retrans_dst_addr = peer_addr;
 		}
+		HIP_IFEL(hip_queue_packet(my_addr_ptr, retrans_dst_addr, msg,
+					  entry), -1, "Queueing failed.\n");
 	}
 	
 	/* Try to send the data. */

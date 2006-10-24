@@ -2236,7 +2236,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		dst_port = ntohs(from_nat->port);
 	}
 	
-	/* The relayed I1 packet has the initiators HIT as source HIT,
+	/* The relayed I1 packet has the initiator's HIT as source HIT,
 	   and the responder HIT as destination HIT. We would like to
 	   verify the HMAC against the host association that was created
 	   when the responder registered to the rvs. That particular
@@ -2333,8 +2333,6 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
- * @warning        This code does not work correctly if there are @b both
- *                 @c FROM and @c FROM_NAT parameters in the incoming I1 packet.
  */
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
@@ -2358,24 +2356,57 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		wmb();
 		state = entry->state;
 		hip_put_ha(entry);
-	} else {
+	}
+	else {
+
+/* Note that this code effectively takes place at the rendezvous server of
+   I->RVS->R hierachy. */ 
 #ifdef CONFIG_HIP_RVS
 		HIP_DEBUG_HIT("Searching rendezvous association on HIT ",
 			      &i1->hitr);
+		/* Try to find a rendezvous association matching Responder's
+		   HIT. */
  		rva = hip_rvs_get_valid(&i1->hitr);
 		HIP_DEBUG("Valid rendezvous association found: %s \n",
 			  (rva != NULL ? "yes" : "no"));
- 		if (rva) {
+		
+		/* If a matching rendezvous association is found, we have three
+		   cases:
+		   1. Only the Initiator is behind a NAT.
+		   2. Both the Initiator and Responder are behind a NAT.
+		   3. Only the Responder is behind a NAT or neither the
+		      Initiator nor Responder is behind a NAT. */
+ 		if (rva != NULL) {
+			HIP_DEBUG("BLING: cli: %u info %u.\n", rva->client_udp_port, i1_info->dst_port);
+			/* Case 1. */
 			if(rva->client_udp_port == 0 &&
 			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
-				hip_rvs_reply_with_notify(i1, i1_saddr, rva,
-							  i1_info);
+				HIP_DEBUG("EKA.\n");
+				HIP_IFE(hip_rvs_reply_with_notify(
+						i1, i1_saddr, rva, i1_info),
+					-ECOMM);
 			}
+			/* Case 2. */
+			else if(rva->client_udp_port == HIP_NAT_UDP_PORT &&
+				i1_info->dst_port == HIP_NAT_UDP_PORT) {
+				HIP_DEBUG("TOKA.\n");
+				HIP_IFE(hip_rvs_relay_i1(
+						i1, i1_saddr, i1_daddr, rva,
+						i1_info),
+					-ECOMM);
+				HIP_IFE(hip_rvs_reply_with_notify(
+						i1, i1_saddr, rva, i1_info),
+					-ECOMM);
+			}
+			/* Case 3. */
 			else {
-				err = hip_rvs_relay_i1(i1, i1_saddr, i1_daddr,
-						       rva, i1_info);
+				HIP_DEBUG("KOLMAS.\n");
+				HIP_IFE(hip_rvs_relay_i1(
+						i1, i1_saddr, i1_daddr, rva,
+						i1_info),
+					-ECOMM);
+				
 			}
-			return err;
  		}
 #endif
 		state = HIP_STATE_NONE;
@@ -2664,7 +2695,13 @@ int hip_handle_notify(const struct hip_common *notify,
 			
 			/* Calculate the HIP header length */
 			hip_calc_hdr_len(&i1);
+			HIP_DEBUG_IN6ADDR("RETRANS DST:", &(entry->hip_msg_retrans.daddr));
+			HIP_DEBUG_IN6ADDR("RETRANS SRC:", &(entry->hip_msg_retrans.saddr));
 			
+			ipv6_addr_copy(&(entry->hip_msg_retrans.daddr),
+				       notify_saddr);
+			/** @todo <span style="color:#f00">Remove this sleep! </span> */
+			// sleep(3);
 			/* Entry cannot be NULL here, because it is checked at
 			   hip_receive_notify(). */
 			err = entry->hadb_xmit_func->

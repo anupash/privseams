@@ -17,13 +17,13 @@
 #define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
+/* when adding new states update debug.h hip_state_str() */
 #define HIP_STATE_NONE              0      /* No state, structure unused */
 #define HIP_STATE_UNASSOCIATED      1      /* ex-E0 */
 #define HIP_STATE_I1_SENT           2      /* ex-E1 */
 #define HIP_STATE_I2_SENT           3      /* ex-E2 */
 #define HIP_STATE_R2_SENT           4
 #define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-/* when adding new states update debug.h hip_state_str() */
 #define HIP_STATE_FAILED            7
 #define HIP_STATE_CLOSING           8
 #define HIP_STATE_CLOSED            9
@@ -82,6 +82,18 @@ typedef struct hip_stateless_info
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
 } hip_portpair_t;
+
+/**
+ * A data structure for handling retransmission. Used inside host association
+ * database entries.
+ */
+typedef struct hip_msg_retrans{
+	int count;
+	time_t last_transmit;
+	struct in6_addr saddr;
+	struct in6_addr daddr;
+	struct hip_common *buf;
+} hip_msg_retrans_t;
 
 /** 
  * A binder structure for storing an IPv6 address and transport layer port
@@ -286,15 +298,9 @@ struct hip_hadb_state
 	uint64_t puzzle_i;
 	/** For base exchange or CLOSE. @b Not for UPDATE. */
 	char echo_data[4];
-	struct {
-		int count;
-		time_t last_transmit;
-		struct in6_addr saddr, daddr;
-		struct hip_common *buf;
-	} hip_msg_retrans;
+	/** For storing retransmission related data. */
+	hip_msg_retrans_t hip_msg_retrans;
 
-	/* function pointer sets for modifying hip behaviour based on state information */
-	
 	/* receive func set. Do not modify these values directly.
 	   Use hip_hadb_set_rcv_function_set instead */
 	hip_rcv_func_set_t *hadb_rcv_func;
