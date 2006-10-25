@@ -96,7 +96,7 @@
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */
-#define HIP_PARAM_NOTIFY               832
+#define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 
@@ -138,7 +138,7 @@
 #define HIP_PARAM_MAX             65536
 /* @} */
 
-/** @addtogroup notify_errors
+/** @addtogroup notification
  * @{ 
  */
 #define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
@@ -155,6 +155,7 @@
 #define HIP_NTF_BLOCKED_BY_POLICY                   42
 #define HIP_NTF_SERVER_BUSY_PLEASE_RETRY            44
 #define HIP_NTF_I2_ACKNOWLEDGEMENT                  46
+#define HIP_NTF_RVS_NAT                             47
 /* @} */
 
 #define HIP_HIP_RESERVED                0
@@ -552,14 +553,14 @@ struct hip_ack {
 	uint32_t peer_update_id; /* n items */
 } __attribute__ ((packed));
 
-struct hip_notify {
+struct hip_notification {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	uint16_t reserved;
 	uint16_t msgtype;
 	/** A short cut pointer to the memory region where the notification data
 	    is to be put. */
-	uint8_t notification[0];
+	uint8_t data[0];
 } __attribute__ ((packed));
 
 struct hip_locator {

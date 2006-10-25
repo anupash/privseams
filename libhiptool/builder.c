@@ -74,7 +74,7 @@ void hip_msg_init(struct hip_common *msg) {
 /**
  * hip_msg_alloc - allocate and initialize a HIP packet
  *
- * Return: initialized HIP packet if successful, %NULL on error.
+ * Return: initialized HIP packet if successful, NULL on error.
  */
 struct hip_common *hip_msg_alloc(void)
 {
@@ -451,7 +451,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_HMAC2,
                         HIP_PARAM_HOST_ID,
                         HIP_PARAM_LOCATOR,
-                        HIP_PARAM_NOTIFY,
+                        HIP_PARAM_NOTIFICATION,
                         HIP_PARAM_PUZZLE,
                         HIP_PARAM_R1_COUNTER,
                         //HIP_PARAM_REG_FAILED,
@@ -828,8 +828,10 @@ void hip_dump_msg(const struct hip_common *msg)
 	   length of padding. */
 	size_t total_len = 0, pad_len = 0;
 	HIP_DEBUG("--------------- MSG START ------------------\n");
-	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
-	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
+	HIP_DEBUG("Msg type : %s (%d)\n",
+		  hip_message_type_name(hip_get_msg_type(msg)),
+		  hip_get_msg_type(msg));
+	HIP_DEBUG("Msg length: %d\n", hip_get_msg_total_len(msg));
 	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
 	
 	while((current_param = hip_get_next_param(msg, current_param))
@@ -914,7 +916,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
 	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
 	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
-	case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
+	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
 	case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
 	case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
 	case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
@@ -2748,33 +2750,33 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 }
 
 /**
- * Builds a NOTIFY parameter.
+ * Builds a NOTIFICATION parameter.
  * 
  * @param msg              a pointer to the message where the parameter will be
  *                         appended
  * @param msgtype          NOTIFY message type
  * @param notification     the Notification data that will contained in the HIP
- *                         NOTIFY parameter
+ *                         NOTIFICATION parameter
  * @param notification_len length of @c notification_data
  *
  * @return zero on success, or negative on failure
  */
-int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
-			   void *notification, size_t notification_len)
+int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
+				 void *data, size_t data_len)
 {
 	int err = 0;
-	struct hip_notify notify;
-
-	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
-	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
+	struct hip_notification notification;
+	
+	hip_set_param_type(&notification, HIP_PARAM_NOTIFICATION);
+	hip_calc_param_len(&notification, sizeof(struct hip_notification) -
 			   sizeof(struct hip_tlv_common) +
-			   notification_len);
-	notify.reserved = 0;
-	notify.msgtype = htons(msgtype);
+			   data_len);
+	notification.reserved = 0;
+	notification.msgtype = htons(msgtype);
 
-	err = hip_build_generic_param(msg, &notify,
-				      sizeof(struct hip_notify),
-				      notification);
+	err = hip_build_generic_param(msg, &notification,
+				      sizeof(struct hip_notification),
+				      data);
 	return err;
 }
 

@@ -339,7 +339,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		}
 	}
 #endif
-	HIP_DUMP_MSG(r1pkt);
+	//HIP_DUMP_MSG(r1pkt);
 
 	/* R1 is send on UPD if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
@@ -366,6 +366,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
  * Sends a NOTIFY packet to peer.
  *
  * @param entry a pointer to the current host association database state.
+ * @warning     includes hardcoded debug data inserted in the NOTIFICATION.
  */ 
 void hip_send_notify(hip_ha_t *entry)
 {
@@ -375,11 +376,14 @@ void hip_send_notify(hip_ha_t *entry)
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
-	entry->hadb_misc_func->hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
-			      &entry->hit_our, &entry->hit_peer);
-	HIP_IFEL(hip_build_param_notify(notify_packet, 1234, "ABCDEFGHIJ", 10), 0, 
+	entry->hadb_misc_func->
+		hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0,
+				      &entry->hit_our, &entry->hit_peer);
+	HIP_IFEL(hip_build_param_notification(notify_packet,
+					      HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE,
+					      "ABCDEFGHIJ", 10), 0,
 		 "Building of NOTIFY failed.\n");
-
+	
         HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), 0);
 	
 	

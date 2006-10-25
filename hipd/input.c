@@ -2526,7 +2526,7 @@ int hip_receive_notify(const struct hip_common *notify,
 		       const struct in6_addr *notify_daddr, hip_ha_t* entry)
 {
 	int err = 0;
-	struct hip_notify *notify_param;
+	struct hip_notification *notify_param;
 	uint16_t mask = HIP_CONTROL_HIT_ANON, notify_controls = 0;
 	
 	HIP_DEBUG("hip_receive_notify() invoked.\n");
@@ -2544,7 +2544,7 @@ int hip_receive_notify(const struct hip_common *notify,
 	err = hip_handle_notify(notify, notify_saddr, notify_daddr, entry);
 
  out_err:
-	if (entry)
+	if (entry != NULL)
 		hip_put_ha(entry);
 	
 	return err;
@@ -2553,7 +2553,7 @@ int hip_receive_notify(const struct hip_common *notify,
 /**
  * Handles an incoming NOTIFY packet.
  *
- * Handles an incoming NOTIFY packet and parses @c NOTIFY parameters and
+ * Handles an incoming NOTIFY packet and parses @c NOTIFICATION parameters and
  * @c VIA_RVS parameter from the packet.
  * 
  * @param notify       a pointer to the received NOTIFY HIP packet common header
@@ -2571,15 +2571,15 @@ int hip_handle_notify(const struct hip_common *notify,
 	int err = 0;
 	struct hip_common i1;
 	struct hip_tlv_common *current_param = NULL;
-	struct hip_notify *notify_param = NULL;
-	struct hip_via_rvs *via_rvs = NULL;
-	struct in6_addr dst;
+	struct hip_notification *notification = NULL;
+	struct in6_addr responder_ip, responder_hit;
 	hip_tlv_type_t param_type = 0;
 	hip_tlv_len_t param_len = 0;
 	uint16_t msgtype = 0;
+	in_port_t port = 0;
 
 	/* draft-ietf-hip-base-06, Section 6.13: Processing NOTIFY packets is
-	   OPTIONAL. If processed, any errors in a received NOTIFY parameter
+	   OPTIONAL. If processed, any errors in a received NOTIFICATION parameter
 	   SHOULD be logged. */
 
 	HIP_DEBUG("hip_receive_notify() invoked.\n");
@@ -2590,124 +2590,130 @@ int hip_handle_notify(const struct hip_common *notify,
 		
 		param_type = hip_get_param_type(current_param);
 		
-		if (param_type == HIP_PARAM_NOTIFY) {
-			HIP_INFO("Found NOTIFY parameter in NOTIFY packet.\n");
-			notify_param = (struct hip_notify *)current_param;
+		if (param_type == HIP_PARAM_NOTIFICATION) {
+			HIP_INFO("Found NOTIFICATION parameter in NOTIFY "\
+				 "packet.\n");
+			notification = (struct hip_notification *)current_param;
 			
 			param_len = hip_get_param_contents_len(current_param);
-			msgtype = ntohs(notify_param->msgtype);
+			msgtype = ntohs(notification->msgtype);
 						
 			switch(msgtype) {
 			case HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "UNSUPPORTED_CRITICAL_PARAMETER_TYPE.\n");
 				break;
 			case HIP_NTF_INVALID_SYNTAX:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "INVALID_SYNTAX.\n");
 				break;
 			case HIP_NTF_NO_DH_PROPOSAL_CHOSEN:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "NO_DH_PROPOSAL_CHOSEN.\n");
 				break;
 			case HIP_NTF_INVALID_DH_CHOSEN:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "INVALID_DH_CHOSEN.\n");
 				break;
 			case HIP_NTF_NO_HIP_PROPOSAL_CHOSEN:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "NO_HIP_PROPOSAL_CHOSEN.\n");
 				break;
 			case HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "INVALID_HIP_TRANSFORM_CHOSEN.\n");
 				break;
 			case HIP_NTF_AUTHENTICATION_FAILED:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "AUTHENTICATION_FAILED.\n");
 				break;
 			case HIP_NTF_CHECKSUM_FAILED:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "CHECKSUM_FAILED.\n");
 				break;
 			case HIP_NTF_HMAC_FAILED:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "HMAC_FAILED.\n");
 				break;
 			case HIP_NTF_ENCRYPTION_FAILED:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "ENCRYPTION_FAILED.\n");
 				break;
 			case HIP_NTF_INVALID_HIT:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "INVALID_HIT.\n");
 				break;
 			case HIP_NTF_BLOCKED_BY_POLICY:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "BLOCKED_BY_POLICY.\n");
 				break;
 			case HIP_NTF_SERVER_BUSY_PLEASE_RETRY:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "SERVER_BUSY_PLEASE_RETRY.\n");
 				break;
 			case HIP_NTF_I2_ACKNOWLEDGEMENT:
-				HIP_INFO("NOTIFY parameter type is "\
+				HIP_INFO("NOTIFICATION parameter type is "\
 					 "I2_ACKNOWLEDGEMENT.\n");
 				break;
+			case HIP_NTF_RVS_NAT:
+				HIP_INFO("NOTIFICATION parameter type is "\
+					 "RVS_NAT.\n");
+				
+				ipv6_addr_copy(&responder_hit, (struct in6_addr *)
+					       notification->data);
+				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
+					       &(notification->
+						 data[sizeof(struct in6_addr)]));
+				memcpy(&port, &(notification->
+						data[2 * sizeof(struct in6_addr)]),
+				       sizeof(in_port_t));
+				
+				HIP_DEBUG_HIT("HIT", &responder_hit); 
+				HIP_DEBUG_IN6ADDR("IP", &responder_ip); 
+				HIP_DEBUG("PORT: %u\n", port);
+
+				/* We don't need to use hip_msg_alloc(), since
+				   the I1 packet is just the size of struct
+				   hip_common. */ 
+				memset(&i1, 0, sizeof(i1));
+
+				entry->hadb_misc_func->
+					hip_build_network_hdr(&i1, HIP_I1,
+							      entry->local_controls,
+							      &entry->hit_our,
+							      &entry->hit_peer);
+				
+				/* Calculate the HIP header length */
+				hip_calc_hdr_len(&i1);
+				HIP_DEBUG_IN6ADDR("RETRANS DST:",
+						  &(entry->hip_msg_retrans.daddr));
+				HIP_DEBUG_IN6ADDR("RETRANS SRC:",
+						  &(entry->hip_msg_retrans.saddr));
+				
+				ipv6_addr_copy(&(entry->hip_msg_retrans.daddr),
+					       notify_saddr);
+				/** @todo <span style="color:#f00">Remove this sleep! </span> */
+				// sleep(3);
+				/* Entry cannot be NULL here, because it is checked at
+				   hip_receive_notify(). */
+				err = entry->hadb_xmit_func->
+					hip_send_pkt(&entry->local_address, &responder_ip,
+						     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+						     &i1, entry, 1);
+				
+				break;
 			default:
-				HIP_INFO("Unrecognized NOTIFY parameter type.\n");
+				HIP_INFO("Unrecognized NOTIFICATION parameter "\
+					 "type.\n");
 				break;
 			}
-			HIP_HEXDUMP("NOTIFY parameter notification data:",
-				    notify_param->notification,
+			HIP_HEXDUMP("NOTIFICATION parameter notification data:",
+				    notification->data,
 				    param_len 
-				    - sizeof(notify_param->reserved)
-				    - sizeof(notify_param->msgtype)
+				    - sizeof(notification->reserved)
+				    - sizeof(notification->msgtype)
 				);
 			msgtype = 0;
-		}
-		/* If there is a VIA_RVS parameter in the NOTIFY message, the
-		   message was sent by an RVS. This means, that we have to send
-		   a new I1 packet to the address in the VIA_RVS parameter.
-		   However, this packet must be send only once, and all
-		   retransmissions MUST be made through the original RVS
-		   location. Therefore we set the retransmission boolean as true
-		   in hip_send_pkt(). If the retransmission handler/packet
-		   queing is changed, care should be taken that the code below
-		   still works as intended. That is, the packet is still send
-		   only once. */
-		else if(param_type == HIP_PARAM_VIA_RVS) {
-			HIP_INFO("Found VIA_RVS parameter in NOTIFY packet.\n");
-			via_rvs = (struct hip_via_rvs *)current_param;
-			
-			ipv6_addr_copy(&dst,
-				       (struct in6_addr *)via_rvs->address);
-			
-			/* We don't need to use hip_msg_alloc(), since the I1
-			   packet is just the size of struct hip_common. */ 
-			memset(&i1, 0, sizeof(i1)); 
-
-			entry->hadb_misc_func->
-				hip_build_network_hdr(&i1, HIP_I1,
-						      entry->local_controls,
-						      &entry->hit_our,
-						      &entry->hit_peer);
-			
-			/* Calculate the HIP header length */
-			hip_calc_hdr_len(&i1);
-			HIP_DEBUG_IN6ADDR("RETRANS DST:", &(entry->hip_msg_retrans.daddr));
-			HIP_DEBUG_IN6ADDR("RETRANS SRC:", &(entry->hip_msg_retrans.saddr));
-			
-			ipv6_addr_copy(&(entry->hip_msg_retrans.daddr),
-				       notify_saddr);
-			/** @todo <span style="color:#f00">Remove this sleep! </span> */
-			// sleep(3);
-			/* Entry cannot be NULL here, because it is checked at
-			   hip_receive_notify(). */
-			err = entry->hadb_xmit_func->
-				hip_send_pkt(&entry->local_address, &dst,
-					     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
-					     &i1, entry, 1);
 		}
 		else {
 			HIP_INFO("Found unsupported parameter in NOTIFY "\

@@ -194,8 +194,8 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 
 int hip_get_param_host_id_di_type_len(struct hip_host_id *host, char **id, int *len);
 char *hip_get_param_host_id_hostname(struct hip_host_id *hostid);
-int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
-			   void *notification_data, size_t notification_data_len);
+int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
+				 void *data, size_t data_len);
 uint16_t hip_create_control_flags(int anon, int cert, int sht, int dht);
 int hip_build_netlink_dummy_header(struct hip_common *msg);
 

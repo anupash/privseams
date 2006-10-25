@@ -556,7 +556,7 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
 
  out_err:
-	if(i1_to_be_relayed)
+	if(i1_to_be_relayed != NULL)
 	{
 		HIP_FREE(i1_to_be_relayed);
 	}
@@ -586,31 +586,48 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 			      const hip_portpair_t *i1_info)
 {
 	int err = 0; 
-	struct hip_common *notify_packet = NULL;
+	struct hip_common *notify = NULL;
 	struct in6_addr responder_ip;
+	void *data = NULL;
+	size_t data_len = 2 * sizeof(struct in6_addr) + sizeof(in_port_t);
 	HIP_DEBUG("hip_rvs_reply_with_notify() invoked.\n");
 
-	HIP_IFEL(!(notify_packet = hip_msg_alloc()), -ENOMEM,
-		 "No memory to create a NOTIFY packet.\n");	
+	HIP_IFEL((notify = hip_msg_alloc()) == NULL, -ENOMEM,
+		 "No memory to create a NOTIFY packet.\n");
+	
+	HIP_IFEL((data = HIP_MALLOC(data_len, 0)) == NULL,
+		 -ENOMEM, "No memory for notification data.\n");
 	
 	/* Get the destination IP address which the client has registered from
 	   the rendezvous association. */
 	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
 	hip_rvs_get_ip(rva, &responder_ip, 0);
+	hip_build_network_hdr(notify, HIP_NOTIFY, 0, &(i1->hitr), &(i1->hits));
 	
-	hip_build_network_hdr(notify_packet, HIP_NOTIFY, 0, &(i1->hitr),
-			      &(i1->hits));
+	/* Create NOTIFICATION data. */
+	ipv6_addr_copy(data, &(i1->hitr));
+	data += sizeof((i1->hitr));
+	ipv6_addr_copy(data, &responder_ip);
+	data += sizeof(responder_ip);
+	memcpy(data, &(rva->client_udp_port), sizeof(rva->client_udp_port));
+	data -= sizeof((i1->hitr)) + sizeof(responder_ip);
 	
-	hip_build_param_via_rvs(notify_packet, &responder_ip, 1);
+	hip_build_param_notification(notify, HIP_NTF_RVS_NAT, data, data_len); 
+	
+	//hip_build_param_via_rvs(notify, &responder_ip, 1);
 	
 	HIP_IFEL(hip_send_udp(NULL, i1_saddr, HIP_NAT_UDP_PORT,
-			      i1_info->src_port, notify_packet,
+			      i1_info->src_port, notify,
 			      NULL, 0),
 		 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
 	
  out_err:
-	if (notify_packet)
-		HIP_FREE(notify_packet);
+	if (notify != NULL) {
+		HIP_FREE(notify);
+	}
+	if (data != NULL) {
+		HIP_FREE(data);
+	}
 	return err;
 }
 
