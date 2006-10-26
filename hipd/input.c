@@ -2693,13 +2693,13 @@ int hip_handle_notify(const struct hip_common *notify,
 				ipv6_addr_copy(&(entry->hip_msg_retrans.daddr),
 					       notify_saddr);
 				/** @todo <span style="color:#f00">Remove this sleep! </span> */
-				// sleep(3);
+				//sleep(3);
 				/* Entry cannot be NULL here, because it is checked at
 				   hip_receive_notify(). */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->local_address, &responder_ip,
 						     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
-						     &i1, entry, 1);
+						     &i1, NULL, 0);
 				
 				break;
 			default:

@@ -176,7 +176,7 @@ hip_rva_t *hip_rvs_get_valid(struct in6_addr *hit)
 {
 	hip_rva_t *rva;
 
- 	rva = hip_ht_find(&rva_table, hit);
+ 	rva = (hip_rva_t*)hip_ht_find(&rva_table, hit);
  	if (rva) {
  		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
 			HIP_ERROR("A matching rendezvous association was found, "\

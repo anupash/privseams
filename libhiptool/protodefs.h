@@ -558,7 +558,7 @@ struct hip_notification {
 	hip_tlv_len_t length;
 	uint16_t reserved;
 	uint16_t msgtype;
-	/** A short cut pointer to the memory region where the notification data
+	/** A shortcut pointer to the memory region where the notification data
 	    is to be put. */
 	uint8_t data[0];
 } __attribute__ ((packed));

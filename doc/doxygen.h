@@ -262,7 +262,7 @@
  * draft-ietf-hip-base-06.
  * 
  * @defgroup notification NOTIFICATION parameter values
- * @see      hip_notify 
+ * @see      hip_notification 
  */
 
 /**

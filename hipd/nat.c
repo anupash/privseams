@@ -215,8 +215,7 @@ int hip_nat_receive_udp_control_packet(struct hip_common *msg,
 int hip_nat_refresh_port()
 {
 	int err = 0 ;
-	/** @todo Remove this return zero. */
-	return 0;
+	
 	HIP_DEBUG("Sending Keep-Alives to NAT.\n");
 	HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
 		 -1, "for_each_ha() err.\n");

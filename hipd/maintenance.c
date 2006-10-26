@@ -50,7 +50,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-		    entry->state != HIP_STATE_ESTABLISHED) {
+		    entry->state != HIP_STATE_ESTABLISHED &&
+		    entry->retrans_state == entry->state) {
 			
 			entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
@@ -80,6 +81,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	}
 
  out_err:
+	entry->retrans_state = entry->state;
+		
 	return err;
 }
 

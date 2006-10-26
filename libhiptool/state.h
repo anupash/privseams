@@ -226,6 +226,9 @@ struct hip_hadb_state
 	atomic_t             refcnt;
 	hip_hastate_t        hastate;
 	int                  state;
+	/** This guarantees that retransmissions work properly also in
+	    non-established state.*/
+	int                  retrans_state;
 	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
