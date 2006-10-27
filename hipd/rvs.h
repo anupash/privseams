@@ -4,7 +4,7 @@
  * @author  (version 1.0) Kristian Slavov
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
- * @date    25.08.2006
+ * @date    27.10.2006
  * @note    Related draft:
  *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
@@ -38,7 +38,7 @@ typedef enum { HIP_RVASTATE_INVALID=0, HIP_RVASTATE_VALID=1 } hip_rvastate_t;
 typedef struct hip_rendezvous_association
 {
 	/** A linked list head.
-	    @todo Version 1.0 author might explain what is the function
+	    @todo Version 1.0 author can(?) explain what is the function
 	    of this.*/
 	struct list_head      list_hit;
 	/** Reference count of this rendezvous association. */
@@ -65,7 +65,6 @@ typedef struct hip_rendezvous_association
 	hip_xmit_func_t       send_pkt;
 }hip_rva_t;
 
-/* FUNCTION PROTOTYPES */
 void hip_rvs_init_rvadb(void);
 void hip_rvs_free_rva(hip_rva_t*);
 void hip_rvs_get_ip(hip_rva_t*, struct in6_addr*, unsigned int);
@@ -85,7 +84,6 @@ hip_rva_t *hip_rvs_allocate(int);
 hip_rva_t *hip_rvs_get(struct in6_addr*);
 hip_rva_t *hip_rvs_get_valid(struct in6_addr*);
 
-/* MACRO DEFINITIONS */
 /**
  * Holds (increases the reference count) a rva.
  */

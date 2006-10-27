@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
 			/* If the values were read in succesfully, we do
 			   the UDP specific stuff next. */
                         else {
-				err =  hip_nat_receive_udp_control_packet(
+				err =  hip_receive_udp_control_packet(
 					hipd_msg, &saddr, &daddr, &pkt_info);
                         }
 

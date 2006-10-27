@@ -204,6 +204,7 @@
  * 
  * @defgroup hip_param_type_numbers HIP parameter type values
  * @see      hip_tlv
+ * @see      hip_param_func
  * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
  * @note     The order of the parameters is strictly enforced. The parameters
@@ -215,6 +216,7 @@
  * 
  * @defgroup hip_tlv HIP TLV data structures
  * @see      hip_param_type_numbers
+ * @see      hip_param_func
  * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
  * @note     The order of the parameters is strictly enforced. The parameters
@@ -252,6 +254,14 @@
  * 
  * @defgroup handle_functions HIP handle functions
  * @see      receive_functions
+ */
+
+/** 
+ * Functions for creating HIP parameters.
+ * 
+ * @defgroup hip_param_func HIP parameter functions
+ * @see      hip_param_type_numbers
+ * @see      hip_tlv
  */
 
 /** 

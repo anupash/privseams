@@ -116,21 +116,15 @@ static inline int hip_controls_sane(u16 controls, u16 legal)
 			 )) | legal) == legal;
 }
 
-int hip_check_hip_ri_opportunistic_mode(struct hip_common *msg,
-					struct in6_addr *src_addr,
-					struct in6_addr *dst_addr,
-					hip_portpair_t *msg_info,
-					hip_ha_t *entry);
-
-int hip_verify_packet_hmac(struct hip_common *, 
-			   struct hip_crypto_key *);
-
+int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
+					struct in6_addr *, hip_portpair_t *,
+					hip_ha_t *);
+int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
-
-int hip_receive_control_packet(struct hip_common *msg,
-			       struct in6_addr *src_addr,
-			       struct in6_addr *dst_addr,
-			       hip_portpair_t *msg_info);
+int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
+			       struct in6_addr *, hip_portpair_t *);
+int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
+				   struct in6_addr *, hip_portpair_t *);
 			  
 /**
  * @addtogroup receive_functions
@@ -170,22 +164,11 @@ int hip_handle_close(struct hip_common *, hip_ha_t *);
 int hip_handle_close_ack(struct hip_common *, hip_ha_t *);	  
 /* @} */
 
-					     
-int hip_produce_keying_material(struct hip_common *msg,
-				struct hip_context *ctx,
-				uint64_t I,
-				uint64_t J);
-				
-int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry,
-		  hip_portpair_t *);
-int hip_create_r2(struct hip_context *ctx,
-		  struct in6_addr *i2_saddr,
-		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry,
-		  hip_portpair_t *);
-
+int hip_produce_keying_material(struct hip_common *, struct hip_context *,
+				uint64_t, uint64_t );
+int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+int hip_create_r2(struct hip_context *, struct in6_addr *,
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
  
 #endif /* HIP_INPUT_H */

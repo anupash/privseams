@@ -24,7 +24,7 @@
  * @author  (version 1.0) Kristian Slavov
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
- * @date    24.08.2006
+ * @date    27.10.2006
  * @note    Related draft:
  *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
@@ -82,8 +82,8 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
-	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
-	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
+	_HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
+	_HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 
 	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
@@ -117,7 +117,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	/* If the host association has a preferred address, copy it as the
 	   first IP address of the rendezvous association. */
 	if (!ipv6_addr_any(&ha->preferred_address)) {
-		HIP_DEBUG("Copying bex address.\n");
+		HIP_DEBUG("Copying base exchange address.\n");
 		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
 		ipcnt++;
 		if (ipcnt >= HIP_RVA_MAX_IPS)
@@ -364,7 +364,6 @@ void hip_rvs_init_rvadb()
  */ 
 void hip_rvs_uninit_rvadb()
 {
-	HIP_DEBUG("hip_rvs_uninit_rvadb() invoked.\n");
 	hip_ht_uninit(&rva_table);
 }
 
@@ -455,7 +454,7 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 				 const struct in6_addr *addr,
 				 const in_port_t port);
 
-	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
+	_HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
 	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
@@ -567,8 +566,9 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 /**
  * Sends a UDP encapsulated NOTIFY packet to the initiator.
  * 
- * Sends a UDP encapsulated NOTIFY packet with responder's IP address in a
- * @c VIA_RVS parameter to the initiator located at @c i1_saddr.
+ * Sends a UDP encapsulated NOTIFY packet with a NOTIFICATION parameter of type
+ * RVS_NAT to the initiator located at @c i1_saddr. NOTIFICATION parameter has
+ * responder's HIT, IP and port number.
  *
  * @param i1       a pointer to the I1 HIP packet common header with source and
  *                 destination HITs.
@@ -590,7 +590,7 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 	struct in6_addr responder_ip;
 	void *data = NULL;
 	size_t data_len = 2 * sizeof(struct in6_addr) + sizeof(in_port_t);
-	HIP_DEBUG("hip_rvs_reply_with_notify() invoked.\n");
+	_HIP_DEBUG("hip_rvs_reply_with_notify() invoked.\n");
 
 	HIP_IFEL((notify = hip_msg_alloc()) == NULL, -ENOMEM,
 		 "No memory to create a NOTIFY packet.\n");
@@ -613,8 +613,6 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 	data -= sizeof((i1->hitr)) + sizeof(responder_ip);
 	
 	hip_build_param_notification(notify, HIP_NTF_RVS_NAT, data, data_len); 
-	
-	//hip_build_param_via_rvs(notify, &responder_ip, 1);
 	
 	HIP_IFEL(hip_send_udp(NULL, i1_saddr, HIP_NAT_UDP_PORT,
 			      i1_info->src_port, notify,
