@@ -95,6 +95,8 @@ CODING CONVENTIONS
     }
   }
 
+  hipsock shares code with the rest of the code and it requires C99
+  style C code. Declare variables right after braces!
 
 - Memory (de)allocation procedure is as follows:
  
