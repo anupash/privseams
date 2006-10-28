@@ -24,6 +24,5 @@ void hip_exit(int signal);
 int init_random_seed();
 void hip_probe_kernel_modules();
 
-
 #endif /* _HIP_INIT */
 

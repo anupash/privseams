@@ -248,8 +248,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 
-	_HIP_DUMP_MSG(response);
-
 	/* Iterate through all host identities in the input */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 	  
