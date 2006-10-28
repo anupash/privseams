@@ -167,10 +167,10 @@ fi
 
 AC_ARG_ENABLE(rvs,
              AC_HELP_STRING([--enable-rvs],
-                            [HIP Rendezvous Extensions (default is NO)]),
-             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=no])
+                            [HIP Rendezvous Extensions (default is YES)]),
+             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=yes])
 AC_CACHE_CHECK([whether to use RVS],
-               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
+               [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
