@@ -232,7 +232,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              int read_addr, struct in6_addr *saddr,
                              struct in6_addr *daddr,
-                             struct hip_stateless_info *msg_info,
+                             hip_portpair_t *msg_info,
                              int encap_hdr_size, int is_ipv4)
 {
 	struct sockaddr_storage addr_from;
@@ -336,7 +336,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-                            struct hip_stateless_info *msg_info,
+                            hip_portpair_t *msg_info,
                             int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
@@ -347,7 +347,7 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-			    struct hip_stateless_info *msg_info,
+			    hip_portpair_t *msg_info,
 			    int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,

@@ -218,7 +218,7 @@ int hip_handle_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
 		   hip_ha_t *entry,
-		   struct hip_stateless_info *stateless_info)
+		   hip_portpair_t *stateless_info)
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;

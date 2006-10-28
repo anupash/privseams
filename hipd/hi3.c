@@ -49,7 +49,7 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 	cl_buf* clb = (cl_buf *)data;
 	char *buf = clb->data;
 	int len = clb->data_len;
-	struct hip_stateless_info msg_info;
+	hip_portpair_t msg_info;
 
 	/* First check the hi3 address header */
 

@@ -138,9 +138,9 @@ static inline const char *hip_state_str(unsigned int state)
 		{
 			"NONE",          // 0
 			"UNASSOCIATED",  // 1
-			"I1_SENT",       // 2
-			"I2_SENT",       // 3
-			"R2_SENT",       // 4
+			"I1-SENT",       // 2
+			"I2-SENT",       // 3
+			"R2-SENT",       // 4
 			"ESTABLISHED",   // 5
 			"UNKNOWN",       // 6 is not currently used.
 			"FAILED",        // 7

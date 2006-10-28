@@ -362,7 +362,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip,
 				  struct in6_addr *dst_ip, 
-				  struct hip_stateless_info *update_info)
+				  hip_portpair_t *update_info)
 {
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_esp_info *esp_info;
@@ -1579,7 +1579,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
 		       struct in6_addr *update_daddr,
 		       hip_ha_t *entry,
-		       struct hip_stateless_info *sinfo)
+		       hip_portpair_t *sinfo)
 {
 	int err = 0, state = 0, has_esp_info = 0;
 	int updating_addresses = 0;

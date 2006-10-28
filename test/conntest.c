@@ -83,7 +83,7 @@ int main_server(int type, int port)
       
 			while((recvnum = recv(peer, mylovemostdata, sizeof(mylovemostdata), 0)) > 0 ) {
 				mylovemostdata[recvnum] = '\0';
-				printf("mylovemostdate %s", mylovemostdata);
+				printf("Client sends: %s", mylovemostdata);
 				fflush(stdout);
 				if (recvnum == 0) {
 					close(peer);
@@ -96,7 +96,7 @@ int main_server(int type, int port)
 					perror("send");
 					exit(2);
 				}
-				printf("mylovemostdate send back\n");
+				printf("Client has been replied.\n");
 			}
 		} else { /* UDP */
 			peerlen = sizeof(struct sockaddr_in6);
