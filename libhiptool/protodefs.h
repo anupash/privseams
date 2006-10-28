@@ -267,6 +267,7 @@
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
 typedef struct in6_addr hip_hit_t;
+typedef struct in6_addr in6_addr_t;
 typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
@@ -403,6 +404,8 @@ struct hip_common {
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
+
+typedef struct hip_common hip_common_t;
 
 /*
  * Use accessor functions defined in hip_build.h, do not access members
