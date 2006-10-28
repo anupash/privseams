@@ -82,7 +82,7 @@ diff -Nru tcpdump-3.7.2/print-hip.c tcpdump-3.7.2-hip/print-hip.c
 +#include "interface.h"
 +#include "addrtoname.h"
 +
-+#include "net/hip.h"
++#include "protodefs.h"
 +
 +/* TODO: check TLV lengths before trying to parse them */
 +

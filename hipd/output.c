@@ -22,7 +22,7 @@
  *                the peer.
  * @return        zero on success, or negative error value on error.
  */
-int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry, int from_agent)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -35,6 +35,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	}
 #endif
 
+	if (!from_agent)
+	{
+//		entry = hip_hadb_find_byhits(src_hit, dst_hit);
+/*		err = entry->hadb_output_filter_func->hip_output_filter(msg);
+		if (err == 1)
+		{
+			err = 0;
+			goto out_err;
+		}*/
+	}
+	
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
@@ -476,8 +487,10 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	_HIP_DEBUG("hip_queue_packet() invoked.\n");
 	/* Not reusing the old entry as the new packet may have
-	   different length. */
-	if (entry->hip_msg_retrans.buf != NULL) {
+	   different length */
+	if (!entry)
+		goto out_err;
+	else if (entry->hip_msg_retrans.buf) {
 		HIP_FREE(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf= NULL;
 	}
@@ -490,7 +503,7 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	       sizeof(struct in6_addr));
 	entry->hip_msg_retrans.count = HIP_RETRANSMIT_MAX;
 	time(&entry->hip_msg_retrans.last_transmit);
- out_err:
+out_err:
 	return err;
 }
 
@@ -610,9 +623,9 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	hip_zero_msg_checksum(msg);
 	msg->checksum = checksum_packet((char*)msg, &src, &dst);
 
-	if (!retransmit && hip_get_msg_type(msg) == HIP_I1)
+	if (!retransmit)
 	{
-		HIP_DEBUG("Retransmit of I1, no filtering required.\n");
+		HIP_DEBUG("Retransmit, no filtering required.\n");
 		err = -ENOENT;
 	}
 	else if (entry)
@@ -634,29 +647,31 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 	else if (err == 1)
 	{
-		HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING.\n");
-		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1,
-			 "Queueing failed.\n");
+		if (hip_get_msg_type(msg) == HIP_I1)
+		{
+			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_I1.\n");
+			entry->state = HIP_STATE_FILTERING_I1;
+		}
+		else if (hip_get_msg_type(msg) == HIP_R2)
+		{
+			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_R2.\n");
+			entry->state = HIP_STATE_FILTERING_R2;
+		}
+		else
+		{
+			err = -1;
+			goto out_err;
+		}
+		
+		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1, "queue failed\n");
 		err = 1;
-		entry->state = HIP_STATE_FILTERING;
-		HIP_HEXDUMP("HA: ", entry, 4);
 		goto out_err;
-	}
-	else if (err == 2)
-	{
-		HIP_DEBUG("Recreating entries, because agent changed local HIT.\n");
-		struct in6_addr addr;
-		memcpy(&addr, &entry->preferred_address, sizeof(addr));
-		HIP_IFEL(hip_hadb_del_peer_map(&entry->hit_peer), -1, "hip_del_peer_map failed!\n");
-		HIP_IFEL(hip_hadb_add_peer_info(&msg->hits, &addr), -1, "hip_hadb_add_peer_info failed!\n");
-		HIP_IFEL(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr), -1, "hip_hadb_find_byhits failed!\n");
 	}
 	else if (err)
 	{
 		HIP_ERROR("Agent reject packet\n");
 		err = -1;
 	}	
-	
 	/* Note that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind
 	   can fail the first time during mobility events (duplicate address

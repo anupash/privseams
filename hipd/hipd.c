@@ -188,6 +188,10 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_firewall_sock, &read_fdset);
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
+
+		/*  XX FIXME: it is possible to have several FDs in
+		    SELECT open at the same time. Currently only one is
+		    handled and the rest are discarded. */
 		
 		_HIP_DEBUG("select loop\n");
 		/* wait for socket activity */
@@ -357,9 +361,18 @@ int main(int argc, char *argv[]) {
  				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
 				if (ha)
 				{
-					ha->state = HIP_STATE_UNASSOCIATED;
-					HIP_HEXDUMP("HA: ", ha, 4);
+					ha->state = HIP_STATE_FILTERED_I1;
 					HIP_DEBUG("Agent accepted I1.\n");
+				}
+			}
+			else if (msg_type == HIP_R2)
+			{
+				hip_ha_t *ha;
+ 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
+				if (ha)
+				{
+					ha->state = HIP_STATE_FILTERED_R2;
+					HIP_DEBUG("Agent accepted R2.\n");
 				}
 			}
 			else if (msg_type == HIP_I1_REJECT)

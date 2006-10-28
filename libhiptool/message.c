@@ -333,7 +333,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	return err;
 }
 
-
 int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,

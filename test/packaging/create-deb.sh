@@ -1,6 +1,8 @@
 #!/bin/sh
 # This script allows for building binary and source debian packages
 
+# XX FIXME: ADD OPP + RVS OPTIONS
+
 #Default debian package is BINARY
 TYPE=binary
 
@@ -48,26 +50,26 @@ copy_files ()
  done
 
  echo "** Copying binary files to '$PKGDIR'"
- mkdir -p "$PKGDIR/usr"
+ mkdir -p "$PKGDIR/usr/local"
  cd "$PKGDIR"
  # create directory structure
- mkdir -p usr/sbin usr/bin usr/lib etc/hip /usr/share/doc
+ mkdir -p usr/local/sbin usr/local/bin usr/local/lib etc/hip /usr/share/doc
  cd "$HIPL"
 
- cp hipd/hipd $PKGDIR/usr/bin/
+ cp hipd/hipd $PKGDIR/usr/local/bin/
 
- cp tools/hipconf $PKGDIR/usr/sbin/
+ cp tools/hipconf $PKGDIR/usr/local/sbin/
  for suffix in "" -gai -native -native-user-key;do
-   cp test/conntest-client$suffix $PKGDIR/usr/bin/
+   cp test/conntest-client$suffix $PKGDIR/usr/local/bin/
  done
  for suffix in "" -legacy -native;do
-   cp test/conntest-server$suffix $PKGDIR/usr/bin/
+   cp test/conntest-server$suffix $PKGDIR/usr/local/bin/
  done
- cp test/hipsetup $PKGDIR/usr/sbin/
+ cp test/hipsetup $PKGDIR/usr/local/sbin/
  for suffix in a so so.0 so.0.0.0;do
-   cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
+   cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/local/lib/
  done
- cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
+ cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/local/lib/
 
  echo "** Copying documentation to '$PKGDIR'"
  cd "$HIPL/doc"

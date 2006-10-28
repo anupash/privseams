@@ -184,7 +184,6 @@ int hip_connect_func(struct addrinfo *res, const char* filename)
 		
 		printf("Trying to connect to %s\n", addr_str);
 		gettimeofday(&stats_before, NULL);
-		// Bing, failed with phit
 		e = connect(sock, ai->ai_addr, ai->ai_addrlen);
 		printf("After call conntest.c: connect to %s\n", addr_str);
 		

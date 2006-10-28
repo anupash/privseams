@@ -227,10 +227,6 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED\n");
 
-	/* Note: I had some problems with deletion of peer info. Try to close
-	   a SA and then to re-establish without rmmod or killing
-	   the hipd when you test the CLOSE. -miika */
-
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 	         &entry->preferred_address), -1,
 	         "Deleting peer info failed\n");
@@ -276,7 +272,6 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 		HIP_DEBUG("No HA for the received close ack\n");
 		goto out_err;
 	} else {
-		barrier();
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
@@ -291,11 +286,6 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 		break;
 	}
 
-	if (entry) {
-		/* XX CHECK: is the put done twice? once already in handle? */
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
  out_err:
 	return err;
 }

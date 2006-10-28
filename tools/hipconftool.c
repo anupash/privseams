@@ -17,7 +17,7 @@
  * @bug     makefile compiles prefix of debug messages wrong for hipconf in 
  *          "make all"
  */
-#include "hipconf.h"
+#include "hipconftool.h"
 
 /* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
    the nat mapping only when the communication takes place with specified
@@ -27,11 +27,11 @@ const char *usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow hit\n"
 #endif
-"add|del map hit ip_addr\n"
+"add|del map hit ipv6\n"
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
-#ifdef CONFIG_HIP_SPAM
+#ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
 #else
 "get|set|inc|dec|new puzzle all\n"
@@ -633,7 +633,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 
 	all = !strcmp("all", opt[0]);
 
-#ifdef CONFIG_HIP_SPAM
 	if (!all) {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
@@ -646,13 +645,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 			goto out;
 		}
 	}
-#else
-	if (!all) {
-		err = -1;
-		HIP_ERROR("Only 'all' is supported\n");
-		goto out;
-	}
-#endif /* CONFIG_HIP_SPAM */
 
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
@@ -823,44 +815,6 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	
 }
 
-/**
- * Handles the hipconf commands where the type is @c run. Execute new
- * application.
- *
- * @param type   the numeric action identifier for the action to be performed.
- * @param argv   an array of pointers to the command line arguments after
- *               the action and type.
- * @param argc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- */
-int exec_application(int type, char *argv[], int argc)
-{
-	/* Variables. */
-	va_list args;
-	int err = 0;
-
-	err = fork();
-
-	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
-	else if (err > 0) err = 0;
-	else if(err == 0)
-	{
-		HIP_DEBUG("Exec new application.\n");
-		if (type == TYPE_RUN) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-		else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so:/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-
-		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");
-		err = execvp(argv[0], argv);
-		if (err != 0)
-		{
-			HIP_DEBUG("Executing new application failed!\n");
-			exit(1);
-		}
-	}
-
-out_err:
-	return (err);
-}
 
 /**
  * Parses command line arguments and send the appropiate message to the kernel
@@ -917,7 +871,7 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
-		exec_application(type, (char **)&argv[3], argc - 3);
+		handle_exec_application(0, type, (char **)&argv[3], argc - 3);
 		goto out;
 	}
 	

@@ -350,6 +350,17 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
 	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
+	
+/*	{
+		hip_hit_t buf1 = { 0x20, 0x01, 0x00, 0x7b, 0x84, 0xe9, 0x35, 0x08,
+		                   0x72, 0xb4, 0x46, 0x3c, 0x2e, 0xb3, 0x8d, 0xdb };
+		hip_hit_t buf2 = { 0x20, 0x01, 0x00, 0x7d, 0xc3, 0x19, 0x1f, 0x37,
+		                   0x3e, 0x9d, 0xdc, 0xbe, 0xe1, 0x04, 0xa5, 0x57 };
+		HIP_HEXDUMP("Original source HIT: ", src_hit, sizeof(hip_hit_t));
+		HIP_HEXDUMP("Original dest HIT: ", dst_hit, sizeof(hip_hit_t));
+		memcpy(src_hit, &buf1, sizeof(hip_hit_t));
+		HIP_HEXDUMP("New source HIT: ", src_hit, sizeof(hip_hit_t));
+	}*/
 
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
@@ -401,7 +412,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
