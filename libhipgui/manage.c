@@ -31,8 +31,8 @@ void gui_add_local_hit(HIT_Local *hit)
 	GtkTreeIter iter;
 	gchar *msg = g_strdup_printf(hit->name);
 
-	w = widget(ID_RLISTMODEL);
-	gtk_tree_store_append(w, &iter, &local_top);
+	w = widget(ID_LLISTMODEL);
+	gtk_tree_store_append(w, &iter, NULL);
 	gtk_tree_store_set(w, &iter, 0, msg, -1);
 	g_free(msg);
 }
@@ -52,16 +52,14 @@ void gui_add_rgroup(HIT_Group *group)
 	GtkTreeIter iter;
 	gchar *msg = g_strdup_printf(group->name);
 
-	gdk_threads_enter();
 	w = widget(ID_RLISTMODEL);
-	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &remote_top);
+	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, NULL);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, msg, -1);
 
 	gtk_combo_box_insert_text(widget(ID_TWR_RGROUP), 0, group);
 	gtk_combo_box_insert_text(widget(ID_NH_RGROUP), 0, group);
 
 	g_free(msg);
-	gdk_threads_leave();
 }
 /* END OF FUNCTION */
 
@@ -82,8 +80,9 @@ void gui_add_remote_hit(char *hit, char *group)
 	int err;
 	char *str;
 
+//	gdk_threads_enter();
 	w = widget(ID_RLISTMODEL);
-	err = gtk_tree_model_iter_children(GTK_TREE_STORE(w), &gtop, &remote_top);
+	err = gtk_tree_model_iter_children(GTK_TREE_STORE(w), &gtop, NULL);
 	HIP_IFEL(err == FALSE, -1, "No remote groups.\n");
 	err = -1;
 
@@ -101,6 +100,7 @@ void gui_add_remote_hit(char *hit, char *group)
 	} while (gtk_tree_model_iter_next(w, &gtop) != FALSE);
 
 out_err:
+//	gdk_threads_leave();
 	if (err)
 	{
 		HIP_DEBUG("Did not find remote group \"%s\", could not show new HIT!\n", group);
@@ -123,8 +123,28 @@ void gui_delete_remote_hit(char *name)
 
 	NAMECPY(ud.old_name, name);
 	ud.new_name[0] = '\0';
-	ud.depth = 3;
-	ud.indices_first = 1;
+	ud.depth = 2;
+	ud.indices_first = -1;
+	gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Tell GUI to delete remote group from list.
+
+	@param name Name of group to be removed.
+*/
+void gui_delete_rgroup(char *name)
+{
+	/* Variables. */
+	Update_data ud;
+
+	NAMECPY(ud.old_name, name);
+	ud.new_name[0] = '\0';
+	ud.depth = 1;
+	ud.indices_first = -1;
 	gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 }
 /* END OF FUNCTION */
@@ -168,8 +188,8 @@ gboolean gui_update_tree_value(GtkTreeModel *model, GtkTreePath *path,
 	indices = gtk_tree_path_get_indices(path);
 	depth = gtk_tree_path_get_depth(path);
 
-	if ((indices[0] != ud->indices_first || depth != ud->depth)
-	    && ud->indices_first >= 0 && ud->depth >= 0);
+	if ((indices[0] != ud->indices_first && ud->indices_first >= 0)
+	    || (depth != ud->depth && ud->depth >= 0));
 	else if (strcmp(ud->old_name, str) == 0)
 	{
 		/* If new name length is less than one, then delete item. */
@@ -243,33 +263,40 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	gtk_window_move(dialog, (gdk_screen_width() - w) / 2, (gdk_screen_height() - h) / 2);
 	gtk_window_set_keep_above(dialog, TRUE);
 	gtk_widget_show(dialog);
-	print_hit_to_buffer(phit, &hit->hit);
-	gtk_label_set_text(widget(ID_NH_HIT), phit);
-	gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
-//	delete_all_items_from_cb(widget(ID_NH_RGROUP));
-	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
-
-	err = gtk_dialog_run(GTK_DIALOG(dialog));
-	switch (err)
+	
+	do
 	{
-	case GTK_RESPONSE_YES:
-		err = 0;
-		break;
-	case GTK_RESPONSE_NO:
-	default:
-		err = -1;
-		break;
-	}
+		print_hit_to_buffer(phit, &hit->hit);
+		gtk_label_set_text(widget(ID_NH_HIT), phit);
+		gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
+	//	delete_all_items_from_cb(widget(ID_NH_RGROUP));
+		gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
+	
+		err = gtk_dialog_run(GTK_DIALOG(dialog));
+		switch (err)
+		{
+		case GTK_RESPONSE_YES:
+			err = 0;
+			break;
+		case GTK_RESPONSE_NO:
+		default:
+			err = -1;
+			break;
+		}
+	
+		ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
+		group = hit_db_find_rgroup(ps);
+		hit->g = group;
+		ps = gtk_entry_get_text(widget(ID_NH_NAME));
+		NAMECPY(hit->name, ps);
+		ps = gtk_entry_get_text(widget(ID_NH_URL));
+		URLCPY(hit->url, ps);
+		ps = gtk_entry_get_text(widget(ID_NH_PORT));
+		URLCPY(hit->port, ps);
+		if (check_name_input(hit->name)) break;
+	} while (1);
 
-	ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
-	group = hit_db_find_rgroup(ps);
-	hit->g = group;
-	ps = gtk_entry_get_text(widget(ID_NH_NAME));
-	NAMECPY(hit->name, ps);
-	ps = gtk_entry_get_text(widget(ID_NH_URL));
-	URLCPY(hit->url, ps);
-	ps = gtk_entry_get_text(widget(ID_NH_PORT));
-	URLCPY(hit->port, ps);
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
 	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
 
@@ -341,19 +368,21 @@ void gui_add_hiu(HIT_Remote *hit)
 
 	@return Name of new remote group.
 */
-char *create_remote_group(void)
+char *create_remote_group(char *name)
 {
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
 	HIT_Group *g;
 	HIT_Local *l;
 	int err = -1, type, lw;
-	char *psn, *psl, *ps;
+	char *psl, *ps, psn[256];
 	pthread_t pt;
 
 	gtk_widget_show(dialog);
 	gtk_widget_grab_focus(widget(ID_NG_NAME));
-	gtk_entry_set_text(widget(ID_NG_NAME), "");
+	gtk_entry_set_text(widget(ID_NG_NAME), name);
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+	gtk_window_set_keep_above(dialog, TRUE);
 
 	err = gtk_dialog_run(dialog);
 	if (err == GTK_RESPONSE_OK)
@@ -365,7 +394,8 @@ char *create_remote_group(void)
 		if (strcmp("lightweight", ps) == 0) lw = 1;
 		else lw = 0;
 
-		psn = gtk_entry_get_text(widget(ID_NG_NAME));
+		strcpy(psn, gtk_entry_get_text(widget(ID_NG_NAME)));
+		if (!check_name_input(psn)) return (create_remote_group(psn));
 		psl = gtk_combo_box_get_active_text(widget(ID_NG_LOCAL));
 		l = NULL;
 		if (strlen(psl) > 0)
@@ -375,7 +405,6 @@ char *create_remote_group(void)
 		if (l == NULL)
 		{
 			HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
-			psn = NULL;
 		}
 		else if (strlen(psn) > 0)
 		{
@@ -388,12 +417,11 @@ char *create_remote_group(void)
 
 			pthread_create(&pt, NULL, create_remote_group_thread, g);
 		}
-		else psn = NULL;
 	}
 
 out_err:
 	gtk_widget_hide(dialog);
-	return (psn);
+	return (NULL);
 }
 /* END OF FUNCTION */
 

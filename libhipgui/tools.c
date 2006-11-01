@@ -97,6 +97,38 @@ void delete_all_items_from_cb(GtkWidget *warg)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/** Check name input. */
+int check_name_input(char *name)
+{
+	/* Variables. */
+	int i, err = 1;
+	
+	HIP_IFE(name == NULL, 0);
+	
+	/* Remove whitespaces from start and end. */
+	for (i = 0; isspace(name[i]) && i < strlen(name); i++);
+	strcpy(name, &name[i]);
+	HIP_IFE(strlen(name) < 1, 0);
+	for (i = (strlen(name) - 1); isspace(name[i]) && i > 0; i--);
+	name[i + 1] = '\0';
+	HIP_IFE(strlen(name) < 1, 0);
+	
+out_err:
+	if (!err)
+	{
+		GtkDialog *dialog;
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "Invalid input given!");
+		gtk_widget_show(dialog);
+		gtk_dialog_run(dialog);
+		gtk_widget_destroy(dialog);
+	}
+	
+	return (err);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

@@ -82,36 +82,24 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 		indices = gtk_tree_path_get_indices(path);
 		gtk_tree_model_get(model, &iter, 0, &str, -1);
 
-		if (depth == 1)
+		if (data == 0)
 		{
-			if (indices[0] == 0)
-			{
-				tw_set_mode(TWMODE_NONE);
-			}
-			if (indices[0] == 1)
-			{
-				tw_set_mode(TWMODE_NONE);
-			}
-		}
-		else if (depth == 2)
-		{
-			if (indices[0] == 0)
-			{
-				tw_set_mode(TWMODE_LOCAL);
-				tw_set_local_info(str);
-			}
-			if (indices[0] == 1)
+			if (depth == 1)
 			{
 				tw_set_mode(TWMODE_RGROUP);
 				tw_set_rgroup_info(str);
 			}
+			else if (depth == 2)
+			{
+				tw_set_mode(TWMODE_REMOTE);
+				tw_set_remote_info(str);
+			}
 		}
-		else if (depth == 3 && indices[0] == 1)
+		else if (data == 1)
 		{
-			tw_set_mode(TWMODE_REMOTE);
-			tw_set_remote_info(str);
+			tw_set_local_info(str);
 		}
-
+		
 		gtk_tree_path_free(path);
 		g_free(str);
 	}
@@ -153,9 +141,9 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 			}
 			else if (depth == 3 && indices[0] == 1)
 			{
-				gtk_menu_popup(widget(ID_RLISTMENU), NULL, NULL, NULL, NULL,
+/*				gtk_menu_popup(widget(ID_RLISTMENU), NULL, NULL, NULL, NULL,
 				               button->button, button->time);
-				return (TRUE);
+				return (TRUE);*/
 			}
 	
 			gtk_tree_path_free(path);
@@ -233,7 +221,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (strcmp("<create new...>", ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group();
+			ps = create_remote_group("");
 			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
 			else gtk_combo_box_set_active(warg, 0);
 		}
@@ -249,7 +237,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (strcmp("<create new...>", ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group();
+			ps = create_remote_group("");
 			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
 			else gtk_combo_box_set_active(warg, 0);
 		}
@@ -265,6 +253,14 @@ void button_event(GtkWidget *warg, gpointer data)
 
 	case IDB_TW_DELETE:
 		tw_delete();
+		break;
+		
+	case IDB_TWL_APPLY:
+		twl_apply();
+		break;
+
+	case IDB_TWL_CANCEL:
+		twl_cancel();
 		break;
 		
 	case IDB_SYSTRAY:
@@ -333,7 +329,7 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 
 	case ID_TOOLBAR_NEWGROUP:
 		HIP_DEBUG("Toolbar: Create remote group.\n");
-		create_remote_group();
+		create_remote_group("");
 		break;
 	}
 }
@@ -345,6 +341,16 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 void systray_event(void *warg, guint bid, guint atime, gpointer data)
 {
 	gtk_menu_popup(widget(ID_SYSTRAYMENU), NULL, NULL, NULL, NULL, 0, atime);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** When notebook has some event. */
+void notebook_event(GtkNotebook *notebook, GtkNotebookPage *page,
+                    guint page_num, gpointer data)
+{
+	HIP_DEBUG("Selected notebook page %d.\n", page_num);
 }
 /* END OF FUNCTION */
 

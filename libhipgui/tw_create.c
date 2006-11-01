@@ -22,29 +22,29 @@
 int tw_create_content(void)
 {
 	/* Variables. */
-	GtkWidget *window = (GtkWidget *)widget(ID_TOOLWND);
 	GtkWidget *w, *hb, *vb;
 	int err = 0;
 
-	gtk_container_set_border_width(window, 1);
+	gtk_container_set_border_width(widget(ID_TOOLWND), 1);
+	gtk_container_set_border_width(widget(ID_LTOOLWND), 1);
 
-	/* Create contents for different modes. */
-	HIP_IFEL(tw_create_remote(), -1, "Failed to create remote info toolwindow.\n");
-	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
-	HIP_IFEL(tw_create_rgroup(), -1, "Failed to create remote group info toolwindow.\n");
-
+	/* Create remote -tab content. */
 	vb = gtk_vbox_new(FALSE, 5);
-	gtk_container_add(window, vb);
+	gtk_box_pack_start(widget(ID_TOOLWND), vb, FALSE, FALSE, 1);
 	gtk_widget_show(vb);
 	widget_set(ID_TW_CONTAINER, vb);
 
+	HIP_IFEL(tw_create_remote(), -1, "Failed to create remote info toolwindow.\n");
+	HIP_IFEL(tw_create_rgroup(), -1, "Failed to create remote group info toolwindow.\n");
+
 	hb = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_end(vb, hb, FALSE, FALSE, 1);
+	gtk_box_pack_start(widget(ID_TOOLWND), hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
 	w = gtk_button_new_with_label("Apply");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
+	gtk_widget_grab_default(w);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TW_APPLY, w);
@@ -63,9 +63,44 @@ int tw_create_content(void)
 	gtk_widget_show(w);
 	widget_set(ID_TW_DELETE, w);
 	
-	/* Set default mode and hide the toolwindow. */
+	/* Create local -tab content. */
+	vb = gtk_vbox_new(FALSE, 5);
+	gtk_container_add(widget(ID_LTOOLWND), vb);
+	gtk_widget_show(vb);
+	widget_set(ID_TWL_CONTAINER, vb);
+	
+	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
+
+	hb = gtk_hbox_new(FALSE, 5);
+	gtk_box_pack_start(widget(ID_TWL_CONTAINER), hb, FALSE, FALSE, 1);
+	gtk_widget_show(hb);
+	
+	w = gtk_button_new_with_label("Apply");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_APPLY);
+	gtk_widget_grab_default(w);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TWL_APPLY, w);
+	
+	w = gtk_button_new_with_label("Cancel");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_CANCEL);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TWL_CANCEL, w);
+
+	w = gtk_button_new_with_label("Delete");
+	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_DELETE);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_hide(w);
+	widget_set(ID_TWL_DELETE, w);
+
+	/* Set default mode. */
  	tw_set_mode(TWMODE_REMOTE);
-	gtk_widget_hide(window);
+	gtk_widget_show(widget(ID_TOOLWND));
+	gtk_widget_show(widget(ID_LTOOLWND));
 
 out_err:
 	return (err);
@@ -120,6 +155,7 @@ int tw_create_remote(void)
 	gtk_entry_set_text(w, "NewHIT");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_NAME, w);
 
@@ -168,6 +204,7 @@ int tw_create_remote(void)
 	gtk_entry_set_text(w, "0");
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
 	gtk_widget_set_size_request(w, 90, -1);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_PORT, w);
@@ -183,6 +220,7 @@ int tw_create_remote(void)
 	gtk_entry_set_text(w, "<notset>");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 //	gtk_widget_show(w);
 	widget_set(ID_TWR_URL, w);
 
@@ -264,6 +302,7 @@ int tw_create_local(void)
 	gtk_container_set_border_width(frame, 5);
 	gtk_widget_show(frame);
 	widget_set(ID_TWLOCAL, frame);
+	gtk_box_pack_start(widget(ID_TWL_CONTAINER), widget(ID_TWLOCAL), FALSE, FALSE, 1);
 	g_object_ref(frame);
 
 	/* This box is for adding everything inside previous frame. */
@@ -283,6 +322,7 @@ int tw_create_local(void)
 	gtk_entry_set_text(w, "LocalHIT");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWL_NAME, w);
 
@@ -343,6 +383,7 @@ int tw_create_rgroup(void)
 	gtk_entry_set_text(w, "NewGroup");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWG_NAME, w);
 

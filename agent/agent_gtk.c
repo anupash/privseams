@@ -16,7 +16,7 @@ void sig_catch_int(int signum)
 {
 	static int force_exit = 0;
 	
-	signal(SIGINT, sig_catch_int);
+	signal(signum, sig_catch_int);
 	agent_exit();
 	if (force_exit < 1) HIP_DEBUG("SIGINT (CTRL-C) caught, exiting agent...\n");
 	else if (force_exit < 2) HIP_DEBUG("SIGINT (CTRL-C) caught, still once to terminate brutally.\n");
@@ -32,15 +32,68 @@ void sig_catch_int(int signum)
 
 
 /******************************************************************************/
+/** Catch SIGTSTP. */
+void sig_catch_tstp(int signum)
+{
+	signal(signum, sig_catch_tstp);
+	HIP_DEBUG("SIGTSTP (CTRL-Z?) caught, don't do that...\n");
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Catch SIGCHLD. */
+void sig_catch_chld(int signum) 
+{ 
+	/* Variables. */
+	union wait status;
+	int pid, i;
+	
+	signal(signum, sig_catch_chld);
+
+	/* Get child process status, so it wont be left as zombie for long time. */
+	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
+	{
+		/* Maybe do something.. */
+	}
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Catch SIGTERM. */
+void sig_catch_term(int signum)
+{
+	signal(signum, sig_catch_tstp);
+	HIP_ERROR("SIGTERM caught, force exit now!\n");
+	exit (1);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
 /**
 	main().
 */
 int main(int argn, char *argv[])
 {
 	/* Variables. */
-	int err = 0;
+	int err = 0, fd;
 	char db_path[1024];
 
+	/* Write pid to file. */
+	unlink(HIP_AGENT_LOCK_FILE);
+	fd = open(HIP_AGENT_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Dont lock now, make this feature available later. */
+		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
+	
 	/* Create database path. */
 	sprintf(db_path, "%s/%s", getenv("HOME"), ".hipagentdb");
 
@@ -79,6 +132,8 @@ int main(int argn, char *argv[])
 
 	/* Set signalling. */
 	signal(SIGINT, sig_catch_int);
+	signal(SIGCHLD, sig_catch_chld);
+	signal(SIGTERM, sig_catch_term);
 
 	/* Initialize GUI. */
 	HIP_DEBUG("##### 1. Initializing GUI...\n");

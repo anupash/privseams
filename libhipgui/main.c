@@ -52,15 +52,14 @@ int gui_init(void)
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
-	/* Create toolwindow. */
-	w = gtk_hbox_new(TRUE, 0); //gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	/* Create toolwindow for remote HITs/groups. */
+	w = gtk_vbox_new(FALSE, 0);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
-//	gtk_window_set_title(w, "HIP tool window");
-//	gtk_widget_set_size_request(w, 450, 300);
-
-	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);
-	g_signal_connect(w, "destroy", G_CALLBACK(tw_destroy), NULL);
+	/* Create toolwindow for local HITs. */
+	w = gtk_vbox_new(TRUE, 0);
+	widget_set(ID_LTOOLWND, w);
+	gtk_widget_show(w);
 
 	/* Create accept-dialog. */
 	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
@@ -117,6 +116,8 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
+	
+	tw_clear();
 
 	/* Initialize terminal server. */
 	if (term_get_mode() == TERM_MODE_SERVER)

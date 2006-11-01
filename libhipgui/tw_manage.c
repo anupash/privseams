@@ -17,10 +17,47 @@
 int tw_current_mode = -1;
 /** Pointer to currently set item in toolwindow. */
 void *tw_current_item = NULL;
+/** Pointer to currently set item in locals toolwindow. */
+void *twl_current_item = NULL;
 
 
 /******************************************************************************/
 /* FUNCTIONS */
+
+/******************************************************************************/
+/** Just clear both toolwindows as empty ones. */
+void tw_clear(void)
+{
+	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TWL_APPLY), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TWL_DELETE), FALSE);
+	gtk_entry_set_text(widget(ID_TWR_NAME), "");
+	gtk_entry_set_text(widget(ID_TWL_NAME), "");
+	gtk_entry_set_text(widget(ID_TWG_NAME), "");
+	
+	tw_current_item = NULL;
+	twl_current_item = NULL;
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Just clear remote toolwindow as empty ones. */
+void tw_clear_remote(void)
+{
+	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
+	gtk_entry_set_text(widget(ID_TWR_NAME), "");
+	gtk_entry_set_text(widget(ID_TWG_NAME), "");
+	
+	tw_current_item = NULL;
+}
+/* END OF FUNCTION */
+
 
 /******************************************************************************/
 /**
@@ -43,10 +80,6 @@ void tw_set_mode(int mode)
 	case TWMODE_NONE:
 		break;
 
-	case TWMODE_LOCAL:
-		gtk_container_remove(container, widget(ID_TWLOCAL));
-		break;
-
 	case TWMODE_REMOTE:
 		gtk_container_remove(container, widget(ID_TWREMOTE));
 		break;
@@ -60,13 +93,6 @@ void tw_set_mode(int mode)
 	switch (mode)
 	{
 	case TWMODE_NONE:
-		break;
-
-	case TWMODE_LOCAL:
-		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_container_add(container, widget(ID_TWLOCAL));
-		gtk_widget_show(widget(ID_TWLOCAL));
 		break;
 
 	case TWMODE_REMOTE:
@@ -168,6 +194,8 @@ void tw_set_local_info(char *hit_name)
 	char str[320];
 	int i;
 
+	gtk_widget_set_sensitive(widget(ID_TWL_APPLY), FALSE);
+	gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), FALSE);
 	hit = hit_db_find_local(hit_name, NULL);
 
 	if (hit)
@@ -175,7 +203,9 @@ void tw_set_local_info(char *hit_name)
 		gtk_entry_set_text(widget(ID_TWL_NAME), hit->name);
 		print_hit_to_buffer(str, &hit->lhit);
 		gtk_entry_set_text(widget(ID_TWL_LOCAL), str);
-		tw_current_item = (void *)hit;
+		twl_current_item = (void *)hit;
+		gtk_widget_set_sensitive(widget(ID_TWL_APPLY), TRUE);
+		gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), TRUE);
 	}
 }
 /* END OF FUNCTION */
@@ -183,7 +213,7 @@ void tw_set_local_info(char *hit_name)
 
 /******************************************************************************/
 /**
-	Set remote HIT info to toolwindow from HIT with given name.
+	Set remote group info to toolwindow from group with given name.
 
 	@param group_name Name of group.
  */
@@ -215,6 +245,9 @@ void tw_set_rgroup_info(char *group_name)
 			gtk_combo_box_set_active(widget(ID_TWG_TYPE2), i);
 
 			tw_current_item = (void *)group;
+			
+			/* If group is empty, allow deleting of the group. */
+			if (group->remotec < 1) gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
 		}
 	}
 }
@@ -248,43 +281,29 @@ int tw_add_rgroup(HIT_Group *group, void *p)
 void tw_apply(void)
 {
 	/* Variables. */
-	HIT_Local *l = (HIT_Local *)tw_current_item;
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
 	Update_data ud;
-	char *ps;
+	char *ps, str[256];
 
+	if (!tw_current_item) return;
+	
 	switch (tw_current_mode)
 	{
-	case TWMODE_LOCAL:
-		ps = gtk_entry_get_text(widget(ID_TWL_NAME));
-		if (strlen(ps) > 0)
-		{
-			NAMECPY(ud.old_name, l->name);
-			NAMECPY(ud.new_name, ps);
-			NAMECPY(l->name, ps);
-			ud.depth = 2;
-			ud.indices_first = 0;
-			HIP_DEBUG("Updating local HIT %s -> %s.\n", ud.old_name, ud.new_name);
-			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
-			all_update_local(ud.old_name, ud.new_name);
-		}
-		break;
-
 	case TWMODE_REMOTE:
-		ps = gtk_entry_get_text(widget(ID_TWR_NAME));
-		if (strlen(ps) > 0)
+		strcpy(str, gtk_entry_get_text(widget(ID_TWR_NAME)));
+		if (check_name_input(str))
 		{
 			NAMECPY(ud.old_name, r->name);
-			NAMECPY(ud.new_name, ps);
-			NAMECPY(r->name, ps);
+			NAMECPY(ud.new_name, str);
+			NAMECPY(r->name, str);
 			ps = gtk_entry_get_text(widget(ID_TWR_URL));
 			URLCPY(r->url, ps);
 			ps = gtk_entry_get_text(widget(ID_TWR_PORT));
 			URLCPY(r->port, ps);
 
-			ud.depth = 3;
-			ud.indices_first = 1;
+			ud.depth = 2;
+			ud.indices_first = -1;
 			HIP_DEBUG("Updating remote HIT %s -> %s.\n", ud.old_name, ud.new_name);
 			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 
@@ -293,7 +312,10 @@ void tw_apply(void)
 			g = hit_db_find_rgroup(ps);
 			if (g && g != r->g)
 			{
+				r->g->remotec--;
 				r->g = g;
+				r->g->remotec++;
+				
 				/* Delete old remote HIT from list. */
 				NAMECPY(ud.old_name, r->name);
 				ud.new_name[0] = '\0';
@@ -305,17 +327,17 @@ void tw_apply(void)
 		break;
 
 	case TWMODE_RGROUP:
-		ps = gtk_entry_get_text(widget(ID_TWG_NAME));
-		if (strlen(ps) > 0)
+		strcpy(str, gtk_entry_get_text(widget(ID_TWG_NAME)));
+		if (check_name_input(str))
 		{
 			NAMECPY(ud.old_name, g->name);
-			NAMECPY(ud.new_name, ps);
-			NAMECPY(g->name, ps);
+			NAMECPY(ud.new_name, str);
+			NAMECPY(g->name, str);
 			ps = gtk_combo_box_get_active_text(widget(ID_TWG_TYPE1));
 			if (strcmp("accept", ps) == 0) g->type = HIT_DB_TYPE_ACCEPT;
 			else g->type = HIT_DB_TYPE_DENY;
-			ud.depth = 2;
-			ud.indices_first = 1;
+			ud.depth = 1;
+			ud.indices_first = -1;
 			HIP_DEBUG("Updating remote group %s -> %s.\n", ud.old_name, ud.new_name);
 			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 			all_update_rgroups(ud.old_name, ud.new_name);
@@ -337,6 +359,8 @@ void tw_cancel(void)
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
 
+	if (!tw_current_item) return;
+	
 	switch (tw_current_mode)
 	{
 	case TWMODE_LOCAL:
@@ -351,8 +375,6 @@ void tw_cancel(void)
 		tw_set_rgroup_info(g->name);
 		break;
 	}
-
-	return (0);
 }
 /* END OF FUNCTION */
 
@@ -362,24 +384,64 @@ void tw_cancel(void)
 void tw_delete(void)
 {
 	/* Variables. */
-	HIT_Local *l = (HIT_Local *)tw_current_item;
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
 
+	if (!tw_current_item) return;
+	
 	switch (tw_current_mode)
 	{
-	case TWMODE_LOCAL:
-		break;
-
 	case TWMODE_REMOTE:
-		if (hit_db_del(r->name) == 0) tw_set_mode(TWMODE_NONE);
+		if (hit_db_del(r->name) == 0) tw_clear_remote();
 		break;
 
 	case TWMODE_RGROUP:
+		if (hit_db_del_rgroup(g->name) == 0) tw_clear_remote();
 		break;
 	}
+}
+/* END OF FUNCTION */
 
-	return (0);
+
+/******************************************************************************/
+/**
+	When apply is pressed in locals toolwindow.
+*/
+void twl_apply(void)
+{
+	/* Variables. */
+	HIT_Local *l = (HIT_Local *)twl_current_item;
+	Update_data ud;
+	char str[256];
+
+	if (!twl_current_item) return;
+
+	strcpy(str, gtk_entry_get_text(widget(ID_TWL_NAME)));
+	if (check_name_input(str))
+	{
+		NAMECPY(ud.old_name, l->name);
+		NAMECPY(ud.new_name, str);
+		NAMECPY(l->name, str);
+		ud.depth = 1;
+		ud.indices_first = -1;
+		HIP_DEBUG("Updating local HIT %s -> %s.\n", ud.old_name, ud.new_name);
+		gtk_tree_model_foreach(widget(ID_LLISTMODEL), gui_update_tree_value, &ud);
+		all_update_local(ud.old_name, ud.new_name);
+	}
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** When cancel is pressed in locals toolwindow. */
+void twl_cancel(void)
+{
+	/* Variables. */
+	HIT_Local *l = (HIT_Local *)twl_current_item;
+	
+	if (!twl_current_item) return;
+
+	tw_set_local_info(l->name);
 }
 /* END OF FUNCTION */
 

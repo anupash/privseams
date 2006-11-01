@@ -64,6 +64,7 @@ int nhdlg_create_content(void)
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 3);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_NH_NAME, w);
@@ -102,6 +103,7 @@ int nhdlg_create_content(void)
 	gtk_entry_set_text(w, "<notset>");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_NH_URL, w);
 
@@ -113,6 +115,7 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
 	gtk_widget_set_size_request(w, 70, -1);
 	gtk_entry_set_max_length(w, 8);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_NH_PORT, w);
 

@@ -35,6 +35,7 @@ int main_create_content(void)
 	GtkWidget *list;
 	GtkWidget *toolbar;
 	GtkWidget *iconw;
+	GtkWidget *remote_pane, *local_pane;
 	PangoFontDescription *font_desc;
 	GdkColor color;
 	GtkCellRenderer *cell;
@@ -79,7 +80,7 @@ int main_create_content(void)
 		widget_set(ID_SYSTRAYMENU, w);
 		
 /*		w = gtk_message_dialog_new(NULL, GTK_DIALOG_NO_SEPARATOR | GTK_DIALOG_NO_SEPARATOR,
-		                           GTK_MESSAGE_OTHER, GTK_BUTTONS_NONE, "testi viesti\nheipä hei");
+		                           GTK_MESSAGE_OTHER, GTK_BUTTONS_NONE, "testi viesti\nheipï¿½hei");
 		gtk_window_set_decorated(w, FALSE);
 		gtk_widget_show(w);
 		gtk_dialog_run(w);
@@ -126,7 +127,7 @@ int main_create_content(void)
 	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_ICONS);
 
 	/* Create toolbar contents. */
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "swtool.png");
+/*	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "swtool.png");
 	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_element(toolbar, GTK_TOOLBAR_CHILD_TOGGLEBUTTON,
 	                               NULL, "Toolwindow", "Show/hide toolwindow",
@@ -136,7 +137,7 @@ int main_create_content(void)
 	widget_set(ID_TB_TW, w);
 	gtk_toggle_button_set_active(w, TRUE);
 
-	gtk_toolbar_append_space(toolbar);
+	gtk_toolbar_append_space(toolbar);*/
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newgroup.png");
 	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_item(toolbar, "New group",
@@ -149,16 +150,17 @@ int main_create_content(void)
 	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-//	iconw = gtk_image_new_from_file("run.xpm");
-/*	w = gtk_toolbar_append_item(toolbar, "New HIT",
+	iconw = gtk_image_new_from_file("run.xpm");
+	w = gtk_toolbar_append_item(toolbar, "New HIT",
 	                            "Popup new HIT dialog for debugging",
 	                            "Private", iconw,
-	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);*/
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
 
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(notebook), GTK_POS_TOP);
 	gtk_box_pack_start(GTK_BOX(pane), notebook, TRUE, TRUE, 0);
+	g_signal_connect(notebook, "switch-page", G_CALLBACK(notebook_event), (gpointer)NULL);
 	gtk_widget_show(notebook);
 
 	/* Create status bar. */
@@ -168,15 +170,20 @@ int main_create_content(void)
 	widget_set(ID_STATUSBAR, w);
 
 	/* Create tabs. */
-	pane = gtk_hpaned_new();
-	label = gtk_label_new("HITs");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pane, label);
-	gtk_widget_show(pane);
+	remote_pane = gtk_hpaned_new();
+	label = gtk_label_new("Remote");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), remote_pane, label);
+	gtk_widget_show(remote_pane);
+
+	local_pane = gtk_hpaned_new();
+	label = gtk_label_new("Local");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), local_pane, label);
+	gtk_widget_show(local_pane);
 
 	hiubox = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new("HITs in use");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
-	gtk_widget_show(hiubox);
+	//gtk_widget_show(hiubox);
 
 /*	label = gtk_label_new("Net");
 	label2 = gtk_label_new("Net");
@@ -196,49 +203,80 @@ int main_create_content(void)
 	cframe = gtk_frame_new("Configure HIP options");
 	label2 = gtk_label_new("Options");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
-	gtk_widget_show(cframe);
+	//gtk_widget_show(cframe);
 
 	pbox = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Processes");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pbox, label2);
-	gtk_widget_show(pbox);
+	//gtk_widget_show(pbox);
 
 	chat = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new("Terminal");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), chat, label2);
-	gtk_widget_show(chat);
+	//gtk_widget_show(chat);
 
 	/***************************************
-	/* Configure HITs. */
+	/* Setup remote HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	model = gtk_tree_store_new(1, G_TYPE_STRING);
-	gtk_tree_store_append(model, &local_top, NULL);
-	gtk_tree_store_set(model, &local_top, 0, "Local HITs", -1);
-	gtk_tree_store_append(model, &remote_top, NULL);
-	gtk_tree_store_set(model, &remote_top, 0, "Remote HIT groups", -1);
+//	gtk_tree_store_append(model, &local_top, NULL);
+//	gtk_tree_store_set(model, &local_top, 0, "Local HITs", -1);
+//	gtk_tree_store_append(model, &remote_top, NULL);
+//	gtk_tree_store_set(model, &remote_top, 0, "Remote HITs", -1);
 
 	list = gtk_tree_view_new();
-	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
-	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)"clicked");
-	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)"pressed");
+//	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
+	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)0);
+	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)0);
 	widget_set(ID_RLISTVIEW, list);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("HITs", cell, "text", 0, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Remote groups and HITs", cell, "text", 0, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
 
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);
-	gtk_paned_add1(GTK_PANED(pane), scroll);
+	gtk_paned_add1(GTK_PANED(remote_pane), scroll);
 	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
 	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
 	gtk_widget_show(list);
 	gtk_widget_show(scroll);
 	widget_set(ID_RLISTMODEL, model);
-	gtk_paned_add2(GTK_PANED(pane), widget(ID_TOOLWND));
+	gtk_paned_add2(GTK_PANED(remote_pane), widget(ID_TOOLWND));
 	gtk_widget_show(widget(ID_TOOLWND));
+	widget_set(ID_REMOTEPANE, remote_pane);
+
+	/***************************************
+	/* Setup local HITs. */
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	model = gtk_tree_store_new(1, G_TYPE_STRING);
+//	gtk_tree_store_append(model, &local_top, NULL);
+//	gtk_tree_store_set(model, &local_top, 0, "Local HITs", -1);
+
+	list = gtk_tree_view_new();
+	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)1);
+	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)1);
+	widget_set(ID_LLISTVIEW, list);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+	cell = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes("Local HITs", cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
+	gtk_widget_set_size_request(scroll, 200, 0);
+	gtk_paned_add1(GTK_PANED(local_pane), scroll);
+	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
+	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
+	gtk_widget_show(list);
+	gtk_widget_show(scroll);
+	widget_set(ID_LLISTMODEL, model);
+	gtk_paned_add2(GTK_PANED(local_pane), widget(ID_LTOOLWND));
+	gtk_widget_show(widget(ID_LTOOLWND));
+	widget_set(ID_LOCALPANE, local_pane);
 
 	/***************************************
 	/* HITs in use -list. */

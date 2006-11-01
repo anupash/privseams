@@ -27,6 +27,7 @@ char *get_nick(void);
 void set_nick(char *);
 int find_from_cb(char *, GtkWidget *);
 void delete_all_items_from_cb(GtkWidget *);
+int check_name_input(char *);
 
 
 /*! @} addtogroup libhipgui */

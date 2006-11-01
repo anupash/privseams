@@ -91,6 +91,8 @@ typedef struct
 	int type;
 	/** Is group lightweight or not. */
 	int lightweight;
+	/** Number of remote HITs in this group. */
+	int remotec;
 	/* Next group item. */
 	void *next;
 } HIT_Group;

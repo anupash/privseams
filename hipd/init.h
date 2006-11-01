@@ -6,6 +6,13 @@
  *
  */
 
+/**
+ * HIP daemon lock file is used to prevent multiple instances
+ * of the daemon to start and to record current daemon pid.
+ */ 
+#define HIP_DAEMON_LOCK_FILE	"/var/lock/hipd.lock"
+
+
 #include <sys/types.h>
 #include <sys/stat.h> 
 #include <sys/socket.h>

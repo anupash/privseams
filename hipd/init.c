@@ -20,10 +20,23 @@ extern struct hip_common *hipd_msg;
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0;
+	int err = 0, fd;
 	struct sockaddr_un daemon_addr;
 
 	hip_probe_kernel_modules();
+
+	/* Write pid to file. */
+	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Dont lock now, make this feature available later. */
+		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
