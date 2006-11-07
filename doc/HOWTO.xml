@@ -666,21 +666,13 @@
    the initial I1 packet to the current location of the responder.
   </para>
   <para>
-   Prerequisites:
-  </para>
-  <para>
-    ./configure --enable-rvs
-  </para>
-  <para>
    The participants:
   </para>
   <para>
   I = Initiator, RVS = RendezVous Server, R = Responder
   </para>
   <para>
-   For now it is best if all the hosts involved in communications have the
-   rendezvous mechanism option enabled ("./configure --enable-rvs"). Although,
-   for the initiator this should not be a requirement. Also, you should have run
+   You should have run
    the base exchange once without rendezvous server to get familiar how the
    "/etc/hosts" and "/etc/hip/hosts" are configured.
   </para>
@@ -1163,12 +1155,6 @@
            ./autogen.sh
     </para></listitem>
     <listitem><para>
-              Run configure with flag --enable-opportunistic. See "./configure --help" for a full list of options
-    </para></listitem>
-    <listitem><para>
-           ./configure --enable-opportunistic
-    </para></listitem>
-    <listitem><para>
               Run make
     </para></listitem>
     <listitem><para>
@@ -1181,10 +1167,7 @@
            hipd/hipd
     </para></listitem>
     <listitem><para>
-            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode
-    </para></listitem>
-    <listitem><para>
-           tools/hipconf set opp on
+            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
            Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="basictest" />. 
