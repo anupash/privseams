@@ -20,11 +20,9 @@ struct hip_common *hipd_msg = NULL;
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-/** File descriptor of socket used for hip control packet NAT traversal on
+/** File descriptor of the socket used for hip control packet NAT traversal on
     UDP/IPv4. */
 int hip_nat_sock_udp = 0;
-/** File descriptor of socket used for data packet NAT traversal on UDP/IPv4. */
-int hip_nat_sock_udp_data = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;
@@ -212,7 +210,7 @@ int main(int argc, char *argv[]) {
 				  hip_raw_sock_v6);
 			
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			hip_msg_init(hipd_msg);
 		
@@ -233,7 +231,7 @@ int main(int argc, char *argv[]) {
 				  hip_raw_sock_v4);
 
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
@@ -267,7 +265,7 @@ int main(int argc, char *argv[]) {
 			   destination addresses and ports of the incoming
 			   packet. */
 			struct in6_addr saddr, daddr;
-			struct hip_stateless_info pkt_info;
+			hip_portpair_t pkt_info;
 
 			/* The NAT socket is bound on port 50500, thus packets
 			   received from NAT socket must have had 50500 as
@@ -287,7 +285,7 @@ int main(int argc, char *argv[]) {
 			/* If the values were read in succesfully, we do
 			   the UDP specific stuff next. */
                         else {
-				err =  hip_nat_receive_udp_control_packet(
+				err =  hip_receive_udp_control_packet(
 					hipd_msg, &saddr, &daddr, &pkt_info);
                         }
 

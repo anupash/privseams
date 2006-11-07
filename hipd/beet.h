@@ -73,7 +73,7 @@ void hip_beetdb_put_entry(void *entry);
  */
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
-		    uint32_t spi, int state, int dir, struct hip_stateless_info *sa_info);
+		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   struct in6_addr *hit_our,
@@ -97,7 +97,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int aalg, struct hip_crypto_key *authkey,
 			  int authkey_len,
 			  int preferred_family,
-				int sport, int dport);// struct hip_stateless_info *sa_info);
+				int sport, int dport);// hip_portpair_t *sa_info);
 int hip_xfrm_state_delete(struct rtnl_handle *rth, struct in6_addr *peer_addr,
 			  __u32 spi, int preferred_family, int sport, int dport);
 /* Allocates SPI for fixed time */

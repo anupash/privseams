@@ -129,6 +129,17 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED.\n");
 
+/* If this machine is a rendezvous server, then we need to delete the rendezvous
+   association matching the sender's HIT. */
+#ifdef CONFIG_HIP_RVS
+	hip_rva_t *rva = hip_rvs_get(&(close->hits));
+	if (rva != NULL) {
+		HIP_DEBUG_HIT("Deleting rendezvous association for HIT",
+			      &(close->hits));
+		hip_rvs_remove(rva);
+	}
+#endif
+	
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed.\n");
@@ -168,7 +179,6 @@ int hip_receive_close(struct hip_common *close,
 		HIP_DEBUG("No HA for the received close\n");
 		goto out_err;
 	} else {
-		barrier();
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}

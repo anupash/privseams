@@ -214,7 +214,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int authkey_len,
 			  int preferred_family,
 			  int sport, int dport )
-			//struct hip_stateless_info *sa_info)
+			//hip_portpair_t *sa_info)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -445,7 +445,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired,
 		    int direction, int update,
 		    int sport, int dport) {
-			// struct hip_stateless_info *sa_info) {
+			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;

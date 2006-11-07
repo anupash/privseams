@@ -871,7 +871,7 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
-		handle_exec_application(type, (char **)&argv[3], argc - 3);
+		handle_exec_application(0, type, (char **)&argv[3], argc - 3);
 		goto out;
 	}
 	

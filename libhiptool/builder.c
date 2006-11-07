@@ -74,7 +74,7 @@ void hip_msg_init(struct hip_common *msg) {
 /**
  * hip_msg_alloc - allocate and initialize a HIP packet
  *
- * Return: initialized HIP packet if successful, %NULL on error.
+ * Return: initialized HIP packet if successful, NULL on error.
  */
 struct hip_common *hip_msg_alloc(void)
 {
@@ -407,15 +407,20 @@ int hip_check_userspace_param_type(const struct hip_tlv_common *param)
 }
 
 /**
- * hip_check_network_param_type - check network parameter type
- * @param param the network parameter
+ * Checks the network parameter type.
+ * 
+ * Optional parameters are not checked, because the code just does not
+ * use them if they are not supported.
  *
+ * @param param the network parameter
  * @return 1 if parameter type is valid, or 0 if parameter type
  * is not valid. "Valid" means all optional and non-optional parameters
  * in the HIP draft.
- *
- * Optional parameters are not checked, because the code just does not
- * use them if they are not supported.
+ * @todo Clarify the functionality and explanation of this function. Should
+ *       new parameters be added to the checked parameters list as they are
+ *       introduced in extensions drafts (RVS, NAT, Registration...), or should
+ *       here only be the parameters listed in Sections 5.2.3 through Section
+ *       5.2.18 of the draft-ietf-hip-base-06?
  */
 int hip_check_network_param_type(const struct hip_tlv_common *param)
 {
@@ -423,6 +428,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
+			
+
 			HIP_PARAM_ACK,
                         HIP_PARAM_CERT,
                         HIP_PARAM_DIFFIE_HELLMAN,
@@ -434,8 +441,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
-                        HIP_PARAM_FROM,
-			HIP_PARAM_FROM_NAT,
+                        //HIP_PARAM_FROM,
+			//HIP_PARAM_FROM_NAT,
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -444,17 +451,17 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_HMAC2,
                         HIP_PARAM_HOST_ID,
                         HIP_PARAM_LOCATOR,
-                        HIP_PARAM_NOTIFY,
+                        HIP_PARAM_NOTIFICATION,
                         HIP_PARAM_PUZZLE,
                         HIP_PARAM_R1_COUNTER,
-                        HIP_PARAM_REG_FAILED,
-                        HIP_PARAM_REG_INFO,
-                        HIP_PARAM_REG_REQUEST,
-                        HIP_PARAM_REG_RESPONSE,
+                        //HIP_PARAM_REG_FAILED,
+                        //HIP_PARAM_REG_INFO,
+                        //HIP_PARAM_REG_REQUEST,
+                        //HIP_PARAM_REG_RESPONSE,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
-                        HIP_PARAM_VIA_RVS,
-			HIP_PARAM_VIA_RVS_NAT
+                        //HIP_PARAM_VIA_RVS,
+			//HIP_PARAM_VIA_RVS_NAT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -471,16 +478,16 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 }
 
 /**
- * hip_check_param_contents_len - check validity of parameter contents length
- * @param msg pointer to the beginning of the message
- * @param param pointer to the parameter to be checked for contents length
+ * Checks the validity of parameter contents length.
  * 
  * The msg is passed also in to check to the parameter will not cause buffer
  * overflows.
- *
- * @return 1 if the length of the parameter contents length was valid
- *          (the length was not too small or too large to fit into the
- *          message). Zero is returned on invalid contents length.
+ * 
+ * @param msg   a pointer to the beginning of the message
+ * @param param a pointer to the parameter to be checked for contents length
+ * @return      1 if the length of the parameter contents length was valid
+ *              (the length was not too small or too large to fit into the
+ *              message). Zero is returned on invalid contents length.
  */
 int hip_check_param_contents_len(const struct hip_common *msg,
 				 const struct hip_tlv_common *param) {
@@ -505,21 +512,19 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 }
 
 /**
- * hip_get_next_param - iterate to the next parameter
- * @param msg pointer to the beginning of the message header
- * @param current_param pointer to the current parameter, or NULL if the msg
- *                 is to be searched from the beginning
- *
- * @return the next parameter after the current_param in msg, or NULL
- *          if no parameters were found
+ * Iterates to the next parameter.
+ * 
+ * @param msg           a pointer to the beginning of the message header
+ * @param current_param a pointer to the current parameter, or NULL if the msg
+ *                      is to be searched from the beginning.
+ * @return              the next parameter after the current_param in msg, or
+ *                      NULL if no parameters were found.
  */
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
-				   const struct hip_tlv_common *current_param)
+					  const struct hip_tlv_common *current_param)
 {
 	struct hip_tlv_common *next_param = NULL;
 	void *pos = (void *) current_param;
-
-	_HIP_DEBUG("\n");
 
 	if (!msg) {
 		HIP_ERROR("msg null\n");
@@ -722,7 +727,7 @@ void *hip_find_free_param(const struct hip_common *msg)
  * hip_calc_hdr_len - update messsage header length
  * @param msg pointer to the beginning of the message header
  *
- * This function is called always when a parameter has added or the
+ * This function is called always when a parameter has been added or the
  * daemon/network header was written. This functions writes the new
  * header length directly into the message.
  */
@@ -730,8 +735,6 @@ void hip_calc_hdr_len(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	void *pos = (void *) msg;
-
-	_HIP_DEBUG("\n");
 
 	/* We cannot call get_next() or get_free() because they need a valid
 	   header length which is to be (possibly) calculated now. So, the
@@ -825,8 +828,10 @@ void hip_dump_msg(const struct hip_common *msg)
 	   length of padding. */
 	size_t total_len = 0, pad_len = 0;
 	HIP_DEBUG("--------------- MSG START ------------------\n");
-	HIP_DEBUG("Msg type : %s (%d)\n", hip_message_type_name(hip_get_msg_type(msg)), hip_get_msg_type(msg));
-	HIP_DEBUG("Msg legth: %d\n", hip_get_msg_total_len(msg));
+	HIP_DEBUG("Msg type : %s (%d)\n",
+		  hip_message_type_name(hip_get_msg_type(msg)),
+		  hip_get_msg_type(msg));
+	HIP_DEBUG("Msg length: %d\n", hip_get_msg_total_len(msg));
 	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
 	
 	while((current_param = hip_get_next_param(msg, current_param))
@@ -851,26 +856,27 @@ void hip_dump_msg(const struct hip_common *msg)
 }
 
 /**
- * hip_message_type_name - returns a string for a given parameter type number
+ * Returns a string for a given parameter type number.
+ * 
  * @param msg_type message type number
- * @return name of the message type
+ * @return         name of the message type
  **/
-char* hip_message_type_name(uint8_t msg_type){
-	switch (msg_type){
-	case HIP_I1: return "HIP_I1";
-	case HIP_R1: return "HIP_R1";
-	case HIP_I2: return "HIP_I2";
-	case HIP_R2: return "HIP_R2";
-	case HIP_CER: return "HIP_CER";
-	case HIP_UPDATE: return "HIP_UPDATE";
-	case HIP_NOTIFY: return "HIP_NOTIFY";
-	case HIP_CLOSE: return "HIP_CLOSE";
+char* hip_message_type_name(const uint8_t msg_type){
+	switch (msg_type) {
+	case HIP_I1:        return "HIP_I1";
+	case HIP_R1:        return "HIP_R1";
+	case HIP_I2:        return "HIP_I2";
+	case HIP_R2:        return "HIP_R2";
+	case HIP_CER:       return "HIP_CER";
+	case HIP_UPDATE:    return "HIP_UPDATE";
+	case HIP_NOTIFY:    return "HIP_NOTIFY";
+	case HIP_CLOSE:     return "HIP_CLOSE";
 	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_BOS: return "HIP_BOS";
-	case HIP_PSIG: return "HIP_PSIG";
-	case HIP_TRIG: return "HIP_TRIG";
+	case HIP_BOS:       return "HIP_BOS";
+	case HIP_PSIG:      return "HIP_PSIG";
+	case HIP_TRIG:      return "HIP_TRIG";
+	default:            return "UNDEFINED";
 	}
-	return "UNDEFINED";
 }
 
 /**
@@ -878,7 +884,7 @@ char* hip_message_type_name(uint8_t msg_type){
  * @param param_type parameter type number
  * @return name of the message type
  **/
-char* hip_param_type_name(uint16_t param_type){
+char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
@@ -910,7 +916,7 @@ char* hip_param_type_name(uint16_t param_type){
 	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
 	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
 	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
-	case HIP_PARAM_NOTIFY: return "HIP_PARAM_NOTIFY";
+	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
 	case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
 	case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
 	case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
@@ -1332,31 +1338,26 @@ int hip_build_user_hdr(struct hip_common *msg,
  * @param control      HIP control bits in host byte order
  * @param hit_sender   source HIT in network byte order
  * @param hit_receiver destination HIT in network byte order
+ * @todo build HIP network header in the same fashion as in build_daemon_hdr().
+ * <ul>
+ * <li>Write missing headers in the header using accessor functions
+ * (see hip_get/set_XXX() functions in the beginning of this file). You have to
+ * create couple of new ones, but daemon and network messages use the same
+ * locations for storing len and type (hip_common->err is stored in the
+ * hip_common->checksum) and they can be used as they are.</li>
+ * <li>payload_proto.</li>
+ * <li>payload_len: see how build_daemon_hdr() works.</li>
+ * <li>ver_res.</li>
+ * <li>checksum (move the checksum function from hip.c to this file
+ *     because this file is shared by kernel and userspace).</li>
+ * <li>write the parameters of this function into the message.</li>
+ * </ul>
+ * @note Use @b only accessors to hide byte order and size conversion issues!
  */
 void hip_build_network_hdr(struct hip_common *msg, uint8_t type_hdr,
 			   uint16_t control, const struct in6_addr *hit_sender,
 			   const struct in6_addr *hit_receiver)
 {
-	/*
-	 * XX TODO: build HIP network header in the same fashion as in
-	 * build_daemon_hdr().
-	 * - Write missing headers in the header using accessor functions
-	 *   (see hip_get/set_XXX() functions in the beginning of this file).
-	 *   You have to create couple of new ones, but daemon and network
-	 *   messages use the same locations for storing len and type
-	 *   (hip_common->err is stored in the hip_common->checksum) and
-	 *   they can be used as they are.
-	 *   - payload_proto
-	 *   - payload_len: see how build_daemon_hdr() works
-	 *   - ver_res
-	 *   - checksum (move the checksum function from hip.c to this file
-	 *     because this file is shared by kernel and userspace)
-	 * - write the parameters of this function into the message
-	 * - couple of notes:
-	 *   - use _only_ accessors to hide byte order and size conversion
-	 *     issues!!!
-	 */
-
 	msg->payload_proto = IPPROTO_NONE; /* 1 byte, no htons()    */
 	/* Do not touch the length; it is written by param builders */
 	msg->type_hdr = type_hdr;              /* 1 byte, no htons()    */
@@ -1719,8 +1720,8 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
-			 in_port_t not_used)
+int hip_build_param_from(struct hip_common *msg, const struct in6_addr *addr,
+			 const in_port_t not_used)
 {
 	struct hip_from from;
 	int err = 0;
@@ -1745,8 +1746,8 @@ int hip_build_param_from(struct hip_common *msg, struct in6_addr *addr,
  * @see        <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
  *             draft-schmitt-hip-nat-traversal-01</a> section 3.1.4.
  */
-int hip_build_param_from_nat(struct hip_common *msg, struct in6_addr *addr,
-			     in_port_t port)
+int hip_build_param_from_nat(struct hip_common *msg, const struct in6_addr *addr,
+			     const in_port_t port)
 {
 	struct hip_from_nat from_nat;
 	int err = 0;
@@ -2749,31 +2750,33 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
 }
 
 /**
- * hip_build_param_notify - build the HIP NOTIFY parameter
- * @param msg the message where the parameter will be appended
- * @param msgtype Notify Message Type
- * @param notification_data the Notification data that will contained in the HIP NOTIFY
- *           parameter
- * @param notification_data_len length of notification_data
+ * Builds a NOTIFICATION parameter.
+ * 
+ * @param msg              a pointer to the message where the parameter will be
+ *                         appended
+ * @param msgtype          NOTIFY message type
+ * @param notification     the Notification data that will contained in the HIP
+ *                         NOTIFICATION parameter
+ * @param notification_len length of @c notification_data
  *
  * @return zero on success, or negative on failure
  */
-int hip_build_param_notify(struct hip_common *msg, uint16_t msgtype,
-			   void *notification_data, size_t notification_data_len)
+int hip_build_param_notification(struct hip_common *msg, uint16_t msgtype,
+				 void *data, size_t data_len)
 {
 	int err = 0;
-	struct hip_notify notify;
-
-	hip_set_param_type(&notify, HIP_PARAM_NOTIFY);
-	hip_calc_param_len(&notify, sizeof(struct hip_notify) -
+	struct hip_notification notification;
+	
+	hip_set_param_type(&notification, HIP_PARAM_NOTIFICATION);
+	hip_calc_param_len(&notification, sizeof(struct hip_notification) -
 			   sizeof(struct hip_tlv_common) +
-			   notification_data_len);
-	notify.reserved = 0;
-	notify.msgtype = htons(msgtype);
+			   data_len);
+	notification.reserved = 0;
+	notification.msgtype = htons(msgtype);
 
-	err = hip_build_generic_param(msg, &notify,
-				      sizeof(struct hip_notify),
-				      notification_data);
+	err = hip_build_generic_param(msg, &notification,
+				      sizeof(struct hip_notification),
+				      data);
 	return err;
 }
 

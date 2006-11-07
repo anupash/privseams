@@ -39,8 +39,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *src_pubkey,
 				 int cookie);
 int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
-                struct in6_addr *, const in_port_t, struct in6_addr *,
-                struct hip_stateless_info *, const void *, const int);
+		struct in6_addr *, const in_port_t, struct in6_addr *,
+		hip_portpair_t *, const void *, const int);
+
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *, int);
 void hip_send_notify_all(void);
 

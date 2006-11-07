@@ -37,12 +37,11 @@ lib_LTLIBRARIES = libhiptool.la
 libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
                         nlink.c sha1ime.c hashtable.c hipconf.c
 
-CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL -DLIB_DIR=\"$(libdir)\"
-
+CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
 include_HEADERS =  builder.h crypto.h debug.h dh.h kerncompat.h list.h
 include_HEADERS += message.h misc.h nlink.h pk.h sha1ime.h hashtable.h
-include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h
+include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h hipconf.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
