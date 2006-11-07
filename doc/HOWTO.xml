@@ -217,14 +217,11 @@
       Next, build the hipd, libinet6, tools and test directory as follows:
     </para>
     <para>
-      ./configure &amp;&amp; make
+      ./configure &amp;&amp; make install
     </para>
     <para>
-      It is not necessary to "make install" the applications. You can
-      execute them straight from their source directories. Note that making
-      from the top directory does not currently build e.g. java libraries or
-      telnet. Follow the instructions presented later in this document to
-      build them.
+      Note: you can also try "make deb" or "make rpm" if you want to build a
+      binary package.
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
