@@ -68,8 +68,12 @@ copy_files ()
  cp test/hipsetup $PKGDIR/usr/local/sbin/
  for suffix in a so so.0 so.0.0.0;do
    cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/local/lib/
+   cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/local/lib/
+   cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/local/lib/
  done
  cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/local/lib/
+ cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/local/lib/
+ cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/local/lib/
 
  echo "** Copying documentation to '$PKGDIR'"
  cd "$HIPL/doc"
