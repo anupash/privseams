@@ -8,6 +8,10 @@
 
 #include "update.h"
 
+/** A transmission function set for NAT traversal. */
+extern hip_xmit_func_set_t nat_xmit_func_set;
+/** A transmission function set for sending raw HIP packets. */
+extern hip_xmit_func_set_t default_xmit_func_set;
 int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 					  struct hip_locator_info_addr_item *i,
 					  void *opaq),
@@ -341,7 +345,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 
 /**
- * hip_handle_update_established - handle incoming UPDATE packet received in ESTABLISHED state
+ * Handles an incoming UPDATE packet received in ESTABLISHED state.
+ * 
  * @param entry hadb entry corresponding to the peer
  * @param msg the HIP packet
  * @param src_ip source IPv6 address from where the UPDATE was sent
@@ -357,7 +362,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *src_ip,
 				  struct in6_addr *dst_ip, 
-				  struct hip_stateless_info *update_info)
+				  hip_portpair_t *update_info)
 {
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_esp_info *esp_info;
@@ -370,8 +375,6 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_common *update_packet = NULL;
 	int err = 0, esp_info_i = 1, need_to_generate_key = 0,
 		dh_key_generated = 0;
-	
-	HIP_DEBUG("\n");
 	
 	HIP_IFEL(!(seq = hip_get_param(msg, HIP_PARAM_SEQ)), -1, 
 		 "No SEQ parameter in packet\n");
@@ -402,7 +405,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/*  3. The system increments its outgoing Update ID by one. */
 	entry->update_id_out++;
 	update_id_out = entry->update_id_out;
-        /* Todo: handle this case */
+        /** @todo handle this case. */
 	HIP_IFEL(!update_id_out, -EINVAL, 
 		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
 
@@ -421,7 +424,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	dh = hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN);
 	if (dh || dh_key_generated) {
 		HIP_DEBUG("would generate new keymat\n");
-		/* todo: generate_new_keymat(); */
+		/** @todo generate_new_keymat(); */
 		keymat_index = 0;
 	} else {
 		/* Otherwise, the ESP_INFO Keymat Index MUST be larger or
@@ -507,7 +510,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
 
-	/*! \todo hmac/signature to common functions */
+	/** @todo hmac/signature to common functions */
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out),
@@ -520,13 +523,15 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
-
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      src_ip, update_info->src_port,
-							update_info->dst_port,
-						      update_packet,
-						      entry, 1), -1,
-		 "csum send failed\n");
+	
+	/* Destination port of the received packet becomes the source
+	   port of the UPDATE packet. */
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&entry->local_address, src_ip,
+			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+	
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
@@ -828,8 +833,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 
 	if (ack) /* breaks if packet has no ack but esp_info exists ? */
 		hip_update_handle_ack(entry, ack, esp_info ? 1 : 0);
-//	if (esp_info)
-//		hip_update_handle_esp_info(entry, puid); /* kludge */
+	/* if (esp_info)
+	   hip_update_handle_esp_info(entry, puid); kludge */
 
 	/* finish SAs if we have received ACK and ESP_INFO */
 	HIP_IFEL(hip_update_for_each_local_addr(hip_update_do_finish_rekey,
@@ -840,7 +845,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 
 	/* Send ACK */
 
-	/*! \todo hmac/signature to common functions */
+	/** @todo hmac/signature to common functions */
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					       &entry->hip_hmac_out), -1,
@@ -852,11 +857,12 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
         HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
 
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&entry->local_address,
-						      &daddr, 0, 0, update_packet,
-						      entry, 1), -1,
-		 "csum_send failed\n");
-
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&entry->local_address, &daddr,
+			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+	
  out_err:
 	/* if (err)
 	   TODO: REMOVE IPSEC SAs
@@ -922,7 +928,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_spi_out_item *spi_out,
 				       void *saddr) {
 	struct in6_addr *src_ip = saddr;
-	/*! \todo Make this timer based:
+	/** @todo Make this timer based:
 	 * 	 If its been too long before active addresses were verfied, 
 	 * 	 	verify them as well
 	 * 	 else 
@@ -934,10 +940,10 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
-				       struct hip_peer_addr_list_item *addr,
-				       struct hip_spi_out_item *spi_out,
-				       struct in6_addr *src_ip,
-				       int verify_active_addresses)
+					   struct hip_peer_addr_list_item *addr,
+					   struct hip_spi_out_item *spi_out,
+					   struct in6_addr *src_ip,
+					   int verify_active_addresses)
 {
 	int err = 0;
 	struct hip_common *update_packet = NULL;
@@ -973,14 +979,12 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, hits,
 					    hitr),
 		 -1, "Building Verification Packet failed\n");
-
-	/* test: send all addr check from same address */
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip,
-						      &addr->address,
-						      0, 0, update_packet,
-						      entry, 0), -1,
-		 "csum_send failed\n");
-
+	
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(src_ip, &addr->address, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet, entry, 0),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+	
  out_err:
 	return err;
 }
@@ -1131,12 +1135,14 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				      hip_get_param_contents_len(echo), 0, 0),
 		 -1, "Building of ECHO_RESPONSE failed\n");
 
-	HIP_DEBUG("Sending reply UPDATE packet (address check)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip,0,0,
-						      update_packet, entry, 0),
-		 -1, "csum_send failed\n");
-
-	HIP_IFEL(set_address_state(entry, src_ip), -1, "Setting Own address status to ACTIVE failed\n");
+	HIP_DEBUG("Sending reply UPDATE packet (address check).\n");
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(dst_ip, src_ip, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet, entry, 0),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+	
+	HIP_IFEL(set_address_state(entry, src_ip),
+		 -1, "Setting Own address status to ACTIVE failed\n");
 
  out_err:
 	if (update_packet)
@@ -1365,7 +1371,7 @@ int hip_create_reg_response(hip_ha_t * entry,
 
         /********** Send UPDATE **********/
         HIP_DEBUG("Sending UPDATE packet with registration response\n");
-        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(src_ip, dst_ip, 0, 0,
+        HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip, 0, 0,
                 update_packet, entry, 1), -1, "csum_send failed\n");
 out_err: 
         return err;
@@ -1645,7 +1651,7 @@ int hip_receive_update(struct hip_common *msg,
 		       struct in6_addr *update_saddr,
 		       struct in6_addr *update_daddr,
 		       hip_ha_t *entry,
-		       struct hip_stateless_info *sinfo)
+		       hip_portpair_t *sinfo)
 {
 	int err = 0, state = 0, has_esp_info = 0;
 	int updating_addresses = 0;
@@ -1788,24 +1794,35 @@ int hip_receive_update(struct hip_common *msg,
                         type_count), -1, "Error handling reg_info\n");
         }
         
-        
-	// NAT stuff
-	if(sinfo->src_port == 0 && sinfo->dst_port == 0 && hip_nat_status == 0){
-		HIP_DEBUG("NAT: UPDATE has come not on udp\n");
-		entry->nat = 0;
+	/* Node moves within public Internet or from behind a NAT to public
+	   Internet. */
+	if(sinfo->dst_port != HIP_NAT_UDP_PORT){
+		HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n");
+		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
+		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
+	/* Node moves from public Internet to behind a NAT, stays behind the
+	   same NAT or moves from behind one NAT to behind another NAT. */
 	else{
+		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
+		entry->nat_mode = 1;
+		entry->peer_udp_port = sinfo->src_port;
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
-		/*Somehow the addresses in the entry doesnt get updated for mobility behind nat case.
-			The else would be called only when the client moves from behind nat to behind nat.
-			updating the entry addresses here.
-			Miika: Is it the correct place to be done? -- Abi
-			Error was because of multiple locator parameter, code shifted to after setting of
-			preferred address by the mm logic          -- Bagri
-
-		*/	
+		
+		/* Somehow the addresses in the entry doesn't get updated for
+		   mobility behind nat case. The "else" would be called only
+		   when the client moves from behind NAT to behind NAT. Updating
+		   the entry addresses here.
+		   
+		   Miika: Is it the correct place to be done? -- Abi
+		   
+		   Error was because of multiple locator parameter, code shifted
+		   to after setting of preferred address by the mm logic
+		   -- Bagri */	
 	}
  out_err:
 	if (err)
@@ -2110,7 +2127,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SP :alue for the SA 0x%x\n", new_spi_in);
 
-		/*! \todo move to rekeying_finish */
+		/** @todo move to rekeying_finish */
 		if (!mapped_spi) {
 			struct hip_spi_in_item spi_in_data;
 
@@ -2213,18 +2230,19 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-        HIP_DEBUG("Sending initial UPDATE packet\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
-						      update_packet, entry, 1),
-		 -1, "csum_send failed\n");
-
 	
+	HIP_DEBUG("Sending initial UPDATE packet.\n");
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
+
 	if (err) {
 		HIP_ERROR("addr list copy failed\n");
 		goto out_err;
 	}
-	/* todo: 5. The system SHOULD start a timer whose timeout value
-  should be ..*/
+	/** @todo 5. The system SHOULD start a timer whose timeout value
+	    should be ..*/
 	goto out;
 
  out_err:
@@ -2269,17 +2287,16 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 }
 
 /**
- * hip_send_update_all - send UPDATE packet to every peer
+ * Sends UPDATE packet to every peer.
+ *
+ * UPDATE is sent to the peer only if the peer is in established state. Add
+ * LOCATOR parameter if @c addr_list is non-null. @c ifindex tells which device
+ * caused the network device event.
+ *
  * @param addr_list if non-NULL, LOCATOR parameter is added to the UPDATE
  * @param addr_count number of addresses in @addr_list
  * @param ifindex if non-zero, the ifindex value of the interface which caused the event
  * @param flags flags passed to @hip_send_update
- *
- * UPDATE is sent to the peer only if the peer is in established
- * state.
- *
- * Add LOCATOR parameter if @addr_list is non-null. @ifindex tells which
- * device caused the network device event.
  */
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex, int flags)
@@ -2288,7 +2305,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 
-	/*! \todo check UPDATE also with radvd (i.e. same address is added twice). */
+	/** @todo check UPDATE also with radvd (i.e. same address is added
+	    twice). */
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
@@ -2299,7 +2317,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-//AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid ha entries
+        /* AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid
+	ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
@@ -2366,8 +2385,8 @@ int hip_update_send_ack(hip_ha_t *entry, struct hip_common *msg,
         }
         
         HIP_DEBUG("Sending reply UPDATE packet (ack)\n");
-        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(dst_ip, src_ip, 0, 0,
-                                                      update_packet, entry, 0),
+        HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(dst_ip, src_ip, 0, 0,
+						     update_packet, entry, 0),
                  -1, "csum_send failed\n");
 
  out_err:
@@ -2419,7 +2438,7 @@ int hip_update_send_registration_request(hip_ha_t *entry,
                 "Could not sign UPDATE. Failing\n");
         
         HIP_DEBUG("Sending initial UPDATE packet (reg_request)\n");
-        HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr, 0, 0,
+        HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(&saddr, &daddr, 0, 0,
                 update_packet, entry, 0), -1, "csum_send failed\n");
 
 out_err:

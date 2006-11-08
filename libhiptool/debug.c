@@ -331,8 +331,10 @@ void hip_hexdump(const char *file, int line, const char *function,
     HIP_DIE("hexdump memory allocation failed\n");
   }
   if(len == 0){
-  	HIP_ERROR("hexdump length was 0\n");  
-	}else{
+	  /* Removed this error message to keep hexdump quiet in 
+	     HIP_DUMP_MSG for zero length padding. Lauri 22.09.2006 */
+	  //HIP_ERROR("hexdump length was 0\n");  
+  }else{
 	do {
 	/* note: if you change the printing format, adjust also hexdump_count! */
 	hexdump_written = snprintf((char *) (hexdump + hexdump_index),
@@ -548,7 +550,7 @@ void hip_print_lsi(const char *str, const struct in_addr *lsi)
  */
 void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
-	if(!hit) { // Null check added 27.07.2006
+	if(hit == NULL) {
 		HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}

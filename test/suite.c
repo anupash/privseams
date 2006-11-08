@@ -24,7 +24,7 @@
 
 #include "crypto.h"
 #include "unit.h"
-#include "tools/hipconf.h"
+#include "hipconftool.h"
 
 extern uint16_t suiteid, caseid;
 

@@ -33,11 +33,11 @@ void hip_uninit_services(void)
  * @returns       zero on success, or negative on error.
  */ 
 int hip_services_add(int service_type)
-{
-	
-	HIP_DEBUG("Adding service.\n");
+{	
 	int err = 0;
 	
+	HIP_DEBUG("Adding service.\n");
+
 	/* Check if the service is already supported. */
 	HIP_SERVICE *tmp = hip_get_service(service_type);
 	if(tmp) {
@@ -256,7 +256,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg,
         if (!reg_request) {
                 lifetime = 0;
                 HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-                HIP_IFEL(hip_build_param_reg_request(msg, lifetime, requests, 
+                HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (int *) requests, 
                         request_count, 0), -1, "Building of REG_RESPONSE failed\n");
         }
         /* Check if this is a cancel message (lifetime=0) */
@@ -395,7 +395,7 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op)
         // TODO: support for cancelling rvs registration
         if (op && (entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
             (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
-                HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
+                _HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
                 request_rvs = 1;
                 type_count++;
         }

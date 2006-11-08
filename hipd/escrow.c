@@ -112,7 +112,7 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
         hip_keadb_put_entry(kea);
 	
         if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -149,7 +149,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
         if (entry->state == HIP_STATE_UNASSOCIATED) {
                 /* TODO: can this situation ever happen? */
                 HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -649,11 +649,13 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	/*** Send UPDATE ***/
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-        HIP_DEBUG("Sending UPDATE packet with escrow data\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_csum_send(&saddr, &daddr,0,0,
-						      update_packet, entry, 1),
-		 -1, "csum_send failed\n");
 
+	/** @todo Functionality on UDP has not been tested. */
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+			      entry->peer_udp_port, update_packet,
+			      entry, 1),
+		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
 	goto out;
 

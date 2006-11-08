@@ -2,10 +2,9 @@
 #define _HIP_IFE
 
 
-/*! \addtogroup ife
+/** 
+ * @addtogroup ife
  * @{
- * HIP IFE-macros.
- *
  */
 
 #define GOTO_OUT -3

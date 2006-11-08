@@ -18,7 +18,7 @@ extern int hip_nat_status;
 int hip_receive_update(struct 	hip_common *msg,
 		       struct 	in6_addr *update_saddr,
 		       struct 	in6_addr *update_daddr,
-		       hip_ha_t *entry, struct hip_stateless_info *);
+		       hip_ha_t *entry, hip_portpair_t *);
 		       
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
@@ -48,7 +48,7 @@ int hip_handle_update_established(hip_ha_t *entry,
 				  struct hip_common *msg,
 				  struct in6_addr *src_ip,
 				  struct in6_addr *dst_ip,
-				  struct hip_stateless_info *update_info);
+				  hip_portpair_t *update_info);
 					
 int hip_handle_update_rekeying(hip_ha_t *entry,
 				struct hip_common *msg,

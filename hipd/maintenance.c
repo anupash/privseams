@@ -17,7 +17,7 @@
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
@@ -31,42 +31,55 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	int err = 0;
 	time_t *now = (time_t*) current_time;	
 
-	if (!entry->hip_msg_retrans.buf)
+	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING)
+	if (entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		HIP_DEBUG("Waiting reply from agent...\n");
 		goto out_err;
 	}
 	
-	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
- 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
-		   entry->hip_msg_retrans.count, entry->state);
+	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
+		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		   entry->hip_msg_retrans.count, hip_state_str(entry->state));
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
+	
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-	    	entry->state != HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Retransmit packet\n");
-			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-								   &entry->hip_msg_retrans.daddr,
-									0,0, /*need to correct it*/
-								   entry->hip_msg_retrans.buf,
-								   entry, 0);
-			/* Set entry state, if previous state was unassosiated and type is I1. */
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
-			{
-				HIP_DEBUG("Send I1 succcesfully after acception.\n");
+		    entry->state != HIP_STATE_ESTABLISHED &&
+		    entry->retrans_state == entry->state) {
+			
+			err = entry->hadb_xmit_func->
+				hip_send_pkt(&entry->hip_msg_retrans.saddr,
+					     &entry->hip_msg_retrans.daddr,
+					     HIP_NAT_UDP_PORT,
+					     entry->peer_udp_port,
+					     entry->hip_msg_retrans.buf,
+					     entry, 0);
+			
+			/* Set entry state, if previous state was unassosiated
+			   and type is I1. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_I1) {
+				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
+			}
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_R2) {
+				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
+				entry->state = HIP_STATE_ESTABLISHED;
 			}
 			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		} else {
+		}
+		else {
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
@@ -74,6 +87,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	}
 
  out_err:
+	entry->retrans_state = entry->state;
+		
 	return err;
 }
 
@@ -280,14 +295,15 @@ int hip_agent_filter(struct hip_common *msg)
 		err = -1;
 		goto out_err;
 	}
-	
+
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 	/*
 		If message is type I1, then user action might be needed to filter the packet.
 		Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1)
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
@@ -367,7 +383,9 @@ void register_to_dht ()
 }
 
 /**
- * Some periodic maintenance (?).
+ * Periodic maintenance.
+ * 
+ * @return ...
  */
 int periodic_maintenance()
 {
@@ -425,11 +443,11 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
-
-	if(nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_keep_alive(), -1, 
-			"Failed to send out keepalives\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+	/* Sending of NAT Keep-Alives. */
+	if(hip_nat_status && nat_keep_alive_counter < 0){
+		HIP_IFEL(hip_nat_refresh_port(),
+			 -ECOMM, "Failed to refresh NAT port state.\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 	} else {
 		nat_keep_alive_counter--;
 	}	

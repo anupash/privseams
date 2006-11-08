@@ -139,10 +139,20 @@ static inline const char *hip_state_str(unsigned int state)
 {
 	const char *str = "UNKNOWN";
         static const char *states[] =
-	{ "NONE", "UNASSOCIATED", "I1_SENT",
-	  "I2_SENT", "R2_SENT", "ESTABLISHED", "REKEYING",
-	  "FAILED" };
-        if (state >= 0 && state <= ARRAY_SIZE(states))
+		{
+			"NONE",          // 0
+			"UNASSOCIATED",  // 1
+			"I1-SENT",       // 2
+			"I2-SENT",       // 3
+			"R2-SENT",       // 4
+			"ESTABLISHED",   // 5
+			"UNKNOWN",       // 6 is not currently used.
+			"FAILED",        // 7
+			"CLOSING",       // 8
+			"CLOSED",        // 9
+			"FILTERING" 	 // 10
+		};
+        if (state >= 0 && state < ARRAY_SIZE(states))
 		str = states[state];
         else
 		HIP_ERROR("invalid state %u\n", state);

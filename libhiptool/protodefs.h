@@ -10,7 +10,6 @@
 /** @addtogroup hip_msg
  * @{
  */
-
 #define HIP_I1         1
 #define HIP_R1         2
 #define HIP_I2         3
@@ -27,7 +26,6 @@
 #define HIP_PSIG 20 /* lightweight HIP pre signature */
 #define HIP_TRIG 21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD 64 /* xxx */
-
 /** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
 /** Daemon should reply to @c HIP_AGENT_PING with this one. */
@@ -40,7 +38,6 @@
 #define HIP_I1_REJECT				74
 /** Daemon sends remote HITs in use with this message to agent. */
 #define HIP_UPDATE_HIU				75
-
 /** Firewall can ping daemon with this message. */
 #define HIP_FIREWALL_PING			80
 /** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
@@ -62,12 +59,10 @@
  *    agent
  */
 #define HIP_DAEMON_QUIT				127
-
 /*
  * DONT MAKE THESE VALUES HIGHER THAN 255
  * The variable, which stores this type, is 8 bits
  */
-
 /* @} */
 
 
@@ -108,7 +103,7 @@
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */
-#define HIP_PARAM_NOTIFY               832
+#define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 
@@ -148,6 +143,26 @@
  * @note exclusive
  */
 #define HIP_PARAM_MAX             65536
+/* @} */
+
+/** @addtogroup notification
+ * @{ 
+ */
+#define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
+#define HIP_NTF_INVALID_SYNTAX                      7
+#define HIP_NTF_NO_DH_PROPOSAL_CHOSEN               14
+#define HIP_NTF_INVALID_DH_CHOSEN                   15
+#define HIP_NTF_NO_HIP_PROPOSAL_CHOSEN              16
+#define HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN        17
+#define HIP_NTF_AUTHENTICATION_FAILED               24
+#define HIP_NTF_CHECKSUM_FAILED                     26
+#define HIP_NTF_HMAC_FAILED                         28
+#define HIP_NTF_ENCRYPTION_FAILED                   32
+#define HIP_NTF_INVALID_HIT                         40
+#define HIP_NTF_BLOCKED_BY_POLICY                   42
+#define HIP_NTF_SERVER_BUSY_PLEASE_RETRY            44
+#define HIP_NTF_I2_ACKNOWLEDGEMENT                  46
+#define HIP_NTF_RVS_NAT                             47
 /* @} */
 
 #define HIP_HIP_RESERVED                0
@@ -259,6 +274,7 @@
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
 typedef struct in6_addr hip_hit_t;
+typedef struct in6_addr in6_addr_t;
 typedef struct in_addr hip_lsi_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
@@ -395,6 +411,8 @@ struct hip_common {
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
+
+typedef struct hip_common hip_common_t;
 
 /*
  * Use accessor functions defined in hip_build.h, do not access members
@@ -536,24 +554,23 @@ struct hip_sig2 {
 struct hip_seq {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint32_t update_id;
 } __attribute__ ((packed));
 
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint32_t peer_update_id; /* n items */
 } __attribute__ ((packed));
 
-struct hip_notify {
+struct hip_notification {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-
 	uint16_t reserved;
 	uint16_t msgtype;
-	/* end of fixed part */
+	/** A shortcut pointer to the memory region where the notification data
+	    is to be put. */
+	uint8_t data[0];
 } __attribute__ ((packed));
 
 struct hip_locator {
@@ -631,15 +648,14 @@ struct hip_via_rvs {
 struct hip_from_nat {
 	/** Type code for the parameter. */
 	hip_tlv_type_t type;
-	/** Length (@b 16) of the parameter contents in bytes. */
+	/** Length (@b 18) of the parameter contents in bytes. */
 	hip_tlv_len_t  length;
 	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
 	uint8_t address[16];
 	/** Port number. */
-	uint16_t port;
+	in_port_t port;
 } __attribute__ ((packed));
 /* End of parameters related to rendezvous service. */
-
 
 /** Parameter containing the IP addresses and source ports of traversed
     rendezvous servers. */
