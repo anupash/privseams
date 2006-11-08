@@ -822,14 +822,11 @@
 
 <itemizedlist>
 
-        <listitem><para>ip6_queue must be loaded with: "modprobe ip6_queue"</para></listitem>
-
-        <listitem><para>Ip6tables must define that HIP and ESP packets are
-              queued in the user-space.  These rules must be inserted
-              so that they precede any other firewall rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50).
-              If ESP packet filtering is not necessary the ip6tables
-              rules concerning ESP packets can be left out.</para></listitem>
+        <para>Ip6tables must define that HIP and ESP packets are
+              queued in the user-space.  These rules are inserted
+              automatically at the head of each chain. Other rules that might
+              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              inserted before them.</para>
 
         <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
@@ -898,7 +895,7 @@
               the interface. Can not be used for rules in INPUT hook
               as packet has no outgoing interface in that case.</para></listitem>
 
-        <listitem><para>-state [!] &lt;state&gt; --verify_responder --accept_mobile</para></listitem>
+        <listitem><para>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</para></listitem>
 
         <listitem><para>Matches state of HIP association: "NEW" or
               "ESTABLISHED". ESP packets are also filtered as part of
@@ -909,7 +906,12 @@
               for existing connection when a mobile host enters the
               network protected by the firewall. Please see
               <xref linkend="handover" /> to see how mobility events
-              can be tested.</para></listitem>
+              can be tested. When option --decrypt_contents is set firewall 
+              tries to decrypt ESP-packet contents. This can be done if 
+              session data has been delivered to firewall. See <xref
+              linkend="escrow" />
+               for details. Currently decrypted packet contents 
+              can be viewed in firewall output.</para></listitem>
 
         <listitem><para>If you get "No buffer space available" errors, please disable
               all of the firewall debug messages (./configure --disable-debug;
@@ -1199,6 +1201,69 @@
 	<para>
 		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
 	</para>
+  </chapter>
+  <chapter id="escrow">
+  	<title>Using Key Escrow</title>
+  	<para>
+  	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
+  	offered by the server, sends session data of all its HIP asssociations to the server. On the server HIP Firewall 
+  	can be used to decrypt ESP-traffic when keys are available. For testing escrow functionality three machines are needed, 
+  	the server offering escrow service, the client who registers to the server and an other host which is communicating 
+  	with the client. The session data of the association between the client and the other host are then delivered to the 
+  	escrow server. If the server is working as a firewall between the hosts HIP firewall can decrypt the ESP-traffic.  
+  	</para>
+  	<para>
+  	Follow these steps to compile and initialize escrow functionality:
+  	</para>
+  	<para>
+  	&nbsp; 1. Run autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; ./autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	</para>
+  	<para>
+  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	</para>
+  	<para>
+  	&nbsp; 3. Run make
+  	</para>
+  	<para>
+  	&nbsp; make
+  	</para>
+  	<para>
+  	&nbsp; 4. Start hip daemon on all machines
+  	</para>
+  	<para>
+  	&nbsp; ./hipd/hipd -b
+  	</para>
+  	<para>
+  	&nbsp; 5. On the server enable escrow service using hipconf
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add service escrow
+  	</para>
+  	<para>
+  	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
+  	</para>
+  	<para>
+  	 On client host register to escrow server using hipconf.
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add escrow hit address
+  	</para>
+  	<para>
+  	After this connection between client and the other host can be tested using conntest-server and conntest-client-gai. 
+  	</para>
+  	<para>
+  	&nbsp; ./test/conntest-server tcp 5000 
+  	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	</para>
+  	<para>
+  	During base exchange session data is sent to escrow server in update-messages. 
+  	</para>
   </chapter>
 </book>    
 
