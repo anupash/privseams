@@ -2,10 +2,10 @@
 
 ldconfig
 
-if [ -x /etc/hip ]
+if test "`echo /etc/hip/hip_host_*_key*`" = "/etc/hip/hip_host_*_key*"
 then
- echo "Not creating host keys under /etc/hip, they already exist"
-else
  echo "Creating host keys under /etc/hip"
  hipconf new hi default
+else
+ echo "Not creating host keys under /etc/hip, they already exist"
 fi
