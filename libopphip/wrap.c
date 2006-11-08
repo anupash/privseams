@@ -752,7 +752,7 @@ ssize_t write(int orig_socket, const void * b, size_t c)
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
-	
+
 	err = dl_function_ptr.write_dlsym(*translated_socket, b, c);
 	
 	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", err);
