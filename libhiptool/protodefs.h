@@ -29,7 +29,7 @@
 /** Agent can ping daemon with this message. */
 #define HIP_AGENT_PING				70
 /** Daemon should reply to @c HIP_AGENT_PING with this one. */
-#define HIP_AGENT_PING_REPLY		71
+#define HIP_AGENT_PING_REPLY		        71
 /** Agent send this one to daemon when exiting. */
 #define HIP_AGENT_QUIT				72
 /** Daemon sends local HITs to agent with this message. */
@@ -41,11 +41,18 @@
 /** Firewall can ping daemon with this message. */
 #define HIP_FIREWALL_PING			80
 /** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
-#define HIP_FIREWALL_PING_REPLY		81
+#define HIP_FIREWALL_PING_REPLY		        81
 /** Firewall sends this one to daemon when exiting. */
 #define HIP_FIREWALL_QUIT			82
 /** Daemon sends escrow data to firewall with this message. */
 #define HIP_ADD_ESCROW_DATA			83
+/** Daemon tells firewall to remove escrow data with this message. */
+#define HIP_DELETE_ESCROW_DATA		        84
+/** Daemon tells firewall that escrow is active with this message. */
+#define HIP_SET_ESCROW_ACTIVE                   85
+/** Daemon tells firewall that escrow is inactive with this message. */
+#define HIP_SET_ESCROW_INACTIVE                 86
+
 /**
  * Daemon should send this message to other processes, when quiting.
  * Currently sending to:

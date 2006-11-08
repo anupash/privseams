@@ -4,6 +4,7 @@
 #include "builder.h"
 #include "hadb.h"
 #include "escrow.h"
+#include "reg.h"
 
 /* FIXME: where to include these from in userspace? */
 #  define IPV6_ADDR_ANY           0x0000U
@@ -55,5 +56,19 @@ int hip_handle_update_rekeying(hip_ha_t *entry,
 				
 int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				struct in6_addr *src_ip, uint32_t spi);
+
+int hip_update_send_ack(hip_ha_t *entry, struct hip_common *msg,
+                                  struct in6_addr *src_ip,
+                                  struct in6_addr *dst_ip);
+
+int hip_update_send_registration_request(hip_ha_t *entry, 
+                                        struct in6_addr *server_hit, 
+                                        int *types, 
+                                        int type_count, 
+                                        int op);
+
+int hip_create_reg_response(hip_ha_t * entry, 
+        struct hip_tlv_common * reg, uint8_t *requests, 
+        int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip);
 
 #endif /* HIP_UPDATE_H */

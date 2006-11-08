@@ -32,6 +32,8 @@
 #define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) \
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
+#define HIP_DUMP_PACKET(prefix, str, len) \
+            hip_hexdump_parsed(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)            
 #define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, family, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
@@ -119,6 +121,8 @@ void hip_perror_wrapper(const char *file, int line, const char *function,
 			const char *s);
 void hip_hexdump(const char *file, int line, const char *function,
 		 const char *prefix, const void *str, int len);
+void hip_print_packet(const char *file, int line, const char *function,
+		 const char *prefix, const void *str, int len);		 
 void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix, sa_family_t family,
 			const struct sockaddr *sockaddr);

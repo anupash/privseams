@@ -110,6 +110,9 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 	const struct in6_addr * hit_r, const struct in6_addr * dst_addr, 
 		     uint32_t spi, int dec_alg, int auth_len, int key_len, 
 		     struct hip_crypto_key	* dec_key);
+                     
+int remove_esp_decryption_data(const struct in6_addr * addr, uint32_t spi);
+
 
 void init_timeout_checking(long int timeout_val);
 #endif

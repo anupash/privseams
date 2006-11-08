@@ -1,5 +1,3 @@
 #!/bin/sh
 
-rm -r /etc/hip/*
-
 exit 0

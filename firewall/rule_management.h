@@ -34,6 +34,7 @@
 #define SRC_HI_STR "--hi"
 #define VERIFY_RESPONDER_STR "--verify_responder"
 #define ACCEPT_MOBILE_STR "--accept_mobile"
+#define DECRYPT_CONTENTS_STR "--decrypt_contents" 
 #define NEGATE_STR "!"
 #define INPUT_STR "INPUT"
 #define OUTPUT_STR "OUTPUT"
@@ -86,6 +87,7 @@ struct state_option{
   struct int_option int_opt;
   int verify_responder; //1 if responder signatures are verified
   int accept_mobile; //1 if state can be established from updates signalling 
+  int decrypt_contents;
 };
 
 // can be turned to more generic string option if necessary
