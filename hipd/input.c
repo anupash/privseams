@@ -1387,7 +1387,7 @@ int hip_receive_r1(struct hip_common *r1,
 	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
-	wmb();
+	//wmb();
 	state = entry->state;
 	
 	HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
@@ -1459,7 +1459,6 @@ int hip_create_r2(struct hip_context *ctx,
 				      &entry->hit_peer);
 
  	/********** ESP_INFO **********/
-	//barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
 					  0, spi_in), -1,
@@ -1927,7 +1926,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
-		wmb();
 #ifdef CONFIG_HIP_RVS
 		/** @todo this should be dynamic (the rvs information should
 		   be stored in the HADB) instead of static */
@@ -2005,7 +2003,6 @@ int hip_receive_i2(struct hip_common *i2,
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
-		barrier();
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
@@ -2416,7 +2413,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 	
 	if (entry) {
-		wmb();
 		state = entry->state;
 		hip_put_ha(entry);
 	}

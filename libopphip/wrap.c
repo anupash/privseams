@@ -31,7 +31,7 @@ int hip_db_exist = 0;
 
 
 // used for dlsym_util
-#define NUMBER_OF_DLSYM_FUNCTIONS 12
+#define NUMBER_OF_DLSYM_FUNCTIONS 13
 
 struct {
 	int (*socket_dlsym)(int domain, int type, int protocol);
@@ -56,8 +56,8 @@ struct {
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
- "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept",
- "write", "read"};
+ "sendmsg", "recv", "recvfrom", "recvmsg", "close",
+ "accept", "write", "read"};
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
@@ -158,14 +158,16 @@ void hip_uninitialize_db()
 
 void hip_initialize_db_when_not_exist()
 {
-	if(!hip_db_exist) {
-		hip_init_dlsym_functions();
-		hip_init_socket_db();
-		HIP_DEBUG("socketdb initialized\n");
-		// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
-		atexit(hip_uninitialize_db);
-		hip_db_exist = 1;
+	if(hip_db_exist) {
+		return;
 	}
+
+	hip_init_dlsym_functions();
+	hip_init_socket_db();
+	HIP_DEBUG("socketdb initialized\n");
+	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
+	atexit(hip_uninitialize_db);
+	hip_db_exist = 1;
 }
 
 #if 0
@@ -329,7 +331,11 @@ int set_translation(hip_opp_socket_t *entry,
 	int err = 0;
 	
 	if (!entry->translated_socket) {
-		int new_socket = socket(AF_INET6, entry->type, 0);
+		//int new_socket = socket(AF_INET6, entry->type, 0);
+		int new_socket = dl_function_ptr.socket_dlsym(AF_INET6,
+							      entry->type,
+							      entry->protocol);
+		HIP_DEBUG("Created new translatable socket %d\n", new_socket);
 		if (new_socket <= 0) {
 			err = -1;
 			HIP_ERROR("socket allocation failed\n");
@@ -541,6 +547,8 @@ int hip_translate_socket(const int *orig_socket,
 	int err = 0, pid = getpid(), is_translated, wrap_applicable;
 	hip_opp_socket_t * entry;
 	
+	hip_initialize_db_when_not_exist();
+
 	HIP_ASSERT(orig_socket);
 	entry = hip_socketdb_find_entry(pid, *orig_socket);
 	if (!entry) {
@@ -600,6 +608,8 @@ int hip_translate_socket(const int *orig_socket,
 	HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  pid, orig_socket, *translated_socket);
 	HIP_DEBUG("orig_id %p, translated_id %p\n", orig_id, *translated_id);
+	HIP_DEBUG("orig fd %d, translated fd %d\n", entry->orig_socket,
+		  entry->translated_socket);
 	
 	return err;
 }
@@ -610,18 +620,22 @@ int socket(int domain, int type, int protocol)
 	int socket_fd = -1;
 	int err = 0;
 	hip_opp_socket_t *entry = NULL;
-	
+
+	HIP_DEBUG("domain=%d type=%d protocol=%d\n", domain, type, protocol);
+
 	hip_initialize_db_when_not_exist();
 	
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
+
+	HIP_DEBUG("socket fd %d\n", socket_fd);
 	
-	if(socket_fd == -1){
+	if(socket_fd == -1) {
 		HIP_ERROR("Socket error\n");
 		goto out_err;
 	}
 
-	pid = getpid();    
-	if(hip_exists_translation(pid, socket_fd)){
+	pid = getpid();
+	if(hip_exists_translation(pid, socket_fd)) {
 		HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
 		goto out_err;
 	}
@@ -739,7 +753,7 @@ ssize_t write(int orig_socket, const void * b, size_t c)
 	
 	/* This functions is almost identical with send() */
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig_socket %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket,
 				   NULL,
@@ -747,7 +761,7 @@ ssize_t write(int orig_socket, const void * b, size_t c)
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len,
-				   0, 0);
+				   1, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
@@ -849,15 +863,15 @@ ssize_t read(int orig_socket, void *b, size_t c)
 	
 	/* This functions is almost identical with recv() */
 
-	HIP_DEBUG("\n");
-	
+	HIP_DEBUG("orig_socket %d\n", orig_socket);
+
 	err = hip_translate_socket(&orig_socket,
 				   NULL,
 				   &zero,
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len,
-				   1, 0);
+				   0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;

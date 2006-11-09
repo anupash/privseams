@@ -553,6 +553,11 @@
     <para>
       Note: the username must be non-root.
     </para>
+    <para>
+      There is a limitation in the current version of the native API. It does
+      not support wildcard addresses at the server. This means that you have to
+      select the correct HIT at the client.
+    </para>
   </chapter>
   <chapter>
 
