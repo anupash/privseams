@@ -69,8 +69,4 @@ struct list_head {
 #define write_unlock_irqrestore(a,b) do {} while(0)
 #define read_unlock_irqrestore(a,b) do {} while(0)
 
-/* XX FIXME: implement with a userspace semaphore etc? */
-#define wmb() do {} while(0)
-#define barrier() do {} while(0)
-
 #endif /* __HIP_KERN_COMPATIBILITY__ */
