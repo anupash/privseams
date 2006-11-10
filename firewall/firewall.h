@@ -17,7 +17,6 @@
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
-//#include "protodefs.h"
 #include "firewall_control.h"
 #include "firewall_defines.h"
 #include "esp_decrypt.h"
@@ -25,7 +24,7 @@
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
-
+#include "utils.h"
 
 
 //made public for filter_esp_state function

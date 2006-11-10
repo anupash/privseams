@@ -54,6 +54,7 @@ struct hip_kea_endpoint
 	HIP_KEA_EP_ID          ep_id;	
 	
 	struct in6_addr        hit;
+        struct in6_addr        peer_hit;
 	struct in6_addr        ip;
 	int                    esp_transform;
 	uint32_t               spi; 
@@ -73,7 +74,7 @@ int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
         int ealg, struct hip_crypto_key *enckey, int operation);
 
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
-	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, 
+	struct in6_addr *addr, struct in6_addr *hit, struct in6_addr *peer_hit, uint32_t spi, 
         uint32_t old_spi, int ealg, uint16_t key_len, 
         struct hip_crypto_key * enc);
 
@@ -129,7 +130,7 @@ int hip_kea_ep_match(const void * ep1, const void * ep2);
 
 HIP_KEA_EP *hip_kea_ep_allocate();
 
-HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, int esp_transform, 
+HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *peer_hit, struct in6_addr *ip, int esp_transform, 
 							  uint32_t spi, uint16_t key_len, 
 							  struct hip_crypto_key * key);
 

@@ -125,7 +125,7 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 		
 out_err:
         if (entry)
-                hip_put_ha(entry);
+                hip_hadb_put_entry(entry);
 	return err;		
 }
 
@@ -392,7 +392,7 @@ HIP_KEA_EP *hip_kea_ep_allocate()
 
 }
 
-HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip, 
+HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *peer_hit, struct in6_addr *ip, 
 							  int esp_transform, uint32_t spi, uint16_t key_len, 
 							  struct hip_crypto_key * key)
 {
@@ -403,12 +403,14 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *ip,
 	
 	HIP_DEBUG("Creating kea endpoint");
 	HIP_DEBUG_HIT("ep hit:", hit);
+        HIP_DEBUG_HIT("ep peer_hit:", peer_hit);
 	HIP_DEBUG("ep spi: %d", spi);
 	//HIP_HEXDUMP("spi: ", spi, sizeof(uint32_t));
 	
 	hip_kea_hold_ep(kea_ep); // Add reference
 	
 	ipv6_addr_copy(&kea_ep->hit, hit);
+        ipv6_addr_copy(&kea_ep->peer_hit, peer_hit);
 	ipv6_addr_copy(&kea_ep->ip, ip);
 	kea_ep->esp_transform = esp_transform;
 	kea_ep->key_len = key_len;
@@ -508,7 +510,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
  * Note: Modification and deletion are not tested properly.
  */
 int hip_send_escrow_update(hip_ha_t *entry, int operation, 
-	struct in6_addr *addr, struct in6_addr *hit, uint32_t spi, uint32_t old_spi,
+	struct in6_addr *addr, struct in6_addr *hit, struct in6_addr *peer_hit, uint32_t spi, uint32_t old_spi,
 	int ealg, uint16_t key_len, struct hip_crypto_key * enc)
 {
 	int err = 0;
@@ -559,7 +561,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	HIP_DEBUG("Creating hip_keys parameter (escrow data)");
 	/* Build hip_keys parameter*/
 	HIP_IFEL(hip_build_param_keys_hdr(&keys_tmp, (uint16_t)operation, 
-		(uint16_t)ealg, addr, hit, spi, old_spi, key_len, enc), -1, 
+		(uint16_t)ealg, addr, hit, peer_hit, spi, old_spi, key_len, enc), -1, 
 		 "Building of hip_keys param (escrow data) failed\n");
 	HIP_IFEL(!(keys = HIP_MALLOC(hip_get_param_total_len(&keys_tmp), 0)), -1, 
 		"Memory allocation failed.\n");
@@ -694,7 +696,7 @@ int hip_deliver_escrow_data(struct in6_addr *saddr, struct in6_addr *daddr,
         if (kea->keastate == HIP_KEASTATE_VALID) {
             enckey_len = hip_enc_key_length(ealg);
             err = hip_send_escrow_update(server_entry, operation, 
-                daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
+                daddr, dst_hit, src_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
         }
         else {
             HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
@@ -752,8 +754,8 @@ int hip_cancel_escrow_registration(struct in6_addr *hit)
                 HIP_DEBUG("Client end\n");
                 if (hip_firewall_is_alive()) {
                         HIP_DEBUG("Firewall alive!\n");
-                        if (hip_firewall_remove_escrow_data(&client_end->ip, client_end->spi))
-                                HIP_DEBUG("Sent remove message to firewall\n");
+                        HIP_IFEL(hip_firewall_remove_escrow_data(&client_end->ip, client_end->spi), 
+                                -1, "Could not send remove escrow data -msg to firewall\n");
                 }
                 hip_kea_remove_endpoint(client_end);
                 kea->client_end = NULL;
@@ -762,12 +764,11 @@ int hip_cancel_escrow_registration(struct in6_addr *hit)
                 HIP_DEBUG("Peer end\n");
                 if (hip_firewall_is_alive()) {
                         HIP_DEBUG("Firewall alive!\n");
-                        if (hip_firewall_remove_escrow_data(&peer_end->ip, peer_end->spi))
-                                HIP_DEBUG("Sent remove message to firewall\n");
+                        HIP_IFEL(hip_firewall_remove_escrow_data(&peer_end->ip, peer_end->spi), 
+                                -1, "Could not send remove escrow data -msg to firewall\n");
                 }
                 hip_kea_remove_endpoint(peer_end);
-                kea->peer_end = NULL;
-                
+                kea->peer_end = NULL;               
         }
         
         hip_keadb_remove_entry(kea);
@@ -784,31 +785,35 @@ int hip_cancel_escrow_service(void)
         // - notify all registered clients with REG_RESPONSE
         // - free all kea and kea_ep data
         int err = 0;
-        HIP_KEA *kea, *tmp;
-        hip_ha_t *entry;
+        HIP_KEA *kea = NULL;
+        HIP_KEA *tmp = NULL;
+        hip_ha_t *entry = NULL;
         struct in6_addr saddr = { 0 }, daddr = { 0 };
         uint8_t services[1] = { HIP_ESCROW_SERVICE };
         int i = 0;
         
         // Send update to all registered clients
         for (i = 0; i < HIP_KEA_SIZE; i++) {
-        
+                
                 list_for_each_entry_safe(kea, tmp, &keadb[i], list_hit) {
                         hip_keadb_hold_entry(kea);
                         //HIP_DEBUG_HIT("Sending cancel to client\n", kea->hit);
                         HIP_DEBUG("Sending cancel to client\n");
                         HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(&kea->hit)), 
                                 -1, "Could not find client entry\n");
-                        hip_hadb_get_peer_addr(entry, &daddr);
+                        HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
+                                "Failed to get peer address");
                         memcpy(&saddr, &entry->local_address, sizeof(saddr));
-                        hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr);
+                        HIP_IFEL(hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr),
+                                -1, "Error creating reg_response\n");
                         hip_keadb_put_entry(kea);
-                        hip_cancel_escrow_registration(&entry->hit_peer);
+                        HIP_IFEL(hip_cancel_escrow_registration(&entry->hit_peer), 
+                                -1, "Error cancelling registration\n");
                 }
         }
         hip_uninit_kea_endpoints();
         hip_uninit_keadb();
-       
+        
 out_err:       
         return err;
 }
