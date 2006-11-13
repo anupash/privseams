@@ -67,44 +67,8 @@ AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
-AC_MSG_CHECKING([for glibc version])
-AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 1
-%%%yes%%%
-#endif
-],[
-	glibc_version=2.1
-	usagi_libc=21
-],[
-	AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 2
-%%%yes%%%
-#endif
-	],[
-		glibc_version=2.2
-		usagi_libc=22
-	],[
-		AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && (__GLIBC_MINOR__ == 3 || __GLIBC_MINOR__ == 4)
-%%%yes%%%
-#endif
-		],[
-			glibc_version=2.3
-			usagi_libc=23
-		],[
-			glibc_version=unknown
-			usagi_libc=unknown
-		])
-	])
-])
-AC_MSG_RESULT($glibc_version)
-if test x"$glibc_version" = x"unknown"; then
-	echo "Fatal, abort."
-	exit 1
-fi
+glibc_version=2.3
+usagi_libc=23
 AC_SUBST(usagi_libc)
 
 #hipl_opt_build=

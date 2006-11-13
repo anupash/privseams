@@ -553,6 +553,11 @@
     <para>
       Note: the username must be non-root.
     </para>
+    <para>
+      There is a limitation in the current version of the native API. It does
+      not support wildcard addresses at the server. This means that you have to
+      select the correct HIT at the client.
+    </para>
   </chapter>
   <chapter>
 
@@ -576,7 +581,7 @@
     a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
     </para>
     <para>
-     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so</emphasis>
     </para>
     <para>
       2. Override the resolver library dynamically:
@@ -818,93 +823,98 @@
 -->
   <chapter>
     <title>HIP Firewall</title>
-        <para>
-        This section describes how to use the HIP firewall. The firewall 
-        needs to be compiled with the --enable-firewall option to configure.
-        </para>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
 
-        <para>
-        Iptables and ip6tables must define that HIP and ESP packets are queued 
-        in the user-space.  These rules are inserted automatically at the head 
-        of each chain. Other rules that might concern the HIP (-p 253) and ESP 
-        packets (-p 50) must not be inserted before them.
-        </para>
-	<itemizedlist>
+        <para>Ip6tables must define that HIP and ESP packets are
+              queued in the userspace.  These rules are inserted
+              automatically at the head of each chain. Other rules that might
+              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              inserted before them.</para>
+
+<itemizedlist>
         <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
-	</itemizedlist>
-        <para>
-        Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding to one, 
-        if you want your firewall to forward IPv6 traffic. Remember to 
-        configure IPv6 routes to the hosts.
-        </para>
+</itemizedlist>
 
-        <para>
-        Firewall can be started with "./firewall -p &lt;protocol&gt; -f 
-        &lt;file_name&gt;" "timeout value" at firewall directory where protocol 
-        is either "ipv4" or "ipv6", file_name is path of the file containing the 
-        firewall rules and timeout value is the connection timeout value in 
-        seconds.  If connection timeout is defined as zero or negative, the 
-        connection timeout checking is not used. Rules in the file must be 
-        separated with newline. The firewall (currently) prints out debug
-        information from rule parsing test functions and from filtering packets.
-        </para>
+        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
+              to one, if you want your firewall to forward IPv6 traffic.
+              Remember to configure IPv6 routes to the hosts.</para>
 
-        <para>
-        Rules follow (loosely) the syntax of Linux Iptables with following 
-        syntax:</para>
-	
-	<itemizedlist>
-        <listitem><para>Basic format of rule:</para>
+        <para>Firewall can be started with "./firewall &lt;file_name&gt;"
+              "timeout value" at firewall directory, where file_name
+              is path of the file containing the firewall rules and
+              timeout value is the connection timeout value in
+              seconds.  If connection timeout is defined as zero or
+              negative, the connection timeout checking is not
+              used. Rules in the file must be separated with
+              newline. The firewall (currently) prints out debug
+              information from rule parsing test functions and from
+              filtering packets.</para>
 
-        <para>HOOK [match] TARGET</para>
+        <para>Rules follow (loosely) the syntax of Linux Iptables with
+        following syntax.</para>
 
-        <para>Here HOOK is one of the netfilter hooks: "INPUT",
+        <para>Basic format of rule is: HOOK [match] TARGET</para>
+
+<itemizedlist>
+        <listitem><para>Here HOOK is one of the netfilter hooks: "INPUT",
               "OUTPUT", "FORWARD".  Target is either "ACCEPT" or
               "DROP", whether packet should be allowed or not.  Match
               is a combination of filtering option described below.</para></listitem>
 </itemizedlist>
 
         <para>Filtering options:</para>
-<itemizedlist>
-        <listitem><para>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</para>
 
-        <para>Matches source HIT of packet. HI can be given with
+<variablelist>
+<varlistentry>
+        <term>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</term>
+
+        <listitem><para>Matches source HIT of packet. HI can be given with
               --hi option and by defining path to a public key
               file as an argument. This causes sender signatures to be
               verified. The file name must contain either "_rsa_" or
               "_dsa_" to define whether RSA or DSA is used as
               algorithm.</para></listitem>
+</varlistentry>
  
-        <listitem><para>-dst_hit [!] &lt;hit&gt;</para>
+<varlistentry>
+        <term>-dst_hit [!] &lt;hit&gt;</term>
 
-        <para>Matches destination HIT of packet.</para></listitem>
+        <listitem><para>Matches destination HIT of packet.</para></listitem>
+</varlistentry>
 
-        <listitem><para>-type [!] &lt;hip packet type&gt;</para>
+<varlistentry>
+        <term>-type [!] &lt;hip packet type&gt;</term>
 
-        <para>Matches HIP packet type. Type is one of following: 
+        <listitem><para>Matches HIP packet type. Type is one of following: 
               "I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE",
               "CLOSE_ACK"</para></listitem>
+</varlistentry>
 
-        <listitem><para>-i [!] &lt;incoming interface&gt;</para>
+<varlistentry>
+        <term>-i [!] &lt;incoming interface&gt;</term>
 
-        <para>Matches incoming interface. Argument contains name of
+        <listitem><para>Matches incoming interface. Argument contains name of
               the interface. Can not be used for rules in OUTPUT hook
               as packet has no incoming interface in that case.</para></listitem>
+</varlistentry>
 
-        <listitem><para>-o [!] &lt;outgoing interface&gt;</para>
+<varlistentry>
+        <term>-o [!] &lt;outgoing interface&gt;</term>
 
-        <para>Matches outgoing interface. Argument contains name of
+        <listitem><para>Matches outgoing interface. Argument contains name of
               the interface. Can not be used for rules in INPUT hook
               as packet has no outgoing interface in that case.</para></listitem>
 
-        <listitem><para>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</para>
+</varlistentry>
+<varlistentry>
+        <term>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</term>
 
-        <para>Matches state of HIP association: "NEW" or
+        <listitem><para>Matches state of HIP association: "NEW" or
               "ESTABLISHED". ESP packets are also filtered as part of
               the connection. With "--verify_responder" option the
               firewall stores responder HI from R1 packet and uses it
@@ -919,10 +929,11 @@
               linkend="escrow" />
                for details. Currently decrypted packet contents 
               can be viewed in firewall output.</para></listitem>
-	
-	</itemizedlist>
-        <para>
-        If you get "No buffer space available" errors, please disable
+</varlistentry>
+</variablelist>
+
+
+        <para>If you get "No buffer space available" errors, please disable
               all of the firewall debug messages (./configure --disable-debug;
               make clean all). This can
               occur when moving large files and the firewall cannot serve
@@ -931,28 +942,29 @@
 
         <para>Management interface:</para>
 
-        <para>Firewall management interface contains functions for
+<itemizedlist>
+        <listitem><para>Firewall management interface contains functions for
               altering rules of running firewall. Functions are
               defined in firewall/rule_management.h and implemented in
               firewall/rule_management.c. Rule_management.c also
               contains functions for copying, comparing and freeing
               rules, etc. If any functions are needed outside the
-              rule_management, they can be defined in the header file.</para>
+              rule_management, they can be defined in the header file.</para></listitem>
 
-        <para>The argument "hook" in the rule is the Netfilter hook
+        <listitem><para>The argument "hook" in the rule is the Netfilter hook
               for which rule is intended. The hooks are defined in
               linux/netfilter_ipv6.h as NF_IP6_LOCAL_IN,
-              NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.</para>
+              NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.</para></listitem>
 
-        <para>The argument rule is structure describing the rule
+        <listitem><para>The argument rule is structure describing the rule
               defined in rule_management.h. The structure contains
               pointers to options. The pointer value must be NULL,
               when option is not defined. The structures for options
               are also defined in rule_management.h. Function: rule *
               parse_rule(char * string) can be used for creating a
               rule structure from a string. This also inspects that
-              the rule syntax is correct.</para>
-	<itemizedlist>
+              the rule syntax is correct.</para></listitem>
+
         <listitem><para>void insert_rule(const struct rule * rule, int hook): Inserts argument rule into with the hook. Insert makes
               local copy of the argument rule.</para></listitem>
 
@@ -967,8 +979,10 @@
                must take care of freeing the returned list.</para></listitem>
 
         <listitem><para>int flush(int hook): Clears all rules.</para></listitem>
-        </itemizedlist>
+</itemizedlist>
+
   </chapter>
+
   <chapter>
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
