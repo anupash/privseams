@@ -145,14 +145,12 @@ void hip_vlog(int debug_level, const char *file, const int line,
   case LOGTYPE_STDERR:
     if (strlen(prefix) > 0) {
       printed = fprintf(stderr, "%s: ", prefix);
-      fflush(stderr);
       if (printed < 0)
 	goto err;
     } else {
       /* LOGFMT_SHORT: no prefix */
     }
     printed = vfprintf(stderr, fmt, args);
-    fflush(stderr);
     if (printed < 0)
       goto err;
     break;
