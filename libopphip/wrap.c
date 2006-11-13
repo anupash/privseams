@@ -29,7 +29,6 @@
 //static
 int hip_db_exist = 0;
 
-
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 13
 
@@ -158,9 +157,8 @@ void hip_uninitialize_db()
 
 void hip_initialize_db_when_not_exist()
 {
-	if(hip_db_exist) {
+	if(hip_db_exist)
 		return;
-	}
 
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
@@ -854,7 +852,6 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	return err;
 }
 
-
 ssize_t read(int orig_socket, void *b, size_t c)
 {
 	int err = 0, *translated_socket;
@@ -924,9 +921,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	int err;
 	int charnum = 0;  
 	int socket = 0;
-	void *dp = NULL;
 	char *error = NULL;
-	char *name = "recvmsg";
 	
 	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
@@ -941,37 +936,37 @@ int close(int fd)
 {
 	int err = 0, pid = 0;
 	hip_opp_socket_t *entry = NULL;
-	void *dp = NULL;
-	char *error = NULL, *name = "close";
+	char *error = NULL;
 	
+	HIP_DEBUG("close() orig fd %d\n", fd);
+
+	//if (hip_db_exist) hip_socketdb_dump();
+
+	/* close original socket */
+	err = dl_function_ptr.close_dlsym(fd);
+
 	if(!hip_db_exist)
 		goto out_err;
 
 	pid = getpid();
-	entry = hip_socketdb_find_entry(pid, fd);
-	HIP_DEBUG("close() pid %d, fd %d\n", pid, fd);
-	
-	if(!entry){
-		_HIP_DEBUG("should not happen, dumping socket db\n");
-		hip_socketdb_dump();
-		goto out_err;
-			//assert(0);
-	}
 
-	if (entry->translated_socket) {
-		// close new_socket too
-		if(entry->orig_socket != entry->translated_socket){
-			err = dl_function_ptr.close_dlsym(entry->translated_socket);
-			if (err)
-				HIP_ERROR("Err %d close trans socket\n", err);
-		}
+	entry = hip_socketdb_find_entry(pid, fd);
+	if (!entry)
+		goto out_err;
+
+	/* close new_socket */
+	if(entry->translated_socket &&
+	   entry->orig_socket != entry->translated_socket) {
+		err = dl_function_ptr.close_dlsym(entry->translated_socket);
+		hip_socketdb_del_entry_by_entry(entry);
+		HIP_DEBUG("old_socket %d new_socket %d\n", 
+			  entry->orig_socket,
+			  entry->translated_socket);	  
 	}
+	if (err)
+		HIP_ERROR("Err %d close trans socket\n", err);
 	
-	HIP_DEBUG("old_socket %d new_socket %d\n", 
-		  entry->orig_socket,
-		  entry->translated_socket);	  
  out_err:
-	err = dl_function_ptr.close_dlsym(fd);
 	HIP_DEBUG("close_dlsym called with err %d\n", err);
 	
   return err;
@@ -994,7 +989,6 @@ void test_db(){
 	entry =  hip_socketdb_find_entry(pid, socket);
 	HIP_ASSERT(entry);
 	hip_socketdb_dump();
-	
 	
 	//  pid++; 
 	socket++;
@@ -1063,4 +1057,5 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif
+
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
