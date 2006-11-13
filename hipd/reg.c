@@ -17,8 +17,12 @@ void hip_init_services(void)
 }
 
 void hip_uninit_services(void)
-{
-	
+{       
+        HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
+        list_for_each_entry_safe(s, tmp, &services, list) {
+                list_del(s);
+        }	
 }
 
 /**
@@ -33,13 +37,15 @@ void hip_uninit_services(void)
  * @returns       zero on success, or negative on error.
  */ 
 int hip_services_add(int service_type)
-{	
+{
 	int err = 0;
-	
+        HIP_SERVICE *tmp = NULL;
+        HIP_SERVICE *service = NULL;
+        
 	HIP_DEBUG("Adding service.\n");
-
+	
 	/* Check if the service is already supported. */
-	HIP_SERVICE *tmp = hip_get_service(service_type);
+	tmp = hip_get_service(service_type);
 	if(tmp) {
 		HIP_ERROR("Trying to add duplicate service: %s. " \
 			  "Current service state is: %s\n", tmp->name,
@@ -48,15 +54,9 @@ int hip_services_add(int service_type)
 		goto out_err;
 	}
 	
-	HIP_SERVICE *service;
-	service = HIP_MALLOC(sizeof(struct hip_reg_service), GFP_KERNEL);
-	
-	if (!service) {
-		HIP_ERROR("service HIP_MALLOC failed");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	
+	HIP_IFEL(!(service = HIP_MALLOC(sizeof(struct hip_reg_service), 0)), -1, 
+                "malloc\n");
+		
 	service->state = HIP_SERVICE_INACTIVE;
 	
 	if (service_type == HIP_ESCROW_SERVICE) {
@@ -83,52 +83,66 @@ int hip_services_add(int service_type)
 	
 	list_add(&service->list, &services);
 	
-	return err;
-
+        //TODO: Send information about new service
+        
 out_err:
 	return err;	
 }
 
 int hip_services_set_active(int service)
 {
-	HIP_SERVICE *s, *tmp;
+        int err = 0;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
 			HIP_DEBUG("Activating service.\n");
 			s->state = HIP_SERVICE_ACTIVE;
 		}
 	}
+out_err:
+        return err;        
 }
 
 int hip_services_set_inactive(int service)
 {
-	HIP_SERVICE *s, *tmp;
+        int err = 0;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
 			HIP_DEBUG("Inactivating service.\n");
 			s->state = HIP_SERVICE_INACTIVE;
 		}
 	}
+out_err:
+        return err;        
 }
 
 int hip_services_remove(int service)
 {
-	HIP_SERVICE *s, *tmp;
+        int err = 0;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service) {
 			HIP_DEBUG("Removing service %d.\n", service);
-                        
-                        s->cancel_service();
+                        HIP_IFEL(s->cancel_service(), -1, 
+                                "Error cancelling service\n");
 			list_del(&s->list);
 			HIP_FREE(s);
 		}
 	}
+        
+out_err:
+        return err;
 }
 
 HIP_SERVICE *hip_get_service(int service_type)
 {
-	HIP_SERVICE *s, *tmp;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service_type) {
 			return s;
@@ -141,7 +155,10 @@ HIP_SERVICE *hip_get_service(int service_type)
 
 int hip_get_services_list(int **service_types)
 {
-	HIP_SERVICE *s, *tmp, *s2, *tmp2;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
+        HIP_SERVICE *s2 = NULL;
+        HIP_SERVICE *tmp2 = NULL;
 	int counter1 = 0;
 	int counter2 = 0;
 	
@@ -171,7 +188,8 @@ int hip_get_services_list(int **service_types)
 
 int hip_get_service_count()
 {
-	HIP_SERVICE *s, *tmp;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	int count = 0;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->state == HIP_SERVICE_ACTIVE)
@@ -183,7 +201,8 @@ int hip_get_service_count()
 
 int hip_services_is_active(int service)
 {
-	HIP_SERVICE *s, *tmp;
+	HIP_SERVICE *s = NULL;
+        HIP_SERVICE *tmp = NULL;
 	list_for_each_entry_safe(s, tmp, &services, list) {
 		if (s->service_type == service && s->state == HIP_SERVICE_ACTIVE)
 			return 1;
@@ -200,7 +219,7 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	int accept_count = 0;
 	int reject_count = 0;
 	int count = 0;
-	HIP_SERVICE *s;
+	HIP_SERVICE *s = NULL;
 	int *a_req, *r_req;
 	count = hip_get_service_count();
 	

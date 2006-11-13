@@ -56,6 +56,8 @@ void print_esp_tuple(const struct esp_tuple * esp_tuple)
 	    esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,  
 	    esp_tuple->tuple->direction);
   print_esp_addr_list(esp_tuple->dst_addr_list);
+  if (esp_tuple->dec_data)
+        HIP_DEBUG("Decryption data for esp_tuple exists\n");
 }
 
 void print_esp_list()
@@ -249,7 +251,7 @@ struct esp_tuple * find_esp_tuple(const struct GSList * esp_list, uint32_t spi)
 
 /* initialize and insert connection*/
 void insert_new_connection(struct hip_data * data){
-  _HIP_DEBUG("insert_new_connection\n");
+  HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
   struct _GList * list = (struct _GList *) hipList;
 
@@ -291,7 +293,7 @@ void insert_new_connection(struct hip_data * data){
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
 					   (gpointer)connection->reply.hip_tuple);
   _HIP_DEBUG("inserting connection ");
-  //print_data(data);
+  print_data(data);
 }
 
 void insert_esp_tuple(const struct esp_tuple * esp_tuple )
@@ -299,7 +301,7 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
   struct _GList * list = (struct _GList *) espList;
   espList = (struct GList *) g_list_append((struct _GList *)espList, 
 					   (gpointer)esp_tuple);
-  _HIP_DEBUG("insert_esp_tuple:\n");
+  HIP_DEBUG("insert_esp_tuple:\n");
   //print_esp_list();
 }
 
@@ -657,7 +659,8 @@ int handle_r1(struct hip_common * common,
 //connection. this for example when connection is re-established. the old esp 
 //tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
 //still able to send data
-int handle_i2(const struct ip6_hdr * ip6_hdr, 
+int handle_i2(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst, 
 	      const struct hip_common * common, 
 	      struct tuple * tuple)
 {
@@ -694,7 +697,7 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
   	esp_tuple->spi_update_id = 0;
 	esp_tuple->dst_addr_list = NULL;
   	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
-						&ip6_hdr->ip6_src, NULL);
+						ip6_src, NULL);
 	esp_tuple->tuple = other_dir;
   	esp_tuple->dec_data = NULL;
   	other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
@@ -723,7 +726,8 @@ int handle_i2(const struct ip6_hdr * ip6_hdr,
 //connection. this for example when connection is re-established. the old esp 
 //tuples are not removed. if attacker spoofs an i2 or r2, the valid peers are
 //still able to send data
-int handle_r2(const struct ip6_hdr * ip6_hdr,
+int handle_r2(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst,
 	      const struct hip_common * common, 
 	      struct tuple * tuple)
 {
@@ -759,7 +763,7 @@ int handle_r2(const struct ip6_hdr * ip6_hdr,
 	esp_tuple->spi_update_id = 0;
   	esp_tuple->dst_addr_list = NULL;
   	esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list, 
-						&ip6_hdr->ip6_src, NULL);
+						ip6_src, NULL);
 
 	esp_tuple->dec_data = NULL;
  	 esp_tuple->tuple = other_dir;
@@ -895,7 +899,8 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 // old values are valid until ack is received
 // SPI parameters don't work in current HIPL -> can not be used for creating
 // connection state fro updates
-int handle_update(const struct ip6_hdr * ip6_hdr,
+int handle_update(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst,
 		  const struct hip_common * common, 
 		  struct tuple * tuple)
 {
@@ -1016,7 +1021,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 		    {
 		      struct esp_tuple * new_esp = 
 			esp_tuple_from_esp_info(esp_info,
-					   &ip6_hdr->ip6_src, 
+					   ip6_src, 
 					   other_dir_tuple);
 		      other_dir_esps = (struct GSList *) 
 			g_slist_append((struct _GSList *) other_dir_esps, 
@@ -1034,7 +1039,7 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
 	      
 	      struct esp_tuple * new_esp = 
 		esp_tuple_from_esp_info(esp_info,
-				   &ip6_hdr->ip6_src, 
+				   ip6_src, 
 				   other_dir_tuple);
 	      other_dir_esps = (struct GSList *) g_slist_append((struct _GSList *) other_dir_esps, 
 								(gpointer) new_esp);
@@ -1137,7 +1142,8 @@ int handle_update(const struct ip6_hdr * ip6_hdr,
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
  */
-int handle_close(const struct ip6_hdr * ip6_hdr, 
+int handle_close(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst, 
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
@@ -1161,7 +1167,8 @@ int handle_close(const struct ip6_hdr * ip6_hdr,
  * requires new I1.. if any more data is to be sent.
  * so, the spi tuple may be removed 
  */
-int handle_close_ack(const struct ip6_hdr * ip6_hdr, 
+int handle_close_ack(const struct in6_addr * ip6_src,
+        const struct in6_addr * ip6_dst, 
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
@@ -1180,7 +1187,8 @@ int handle_close_ack(const struct ip6_hdr * ip6_hdr,
  * returns 1 if packet ok otherwise 0
  *  
  */
-int check_packet(const struct ip6_hdr * ip6_hdr, 
+int check_packet(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst, 
 		 struct hip_common * common, 
 		 struct tuple * tuple,
 		 int verify_responder,
@@ -1206,6 +1214,8 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
       if(verify_packet_signature(tuple->hip_tuple->data->src_hi, 
 				  common) != 0)
 	return 0;
+        HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
+        HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
       HIP_DEBUG("check_packet: signature verification ok\n");
     }
   if(common->type_hdr == HIP_I1) 
@@ -1214,6 +1224,8 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
 	{
 	  struct hip_data * data = get_hip_data(common);	  
 	  insert_new_connection(data);
+          HIP_DEBUG_HIT("src hit: ", &data->src_hit);
+        HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
 	}
       else
 	{
@@ -1225,9 +1237,9 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
     return_value = handle_r1(common, tuple, verify_responder);
   }
   else if(common->type_hdr == HIP_I2) 
-    return_value = handle_i2(ip6_hdr, common, tuple);
+    return_value = handle_i2(ip6_src, ip6_dst, common, tuple);
   else if(common->type_hdr == HIP_R2)
-    return_value = handle_r2(ip6_hdr, common, tuple);
+    return_value = handle_r2(ip6_src, ip6_dst, common, tuple);
   else if(common->type_hdr == HIP_UPDATE)
     {
       
@@ -1239,7 +1251,7 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
 	    return_value = 0; //responder hi not available
 	}
       if(return_value)      
-	return_value = handle_update(ip6_hdr, common, tuple);
+	return_value = handle_update(ip6_src, ip6_dst, common, tuple);
     }
   else if(common->type_hdr == HIP_NOTIFY)
     return_value = 1;
@@ -1247,10 +1259,10 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
     return_value = 1;
   /* NOT YET IN THE HIPL IMPLEMENTATION. */ 
   else if(common->type_hdr == HIP_CLOSE)
-    return_value = handle_close(ip6_hdr, common, tuple);
+    return_value = handle_close(ip6_src, ip6_dst, common, tuple);
   /* NOT YET IN THE HIPL IMPLEMENTATION. */ 
   else if(common->type_hdr == HIP_CLOSE_ACK) 
-    return_value = handle_close_ack(ip6_hdr, common, tuple);
+    return_value = handle_close_ack(ip6_src, ip6_dst, common, tuple);
   else 
     return_value = 0;
   if(return_value && tuple)
@@ -1259,6 +1271,7 @@ int check_packet(const struct ip6_hdr * ip6_hdr,
       //for new connections time_stamp is set when creating
       g_get_current_time(&tuple->connection->time_stamp);
     }
+        
   return return_value;
 }
 
@@ -1337,16 +1350,20 @@ int filter_esp_state(const struct in6_addr * dst_addr,
     {
 		// If decryption data for this spi exists, decrypt the contents
 		esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
-		if (!esp_tuple) {
+                if (!esp_tuple) {
 			HIP_DEBUG("Could not find corresponding esp_tuple\n");
                 }
 		/* Decrypt contents */
 		if (esp_tuple && esp_tuple->dec_data) {
-			decrypt_packet(dst_addr, esp_tuple, esp);
+		      HIP_DEBUG_HIT("src hit: ", &esp_tuple->tuple->hip_tuple->data->src_hit);
+                        HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
+                
+                	decrypt_packet(dst_addr, esp_tuple, esp);
                 }
                 else {
                         // If contents cannot be decrypted, drop packet
                         // TODO: Is this what we want?
+                        HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
                         return_value = 0;
                         goto out;    
                 }        
@@ -1373,7 +1390,8 @@ int filter_esp_state(const struct in6_addr * dst_addr,
 }
 
 //check the verdict in rule, so connections can only be created when necessary
-int filter_state(const struct ip6_hdr * ip6_hdr, 
+int filter_state(const struct in6_addr * ip6_src,
+                const struct in6_addr * ip6_dst, 
 		 struct hip_common * buf, 
 		 const struct state_option * option,
 		 int accept) 
@@ -1449,7 +1467,7 @@ int filter_state(const struct ip6_hdr * ip6_hdr,
 	  goto out;
 	}
     }
-  return_value = check_packet(ip6_hdr, buf, tuple, 
+  return_value = check_packet(ip6_src, ip6_dst, buf, tuple, 
 			      option->verify_responder, 
 			      option->accept_mobile);
  out:
@@ -1463,7 +1481,8 @@ int filter_state(const struct ip6_hdr * ip6_hdr,
  * filtered through any state rules 
  * needs to be registered by connection tracking
  */
-void conntrack(const struct ip6_hdr * ip6_hdr, 
+void conntrack(const struct in6_addr * ip6_src,
+        const struct in6_addr * ip6_dst, 
 	       struct hip_common * buf) 
 {
   struct hip_data * data;
@@ -1478,7 +1497,7 @@ void conntrack(const struct ip6_hdr * ip6_hdr,
   _HIP_DEBUG("conntrack:checking packet \n");
   //the accept_mobile parameter is true as packets 
   //are not filtered here
-  check_packet(ip6_hdr, buf, tuple, 0, 1);
+  check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1);
   g_mutex_unlock(connectionTableMutex);
   _HIP_DEBUG("conntrack:unlocked mutex\n");
   
@@ -1493,35 +1512,58 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 {
 	int err = 0;
 	struct tuple * tuple = NULL;
-	struct esp_tuple * esp_tuple;
-	struct decryption_data * dec_data;
+	struct esp_tuple * esp_tuple = NULL;
+	struct decryption_data * dec_data = NULL;
+        struct tuple * other_dir = NULL;
 
 	_HIP_DEBUG("add_esp_decryption_data\n");
 	g_mutex_lock(connectionTableMutex);
 	_HIP_DEBUG("add_esp_decryption_data:locked mutex\n");
 	
-	_HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
+	HIP_DEBUG("add_esp_decryption_data: dst addr %s spi %d finding connection...\n",
 		addr_to_numeric(dst_addr), spi);
+        HIP_DEBUG_HIT("src hit: ", hit_s);
+        HIP_DEBUG_HIT("dst hit: ", hit_r);        
 	tuple = get_tuple_by_esp(dst_addr, spi);	
-	if (!tuple)
+	if (!tuple) {
+                HIP_DEBUG("Getting tuple by hits\n");
 		tuple = get_tuple_by_hits(hit_s, hit_r);
+                if (tuple) {
+                        esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
+                        if(tuple->direction == ORIGINAL_DIR)
+                                other_dir = &tuple->connection->reply;
+                        else
+                                other_dir = &tuple->connection->original;
+                }
+        }
+        else {
+                if(tuple->direction == ORIGINAL_DIR)
+                        other_dir = &tuple->connection->original;
+                else
+                        other_dir = &tuple->connection->reply;
+                if (other_dir && other_dir->esp_tuples) {
+                        tuple = other_dir;
+                        esp_tuple = find_esp_tuple(other_dir->esp_tuples, spi);
+                }
+                else
+                        HIP_DEBUG("No esp-tuples in other direction\n");        
+        }
 	if (!tuple) {
 		HIP_DEBUG("Tuple not found!\n");
 		err = -1;
 		goto out_err;
 	}
-	esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
+	
 	if (!esp_tuple) {
 		_HIP_DEBUG("ESP tuple not found, creating new\n");
 		esp_tuple = malloc(sizeof(struct esp_tuple));
-		struct tuple * other_dir = NULL;
-  		
+
   		// store in tuple of other direction that will be using
   		// this spi and dst address 
-  		if(tuple->direction == ORIGINAL_DIR)
-    		other_dir = &tuple->connection->reply;
+  		/*if(tuple->direction == ORIGINAL_DIR)
+                        other_dir = &tuple->connection->reply;
 		else
-    		other_dir = &tuple->connection->original;
+                        other_dir = &tuple->connection->original;*/
   		esp_tuple->spi = spi;
   		esp_tuple->new_spi = 0;
   		esp_tuple->spi_update_id = 0;
@@ -1532,7 +1574,7 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
   		esp_tuple->tuple = other_dir;
  		other_dir->esp_tuples = (struct GSList *)g_slist_append((struct _GSList *)other_dir->esp_tuples, esp_tuple);
   		insert_esp_tuple(esp_tuple);
-		_HIP_DEBUG("Created new esp tuple!\n");
+		HIP_DEBUG("Created new esp tuple!\n");
 	}
 	if (esp_tuple != NULL) {
 		dec_data = (struct decryption_data *)malloc(sizeof(struct decryption_data));
@@ -1547,6 +1589,7 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
 			_HIP_HEXDUMP("Keyhex: ", dec_data->dec_key.key, /*esp_tuple->dec_data->key_len*/ 24);
 			esp_tuple->dec_data = dec_data;
 			HIP_DEBUG("Added decryption data\n\n");
+                        print_esp_list();
 		}
 	}
 	else {

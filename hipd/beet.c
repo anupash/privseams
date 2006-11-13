@@ -386,41 +386,6 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_try_to_find_by_peer_hit(peer_addr);	
-		if (entry) {
-			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				kea = hip_kea_find(&server_entry->hit_our);	
-				if (server_entry && kea) {
-					int err;
-					// TODO: check correctness
-					if (spi == kea->spi_out)		
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							peer_addr, &entry->hit_peer, 0, spi, 0, 0, 0);
-					else
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							&entry->local_address, &entry->hit_our, 0, spi, 0, 0, 0);
-						
-				}
-				else {
-					HIP_DEBUG("No server entry or kea base found.\n");
-					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
-				}
-			}
-			else {
-				HIP_DEBUG("Escrow not in use - not sending update.\n");
-			}
-		}
-		else {
-			HIP_DEBUG("Could not find ha_state entry.\n");
-		}
-	} 		
-
-#endif //CONFIG_HIP_ESCROW
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {

@@ -5,12 +5,8 @@
 #include <glib/gthread.h>
 #include <sys/un.h>
 
-//#include "state.h"
-//#include "user.h"
 #include "builder.h"
 #include "protodefs.h"
-//#include "rule_management.h"
-//#include "debug.h"
 
 
 gpointer run_control_thread(gpointer data);

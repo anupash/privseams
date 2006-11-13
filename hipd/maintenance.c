@@ -473,28 +473,29 @@ int hip_firewall_is_alive()
 }
 
 
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys)
 {
 		struct hip_common *msg;
 		int err = 0;
 		int n;
 		socklen_t alen;
-		struct in6_addr * hit_s;
-		struct in6_addr * hit_r;
+		//struct in6_addr * hit_s;
+		//struct in6_addr * hit_r;
 				
 		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
                         "Build hdr failed\n");
 		
-		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
 			hit_s = &entry->hit_peer;
 			hit_r = &entry->hit_our;
 		}
 		else {
 			hit_r = &entry->hit_peer;
 			hit_s = &entry->hit_our;
-		}
+		}*/
                 
                 HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
                         sizeof(struct in6_addr)), -1, "build param contents failed\n");
