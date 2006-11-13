@@ -18,11 +18,7 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-//#include "firewall.h"
-//#include "conntrack.h"
-//#include "helpers.h"
 #include "debug.h"
-//#include "firewall.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"

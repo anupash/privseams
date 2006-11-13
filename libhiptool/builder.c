@@ -2269,7 +2269,7 @@ int hip_build_param_locator(struct hip_common *msg,
  */	 
 int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id, 
 						uint16_t alg_id, struct in6_addr *addr,
-						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						struct in6_addr *hit, struct in6_addr *peer_hit, uint32_t spi, uint32_t spi_old,
 						uint16_t key_len, struct hip_crypto_key *enc)
 {
 	int err = 0;
@@ -2280,7 +2280,8 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 	
 	
 	memcpy((struct in6_addr *)&keys.address, addr, 16);
-	memcpy((struct in6_addr *)&keys.hit, hit, 16);		
+	memcpy((struct in6_addr *)&keys.hit, hit, 16);
+        memcpy((struct in6_addr *)&keys.peer_hit, peer_hit, 16);		
 	keys.operation = htons(operation_id);
 	keys.alg_id = htons(alg_id);	
 	keys.spi = htonl(spi);
@@ -2294,7 +2295,7 @@ int hip_build_param_keys(struct hip_common *msg, uint16_t operation_id,
 
 int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id, 
 						uint16_t alg_id, struct in6_addr *addr,
-						struct in6_addr *hit, uint32_t spi, uint32_t spi_old,
+						struct in6_addr *hit, struct in6_addr *peer_hit, uint32_t spi, uint32_t spi_old,
 						uint16_t key_len, struct hip_crypto_key *enc)
 {
 	int err = 0;
@@ -2304,6 +2305,7 @@ int hip_build_param_keys_hdr(struct hip_keys *keys, uint16_t operation_id,
 	
 	memcpy((struct in6_addr *)keys->address, addr, 16);
 	memcpy((struct in6_addr *)keys->hit, hit, 16);		
+        memcpy((struct in6_addr *)keys->peer_hit, peer_hit, 16);                
 	keys->operation = htons(operation_id);
 	keys->alg_id = htons(alg_id);	
 	keys->spi = htonl(spi);

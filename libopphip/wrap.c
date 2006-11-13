@@ -563,6 +563,7 @@ int hip_translate_socket(const int *orig_socket,
 		(is_peer ? entry->peer_id_is_translated :
 		 entry->local_id_is_translated);
 	wrap_applicable = hip_wrapping_is_applicable(orig_id, entry);
+	wrap_applicable = 0;
 
 	HIP_DEBUG("orig_id=%p is_dgram=%d wrap_applicable=%d already=%d is_peer=%d\n",
 		  orig_id, is_dgram, wrap_applicable, is_translated, is_peer);

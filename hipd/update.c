@@ -1397,13 +1397,14 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	int err = 0;
 	HIP_KEA * kea = NULL; 
 	HIP_KEA_EP * ep = NULL;
-	struct in6_addr * hit, * ip;
+	struct in6_addr * hit, * peer_hit, * ip;
 	int accept = 0;
 	
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_peer)), -1, 
 		"No KEA found: Could not add escrow endpoint info");
 	
 	 hit = (struct in6_addr *)&keys->hit;
+         peer_hit = (struct in6_addr *)&keys->peer_hit;
 	 ip = (struct in6_addr *)&keys->address;		
 	 
 	 HIP_DEBUG_HIT("handle escrow param hit:", hit);
@@ -1417,7 +1418,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 switch (op) {
 	 	
 	 	case HIP_ESCROW_OPERATION_ADD:
-	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
+	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, peer_hit, ip, alg,
 				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
 	 		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep), 
@@ -1428,7 +1429,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 		HIP_IFEL(!(ep = hip_kea_ep_find(ip, spi_old)), -1, 
 	 			"Could not find endpoint to be modified");
 	 		hip_kea_remove_endpoint(ep);
-	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, ip, alg,
+	 		HIP_IFEL(!(ep = hip_kea_ep_create(hit, peer_hit, ip, alg,
 				spi, len, &keys->enc)), -1,
 				"Error creating kea endpoint");
 	 		HIP_IFEBL(hip_kea_add_endpoint(kea, ep), -1, hip_kea_put_ep(ep), 
@@ -1446,13 +1447,12 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	 			op);	 
 			accept = -1;	
 	 }
-	
 	/* If firewall is used, the received information shuold be delivered 
 	 * to it. TODO: a better place for this? */ 	
 	if (accept == 0) {
 		if (hip_firewall_is_alive()) {
 			HIP_DEBUG("Firewall alive!\n");
-			if (hip_firewall_add_escrow_data(entry, keys))
+			if (hip_firewall_add_escrow_data(entry, hit, peer_hit, keys))
 				HIP_DEBUG("Sent data to firewall\n");
 		}
 	}

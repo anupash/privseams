@@ -727,6 +727,7 @@ struct hip_keys {
 	uint16_t 		alg_id;
 	uint8_t 		address[16];
 	uint8_t 		hit[16];
+        uint8_t                 peer_hit[16];
 	uint32_t 		spi;
 	uint32_t 		spi_old;
 	uint16_t 		key_len;

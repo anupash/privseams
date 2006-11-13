@@ -826,7 +826,7 @@
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
-              queued in the user-space.  These rules are inserted
+              queued in the userspace.  These rules are inserted
               automatically at the head of each chain. Other rules that might
               concern the HIP (-p 253) and ESP packets (-p 50) must not be 
               inserted before them.</para>
