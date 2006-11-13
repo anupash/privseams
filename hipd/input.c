@@ -973,49 +973,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
         // TODO: check also unregistrations   
         type_count = hip_get_incomplete_registrations(&reg_type, entry, 1); 
-
-	/** @todo This is just a temporary kludge until something more 
-	    elegant is build. Rationalize this. */
-
-#ifdef CONFIG_HIP_RVS	
-	/* Check that we have requested rvs service and that the 
-	   peer is rvs capable. */
-	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
-	    (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
-		HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
-		request_rvs = 1;
-		type_count++;
-	}
-#endif /* CONFIG_HIP_RVS */
-#ifdef CONFIG_HIP_ESCROW	
-	/* ESCROW */
-	HIP_KEA *kea;
-	kea = hip_kea_find(&entry->hit_our);
-	if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-		request_escrow = 1;
-		type_count++;
-	}
-	if (kea) {
-		hip_keadb_put_entry(kea);
-	}
-#endif /* CONFIG_HIP_ESCROW */
-
-	/* Have to use malloc() here, otherwise the macros will
-	   "jump into scope of identifier with variably modified type". */
-	HIP_IFEL(!(reg_type = HIP_MALLOC(type_count * sizeof(int), 0)),
-		 -ENOMEM, "Not enough memory to rvs_addresses.");
-
-	if(type_count == 2){
-		reg_type[0] = HIP_ESCROW_SERVICE;
-		reg_type[1] = HIP_RENDEZVOUS_SERVICE;
-	}
-	else if(request_escrow){
-		reg_type[0] = HIP_ESCROW_SERVICE;
-	}
-	else if(request_rvs){
-		reg_type[0] = HIP_RENDEZVOUS_SERVICE;
-	}
-		
+	
 	if (type_count > 0) {
 		HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
 		/* TODO: Lifetime value usage. Now requesting maximum lifetime (255 ~= 178 days) always */
@@ -1439,7 +1397,6 @@ int hip_create_r2(struct hip_context *ctx,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
-	HIP_KEA *kea = NULL;	
 	hip_rva_t *rva = NULL;
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
@@ -1501,17 +1458,6 @@ int hip_create_r2(struct hip_context *ctx,
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
-
-#ifdef CONFIG_HIP_ESCROW
-	// Add escrow association to database
-	// TODO: definition
-	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
-	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
-	kea->keastate = HIP_KEASTATE_VALID;
-	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
-		"Error while inserting KEA to keatable");
-	HIP_DEBUG("Added kea entry");
-#endif /* CONFIG_HIP_ESCROW */
 
 #ifdef CONFIG_HIP_RVS
 	/* Insert rendezvous association with appropriate xmit-function to

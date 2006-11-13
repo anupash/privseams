@@ -577,20 +577,20 @@ int main(int argc, char **argv)
       
         ipq_packet_msg_t *m = ipq_get_packet(buf);
         if (use_ipv4) {
-                HIP_DEBUG("ipv4\n");
+                _HIP_DEBUG("ipv4\n");
                 iphdr = (struct ip *) m->payload; 
                 packet_hdr = (void *)iphdr;
                 hdr_size = (iphdr->ip_hl * 4);
-                HIP_DEBUG("header size: %d\n", hdr_size);
+                _HIP_DEBUG("header size: %d\n", hdr_size);
                 IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
                 IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
         }
         else {
-                HIP_DEBUG("ipv6\n");
+                _HIP_DEBUG("ipv6\n");
                 ip6_hdr = (struct ip6_hdr *) m->payload;   
                 packet_hdr = (void *)ip6_hdr;
                 hdr_size = sizeof(struct ip6_hdr);
-                HIP_DEBUG("header size: %d\n", hdr_size);
+                _HIP_DEBUG("header size: %d\n", hdr_size);
                 ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         }
