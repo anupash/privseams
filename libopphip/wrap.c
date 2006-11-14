@@ -29,10 +29,13 @@
 //static
 int hip_db_exist = 0;
 
-
 // used for dlsym_util
 #define NUMBER_OF_DLSYM_FUNCTIONS 13
 
+/* open() has varying number of args, so it is not in the list. fopen(),
+   fdopen and create() are not in the list because they operate only on
+   files, similarly as open. The separation between files and sockets is
+   done with in socket() or dynamically in read() or write() calls. */
 struct {
 	int (*socket_dlsym)(int domain, int type, int protocol);
 	int (*bind_dlsym)(int socket, const struct sockaddr *sa,
@@ -46,18 +49,64 @@ struct {
 	ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
 				  struct sockaddr *from, socklen_t *fromlen);
 	ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
-	int (*close_dlsym)(int fd);
 	int (*accept_dlsym)(int sockfd, struct sockaddr *addr,
 			    socklen_t *addrlen);
 	ssize_t (*write_dlsym)(int fd, const void *buf, size_t count);
 	ssize_t (*read_dlsym)(int fd, void *buf, size_t count);
+	int (*close_dlsym)(int fd);
 } dl_function_ptr;
+/* XX TODO: ADD: clone() dup(), dup2(), fclose() ? */
 
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
- "sendmsg", "recv", "recvfrom", "recvmsg", "close",
- "accept", "write", "read"};
+ "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
+ "write", "read", "close"};
+
+void hip_init_dlsym_functions()
+{
+	int err = 0, i;
+	char *error = NULL;
+	
+	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
+		dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
+		HIP_ASSERT(dl_function_fd[i]);
+		((int **) (&dl_function_ptr))[i] =
+			dlsym(dl_function_fd[i], dl_function_name[i]);
+	}
+	
+	error = dlerror();
+	if (err){
+		HIP_DIE("dlerror: %s\n", error);
+	}
+}
+
+void hip_uninit_dlsym_functions()
+{
+	int i = 0;
+	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
+		dlclose(dl_function_fd[i]);
+	}
+}
+
+void hip_uninitialize_db()
+{
+	hip_uninit_dlsym_functions();
+	hip_uninit_socket_db();
+}
+
+void hip_initialize_db_when_not_exist()
+{
+	if (hip_db_exist)
+		return;
+
+	hip_init_dlsym_functions();
+	hip_init_socket_db();
+	HIP_DEBUG("socketdb initialized\n");
+	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
+	atexit(hip_uninitialize_db);
+	hip_db_exist = 1;
+}
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
@@ -122,52 +171,6 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 	}
 	
 	return 1;
-}
-
-void hip_uninit_dlsym_functions()
-{
-	int i = 0;
-	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-		dlclose(dl_function_fd[i]);
-	}
-}
-
-void hip_init_dlsym_functions()
-{
-	int err = 0, i;
-	char *error = NULL;
-	
-	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-		dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
-		HIP_ASSERT(dl_function_fd[i]);
-		((int **) (&dl_function_ptr))[i] = dlsym(dl_function_fd[i],
-							 dl_function_name[i]);
-	}
-	
-	error = dlerror();
-	if (err){
-		HIP_DIE("dlerror: %s\n", error);
-	}
-}
-
-void hip_uninitialize_db()
-{
-	hip_uninit_dlsym_functions();
-	hip_uninit_socket_db();
-}
-
-void hip_initialize_db_when_not_exist()
-{
-	if(hip_db_exist) {
-		return;
-	}
-
-	hip_init_dlsym_functions();
-	hip_init_socket_db();
-	HIP_DEBUG("socketdb initialized\n");
-	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
-	atexit(hip_uninitialize_db);
-	hip_db_exist = 1;
 }
 
 #if 0
@@ -367,7 +370,7 @@ int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
 		hit->sin6_port = rand();
-	} while(hit->sin6_port < 1024);
+	} while (hit->sin6_port < 1024);
 	
 	HIP_IFE(set_translation(entry, hit, 0), -1);
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
@@ -854,7 +857,6 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	return err;
 }
 
-
 ssize_t read(int orig_socket, void *b, size_t c)
 {
 	int err = 0, *translated_socket;
@@ -924,9 +926,7 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	int err;
 	int charnum = 0;  
 	int socket = 0;
-	void *dp = NULL;
 	char *error = NULL;
-	char *name = "recvmsg";
 	
 	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
@@ -937,41 +937,47 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	return charnum;
 }
 
-int close(int fd)
+int close(int orig_fd)
 {
 	int err = 0, pid = 0;
 	hip_opp_socket_t *entry = NULL;
-	void *dp = NULL;
-	char *error = NULL, *name = "close";
+	char *error = NULL;
+
+	/* The database and the function pointers may not be initialized
+	   because e.g. open call is not wrapped. We need only the
+	   dl_function_ptr.close_dlsym to be initialized here, but let's
+	   initialize everything anyway. This way, there is no need to
+	   check hip_db_exist value everywhere. */
+	hip_initialize_db_when_not_exist();
 	
-	if(!hip_db_exist)
-		goto out_err;
+	HIP_DEBUG("close() orig fd %d\n", orig_fd);
+
+	//if (hip_db_exist) hip_socketdb_dump();
+
+	/* close original socket */
+	err = dl_function_ptr.close_dlsym(orig_fd);
 
 	pid = getpid();
-	entry = hip_socketdb_find_entry(pid, fd);
-	HIP_DEBUG("close() pid %d, fd %d\n", pid, fd);
-	
-	if(!entry){
-		_HIP_DEBUG("should not happen, dumping socket db\n");
-		hip_socketdb_dump();
-		goto out_err;
-			//assert(0);
-	}
 
-	if (entry->translated_socket) {
-		// close new_socket too
-		if(entry->orig_socket != entry->translated_socket){
-			err = dl_function_ptr.close_dlsym(entry->translated_socket);
-			if (err)
-				HIP_ERROR("Err %d close trans socket\n", err);
-		}
+	entry = hip_socketdb_find_entry(pid, orig_fd);
+	if (!entry)
+		goto out_err;
+
+	HIP_ASSERT(entry);
+
+	/* close new_socket */
+	if(entry->translated_socket &&
+	   entry->orig_socket != entry->translated_socket) {
+		err = dl_function_ptr.close_dlsym(entry->translated_socket);
+		hip_socketdb_del_entry_by_entry(entry);
+		HIP_DEBUG("old_socket %d new_socket %d\n", 
+			  entry->orig_socket,
+			  entry->translated_socket);	  
 	}
+	if (err)
+		HIP_ERROR("Err %d close trans socket\n", err);
 	
-	HIP_DEBUG("old_socket %d new_socket %d\n", 
-		  entry->orig_socket,
-		  entry->translated_socket);	  
  out_err:
-	err = dl_function_ptr.close_dlsym(fd);
 	HIP_DEBUG("close_dlsym called with err %d\n", err);
 	
   return err;
@@ -994,7 +1000,6 @@ void test_db(){
 	entry =  hip_socketdb_find_entry(pid, socket);
 	HIP_ASSERT(entry);
 	hip_socketdb_dump();
-	
 	
 	//  pid++; 
 	socket++;
@@ -1063,4 +1068,5 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif
+
+#endif /* CONFIG_HIP_OPPORTUNISTIC */

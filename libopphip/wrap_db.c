@@ -149,8 +149,9 @@ void hip_socketdb_dump()
 	char dst_hit[INET6_ADDRSTRLEN] = "\0";
 	hip_opp_socket_t *item = NULL;
 	hip_opp_socket_t *tmp = NULL;
-	
+
 	HIP_DEBUG("start socketdb dump\n");
+
 	HIP_LOCK_HT(&socketdb);
 	
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
