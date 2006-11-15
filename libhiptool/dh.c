@@ -50,7 +50,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		goto err_free;
 	}
 
-	HIP_HEXDUMP("DH public key: ", buffer, res);
+	_HIP_HEXDUMP("DH public key: ", buffer, res);
 
  err_free:
 	return res;
