@@ -524,7 +524,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
        HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        /* Hash Input :=  Context ID | Input */
        khi_data = HIP_MALLOC(khi_data_len, 0);
@@ -536,14 +536,14 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        HIP_ASSERT(khi_index == khi_data_len);
 
-       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
+       _HIP_HEXDUMP("khi data", khi_data, khi_data_len);
 
        /* Hash :=  SHA1( Expand( Hash Input ) ) */
        HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
 					khi_data_len, digest)), err,
 		"Building of digest failed\n");
 
-       HIP_HEXDUMP("digest", digest, sizeof(digest));
+       _HIP_HEXDUMP("digest", digest, sizeof(digest));
 
        bzero(hit, sizeof(hip_hit_t));
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
@@ -551,9 +551,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
 		-1, "encoding failed\n");
 
-       HIP_DEBUG_HIT("HIT before prefix: ", hit);
+       _HIP_DEBUG_HIT("HIT before prefix: ", hit);
        set_hit_prefix(hit);
-       HIP_DEBUG_HIT("HIT after prefix: ", hit);
+       _HIP_DEBUG_HIT("HIT after prefix: ", hit);
 
  out_err:
        if (khi_data)

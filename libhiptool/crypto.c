@@ -964,7 +964,9 @@ int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
     }
   }
 
-  HIP_DEBUG("the host id was %s\n", (is_public ? "public" : "private"));
+  HIP_DEBUG_HIT("hit", hit);
+  HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
+	    (is_dsa ? "dsa" : "rsa"));
   
  out_err:
 
@@ -1022,10 +1024,10 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   *dsa_key_rr = NULL;
 
-  HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
-  HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
-  HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-  HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key)); // shouldn't this be NULL also?
+  _HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
+  _HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
+  _HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
+  _HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key)); // shouldn't this be NULL also?
 
   /* notice that these functions allocate memory */
   _HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
@@ -1040,7 +1042,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
     err = -EINVAL;
     goto out_err;
   }
-  HIP_DEBUG("t=%d\n", t);
+  _HIP_DEBUG("t=%d\n", t);
 
   /* RFC 2536 section 2 */
   /*
@@ -1063,7 +1065,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
     HIP_DEBUG("No private key\n");
   }
 
-  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
+  _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
   if (!*dsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -1080,7 +1082,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   /* set T */
   memset(p, t, 1); // XX FIX: WTF MEMSET?
   p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
 
   /* minimum number of bytes needed to store P, G or Y */
   bn_buf_len = BN_num_bytes(dsa->p);
@@ -1099,7 +1101,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   
   /* Q */
   bn2bin_len = bn2bin_safe(dsa->q, bn_buf, 20);
-  HIP_DEBUG("q len=%d\n", bn2bin_len);
+  _HIP_DEBUG("q len=%d\n", bn2bin_len);
   if (!bn2bin_len) {
     HIP_ERROR("bn2bin\n");
     err = -ENOMEM;
@@ -1108,7 +1110,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   HIP_ASSERT(bn2bin_len == 20);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
   /* add given dsa_param to the *dsa_key_rr */
 #define DSA_ADD_PGY_PARAM_TO_RR(dsa_param, t)            \
@@ -1126,13 +1128,13 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   /* padding + P */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->p, t);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + G */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->g, t);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + Y */
   DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key, t);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
+  _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
   /* padding + X */
 
 #undef DSA_ADD_PGY_PARAM_TO_RR
@@ -1143,7 +1145,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
     memcpy(p,bn_buf,bn2bin_len);
     
     p += bn2bin_len;
-    HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
+    _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
 
   }
 
@@ -1754,7 +1756,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     dsa_key_rr, dsa_key_rr_len);
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
 
  out_err:
 
@@ -1793,12 +1795,12 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
   }
   memset(*endpoint, 0, endpoint_hdr.length);
 
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
 
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     rsa_key_rr, rsa_key_rr_len);
 			   
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
 
  out_err:
 

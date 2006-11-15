@@ -2051,7 +2051,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 				      sizeof(struct hip_diffie_hellman),
 				      pubkey);
 
-	HIP_HEXDUMP("Own DH pubkey: ", pubkey, pubkey_len);
+	_HIP_HEXDUMP("Own DH pubkey: ", pubkey, pubkey_len);
 
 	return err;
 }
