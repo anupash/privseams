@@ -71,7 +71,7 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 
 extern struct rtnl_handle hip_nl_route;
