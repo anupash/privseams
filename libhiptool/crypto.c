@@ -964,10 +964,10 @@ int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
     }
   }
 
-  HIP_DEBUG_HIT("hit", hit);
-  HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
-	    (is_dsa ? "dsa" : "rsa"));
-  
+   HIP_DEBUG_HIT("hit", hit);
+   HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
+	     (is_dsa ? "dsa" : "rsa"));
+
  out_err:
 
   if (key_rr)
