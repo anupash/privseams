@@ -62,7 +62,7 @@ char *i3_config = NULL;
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
-	fprintf(stderr, "  -b run in foreground\n");
+	fprintf(stderr, "  -b run in background\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
