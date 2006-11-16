@@ -457,8 +457,10 @@ int hip_translate_new(hip_opp_socket_t *entry,
 			goto out_err;
 		}
 		dst_hit.sin6_family = AF_INET6;
-	} else if (!entry->local_id_is_translated) {
-		HIP_DEBUG("Local id already translated\n");
+	} else {
+		/* Called e.g. in bind(). XX FIXME: Currently no conversion
+		   due to problems described in accept() */
+		goto out_err;
 	}
 	
 	if (err || IN6_IS_ADDR_V4MAPPED(&hit->sin6_addr) ||
@@ -577,7 +579,6 @@ int hip_translate_socket(const int *orig_socket,
 	if (!is_translated)
 		hip_store_orig_socket_info(entry, is_peer, *orig_socket,
 					   orig_id, *orig_id_len);
-	
 	
 	if (!wrap_applicable)
 		hip_translate_to_original(entry);
@@ -700,7 +701,7 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 	err = dl_function_ptr.bind_dlsym(*translated_socket, translated_id,
 					 *translated_id_len);
 	if (err) {
-		HIP_PERROR("connect error:");
+		HIP_PERROR("bind error:");
 	}
 	
  out_err:
@@ -727,12 +728,13 @@ int listen(int sockfd, int backlog)
 
 int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
-	int err = 0, *translated_socket, new_sock;
+	int err = 0, *translated_socket, new_sock, zero = 0;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 	hip_opp_socket_t *entry = NULL;
 
-	HIP_DEBUG("Accept called orig_socket %d\n", orig_socket);
+	HIP_DEBUG("Accept called orig_socket %p len %p\n", orig_socket,
+		  orig_id_len);
 
 	/* XX TODO: we arrive here from two alternative ways through listen().
 	   Either listen has discovered an IP based connection or HIT based
@@ -741,8 +743,8 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 	   original and pass the call as it is. In the case of HIT, we must
 	   translate to a new HIT and peel of a new file descriptor. The
 	   new file descriptor requires a new entry that may conflict with
-	   the original id? In addition, what to return from this function?
-	*/
+	   the original id? Most importantly, what to return from this
+	   function? */
 
 	new_sock = dl_function_ptr.accept_dlsym(orig_socket,
 						orig_id,
@@ -765,11 +767,22 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 		goto out_err;
 	}
 
-	err = hip_translate_socket(&new_sock, orig_id, &orig_id_len,
+	err = hip_translate_socket(&new_sock,
+				   (struct sockaddr *) &entry->orig_local_id,
+				   &entry->orig_local_id_len,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len, 0, 0);
+	if (err) {
+		HIP_ERROR("Local id translation failure\n");
+		goto out_err;
+	}
+	err = hip_translate_socket(&new_sock, orig_id,
+				   (orig_id ? orig_id_len : &zero),
 				   &translated_socket, &translated_id,
 				   &translated_id_len, 1, 0);
 	if (err) {
-		HIP_ERROR("Translation failure\n");
+		HIP_ERROR("Peer id translation failure\n");
 		goto out_err;
 	}
 	
