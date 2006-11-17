@@ -30,7 +30,7 @@
 int hip_db_exist = 0;
 
 // used for dlsym_util
-#define NUMBER_OF_DLSYM_FUNCTIONS 14
+#define NUMBER_OF_DLSYM_FUNCTIONS 16
 
 /* open() has varying number of args, so it is not in the list. fopen(),
    fdopen and create() are not in the list because they operate only on
@@ -55,14 +55,17 @@ struct {
 	ssize_t (*read_dlsym)(int fd, void *buf, size_t count);
 	int (*close_dlsym)(int fd);
 	int (*listen_dlsym)(int sockfd, int backlog);
+	ssize_t (*readv_dlsym)(int fd, const struct iovec *vector, int count);
+	ssize_t (*writev_dlsym)(int fd, const struct iovec *vector, int count);
 } dl_function_ptr;
-/* XX TODO: ADD: clone() dup(), dup2(), fclose() ? */
+/* XX TODO: ADD: clone() dup(), dup2(), fclose(), select ? */
 
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
  "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
- "write", "read", "close", "listen"};
+ "write", "read", "close", "listen", "readv",
+ "writev"};
 
 void hip_init_dlsym_functions()
 {
@@ -882,6 +885,40 @@ ssize_t write(int orig_socket, const void * b, size_t c)
 	return chars;
 }
 
+ssize_t writev(int orig_socket, const struct iovec *vector, int count)
+{
+	int err = 0, *translated_socket;
+	ssize_t chars = -1;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	
+	/* This functions is almost identical with send() */
+
+	HIP_DEBUG("orig_socket %d\n", orig_socket);
+	
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   1, 0, 0);
+
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+
+	chars = dl_function_ptr.writev_dlsym(*translated_socket, vector, count);
+	
+	HIP_DEBUG("Called writev_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
+}
+
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
  * Untested.
@@ -989,6 +1026,39 @@ ssize_t read(int orig_socket, void *b, size_t c)
 	chars = dl_function_ptr.read_dlsym(*translated_socket, b, c);
 	
 	HIP_DEBUG("Called read_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
+}
+
+ssize_t readv(int orig_socket, const struct iovec *vector, int count)
+{
+	int err = 0, *translated_socket;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	ssize_t chars = -1;
+	
+	/* This functions is almost identical with recv() */
+
+	HIP_DEBUG("orig_socket %d\n", orig_socket);
+
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   0, 0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+	
+	chars = dl_function_ptr.readv_dlsym(*translated_socket, vector, count);
+	
+	HIP_DEBUG("Called readv_dlsym with number of returned char=%d\n",
 		  chars);
 	
  out_err:
