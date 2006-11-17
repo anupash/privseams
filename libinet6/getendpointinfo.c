@@ -149,7 +149,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  HIP_HEXDUMP("host_id in endpoint: ", &ep_hip->id.host_id,
+  _HIP_HEXDUMP("host_id in endpoint: ", &ep_hip->id.host_id,
 	      hip_get_param_total_len(&ep_hip->id.host_id));
 
   msg = hip_msg_alloc();
@@ -321,10 +321,10 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   {
     
     if (ep_hip->flags & HIP_ENDPOINT_FLAG_HIT) {
-      HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
+      _HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
 		  sizeof(struct in6_addr));
     } else {
-      HIP_HEXDUMP("setpeereid hi: ", &ep_hip->id.host_id,
+      _HIP_HEXDUMP("setpeereid hi: ", &ep_hip->id.host_id,
 		  hip_get_param_total_len(&ep_hip->id.host_id));
     }
   }
@@ -990,7 +990,7 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
     endpoint_hip.flags = HIP_ENDPOINT_FLAG_HIT;
     memcpy(&endpoint_hip.id.hit, hit, sizeof(struct in6_addr));
     
-    HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
+    _HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
     
     HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
 
@@ -1605,11 +1605,11 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     goto out_err;
   }
   
-  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
 
-  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
@@ -1793,11 +1793,11 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
 
-  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);

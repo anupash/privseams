@@ -964,10 +964,10 @@ int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
     }
   }
 
-  HIP_DEBUG_HIT("hit", hit);
-  HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
-	    (is_dsa ? "dsa" : "rsa"));
-  
+   HIP_DEBUG_HIT("hit", hit);
+   HIP_DEBUG("hi is %s %s\n", (is_public ? "public" : "private"),
+	     (is_dsa ? "dsa" : "rsa"));
+
  out_err:
 
   if (key_rr)
@@ -1628,10 +1628,10 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
     goto out_err;
   }
 
-  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
   if (err && *dsa)
@@ -1710,8 +1710,8 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
     goto out_err;
   }
 
-  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
 
  out_err:
   if (err && *rsa)
@@ -1753,7 +1753,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   }
   memset(*endpoint, 0, endpoint_hdr.length);
 
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
   hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
 		     dsa_key_rr, dsa_key_rr_len);
   _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
