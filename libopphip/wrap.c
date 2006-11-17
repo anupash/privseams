@@ -372,6 +372,13 @@ int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
 	pid_t pid = getpid();
 
+	err = hip_get_local_hit_wrapper(&hit->sin6_addr);
+	if (err) {
+		HIP_ERROR("No local HIT: is hipd running?\n");
+		hit->sin6_family = AF_INET6;
+		goto out_err;
+	}
+
 	srand(pid);
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
@@ -383,7 +390,7 @@ int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 					 (struct sockaddr *) &entry->translated_local_id,
 					 sizeof(struct sockaddr_in6));
 	if (err) {
-		HIP_ERROR("bind failed\n");
+		HIP_ERROR("autobind failed\n");
 		goto out_err;
 	}
 	
@@ -408,15 +415,9 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	
 	_HIP_ASSERT(entry->type == SOCK_STREAM || orig_id);
 	
-	err = hip_get_local_hit_wrapper(&src_hit.sin6_addr);
-	if (err) {
-		HIP_ERROR("No local HIT: is hipd running?\n");
-		src_hit.sin6_family = AF_INET6;
-		goto out_err;
-	}
-	
-	if (entry->type == SOCK_STREAM && is_peer &&
-	    !entry->local_id_is_translated) {
+	if (is_peer && !entry->local_id_is_translated) {
+		/* Can happen also with UDP based sockets with
+		   connect() + send() */
 		HIP_IFE(hip_autobind(entry, &src_hit), -1);
 	}
 	
@@ -680,7 +681,7 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig sock = %d\n", orig_socket);
 
 	/* XX FIXME: we have bind to one HIT (=inet6_any !!!) and to one IP
 	   (the orig id). This translation step here does not work. */
@@ -711,7 +712,7 @@ int listen(int sockfd, int backlog)
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig sock = %d\n", sockfd);
 
 	/* XX FIXME: listen for two sockets: one HIT based and one IP based.
 	   We have to implement a select loop here because listen will block.*/
@@ -931,7 +932,7 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
 	struct sockaddr *translated_id;
 	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig sock = %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket,
 				   orig_id,
@@ -976,7 +977,7 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	struct sockaddr *translated_id;
 	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig sock = %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket,
 				   NULL,
@@ -989,9 +990,9 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
-	
+
 	chars = dl_function_ptr.recv_dlsym(*translated_socket, b, c, flags);
-	
+
 	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n",
 		  chars);
 	
@@ -1074,7 +1075,7 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 	struct sockaddr *translated_id;
 	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("orig sock = %d\n", orig_socket);
 
 	/* XX FIXME: in the case of UDP server, this creates additional
 	   HIP traffic even though the connection is not necessarily
