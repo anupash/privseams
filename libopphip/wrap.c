@@ -672,7 +672,53 @@ int socket(int domain, int type, int protocol)
   out_err:
 	HIP_DEBUG("Called socket_dlsym socket_fd=%d\n", socket_fd);  
 	 return socket_fd;
- }
+}
+
+int close(int orig_fd)
+{
+	int err = 0, pid = 0;
+	hip_opp_socket_t *entry = NULL;
+	char *error = NULL;
+
+	/* The database and the function pointers may not be initialized
+	   because e.g. open call is not wrapped. We need only the
+	   dl_function_ptr.close_dlsym to be initialized here, but let's
+	   initialize everything anyway. This way, there is no need to
+	   check hip_db_exist value everywhere. */
+	hip_initialize_db_when_not_exist();
+	
+	HIP_DEBUG("close() orig fd %d\n", orig_fd);
+
+	//if (hip_db_exist) hip_socketdb_dump();
+
+	/* close original socket */
+	err = dl_function_ptr.close_dlsym(orig_fd);
+
+	pid = getpid();
+
+	entry = hip_socketdb_find_entry(pid, orig_fd);
+	if (!entry)
+		goto out_err;
+
+	HIP_ASSERT(entry);
+
+	/* close new_socket */
+	if(entry->translated_socket &&
+	   entry->orig_socket != entry->translated_socket) {
+		err = dl_function_ptr.close_dlsym(entry->translated_socket);
+		hip_socketdb_del_entry_by_entry(entry);
+		HIP_DEBUG("old_socket %d new_socket %d\n", 
+			  entry->orig_socket,
+			  entry->translated_socket);	  
+	}
+	if (err)
+		HIP_ERROR("Err %d close trans socket\n", err);
+	
+ out_err:
+	HIP_DEBUG("close_dlsym called with err %d\n", err);
+	
+  return err;
+}
 
 int bind(int orig_socket, const struct sockaddr *orig_id,
 	 socklen_t orig_id_len)
@@ -822,7 +868,6 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
  out_err:
 	return err;
 }
-
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
@@ -1118,52 +1163,6 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	return charnum;
 }
 
-int close(int orig_fd)
-{
-	int err = 0, pid = 0;
-	hip_opp_socket_t *entry = NULL;
-	char *error = NULL;
-
-	/* The database and the function pointers may not be initialized
-	   because e.g. open call is not wrapped. We need only the
-	   dl_function_ptr.close_dlsym to be initialized here, but let's
-	   initialize everything anyway. This way, there is no need to
-	   check hip_db_exist value everywhere. */
-	hip_initialize_db_when_not_exist();
-	
-	HIP_DEBUG("close() orig fd %d\n", orig_fd);
-
-	//if (hip_db_exist) hip_socketdb_dump();
-
-	/* close original socket */
-	err = dl_function_ptr.close_dlsym(orig_fd);
-
-	pid = getpid();
-
-	entry = hip_socketdb_find_entry(pid, orig_fd);
-	if (!entry)
-		goto out_err;
-
-	HIP_ASSERT(entry);
-
-	/* close new_socket */
-	if(entry->translated_socket &&
-	   entry->orig_socket != entry->translated_socket) {
-		err = dl_function_ptr.close_dlsym(entry->translated_socket);
-		hip_socketdb_del_entry_by_entry(entry);
-		HIP_DEBUG("old_socket %d new_socket %d\n", 
-			  entry->orig_socket,
-			  entry->translated_socket);	  
-	}
-	if (err)
-		HIP_ERROR("Err %d close trans socket\n", err);
-	
- out_err:
-	HIP_DEBUG("close_dlsym called with err %d\n", err);
-	
-  return err;
-}
-
 // used to test socketdb
 void test_db(){
 	HIP_DEBUG("testing db\n");
@@ -1249,5 +1248,6 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
+
+
