@@ -73,6 +73,9 @@ void tw_set_mode(int mode)
 	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
+	gtk_widget_show(widget(ID_TW_APPLY));
+	gtk_widget_show(widget(ID_TW_CANCEL));
+	gtk_widget_show(widget(ID_TW_DELETE));
 
 	/* First hide current. */
 	switch (tw_current_mode)
@@ -93,6 +96,9 @@ void tw_set_mode(int mode)
 	switch (mode)
 	{
 	case TWMODE_NONE:
+		gtk_widget_hide(widget(ID_TW_APPLY));
+		gtk_widget_hide(widget(ID_TW_CANCEL));
+		gtk_widget_hide(widget(ID_TW_DELETE));
 		break;
 
 	case TWMODE_REMOTE:
@@ -168,12 +174,12 @@ void tw_set_remote_rgroup_info(HIT_Group *g)
 	i = find_from_cb(g->l->name, widget(ID_TWR_LOCAL));
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), i);
 
-	if (g->type == HIT_DB_TYPE_ACCEPT) ps = "accept";
-	else ps = "deny";
+	if (g->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+	else ps = lang_get("group-type-deny");
 	i = find_from_cb(ps, widget(ID_TWR_TYPE1));
 	gtk_combo_box_set_active(widget(ID_TWR_TYPE1), i);
-	if (g->lightweight == 1) ps = "lightweight";
-	else ps = "normal";
+	if (g->lightweight == 1) ps = lang_get("group-type2-lightweight");
+	else ps = lang_get("group-type2-normal");
 	i = find_from_cb(ps, widget(ID_TWR_TYPE2));
 	gtk_combo_box_set_active(widget(ID_TWR_TYPE2), i);
 }
@@ -235,19 +241,20 @@ void tw_set_rgroup_info(char *group_name)
 		{
 			gtk_entry_set_text(widget(ID_TWG_NAME), group->name);
 			gtk_combo_box_set_active(widget(ID_TWG_LOCAL), i);
-			if (group->type == HIT_DB_TYPE_ACCEPT) ps = "accept";
-			else ps = "deny";
+			if (group->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+			else ps = lang_get("group-type-deny");
 			i = find_from_cb(ps, widget(ID_TWG_TYPE1));
 			gtk_combo_box_set_active(widget(ID_TWG_TYPE1), i);
-			if (group->lightweight == 1) ps = "lightweight";
-			else ps = "normal";
+			if (group->lightweight == 1) ps = lang_get("group-type2-lightweight");
+			else ps = lang_get("group-type2-normal");
 			i = find_from_cb(ps, widget(ID_TWG_TYPE2));
 			gtk_combo_box_set_active(widget(ID_TWG_TYPE2), i);
 
 			tw_current_item = (void *)group;
 			
-			/* If group is empty, allow deleting of the group. */
-			if (group->remotec < 1) gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
+			/* If group is empty and not default, allow deleting of the group. */
+			if (strcmp(group->name, lang_get("default-group-name")) == 0);
+			else if (group->remotec < 1) gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
 		}
 	}
 }
@@ -283,6 +290,7 @@ void tw_apply(void)
 	/* Variables. */
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
+	HIT_Group *g2;
 	Update_data ud;
 	char *ps, str[256];
 
@@ -292,7 +300,7 @@ void tw_apply(void)
 	{
 	case TWMODE_REMOTE:
 		strcpy(str, gtk_entry_get_text(widget(ID_TWR_NAME)));
-		if (check_name_input(str))
+		if (check_hit_name(str, r))
 		{
 			NAMECPY(ud.old_name, r->name);
 			NAMECPY(ud.new_name, str);
@@ -313,6 +321,7 @@ void tw_apply(void)
 			if (g && g != r->g)
 			{
 				r->g->remotec--;
+				g2 = r->g;
 				r->g = g;
 				r->g->remotec++;
 				
@@ -322,19 +331,20 @@ void tw_apply(void)
 				gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 				/* Add it to new group in list. */
 				gui_add_remote_hit(r->name, g->name);
+				if (g2->remotec < 1) gui_add_remote_hit("", g2->name);
 			}
 		}
 		break;
 
 	case TWMODE_RGROUP:
 		strcpy(str, gtk_entry_get_text(widget(ID_TWG_NAME)));
-		if (check_name_input(str))
+		if (check_group_name(str, g))
 		{
 			NAMECPY(ud.old_name, g->name);
 			NAMECPY(ud.new_name, str);
 			NAMECPY(g->name, str);
 			ps = gtk_combo_box_get_active_text(widget(ID_TWG_TYPE1));
-			if (strcmp("accept", ps) == 0) g->type = HIT_DB_TYPE_ACCEPT;
+			if (strcmp(lang_get("hit-type-accept"), ps) == 0) g->type = HIT_DB_TYPE_ACCEPT;
 			else g->type = HIT_DB_TYPE_DENY;
 			ud.depth = 1;
 			ud.indices_first = -1;
@@ -384,19 +394,47 @@ void tw_cancel(void)
 void tw_delete(void)
 {
 	/* Variables. */
+	GtkWidget *w;
 	HIT_Remote *r = (HIT_Remote *)tw_current_item;
 	HIT_Group *g = (HIT_Group *)tw_current_item;
-
+	int err;
+	
 	if (!tw_current_item) return;
 	
 	switch (tw_current_mode)
 	{
 	case TWMODE_REMOTE:
-		if (hit_db_del(r->name) == 0) tw_clear_remote();
+		g = r->g;
+		w = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+		                           GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+		                           lang_get("ask-delete-hit"));
+		gtk_widget_show(w);
+		gtk_window_set_keep_above(w, TRUE);
+		err = gtk_dialog_run(w);
+		gtk_widget_destroy(w);
+		if (err != GTK_RESPONSE_YES);
+		else if (hit_db_del(r->name) == 0)
+		{
+			tw_clear_remote();
+			tw_set_mode(TWMODE_NONE);
+			if (g->remotec < 1) gui_add_remote_hit("", g->name);
+		}
 		break;
 
 	case TWMODE_RGROUP:
-		if (hit_db_del_rgroup(g->name) == 0) tw_clear_remote();
+		w = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+		                           GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+		                           lang_get("ask-delete-group"));
+		gtk_widget_show(w);
+		gtk_window_set_keep_above(w, TRUE);
+		err = gtk_dialog_run(w);
+		gtk_widget_destroy(w);
+		if (err != GTK_RESPONSE_YES);
+		else if (hit_db_del_rgroup(g->name) == 0)
+		{
+			tw_clear_remote();
+			tw_set_mode(TWMODE_NONE);
+		}
 		break;
 	}
 }
@@ -417,7 +455,7 @@ void twl_apply(void)
 	if (!twl_current_item) return;
 
 	strcpy(str, gtk_entry_get_text(widget(ID_TWL_NAME)));
-	if (check_name_input(str))
+	if (1)//check_name_input(str))
 	{
 		NAMECPY(ud.old_name, l->name);
 		NAMECPY(ud.new_name, str);

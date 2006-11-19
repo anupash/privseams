@@ -79,10 +79,9 @@ int main(int argn, char *argv[])
 {
 	/* Variables. */
 	int err = 0, fd;
-	char db_path[1024];
 
 	/* Write pid to file. */
-	unlink(HIP_AGENT_LOCK_FILE);
+/*	unlink(HIP_AGENT_LOCK_FILE);
 	fd = open(HIP_AGENT_LOCK_FILE, O_RDWR | O_CREAT, 0644);
 	if (fd > 0)
 	{
@@ -90,12 +89,20 @@ int main(int argn, char *argv[])
 		/* Dont lock now, make this feature available later. */
 		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
 		/* Only first instance continues. */
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+//		sprintf(str, "%d\n", getpid());
+//		write(fd, str, strlen(str)); /* record pid to lockfile */
+//	}
 	
-	/* Create database path. */
-	sprintf(db_path, "%s/%s", getenv("HOME"), ".hipagentdb");
+	/* Initialize string variables. */
+	HIP_IFEL(str_var_init(), -1, "Failed to initialize strvars!\n");
+	
+	/* Create config path. */
+	str_var_set("config-path", "%s/.hipagent", getenv("HOME"));
+	mkdir(str_var_get("config-path"), 0700);
+	/* Create config filename. */
+	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
+	/* Create database filename. */
+	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
 
 	/* Check command line options. */
 	term_set_mode(TERM_MODE_NONE);
@@ -127,6 +134,11 @@ int main(int argn, char *argv[])
 
 	HIP_IFEL(err, -1, "Invalid command line parameters.\n");
 
+	/* Read config. */
+	err = config_read(str_var_get("config-file"));
+	if (err) HIP_ERROR("Could not read config file.\n");
+	lang_init(str_var_get("lang"));
+
 	/* Set some random seed. */
 	srand(time(NULL));
 
@@ -141,7 +153,7 @@ int main(int argn, char *argv[])
 
 	/* Initialize database. */
 	HIP_DEBUG("##### 2. Initializing database...\n");
-	HIP_IFEL(hit_db_init(db_path), -1, "Failed to load agent database!\n");
+	HIP_IFEL(hit_db_init(str_var_get("db-file")), -1, "Failed to load agent database!\n");
 
 	/* Initialize connection to HIP daemon. */
 	HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
@@ -191,7 +203,9 @@ int main(int argn, char *argv[])
 
 out_err:
 	connhipd_quit();
-	hit_db_quit(db_path);
+	hit_db_quit(str_var_get("db-file"));
+	lang_quit();
+	str_var_quit();
 
 	HIP_DEBUG("##### X. Exiting application...\n");
 	return (err);

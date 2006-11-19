@@ -203,8 +203,8 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	{
 		if (group_db_n < 1)
 		{
-			HIP_DEBUG("Group database emty, adding default group.\n");
-			hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
+			//HIP_DEBUG("Group database emty, adding default group.\n");
+			//hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
 		}
 		group = group_db;
 	}
@@ -511,7 +511,7 @@ int hit_db_load_from_file(char *file)
 		if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
 		else if (buf[0] == 'l') hit_db_parse_local(&buf[2]);
 		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
-	
+
 	loop_end:
 		/* Clear buffer. */
 		memset(buf, '\0', sizeof(buf)); i = 0;
@@ -824,7 +824,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	if (group_db_n < 1)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
-		hit_db_add_rgroup("default", h, HIT_DB_TYPE_ACCEPT, 0);
+		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_DB_TYPE_ACCEPT, 0);
 	}
 
 	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
@@ -918,6 +918,24 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 	HIP_DEBUG("Enumerated %d local HITs.\n", n);
 	
 	return (n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return number of local HITs in database. */
+int hit_db_count_locals(void)
+{
+	return (local_db_n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return default local HIT. */
+HIT_Local *hit_db_default_local(void)
+{
+	return (local_db);
 }
 /* END OF FUNCTION */
 

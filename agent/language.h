@@ -1,37 +1,27 @@
 /*
-    DNET - Duge's Networking Library
-
+    HIP Agent
+    
     License: GNU/GPL
     Authors: Antti Partanen <aehparta@cc.hut.fi>
 */
 
-#ifndef TOOLS_H
-#define TOOLS_H
+#ifndef LANGUAGE_H
+#define LANGUAGE_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <stdlib.h>
-#include <gtk/gtk.h>
-
 #include "debug.h"
-#include "hit_db.h"
+#include "str_var.h"
 
-/*!
-	\addtogroup libhipgui
-	@{
-*/
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-char *get_nick(void);
-void set_nick(char *);
-int find_from_cb(char *, GtkWidget *);
-void delete_all_items_from_cb(GtkWidget *);
-int check_group_name(char *, HIT_Group *);
-int check_hit_name(char *, HIT_Remote *);
 
+/* This is a template file for new files. */
+int lang_init(const char *);
+void lang_quit(void);
+char *lang_get(const char *);
 
-/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

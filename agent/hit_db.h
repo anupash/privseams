@@ -55,14 +55,14 @@
 #define NAMECPY(dst, src) \
 { \
 	strncpy(dst, src, MAX_NAME_LEN); \
-	dst[MAX_NAME_LEN] = '\0'; \
+	dst[MAX_NAME_LEN - 1] = '\0'; \
 }
 
 /** This macro is for copying url string, see NAMECPY for more info. */
 #define URLCPY(dst, src) \
 { \
 	strncpy(dst, src, MAX_URL_LEN); \
-	dst[MAX_URL_LEN] = '\0'; \
+	dst[MAX_URL_LEN - 1] = '\0'; \
 }
 
 
@@ -166,6 +166,9 @@ HIT_Local *hit_db_add_local(char *, struct in6_addr *);
 int hit_db_del_local(char *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
 int hit_db_enum_locals(int (*)(HIT_Local *, void *), void *);
+
+int hit_db_count_locals(void);
+HIT_Local *hit_db_default_local(void);
 
 
 /******************************************************************************/

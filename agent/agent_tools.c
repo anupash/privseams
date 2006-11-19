@@ -95,6 +95,80 @@ void read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/**
+	Read current config.
+	
+	@param file Config file.
+	@return 0 on success, -1 on errors.
+*/
+int config_read(const char *file)
+{
+	/* Variables. */
+	FILE *f;
+	int err = -1, i, n;
+	char ch, buf[LONG_STRING], *p1, *p2;
+
+	/* Open file for reading. */
+	f = fopen(file, "r");
+	HIP_IFEL(!f, -1, "Couldn't open config file: \"%s\"\n", file);
+
+	/* Start parsing. */
+	memset(buf, '\0', LONG_STRING); i = 0;
+	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
+	{
+		/* Remove whitespaces from line start. */
+		if (i == 0 && (ch == ' ' || ch == '\t'))
+		{
+			continue;
+		}
+		
+		/* Find end of line. */
+		if (ch != '\n')
+		{
+			buf[i] = ch;
+			i++;
+			continue;
+		}
+
+		/*
+			Check whether there is carriage return
+			in the stream and remove it.
+		*/
+		ch = fgetc(f);
+		
+		if (ch != '\r')
+		{
+			ungetc(ch, f);
+		}
+		
+		/* Check for empty lines and for commented lines. */
+		if (strlen(buf) < 1) goto loop_end;
+		if (buf[0] == '#') goto loop_end;
+		
+		/* Find '=' character and split string from there. */
+		p1 = strtok(buf, "=");
+		if (p1 == NULL) goto loop_end;
+		p2 = strtok(NULL, "\0");
+		if (p2 == NULL) goto loop_end;
+		
+		/* Set values. */
+		str_var_set(p1, p2);
+		HIP_DEBUG("config string read: %s=%s\n", p1, p2);
+		
+	loop_end:
+		/* Clear buffer. */
+		memset(buf, '\0', LONG_STRING); i = 0;
+	}
+
+	err = 0;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

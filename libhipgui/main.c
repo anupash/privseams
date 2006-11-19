@@ -46,7 +46,7 @@ int gui_init(void)
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_MAINWND, w);
 	gtk_widget_show(w);
-	gtk_window_set_title(w, "HIP Config");
+	gtk_window_set_title(w, lang_get("title-main"));
 //	gtk_widget_set_size_request(w, 400, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
@@ -62,18 +62,19 @@ int gui_init(void)
 	gtk_widget_show(w);
 
 	/* Create accept-dialog. */
-	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
-	                                "Add", GTK_RESPONSE_YES, "Drop", GTK_RESPONSE_NO, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-newhit"), NULL, GTK_DIALOG_MODAL,
+	                                lang_get("nhdlg-button-accept"), GTK_RESPONSE_YES,
+	                                lang_get("nhdlg-button-drop"), GTK_RESPONSE_NO, NULL);
 	widget_set(ID_NHDLG, w);
 	gtk_widget_hide(w);
 
 	/* Create execute-dialog. */
-	w = gtk_dialog_new_with_buttons("Run application", NULL, GTK_DIALOG_MODAL, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-runapp"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_EXECDLG, w);
 	gtk_widget_hide(w);
 
 	/* Create create-dialog. */
-	w = gtk_dialog_new_with_buttons("Create new remote group", NULL, GTK_DIALOG_MODAL, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
 	
@@ -89,6 +90,7 @@ int gui_init(void)
 	gui_set_info("HIP GUI started.");
 	cmd_help("");
 	term_print("* HIP GUI started.\n");
+	tw_set_mode(TWMODE_NONE);
 
 	/* Default nickname. */
 	set_nick("user");
@@ -109,8 +111,8 @@ int gui_main(void)
 	/* Variables. */
 	GtkWidget *w;
 	
-	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
-	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
+	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), lang_get("combo-newgroup"));
+	gtk_combo_box_append_text(widget(ID_NH_RGROUP), lang_get("combo-newgroup"));
 
 	hit_db_enum_locals(all_add_local, NULL);
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);

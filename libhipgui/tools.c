@@ -98,11 +98,13 @@ void delete_all_items_from_cb(GtkWidget *warg)
 
 
 /******************************************************************************/
-/** Check name input. */
-int check_name_input(char *name)
+/** Check group name. */
+int check_group_name(char *name, HIT_Group *ge)
 {
 	/* Variables. */
+	HIT_Group *g;
 	int i, err = 1;
+	char *msg = lang_get("ngdlg-err-invalid");
 	
 	HIP_IFE(name == NULL, 0);
 	
@@ -114,11 +116,55 @@ int check_name_input(char *name)
 	name[i + 1] = '\0';
 	HIP_IFE(strlen(name) < 1, 0);
 	
+	g = hit_db_find_rgroup(name);
+	msg = lang_get("ngdlg-err-exists");
+	if (g != ge) HIP_IFE(g, 0);
+
 out_err:
 	if (!err)
 	{
 		GtkDialog *dialog;
-		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "Invalid input given!");
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(dialog, TRUE);
+		gtk_widget_show(dialog);
+		gtk_dialog_run(dialog);
+		gtk_widget_destroy(dialog);
+	}
+	
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Check hit name. */
+int check_hit_name(char *name, HIT_Remote *re)
+{
+	/* Variables. */
+	HIT_Remote *r;
+	int i, err = 1;
+	char *msg = lang_get("nhdlg-err-invalid");
+	
+	HIP_IFE(name == NULL, 0);
+	
+	/* Remove whitespaces from start and end. */
+	for (i = 0; isspace(name[i]) && i < strlen(name); i++);
+	strcpy(name, &name[i]);
+	HIP_IFE(strlen(name) < 1, 0);
+	for (i = (strlen(name) - 1); isspace(name[i]) && i > 0; i--);
+	name[i + 1] = '\0';
+	HIP_IFE(strlen(name) < 1, 0);
+	
+	r = hit_db_find(name, NULL);
+	msg = lang_get("nhdlg-err-exists");
+	if (r != re) HIP_IFE(r, 0);
+
+out_err:
+	if (!err)
+	{
+		GtkDialog *dialog;
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(dialog, TRUE);
 		gtk_widget_show(dialog);
 		gtk_dialog_run(dialog);
 		gtk_widget_destroy(dialog);

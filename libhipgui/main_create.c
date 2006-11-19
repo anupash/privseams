@@ -62,17 +62,17 @@ int main_create_content(void)
 		/* Create menu for status icon. */
 		w = gtk_menu_new();
 		
-		label = gtk_menu_item_new_with_label("Show");
+		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
 		gtk_menu_shell_append(w, label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label("Hide");
+		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
 		gtk_menu_shell_append(w, label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label("Exit");
+		label = gtk_menu_item_new_with_label(lang_get("systray-exit"));
 		gtk_menu_shell_append(w, label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXIT);
 		gtk_widget_show(label);
@@ -100,18 +100,18 @@ int main_create_content(void)
 	gtk_box_pack_start(pane, menu_bar, FALSE, FALSE, 0);
 	gtk_widget_show(menu_bar);
 	
-	w = gtk_menu_item_new_with_label("File");
+	w = gtk_menu_item_new_with_label(lang_get("menu-file"));
 	gtk_widget_show(w);
 
 	/* File-menu. */
 	w2 = gtk_menu_new();
 	
-	label = gtk_menu_item_new_with_label("Run");
+	label = gtk_menu_item_new_with_label(lang_get("menu-tools-runapp"));
 	gtk_menu_shell_append(w2, label);
 //	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 	gtk_widget_show(label);
 	
-	label = gtk_menu_item_new_with_label("Exit");
+	label = gtk_menu_item_new_with_label(lang_get("menu-file-exit"));
 	gtk_menu_shell_append(w2, label);
 	g_signal_connect(label, "activate", G_CALLBACK(main_destroy), (gpointer)"exit");
 	gtk_widget_show(label);
@@ -140,14 +140,14 @@ int main_create_content(void)
 	gtk_toolbar_append_space(toolbar);*/
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newgroup.png");
 	iconw = gtk_image_new_from_file(str);
-	w = gtk_toolbar_append_item(toolbar, "New group",
-	                            "Create new remote group",
+	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newgroup"),
+	                            lang_get("tb-newgroup-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
 	gtk_toolbar_append_space(toolbar);
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "run.png");
 	iconw = gtk_image_new_from_file(str);
-	w = gtk_toolbar_append_item(toolbar, "Run", "Run new process",
+	w = gtk_toolbar_append_item(toolbar, lang_get("tb-runapp"), lang_get("tb-runapp-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
 	iconw = gtk_image_new_from_file("run.xpm");
@@ -171,7 +171,7 @@ int main_create_content(void)
 
 	/* Create tabs. */
 	remote_pane = gtk_hpaned_new();
-	label = gtk_label_new("Remote");
+	label = gtk_label_new(lang_get("tabs-hits"));
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), remote_pane, label);
 	gtk_widget_show(remote_pane);
 

@@ -84,7 +84,9 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 
 		if (data == 0)
 		{
-			if (depth == 1)
+			tw_set_mode(TWMODE_NONE);
+			if (str[0] == ' ');
+			else if (depth == 1)
 			{
 				tw_set_mode(TWMODE_RGROUP);
 				tw_set_rgroup_info(str);
@@ -221,9 +223,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (strcmp("<create new...>", ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group("");
-			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
-			else gtk_combo_box_set_active(warg, 0);
+			create_remote_group("");
 		}
 		break;
 
@@ -237,9 +237,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (strcmp("<create new...>", ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group("");
-			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
-			else gtk_combo_box_set_active(warg, 0);
+			create_remote_group("");
 		}
 		break;
 

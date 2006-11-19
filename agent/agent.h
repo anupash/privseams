@@ -25,6 +25,7 @@
 //#include <socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <string.h>
 #include <stdio.h>
