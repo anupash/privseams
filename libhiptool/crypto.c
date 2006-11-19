@@ -1060,9 +1060,9 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   if (dsa->priv_key) {
     dsa_key_rr_len += 20; /* private key hack */
-    HIP_DEBUG("Private key included\n");
+    _HIP_DEBUG("Private key included\n");
   } else {
-    HIP_DEBUG("No private key\n");
+    _HIP_DEBUG("No private key\n");
   }
 
   _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
@@ -1580,7 +1580,7 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
   FILE *fp = NULL;
   int err = 0;
 
-  HIP_DEBUG("load_dsa_public_key called\n");
+  _HIP_DEBUG("load_dsa_public_key called\n");
 
   *dsa = NULL;
 
@@ -1663,7 +1663,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
 
   *rsa = NULL;
 
-  HIP_DEBUG("load_rsa_public_key called\n");
+  _HIP_DEBUG("load_rsa_public_key called\n");
 
   if (!filename) {
     HIP_ERROR("NULL filename\n");
@@ -1732,7 +1732,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
   int dsa_key_rr_len;
   struct endpoint_hip endpoint_hdr;
 
-  HIP_DEBUG("dsa_to_hip_endpoint called\n");
+  _HIP_DEBUG("dsa_to_hip_endpoint called\n");
 
   dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
   if (dsa_key_rr_len <= 0) {

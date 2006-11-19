@@ -1916,7 +1916,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
   
-  HIP_DEBUG("\n");
+  _HIP_DEBUG("\n");
 
   /* assign default hints */
   memset(&modified_hints, 0, sizeof(struct endpointinfo));

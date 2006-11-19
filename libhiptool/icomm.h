@@ -68,6 +68,7 @@
 #define SO_HIP_SET_PEER_HIT			137
 #define SO_HIP_CANCEL_ESCROW                    138
 #define SO_HIP_CANCEL_RENDEZVOUS                139
+#define SO_HIP_GET_LOCAL_HI                     140
 /** @} */
 
 #endif /* _HIP_ICOMM */
