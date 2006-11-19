@@ -62,7 +62,7 @@ char *i3_config = NULL;
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
-	fprintf(stderr, "  -b run in foreground\n");
+	fprintf(stderr, "  -b run in background\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
@@ -434,6 +434,13 @@ int main(int argc, char *argv[]) {
 					}
 					hip_firewall_status = 1;
 				}
+                                
+                                if (hip_services_is_active(HIP_ESCROW_SERVICE))
+                                        HIP_DEBUG("Escrow service is now active.\n");
+                
+                                if (hip_firewall_is_alive()) {
+                                        hip_firewall_set_escrow_active(1);
+                                }
 			}
 			else if (msg_type == HIP_FIREWALL_QUIT)
 			{

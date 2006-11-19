@@ -473,62 +473,37 @@ int hip_firewall_is_alive()
 }
 
 
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys)
 {
 		struct hip_common *msg;
 		int err = 0;
 		int n;
 		socklen_t alen;
-		struct in6_addr * hit_s;
-		struct in6_addr * hit_r;
+		//struct in6_addr * hit_s;
+		//struct in6_addr * hit_r;
 				
-		msg = malloc(HIP_MAX_PACKET);
-		if (!msg)
-		{
-			HIP_ERROR("malloc failed\n");
-			goto out_err;
-		}
+		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
-
-		err = hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0);
-		if (err)
-		{
-			HIP_ERROR("build hdr failed: %s\n", strerror(err));
-			goto out_err;
-		}
+		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
+                        "Build hdr failed\n");
 		
-		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
 			hit_s = &entry->hit_peer;
 			hit_r = &entry->hit_our;
 		}
 		else {
 			hit_r = &entry->hit_peer;
 			hit_s = &entry->hit_our;
-		}
-		
-		err = hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-		if (err)
-		{
-			HIP_ERROR("build param hit with hit_our failed: %s\n", strerror(err));
-			goto out_err;
-		}
-		err = hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-		if (err)
-		{
-			HIP_ERROR("build param hit with hit_peer failed: %s\n", strerror(err));
-			goto out_err;
-		}
-		
-		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
-		if (err)
-		{
-			HIP_ERROR("build param failed: %s\n", strerror(err));
-			goto out_err;
-		}
-	
-		HIP_DEBUG("Sending test msg to firewall\n");
+		}*/
+                
+                HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+		HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+                
+		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
+                        "hip build param failed\n");
 
 		n = hip_sendto(msg, &hip_firewall_addr);                   
 		if (n < 0)
@@ -544,5 +519,62 @@ out_err:
 
 }
 
+int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        struct in6_addr * hit_s;
+        struct in6_addr * hit_r;                        
+                                
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_DELETE_ESCROW_DATA, 0), -1, 
+                "Build hdr failed\n");
+                
+        HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
+                sizeof(struct in6_addr)), -1, "build param contents failed\n");
+        HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
+                sizeof(unsigned int)), -1, "build param contents failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0)
+        {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else HIP_DEBUG("Sendto firewall OK.\n");
+                
+out_err:
+        return err;        
+}
 
+
+int hip_firewall_set_escrow_active(int activate)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending activate msg to firewall (value=%d)\n", activate);                        
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, 
+                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                -1, "Build hdr failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0) {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else {
+                HIP_DEBUG("Sendto firewall OK.\n");
+        }  
+out_err:
+        return err;        
+}
 

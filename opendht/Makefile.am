@@ -37,7 +37,9 @@ rpcif_xdr.c:
 
 client.c: rpcif.h
 opendht_interface.c: rpcif.h
-rpcif_client.c: rpcif.h
+# According to Tao, enabling this gives an error:
+# opendht/Makefile.am:33: rpcif_client.c multiply defined in condition
+#rpcif_client.c: rpcif.h
 
 else
 

@@ -114,15 +114,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	struct hip_common *msg;
  	int err = 0,dh_size,written, mask;
  	u8 *dh_data = NULL;
- 	/* Supported HIP and ESP transforms. */
+    int * service_list = NULL;
+    int service_count = 0;
+    
+    /* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
 		HIP_HIP_3DES_SHA1,
 		HIP_HIP_NULL_SHA1
 	};
  	hip_transform_suite_t transform_esp_suite[] = {
-		HIP_ESP_3DES_SHA1,
 		HIP_ESP_AES_SHA1,
+		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
@@ -189,27 +192,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
 
-	/* REG_INFO */
-	/* @todo Get service-list from some function which lists all services
-	   offered by this system. */
-	
-	int *list;
-	int count = 0;
-		
-	count = hip_get_services_list(&list);
-	
-	HIP_DEBUG("Amount of services is %d.\n", count);
-	
-	int i;
-	for (i = 0; i < count; i++) {
-		HIP_DEBUG("Service is %d.\n", list[i]);
-	}
-	
-	if (count > 0) {
+	/********** REG_INFO *********/
+	/* Get service list of all services offered by this system */
+	service_count = hip_get_services_list(&service_list);
+	if (service_count > 0) {
 		HIP_DEBUG("Adding REG_INFO parameter.\n");
-		/** @todo Min and max lifetime of registration. */
-		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
-		 	"Building of reg_info failed\n");	
+                HIP_IFEL(hip_build_param_reg_info(msg, hip_get_service_min_lifetime(), 
+                        hip_get_service_max_lifetime(), service_list, service_count), 
+                        -1, "Building of reg_info failed\n");	
 	}
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
@@ -351,10 +341,10 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	}
 #endif
 
-	/* R1 is send on UPD if R1 destination port is 50500. This is if:
+	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a FROM_NAT parameter. */
-	if(r1_dst_port == HIP_NAT_UDP_PORT) {
+	if(r1_dst_port != 0) {
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
