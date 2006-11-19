@@ -341,10 +341,10 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	}
 #endif
 
-	/* R1 is send on UPD if R1 destination port is 50500. This is if:
+	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a FROM_NAT parameter. */
-	if(r1_dst_port == HIP_NAT_UDP_PORT) {
+	if(r1_dst_port != 0) {
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");

@@ -499,7 +499,7 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
 		  "BN_bn2bin_safe\n");
 
-	HIP_HEXDUMP("encoded: ", encoded, len);
+	_HIP_HEXDUMP("encoded: ", encoded, len);
 
  out_err:
 	if(bn)
@@ -522,7 +522,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        int khi_data_len = key_rr_len + sizeof(khi_context_id);
        int khi_index = 0;
 
-       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
        HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
        _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
