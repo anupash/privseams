@@ -299,22 +299,11 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 	hip_ha_t *entry = NULL;
 
 	if (type == HIP_I1) {
-	  //struct gaih_addrtuple *at = NULL;
-	  //struct gaih_addrtuple **pat = &at;
-
 		if(!hit_is_opportunistic_null(&msg->hitr)){
 			goto out_err;
 		}
 
-#if 0			
-		/* Rewrite responder HIT of i1  */
-		get_local_hits(NULL, pat);
-		HIP_DEBUG_HIT("The local HIT =", &at->addr);
-		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-#endif
 		hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
-		  //memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-		  //HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
 	} else if (type == HIP_R1) {
 		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	} else {
