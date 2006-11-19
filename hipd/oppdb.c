@@ -293,26 +293,17 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					struct in6_addr *src_addr,
 					struct in6_addr *dst_addr,
-					struct hip_stateless_info *msg_info)
+					hip_portpair_t *msg_info)
 {
 	hip_hdr_type_t type = hip_get_msg_type(msg);
 	hip_ha_t *entry = NULL;
 
 	if (type == HIP_I1) {
-		struct gaih_addrtuple *at = NULL;
-		struct gaih_addrtuple **pat = &at;
-
 		if(!hit_is_opportunistic_null(&msg->hitr)){
 			goto out_err;
 		}
-			
-		/* Rewrite responder HIT of i1  */
-		get_local_hits(NULL, pat);
-		HIP_DEBUG_HIT("The local HIT =", &at->addr);
-		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-		
-		memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
+
+		hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
 	} else if (type == HIP_R1) {
 		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	} else {
@@ -327,7 +318,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
-		       struct hip_stateless_info *msg_info)
+		       hip_portpair_t *msg_info)
 {
 	hip_opp_block_t *block_entry = NULL;
 	hip_ha_t *entry_tmp = NULL, *entry;
@@ -479,7 +470,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	}
 	
  send_i1:
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+ 	/** @todo Not filtering I1 trough agent, if in opportunistic mode! */
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha, 1), -1,
 		 "sending of I1 failed\n");
 	
  out_err:

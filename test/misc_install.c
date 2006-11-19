@@ -45,7 +45,7 @@ int add_hi_default(struct hip_common *msg)
 {	
 	/*
 	  $HIPL_DIR/tools/hipconf add hi default
-	  This function is in hipconf.c and is handle_hi()
+	  This function is in hipconftool.c and is handle_hi()
 	*/
 	char *opts[1];
 	int err;

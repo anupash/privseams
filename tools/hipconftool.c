@@ -17,7 +17,7 @@
  * @bug     makefile compiles prefix of debug messages wrong for hipconf in 
  *          "make all"
  */
-#include "hipconf.h"
+#include "hipconftool.h"
 
 /* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
    the nat mapping only when the communication takes place with specified
@@ -31,7 +31,7 @@ const char *usage =
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
-#ifdef CONFIG_HIP_SPAM
+#ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
 #else
 "get|set|inc|dec|new puzzle all\n"
@@ -41,6 +41,7 @@ const char *usage =
 "hip rst all|peer_hit\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
+"get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
@@ -270,7 +271,9 @@ int handle_hi(struct hip_common *msg,
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   if (action == ACTION_DEL)
-    return handle_del(msg, action, opt, optc);
+    return handle_hi_del(msg, action, opt, optc);
+  else if (action == ACTION_GET)
+    return handle_hi_get(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -380,8 +383,8 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_del(struct hip_common *msg, int action,
-	       const char *opt[], int optc) 
+int handle_hi_del(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
 {
  	int err;
  	int ret;
@@ -423,6 +426,47 @@ int handle_del(struct hip_common *msg, int action,
 out:
 	return err;
 }
+
+/**
+ * Handles the hipconf commands where the type is @c del.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int handle_hi_get(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), "Missing arguments\n", -1);
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	err = get_local_hits(NULL, &at);
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
+}
+
 
 /**
  * Handles the hipconf commands where the type is @c rst.
@@ -633,7 +677,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 
 	all = !strcmp("all", opt[0]);
 
-#ifdef CONFIG_HIP_SPAM
 	if (!all) {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
@@ -646,13 +689,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 			goto out;
 		}
 	}
-#else
-	if (!all) {
-		err = -1;
-		HIP_ERROR("Only 'all' is supported\n");
-		goto out;
-	}
-#endif /* CONFIG_HIP_SPAM */
 
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
@@ -823,44 +859,6 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	
 }
 
-/**
- * Handles the hipconf commands where the type is @c run. Execute new
- * application.
- *
- * @param type   the numeric action identifier for the action to be performed.
- * @param argv   an array of pointers to the command line arguments after
- *               the action and type.
- * @param argc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- */
-int exec_application(int type, char *argv[], int argc)
-{
-	/* Variables. */
-	va_list args;
-	int err = 0;
-
-	err = fork();
-
-	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
-	else if (err > 0) err = 0;
-	else if(err == 0)
-	{
-		HIP_DEBUG("Exec new application.\n");
-		if (type == TYPE_RUN) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-		else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so:/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-
-		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");
-		err = execvp(argv[0], argv);
-		if (err != 0)
-		{
-			HIP_DEBUG("Executing new application failed!\n");
-			exit(1);
-		}
-	}
-
-out_err:
-	return (err);
-}
 
 /**
  * Parses command line arguments and send the appropiate message to the kernel
@@ -917,7 +915,7 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
-		exec_application(type, (char **)&argv[3], argc - 3);
+		handle_exec_application(0, type, (char **)&argv[3], argc - 3);
 		goto out;
 	}
 	
@@ -939,7 +937,7 @@ int main(int argc, char *argv[]) {
 
 	/* hipconf new hi does not involve any messages to kernel */
 	if (hip_get_msg_type(msg) == 0){
-	  HIP_INFO("!!!!  new hi does not involve any messages to kernel\n");
+	  _HIP_DEBUG("!!!!  new hi does not involve any messages to kernel\n");
 	  goto skip_msg;
 	}
 	

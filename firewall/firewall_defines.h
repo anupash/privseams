@@ -7,6 +7,8 @@
 #include <glib/gthread.h>
 
 
+/********** State table structures **************/
+
 struct esp_address{
   struct in6_addr dst_addr;
   uint32_t * update_id; // null or pointer to the update id from the packet 
@@ -62,8 +64,10 @@ struct connection {
 struct hip_esp_packet {
 	int packet_length;
 	struct hip_esp * esp_data;
-	/*struct hip_esp_tail * esp_tail;*/
 };
+
+
+/*********** ESP structures *************/
 
 struct hip_esp {
 	uint32_t esp_spi;

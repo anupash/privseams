@@ -105,6 +105,8 @@ void print_rule(const struct rule * rule){
 	    HIP_DEBUG("%s ", VERIFY_RESPONDER_STR); 
 	  if (rule->state->accept_mobile)
 	    HIP_DEBUG("%s ", ACCEPT_MOBILE_STR); 
+	  if (rule->state->decrypt_contents)
+	    HIP_DEBUG("%s ", DECRYPT_CONTENTS_STR);  
 	}
       if(rule->in_if != NULL)
 	{
@@ -325,7 +327,8 @@ int state_options_equal(const struct state_option * state_option1,
 			 &state_option2->int_opt)
        && 
        state_option1->verify_responder == state_option2->verify_responder && 
-       state_option1->accept_mobile == state_option2->accept_mobile)
+       state_option1->accept_mobile == state_option2->accept_mobile && 
+       state_option1->decrypt_contents == state_option2->decrypt_contents)
       return 1;
     return 0;
   }
@@ -455,6 +458,7 @@ struct hit_option * parse_hit(char * token)
   int err;
   DSA dsa;
   RSA rsa;
+	option->boolean = 1;
 
   if(!strcmp(token, NEGATE_STR)){
     _HIP_DEBUG("found ! \n");
@@ -471,7 +475,7 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  _HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
   return option;
 }
 
@@ -488,7 +492,7 @@ struct hip_host_id * load_rsa_file(FILE * fp)
   rsa = PEM_read_RSA_PUBKEY(fp, &rsa, NULL, NULL);
   if(!rsa)
       {
-	printf("reading RSA file failed \n"); 
+	HIP_DEBUG("reading RSA file failed \n"); 
 	RSA_free(rsa);
 	return NULL;
       }
@@ -524,7 +528,7 @@ struct hip_host_id * load_dsa_file(FILE * fp)
   dsa = PEM_read_DSA_PUBKEY(fp, &dsa, NULL, NULL);
   if(!dsa)
       {
-	printf("reading RSA file failed \n"); 
+	HIP_DEBUG("reading RSA file failed \n"); 
 	DSA_free(dsa);
 	return NULL;
       }
@@ -562,7 +566,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
   HIP_DEBUG("parse_hi: hi file: %s\n", token);
   fp = fopen(token, "rb");
   if(!fp){
-    printf("Invalid filename for HI \n"); 
+    HIP_DEBUG("Invalid filename for HI \n"); 
     return NULL;
   }
   if(strstr(token, RSA_FILE))
@@ -571,7 +575,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     algo = HIP_HI_DSA;
   else
     {
-      printf("Invalid filename for HI: missing _rsa_ or _dsa_ \n"); 
+      HIP_DEBUG("Invalid filename for HI: missing _rsa_ or _dsa_ \n"); 
       return NULL;
     }
   _HIP_DEBUG("parse_hi: algo found %d\n", algo);
@@ -585,7 +589,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     }
   if(!hi)
     {
-      printf("file loading failed \n"); 
+      HIP_DEBUG("file loading failed \n"); 
       return NULL;
     }
 
@@ -595,7 +599,7 @@ struct hip_host_id * parse_hi(char * token, const struct in6_addr * hit){
     _HIP_DEBUG("parse hi: hi-hit match\n");
   else
     {
-    printf("HI in file %s does not match hit %s \n", 
+    HIP_DEBUG("HI in file %s does not match hit %s \n", 
 	      token, addr_to_numeric(hit));
     free(hi);
     return NULL;
@@ -678,6 +682,7 @@ struct state_option * parse_state(char * token)
     }
   option->verify_responder = 0;
   option->accept_mobile = 0;
+  option->decrypt_contents = 0;
   return option;
 }
 
@@ -718,7 +723,7 @@ struct rule * parse_rule(char * string)
   char * token;
   int option_found = NO_OPTION;
   
-  HIP_DEBUG("parse rule string: %s\n", string);
+  _HIP_DEBUG("parse rule string: %s\n", string);
   token = (char *) strtok(string, " ");
   if(token == NULL)
     return NULL;
@@ -828,7 +833,7 @@ struct rule * parse_rule(char * string)
 	      //related state option must be defined
 	      if(rule->state == NULL)
 		{
-		  printf("error parsing rule: %s without %s\n", 
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
 			    VERIFY_RESPONDER_STR, STATE_STR);
 		  free_rule(rule);
 		  return NULL;
@@ -841,7 +846,7 @@ struct rule * parse_rule(char * string)
 	      //related state option must be defined
 	      if(rule->state == NULL)
 		{
-		  printf("error parsing rule: %s without %s\n", 
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
 			    ACCEPT_MOBILE_STR, STATE_STR);
 		  free_rule(rule);
 		  return NULL;
@@ -849,6 +854,19 @@ struct rule * parse_rule(char * string)
 	      rule->state->accept_mobile = 1;
 	      _HIP_DEBUG("%s found\n", ACCEPT_MOBILE_STR);
 	    }
+	  else if(!strcmp(token, DECRYPT_CONTENTS_STR))
+	    {
+	      //related state option must be defined
+	      if(rule->state == NULL)
+		{
+		  HIP_DEBUG("error parsing rule: %s without %s\n", 
+			    DECRYPT_CONTENTS_STR, STATE_STR);
+		  free_rule(rule);
+		  return NULL;
+		}
+	      rule->state->decrypt_contents = 1;
+	      _HIP_DEBUG("%s found\n", DECRYPT_CONTENTS_STR);
+	    }  
 	  else if(!strcmp(token, IN_IF_STR))
 	    {
 	      //option already defined
@@ -1010,8 +1028,8 @@ struct rule * parse_rule(char * string)
       return NULL;
     }
   
-  HIP_DEBUG("done with parsing rule ");
-  print_rule(rule);
+  _HIP_DEBUG("done with parsing rule ");
+  //print_rule(rule);
   return rule;
 }
 
@@ -1245,8 +1263,10 @@ void read_file(char * file_name)
 	    }
 	  else 
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
+	  free(original_line);
 	  free(line);
 	  line = NULL;
+	  original_line = NULL;
       }
       fclose(file);
     }

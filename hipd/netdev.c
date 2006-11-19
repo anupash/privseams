@@ -54,8 +54,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		a = ntohl(a);
 		if ((a == INADDR_ANY) ||
                     (a == INADDR_LOOPBACK) ||
+		    //IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    (a == INADDR_BROADCAST) ||
-			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
 		    IS_LSI32(a)) {
 			return 0;
 		} else {
@@ -350,6 +350,17 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
 	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
+	
+/*	{
+		hip_hit_t buf1 = { 0x20, 0x01, 0x00, 0x7b, 0x84, 0xe9, 0x35, 0x08,
+		                   0x72, 0xb4, 0x46, 0x3c, 0x2e, 0xb3, 0x8d, 0xdb };
+		hip_hit_t buf2 = { 0x20, 0x01, 0x00, 0x7d, 0xc3, 0x19, 0x1f, 0x37,
+		                   0x3e, 0x9d, 0xdc, 0xbe, 0xe1, 0x04, 0xa5, 0x57 };
+		HIP_HEXDUMP("Original source HIT: ", src_hit, sizeof(hip_hit_t));
+		HIP_HEXDUMP("Original dest HIT: ", dst_hit, sizeof(hip_hit_t));
+		memcpy(src_hit, &buf1, sizeof(hip_hit_t));
+		HIP_HEXDUMP("New source HIT: ", src_hit, sizeof(hip_hit_t));
+	}*/
 
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
@@ -401,9 +412,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-
-
-	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
@@ -511,9 +520,9 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			if (i == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
-				/* send 0-address REA is this was deletion of the
+				/* send 0-address locator is this was deletion of the
 				   last address */
-				HIP_DEBUG("sending 0-addr REA\n");
+				HIP_DEBUG("sending 0-addr LOCATOR\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR);
 			} else if (i == 0) {
@@ -544,9 +553,9 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				//	locators[i].reserved =
 				//		i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
- i++;
+					i++;
 				}
-				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
+				HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR);
@@ -688,9 +697,20 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
+/**
+ * Selects a source IP address.
+ *
+ * Selection criteria is explained in [RFC1122] for IPv4 and in [RFC3484] for
+ * IPv6.
+ *
+ * @param src 
+ * @param dst
+ * @return zero on success, or negative error value on error.
+ */ 
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
+	HIP_DEBUG("hip_select_source_address() invoked.\n");
 	int err = 0, i;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
@@ -708,8 +728,8 @@ int hip_select_source_address(struct in6_addr *src,
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,
 				 family, idxmap), -1,
 		 "Finding ip route failed\n");
-
-	HIP_DEBUG_IN6ADDR("src", src);
+	
+	HIP_DEBUG_IN6ADDR("Source address selected", src);
  out_err:
 	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
 		if (rtnl_rtdsfield_tab[i])

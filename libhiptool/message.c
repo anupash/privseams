@@ -155,12 +155,10 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
-	/*! \todo required by the native HIP API */
+	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
   	//hip_send_daemon_info(msg);
-	
-
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
@@ -206,32 +204,38 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 }
 
 /**
- * hip_read_control_msg - prepares the hip_common struct,
- * allocates memory for buffers and nested structs. Receives
- * a message from socket and fills the hip_common struct with the
- * values from this message.
+ * Prepares a @c hip_common struct based on information received from a socket.
+ * 
+ * Prepares a @c hip_common struct, allocates memory for buffers and nested
+ * structs. Receives a message from socket and fills the @c hip_common struct
+ * with the values from this message.
  *
- * @param socket socket to read from
- * @param hip_msg is returned as filled struct
- * @param read_addr flag whether the adresses should be read from the received packet
- *                  1:read addresses, 0:don't read addresses
- * @param saddr is used as return value for the sender address of the received message
- *              (if read_addr is set to 1)
- * @param daddr is used as return value for the destination address of the received message
- *              (if read_addr is set to 1)
- * @param msg_info No description.
- * @param encap_hdr_size No description.
- * @param is_ipv4 No description.
- *
- * @return -1 in case of an error, >0 otherwise.
+ * @param socket         a socket to read from.
+ * @param hip_msg        a pointer to a buffer where to put the received HIP
+ *                       common header. This is returned as filled struct.
+ * @param read_addr      a flag whether the adresses should be read from the
+ *                       received packet. <b>1</b>:read addresses,
+ *                       <b>0</b>:don't read addresses.
+ * @param saddr          a pointer to a buffer where to put the source IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param daddr          a pointer to a buffer where to put the destination IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param msg_info       a pointer to a buffer where to put the source and 
+ *                       destination ports of the received message.
+ * @param encap_hdr_size size of encapsulated header in bytes.
+ * @param is_ipv4        a boolean value to indicate whether message is received
+ *                       on IPv4.
+ * @return               -1 in case of an error, 0 otherwise.
  */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              int read_addr, struct in6_addr *saddr,
                              struct in6_addr *daddr,
-                             struct hip_stateless_info *msg_info,
+                             hip_portpair_t *msg_info,
                              int encap_hdr_size, int is_ipv4)
 {
-        struct sockaddr_storage addr_from;
+	struct sockaddr_storage addr_from;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
 	struct sockaddr_in6 *addr_from6 =
 		((struct sockaddr_in6 *) &addr_from);
@@ -246,7 +250,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         int err = 0, len;
 	int cmsg_level, cmsg_type;
 
-	HIP_DEBUG("db1\n");
+	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
+
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);
 
@@ -268,7 +273,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
-	HIP_DEBUG("db2\n");
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -288,8 +292,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		}
 	}
         
-        HIP_DEBUG("db3\n");
-
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */
 	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
@@ -297,7 +299,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	/* UDP port numbers */
 	if (is_ipv4) {
-		HIP_DEBUG("port number ntohs = %d\n",
+		/* Destination port is known from the bound socket. */
+		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
 	}
@@ -322,19 +325,18 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	}
 
 	if (saddr)
-		HIP_DEBUG_IN6ADDR("src\n", saddr);
+		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
-		HIP_DEBUG_IN6ADDR("dst\n", daddr);
+		HIP_DEBUG_IN6ADDR("dst", daddr);
 
  out_err:
 	return err;
 }
 
-
 int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-                            struct hip_stateless_info *msg_info,
+                            hip_portpair_t *msg_info,
                             int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
@@ -345,7 +347,7 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-			    struct hip_stateless_info *msg_info,
+			    hip_portpair_t *msg_info,
 			    int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
