@@ -1546,8 +1546,12 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   hints->ei_flags |= HIP_HI_REUSE_ANY;
   
   /* select between anonymous/public HI based on the file name */
-  if(!findsubstring(basename, pub_suffix))
-    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+  if(!findsubstring(basename, pub_suffix)) {
+	  hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+	  HIP_DEBUG("Anonymous HI\n");
+  } else {
+	  HIP_DEBUG("Published HI\n");
+  }
   
   /* check the algorithm from PEM format key */
   /* Bing, replace the following code:
