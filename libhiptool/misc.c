@@ -1115,7 +1115,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			      HIP_ENDPOINT_FLAG_ANON, 
 			      hostname);
     if (err) {
-      HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
+      HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
       goto out;
     }
     
@@ -1123,7 +1123,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			      HIP_ENDPOINT_FLAG_ANON,
 			      hostname);
     if (err) {
-      HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
+      HIP_ERROR("Failed to allocate and build RSA endpoint (anon).\n");
       goto out;
     }
     
