@@ -1910,6 +1910,8 @@ int get_localhost_endpoint(const char *basename,
  *
  * @return zero on success, or negative error value on failure
  *
+ * @todo: rewrite the function to actually return a list
+ *
  */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   int err = 0, i;
@@ -1919,7 +1921,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   List list;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
-  
+
   _HIP_DEBUG("\n");
 
   /* assign default hints */
