@@ -741,10 +741,6 @@ int close(int orig_fd)
 	}
 	if (err)
 		HIP_ERROR("Err %d close trans socket\n", err);
-	entry->orig_socket = 0;
-	entry->translated_socket = 0;
-	entry->local_id_is_translated = 0;
-	entry->peer_id_is_translated = 0;
 	
  out_err:
 	HIP_DEBUG("close_dlsym called with err %d\n", err);
