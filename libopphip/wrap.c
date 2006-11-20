@@ -275,8 +275,6 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 
 	*fallback = 1;
 	
-	HIP_IFE(ipv6_addr_any(peer_ip), -1);
-	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
@@ -420,8 +418,14 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	if (is_peer && !entry->local_id_is_translated) {
 		/* Can happen also with UDP based sockets with
 		   connect() + send() */
-		HIP_IFE(hip_autobind(entry, &src_hit), -1);
+		HIP_IFEL(hip_autobind(entry, &src_hit), -1,
+			 "autobind failed\n");
+	} else {
+		HIP_DEBUG("Translation not possible\n");
+		goto out_err;
 	}
+
+	HIP_DEBUG_IN6ADDR("translate new: src addr", &src_hit.sin6_addr);
 	
 	/* hipd requires IPv4 addresses in IPv6 mapped format */
 	if (orig_id->sa_family == AF_INET) {
@@ -443,6 +447,21 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	
 	_HIP_DEBUG("sin_port=%d\n", ntohs(port));
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
+
+	/* Check that the address is not loopback */
+
+	//HIP_IFEL(ipv6_addr_any(peer_ip), 0, "Not a valid address\n");
+	
+	if (orig_id->sa_family == AF_INET) {
+		struct in_addr *oip = SA2IP(orig_id);
+		HIP_IFEL((orig_id &&
+			  (oip->s_addr == htonl(INADDR_LOOPBACK))), 0,
+			 "loopback v4 address, no translation\n");
+	}
+	HIP_IFEL(IN6_IS_ADDR_LOOPBACK(&mapped_addr), 0,
+		 "loopback v6, no translation\n");
+
+	/* Try opportunistic base exchange to retrieve peer's HIT */
 	
 	if (is_peer) {
 		int fallback;
