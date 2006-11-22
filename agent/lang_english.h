@@ -28,8 +28,6 @@ char *lang_english[] =
 	"title-newgroup",			"Create new group",
 	"title-runapp",				"Run application",
 	
-	"combo-newgroup",			"<create new...>",
-	
 	/* System tray menu. */
 	"systray-hide",				"Hide",
 	"systray-show",				"Show",
@@ -48,6 +46,8 @@ char *lang_english[] =
 	"tb-newgroup-tooltip",		"Create new group",
 	"tb-runapp",				"Run",
 	"tb-runapp-tooltip",		"Run new application using HIP libraries",
+	"tb-newhit",				"New HIT",
+	"tb-newhit-tooltip",		"Add new HIT manually",
 	
 	/* Tabs. */
 	"tabs-hits",				"HITs",
@@ -57,16 +57,21 @@ char *lang_english[] =
 	"nhdlg-button-drop",		"Drop",
 	"nhdlg-err-invalid",		"Invalid HIT name given!",
 	"nhdlg-err-exists",			"HIT with given name already exists!",
+	"nhdlg-err-reserved",		"Given HIT name is reserved!\nChoose another one.",
+	"nhdlg-err-invchar",		"HIT name contains invalid characters!\nRename.",
+	"nhdlg-err-hit",			"HIT is invalid, check it.",
 	
 	/* New group dialog. */
 	"ngdlg-name",				"Name:",
 	"ngdlg-localhit",			"Local HIT:",
 	"ngdlg-type",				"Type:",
-	"ngdlg-type2",				"Lightweight:",
+	"ngdlg-type2",				"Encryption:",
 	"ngdlg-button-create",		"Create",
 	"ngdlg-button-cancel",		"Cancel",
 	"ngdlg-err-invalid",		"Invalid group name given!",
 	"ngdlg-err-exists",			"Group already exists!",
+	"ngdlg-err-reserved",		"Given group name is reserved!\nChoose another one.",
+	"ngdlg-err-invchar",		"Group name contains invalid characters!\nRename.",
 	
 	/* Tool window (HIT handling). */
 	"tw-button-apply",			"Apply",
@@ -75,16 +80,27 @@ char *lang_english[] =
 	"tw-hit-info",				"HIT information",
 	"tw-hit-name",				"Name:",
 	"tw-hit-group",				"Group:",
-	"tw-hit-advanced",			"Advanced:",
+	"tw-hit-advanced",			"Advanced",
 	"tw-hit-hit",				"HIT:",
 	"tw-hit-port",				"Port:",
 	"tw-hit-url",				"URL:",
 	"tw-hit-groupinfo",			"Group info:",
+	"tw-hit-local",				"Local HIT:",
+	"tw-group-info",			"Group information",
+	"tw-group-name",			"Name:",
+	"tw-group-advanced",		"Advanced",
+	"tw-group-local",			"Local HIT:",
+	
+	"tw-hitgroup-type",			"Type:",
+	"tw-hitgroup-lightweight",	"Encryption:",
 	
 	/* Local HIT handling. */
 	"lh-button-apply",			"Apply",
 	"lh-button-cancel",			"Cancel",
 	"lh-button-delete",			"Delete",
+	"lh-info",					"Local HIT information:",
+	"lh-hit",					"HIT:",
+	"lh-name",					"Name:",
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
@@ -94,13 +110,12 @@ char *lang_english[] =
 	
 	"group-type-accept",		"accept",
 	"group-type-deny",			"deny",
-
 	"group-type2-lightweight",	"lightweight",
 	"group-type2-normal",		"normal",
-
+	
 	"hits-number-of-used",		"Number of HITs in use",
-
 	"default-group-name",		"ungrouped",
+	"combo-newgroup",			"<create new...>",
 
 	NULL
 };

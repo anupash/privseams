@@ -72,17 +72,22 @@ void print_hit_to_buffer(char *buffer, struct in6_addr *hit)
 /******************************************************************************/
 /**
 	Read hit from text buffer as hit.
+	
+	@return 0 on success, -1 on invalid HIT in input buffer.
 */
-void read_hit_from_buffer(struct in6_addr *hit, char *buffer)
+int read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 {
-	int n, i;
+	/* Variables. */
+	int n, i, err = 0;
 	int v[8];
 	
 	memset(v, 0, sizeof(int) * 8);
-
-	sscanf(buffer, "%x:%x:%x:%x:%x:%x:%x:%x",
-	       &v[7], &v[6], &v[5], &v[4],
-	       &v[3], &v[2], &v[1], &v[0]);
+	memset(hit, 0, sizeof(struct in6_addr));
+	
+	err = sscanf(buffer, "%x:%x:%x:%x:%x:%x:%x:%x",
+	             &v[7], &v[6], &v[5], &v[4],
+	             &v[3], &v[2], &v[1], &v[0]);
+	HIP_IFEL(err != 8, -1, "Invalid HIT in buffer!\n")
 	
 	n = 0;
 	for (i = 7; i >= 0; i--)
@@ -91,6 +96,13 @@ void read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 		hit->s6_addr[n] = (v[i] >> 8) & 0xff;
 		n += 2;
 	}
+	
+	HIP_IFEL(v[7] != 0x2001 && (v[6] & 0xfff0) != 0x0070, -1, "Invalid HIT prefix!\n");
+	
+	err = 0;
+
+out_err:
+	return (err);
 }
 /* END OF FUNCTION */
 

@@ -16,6 +16,12 @@
 #include "debug.h"
 #include "hit_db.h"
 
+
+/******************************************************************************/
+/* DEFINES */
+#define NAME_INVALID_CHARS		"<>\""
+
+
 /*!
 	\addtogroup libhipgui
 	@{

@@ -253,34 +253,53 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 	Ask for new HIT from user.
 
 	@param hit Information of HIT to be accepted.
-	@param inout Whether in or outgoing packet.
+	@param inout Whether in or outgoing packet, or manual input.
+	       0 in, 1 out, 2 manual.
 	@return Returns 0 on add, -1 on drop.
 */
 int gui_ask_new_hit(HIT_Remote *hit, int inout)
 {
 	/* Variables. */
 	static int in_use = 0;
-	GtkDialog *dialog = (GtkDialog *)widget(ID_NHDLG);
+	GtkDialog *dialog = (GtkDialog *)widget(ID_NHDLG), *d;
 	HIT_Group *group;
+	HIT_Remote _hit;
 	char phit[128], *ps;
-	int err = 0, w, h;
+	int err = 0, w, h, i;
 
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
-	gdk_threads_enter();
+	if (inout != 2) gdk_threads_enter();
 	gtk_window_get_size(dialog, &w, &h);
 	gtk_window_move(dialog, (gdk_screen_width() - w) / 2, (gdk_screen_height() - h) / 2);
 	gtk_window_set_keep_above(dialog, TRUE);
 	gtk_widget_show(dialog);
 	
+	/* If manual input wanted. */
+	if (inout == 2)
+	{
+		gtk_widget_set_sensitive(widget(ID_NH_HIT), TRUE);
+		gtk_entry_set_text(widget(ID_NH_HIT), "2001:0070:0000:0000:0000:0000:0000:0000");
+		gtk_editable_select_region(widget(ID_NH_HIT), 0, -1);
+		gtk_entry_set_text(widget(ID_NH_NAME), "");
+		hit = &_hit;
+		memset(hit, 0, sizeof(HIT_Remote));
+	}
+	else
+	{
+		gtk_widget_set_sensitive(widget(ID_NH_HIT), FALSE);
+		print_hit_to_buffer(phit, &hit->hit);
+		gtk_entry_set_text(widget(ID_NH_HIT), phit);
+		gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
+		gtk_editable_select_region(widget(ID_NH_NAME), 0, -1);
+	}
+	
+	/* Get valid input from user in this loop. */
 	do
 	{
-		print_hit_to_buffer(phit, &hit->hit);
-		gtk_label_set_text(widget(ID_NH_HIT), phit);
-		gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
-	//	delete_all_items_from_cb(widget(ID_NH_RGROUP));
-		gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
+		i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
+		gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
 		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
 	
 		err = gtk_dialog_run(GTK_DIALOG(dialog));
@@ -305,7 +324,28 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 		URLCPY(hit->url, ps);
 		ps = gtk_entry_get_text(widget(ID_NH_PORT));
 		URLCPY(hit->port, ps);
-		if (check_hit_name(hit->name, NULL)) break;
+		/* If HIT added manually. */
+		if (inout == 2)
+		{
+			ps = gtk_entry_get_text(widget(ID_NH_HIT));
+			err = read_hit_from_buffer(&hit->hit, ps);
+			if (err)
+			{
+				HIP_DEBUG("Failed to parse HIT from buffer!\n");
+				d = gtk_message_dialog_new(dialog, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+				                           lang_get("nhdlg-err-hit"));
+				gtk_window_set_keep_above(d, TRUE);
+				gtk_widget_show(d);
+				gtk_dialog_run(d);
+				gtk_widget_destroy(d);
+			}
+			else if (check_hit_name(hit->name, NULL))
+			{
+				hit_db_add_hit(hit, 0);
+				break;
+			}
+		}
+		else if (check_hit_name(hit->name, NULL)) break;
 	} while (1);
 
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
@@ -313,7 +353,7 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 
 out_err:
 	gtk_widget_hide(dialog);
-	gdk_threads_leave();
+	if (inout != 2) gdk_threads_leave();
 	in_use = 0;
 
 	return (err);

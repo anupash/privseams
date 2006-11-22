@@ -144,17 +144,17 @@ int main_create_content(void)
 	                            lang_get("tb-newgroup-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
+	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newhit.png");
+	iconw = gtk_image_new_from_file(str);
+	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newhit"), lang_get("tb-newhit-tooltip"),
+	                            "Private", iconw,
+	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
 	gtk_toolbar_append_space(toolbar);
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "run.png");
 	iconw = gtk_image_new_from_file(str);
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-runapp"), lang_get("tb-runapp-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
-	iconw = gtk_image_new_from_file("run.xpm");
-	w = gtk_toolbar_append_item(toolbar, "New HIT",
-	                            "Popup new HIT dialog for debugging",
-	                            "Private", iconw,
-	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
 
 	/* Create tabbed notebook. */
 	notebook = gtk_notebook_new();

@@ -105,7 +105,8 @@ int check_group_name(char *name, HIT_Group *ge)
 	HIT_Group *g;
 	int i, err = 1;
 	char *msg = lang_get("ngdlg-err-invalid");
-	
+	char *pch;
+
 	HIP_IFE(name == NULL, 0);
 	
 	/* Remove whitespaces from start and end. */
@@ -116,6 +117,17 @@ int check_group_name(char *name, HIT_Group *ge)
 	name[i + 1] = '\0';
 	HIP_IFE(strlen(name) < 1, 0);
 	
+	/* Check for reserved names. */
+	msg = lang_get("ngdlg-err-reserved");
+	i = strcmp(lang_get("combo-newgroup"), name);
+	HIP_IFE(i == 0, 0);
+
+	/* Some characters can be reserved for internal purposes. */
+	msg = lang_get("ngdlg-err-invchar");
+	pch = strpbrk(name, NAME_INVALID_CHARS);
+	HIP_IFE(pch, 0);
+
+	/* Check that group with this name does not already exist. */
 	g = hit_db_find_rgroup(name);
 	msg = lang_get("ngdlg-err-exists");
 	if (g != ge) HIP_IFE(g, 0);
@@ -144,7 +156,8 @@ int check_hit_name(char *name, HIT_Remote *re)
 	HIT_Remote *r;
 	int i, err = 1;
 	char *msg = lang_get("nhdlg-err-invalid");
-	
+	char *pch;
+
 	HIP_IFE(name == NULL, 0);
 	
 	/* Remove whitespaces from start and end. */
@@ -155,6 +168,12 @@ int check_hit_name(char *name, HIT_Remote *re)
 	name[i + 1] = '\0';
 	HIP_IFE(strlen(name) < 1, 0);
 	
+	/* Some characters can be reserved for internal purposes. */
+	msg = lang_get("ngdlg-err-invchar");
+	pch = strpbrk(name, NAME_INVALID_CHARS);
+	HIP_IFE(pch, 0);
+	
+	/* Check that HIT with this name does not already exist. */
 	r = hit_db_find(name, NULL);
 	msg = lang_get("nhdlg-err-exists");
 	if (r != re) HIP_IFE(r, 0);

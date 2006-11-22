@@ -220,7 +220,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			tw_set_remote_rgroup_info(g);
 		}
-		else if (strcmp("<create new...>", ps) == 0)
+		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
 			create_remote_group("");
@@ -234,7 +234,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			nh_set_remote_rgroup_info(g);
 		}
-		else if (strcmp("<create new...>", ps) == 0)
+		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
 		{
 			HIP_DEBUG("Create new group.\n");
 			create_remote_group("");
@@ -313,10 +313,8 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 		break;
 
 	case ID_TOOLBAR_NEWHIT:
-		HIP_DEBUG("Toolbar: Fake popup for new HIT.\n");
-		memset(&hit, 0, sizeof(HIT_Remote));
-		NAMECPY(hit.name, "Fake hit popup");
-		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
+		HIP_DEBUG("Toolbar: Popup for new HIT.\n");
+		gui_ask_new_hit(NULL, 2);
 		break;
 
 	case ID_TOOLBAR_TOGGLETOOLWINDOW:

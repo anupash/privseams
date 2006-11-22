@@ -240,7 +240,7 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Local HIT:");
+	w = gtk_label_new(lang_get("tw-hit-local"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
@@ -254,24 +254,24 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Type:");
+	w = gtk_label_new(lang_get("tw-hitgroup-type"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "accept");
-	gtk_combo_box_append_text(w, "deny");
+	gtk_combo_box_append_text(w, lang_get("group-type-accept"));
+	gtk_combo_box_append_text(w, lang_get("group-type-deny"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_TYPE1, w);
 
-	w = gtk_label_new("Lightweight:");
+	w = gtk_label_new(lang_get("tw-hitgroup-lightweight"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "normal");
-	gtk_combo_box_append_text(w, "lightweight");
+	gtk_combo_box_append_text(w, lang_get("group-type2-normal"));
+	gtk_combo_box_append_text(w, lang_get("group-type2-lightweight"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);
@@ -296,7 +296,7 @@ int tw_create_local(void)
 	
 	/* Create local HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(GTK_FRAME(frame), "Local HIT information:");
+	gtk_frame_set_label(GTK_FRAME(frame), lang_get("lh-info"));
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
@@ -315,11 +315,11 @@ int tw_create_local(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Name:");
+	w = gtk_label_new(lang_get("lh-name"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "LocalHIT");
+	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
 	gtk_entry_set_activates_default(w, TRUE);
@@ -330,7 +330,7 @@ int tw_create_local(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("HIT:");
+	w = gtk_label_new(lang_get("lh-hit"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
@@ -358,7 +358,7 @@ int tw_create_rgroup(void)
 	
 	/* Create remote group HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(GTK_FRAME(frame), "Remote group information:");
+	gtk_frame_set_label(GTK_FRAME(frame), lang_get("tw-group-info"));
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
@@ -376,11 +376,11 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Name:");
+	w = gtk_label_new(lang_get("tw-group-name"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "NewGroup");
+	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
 	gtk_entry_set_activates_default(w, TRUE);
@@ -393,7 +393,7 @@ int tw_create_rgroup(void)
 	gtk_widget_show(w);
 
 	/* Advanced information. */
-	exp = gtk_expander_new("Advanced");
+	exp = gtk_expander_new(lang_get("tw-group-advanced"));
 	gtk_box_pack_start(vb, exp, FALSE, TRUE, 2);
 	gtk_widget_show(exp);
 	
@@ -405,7 +405,7 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Local HIT:");
+	w = gtk_label_new(lang_get("tw-group-local"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
@@ -418,23 +418,23 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Type:");
+	w = gtk_label_new(lang_get("tw-hitgroup-type"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "accept");
-	gtk_combo_box_append_text(w, "deny");
+	gtk_combo_box_append_text(w, lang_get("group-type-accept"));
+	gtk_combo_box_append_text(w, lang_get("group-type-deny"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_show(w);
 	widget_set(ID_TWG_TYPE1, w);
 
-	w = gtk_label_new("Lightweight:");
+	w = gtk_label_new(lang_get("tw-hitgroup-lightweight"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "normal");
-	gtk_combo_box_append_text(w, "lightweight");
+	gtk_combo_box_append_text(w, lang_get("group-type2-normal"));
+	gtk_combo_box_append_text(w, lang_get("group-type2-lightweight"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);

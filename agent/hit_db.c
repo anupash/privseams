@@ -219,8 +219,8 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_n++;
 
 	/* Then call GUI to show new HIT. */
-	HIP_DEBUG("Calling GUI to show new HIT...\n");
-	gui_add_remote_hit(name, group->name);
+	HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+	gui_add_remote_hit(r->name, group->name);
 
 	HIP_DEBUG("%d items in database.\n", remote_db_n);
 

@@ -49,7 +49,7 @@ int nhdlg_create_content(void)
 	w = gtk_label_new("New HIT:");
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 3);
 	gtk_widget_show(w);
-	w = gtk_label_new("<empty>");
+	w = gtk_entry_new();
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 3);
 	gtk_widget_show(w);
 	widget_set(ID_NH_HIT, w);

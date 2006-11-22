@@ -32,7 +32,7 @@ int agent_exec(void);
 void agent_exit(void);
 
 void print_hit_to_buffer(char *, struct in6_addr *);
-void read_hit_from_buffer(struct in6_addr *, char *);
+int read_hit_from_buffer(struct in6_addr *, char *);
 
 int config_read(const char *);
 
