@@ -155,9 +155,9 @@ void hip_vlog(int debug_level, const char *file, const int line,
       goto err;
     break;
   case LOGTYPE_SYSLOG:
-    openlog(prefix, SYSLOG_OPT, SYSLOG_FACILITY);
+    openlog(NULL, SYSLOG_OPT, SYSLOG_FACILITY);
     printed = vsnprintf(syslog_msg, DEBUG_MSG_MAX_LEN, fmt, args);
-    syslog(syslog_level|SYSLOG_FACILITY, "%s", syslog_msg);
+    syslog(syslog_level|SYSLOG_FACILITY, "%s %s", prefix, syslog_msg);
     /* the result of vsnprintf depends on glibc version; handle them both
        (note about barriers: printed has \0 excluded,
        DEBUG_MSG_MAX_LEN has \0 included) */
