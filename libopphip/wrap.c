@@ -868,6 +868,7 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
  out_err:
 
 	memcpy(orig_id, &peer_id, peer_id_len);
+	memcpy(orig_id_len, &peer_id_len, sizeof(socklen_t));
 
 	return new_sock;
 }
