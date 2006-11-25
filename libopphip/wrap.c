@@ -815,6 +815,14 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 		  orig_socket, orig_id);
 
 	entry = hip_socketdb_find_entry(getpid(), orig_socket);
+	if (!entry) {
+		HIP_DEBUG("Did not find entry, should not happen? Fallbacking..\n");
+		new_sock = dl_function_ptr.accept_dlsym(orig_socket,
+							(struct sockaddr *) &peer_id,
+							&peer_id_len);
+		goto out_err;
+	}
+
 	HIP_ASSERT(entry);
 
 	/* The bind() was done on in6_addr any. It supports also ipv4 mapped
