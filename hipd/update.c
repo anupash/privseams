@@ -4,6 +4,8 @@
  * - Mika Kousa <mkousa@cc.hut.fi>
  * - Tobias Heer <tobi@tobibox.de>
  * - Abhijit Bagri <abagri@gmail.com>
+ *
+ * @note Based on <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
 
 #include "update.h"
