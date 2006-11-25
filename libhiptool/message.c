@@ -255,6 +255,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);
 
+	memset(msg_info, 0, sizeof(hip_portpair_t));
+
         /* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
         msg.msg_namelen = sizeof(struct sockaddr_storage);
@@ -298,11 +300,15 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4) {
+	if (is_ipv4 && encap_hdr_size == 0) {
 		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
+		/* The NAT socket is bound on port 50500, thus packets
+		   received from NAT socket must have had 50500 as
+		   destination port. */
+		msg_info->dst_port = HIP_NAT_UDP_PORT; 
 	}
 
 	/* IPv4 addresses */
