@@ -17,10 +17,12 @@
 
 /* stderror: includes prefix, separator, msg and \0
    syslog:   includes msg and \0 */
-#define DEBUG_MSG_MAX_LEN     256
+#define DEBUG_MSG_MAX_LEN     1024
 
 #define SYSLOG_OPT        (LOG_PID)
-#define SYSLOG_FACILITY   LOG_DAEMON
+//#define SYSLOG_FACILITY   LOG_DAEMON
+// oleg 2006-11-22
+#define SYSLOG_FACILITY   LOG_LOCAL6
 
 #define HIP_INFO(...) hip_info(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_ERROR(...) hip_error(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)

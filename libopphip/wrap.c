@@ -116,15 +116,14 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
 	int err = 0;
 	struct gaih_addrtuple *at = NULL;
-	struct gaih_addrtuple **pat = &at;
 	
-	err = get_local_hits(NULL, pat);
+	err = get_local_hits(NULL, &at);
 	if (err)
 		HIP_ERROR("getting local hit failed\n");
 	else
 		memcpy(hit, &at->addr, sizeof(hip_hit_t));
 	
-	HIP_FREE(*pat);
+	HIP_FREE(at);
 	
 	return err;
 }
@@ -172,8 +171,16 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 			return 0;
 		if (!(sa->sa_family == AF_INET || sa->sa_family == AF_INET6))
 			return 0;
+		if (sa->sa_family == AF_INET) {
+			struct in_addr *oip = SA2IP(sa);
+			if (oip->s_addr == htonl(INADDR_LOOPBACK))
+				return 0;
+		}
+		if (sa->sa_family == AF_INET6 &&
+		    IN6_IS_ADDR_LOOPBACK(SA2IP(sa)))
+			return 0;
+
 	}
-	
 	return 1;
 }
 
@@ -275,8 +282,6 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 
 	*fallback = 1;
 	
-	HIP_IFE(ipv6_addr_any(peer_ip), -1);
-	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
@@ -368,18 +373,11 @@ int hip_set_translation(hip_opp_socket_t *entry,
 	
 }
 
-int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
+int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
 	pid_t pid = getpid();
 
 	HIP_DEBUG("autobind\n");
-
-	err = hip_get_local_hit_wrapper(&hit->sin6_addr);
-	if (err) {
-		HIP_ERROR("No local HIT: is hipd running?\n");
-		hit->sin6_family = AF_INET6;
-		goto out_err;
-	}
 
 	srand(pid);
 	
@@ -412,16 +410,28 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	socklen_t translated_id_len;
 	struct sockaddr_in6 mapped_addr;
+
+	//HIP_ASSERT((entry->type == SOCK_STREAM) || orig_id);
+
+	/* i.e. socket(PF_FILE), connect and read */
+	HIP_IFEL(!orig_id, 0, "No new id to translate, bailing out\n");
 	
 	HIP_DEBUG("Translating to new socket (orig %d)\n", orig_socket);
 	
-	_HIP_ASSERT(entry->type == SOCK_STREAM || orig_id);
-	
+	HIP_IFEL(hip_get_local_hit_wrapper(&src_hit.sin6_addr), -1,
+		 "Querying of local HIT failed (no hipd running?)\n");
+	src_hit.sin6_family = AF_INET6;
+
 	if (is_peer && !entry->local_id_is_translated) {
 		/* Can happen also with UDP based sockets with
 		   connect() + send() */
-		HIP_IFE(hip_autobind(entry, &src_hit), -1);
+		HIP_IFEL(hip_autobind_port(entry, &src_hit), -1,
+			 "autobind failed\n");
+	} else {
+		HIP_DEBUG("autobind was not necessary\n");
 	}
+
+	_HIP_DEBUG_IN6ADDR("translate new: src addr", &src_hit.sin6_addr);
 	
 	/* hipd requires IPv4 addresses in IPv6 mapped format */
 	if (orig_id->sa_family == AF_INET) {
@@ -443,6 +453,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	
 	_HIP_DEBUG("sin_port=%d\n", ntohs(port));
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
+
+	/* Try opportunistic base exchange to retrieve peer's HIT */
 	
 	if (is_peer) {
 		int fallback;
@@ -464,17 +476,19 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		}
 		dst_hit.sin6_family = AF_INET6;
 	} else {
-		/* Called e.g. in bind(). XX FIXME: Currently no conversion
-		   due to problems described in accept() */
-		HIP_DEBUG("Server-side translation currently unsupported\n");
-		goto out_err;
+		/* Called e.g. in bind() */
+		HIP_DEBUG("Binding to inaddr6_any\n");
+		src_hit.sin6_addr = in6addr_any;
+		src_hit.sin6_family = AF_INET6;
 	}
 	
 	if (err || IN6_IS_ADDR_V4MAPPED(&hit->sin6_addr) ||
-	    !ipv6_addr_is_hit(&hit->sin6_addr)) {
+	    (!ipv6_addr_any(&hit->sin6_addr) && !ipv6_addr_is_hit(&hit->sin6_addr))) {
 		HIP_DEBUG("Localhost/peer does not support HIP, falling back to IP\n");
 		goto out_err;
 	}
+
+	HIP_DEBUG("HIT translation was successfull\n");
 	
 	/* We have now successfully translated an IP to an HIT. The HIT
 	   requires a new socket. Also, we need set the return values
@@ -608,6 +622,15 @@ int hip_translate_socket(const int *orig_socket,
 	HIP_DEBUG("orig_id=%p is_dgram=%d wrap_applicable=%d already=%d is_peer=%d force=%d\n",
 		  orig_id, is_dgram, wrap_applicable, is_translated, is_peer,
 		  force_orig);
+
+	if (orig_id) {
+		if (orig_id->sa_family == AF_INET)
+			HIP_DEBUG_INADDR("orig_id", SA2IP(orig_id));
+		else if (orig_id->sa_family == AF_INET6)
+			HIP_DEBUG_IN6ADDR("orig_id", SA2IP(orig_id));
+		else
+			HIP_DEBUG("orig_id family %d\n", orig_id->sa_family);
+	}
 	
 	if (!is_translated)
 		hip_store_orig_socket_info(entry, is_peer, *orig_socket,
@@ -705,7 +728,7 @@ int close(int orig_fd)
 	if (!entry)
 		goto out_err;
 
-	HIP_ASSERT(entry);
+	//HIP_ASSERT(entry);
 
 	/* close new_socket */
 	if(entry->translated_socket &&
@@ -734,14 +757,11 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 
 	HIP_DEBUG("bind: orig sock = %d\n", orig_socket);
 
-	/* XX FIXME: we have bind to one HIT (=inet6_any !!!) and to one IP
-	   (the orig id). This translation step here does not work. */
-	/* XX FIXME: if orig id is inet6_any, we should not do anything */
-	/* XX FIXME: what about the client side bind? */
-	
+	/* the address will be translated to in6addr_any */
+
 	err = hip_translate_socket(&orig_socket, orig_id, &orig_id_len,
 				   &translated_socket, &translated_id,
-				   &translated_id_len, 0, 0, 1);
+				   &translated_id_len, 0, 0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
@@ -757,18 +777,23 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
-int listen(int sockfd, int backlog)
+int listen(int orig_socket, int backlog)
 {
-	int err = 0, *translated_socket;
+	int err = 0, *translated_socket, zero = 0;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 
-	HIP_DEBUG("listen: orig sock = %d\n", sockfd);
+	HIP_DEBUG("listen: orig sock = %d\n", orig_socket);
 
-	/* XX FIXME: listen for two sockets: one HIT based and one IP based.
-	   We have to implement a select loop here because listen will block.*/
+	err = hip_translate_socket(&orig_socket, NULL, &zero,
+				   &translated_socket, &translated_id,
+				   &translated_id_len, 0, 0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
 	
-	err = dl_function_ptr.listen_dlsym(sockfd, backlog);
+	err = dl_function_ptr.listen_dlsym(*translated_socket, backlog);
 	if (err) {
 		HIP_PERROR("connect error:");
 	}
@@ -780,38 +805,36 @@ int listen(int sockfd, int backlog)
 int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
 	int err = 0, *translated_socket, new_sock;
-	socklen_t *translated_id_len, zero = 0;
+	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 	hip_opp_socket_t *entry = NULL;
+	struct sockaddr_storage peer_id;
+	socklen_t peer_id_len = 0;
 
 	HIP_DEBUG("accept: orig_socket %d orig_id %p\n",
 		  orig_socket, orig_id);
 
-	/* XX TODO: we arrive here from two alternative ways through listen().
-	   Either listen has discovered an IP based connection or HIT based
-	   connection. This is discovered through orig_id HIT family and
-	   HIT prefix. In the case of IP, we must set translation to the
-	   original and pass the call as it is. In the case of HIT, we must
-	   translate to a new HIT and peel of a new file descriptor. The
-	   new file descriptor requires a new entry that may conflict with
-	   the original id? Most importantly, what to return from this
-	   function? */
-
-	new_sock = dl_function_ptr.accept_dlsym(orig_socket,
-						orig_id,
-						orig_id_len);
-	if (new_sock < 0) {
-		HIP_PERROR("accept_dlsym error: ");
+	entry = hip_socketdb_find_entry(getpid(), orig_socket);
+	if (!entry) {
+		HIP_DEBUG("Did not find entry, should not happen? Fallbacking..\n");
+		new_sock = dl_function_ptr.accept_dlsym(orig_socket,
+							(struct sockaddr *) &peer_id,
+							&peer_id_len);
 		goto out_err;
 	}
-	HIP_DEBUG("orig id len %d\n", (orig_id ? *orig_id_len : 0));
 
-	/* Until the above TODO comment is implemented, we will just add here
-	   the new socket fd and local+remote ids to the db without HIT
-	   translation. */
-
-	entry = hip_socketdb_find_entry(getpid(), orig_socket);
 	HIP_ASSERT(entry);
+
+	/* The bind() was done on in6_addr any. It supports also ipv4 mapped
+	   addresses and we can therefore safely just accept() that. */
+
+	new_sock = dl_function_ptr.accept_dlsym(entry->translated_socket,
+						(struct sockaddr *) &peer_id,
+						&peer_id_len);
+	if (new_sock < 0) {
+		HIP_PERROR("accept error:");
+		goto out_err;
+	}
 
 	err = hip_add_orig_socket_to_db(new_sock,
 					entry->domain,
@@ -823,8 +846,8 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 	}
 	
 	err = hip_translate_socket(&new_sock,
-				   (struct sockaddr *) &entry->orig_local_id,
-				   &entry->orig_local_id_len,
+				   (struct sockaddr *) &entry->translated_local_id,
+				   &entry->translated_local_id_len,
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len, 0, 0, 1);
@@ -833,16 +856,19 @@ int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 		goto out_err;
 	}
 
-	err = hip_translate_socket(&new_sock, orig_id,
-				   (orig_id ? orig_id_len : &zero),
+	err = hip_translate_socket(&new_sock, (struct sockaddr *) &peer_id,
+				   &peer_id_len,
 				   &translated_socket, &translated_id,
 				   &translated_id_len, 1, 0, 1);
 	if (err) {
 		HIP_ERROR("Peer id translation failure\n");
 		goto out_err;
 	}
-	
+
  out_err:
+
+	memcpy(orig_id, &peer_id, peer_id_len);
+	memcpy(orig_id_len, &peer_id_len, sizeof(socklen_t));
 
 	return new_sock;
 }
