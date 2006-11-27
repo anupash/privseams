@@ -105,6 +105,7 @@ int main(int argn, char *argv[])
 	*/
 	if (err != 0 && 0)
 	{
+		HIP_DEBUG("Trying to execute daemon...\n");
 		err = fork();
 		
 		if (err < 0) HIP_DEBUG("fork() failed!\n");

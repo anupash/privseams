@@ -1,59 +1,56 @@
-/*
- * Command line tool for configuring the HIP kernel module.
+/** @file
+ * This file defines a command line tool for configuring the the Host Identity
+ * Protocol daemon (hipd).
  *
- * Authors:
- * - Janne Lundberg <jlu@tcs.hut.fi>
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
- * - Anthony D. Joseph <adj@hiit.fi>
- * - Abhinav Pathak <abhinav.pathak@hiit.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- * Licence: GNU/GPL
- *
- * TODO:
- * - add/del map
- * - fix the rst kludges
- * - read the output message from send_msg?
- *
- * BUGS:
- * - makefile compiles prefix of debug messages wrong for hipconf in "make all"
- *
+ * @author  Janne Lundberg <jlu_tcs.hut.fi>
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_cc.hut.fi>
+ * @author  Anthony D. Joseph <adj_hiit.fi>
+ * @author  Abhinav Pathak <abhinav.pathak_hiit.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Anu Markkola
+ * @author  Lauri Silvennoinen
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @todo    add/del map
+ * @todo    fix the rst kludges
+ * @todo    read the output message from send_msg?
+ * @bug     makefile compiles prefix of debug messages wrong for hipconf in 
+ *          "make all"
  */
+#include "hipconftool.h"
 
-#include "hipconf.h"
-
+/* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
+   the nat mapping only when the communication takes place with specified
+   peer_hit --Abi */
+/** A help string containing the usage of @c hipconf. */
 const char *usage =
-	"new|add hi default\n"
-	"new|add hi anon|pub rsa|dsa filebasename\n"
-	"del hi <hit>\n"
-	"add|del map hit ipv6\n"
-	"hip rst all|peer_hit\n"
-	"add rvs hit ipv6\n"
-	"hip bos\n"
-	"hip nat on|off|peer_hit\n"
-	"add|del service service_type\n"
-	"run normal|opp <binary>\n"
-#ifdef CONFIG_HIP_SPAM
-	"get|set|inc|dec|new puzzle all|hit\n"
-#else
-	"get|set|inc|dec|new puzzle all\n"
-#endif
-
 #ifdef CONFIG_HIP_ESCROW
-	"add|del escrow hit\n"
+"add|del escrow hit\n"
 #endif
+"add|del map hit ipv6\n"
+"add|del service escrow|rvs\n"
+"add rvs <hit> <ipv6>\n"
+"del hi <hit>\n"
+#ifdef CONFIG_HIP_ICOOKIE
+"get|set|inc|dec|new puzzle all|hit\n"
+#else
+"get|set|inc|dec|new puzzle all\n"
+#endif
+"hip bos\n"
+"hip nat on|off|peer_hit\n"
+"hip rst all|peer_hit\n"
+"new|add hi anon|pub rsa|dsa filebasename\n"
+"new|add hi default\n"
+"get hi default\n"
+"run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	"set opp on|off\n"
+"set opp on|off\n"
 #endif
 ;
-/* hip nat on|off|peer_hit is currently specified. 
- * For peer_hit we should 'on' the nat mapping only when the 
- * communication takes place with specified peer_hit --Abi */
 
-
-/*
- * Handler functions.
+/** Function pointer array containing pointers to handler functions.
+ *  @note Keep the elements in the same order as the @c TYPE values are defined
+ *  in hipconf.h because type values are used as @c action_handler array index.
  */
 int (*action_handler[])(struct hip_common *, int action,
 			const char *opt[], int optc) = {
@@ -67,15 +64,15 @@ int (*action_handler[])(struct hip_common *, int action,
 	handle_nat,
 	handle_opp,
 	handle_escrow,
-	handle_service
+	handle_service,
 };
 
 /**
- * get_action - map symbolic hipconf action (=add/del) names into numeric
- *              action identifiers
- * @param text the action as a string
- *
- * @return Returns the numeric action id correspoding to the symbolic text
+ * Maps symbolic hipconf action (=add/del) names into numeric action
+ * identifiers.
+ * 
+ * @param  text the action as a string.
+ * @return the numeric action id correspoding to the symbolic text.
  */
 int get_action(char *text) {
 	int ret = -1;
@@ -102,9 +99,9 @@ int get_action(char *text) {
 }
 
 /**
- * check_action_argc - get minimum amount of arguments needed to be given to the action
- * @param action action type
- *
+ * Gets the minimum amount of arguments needed to be given to the action.
+ * 
+ * @param  action action type
  * @return how many arguments needs to be given at least
  */
 int check_action_argc(int action) {
@@ -112,17 +109,24 @@ int check_action_argc(int action) {
 
 	switch (action) {
 	case ACTION_ADD:
-	case ACTION_NEW:
+		count = 2;
+		break;
 	case ACTION_DEL:
 		count = 2;
 		break;
-	case ACTION_GET:
-		count = 2;
+	case ACTION_NEW:
+		break;
+	case ACTION_HIP:
 		break;
 	case ACTION_SET:
 		count = 2;
 		break;
 	case ACTION_INC:
+		count = 2;
+		break;
+	case ACTION_DEC:
+		break;
+	case ACTION_GET:
 		count = 2;
 		break;
 	case ACTION_RUN:
@@ -134,10 +138,10 @@ int check_action_argc(int action) {
 }
 
 /**
- * get_type - map symbolic hipconf type (=lhi/map) names to numeric types
- * @param text the type as a string
- *
- * @return the numeric type id correspoding to the symbolic text
+ * Maps symbolic hipconf type (=lhi/map) names to numeric types.
+ * 
+ * @param  text the type as a string.
+ * @return the numeric type id correspoding to the symbolic text.
  */
 int get_type(char *text) {
 	int ret = -1;
@@ -168,7 +172,6 @@ int get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-
 	return ret;
 }
 
@@ -193,18 +196,38 @@ int get_type_arg(int action) {
 }
 
 /**
- * handle_rvs - ...
- */
-
+ * Handles the hipconf commands where the type is @c rvs.
+ *  
+ * Create a message to the kernel module from the function parameters @c msg,
+ * @c action and @c opt[].
+ * 
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type (should be the HIT and the corresponding
+ *               IPv6 address).
+ * @param optc   the number of elements in the array (@b 2).
+ * @return       zero on success, or negative error value on error.
+ * @note         Currently only action @c add is supported.
+ * @todo         If the current machine has more than one IP address
+ *               there should be a way to choose which of the addresses
+ *               to register to the rendezvous server.
+ * @todo         There are currently four different HITs at the @c dummy0
+ *               interface. There should be a way to choose which of the HITs
+ *               to register to the rendezvous server.
+ */ 
 int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 	       int optc)
 {
+	HIP_DEBUG("handle_rvs() invoked.\n");
 	struct in6_addr hit, ip6;
 	int err=0;
 	int ret;
-	
 	HIP_INFO("action=%d optc=%d\n", action, optc);
-
+	
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"rvs\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
 	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
@@ -212,7 +235,6 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 		 "string to address conversion failed\n");
 	
-	/*! \todo source HIT selection? */
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
@@ -222,7 +244,7 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
 		 "build hdr failed\n");
 out_err:
 	return err;
@@ -230,8 +252,15 @@ out_err:
 }
 
 /**
- * handle_hi - handle the hipconf commands where the type is "hi"
+ * Handles the hipconf commands where the type is @c hi.
  *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
  */
 int handle_hi(struct hip_common *msg,
 	      int action,
@@ -242,7 +271,9 @@ int handle_hi(struct hip_common *msg,
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   if (action == ACTION_DEL)
-    return handle_del(msg, action, opt, optc);
+    return handle_hi_del(msg, action, opt, optc);
+  else if (action == ACTION_GET)
+    return handle_hi_get(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -286,16 +317,17 @@ int handle_hi(struct hip_common *msg,
 }
 
 /**
- * handle_map - handle all actions related to "mapping"
- * @param msg the buffer where the message for kernel will be written
- * @param action the action (add/del) to performed on the given mapping
- * @param opt an array of pointers to the command line arguments after
- *          the action and type, the HIT and the corresponding IPv6 address
- * @param optc the number of elements in the array (=2, HIT and IPv6 address)
+ * Handles the hipconf commands where the type is @c map.
  *
- * Note: does not support "delete" action.
- *
- * @return zero on success, else non-zero.
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type. (should be the HIT and the corresponding
+ *               IPv6 address).
+ * @param optc   the number of elements in the array (@b 2).
+ * @return       zero on success, or negative error value on error.
+ * @note         Does not support @c del action.
  */
 int handle_map(struct hip_common *msg, int action,
 	       const char *opt[], int optc) {
@@ -340,8 +372,19 @@ out_err:
 	return err;
 }
 
-int handle_del(struct hip_common *msg, int action,
-	       const char *opt[], int optc) 
+/**
+ * Handles the hipconf commands where the type is @c del.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int handle_hi_del(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
 {
  	int err;
  	int ret;
@@ -352,8 +395,7 @@ int handle_del(struct hip_common *msg, int action,
  		err = -EINVAL;
  		goto out;
  	}
- 	
- 	
+ 	 	
  	ret = inet_pton(AF_INET6, opt[0], &hit);
  	if (ret < 0 && errno == EAFNOSUPPORT) {
  		HIP_PERROR("inet_pton: not a valid address family\n");
@@ -385,6 +427,58 @@ out:
 	return err;
 }
 
+/**
+ * Handles the hipconf commands where the type is @c del.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int handle_hi_get(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), "Missing arguments\n", -1);
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	err = get_local_hits(NULL, &at);
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
+}
+
+
+/**
+ * Handles the hipconf commands where the type is @c rst.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
 int handle_rst(struct hip_common *msg, int action,
 	       const char *opt[], int optc) 
 {
@@ -430,15 +524,17 @@ int handle_rst(struct hip_common *msg, int action,
 	return err;
 }
 
+
 /**
- * handle_bos - generate a BOS message
- * @param msg the buffer where the message for kernel will be written
- * @param action the action (add/del) to performed (should be empty)
- * @param opt an array of pointers to the command line arguments after
- *          the action and type (should be empty)
- * @param optc the number of elements in the array (=0, no extra arguments)
+ * Handles the hipconf commands where the type is @c bos.
  *
- * @return zero on success, else non-zero.
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
  */
 int handle_bos(struct hip_common *msg, int action,
 	       const char *opt[], int optc) 
@@ -464,16 +560,16 @@ int handle_bos(struct hip_common *msg, int action,
 }
 
 /**
- * handle_nat - Sends a msg to daemon about NAT setting
- * @param msg the buffer where the message for daemon will be written
- * @param action the action (add/del) to performed (should be empty)
- * @param opt an array of pointers to the command line arguments after
- *          the action and type (should be empty)
- * @param optc the number of elements in the array (=0, no extra arguments)
+ * Handles the hipconf commands where the type is @c nat.
  *
- * @return zero on success, else non-zero.
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
  */
-
 int handle_nat(struct hip_common *msg, int action,
                const char *opt[], int optc)
 {
@@ -528,6 +624,17 @@ int handle_nat(struct hip_common *msg, int action,
 
 }
 
+/**
+ * Handles the hipconf commands where the type is @c puzzle.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
 int handle_puzzle(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
@@ -570,7 +677,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 
 	all = !strcmp("all", opt[0]);
 
-#ifdef CONFIG_HIP_SPAM
 	if (!all) {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
@@ -583,13 +689,6 @@ int handle_puzzle(struct hip_common *msg, int action,
 			goto out;
 		}
 	}
-#else
-	if (!all) {
-		err = -1;
-		HIP_ERROR("Only 'all' is supported\n");
-		goto out;
-	}
-#endif /* CONFIG_HIP_SPAM */
 
 	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr));
@@ -614,6 +713,18 @@ int handle_puzzle(struct hip_common *msg, int action,
  out:
 	return err;
 }
+
+/**
+ * Handles the hipconf commands where the type is @c opp.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
 int handle_opp(struct hip_common *msg, int action,
 		  const char *opt[], int optc)
 {
@@ -656,6 +767,17 @@ int handle_opp(struct hip_common *msg, int action,
 	return err;
 }
 
+/**
+ * Handles the hipconf commands where the type is @c escrow.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
 int handle_escrow(struct hip_common *msg, int action, const char *opt[], 
 					int optc)
 {
@@ -690,62 +812,62 @@ out_err:
 	
 }
 
-
+/**
+ * Handles @c service commands received from @c hipconf.
+ *  
+ * Create a message to the kernel module from the function parameters @c msg,
+ * @c action and @c opt[].
+ * 
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed on
+ *               the given mapping.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type (pointer to @b "escrow" or @b "rvs").
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
 int handle_service(struct hip_common *msg, int action, const char *opt[], 
-					int optc)
+		   int optc)
 {
-	HIP_DEBUG("hipconf: handling service");
+	HIP_DEBUG("hipconf: handling service.\n");
 	
 	int err = 0;
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"service\".\n");
+	HIP_IFEL((optc < 1), -1, "Missing arguments\n");
+	HIP_IFEL((optc > 1), -1, "Too many arguments\n");
 	
 	if (strcmp(opt[0], "escrow") == 0) {
-		HIP_DEBUG("Adding escrow service");
+		HIP_INFO("Adding escrow service.\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-		 "build hdr failed\n");
+			 "build hdr failed\n");
 	}
-	
-out_err:
+	else if (strcmp(opt[0], "rvs") == 0) {
+		HIP_INFO("Adding rvs service.\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
+			 "build hdr failed\n");
+	}
+	else {
+		HIP_ERROR("Unknown service %s.\n", opt[0]);
+	}
+
+ out_err:
 	return err;
 	
 }
 
-/* Execute new application.
- */
-int exec_application(int type, char *argv[], int argc)
-{
-	/* Variables. */
-	va_list args;
-	int err = 0;
 
-	err = fork();
-
-	if (err < 0) HIP_DEBUG("Failed to exec new application.\n");
-	else if (err > 0) err = 0;
-	else if(err == 0)
-	{
-		HIP_DEBUG("Exec new application.\n");
-		if (type == TYPE_RUN) setenv("LD_PRELOAD", "/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-		else setenv("LD_PRELOAD", "/usr/local/lib/libopphip.so:/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", 1);
-
-		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");
-		err = execvp(argv[0], argv);
-		if (err != 0)
-		{
-			HIP_DEBUG("Executing new application failed!\n");
-			exit(1);
-		}
-	}
-
-out_err:
-	return (err);
-}
-
-
-/* Parse command line arguments and send the appropiate message to
- * the kernel module
+/**
+ * Parses command line arguments and send the appropiate message to the kernel
+ * module.
+ *
+ * @param argc   the number of elements in the array.
+ * @param argv   an array of pointers to the command line arguments after
+ *               the action and type.
+ * @return       zero on success, or negative error value on error.
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
@@ -793,7 +915,7 @@ int main(int argc, char *argv[]) {
 
 	if (action == ACTION_RUN)
 	{
-		exec_application(type, (const char **)&argv[3], argc - 3);
+		handle_exec_application(0, type, (char **)&argv[3], argc - 3);
 		goto out;
 	}
 	
@@ -804,6 +926,8 @@ int main(int argc, char *argv[]) {
 	}
 	hip_msg_init(msg);
 
+	/* Call handler function from the handler function pointer
+	   array at index "type" with given commandline arguments. */
         err = (*action_handler[type])(msg, action, (const char **) &argv[3],
                                               argc - 3);
 	if (err) {
@@ -813,7 +937,7 @@ int main(int argc, char *argv[]) {
 
 	/* hipconf new hi does not involve any messages to kernel */
 	if (hip_get_msg_type(msg) == 0){
-	  HIP_INFO("!!!!  new hi does not involve any messages to kernel\n");
+	  _HIP_DEBUG("!!!!  new hi does not involve any messages to kernel\n");
 	  goto skip_msg;
 	}
 	

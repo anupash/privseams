@@ -18,7 +18,7 @@ typedef uint16_t  u16;
 typedef uint32_t  u32;
 typedef struct { volatile int counter; } atomic_t;
 typedef struct {
-	/* XX FIXME */
+	/** @todo Is empty. */
 } spinlock_t;
 
 #define spin_lock_init 
@@ -68,9 +68,5 @@ struct list_head {
 #define write_lock_irqsave(a,b) do {} while(0)
 #define write_unlock_irqrestore(a,b) do {} while(0)
 #define read_unlock_irqrestore(a,b) do {} while(0)
-
-/* XX FIXME: implement with a userspace semaphore etc? */
-#define wmb() do {} while(0)
-#define barrier() do {} while(0)
 
 #endif /* __HIP_KERN_COMPATIBILITY__ */

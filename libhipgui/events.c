@@ -45,6 +45,7 @@ gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 /** On window destroy. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
+	connhipd_quit();
 	gtk_main_quit();
 }
 /* END OF FUNCTION */
@@ -61,14 +62,17 @@ void tw_destroy(GtkWidget *widget, gpointer data)
 
 /******************************************************************************/
 /** On HIT list click. */
-gboolean list_click(GtkTreeSelection *selection, gpointer data)
+gboolean list_click(GtkTreeView *tree, gpointer data)
 {
 	/* Variables. */
 	GtkTreeIter iter;
 	GtkTreeModel *model;
 	GtkTreePath *path;
+	GtkTreeSelection *selection;
 	char *str;
 	int depth, *indices;
+
+	selection = gtk_tree_view_get_selection(tree);
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
@@ -118,11 +122,59 @@ gboolean list_click(GtkTreeSelection *selection, gpointer data)
 
 
 /******************************************************************************/
+/** On HIT list click. */
+gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
+{
+	/* Variables. */
+	GtkTreeIter iter;
+	GtkTreeModel *model;
+	GtkTreePath *path;
+	GtkTreeSelection *selection;
+	char *str;
+	int depth, *indices;
+
+	if (button->type == GDK_BUTTON_PRESS && button->button == 3)
+	{
+		selection = gtk_tree_view_get_selection(tree);
+
+		if (gtk_tree_selection_get_selected(selection, &model, &iter))
+		{
+			/* Get values for the path. */
+			path = gtk_tree_model_get_path(model, &iter);
+			depth = gtk_tree_path_get_depth(path);
+			indices = gtk_tree_path_get_indices(path);
+			gtk_tree_model_get(model, &iter, 0, &str, -1);
+	
+			if (depth == 1)
+			{
+			}
+			else if (depth == 2)
+			{
+			}
+			else if (depth == 3 && indices[0] == 1)
+			{
+				gtk_menu_popup(widget(ID_RLISTMENU), NULL, NULL, NULL, NULL,
+				               button->button, button->time);
+				return (TRUE);
+			}
+	
+			gtk_tree_path_free(path);
+			g_free(str);
+		}
+	}
+	
+	return (FALSE);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
 /** On HIT list double click. */
 gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
 						   GtkTreeViewColumn *column, gpointer data)
 {
 	gtk_widget_show(widget(ID_TOOLWND));
+	gtk_toggle_button_set_active(widget(ID_TB_TW), TRUE);
 }
 /* END OF FUNCTION */
 
@@ -139,7 +191,7 @@ void button_event(GtkWidget *warg, gpointer data)
 	time_t rawtime;
 	struct tm *tinfo;
 	pthread_t pt;
-
+	
 	switch (id)
 	{
 	case IDB_SEND:
@@ -216,7 +268,6 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 		
 	case IDB_SYSTRAY:
-		HIP_DEBUG("systray activate.\n");
 		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
 		if (i == TRUE)
 		{
@@ -226,6 +277,22 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			gtk_widget_show(widget(ID_MAINWND));
 		}
+		break;
+		
+	case IDM_TRAY_SHOW:
+		gtk_widget_show(widget(ID_MAINWND));
+		break;
+	
+	case IDM_TRAY_HIDE:
+		gtk_widget_hide(widget(ID_MAINWND));
+		break;
+	
+	case IDM_TRAY_EXIT:
+		gui_terminate();
+		break;
+		
+	case IDM_RLIST_DELETE:
+		HIP_DEBUG("Delete\n");
 		break;
 	}
 }
@@ -277,9 +344,7 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 /** When systray is activated. */
 void systray_event(void *warg, guint bid, guint atime, gpointer data)
 {
-	/* Variables. */
-	
-	HIP_DEBUG("systray popup.\n");
+	gtk_menu_popup(widget(ID_SYSTRAYMENU), NULL, NULL, NULL, NULL, 0, atime);
 }
 /* END OF FUNCTION */
 

@@ -87,6 +87,46 @@ void *term_client_thread(void *data)
 	struct timeval tv;
 	int err = 0, i, j, x;
 	struct sockaddr_storage addr;
+	struct sockaddr_in6 *addr6;
+	struct addrinfo hints, *ai_list = NULL;
+	char port_string[32];
+
+	/* Clear struct. */
+	memset(&hints, 0, sizeof(hints));
+
+	/* Set up struct. */
+	hints.ai_flags = AI_HIP;
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	sprintf(port_string, "%d", TERM_SERVER_PORT);
+
+	/* Get the host info. */
+	err = getaddrinfo(term_get_server_addr(), port_string, &hints, &ai_list);
+	if (err)
+	{
+		HIP_DEBUG("getaddrinfo() failed!\n");
+		term_print("* Failed to resolve given address\n");
+		err = -1;
+		goto out_err;
+	}
+		
+	/* Convert address. */
+	addr6 = (struct sockaddr_in6 *)ai_list->ai_addr;
+
+	/* Create socket. */
+	client_sockfd = socket(PF_INET6, SOCK_STREAM, 0);
+	HIP_IFEL(client_sockfd == -1, -1, "socket() failed!\n");
+
+	/* Try to connect to resolved address. */
+	err = connect(client_sockfd, (struct sockaddr *)addr6, sizeof(struct sockaddr_in6));
+	if (err)
+	{
+		HIP_DEBUG("connect() failed!\n");
+		term_print("* Failed to connect to server\n");
+		err = -1;
+		goto out_err;
+	}
 
 	/* Clear fd-sets. */
 	FD_ZERO(&read_fds);
@@ -147,39 +187,11 @@ out_err:
 int term_client_init(void)
 {
 	/* Variables. */
-	struct sockaddr_in6 *addr6;
-	struct addrinfo hints, *ai_list = NULL;
-	int i, err = 0;
-	char port_string[32];
+	int err = 0;
 
 	/* Close client/server just for sure. */
 	term_server_quit();
 	term_client_quit();
-	
-	/* Clear struct. */
-	memset(&hints, 0, sizeof(hints));
-
-	/* Set up struct. */
-	hints.ai_flags = AI_HIP;
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
-	sprintf(port_string, "%d", TERM_SERVER_PORT);
-
-	/* Get the host info. */
-	err = getaddrinfo(term_get_server_addr(), port_string, &hints, &ai_list);
-	HIP_IFEL(err, -1, "getaddrinfo() failed!\n");
-		
-	/* Convert address. */
-	addr6 = (struct sockaddr_in6 *)ai_list->ai_addr;
-
-	/* Create socket. */
-	client_sockfd = socket(PF_INET6, SOCK_STREAM, 0);
-	HIP_IFEL(client_sockfd == -1, -1, "socket() failed!\n");
-
-	/* Try to connect to resolved address. */
-	err = connect(client_sockfd, (struct sockaddr *)addr6, sizeof(struct sockaddr_in6));
-	HIP_IFEL(err, -1, "connect() failed!\n");
 	
 	/* Create thread for processing terminal. */
 	client_run = 1;
@@ -187,9 +199,6 @@ int term_client_init(void)
 	HIP_IFEL(err, -1, "Failed to create terminal client thread!\n");
 
 out_err:
-	if (err && client_sockfd != -1) close(client_sockfd);
-	if (err) term_print("* Failed to connect\n");
-	if (ai_list) freeaddrinfo(ai_list);
 	return (err);
 }
 /* END OF FUNCTION */

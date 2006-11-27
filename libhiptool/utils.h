@@ -2,13 +2,19 @@
 #define _HIP_UTILS
 
 #ifdef __KERNEL__
+#  include <linux/un.h>
+#  include <linux/in6.h>
 #  include "usercompat.h"
+#  include "protodefs.h"
+#  include "state.h"
+#  include "icomm.h"
+#  include "ife.h"
 #else
 #  include "kerncompat.h"
+#  include "sys/un.h"
+#  include "protodefs.h"
 #endif
 
-#include "protodefs.h"
-#include "sys/un.h"
 
 /*
  * HIP header and parameter related constants and structures.
@@ -31,19 +37,18 @@ struct hip_opp_blocking_request_entry {
   spinlock_t           	lock;
   atomic_t             	refcnt;
 
+  time_t                creation_time;
   struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
-  struct in6_addr       peer_real_hit;
+  hip_hit_t             our_real_hit;
+  hip_hit_t             peer_real_hit;
+  struct in6_addr       peer_ip;
+  struct in6_addr       our_ip;
   struct sockaddr_un    caller;
 };
 
-inline static ipv6_addr_is_null(struct in6_addr *ip){
+inline static int ipv6_addr_is_null(struct in6_addr *ip){
 	return ((ip->s6_addr32[0] | ip->s6_addr32[1] | 
 		 ip->s6_addr32[2] | ip->s6_addr32[3] ) == 0); 
-}
-
-static inline int create_new_socket(int type, int protocol)
-{
-  return socket(AF_INET6, type, protocol);
 }
 
 static inline int hit_is_real_hit(const struct in6_addr *hit) {
@@ -57,6 +62,7 @@ static inline int hit_is_opportunistic_hit(const struct in6_addr *hit){
 static inline int hit_is_opportunistic_hashed_hit(const struct in6_addr *hit){
 	return hit_is_opportunistic_hit(hit);
 }
+
 static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 	// return hit_is_opportunistic_hit(hit);
   return ((hit->s6_addr32[0] | hit->s6_addr32[1] |
@@ -80,6 +86,8 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 	//printf("*************** %x\n", *hit);
 }
 
+/* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
+
 #define SET_NULL_HIT(hit)                           \
         { memset(hit, 0, sizeof(hip_hit_t));        \
           set_hit_prefix(hit) }
@@ -101,13 +109,20 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
 
-#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+#define IS_LSI32(a) ((a & 0xFF000000) == 0x01000000)
 
 #define HIT_IS_LSI(a) \
         ((((__const uint32_t *) (a))[0] == 0)                                 \
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
          && IS_LSI32(((__const uint32_t *) (a))[3]))        
+
+#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        (void*)&((struct sockaddr_in*)x)->sin_addr : \
+        (void*)&((struct sockaddr_in6*)x)->sin6_addr
+#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
+#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))

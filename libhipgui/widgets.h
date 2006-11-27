@@ -10,6 +10,11 @@
 
 #include "ife.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
+
 /******************************************************************************/
 /* DEFINES */
 enum WIDGET_IDS
@@ -30,6 +35,8 @@ enum WIDGET_IDS
 	ID_TOOLBAR,
 	ID_PLISTMODEL,
 	ID_PLISTVIEW,
+	ID_PHIUMODEL,
+	ID_PHIUVIEW,
 	ID_TERMSCREEN,
 	ID_TERMINPUT,
 	ID_TERMBUFFER,
@@ -37,6 +44,7 @@ enum WIDGET_IDS
 	ID_USERVIEW,
 	ID_USERMODEL,
 	ID_TB_TW,
+	ID_HIUNUM,
 
 	/* Tool dialog IDs. */
 	ID_TW_CONTAINER,
@@ -82,6 +90,10 @@ enum WIDGET_IDS
 	ID_NG_TYPE1,
 	ID_NG_TYPE2,
 
+	/* Some misc. */
+	ID_SYSTRAYMENU,
+	ID_RLISTMENU,
+
 	/* IDs for hipstart. */
 	ID_HS_MAIN,
 	ID_HS_MODEL,
@@ -109,6 +121,8 @@ void widget_quit(void);
 void widget_set(int, void *);
 void *widget(int);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

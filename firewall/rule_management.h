@@ -18,11 +18,7 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "firewall.h"
-#include "conntrack.h"
-#include "helpers.h"
 #include "debug.h"
-#include "firewall.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
@@ -34,6 +30,7 @@
 #define SRC_HI_STR "--hi"
 #define VERIFY_RESPONDER_STR "--verify_responder"
 #define ACCEPT_MOBILE_STR "--accept_mobile"
+#define DECRYPT_CONTENTS_STR "--decrypt_contents" 
 #define NEGATE_STR "!"
 #define INPUT_STR "INPUT"
 #define OUTPUT_STR "OUTPUT"
@@ -86,6 +83,7 @@ struct state_option{
   struct int_option int_opt;
   int verify_responder; //1 if responder signatures are verified
   int accept_mobile; //1 if state can be established from updates signalling 
+  int decrypt_contents;
 };
 
 // can be turned to more generic string option if necessary
@@ -126,7 +124,7 @@ void read_rules_exit(int hook);
 //rule management functions
 void insert_rule(const struct rule * rule, int hook);
 int delete_rule(const struct rule * rule, int hook);
-GList * list_rules(int hook);
+struct _GList * list_rules(int hook);
 int flush(int hook);
 
 void test_rule_management();

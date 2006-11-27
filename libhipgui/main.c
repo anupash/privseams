@@ -53,10 +53,10 @@ int gui_init(void)
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
 	/* Create toolwindow. */
-	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	w = gtk_hbox_new(TRUE, 0); //gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
-	gtk_window_set_title(w, "HIP tool window");
+//	gtk_window_set_title(w, "HIP tool window");
 //	gtk_widget_set_size_request(w, 450, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);
@@ -131,6 +131,8 @@ int gui_main(void)
 	}
 
 	gtk_main();
+
+	gui_quit();
 }
 /* END OF FUNCTION */
 
@@ -159,6 +161,8 @@ void gui_set_info(const char *string, ...)
 	char *str[2048];
 	va_list args;
 	
+	gdk_threads_enter();
+	
 	/* Get args. */
 	va_start(args, string);
 
@@ -171,6 +175,8 @@ void gui_set_info(const char *string, ...)
 
 	/* End args. */
 	va_end(args);
+
+	gdk_threads_leave();
 }
 /* END OF FUNCTION */
 

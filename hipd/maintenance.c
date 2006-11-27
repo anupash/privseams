@@ -15,10 +15,13 @@
 
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
+float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 float precreate_counter = HIP_R1_PRECREATE_INIT;
-int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
+int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
+int hip_firewall_status = 0;
 
 /**
  * Handle packet retransmissions.
@@ -28,42 +31,55 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	int err = 0;
 	time_t *now = (time_t*) current_time;	
 
-	if (!entry->hip_msg_retrans.buf)
+	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING)
+	if (entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		HIP_DEBUG("Waiting reply from agent...\n");
 		goto out_err;
 	}
 	
-	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
- 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
-		   entry->hip_msg_retrans.count, entry->state);
+	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
+		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		   entry->hip_msg_retrans.count, hip_state_str(entry->state));
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
+	
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-	    	entry->state != HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Retransmit packet\n");
-			err = entry->hadb_xmit_func->hip_csum_send(&entry->hip_msg_retrans.saddr,
-								   &entry->hip_msg_retrans.daddr,
-									0,0, /*need to correct it*/
-								   entry->hip_msg_retrans.buf,
-								   entry, 0);
-			/* Set entry state, if previous state was unassosiated and type is I1. */
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1);
-			{
-				HIP_DEBUG("Send I1 succcesfully after acception.\n");
+		    entry->state != HIP_STATE_ESTABLISHED &&
+		    entry->retrans_state == entry->state) {
+			
+			err = entry->hadb_xmit_func->
+				hip_send_pkt(&entry->hip_msg_retrans.saddr,
+					     &entry->hip_msg_retrans.daddr,
+					     HIP_NAT_UDP_PORT,
+					     entry->peer_udp_port,
+					     entry->hip_msg_retrans.buf,
+					     entry, 0);
+			
+			/* Set entry state, if previous state was unassosiated
+			   and type is I1. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_I1) {
+				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
+			}
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_R2) {
+				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
+				entry->state = HIP_STATE_ESTABLISHED;
 			}
 			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		} else {
+		}
+		else {
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
@@ -71,8 +87,24 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	}
 
  out_err:
+	entry->retrans_state = entry->state;
+		
 	return err;
 }
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+int hip_scan_opp_fallback()
+{
+	int err = 0;
+	time_t current_time;
+	time(&current_time);
+
+	HIP_IFEL(hip_for_each_opp(hip_handle_opp_fallback, &current_time), 0, 
+		 "for_each_ha err.\n");
+ out_err:
+	return err;
+}
+#endif
 
 /**
  * Find packets, that should be retransmitted.
@@ -161,6 +193,77 @@ out_err:
 	return (err);
 }
 
+
+/**
+ * Send one used remote HIT to agent, enumerative function.
+ */
+int hip_agent_send_rhit(hip_ha_t *entry, void *msg)
+{
+	int err = 0;
+
+	if (entry->state != HIP_STATE_ESTABLISHED) return (err);
+	
+	err = hip_build_param_contents(msg, (void *)&entry->hit_peer, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));
+/*	err = hip_build_param_contents(msg, (void *)&entry->hit_our, HIP_PARAM_HIT,
+	                               sizeof(struct in6_addr));*/
+	if (err)
+	{
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+out_err:
+	return (err);
+}
+
+
+/**
+ * Send remote HITs in use (hadb entrys) to agent.
+ */
+int hip_agent_send_remote_hits(void)
+{
+	struct hip_common *msg;
+	int err = 0, n;
+	socklen_t alen;
+
+#ifdef CONFIG_HIP_AGENT
+	msg = malloc(HIP_MAX_PACKET);
+	if (!msg)
+	{
+		HIP_ERROR("malloc failed\n");
+		goto out_err;
+	}
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
+	         "for_each_ha err.\n");
+
+	err = hip_build_user_hdr(msg, HIP_UPDATE_HIU, 0);
+	if (err)
+	{
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+	alen = sizeof(hip_agent_addr);                      
+	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
+	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+//	else HIP_DEBUG("Sendto() OK.\n");
+
+#endif
+
+out_err:
+	return (err);
+}
+
+
 /**
  * Filter packet trough agent.
  */
@@ -192,14 +295,15 @@ int hip_agent_filter(struct hip_common *msg)
 		err = -1;
 		goto out_err;
 	}
-	
+
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 	/*
 		If message is type I1, then user action might be needed to filter the packet.
 		Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1)
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
@@ -264,7 +368,7 @@ void register_to_dht ()
     if (ipv6_addr_is_hit(SA2IP(&n->addr)))
 	continue;
 
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO) < 0) {
+    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
       HIP_ERROR("No HIT found\n");
       return;
     }
@@ -272,21 +376,39 @@ void register_to_dht ()
     tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
     tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
     
-    HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n",
-	      tmp_hit_str, tmp_addr_str, hostname);
-    updateHIT(hostname, tmp_hit_str);
-    updateHIT(tmp_hit_str, tmp_addr_str);
+    // HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", tmp_hit_str, tmp_addr_str, hostname);
+    updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
   } 	
 #endif
 }
 
 /**
- * Some periodic maintenance (?).
+ * Periodic maintenance.
+ * 
+ * @return ...
  */
 int periodic_maintenance()
 {
 	int err = 0;
-
+	
+	if (hipd_get_state() == HIPD_STATE_CLOSING) {
+		if (force_exit_counter > 0) {
+			err = hip_count_open_connections();
+			if (err < 1) hipd_set_state(HIPD_STATE_CLOSED);
+		} else {
+			hip_exit(SIGINT);
+			exit(SIGINT);
+		}
+		force_exit_counter--;
+	}
+	
+#ifdef CONFIG_HIP_AGENT
+	if (hip_agent_is_alive())
+	{
+		hip_agent_send_remote_hits();
+	}
+#endif
+	
 	if (retrans_counter < 0) {
 		HIP_IFEL(hip_scan_retransmissions(), -1,
 			 "retransmission scan failed\n");
@@ -294,6 +416,16 @@ int periodic_maintenance()
 	} else {
 		retrans_counter--;
 	}
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	if (opp_fallback_counter < 0) {
+		HIP_IFEL(hip_scan_opp_fallback(), -1,
+			 "retransmission scan failed\n");
+		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
+	} else {
+		opp_fallback_counter--;
+	}
+#endif
 
 	if (precreate_counter < 0) {
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1,
@@ -311,11 +443,11 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
-
-	if(nat_keep_alive_counter < 0){
-		HIP_IFEL(hip_nat_keep_alive(), -1, 
-			"Failed to send out keepalives\n");
-		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_TIME;
+	/* Sending of NAT Keep-Alives. */
+	if(hip_nat_status && nat_keep_alive_counter < 0){
+		HIP_IFEL(hip_nat_refresh_port(),
+			 -ECOMM, "Failed to refresh NAT port state.\n");
+		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 	} else {
 		nat_keep_alive_counter--;
 	}	
@@ -324,5 +456,125 @@ int periodic_maintenance()
 	return err;
 }
 
+int hip_firewall_is_alive()
+{
+#ifdef CONFIG_HIP_FIREWALL
+	if (hip_firewall_status) {
+		HIP_DEBUG("Firewall is alive.\n");
+	}
+	else {
+		HIP_DEBUG("Firewall is not alive.\n");
+	}
+	return hip_firewall_status;
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
 
+
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys)
+{
+		struct hip_common *msg;
+		int err = 0;
+		int n;
+		socklen_t alen;
+		//struct in6_addr * hit_s;
+		//struct in6_addr * hit_r;
+				
+		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
+                        "Build hdr failed\n");
+		
+		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+			hit_s = &entry->hit_peer;
+			hit_r = &entry->hit_our;
+		}
+		else {
+			hit_r = &entry->hit_peer;
+			hit_s = &entry->hit_our;
+		}*/
+                
+                HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+		HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+                
+		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
+                        "hip build param failed\n");
+
+		n = hip_sendto(msg, &hip_firewall_addr);                   
+		if (n < 0)
+		{
+			HIP_ERROR("Sendto firewall failed.\n");
+			err = -1;
+			goto out_err;
+		}
+		else HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
+
+}
+
+int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        struct in6_addr * hit_s;
+        struct in6_addr * hit_r;                        
+                                
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_DELETE_ESCROW_DATA, 0), -1, 
+                "Build hdr failed\n");
+                
+        HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
+                sizeof(struct in6_addr)), -1, "build param contents failed\n");
+        HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
+                sizeof(unsigned int)), -1, "build param contents failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0)
+        {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else HIP_DEBUG("Sendto firewall OK.\n");
+                
+out_err:
+        return err;        
+}
+
+
+int hip_firewall_set_escrow_active(int activate)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending activate msg to firewall (value=%d)\n", activate);                        
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, 
+                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                -1, "Build hdr failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0) {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else {
+                HIP_DEBUG("Sendto firewall OK.\n");
+        }  
+out_err:
+        return err;        
+}
 

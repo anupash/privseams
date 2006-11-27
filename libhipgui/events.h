@@ -22,6 +22,10 @@
 #include "terminal.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* DEFINES */
@@ -47,6 +51,12 @@ enum BUTTON_IDS
 	
 	IDB_SYSTRAY,
 
+	IDM_TRAY_SHOW,
+	IDM_TRAY_HIDE,
+	IDM_TRAY_EXIT,
+	
+	IDM_RLIST_DELETE,
+	
 	BUTTON_IDS_N
 };
 
@@ -58,7 +68,8 @@ gboolean tw_delete_event(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
 void tw_destroy(GtkWidget *, gpointer);
 
-gboolean list_click(GtkTreeSelection *, gpointer);
+gboolean list_click(GtkTreeView *, gpointer);
+gboolean list_press(GtkTreeView *, GdkEventButton *, gpointer);
 gboolean list_double_click(GtkTreeSelection *, GtkTreePath *,
 						   GtkTreeViewColumn *, gpointer);
 
@@ -66,6 +77,8 @@ void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 void systray_event(void *, guint, guint, gpointer);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

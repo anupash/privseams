@@ -57,6 +57,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
+	/* TODO: Compiler warning;
+	   warning: the use of `tmpnam' is dangerous, better use `mkstemp' */
 	HIP_IFEL(!(app_name = tmpnam(NULL)), -1, "app_name\n");
 	_HIP_DEBUG("app_name: %s\n", app_name);
 	//HIP_IFEL((creat(app_name, S_IRWXO) < 0), -1, "creat\n");
@@ -72,11 +74,16 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
 	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
 
+	// XX FIXME: check why we are calling bind and connect
 	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
 		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
 		 -1, "app_addr bind failed");
 
-	n = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	err = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	if (err) {
+	  HIP_ERROR("connect failed\n");
+	  goto out_err;
+	}
 
 	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 
 		   0,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
@@ -87,9 +94,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	HIP_DEBUG("waiting to receive deamon info\n");
-	//recv(hip_user_sock, msg, hip_get_msg_total_len(msg), 0);
-	n = recvfrom(hip_user_sock, msg, hip_get_msg_total_len(msg), 
+	HIP_DEBUG("waiting to receive daemon info\n");
+	n = recvfrom(hip_user_sock, msg, hip_peek_recv_total_len(hip_user_sock, 0), 
 	     0,(struct sockaddr *)&daemon_addr, &alen);
 	
 	if (n < 0) {
@@ -108,16 +114,16 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 }
 
 int hip_send_daemon_info(const struct hip_common *msg) {
+  	int err = 0, n, len, hip_user_sock = 0;
+	struct sockaddr_un user_addr;
+	socklen_t alen;
+	
   	// return hip_send_recv_daemon_info(msg);
   
   	// do not call send_recv function here,
   	// since this function is called at several other places
 	// TODO: copy send_recv function's recvfrom to hip_recv_daemon_info()
 
-  	int err = 0, n, len, hip_user_sock = 0;
-	struct sockaddr_un user_addr;
-	socklen_t alen;
-	
 	// Create and bind daemon socket.
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (hip_user_sock < 0)
@@ -149,18 +155,17 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
-	/*! \todo required by the native HIP API */
+	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
   	//hip_send_daemon_info(msg);
-	
-
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 			      struct sockaddr_un *saddr)
 {
-	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total, len;
+	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
+	unsigned int len;
 	
 	len = sizeof(*saddr);
 	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
@@ -181,7 +186,10 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 #endif
 
 	_HIP_DEBUG("msg total length = %d\n", total);
-
+	
+	/* TODO: Compiler warning;
+	   warning: pointer targets in passing argument 6 of 'recvfrom'
+	   differ in signedness. */
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
 				    &len)) != total), -1, "recv\n");
 
@@ -196,28 +204,38 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 }
 
 /**
- * hip_read_control_msg - prepares the hip_common struct,
- * allocates memory for buffers and nested structs. Receives
- * a message from socket and fills the hip_common struct with the
- * values from this message.
- * @param socket socket to read from
- * @param hip_common is returned as filled struct
- * @read addr:  flag whether the adresses should be read from the received packet
- *              1:read addresses, 0:don't read addresses
- * @param saddr is used as return value for the sender address of the received message
- *              (if read_addr is set to 1)
- * @param daddr is used as return value for the destination address of the received message
- *              (if read_addr is set to 1)
+ * Prepares a @c hip_common struct based on information received from a socket.
+ * 
+ * Prepares a @c hip_common struct, allocates memory for buffers and nested
+ * structs. Receives a message from socket and fills the @c hip_common struct
+ * with the values from this message.
  *
- * Returns -1 in case of an error, >0 otherwise.
+ * @param socket         a socket to read from.
+ * @param hip_msg        a pointer to a buffer where to put the received HIP
+ *                       common header. This is returned as filled struct.
+ * @param read_addr      a flag whether the adresses should be read from the
+ *                       received packet. <b>1</b>:read addresses,
+ *                       <b>0</b>:don't read addresses.
+ * @param saddr          a pointer to a buffer where to put the source IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param daddr          a pointer to a buffer where to put the destination IP
+ *                       address of the received message (if @c read_addr is set
+ *                       to 1).
+ * @param msg_info       a pointer to a buffer where to put the source and 
+ *                       destination ports of the received message.
+ * @param encap_hdr_size size of encapsulated header in bytes.
+ * @param is_ipv4        a boolean value to indicate whether message is received
+ *                       on IPv4.
+ * @return               -1 in case of an error, 0 otherwise.
  */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
-			    int read_addr, struct in6_addr *saddr,
-			    struct in6_addr *daddr,
-                            struct hip_stateless_info *msg_info,
-                            int encap_hdr_size, int is_ipv4)
+                             int read_addr, struct in6_addr *saddr,
+                             struct in6_addr *daddr,
+                             hip_portpair_t *msg_info,
+                             int encap_hdr_size, int is_ipv4)
 {
-        struct sockaddr_storage addr_from;
+	struct sockaddr_storage addr_from;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
 	struct sockaddr_in6 *addr_from6 =
 		((struct sockaddr_in6 *) &addr_from);
@@ -232,9 +250,12 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         int err = 0, len;
 	int cmsg_level, cmsg_type;
 
-	HIP_DEBUG("db1\n");
+	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
+
 	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size)) <= 0), -1,
 		 "Bad packet length (%d)\n", len);
+
+	memset(msg_info, 0, sizeof(hip_portpair_t));
 
         /* setup message header with control and receive buffers */
         msg.msg_name = &addr_from;
@@ -254,7 +275,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 
 	len = recvmsg(socket, &msg, 0);
 
-	HIP_DEBUG("db2\n");
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -274,18 +294,21 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		}
 	}
         
-        HIP_DEBUG("db3\n");
-
 	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
 	   hip_init_raw_sock_v6 */
 	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4) {
-		HIP_DEBUG("port number ntohs = %d\n",
+	if (is_ipv4 && encap_hdr_size == 0) {
+		/* Destination port is known from the bound socket. */
+		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
+		/* The NAT socket is bound on port 50500, thus packets
+		   received from NAT socket must have had 50500 as
+		   destination port. */
+		msg_info->dst_port = HIP_NAT_UDP_PORT; 
 	}
 
 	/* IPv4 addresses */
@@ -308,19 +331,18 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	}
 
 	if (saddr)
-		HIP_DEBUG_IN6ADDR("src\n", saddr);
+		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
-		HIP_DEBUG_IN6ADDR("dst\n", daddr);
+		HIP_DEBUG_IN6ADDR("dst", daddr);
 
  out_err:
 	return err;
 }
 
-
 int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-                            struct hip_stateless_info *msg_info,
+                            hip_portpair_t *msg_info,
                             int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,
@@ -331,7 +353,7 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int read_addr, struct in6_addr *saddr,
 			    struct in6_addr *daddr,
-			    struct hip_stateless_info *msg_info,
+			    hip_portpair_t *msg_info,
 			    int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, read_addr, saddr,

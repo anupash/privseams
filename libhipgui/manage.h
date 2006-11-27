@@ -15,6 +15,10 @@
 #include "hit_db.h"
 #include "widgets.h"
 
+/*!
+	\addtogroup libhipgui
+	@{
+*/
 
 /******************************************************************************/
 /* STRUCTS */
@@ -46,6 +50,10 @@ gboolean gui_update_list_value(GtkTreeModel *, GtkTreePath *,
 
 int gui_ask_new_hit(HIT_Remote *, int);
 
+void gui_set_nof_hui(int);
+void gui_clear_hiu(void);
+void gui_add_hiu(HIT_Remote *hit);
+
 int tooldlg_add_rgroups(HIT_Group *, void *);
 int tooldlg_add_lhits(HIT_Remote *, void *);
 int askdlg_add_rgroups(HIT_Group *, void *);
@@ -58,6 +66,8 @@ int all_add_local(HIT_Remote *hit, void *p);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 
+
+/*! @} addtogroup libhipgui */
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

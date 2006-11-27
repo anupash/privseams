@@ -499,7 +499,7 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	HIP_IFEL((bn2bin_safe(bn, encoded, len) != len), -1,
 		  "BN_bn2bin_safe\n");
 
-	HIP_HEXDUMP("encoded: ", encoded, len);
+	_HIP_HEXDUMP("encoded: ", encoded, len);
 
  out_err:
 	if(bn)
@@ -522,9 +522,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        int khi_data_len = key_rr_len + sizeof(khi_context_id);
        int khi_index = 0;
 
-       HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
+       _HIP_DEBUG("key_rr_len=%u\n", key_rr_len);
        HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
-       HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
+       _HIP_HEXDUMP("key_rr", key_rr, key_rr_len);
 
        /* Hash Input :=  Context ID | Input */
        khi_data = HIP_MALLOC(khi_data_len, 0);
@@ -536,14 +536,14 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        HIP_ASSERT(khi_index == khi_data_len);
 
-       HIP_HEXDUMP("khi data", khi_data, khi_data_len);
+       _HIP_HEXDUMP("khi data", khi_data, khi_data_len);
 
        /* Hash :=  SHA1( Expand( Hash Input ) ) */
        HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, khi_data,
 					khi_data_len, digest)), err,
 		"Building of digest failed\n");
 
-       HIP_HEXDUMP("digest", digest, sizeof(digest));
+       _HIP_HEXDUMP("digest", digest, sizeof(digest));
 
        bzero(hit, sizeof(hip_hit_t));
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
@@ -551,9 +551,9 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
 		-1, "encoding failed\n");
 
-       HIP_DEBUG_HIT("HIT before prefix: ", hit);
+       _HIP_DEBUG_HIT("HIT before prefix: ", hit);
        set_hit_prefix(hit);
-       HIP_DEBUG_HIT("HIT after prefix: ", hit);
+       _HIP_DEBUG_HIT("HIT after prefix: ", hit);
 
  out_err:
        if (khi_data)
@@ -742,7 +742,7 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 }
 
 void change_key_file_perms(char *filenamebase) {
-  char *pubfilename;
+  char *pubfilename = NULL;
   int pubfilename_len;
 
   pubfilename_len =
@@ -761,6 +761,9 @@ void change_key_file_perms(char *filenamebase) {
   chmod(pubfilename, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
 
  out_err:
+  if (pubfilename)
+    HIP_FREE(pubfilename);
+
   return;
 }
 
@@ -1112,7 +1115,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			      HIP_ENDPOINT_FLAG_ANON, 
 			      hostname);
     if (err) {
-      HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
+      HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
       goto out;
     }
     
@@ -1120,7 +1123,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			      HIP_ENDPOINT_FLAG_ANON,
 			      hostname);
     if (err) {
-      HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
+      HIP_ERROR("Failed to allocate and build RSA endpoint (anon).\n");
       goto out;
     }
     
@@ -1252,8 +1255,31 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     free(dsa_filenamebase_pub);
   if (rsa_filenamebase_pub)
     free(rsa_filenamebase_pub);
+  if (endpoint_dsa_hip)
+    free(endpoint_dsa_hip);
+  if (endpoint_rsa_hip)
+    free(endpoint_rsa_hip);
+  if (endpoint_dsa_pub_hip)
+    free(endpoint_dsa_pub_hip);
+  if (endpoint_rsa_pub_hip)
+    free(endpoint_rsa_pub_hip);
   
   return err;
+}
+
+int hip_any_sa_to_hit_sa(const struct sockaddr *from,
+		     const hip_hit_t *use_hit,
+		     struct sockaddr_in6 *to) {
+	to->sin6_family = AF_INET6;
+	ipv6_addr_copy(&to->sin6_addr, use_hit);
+	if (from->sa_family == AF_INET)
+		to->sin6_port = ((struct sockaddr_in *) from)->sin_port;
+	else if (from->sa_family == AF_INET6)
+		to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_port;
+	else
+		return -1;
+	
+	return 0;
 }
 
 #endif /* ! __KERNEL__ */

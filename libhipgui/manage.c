@@ -22,7 +22,7 @@ extern GtkTreeIter local_top, remote_top, process_top;
 /**
 	Tell GUI to add new local HIT into list.
 
-	@param New HIT to add.
+	@param hit New HIT to add.
 */
 void gui_add_local_hit(HIT_Local *hit)
 {
@@ -223,7 +223,7 @@ gboolean gui_update_list_value(GtkTreeModel *model, GtkTreePath *path,
 	Ask for new HIT from user.
 
 	@param hit Information of HIT to be accepted.
-	@param Whether in or outgoing packet.
+	@param inout Whether in or outgoing packet.
 	@return Returns 0 on add, -1 on drop.
 */
 int gui_ask_new_hit(HIT_Remote *hit, int inout)
@@ -233,12 +233,15 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	GtkDialog *dialog = (GtkDialog *)widget(ID_NHDLG);
 	HIT_Group *group;
 	char phit[128], *ps;
-	int err = 0;
+	int err = 0, w, h;
 
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
 	gdk_threads_enter();
+	gtk_window_get_size(dialog, &w, &h);
+	gtk_window_move(dialog, (gdk_screen_width() - w) / 2, (gdk_screen_height() - h) / 2);
+	gtk_window_set_keep_above(dialog, TRUE);
 	gtk_widget_show(dialog);
 	print_hit_to_buffer(phit, &hit->hit);
 	gtk_label_set_text(widget(ID_NH_HIT), phit);
@@ -266,7 +269,7 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	ps = gtk_entry_get_text(widget(ID_NH_URL));
 	URLCPY(hit->url, ps);
 	ps = gtk_entry_get_text(widget(ID_NH_PORT));
-	hit->port = atoi(ps);
+	URLCPY(hit->port, ps);
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
 	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
 
@@ -275,6 +278,59 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	in_use = 0;
 
 	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Set number of remote HITs in use.
+*/
+void gui_set_nof_hiu(int n)
+{
+	/* Variables. */
+	char str[320];
+	
+	gdk_threads_enter();
+	sprintf(str, "Number of remote HITs in use: %d", n);
+	gtk_label_set_text(widget(ID_HIUNUM), str);
+	gdk_threads_leave();
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Delete all remote HITs in use from list.
+*/
+void gui_clear_hiu(void)
+{
+	/* Variables. */
+	GtkWidget *w;
+	
+	gdk_threads_enter();
+	w = widget(ID_PHIUMODEL);
+	gtk_tree_store_clear(w);
+	gdk_threads_leave();
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+	Add remote HIT in use.
+*/
+void gui_add_hiu(HIT_Remote *hit)
+{
+	/* Variables. */
+	GtkWidget *w;
+	GtkTreeIter iter;
+
+	gdk_threads_enter();
+	w = widget(ID_PHIUMODEL);
+	gtk_tree_store_insert(w, &iter, NULL, 99);
+	gtk_tree_store_set(w, &iter, 0, hit->name, -1);
+	gdk_threads_leave();
 }
 /* END OF FUNCTION */
 

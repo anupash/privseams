@@ -1,7 +1,5 @@
 #include "beet.h"
 
-
-
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
  * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
@@ -192,9 +190,9 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-
 /**
- * hip_xfrm_state_modify - modify the Security Association
+ * Modifies a Security Association.
+ * 
  * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
@@ -216,7 +214,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int authkey_len,
 			  int preferred_family,
 			  int sport, int dport )
-			//struct hip_stateless_info *sa_info)
+			//hip_portpair_t *sa_info)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -226,16 +224,14 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		char   			buf[RTA_BUF_SIZE];
 	} req;
 
+	HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
+	HIP_DEBUG("hip_nat_status %d, sport %d, dport %d\n",
+		  hip_nat_status,  sport, dport);
+	HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
+	HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
+	
 	memset(&req, 0, sizeof(req));
 
-	HIP_DEBUG("***********************************************\n");
-	HIP_DEBUG("natstatus %d, sport %d, dport %d\n",  hip_nat_status, 
-				sport, dport);
-	
-	HIP_DEBUG_IN6ADDR("saddr in sa \n", saddr);
-	HIP_DEBUG_IN6ADDR("daddr in sa \n", daddr);
-	
-	
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
 	{	
 		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];
@@ -282,7 +278,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			 "blowfish", "cipher_null", "cipher_null"};
 		char *a_algo_names[] =
 			{"reserved", "sha1", "sha1", "md5",
-			 //			 "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
+			 //  "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
 			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
@@ -362,7 +358,8 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
         }
 
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
-//#if 0 /* XX FIXME: fill in information for UDP-NAT SAs */
+	
+        /** @todo Fill in information for UDP-NAT SAs. */
 	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
 	{
 		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
@@ -371,7 +368,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
-//#endif
+
 
 	req.xsid.spi = htonl(spi);
 	if (spi)
@@ -389,44 +386,6 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
-
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_try_to_find_by_peer_hit(peer_addr);	
-		if (entry) {
-			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				kea = hip_kea_find(&server_entry->hit_our);	
-				if (server_entry && kea) {
-					int err;
-					// TODO: check correctness
-					if (spi == kea->spi_out)		
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							peer_addr, &entry->hit_peer, 0, spi, 0, 0, 0);
-					else
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							&entry->local_address, &entry->hit_our, 0, spi, 0, 0, 0);
-						
-				}
-				else {
-					HIP_DEBUG("No server entry or kea base found");
-					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
-				}
-			}
-			else {
-				HIP_DEBUG("Escrow not in use - not sending update");
-			}
-		}
-		else {
-			HIP_DEBUG("Could not find ha_state entry");
-		}
-	} 		
-
-#endif //CONFIG_HIP_ESCROW
-	
-
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
@@ -448,7 +407,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired,
 		    int direction, int update,
 		    int sport, int dport) {
-			// struct hip_stateless_info *sa_info) {
+			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
@@ -475,49 +434,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
 				      sport, dport), -1);
-
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_find_byhits(src_hit, dst_hit);	
-		if (entry) {
-			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				if (server_entry) {
-					int err;
-					kea = hip_kea_find(&server_entry->hit_our);
-					if (kea->keastate == HIP_KEASTATE_VALID) {
-						// TODO: Fix values. Spi usage needs to be checked. 
-						// direction should propably be checked
-						err = hip_send_escrow_update(server_entry, 
-							(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
-							daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
-					
-						if (ipv6_addr_cmp(&kea->hit, dst_hit))
-							kea->spi_in = *spi;
-						else 
-							kea->spi_out = *spi;		
-					}
-					else {
-						HIP_DEBUG("keastate not valid - not sending update");
-					}
-				}
-				else {
-					HIP_DEBUG("No server entry found");
-					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
-				}
-			}
-			else {
-				HIP_DEBUG("Escrow not in use - not sending update");
-			}
-		}
-		else {
-			HIP_DEBUG("Could not find ha_state entry");
-		}
-	} 		
-
-#endif //CONFIG_HIP_ESCROW
 				      
  out_err:
 	return err;
@@ -574,7 +490,9 @@ void hip_delete_default_prefix_sp_pair() {
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
+	struct in6_addr ip;
 #if 0
+	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
 
@@ -582,7 +500,7 @@ int hip_setup_default_sp_prefix_pair() {
 	set_hit_prefix(&src_hit);
 	set_hit_prefix(&dst_hit);
 
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, NULL, NULL, 0, 0, 0),
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
 		-1);
 #endif
  out_err:

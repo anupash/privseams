@@ -41,8 +41,8 @@ static inline void prefetch(const void *x) {;}
  * the prev/next entries already!
  */
 static inline void __list_add(struct list_head *lnew,
-			      struct list_head *lprev,
-			      struct list_head *lnext)
+                              struct list_head *lprev,
+                              struct list_head *lnext)
 {
 	lnext->prev = lnew;
 	lnew->next = lnext;
@@ -52,8 +52,8 @@ static inline void __list_add(struct list_head *lnew,
 
 /**
  * list_add - add a new entry
- * @param new new entry to be added
- * @param head list head to add it after
+ * @param lnew new entry to be added
+ * @param lhead list head to add it after
  *
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
@@ -65,8 +65,8 @@ static inline void list_add(struct list_head *lnew, struct list_head *lhead)
 
 /**
  * list_add_tail - add a new entry
- * @param new new entry to be added
- * @param head list head to add it before
+ * @param lnew new entry to be added
+ * @param lhead list head to add it before
  *
  * Insert a new entry before the specified head.
  * This is useful for implementing queues.
@@ -192,7 +192,7 @@ static inline void list_splice(struct list_head *list, struct list_head *head)
  * @param list the new list to add.
  * @param head the place to add it in the first list.
  *
- * The list at @list is reinitialised
+ * The list at list is reinitialised
  */
 static inline void list_splice_init(struct list_head *list,
 				    struct list_head *head)
@@ -304,7 +304,8 @@ static inline void list_splice_init(struct list_head *list,
 		     prefetch(pos->member.next))
 
 /**
- * list_for_each_entry_safe - iterate over list of given type safe against removal of list entry
+ * Iterates over a list of given type safe against removal of list entry.
+ *
  * @param pos the type * to use as a loop counter.
  * @param n another type * to use as temporary storage
  * @param head the head for your list.

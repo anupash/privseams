@@ -50,7 +50,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		goto err_free;
 	}
 
-	HIP_HEXDUMP("DH public key: ", buffer, res);
+	_HIP_HEXDUMP("DH public key: ", buffer, res);
 
  err_free:
 	return res;
@@ -60,17 +60,17 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
  * hip_calculate_shared_secret - Creates a shared secret based on the
  * public key of the peer (passed as an argument) and own DH private key
  * (created beforehand).
- * public_value: Peer's Diffie-Hellman public key
- * group_id: the Diffie-Hellman group ID
- * len: the length of the public value
+ * @param public_value Peer's Diffie-Hellman public key
+ * @param group_id the Diffie-Hellman group ID
+ * @param len the length of the public value
  * @param buffer Buffer that holds enough space for the shared secret.
  * @param bufsize size of the buffer
  *
  * @return the length of the shared secret in octets if successful,
  * or -1 if an error occured.
  */
-int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id, signed int len, u8* buffer, 
-				int bufsize)
+int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
+                                signed int len, u8* buffer, int bufsize)
 {
 	int err;
 

@@ -47,6 +47,8 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 
 	list_for_each_safe(curr,iter,&db->db_head) {
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
+		if (tmp->r1)
+			hip_uninit_r1(tmp->r1);
 		if (tmp->host_id)
 			HIP_FREE(tmp->host_id);
 		HIP_FREE(tmp);
@@ -59,6 +61,7 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
  * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
  * @param db Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
  * @param lhi the local host id to be searched 
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  *
  * If lhi is null, finds the first used host id. 
  * If algo is HIP_ANY_ALGO, ignore algore comparison.
@@ -67,17 +70,19 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
  */
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
 							       const struct in6_addr *hit,
-							       int algo)
+							       int algo, int anon)
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(*(&id_entry->host_id)));
+		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
-		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(*(&id_entry->host_id)) == algo)))
+		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
+		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
 	HIP_DEBUG("***************RETURNING NULL***************\n");
 	return NULL;
+
 }
 
 /*
@@ -139,13 +144,14 @@ int hip_add_host_id(struct hip_db_struct *db,
 	struct hip_host_id *pubkey = NULL;
 	unsigned long lf;
 
-	HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("adding host id", &lhi->hit, sizeof(struct in6_addr));
 
 	HIP_ASSERT(&lhi->hit != NULL);
-	HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
+	_HIP_DEBUG("host id algo:%d \n", hip_get_host_id_algo(host_id));
 	HIP_IFEL(!(id_entry = (struct hip_host_id_entry *) HIP_MALLOC(sizeof(struct hip_host_id_entry),
-								      GFP_KERNEL)), -ENOMEM,
+								      0)), -ENOMEM,
 		 "No memory available for host id\n");
+	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 	len = hip_get_param_total_len(host_id);
 	HIP_IFEL(!(id_entry->host_id = (struct hip_host_id *)HIP_MALLOC(len, GFP_KERNEL)), 
 		 -ENOMEM, "lhost_id mem alloc failed\n");
@@ -162,7 +168,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	/* check for duplicates */
 	old_entry = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, 
-							 HIP_ANY_ALGO);
+							 HIP_ANY_ALGO, -1);
 	if (old_entry != NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("Trying to add duplicate lhi\n");
@@ -176,7 +182,7 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	list_add(&id_entry->next, &db->db_head);
 
-	HIP_DEBUG("Generating a new R1 set.\n");
+	_HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
 	
 	pubkey = hip_get_public_key(pubkey);
@@ -242,8 +248,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 
-	_HIP_DUMP_MSG(response);
-
 	/* Iterate through all host identities in the input */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 	  
@@ -284,13 +288,16 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
-	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
-	  hip_add_iface_local_route_lsi(lsi_tmp);
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+
+#if 0 /* LSIs are not supported yet  */
+	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
+	  hip_add_iface_local_route_lsi(lsi_tmp);
 	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
 		   "Failed to add LSI to the device\n");
+#endif
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
@@ -318,7 +325,7 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	HIP_WRITE_LOCK_DB(db);
 
-	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO);
+	id = hip_get_hostid_entry_by_lhi_and_algo(db, &lhi->hit, HIP_ANY_ALGO, -1);
 	if (id == NULL) {
 		HIP_WRITE_UNLOCK_DB(db);
 		HIP_ERROR("lhi not found\n");
@@ -337,6 +344,8 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 
 	/* free the dynamically reserved memory and
 	   set host_id to null to signal that it is free */
+	if (id->r1)
+		hip_uninit_r1(id->r1);
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
@@ -391,10 +400,11 @@ int hip_handle_del_local_hi(const struct hip_common *input)
  * local HIT that is found.
  * @param target Placeholder for the target
  * @param algo the algoritm to match, but if HIP_ANY_ALGO comparison is ignored.
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  *
  * Returns 0 if ok, and negative if failed.
  */
-int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
+int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 {
 	struct hip_host_id_entry *entry;
 	int err = 0;
@@ -402,7 +412,8 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo)
 
 	HIP_READ_LOCK_DB(&hip_local_hostid_db);
 	
-	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,NULL,algo);
+	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+						     NULL, algo, anon);
 	if (!entry) {
 		err=-ENOENT;
 		goto out;
@@ -447,7 +458,7 @@ struct hip_host_id *hip_get_host_id(struct hip_db_struct *db,
 
 	HIP_READ_LOCK_DB(db);
 
-	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo);
+	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_ERROR("No host id found\n");
@@ -695,7 +706,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
 	{
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
-		HIP_HEXDUMP("Found HIT:", &tmp->lhi.hit, 16);
+		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
 
 		err = func(tmp, opaque);
 		if (err) break;

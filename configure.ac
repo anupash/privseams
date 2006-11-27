@@ -4,7 +4,7 @@
 # Generated with autoscan and manually edited -Miika
 
 AC_INIT(hipl, main, hipl-users@freelists.org, hipl-main.tar.gz)
-AC_CONFIG_SRCDIR([tools/hipconf.c])
+AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
 # Checks for programs.
@@ -67,44 +67,8 @@ AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
-AC_MSG_CHECKING([for glibc version])
-AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 1
-%%%yes%%%
-#endif
-],[
-	glibc_version=2.1
-	usagi_libc=21
-],[
-	AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ == 2
-%%%yes%%%
-#endif
-	],[
-		glibc_version=2.2
-		usagi_libc=22
-	],[
-		AC_EGREP_CPP(%%%yes%%%, [
-#include <features.h>
-#if defined(__GLIBC__) && __GLIBC__ == 2 && (__GLIBC_MINOR__ == 3 || __GLIBC_MINOR__ == 4)
-%%%yes%%%
-#endif
-		],[
-			glibc_version=2.3
-			usagi_libc=23
-		],[
-			glibc_version=unknown
-			usagi_libc=unknown
-		])
-	])
-])
-AC_MSG_RESULT($glibc_version)
-if test x"$glibc_version" = x"unknown"; then
-	echo "Fatal, abort."
-	exit 1
-fi
+glibc_version=2.3
+usagi_libc=23
 AC_SUBST(usagi_libc)
 
 #hipl_opt_build=
@@ -155,22 +119,22 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
 
-AC_ARG_ENABLE(spam,
-             AC_HELP_STRING([--enable-spam],
-                            [HIP spamassassing extensions (default is NO)]),
-             [ac_cv_use_spam=$enableval], [ac_cv_use_spam=no])
-AC_CACHE_CHECK([whether to use spam],
-               [ac_cv_use_spam], [ac_cv_use_spam=no])
-if test x"$ac_cv_use_spam" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_SPAM, AC_PREREQ(2.53))
+AC_ARG_ENABLE(cookie,
+             AC_HELP_STRING([--enable-cookie],
+                            [HIP cookie extensions (default is NO)]),
+             [ac_cv_use_cookie=$enableval], [ac_cv_use_cookie=no])
+AC_CACHE_CHECK([whether to use cookie extensions],
+               [ac_cv_use_cookie], [ac_cv_use_cookie=no])
+if test x"$ac_cv_use_cookie" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(rvs,
              AC_HELP_STRING([--enable-rvs],
-                            [HIP Rendezvous Extensions (default is NO)]),
-             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=no])
+                            [HIP Rendezvous Extensions (default is YES)]),
+             [ac_cv_use_rvs=$enableval], [ac_cv_use_rvs=yes])
 AC_CACHE_CHECK([whether to use RVS],
-               [ac_cv_use_rvs], [ac_cv_use_rvs=no])
+               [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
@@ -187,10 +151,10 @@ fi
 
 AC_ARG_ENABLE(opportunistic,
              AC_HELP_STRING([--enable-opportunistic],
-                            [HIP opportunistic extensions (default is NO)]),
-             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=no])
+                            [HIP opportunistic extensions (default is YES)]),
+             [ac_cv_use_opportunistic=$enableval], [ac_cv_use_opportunistic=yes])
 AC_CACHE_CHECK([whether to use opportunistic],
-               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=no])
+               [ac_cv_use_opportunistic], [ac_cv_use_opportunistic=yes])
 if test x"$ac_cv_use_opportunistic" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPPORTUNISTIC, AC_PREREQ(2.53))
 fi
@@ -204,9 +168,9 @@ AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=no])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
+        AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
-
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],
@@ -241,8 +205,9 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_STATIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.a")
 AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
+AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
 
 AC_CONFIG_FILES([ Makefile
@@ -252,6 +217,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc22/Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
+                  opendht/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
