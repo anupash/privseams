@@ -1576,11 +1576,24 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	HIP_DEBUG_IN6ADDR("local", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("peer", &addr->address);
 
+	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
+
+
+	/* @todo: enabling 1s makes hard handovers work, but softhandovers
+	   fail */
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
 	hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
+#endif
+
+#if 1
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+
+	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+			      (int)entry->peer_udp_port, 0);
 #endif
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
@@ -1597,16 +1610,6 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
-	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
-	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
-
-#if 1
-	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
-
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
-#endif
-
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				       &addr->address, &entry->local_address,
 				       IPPROTO_ESP, 1, 0), -1,
