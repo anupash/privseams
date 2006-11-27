@@ -2072,7 +2072,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint16_t mask = 0;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 	
-	
+	HIP_DEBUG("XX FIXME: UPDATE KLUDGE: SLEEP 5 SECS\n");
+	sleep(9);
 	
 	add_locator = flags & SEND_UPDATE_LOCATOR;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
