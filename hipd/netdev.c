@@ -393,8 +393,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-
-
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
 		 "Sending of I1 failed\n");
  out_err:
