@@ -2072,8 +2072,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint16_t mask = 0;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 	
-	HIP_DEBUG("XX FIXME: UPDATE KLUDGE: SLEEP 5 SECS\n");
-	sleep(9);
+	//HIP_DEBUG("XX FIXME: UPDATE KLUDGE: SLEEP 5 SECS\n");
+	//sleep(9);
 	
 	add_locator = flags & SEND_UPDATE_LOCATOR;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -2244,13 +2244,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_ERROR("addr list copy failed\n");
 		goto out_err;
 	}
+
+	entry->state = HIP_STATE_ESTABLISHED;
+	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
+
 	/** @todo 5. The system SHOULD start a timer whose timeout value
 	    should be ..*/
 	goto out;
 
  out_err:
-	entry->state = HIP_STATE_ESTABLISHED;
-	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 	hip_set_spi_update_status(entry, esp_info_old_spi, 0);
 	/* delete IPsec SA on failure */
 	HIP_ERROR("TODO: delete SA\n");
