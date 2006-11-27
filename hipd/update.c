@@ -2247,10 +2247,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
-	if (err) {
-		HIP_ERROR("addr list copy failed\n");
-		goto out_err;
-	}
 	/** @todo 5. The system SHOULD start a timer whose timeout value
 	    should be ..*/
 	goto out;
@@ -2258,6 +2254,7 @@ int hip_send_update(struct hip_hadb_state *entry,
  out_err:
 	entry->state = HIP_STATE_ESTABLISHED;
 	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
+
 	hip_set_spi_update_status(entry, esp_info_old_spi, 0);
 	/* delete IPsec SA on failure */
 	HIP_ERROR("TODO: delete SA\n");
