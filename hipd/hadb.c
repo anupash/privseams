@@ -1271,6 +1271,8 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
 				   struct in6_addr *addr)
 {
+	HIP_DEBUG("\n");
+
 	if (!spi_out) {
 		HIP_ERROR("NULL spi_out\n");
 		return;
@@ -1288,6 +1290,8 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 		if (!err) {
 			ipv6_addr_copy(&spi_out->preferred_address, &a);
 			ipv6_addr_copy(&entry->preferred_address, &a);
+			HIP_DEBUG("default out addr\n",
+				  &entry->preferred_address);
 		} else
 			HIP_ERROR("couldn't select and set preferred address\n");
 	}
