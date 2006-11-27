@@ -25,8 +25,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
 	if (addr->sa_family == AF_INET6) {
-		struct sockaddr_in6 *a = SA2IP(addr);
-		HIP_DEBUG_INADDR("IPv6 addr", &a->sin6_addr);
+		struct in6_addr *a = SA2IP(addr);
+		HIP_DEBUG_INADDR("IPv6 addr", a);
 		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
@@ -36,7 +36,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(&a->sin6_addr)) {
+		    ipv6_addr_is_hit(a)) {
 			return 0;
 		} else {
 			return 1;
@@ -550,8 +550,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].locator_length =
 						sizeof(struct in6_addr) / 4;
 					/* For testing preferred address */
-				//	locators[i].reserved =
-				//		i == 0 ? htonl(1 << 31) : 0;
+					//locators[i].reserved =
+					//	i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
 					i++;
 				}
