@@ -25,7 +25,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
 	if (addr->sa_family == AF_INET6) {
-		struct sockaddr_in6 *a = SA2IP(addr);
+		struct in6_addr *a = SA2IP(addr);
+		HIP_DEBUG_INADDR("IPv6 addr", a);
 		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
@@ -35,8 +36,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(&a->sin6_addr))
+		    ipv6_addr_is_hit(a)) {
 			return 0;
+		}
 		return 1;
 	}
 
@@ -48,9 +50,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
 		if (a == INADDR_ANY ||
-                    a == INADDR_LOOPBACK ||
 		    a == INADDR_BROADCAST ||
-			//IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
+			IN_MULTICAST(a)||
 			IS_LSI32(a))
 				return 0;
 		return 1;
@@ -394,9 +395,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
-
-
-	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
@@ -534,8 +533,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].locator_length =
 						sizeof(struct in6_addr) / 4;
 					/* For testing preferred address */
-				//	locators[i].reserved =
-				//		i == 0 ? htonl(1 << 31) : 0;
+					//locators[i].reserved =
+					//	i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
  i++;
 				}

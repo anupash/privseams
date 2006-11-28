@@ -8,6 +8,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h> 
+#include <sys/socket.h>
 
 #include "hipconf.h"
 
@@ -22,7 +23,6 @@ void hip_close(int signal);
 void hip_exit(int signal);
 int init_random_seed();
 void hip_probe_kernel_modules();
-
 
 #endif /* _HIP_INIT */
 

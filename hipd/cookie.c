@@ -11,7 +11,7 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-#ifndef CONFIG_HIP_SPAM /* see also spam.c for overriding functions */
+#ifndef CONFIG_HIP_ICOOKIE /* see also spam.c for overriding functions */
 
 void hip_init_puzzle_defaults() {
 	return;
@@ -70,7 +70,7 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	return (base) % HIP_R1TABLESIZE;
 }
-#endif /* !CONFIG_HIP_SPAM */
+#endif /* !CONFIG_HIP_ICOOKIE */
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
@@ -134,7 +134,9 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
-	r1 = HIP_MALLOC(len, GFP_KERNEL);
+	/* Replaced memory allocation, Lauri Silvennoinen 02.08.2006 */
+        //r1 = HIP_MALLOC(len, GFP_KERNEL);
+	r1 = hip_msg_alloc();
 	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
 
@@ -267,7 +269,7 @@ struct hip_r1entry * hip_init_r1(void)
 }
 
 
-#ifndef CONFIG_HIP_SPAM
+#ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
@@ -296,7 +298,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
  err_out:
 	return 0;
 }
-#endif /* !CONFIG_HIP_SPAM */
+#endif /* !CONFIG_HIP_ICOOKIE */
 
 void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {

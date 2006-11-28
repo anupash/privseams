@@ -11,6 +11,7 @@ Group: System Environment/Kernel
 Requires: openssl
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
+Prefix: /usr/local
 
 %description
 
@@ -27,7 +28,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-./configure --bindir=%{buildroot}/%{_bindir} --sbindir=%{buildroot}/%{_sbindir} --datadir=%{buildroot}/%{_datadir} --sysconfdir=%{buildroot}/%{_sysconfdir} --libdir=%{buildroot}/%{_libdir} --includedir=%{buildroot}/%{_includedir} --infodir=%{buildroot}/%{_infodir} --mandir=%{buildroot}/%{_bindir} && make
+./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -42,13 +43,13 @@ make -C doc all
 
 %install
 rm -rf %{buildroot}
-install -d %{buildroot}/%{_bindir}
-install -d %{buildroot}/%{_sbindir}
-install -d %{buildroot}/%{_libdir}
-install -d %{buildroot}/%{_docdir}
+install -d %{buildroot}/%{prefix}/bin
+install -d %{buildroot}/%{prefix}/sbin
+install -d %{buildroot}/%{prefix}/lib
+install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
 make install
-install -m 644 doc/HOWTO.txt %{buildroot}/%{_docdir}
+install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
 %pre
@@ -70,16 +71,16 @@ rm -rf %{buildroot}
 # Note: we are not distributing everything from test directory, just essentials
 %files
 %defattr (-, root, root)
-%{_sbindir}/hipconf
-%{_sbindir}/hipd
-%{_bindir}/hipsetup
-%{_bindir}/conntest-client
-%{_bindir}/conntest-client-gai
-%{_bindir}/conntest-client-native
-%{_bindir}/conntest-client-native-user-key
-%{_bindir}/conntest-server
-%{_bindir}/conntest-server-native
-%{_libdir}/*
+%{prefix}/sbin/hipconf
+%{prefix}/sbin/hipd
+%{prefix}/bin/hipsetup
+%{prefix}/bin/conntest-client
+%{prefix}/bin/conntest-client-gai
+%{prefix}/bin/conntest-client-native
+%{prefix}/bin/conntest-client-native-user-key
+%{prefix}/bin/conntest-server
+%{prefix}/bin/conntest-server-native
+%{prefix}/lib/*
 %config /etc/rc.d/init.d/hipd
 %doc doc/HOWTO.txt doc/howto-html
 

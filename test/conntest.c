@@ -9,15 +9,11 @@
  * @return the socket id,
  * exits on error.
  */
-int create_serversocket(int proto, int port) {
+int create_serversocket(int type, int port) {
 	int fd, on = 1;
 	struct sockaddr_in6 addr;
-  
-	if (proto == IPPROTO_TCP) {
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-	} else {
-		fd = socket(AF_INET6, SOCK_DGRAM, 0);
-	}
+	
+	fd = socket(AF_INET6, type, 0);
 	if (fd < 0) {
 		perror("socket");
 		exit(1);
@@ -40,7 +36,7 @@ int create_serversocket(int proto, int port) {
 		exit(1);
 	}
 
-	if (proto == IPPROTO_TCP) {
+	if (type == SOCK_STREAM) {
 		if (listen(fd, 1) < 0) {
 			perror("listen");
 			close(fd);
@@ -60,7 +56,7 @@ int create_serversocket(int proto, int port) {
  * @return the socket id,
  * exits on error.
  */
-int main_server(int proto, int port)
+int main_server(int type, int port)
 {
 	int serversock;
 	int peer;
@@ -70,13 +66,13 @@ int main_server(int proto, int port)
 	int recvnum, sendnum;
 	char addrstr[INET6_ADDRSTRLEN];
 	
-	serversock = create_serversocket(proto, port);
+	serversock = create_serversocket(type, port);
   
 	peerlen = sizeof(struct sockaddr_in6);
   
 	while(1) {
     
-		if (proto == IPPROTO_TCP) {
+		if (type == SOCK_STREAM) {
 		  peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
 			if (peer < 0) {
 				perror("accept");
@@ -87,7 +83,7 @@ int main_server(int proto, int port)
       
 			while((recvnum = recv(peer, mylovemostdata, sizeof(mylovemostdata), 0)) > 0 ) {
 				mylovemostdata[recvnum] = '\0';
-				printf("mylovemostdate %s", mylovemostdata);
+				printf("Client sends: %s", mylovemostdata);
 				fflush(stdout);
 				if (recvnum == 0) {
 					close(peer);
@@ -100,7 +96,7 @@ int main_server(int proto, int port)
 					perror("send");
 					exit(2);
 				}
-				printf("mylovemostdate send back\n");
+				printf("Client has been replied.\n");
 			}
 		} else { /* UDP */
 			peerlen = sizeof(struct sockaddr_in6);
@@ -139,7 +135,7 @@ int main_server(int proto, int port)
  *
  * @return 0 on error, the sockid on success
  */
-int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
+int hip_connect_func(struct addrinfo *res, const char* filename)
 {
 	struct addrinfo *ai, hints;
 	int sock = 0;
@@ -188,7 +184,6 @@ int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
 		
 		printf("Trying to connect to %s\n", addr_str);
 		gettimeofday(&stats_before, NULL);
-		// Bing, failed with phit
 		e = connect(sock, ai->ai_addr, ai->ai_addrlen);
 		printf("After call conntest.c: connect to %s\n", addr_str);
 		
@@ -237,7 +232,7 @@ out_err:
  *
  * @return 1 with success, 0 otherwise.
  */
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name, int flags)
+int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int flags)
 {
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
@@ -254,7 +249,6 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		hints.ai_flags |= AI_KERNEL_LIST;
 	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = socktype;
-	hints.ai_protocol = proto;
 	
 	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	
@@ -278,7 +272,7 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
 	HIP_INFO("!!!! conntest.c Connecting...\n");
-	sock = hip_connect_func(proto, res, NULL);
+	sock = hip_connect_func(res, NULL);
 	if (!sock)
 		goto out_err;
 	HIP_INFO("!!!! conntest.c got sock\n");
@@ -315,10 +309,11 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		}
 	}
 
+	printf("=== connection test result: ");
 	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		printf("OK\n");
+		printf("OK ===\n");
 	} else {
-		printf("FAIL\n");
+		printf("FAIL ===\n");
 		return(1);
 	}
 
@@ -340,7 +335,7 @@ out_err:
  *
  * @return 1 with success, 0 otherwise.
  */
-int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
 	struct endpointinfo hints, *epinfo, *res = NULL;
 	struct timeval stats_before, stats_after;

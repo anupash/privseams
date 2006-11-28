@@ -8,8 +8,8 @@
   *
   */
 
-#ifdef CONFIG_HIP_SPAM
-#include "spam.h"
+#ifdef CONFIG_HIP_ICOOKIE
+#include "icookie.h"
 
 /* We need maintain a separate table for the K values of cookies because
    otherwise they are just overwritten when R1s are recreated periodically. */
@@ -27,9 +27,8 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	register u32 base=0;
 	int i;
 
-	/* The HIP spam assassin extensions require indexing based on the
-	   initiator HIT only. However, this may happen on the expense of
-	   DoS protection against zombies. */
+	/* Indexing based on the initiator HIT only: however, this may happen
+	   on the expense of DoS protection against zombies. */
 	for(i = 0; i < 4; i++) {
 		base ^= hit_i->s6_addr32[i];
 	}
@@ -103,4 +102,4 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 	return 0;
 }
 
-#endif /* CONFIG_HIP_SPAM */
+#endif /* CONFIG_HIP_ICOOKIE */

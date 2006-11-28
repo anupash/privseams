@@ -2,7 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "tracker.h"
-#include <opendht_interface.h>
+#include "opendht_interface.h"
+#include "debug.h"
 
 int updateHIT(char *hit, char *ip)
 {
@@ -91,22 +92,18 @@ int updateMAPS(char *fqdn, char *hit, char *ip)
   }
   else
   {
-   printf("TEST: HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
+    printf("TEST: HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
     //HIP_DEBUG("HIT->IP was not found from the DHT (%s->%s)\n",hit, ip);
   }
   free(dht_val);
   //end informative part
 
   //upload mapping fqdn->hit->ip to the DHT
-  printf("Upload mapping (fqdn->hit, %s->%s)\n", fqdn, hit);
-  //HIP_DEBUG("Upload mapping (fqdn->hit, %s->%s)\n", fqdn, hit);
   if ( ret = opendhtputhit(fqdn,hit) )
   {
     printf("Error: Put (fqdn->hit) failed with return value %d\n", ret);
     //HIP_DEBUG("Error: Put (fqdn->hit) failed with return value %d\n", ret); 
   }
-  printf("Upload mapping (hit->ip, %s->%s)\n", hit, ip);
-  //HIP_DEBUG("Upload mapping (hit->ip, %s->%s)\n", hit, ip);
   if ( ret = opendhtputhit(hit,ip) )
   {
     printf("Error: Put (hit->ip) failed with return value %d\n", ret);

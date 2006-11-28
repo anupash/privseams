@@ -8,15 +8,24 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <glib.h>
 #include <glib/glist.h>
 #include <string.h>
 
+#include "crypto.h"
+#include "ife.h"
+#include "state.h"
+#include "firewall_control.h"
+#include "firewall_defines.h"
+#include "esp_decrypt.h"
 #include "rule_management.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
+#include "utils.h"
+
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
@@ -24,6 +33,10 @@ int match_hit(struct in6_addr match_hit,
 	      int boolean);
 void set_stateful_filtering(int v);
 int get_stateful_filtering();
+
+int firewall_init();
+void firewall_close(int signal);
+void firewall_exit();
 
 #endif
 

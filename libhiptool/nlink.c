@@ -356,6 +356,8 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
                 }
         }
 
+	/* XX FIXME: having more that one NETLINK socket open at the same
+	   time is bad! See hipd.c:addresses comments */
         return if_nametoindex(name);
 }
 
@@ -497,7 +499,7 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 int hip_iproute_modify(struct rtnl_handle *rth,
 		       int cmd, int flags, int family, char *ip,
-		       char *dev, struct idxmap **idxmap)
+		       char *dev)
 {
         struct {
                 struct nlmsghdr         n;
@@ -505,9 +507,13 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                 char                    buf[1024];
         } req1;
         inet_prefix dst;
+	struct idxmap *idxmap[16];
         int dst_ok = 0, err;
-        int idx;
+        int idx, i;
+
         memset(&req1, 0, sizeof(req1));
+	for (i = 0; i < 16; i++)
+		idxmap[i] = NULL;
 
         req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
         req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
@@ -544,6 +550,9 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 		"netlink_talk failed\n");
 
  out_err:
+	for (i = 0; i < 16; i++)
+	  if (idxmap[i])
+	    HIP_FREE(idxmap[i]);
 
         return 0;
 }
@@ -574,28 +583,23 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	return err;
 }
 
-int hip_iproute_get(struct rtnl_handle *rth,
-		    struct in6_addr *src_addr,
-		    struct in6_addr *dst_addr,
-		    char *idev,
-		    char *odev,
-		    int family,
-		    struct idxmap **idxmap)
+int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
+		    struct in6_addr *dst_addr, char *idev, char *odev,
+		    int family, struct idxmap **idxmap)
 {
 	struct {
 		struct nlmsghdr 	n;
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
+
 	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
-	HIP_DEBUG("\n");
-
-	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
+	HIP_DEBUG_IN6ADDR("Getting route for destination address", dst_addr);
 
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
 		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
@@ -674,7 +678,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
         addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
         local_len = lcl.bytelen;
-	// FIXED : prefix now adds - Abi
+
 	if (req.ifa.ifa_prefixlen == 0)
                 req.ifa.ifa_prefixlen = lcl.bitlen;
 
@@ -788,7 +792,7 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 }
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
 {
-	encap->encap_type = UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
+	encap->encap_type = HIP_UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
 	encap->encap_sport = htons(sport);
 	encap->encap_dport = htons(dport);
 	encap->encap_oa.a4 = oa->s6_addr32[3];
@@ -968,7 +972,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
 {
         int h;
         struct ifinfomsg *ifi = NLMSG_DATA(n);
-        struct idxmap *im, **imp;
+        struct idxmap *im = NULL, **imp;
 	struct idxmap **idxmap = (struct idxmap **) arg;
         struct rtattr *tb[IFLA_MAX+1];
 
@@ -987,9 +991,10 @@ int ll_remember_index(const struct sockaddr_nl *who,
         h = ifi->ifi_index&0xF;
 
         for (imp=&idxmap[h]; (im=*imp)!=NULL; imp = &im->next)
-                if (im->index == ifi->ifi_index)
+		if (im->index == ifi->ifi_index)
                         break;
 
+        /* the malloc leaks memory */
         if (im == NULL) {
                 im = malloc(sizeof(*im));
                 if (im == NULL)
@@ -1012,6 +1017,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
                 memset(im->addr, 0, sizeof(im->addr));
         }
         strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
+
         return 0;
 }
 
@@ -1045,7 +1051,9 @@ int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
                 return -1;
         }
 
-        if (rtnl_dump_filter(rth, ll_remember_index, idxmap, NULL, NULL) < 0) {
+        if (rtnl_dump_filter(rth,
+			     /*ll_remember_index*/ NULL,
+			     idxmap, NULL, NULL) < 0) {
                 HIP_ERROR("Dump terminated\n");
                 return -1;
         }
@@ -1225,7 +1233,7 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
 
                 h = (struct nlmsghdr*)buf;
                 while (NLMSG_OK(h, status)) {
-                        int err;
+                        int err = 0;
 
                         if (nladdr.nl_pid != 0 ||
                             h->nlmsg_pid != rth->local.nl_pid ||
@@ -1250,7 +1258,8 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
                                 }
                                 return -1;
                         }
-                        err = filter(&nladdr, h, arg1);
+			if (filter)
+				err = filter(&nladdr, h, arg1);
                         if (err < 0)
                                 return err;
 

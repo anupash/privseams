@@ -45,6 +45,7 @@ gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 /** On window destroy. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
+	connhipd_quit();
 	gtk_main_quit();
 }
 /* END OF FUNCTION */
@@ -173,6 +174,7 @@ gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
 						   GtkTreeViewColumn *column, gpointer data)
 {
 	gtk_widget_show(widget(ID_TOOLWND));
+	gtk_toggle_button_set_active(widget(ID_TB_TW), TRUE);
 }
 /* END OF FUNCTION */
 

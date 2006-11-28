@@ -1,0 +1,5 @@
+Modified showip-addon for mozilla/firefox.
+Displays HITs differently from ipv6 addresses.
+
+If you modify the sources, just run create.sh
+to create new install package for mozilla.

@@ -44,9 +44,12 @@
 #  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
 #endif
 
-#define HIP_SELECT_TIMEOUT      1
-#define HIP_RETRANSMIT_MAX      10
-#define HIP_RETRANSMIT_INTERVAL 1 /* seconds */
+#define HIP_SELECT_TIMEOUT        1
+#define HIP_RETRANSMIT_MAX        10
+#define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
+#define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
+#define HIP_OPP_FALLBACK_INIT \
+           (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
 /* the interval with which the hadb entries are checked for retransmissions */
 #define HIP_RETRANSMIT_INIT \
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -68,7 +71,7 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 
 extern struct rtnl_handle hip_nl_route;
@@ -84,8 +87,17 @@ extern int hip_user_sock;
 extern int hip_agent_sock, hip_agent_status;
 extern struct sockaddr_un hip_agent_addr;
 
+extern int hip_firewall_sock, hip_firewall_status;
+extern struct sockaddr_un hip_firewall_addr;
+
+
 int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
+
+int hip_firewall_is_alive();
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys);
+int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
 #define IPV4_HDR_SIZE 20
 
