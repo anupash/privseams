@@ -41,6 +41,7 @@ const char *usage =
 "hip rst all|peer_hit\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
+"get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
@@ -270,7 +271,9 @@ int handle_hi(struct hip_common *msg,
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   if (action == ACTION_DEL)
-    return handle_del(msg, action, opt, optc);
+    return handle_hi_del(msg, action, opt, optc);
+  else if (action == ACTION_GET)
+    return handle_hi_get(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -380,8 +383,8 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_del(struct hip_common *msg, int action,
-	       const char *opt[], int optc) 
+int handle_hi_del(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
 {
  	int err;
  	int ret;
@@ -423,6 +426,47 @@ int handle_del(struct hip_common *msg, int action,
 out:
 	return err;
 }
+
+/**
+ * Handles the hipconf commands where the type is @c del.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int handle_hi_get(struct hip_common *msg, int action,
+		  const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), "Missing arguments\n", -1);
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	err = get_local_hits(NULL, &at);
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
+}
+
 
 /**
  * Handles the hipconf commands where the type is @c rst.
@@ -893,7 +937,7 @@ int main(int argc, char *argv[]) {
 
 	/* hipconf new hi does not involve any messages to kernel */
 	if (hip_get_msg_type(msg) == 0){
-	  HIP_INFO("!!!!  new hi does not involve any messages to kernel\n");
+	  _HIP_DEBUG("!!!!  new hi does not involve any messages to kernel\n");
 	  goto skip_msg;
 	}
 	

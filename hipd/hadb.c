@@ -230,9 +230,10 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
-	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 	hip_hastate_t st;
 	hip_ha_t *tmp;
+
+	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 
 	/* assume already locked ha */
 
@@ -301,14 +302,14 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 				    struct in6_addr *local_addr,
 				    struct in6_addr *peer_addr)
 {
+	int err = 0;
+	hip_ha_t *entry;
+	
 	HIP_DEBUG("hip_hadb_add_peer_info_complete() invoked.\n");
 	HIP_DEBUG_HIT("Our HIT", local_hit);
 	HIP_DEBUG_HIT("Peer HIT", peer_hit);
 	HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
-	
-	int err = 0;
-	hip_ha_t *entry;
 	
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
@@ -329,7 +330,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	/* If global NAT status is on, that is if the current host is behind
 	   NAT, the NAT status of the host association is set on and the send
 	   function set is set to "nat_xmit_func_set". */
-	if(hip_nat_status)
+	if(hip_nat_status && !IN6_IS_ADDR_V4MAPPED(peer_addr))
 	{
 		entry->nat_mode = 1;
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
@@ -377,10 +378,10 @@ out_err:
 int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 				   void *peer_map_void)
 {
-	HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
 	struct hip_peer_map_info *peer_map = peer_map_void;
 	int err = 0;
 
+	HIP_DEBUG("hip_hadb_add_peer_info_wrapper() invoked.\n");
 	HIP_IFEL(hip_hadb_add_peer_info_complete(&entry->lhi.hit,
 						 &peer_map->peer_hit,
 						 &peer_map->our_addr,
@@ -393,12 +394,13 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 {
-	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
-	HIP_DEBUG_HIT("Peer HIT", peer_hit);
-	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
+
+	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
+	HIP_DEBUG_HIT("Peer HIT", peer_hit);
+	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
@@ -1269,6 +1271,8 @@ uint32_t hip_hadb_relookup_default_out(hip_ha_t *entry)
 void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out,
 				   struct in6_addr *addr)
 {
+	HIP_DEBUG("\n");
+
 	if (!spi_out) {
 		HIP_ERROR("NULL spi_out\n");
 		return;
@@ -1286,6 +1290,8 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 		if (!err) {
 			ipv6_addr_copy(&spi_out->preferred_address, &a);
 			ipv6_addr_copy(&entry->preferred_address, &a);
+			HIP_DEBUG("default out addr\n",
+				  &entry->preferred_address);
 		} else
 			HIP_ERROR("couldn't select and set preferred address\n");
 	}
@@ -1488,7 +1494,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if (new) {
 		HIP_DEBUG("create new addr item to SPI list\n");
 		/* SPI list does not contain the address, add the address to the SPI list */
-		new_addr = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+		new_addr = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), 0);
 		if (!new_addr) {
 			HIP_ERROR("item HIP_MALLOC failed\n");
 			err = -ENOMEM;

@@ -29,6 +29,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int err = 0;
 	int msg_type;
 	int n = 0;
+	hip_ha_t * server_entry = NULL;
+	HIP_KEA * kea = NULL;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -147,10 +149,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  break;
 #endif
 #ifdef CONFIG_HIP_ESCROW
-/** @todo create kea with own hit (params: server_hit, rules) 
-    - send i1 hip_add_peer_map */
 	case SO_HIP_ADD_ESCROW:
-		HIP_DEBUG("handling escrow user message.\n");
+		HIP_DEBUG("handling escrow user message (add).\n");
 	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
 							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
@@ -158,44 +158,72 @@ int hip_handle_user_msg(struct hip_common *msg,
 							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		
-		HIP_KEA *kea;
-
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
-		
 		HIP_DEBUG("Added kea base entry.\n");
-		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
-		// TODO: how to know later that we want to do registration? with kea state?
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea) {
-			HIP_DEBUG("Found kea base entry.\n");
-			kea->keastate = HIP_KEASTATE_REGISTERING;
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!\n");
-		}
+		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
+	         "for_each_hi err.\n");	
+		break;
+	
+	case SO_HIP_DEL_ESCROW:
 		
+                HIP_DEBUG("handling escrow user message (delete).\n");
+                HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+                        -1, "no hit found\n");
+                HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
+                        HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+                HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
+                        -1, "Could not find server entry");
+                HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
+                	"Could not find kea base entry");
+                if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
+                        // Cancel registration (REG_REQUEST with zero lifetime)
+                        HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
+                                "for_each_hi err.\n");
+                        hip_keadb_put_entry(kea);
+                        HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
+                                0, "for_each_hi err.\n");	
+                        HIP_IFEL(hip_kea_remove_base_entries(), 0,
+                                "Could not remove base entries\n");	
+                        HIP_DEBUG("Removed kea base entries.\n");	
+		}
 		/** @todo Not filtering I1, when handling escrow user message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
 			 -1, "sending i1 failed\n");
-	
 		break;
 		
 	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling escrow service user message.\n");
+		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_ESCROW_SERVICE), -1);
+		HIP_IFEL(hip_services_add(HIP_ESCROW_SERVICE), -1, 
+                        "Error while adding service\n");
 	
 		hip_services_set_active(HIP_ESCROW_SERVICE);
 		if (hip_services_is_active(HIP_ESCROW_SERVICE))
 			HIP_DEBUG("Escrow service is now active.\n");
-		err = hip_recreate_all_precreated_r1_packets();	
+		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
+                        "Failed to recreate R1-packets\n"); 
+                
+                if (hip_firewall_is_alive()) {
+                        HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
+                                "Failed to deliver activation message to firewall\n");
+                }
+                
 		break;
+                
+        case SO_HIP_CANCEL_ESCROW:
+                HIP_DEBUG("Handling del escrow service -user message.\n");
+                if (hip_firewall_is_alive()) {
+                         HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
+                                "Failed to deliver activation message to firewall\n");
+                }
+                HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
+                        "Error while removing service\n");
+                HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
+                        "Failed to recreate R1-packets\n"); 
+                
+                break;                
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS

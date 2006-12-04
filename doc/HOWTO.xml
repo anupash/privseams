@@ -217,14 +217,11 @@
       Next, build the hipd, libinet6, tools and test directory as follows:
     </para>
     <para>
-      ./configure &amp;&amp; make
+      ./configure &amp;&amp; make install
     </para>
     <para>
-      It is not necessary to "make install" the applications. You can
-      execute them straight from their source directories. Note that making
-      from the top directory does not currently build e.g. java libraries or
-      telnet. Follow the instructions presented later in this document to
-      build them.
+      Note: you can also try "make deb" or "make rpm" if you want to build a
+      binary package.
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
@@ -556,6 +553,11 @@
     <para>
       Note: the username must be non-root.
     </para>
+    <para>
+      There is a limitation in the current version of the native API. It does
+      not support wildcard addresses at the server. This means that you have to
+      select the correct HIT at the client.
+    </para>
   </chapter>
   <chapter>
 
@@ -579,7 +581,7 @@
     a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
     </para>
     <para>
-     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libhiptool.so</emphasis>
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so</emphasis>
     </para>
     <para>
       2. Override the resolver library dynamically:
@@ -666,21 +668,13 @@
    the initial I1 packet to the current location of the responder.
   </para>
   <para>
-   Prerequisites:
-  </para>
-  <para>
-    ./configure --enable-rvs
-  </para>
-  <para>
    The participants:
   </para>
   <para>
   I = Initiator, RVS = RendezVous Server, R = Responder
   </para>
   <para>
-   For now it is best if all the hosts involved in communications have the
-   rendezvous mechanism option enabled ("./configure --enable-rvs"). Although,
-   for the initiator this should not be a requirement. Also, you should have run
+   You should have run
    the base exchange once without rendezvous server to get familiar how the
    "/etc/hosts" and "/etc/hip/hosts" are configured.
   </para>
@@ -831,29 +825,26 @@
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
 
+        <para>Ip6tables must define that HIP and ESP packets are
+              queued in the userspace.  These rules are inserted
+              automatically at the head of each chain. Other rules that might
+              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              inserted before them.</para>
+
 <itemizedlist>
-
-        <listitem><para>ip6_queue must be loaded with: "modprobe ip6_queue"</para></listitem>
-
-        <listitem><para>Ip6tables must define that HIP and ESP packets are
-              queued in the user-space.  These rules must be inserted
-              so that they precede any other firewall rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50).
-              If ESP packet filtering is not necessary the ip6tables
-              rules concerning ESP packets can be left out.</para></listitem>
-
         <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
+</itemizedlist>
 
-        <listitem><para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
+        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
               to one, if you want your firewall to forward IPv6 traffic.
-              Remember to configure IPv6 routes to the hosts.</para></listitem>
+              Remember to configure IPv6 routes to the hosts.</para>
 
-        <listitem><para>Firewall can be started with "./firewall &lt;file_name&gt;"
+        <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
               is path of the file containing the firewall rules and
               timeout value is the connection timeout value in
@@ -862,23 +853,25 @@
               used. Rules in the file must be separated with
               newline. The firewall (currently) prints out debug
               information from rule parsing test functions and from
-              filtering packets.</para></listitem>
+              filtering packets.</para>
 
-        <listitem><para>Rules follow (loosely) the syntax of Linux Iptables with
-        following syntax:</para></listitem>
+        <para>Rules follow (loosely) the syntax of Linux Iptables with
+        following syntax.</para>
 
-        <listitem><para>Basic format of rule:</para></listitem>
+        <para>Basic format of rule is: HOOK [match] TARGET</para>
 
-        <listitem><para>HOOK [match] TARGET</para></listitem>
-
+<itemizedlist>
         <listitem><para>Here HOOK is one of the netfilter hooks: "INPUT",
               "OUTPUT", "FORWARD".  Target is either "ACCEPT" or
               "DROP", whether packet should be allowed or not.  Match
               is a combination of filtering option described below.</para></listitem>
+</itemizedlist>
 
-        <listitem><para>Filtering options:</para></listitem>
+        <para>Filtering options:</para>
 
-        <listitem><para>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</para></listitem>
+<variablelist>
+<varlistentry>
+        <term>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</term>
 
         <listitem><para>Matches source HIT of packet. HI can be given with
               --hi option and by defining path to a public key
@@ -886,30 +879,40 @@
               verified. The file name must contain either "_rsa_" or
               "_dsa_" to define whether RSA or DSA is used as
               algorithm.</para></listitem>
+</varlistentry>
  
-        <listitem><para>-dst_hit [!] &lt;hit&gt;</para></listitem>
+<varlistentry>
+        <term>-dst_hit [!] &lt;hit&gt;</term>
 
         <listitem><para>Matches destination HIT of packet.</para></listitem>
+</varlistentry>
 
-        <listitem><para>-type [!] &lt;hip packet type&gt;</para></listitem>
+<varlistentry>
+        <term>-type [!] &lt;hip packet type&gt;</term>
 
         <listitem><para>Matches HIP packet type. Type is one of following: 
               "I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE",
               "CLOSE_ACK"</para></listitem>
+</varlistentry>
 
-        <listitem><para>-i [!] &lt;incoming interface&gt;</para></listitem>
+<varlistentry>
+        <term>-i [!] &lt;incoming interface&gt;</term>
 
         <listitem><para>Matches incoming interface. Argument contains name of
               the interface. Can not be used for rules in OUTPUT hook
               as packet has no incoming interface in that case.</para></listitem>
+</varlistentry>
 
-        <listitem><para>-o [!] &lt;outgoing interface&gt;</para></listitem>
+<varlistentry>
+        <term>-o [!] &lt;outgoing interface&gt;</term>
 
         <listitem><para>Matches outgoing interface. Argument contains name of
               the interface. Can not be used for rules in INPUT hook
               as packet has no outgoing interface in that case.</para></listitem>
 
-        <listitem><para>-state [!] &lt;state&gt; --verify_responder --accept_mobile</para></listitem>
+</varlistentry>
+<varlistentry>
+        <term>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</term>
 
         <listitem><para>Matches state of HIP association: "NEW" or
               "ESTABLISHED". ESP packets are also filtered as part of
@@ -920,17 +923,26 @@
               for existing connection when a mobile host enters the
               network protected by the firewall. Please see
               <xref linkend="handover" /> to see how mobility events
-              can be tested.</para></listitem>
+              can be tested. When option --decrypt_contents is set firewall 
+              tries to decrypt ESP-packet contents. This can be done if 
+              session data has been delivered to firewall. See <xref
+              linkend="escrow" />
+               for details. Currently decrypted packet contents 
+              can be viewed in firewall output.</para></listitem>
+</varlistentry>
+</variablelist>
 
-        <listitem><para>If you get "No buffer space available" errors, please disable
+
+        <para>If you get "No buffer space available" errors, please disable
               all of the firewall debug messages (./configure --disable-debug;
               make clean all). This can
               occur when moving large files and the firewall cannot serve
               with sufficient speed when it has to display debug messages.
-        </para></listitem>
+        </para>
 
-        <listitem><para>Management interface:</para></listitem>
+        <para>Management interface:</para>
 
+<itemizedlist>
         <listitem><para>Firewall management interface contains functions for
               altering rules of running firewall. Functions are
               defined in firewall/rule_management.h and implemented in
@@ -968,7 +980,9 @@
 
         <listitem><para>int flush(int hook): Clears all rules.</para></listitem>
 </itemizedlist>
+
   </chapter>
+
   <chapter>
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
@@ -1163,12 +1177,6 @@
            ./autogen.sh
     </para></listitem>
     <listitem><para>
-              Run configure with flag --enable-opportunistic. See "./configure --help" for a full list of options
-    </para></listitem>
-    <listitem><para>
-           ./configure --enable-opportunistic
-    </para></listitem>
-    <listitem><para>
               Run make
     </para></listitem>
     <listitem><para>
@@ -1181,10 +1189,7 @@
            hipd/hipd
     </para></listitem>
     <listitem><para>
-            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode
-    </para></listitem>
-    <listitem><para>
-           tools/hipconf set opp on
+            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
            Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="basictest" />. 
@@ -1219,6 +1224,69 @@
 	<para>
 		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
 	</para>
+  </chapter>
+  <chapter id="escrow">
+  	<title>Using Key Escrow</title>
+  	<para>
+  	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
+  	offered by the server, sends session data of all its HIP asssociations to the server. On the server HIP Firewall 
+  	can be used to decrypt ESP-traffic when keys are available. For testing escrow functionality three machines are needed, 
+  	the server offering escrow service, the client who registers to the server and an other host which is communicating 
+  	with the client. The session data of the association between the client and the other host are then delivered to the 
+  	escrow server. If the server is working as a firewall between the hosts HIP firewall can decrypt the ESP-traffic.  
+  	</para>
+  	<para>
+  	Follow these steps to compile and initialize escrow functionality:
+  	</para>
+  	<para>
+  	&nbsp; 1. Run autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; ./autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	</para>
+  	<para>
+  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	</para>
+  	<para>
+  	&nbsp; 3. Run make
+  	</para>
+  	<para>
+  	&nbsp; make
+  	</para>
+  	<para>
+  	&nbsp; 4. Start hip daemon on all machines
+  	</para>
+  	<para>
+  	&nbsp; ./hipd/hipd -b
+  	</para>
+  	<para>
+  	&nbsp; 5. On the server enable escrow service using hipconf
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add service escrow
+  	</para>
+  	<para>
+  	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
+  	</para>
+  	<para>
+  	 On client host register to escrow server using hipconf.
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add escrow hit address
+  	</para>
+  	<para>
+  	After this connection between client and the other host can be tested using conntest-server and conntest-client-gai. 
+  	</para>
+  	<para>
+  	&nbsp; ./test/conntest-server tcp 5000 
+  	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	</para>
+  	<para>
+  	During base exchange session data is sent to escrow server in update-messages. 
+  	</para>
   </chapter>
 </book>    
 

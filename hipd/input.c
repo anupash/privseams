@@ -760,6 +760,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	struct hip_spi_in_item spi_in_data;
 	uint16_t mask = 0;
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
+        int *reg_type = NULL;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -832,13 +833,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
 		 -EINVAL, "Could not find acceptable hip transform suite\n");
-	entry->hip_transform = transform_hip_suite;
 	
 	/* Select only one transform */
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_HIP_TRANSFORM,
 					   &transform_hip_suite, 1), -1, 
 		 "Building of HIP transform failed\n");
-
+	
+	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
+	
 	/********** ESP-ENC transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
 
@@ -929,6 +931,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
+	entry->hip_transform = transform_hip_suite;
 
 	/* let the setup routine give us a SPI. */
 	HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
@@ -951,7 +954,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	esp_info->new_spi = htonl(spi_in);
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
-
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits, 
+        &ctx->input->hitr, &spi_in, transform_esp_suite, &ctx->esp_in, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }             
+#endif //CONFIG_HIP_ESCROW
+				      
 	/* Check if the incoming R1 has a REG_REQUEST parameter. */
 
 	/* Add service types to which the current machine wishes to
@@ -960,54 +971,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	   state regarding to registering. This state is set before
 	   sending the I1 packet to peer (registrar). */
 
-	/** @todo This is just a temporary kludge until something more 
-	    elegant is build. Rationalize this. */
-
-#ifdef CONFIG_HIP_RVS	
-	/* Check that we have requested rvs service and that the 
-	   peer is rvs capable. */
-	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
-	    (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
-		HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
-		request_rvs = 1;
-		type_count++;
-	}
-#endif /* CONFIG_HIP_RVS */
-#ifdef CONFIG_HIP_ESCROW	
-	/* ESCROW */
-	HIP_KEA *kea;
-	kea = hip_kea_find(&entry->hit_our);
-	if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-		request_escrow = 1;
-		type_count++;
-	}
-	if (kea) {
-		hip_keadb_put_entry(kea);
-	}
-#endif /* CONFIG_HIP_ESCROW */
-
-	/* Have to use malloc() here, otherwise the macros will
-	   "jump into scope of identifier with variably modified type". */
-	int *reg_type = NULL;
-	HIP_IFEL(!(reg_type = HIP_MALLOC(type_count * sizeof(int), 0)),
-		 -ENOMEM, "Not enough memory to rvs_addresses.");
-
-	if(type_count == 2){
-		reg_type[0] = HIP_ESCROW_SERVICE;
-		reg_type[1] = HIP_RENDEZVOUS_SERVICE;
-	}
-	else if(request_escrow){
-		reg_type[0] = HIP_ESCROW_SERVICE;
-	}
-	else if(request_rvs){
-		reg_type[0] = HIP_RENDEZVOUS_SERVICE;
-	}
-		
+        // TODO: check also unregistrations   
+        type_count = hip_get_incomplete_registrations(&reg_type, entry, 1); 
+	
 	if (type_count > 0) {
 		HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-		HIP_IFEL(hip_build_param_reg_request(
-				 i2, 0, reg_type, type_count, 1),
-			 -1, "Could not build REG_REQUEST parameter\n");
+		/* TODO: Lifetime value usage. Now requesting maximum lifetime (255 ~= 178 days) always */
+                HIP_IFEL(hip_build_param_reg_request(i2, 255, reg_type, 
+                type_count, 1), -1, "Could not build REG_REQUEST parameter\n");
 	}
 		
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
@@ -1052,7 +1023,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEB(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data), -1, HIP_UNLOCK_HA(entry));
 
 	entry->esp_transform = transform_esp_suite;
-	
+	HIP_DEBUG("Saving base exchange encryption data to entry \n");
+	HIP_DEBUG_HIT("our_hit: ", &entry->hit_our);
+	HIP_DEBUG_HIT("peer_hit: ", &entry->hit_peer);
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -1196,11 +1169,13 @@ int hip_handle_r1(struct hip_common *r1,
 				kea = hip_kea_find(&entry->hit_our);
 				if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
 					HIP_DEBUG("Registering to escrow service.\n");
+					hip_keadb_put_entry(kea);
 				} 
 				else if(kea){
 					kea->keastate = HIP_KEASTATE_INVALID;
 					HIP_DEBUG("Not doing escrow registration, "\
 						  "invalid kea state.\n");
+					hip_keadb_put_entry(kea);	  
 				}
 				else{
 					HIP_DEBUG("Not doing escrow registration.\n");
@@ -1228,6 +1203,9 @@ int hip_handle_r1(struct hip_common *r1,
 		kea = hip_kea_find(&entry->hit_our);
 		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
 			kea->keastate = HIP_KEASTATE_INVALID;
+		if (kea)
+			hip_keadb_put_entry(kea);	
+		//TODO: Remove base keas	
 	}
 #endif /* CONFIG_HIP_ESCROW */
 
@@ -1367,7 +1345,7 @@ int hip_receive_r1(struct hip_common *r1,
 	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
-	wmb();
+	//wmb();
 	state = entry->state;
 	
 	HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
@@ -1413,13 +1391,17 @@ int hip_create_r2(struct hip_context *ctx,
 		  hip_ha_t *entry,
 		  hip_portpair_t *i2_info)
 {
-	uint32_t spi_in;
+	struct hip_reg_request *reg_request = NULL;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
 	uint16_t mask = 0;
+	uint8_t lifetime;
+	uint32_t spi_in;
+	hip_rva_t *rva = NULL;
 #ifdef CONFIG_HIP_RVS
 	int create_rva = 0;
 #endif
+        
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
 	i2 = ctx->input;
@@ -1434,7 +1416,6 @@ int hip_create_r2(struct hip_context *ctx,
 				      &entry->hit_peer);
 
  	/********** ESP_INFO **********/
-	//barrier();
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
 					  0, spi_in), -1,
@@ -1444,43 +1425,15 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 
-	uint8_t lifetime;
-	struct hip_reg_request *reg_request;
 	reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
 				
 	if (reg_request) {
-		HIP_DEBUG("Found REG_REQUEST parameter.\n");
-
-		int *accepted_requests, *rejected_requests;
-		int request_count, my_request_count, accepted_count, rejected_count;
-		uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
-			
-		/** @todo - sizeof(reg_request->lifetime) instead of - 1 ?*/
-		request_count = hip_get_param_contents_len(reg_request) - 1; // leave out lifetime field
-		my_request_count = hip_get_param_contents_len(reg_request)
-			- sizeof(reg_request->lifetime); // leave out lifetime field
-			
-		HIP_DEBUG("request_count: %d\n", request_count);
-		HIP_DEBUG("my_request_count: %d\n", my_request_count);
-
-		accepted_count = hip_check_service_requests(&entry->hit_our, (types + 1),
-							    request_count, &accepted_requests,
-							    &rejected_requests);
-		rejected_count = request_count - accepted_count;
-			
-		HIP_DEBUG("Accepted %d, rejected: %d\n", accepted_count, rejected_count);
-		if (accepted_count > 0) {
-			lifetime = reg_request->lifetime;
-			HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-			HIP_IFEL(hip_build_param_reg_request(r2, lifetime, accepted_requests, 
-							     accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
-		}
-		if (rejected_count > 0) {
-			lifetime = reg_request->lifetime;
-			HIP_DEBUG("Building REG_FAILED parameter");
-			HIP_IFEL(hip_build_param_reg_failed(r2, 1, rejected_requests, 
-							    rejected_count), -1, "Building of REG_FAILED failed\n");
-		}
+                uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+                int type_count = hip_get_param_contents_len(reg_request)
+                        - sizeof(reg_request->lifetime); // leave out lifetime field
+                /* Check service requests and build reg_response and/or reg_failed */
+                hip_handle_registration_attempt(entry, r2, reg_request, 
+                        (types + sizeof(reg_request->lifetime)), type_count);
 	}
 	else {
 		HIP_DEBUG("No REG_REQUEST found in I2.\n");
@@ -1505,23 +1458,11 @@ int hip_create_r2(struct hip_context *ctx,
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
-#ifdef CONFIG_HIP_ESCROW
-	// Add escrow association to database
-	// TODO: definition
-	HIP_KEA *kea;	
-	HIP_IFE(!(kea = hip_kea_create(&entry->hit_peer, GFP_KERNEL)), -1);
-	HIP_HEXDUMP("Created kea base entry with peer hit: ", &entry->hit_peer, 16);
-	kea->keastate = HIP_KEASTATE_VALID;
-	HIP_IFEBL(hip_keadb_add_entry(kea), -1, hip_keadb_put_entry(kea), 
-		"Error while inserting KEA to keatable");
-	HIP_DEBUG("Added kea entry");
-#endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
 	/* Insert rendezvous association with appropriate xmit-function to
 	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
-	hip_rva_t *rva;
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 -1, "Inserting rendezvous association failed..\n");
@@ -1533,7 +1474,7 @@ int hip_create_r2(struct hip_context *ctx,
  out_err:
 	if (r2)
 		HIP_FREE(r2);
-	if (clear && entry) {/* Hmm, check */
+        if (clear && entry) {/* Hmm, check */
 		HIP_ERROR("TODO: about to do hip_put_ha, should this happen here ?\n");
 		hip_put_ha(entry);
 	}
@@ -1755,6 +1696,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 			//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
 		}
+		entry->hip_transform = hip_tfm;
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
@@ -1834,6 +1776,16 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	/* ok, found an unused SPI to use */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(i2_saddr, i2_daddr, &ctx->input->hits, 
+        &ctx->input->hitr, &spi_in, esp_tfm, &ctx->esp_in, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW
+                          
+
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
@@ -1862,7 +1814,16 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	/* @todo Check if err = -EAGAIN... */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
-	
+
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(i2_daddr, i2_saddr, &ctx->input->hitr, 
+        &ctx->input->hits, &spi_out, esp_tfm, &ctx->esp_out, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW
+
 	HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 				       &ctx->input->hitr,
 				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
@@ -1911,7 +1872,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
-		wmb();
 #ifdef CONFIG_HIP_RVS
 		/** @todo this should be dynamic (the rvs information should
 		   be stored in the HADB) instead of static */
@@ -1989,7 +1949,6 @@ int hip_receive_i2(struct hip_common *i2,
 	if (!entry) {
 		state = HIP_STATE_UNASSOCIATED;
 	} else {
-		barrier();
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
@@ -2066,6 +2025,9 @@ int hip_handle_r2(struct hip_common *r2,
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
 	int retransmission = 0;
+        int * reg_types = NULL;
+        int type_count = 0;
+        
 
 	_HIP_DEBUG("hip_handle_r2() invoked.\n");
 	if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -2107,6 +2069,8 @@ int hip_handle_r2(struct hip_common *r2,
 
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
+	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
+
 	err = hip_add_sa(r2_daddr, r2_saddr,
 			 &ctx->input->hitr, &ctx->input->hits,
 			 &spi_recvd, tfm,
@@ -2127,6 +2091,15 @@ int hip_handle_r2(struct hip_common *r2,
 	}
 	/* XXX: Check for -EAGAIN */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
+
+#ifdef CONFIG_HIP_ESCROW
+    if (hip_deliver_escrow_data(r2_daddr, r2_saddr, &ctx->input->hitr, 
+        &ctx->input->hits, &spi_recvd, tfm, &ctx->esp_out, 
+        HIP_ESCROW_OPERATION_ADD) != 0)
+    {  
+        HIP_DEBUG("Could not deliver escrow data to server\n");
+    }
+#endif //CONFIG_HIP_ESCROW                          
 
 	/* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
@@ -2152,53 +2125,14 @@ int hip_handle_r2(struct hip_common *r2,
 	  HIP_DEBUG("clearing the address used during the bex\n");
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 	*/
+        
+        /* Check if we should expect REG_RESPONSE or REG_FAILED parameter */
+        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1); 
+        if (type_count > 0) {
+                HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
+                        "Error handling reg_response\n"); 
+        }
 
-	/* Check if the incoming R2 has a REG_RESPONSE parameter. */
-		
-	HIP_DEBUG("Checking R2 for REG_RESPONSE parameter.\n");
-	struct hip_reg_request *rresp;
-	uint8_t reg_types[1] = { HIP_ESCROW_SERVICE };
-	rresp = hip_get_param(r2, HIP_PARAM_REG_RESPONSE);
-	uint8_t lifetime;
-	if (!rresp) {
-		HIP_DEBUG("No REG_RESPONSE found in R2.\n");
-		HIP_DEBUG("Checking r2 for REG_FAILED parameter.\n");
-		rresp = hip_get_param(r2, HIP_PARAM_REG_FAILED);
-		if (rresp) {
-			HIP_DEBUG("Registration failed!.\n");
-		}	
-		else 
-			HIP_DEBUG("Server not responding to registration attempt.\n");
-			
-		/** @todo Should the base entry be removed when registration fails?
-		    Registration unsuccessful - removing base keas
-		    hip_kea_remove_base_entries(); */
-			
-	}
-	else {
-		HIP_DEBUG("Found REG_RESPONSE parameter.\n");
-		uint8_t *types = (uint8_t *)(hip_get_param_contents(r2, HIP_PARAM_REG_RESPONSE));
-		int typecnt = hip_get_param_contents_len(rresp);
-		int accept = 0;
-		int i;
-		if (typecnt >= 1) { 
-			for (i = 1; i < typecnt; i++) {
-				HIP_DEBUG("Service type: %d.\n", types[i]);
-				if (types[i] == HIP_ESCROW_SERVICE) {
-					accept = 1;
-				}
-			}	
-		}
-		if (accept) {
-			HIP_DEBUG("Registration to escrow service completed!\n");
-			HIP_KEA *kea;	
-			HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1);
-			HIP_DEBUG("Found kea base entry.\n");
-			kea->keastate = HIP_KEASTATE_VALID;
-			hip_keadb_put_entry(kea); 
-		}
-	}
-	
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
 	//	hip_finalize_sa(&entry->hit_peer, spi_recvd);
@@ -2211,7 +2145,9 @@ int hip_handle_r2(struct hip_common *r2,
  out_err:
 	if (ctx)
 		HIP_FREE(ctx);
-	return err;
+        if (reg_types)
+                HIP_FREE(reg_types);
+        return err;
 }
 
 /**
@@ -2423,7 +2359,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 	
 	if (entry) {
-		wmb();
 		state = entry->state;
 		hip_put_ha(entry);
 	}

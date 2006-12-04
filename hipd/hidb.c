@@ -288,14 +288,13 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
-	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
-#if 0 /* LSIs are not supported yet  */
-	  hip_add_iface_local_route_lsi(lsi_tmp);
-#endif
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+
 #if 0 /* LSIs are not supported yet  */
+	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
+	  hip_add_iface_local_route_lsi(lsi_tmp);
 	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
 		   "Failed to add LSI to the device\n");
 #endif

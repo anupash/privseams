@@ -33,12 +33,12 @@ uint32_t hip_get_param_lsi_value(const struct hip_esp_info *);
 #endif
 
 void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
-			    uint8_t, unsigned int);
+                            uint8_t, unsigned int);
 void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,
-			const char *, const unsigned char *, unsigned int);
+                        const char *, const unsigned char *, unsigned int);
 int hip_build_netlink_dummy_header(struct hip_common *);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
-			   const struct in6_addr *, const struct in6_addr *);
+                           const struct in6_addr *, const struct in6_addr *);
 
 /**
  * @addtogroup hip_param_func
@@ -46,60 +46,62 @@ void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
  */
 int hip_build_param_ack(struct hip_common *, uint32_t);
 int hip_build_param_contents(struct hip_common *, const void *, hip_tlv_type_t,
-			     hip_tlv_type_t);
+                             hip_tlv_type_t);
 int hip_build_param_diffie_hellman_contents(struct hip_common *, uint8_t,
-					    void *, hip_tlv_len_t);
+                                            void *, hip_tlv_len_t);
 int hip_build_param_echo(struct hip_common *, void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
-				 const struct endpoint_hip *);
+                                 const struct endpoint_hip *);
 int hip_build_param_eid_iface(struct hip_common *, hip_eid_iface_type_t);
 int hip_build_param_eid_sockaddr(struct hip_common *, struct sockaddr *, size_t);
 int hip_build_param_encrypted_3des_sha1(struct hip_common *,
-					struct hip_tlv_common *);
+                                        struct hip_tlv_common *);
 int hip_build_param_encrypted_aes_sha1(struct hip_common *,
-				       struct hip_tlv_common *);
+                                       struct hip_tlv_common *);
 int hip_build_param_encrypted_null_sha1(struct hip_common *,
-					struct hip_tlv_common *);
+                                        struct hip_tlv_common *);
 int hip_build_param_esp_info(struct hip_common *, uint16_t, uint32_t, uint32_t);
 int hip_build_param_from_nat(struct hip_common *, const struct in6_addr *,
-			     const in_port_t);
+                             const in_port_t);
 int hip_build_param_from(struct hip_common *, const struct in6_addr *,
-			 const in_port_t);
+                         const in_port_t);
 int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
-				   struct hip_host_id *);
+                                   struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
-			     struct in6_addr *, struct in6_addr *, uint32_t,
-			     uint32_t, uint16_t, struct hip_crypto_key *);
+                             struct in6_addr *, struct in6_addr *, 
+                             struct in6_addr *, uint32_t, uint32_t, uint16_t, 
+                             struct hip_crypto_key *);
 int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
-			 struct in6_addr *, struct in6_addr *, uint32_t,
-			 uint32_t, uint16_t, struct hip_crypto_key *);
+                         struct in6_addr *, struct in6_addr *, 
+                         struct in6_addr *, uint32_t, uint32_t, uint16_t, 
+                         struct hip_crypto_key *);
 int hip_build_param_locator(struct hip_common *,
-			    struct hip_locator_info_addr_item *, int);
+                            struct hip_locator_info_addr_item *, int);
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
-			   uint64_t);
+                           uint64_t);
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 int hip_build_param_reg_failed(struct hip_common *, uint8_t, int *, int);
 int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 int hip_build_param_reg_request(struct hip_common *, uint8_t, int *, int, int);
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
-				      struct hip_crypto_key *);
+                                      struct hip_crypto_key *);
 int hip_build_param_seq(struct hip_common *, uint32_t);
 int hip_build_param_signature2_contents(struct hip_common *, const void *,
-					hip_tlv_len_t, uint8_t);
+                                        hip_tlv_len_t, uint8_t);
 int hip_build_param_signature_contents(struct hip_common *, const void *,
-				       hip_tlv_len_t, uint8_t);
+                                       hip_tlv_len_t, uint8_t);
 int hip_build_param_solution(struct hip_common *, struct hip_puzzle *,
-			     uint64_t);
+                             uint64_t);
 int hip_build_param(struct hip_common *, const void *);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
-			      const hip_transform_suite_t[], const uint16_t);
+                              const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
 int hip_build_param_via_rvs_nat(struct hip_common *,
-				const struct hip_in6_addr_port[], const int);
+                                const struct hip_in6_addr_port[], const int);
 int hip_build_param_via_rvs(struct hip_common *, const struct in6_addr[],
-			    const int);
+                            const int);
 /** @} */
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
@@ -114,17 +116,17 @@ void hip_dump_msg(const struct hip_common *);
 void *hip_find_free_param(const struct hip_common *);
 void *hip_get_diffie_hellman_param_public_value_contents(const void *);
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(
-	const struct hip_diffie_hellman *);
+        const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(struct hip_locator *);
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
-	struct hip_locator *);
+        struct hip_locator *);
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
-					  const struct hip_tlv_common *);
+                                          const struct hip_tlv_common *);
 void *hip_get_nth_param(const struct hip_common *, hip_tlv_type_t, int);
 void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);
@@ -134,7 +136,7 @@ int hip_get_param_host_id_di_type_len(struct hip_host_id *, char **, int *);
 char *hip_get_param_host_id_hostname(struct hip_host_id *);
 hip_tlv_len_t hip_get_param_total_len(const void *);
 hip_transform_suite_t hip_get_param_transform_suite_id(const void *,
-						       const uint16_t);
+                                                       const uint16_t);
 hip_tlv_type_t hip_get_param_type(const void *);
 uint16_t hip_get_unit_test_case_param_id(const struct hip_unit_test *);
 uint16_t hip_get_unit_test_suite_param_id(const struct hip_unit_test *);

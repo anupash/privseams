@@ -309,10 +309,11 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 		}
 	}
 
+	printf("=== connection test result: ");
 	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		printf("OK\n");
+		printf("OK ===\n");
 	} else {
-		printf("FAIL\n");
+		printf("FAIL ===\n");
 		return(1);
 	}
 

@@ -29,7 +29,8 @@
 int handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
-	char *path;
+	char *libs;
+	char *path = "/usr/local/lib:/usr/lib:/lib";
 	va_list args;
 	int err = 0;
 
@@ -40,16 +41,17 @@ int handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	else if (err > 0) err = 0;
 	else if(err == 0)
 	{
+		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
-			path = "libinet6.so:libhiptool.so";
-			setenv("LD_PRELOAD", path, 1);
+			libs = "libinet6.so:libhiptool.so";
+			setenv("LD_PRELOAD", libs, 1);
 		}
 		else
 		{
-			path = "libopphip.so:libinet6.so:libhiptool.so";
-			setenv("LD_PRELOAD", path, 1);
+			libs = "libopphip.so:libinet6.so:libhiptool.so";
+			setenv("LD_PRELOAD", libs, 1);
 		}
 
 		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");

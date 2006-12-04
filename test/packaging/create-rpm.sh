@@ -47,13 +47,15 @@ ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
 cat <<EOF
 
-*** Now, execute the following commands as root:
+#############################################
+# Assuming that you are in /etc/sudoers!!!! #
+#############################################
 
-mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
-rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
-
-
-*** The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
 EOF
+
+# The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
+
+sudo mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
+sudo rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 
 error_cleanup

@@ -678,7 +678,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
         addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
         local_len = lcl.bytelen;
-	// FIXED : prefix now adds - Abi
+
 	if (req.ifa.ifa_prefixlen == 0)
                 req.ifa.ifa_prefixlen = lcl.bitlen;
 
