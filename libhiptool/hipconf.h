@@ -82,8 +82,9 @@
 #define ACTION_DEC 7
 #define ACTION_GET 8
 #define ACTION_RUN 9
+#define ACTION_LOAD 10
 
-#define ACTION_MAX 10 /* exclusive */
+#define ACTION_MAX 11 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1

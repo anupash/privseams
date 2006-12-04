@@ -24,13 +24,17 @@
    peer_hit --Abi */
 /** A help string containing the usage of @c hipconf. */
 const char *usage =
+#ifdef HIP_CONFIG_LOAD
+"load | config | default\n"
+#endif
 #ifdef CONFIG_HIP_ESCROW
-"add|del escrow hit\n"
+"add|del escrow  hit\n"
 #endif
 "add|del map hit ipv6\n"
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
+
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
 #else
@@ -65,6 +69,8 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	handle_opp,
 	handle_escrow,
 	handle_service,
+/*	handle_load,*/
+
 };
 
 /**
@@ -95,6 +101,9 @@ int get_action(char *text) {
 		ret = ACTION_HIP;
 	else if (!strcmp("run", text))
 		ret = ACTION_RUN;
+	else if (!strcmp("load",text))
+		ret =ACTION_LOAD;
+
 	return ret;
 }
 
@@ -132,6 +141,10 @@ int check_action_argc(int action) {
 	case ACTION_RUN:
 		count = 2;
 		break;
+	case ACTION_LOAD:
+		count=2;
+		break;
+
 	}
 
 	return count;
@@ -188,6 +201,8 @@ int get_type_arg(int action) {
         case ACTION_SET:
         case ACTION_GET:
         case ACTION_RUN:
+	case ACTION_LOAD:
+
                 type_arg = 2;
                 break;
         }
@@ -917,12 +932,6 @@ int main(int argc, char *argv[]) {
 	HIP_INFO("Hi, we are testing hipconf\n");
 /*	text=strcmp(argv[1],"load");*/
 
-	if ((argc==1) && !strcmp(argv[1],"load"))
-	{
-	read_hip_conf(argv[0]);
-        exit(0);
- 	}
-
 	if (argc < 2) {
 		err = -EINVAL;
 		//  display_usage();
@@ -933,11 +942,17 @@ int main(int argc, char *argv[]) {
 	hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
 
 	action = get_action(argv[1]);
+	printf("%s",argv[0]);
 	if (action <= 0 || action >= ACTION_MAX) {
 		err = -EINVAL;
 		HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
 		goto out;
 	}
+	else if (action==ACTION_LOAD) {
+ 		read_hip_conf(argv[0]);
+ 		goto out;
+ 	}
+
 	_HIP_INFO("action=%d\n", action);
 	
 	if (argc-2 < check_action_argc(action)) {
@@ -946,6 +961,7 @@ int main(int argc, char *argv[]) {
 			  argv[1]);
 		goto out;
 	}
+	
 	
 	type_arg = get_type_arg(action);
 	if (type_arg < 0) {
@@ -959,6 +975,8 @@ int main(int argc, char *argv[]) {
 		HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
 		goto out;
 	}
+	
+
 	_HIP_INFO("type=%d\n", type);
 
 	if (action == ACTION_RUN)
