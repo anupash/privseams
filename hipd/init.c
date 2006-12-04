@@ -149,6 +149,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 	
 	register_to_dht();
+	/*read_hip_conf();*/
 	
 out_err:
 	return err;

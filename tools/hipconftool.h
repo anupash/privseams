@@ -34,5 +34,5 @@ int handle_escrow(struct hip_common *msg, int action, const char *opt[], int opt
 int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
 int get_action(char *action);
 int get_type(char *type);
-
+int read_hip_conf(char *prog);
 #endif /* HIPCONFTOOL_H */

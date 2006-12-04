@@ -52,8 +52,8 @@ const char *usage =
  *  @note Keep the elements in the same order as the @c TYPE values are defined
  *  in hipconf.h because type values are used as @c action_handler array index.
  */
-int (*action_handler[])(struct hip_common *, int action,
-			const char *opt[], int optc) = {
+int (*action_handler[])(struct hip_common *, int action,const char *opt[], int optc) = 
+{
 	NULL, /* reserved */
 	handle_hi,
 	handle_map,
@@ -226,18 +226,14 @@ int handle_rvs(struct hip_common *msg, int action, const char *opt[],
 	int ret;
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"rvs\".\n");
+	HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"rvs\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-		 "string to address conversion failed\n");
-	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
-		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,"string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,"string to address conversion failed\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
-		 "build param hit failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit,
+	HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,"build param hit failed\n");
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
 					  HIP_PARAM_IPV6_ADDR,
@@ -859,6 +855,48 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	
 }
 
+int read_hip_conf(char *prog)
+{
+
+	char c[45];  
+	FILE *hip_config;  
+  	char *hip_arg;
+  	char ch;
+  	int arg_len;
+  	char str[1024];
+ 
+	hip_config = fopen("/etc/hip/hipd_config","r");
+        if(hip_config==NULL)
+         {
+                printf("Error: can't open file.\n");
+                return 0;
+                }
+
+        else
+	{
+        
+	while(fgets(c,sizeof(c),hip_config)!=NULL)
+                {
+
+        if ((c[0] !='#') && (c[0] !='\n'))
+        {
+                memset(str, '\0', sizeof(str));
+                strcpy(str, prog);
+                str[strlen(str)] = ' ';
+                hip_arg=strcat(str,c);
+		arg_len=strlen(prog);
+		handle_exec_application(0,arg_len,hip_arg,1);
+		
+        }
+
+           };
+                fclose(hip_config);
+ 		return 0;
+       }
+
+}
+
+
 
 /**
  * Parses command line arguments and send the appropiate message to the kernel
@@ -869,12 +907,22 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
  *               the action and type.
  * @return       zero on success, or negative error value on error.
  */
+
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
 	int type_arg, err = 0;
 	long int action, type;
+	char *text;
 	struct hip_common *msg;
 	HIP_INFO("Hi, we are testing hipconf\n");
+/*	text=strcmp(argv[1],"load");*/
+
+	if ((argc==1) && !strcmp(argv[1],"load"))
+	{
+	read_hip_conf(argv[0]);
+        exit(0);
+ 	}
+
 	if (argc < 2) {
 		err = -EINVAL;
 		//  display_usage();
