@@ -353,7 +353,7 @@ out_err:
 void register_to_dht ()
 {
 #ifdef CONFIG_HIP_OPENDHT
-
+/*
   struct netdev_address *n, *t;
   char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
   if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
@@ -378,7 +378,8 @@ void register_to_dht ()
     
     // HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", tmp_hit_str, tmp_addr_str, hostname);
     updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
-  } 	
+  } 
+*/
 #endif
 }
 

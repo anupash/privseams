@@ -69,10 +69,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 
-
+/*
 #ifdef CONFIG_HIP_OPENDHT
 #include "dhtresolver.h"
 #endif
+*/
 
 #include "bos.h"
 
@@ -427,6 +428,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   int found_hits = 0;
 
 #ifdef CONFIG_HIP_OPENDHT
+/*
   char tmp_hit_str[INET6_ADDRSTRLEN], tmp_addr_str[INET6_ADDRSTRLEN];	
   struct in6_addr tmp_hit, tmp_addr;
 
@@ -460,6 +462,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
 	return 1;
       }
     }
+*/
 #endif
 									
   /*! \todo check return values */

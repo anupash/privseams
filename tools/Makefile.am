@@ -17,7 +17,12 @@ if HIP_HI3
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+if HIP_OPENDHT
+  LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a 
+#../opendht/.libs/libdhtresolver.a
+else
+  LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a 
+endif
 
 LDFLAGS = -lcrypto
 
