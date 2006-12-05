@@ -6,7 +6,7 @@ XMLI = $(shell xml2-config --cflags)
 CFLAGS= $(hipl_common_cflags) $(XMLI)
 opendhtteststub_LDFLAGS= -lhipopendht -lcrypto $(XMLL) 
 
-INCLUDES = $(hipl_common_inclide_paths)
+INCLUDES = $(hipl_common_include_paths)
 include_HEADERS = libhipopendht.h libhipopendhtxml.h
 
 lib_LTLIBRARIES = libhipopendht.la
