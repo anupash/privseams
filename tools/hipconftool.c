@@ -25,7 +25,7 @@
 /** A help string containing the usage of @c hipconf. */
 const char *usage =
 #ifdef HIP_CONFIG_LOAD
-"load | config | default\n"
+"load config default\n"
 #endif
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow  hit\n"
@@ -34,7 +34,6 @@ const char *usage =
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "del hi <hit>\n"
-
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
 #else
@@ -69,8 +68,9 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	handle_opp,
 	handle_escrow,
 	handle_service,
-/*	handle_load,*/
-
+	NULL, /* run */
+	NULL, /* run */
+	handle_load
 };
 
 /**
@@ -185,6 +185,8 @@ int get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
+	else if (!strcmp("config", text))
+		ret = TYPE_CONFIG;
 	return ret;
 }
 
@@ -202,7 +204,6 @@ int get_type_arg(int action) {
         case ACTION_GET:
         case ACTION_RUN:
 	case ACTION_LOAD:
-
                 type_arg = 2;
                 break;
         }
@@ -456,7 +457,7 @@ int handle_hi_get(struct hip_common *msg, int action,
 	struct gaih_addrtuple *tmp;
 	int err = 0;
  	
- 	HIP_IFEL((optc != 1), "Missing arguments\n", -1);
+ 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
 	err = get_local_hits(NULL, &at);
@@ -573,7 +574,7 @@ int handle_bos(struct hip_common *msg, int action,
 /**
  * Handles the hipconf commands where the type is @c nat.
  *
- * @param msg    a pointer to the buffer where the message for kernel will
+ * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
  * @param action the numeric action identifier for the action to be performed.
  * @param opt    an array of pointers to the command line arguments after
@@ -870,59 +871,77 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	
 }
 
-int read_hip_conf(char *prog)
+int hip_read_conf(char *prog)
 {
+  	int arg_len, err = 0;
+	char c[45], *hip_arg, ch, str[128];
+	FILE *hip_config = NULL;  
 
-	char c[45];  
-	FILE *hip_config;  
-  	char *hip_arg;
-  	char ch;
-  	int arg_len;
-  	char str[1024];
- 
-	hip_config = fopen("/etc/hip/hipd_config","r");
-        if(hip_config==NULL)
-         {
-                printf("Error: can't open file.\n");
-                return 0;
-                }
-
-        else
-	{
+	hip_config = fopen(HIPD_CONFIG_FILE, "r");
+        if (hip_config==NULL) {
+                HIP_ERROR("Error: can't open config file.\n");
+		err = -1;
+                goto out_err;
+	}
         
-	while(fgets(c,sizeof(c),hip_config)!=NULL)
-                {
+	while(fgets(c,sizeof(c),hip_config) != NULL) {
+	  if ((c[0] !='#') && (c[0] !='\n')) {
+		  memset(str, '\0', sizeof(str));
+		  strcpy(str, prog);
+		  str[strlen(str)] = ' ';
+		  hip_arg = strcat(str,c);
+		  arg_len = strlen(prog);
+		  handle_exec_application(0, arg_len, &hip_arg, 1);
+		  
+	  }
+	}
 
-        if ((c[0] !='#') && (c[0] !='\n'))
-        {
-                memset(str, '\0', sizeof(str));
-                strcpy(str, prog);
-                str[strlen(str)] = ' ';
-                hip_arg=strcat(str,c);
-		arg_len=strlen(prog);
-		handle_exec_application(0,arg_len,hip_arg,1);
-		
-        }
+ out_err:
+	if (hip_config)
+		fclose(hip_config);
 
-           };
-                fclose(hip_config);
- 		return 0;
-       }
+	return err;
+}
+
+/**
+ * Handles the hipconf commands where the type is @c load.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int handle_load(struct hip_common *msg, int action,
+               const char *opt[], int optc)
+{
+	int err = 0;
+	
+	HIP_DEBUG("Options:%s\n", opt[0]);
+
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = 1;
+
+ out:
+	return err;
 
 }
 
-
-
 /**
- * Parses command line arguments and send the appropiate message to the kernel
- * module.
+ * Parses command line arguments and send the appropiate message to hipd
  *
  * @param argc   the number of elements in the array.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
  * @return       zero on success, or negative error value on error.
  */
-
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
 	int type_arg, err = 0;
@@ -930,28 +949,23 @@ int main(int argc, char *argv[]) {
 	char *text;
 	struct hip_common *msg;
 	HIP_INFO("Hi, we are testing hipconf\n");
-/*	text=strcmp(argv[1],"load");*/
 
 	if (argc < 2) {
 		err = -EINVAL;
-		//  display_usage();
+		/*  display_usage(); */
 		HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
 		goto out;
 	}
 
-	hip_set_logtype(LOGTYPE_STDERR); // we don't want log messages via syslog
+	/* we don't want log messages via syslog */
+	hip_set_logtype(LOGTYPE_STDERR);
 
 	action = get_action(argv[1]);
-	printf("%s",argv[0]);
 	if (action <= 0 || action >= ACTION_MAX) {
 		err = -EINVAL;
 		HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
 		goto out;
 	}
-	else if (action==ACTION_LOAD) {
- 		read_hip_conf(argv[0]);
- 		goto out;
- 	}
 
 	_HIP_INFO("action=%d\n", action);
 	

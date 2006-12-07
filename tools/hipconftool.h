@@ -20,7 +20,6 @@
 
 #include "hipconf.h"
 
-
 int handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int handle_map(struct hip_common *, int type, const char *opt[], int optc);
 int handle_rst(struct hip_common *, int type, const char *opt[], int optc);
@@ -32,6 +31,7 @@ int handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
+int handle_load(struct hip_common *, int type, const char *opt[], int optc);
 int get_action(char *action);
 int get_type(char *type);
 int read_hip_conf(char *prog);

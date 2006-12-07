@@ -99,13 +99,15 @@
 #define TYPE_SERVICE 	10
 #define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
 #define TYPE_RESERVED	EXEC_LOADLIB_NONE /* Should be 13 */
-#define TYPE_MAX    	14 /* exclusive */
+#define TYPE_CONFIG     14
+#define TYPE_MAX    	15 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
 
+#define HIPD_CONFIG_FILE "/etc/hip/hipd_config"
 
 int handle_exec_application(int fork, int type, char **argv, int argc);
 
