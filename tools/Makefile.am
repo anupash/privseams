@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB)
+CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
@@ -17,12 +17,7 @@ if HIP_HI3
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-if HIP_OPENDHT
-  LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a 
-#../opendht/.libs/libdhtresolver.a
-else
-  LDADD    = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a 
-endif
+LDADD    = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a 
 
 LDFLAGS = -lcrypto
 

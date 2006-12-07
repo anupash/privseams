@@ -521,13 +521,14 @@ out_err:
  *                   hadb_xmit_func->send_pkt instead.
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
 int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port, struct hip_common *msg,
-		 hip_ha_t *entry, int retransmit)
+		 in_port_t src_port, in_port_t dst_port,
+		 struct hip_common *msg, hip_ha_t *entry, int retransmit)
 {
-	int err = 0, sa_size, sent, len, dupl, try_bind_again;
+	int err = 0, sa_size, sent, len, dupl, try_again;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4;
 	struct sockaddr_in6 *src6, *dst6;
@@ -672,12 +673,12 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
-	for (try_bind_again = 0; try_bind_again < 2; try_bind_again++) {
+	for (try_again = 0; try_again < 2; try_again++) {
 		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
 		if (err == EADDRNOTAVAIL) {
 			HIP_DEBUG("Binding failed 1st time, trying again\n");
 			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
-			sleep(4);
+			sleep(2);
 		} else {
 			break;
 		}
@@ -696,17 +697,21 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
-
-		sent = sendto(hip_raw_sock, msg, len, 0,
-			      (struct sockaddr *) &dst, sa_size);
-	
-		HIP_IFEL((sent != len), -1,
-			 "Could not send the all requested data (%d/%d)\n",
-			 sent, len);
+		for (try_again = 0; try_again < 2; try_again++) {
+			sent = sendto(hip_raw_sock, msg, len, 0,
+				      (struct sockaddr *) &dst, sa_size);
+			if (sent != len) {
+				HIP_ERROR("Could not send the all requested"\
+					  " data (%d/%d)\n", sent, len);
+				sleep(2);
+			} else {
+				HIP_DEBUG("sent=%d/%d ipv4=%d\n",
+					  sent, len, dst_is_ipv4);
+				HIP_DEBUG("Packet sent ok\n");
+				break;
+			}
+		}
 	}
-	HIP_DEBUG("sent=%d/%d ipv4=%d\n", sent, len, dst_is_ipv4);
-	HIP_DEBUG("Packet sent ok\n");
-
  out_err:
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
@@ -746,6 +751,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                   hadb_xmit_func->send_pkt instead.
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_raw
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
@@ -840,8 +846,8 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		/* Failure. */
 		if(chars_sent < 0)
 		{
-			HIP_DEBUG("Problem in sending UDP packet. Sleeping for "\
-				  "%d seconds and trying again.\n",
+			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
+				  "for %d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
 			sleep(HIP_NAT_SLEEP_TIME);
 		}

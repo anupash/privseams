@@ -51,7 +51,7 @@ int add_hi_default(struct hip_common *msg)
 	int err;
 	opts[0] = "default";
 	printf("Calling handle_hi...\n");
-	err = handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
+	err = hip_conf_handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
 	return err;
 }
 

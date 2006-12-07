@@ -37,7 +37,7 @@ bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
-bin_PROGRAMS += unittest
+#bin_PROGRAMS += unittest
 bin_PROGRAMS += hipsetup
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
@@ -59,7 +59,7 @@ conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
 conntest_server_native_SOURCES = conntest-server-native.c conntest.c
 conntest_server_SOURCES = conntest-server.c conntest.c
-unittest_SOURCES = unit.c unittest.c hipconftool.c suite.c
+#unittest_SOURCES = unit.c unittest.c hipconftool.c suite.c
 hipsetup_SOURCES = hipsetup.c hipconftool.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconftool.c misc_install.c conntest.c
 cookietest_SOURCES = cookietest.c

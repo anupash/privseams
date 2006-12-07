@@ -40,7 +40,7 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
+#include "util.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
@@ -82,8 +82,9 @@
 #define ACTION_DEC 7
 #define ACTION_GET 8
 #define ACTION_RUN 9
+#define ACTION_LOAD 10
 
-#define ACTION_MAX 10 /* exclusive */
+#define ACTION_MAX 11 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -96,17 +97,33 @@
 #define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
 #define TYPE_ESCROW  	9
 #define TYPE_SERVICE 	10
+#define TYPE_CONFIG     11
 #define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-#define TYPE_RESERVED	EXEC_LOADLIB_NONE /* Should be 13 */
-#define TYPE_MAX    	14 /* exclusive */
+#define TYPE_MAX    	13 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
 
+#define HIPD_CONFIG_FILE "/etc/hip/hipd_config"
 
-int handle_exec_application(int fork, int type, char **argv, int argc);
-
+int hip_handle_exec_application(int fork, int type, char **argv, int argc);
+int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+			       const char *opt[], int optc);
+int hip_get_action(char *action);
+int hip_get_type(char *type);
 
 #endif /* HIPCONF */
