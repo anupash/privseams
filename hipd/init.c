@@ -15,6 +15,31 @@
 
 extern struct hip_common *hipd_msg;
 
+void hip_load_configuration() {
+	const char *cfile = "default";
+	struct stat status;
+	pid_t pid;
+	FILE *fp = NULL;
+	size_t items = 0;
+	int len = strlen(HIPD_CONFIG_FILE_EX);
+
+	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_CONFIG_FILE_EX, len, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	pid = fork();
+	
+	if (pid == 0) {
+		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+		exit(0);
+	}
+}
+
 /**
  * Main initialization function for HIP daemon.
  */
@@ -51,7 +76,7 @@ int hipd_init(int flush_ipsec)
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_init_opp_db();
+	hip_init_opp_db();
 #endif
 
 	/* Resolve our current addresses, afterwards the events from kernel
@@ -137,7 +162,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
 //	TODO: initialize firewall socket
-    hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_firewall_sock < 0), 1,
 		 "Could not create socket for firewall communication.\n");
 	unlink(HIP_FIREWALLADDR_PATH);
@@ -149,7 +174,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 	
 	register_to_dht();
-	
+	hip_load_configuration();
 out_err:
 	return err;
 }

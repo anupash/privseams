@@ -521,6 +521,7 @@ out_err:
  *                   hadb_xmit_func->send_pkt instead.
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_udp
  */
 int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
@@ -672,7 +673,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Required for mobility; ensures that we are sending packets from
 	   the correct source address */
-	for (try_again = 0; try_again < 6; try_again++) {
+	for (try_again = 0; try_again < 2; try_again++) {
 		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
 		if (err == EADDRNOTAVAIL) {
 			HIP_DEBUG("Binding failed 1st time, trying again\n");
@@ -696,7 +697,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	_HIP_HEXDUMP("Dumping packet ", msg, len);
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
-		for (try_again = 0; try_again < 6; try_again++) {
+		for (try_again = 0; try_again < 2; try_again++) {
 			sent = sendto(hip_raw_sock, msg, len, 0,
 				      (struct sockaddr *) &dst, sa_size);
 			if (sent != len) {
@@ -750,6 +751,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                   hadb_xmit_func->send_pkt instead.
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
  * @see              hip_send_raw
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
