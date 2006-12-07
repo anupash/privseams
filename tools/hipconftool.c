@@ -24,9 +24,6 @@
    peer_hit --Abi */
 /** A help string containing the usage of @c hipconf. */
 const char *usage =
-#ifdef HIP_CONFIG_LOAD
-"load config default\n"
-#endif
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow  hit\n"
 #endif
@@ -44,6 +41,7 @@ const char *usage =
 "hip rst all|peer_hit\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
+"load conf default\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -58,17 +56,17 @@ const char *usage =
 int (*action_handler[])(struct hip_common *, int action,const char *opt[], int optc) = 
 {
 	NULL, /* reserved */
-	handle_hi,
-	handle_map,
-	handle_rst,
-	handle_rvs,
-	handle_bos,
-	handle_puzzle,
-	handle_nat,
-	handle_opp,
-	handle_escrow,
-	handle_service,
-	handle_load,
+	hip_conf_handle_hi,
+	hip_conf_handle_map,
+	hip_conf_handle_rst,
+	hip_conf_handle_rvs,
+	hip_conf_handle_bos,
+	hip_conf_handle_puzzle,
+	hip_conf_handle_nat,
+	hip_conf_handle_opp,
+	hip_conf_handle_escrow,
+	hip_conf_handle_service,
+	hip_conf_handle_load,
 	NULL, /* run */
 	NULL, /* run */
 };
@@ -80,7 +78,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
  */
-int get_action(char *text) {
+int hip_conf_get_action(char *text) {
 	int ret = -1;
 
 	if (!strcmp("add", text))
@@ -113,7 +111,7 @@ int get_action(char *text) {
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
-int check_action_argc(int action) {
+int hip_conf_check_action_argc(int action) {
 	int count = -1;
 
 	switch (action) {
@@ -156,7 +154,7 @@ int check_action_argc(int action) {
  * @param  text the type as a string.
  * @return the numeric type id correspoding to the symbolic text.
  */
-int get_type(char *text) {
+int hip_conf_get_type(char *text) {
 	int ret = -1;
 
 	if (!strcmp("hi", text))
@@ -185,12 +183,12 @@ int get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-	else if (!strcmp("config", text))
+	else if (!strcmp("conf", text))
 		ret = TYPE_CONFIG;
 	return ret;
 }
 
-int get_type_arg(int action) {
+int hip_conf_get_type_arg(int action) {
         int type_arg = -1;
 
         switch (action) {
@@ -233,13 +231,13 @@ int get_type_arg(int action) {
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int handle_rvs(struct hip_common *msg, int action, const char *opt[], 
+int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 	       int optc)
 {
-	HIP_DEBUG("handle_rvs() invoked.\n");
 	struct in6_addr hit, ip6;
 	int err=0;
 	int ret;
+	HIP_DEBUG("handle_rvs() invoked.\n");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
 	HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"rvs\".\n");
@@ -274,7 +272,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_hi(struct hip_common *msg,
+int hip_conf_handle_hi(struct hip_common *msg,
 	      int action,
 	      const char *opt[],
 	      int optc) {
@@ -283,9 +281,9 @@ int handle_hi(struct hip_common *msg,
   _HIP_INFO("action=%d optc=%d\n", action, optc);
 
   if (action == ACTION_DEL)
-    return handle_hi_del(msg, action, opt, optc);
+    return hip_conf_handle_hi_del(msg, action, opt, optc);
   else if (action == ACTION_GET)
-    return handle_hi_get(msg, action, opt, optc);
+    return hip_conf_handle_hi_get(msg, action, opt, optc);
 
   /* Check min/max amount of args */
   if (optc < 1 || optc > 3) {
@@ -341,7 +339,7 @@ int handle_hi(struct hip_common *msg,
  * @return       zero on success, or negative error value on error.
  * @note         Does not support @c del action.
  */
-int handle_map(struct hip_common *msg, int action,
+int hip_conf_handle_map(struct hip_common *msg, int action,
 	       const char *opt[], int optc) {
 	int err = 0;
 	int ret;
@@ -395,7 +393,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_hi_del(struct hip_common *msg, int action,
+int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
  	int err;
@@ -450,8 +448,8 @@ out:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_hi_get(struct hip_common *msg, int action,
-		  const char *opt[], int optc) 
+int hip_conf_handle_hi_get(struct hip_common *msg, int action,
+		      const char *opt[], int optc) 
 {
 	struct gaih_addrtuple *at = NULL;
 	struct gaih_addrtuple *tmp;
@@ -491,8 +489,8 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_rst(struct hip_common *msg, int action,
-	       const char *opt[], int optc) 
+int hip_conf_handle_rst(struct hip_common *msg, int action,
+		   const char *opt[], int optc) 
 {
 	int err;
 	int ret;
@@ -548,8 +546,8 @@ int handle_rst(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int handle_bos(struct hip_common *msg, int action,
-	       const char *opt[], int optc) 
+int hip_conf_handle_bos(struct hip_common *msg, int action,
+		   const char *opt[], int optc) 
 {
 	int err;
 
@@ -582,8 +580,8 @@ int handle_bos(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int handle_nat(struct hip_common *msg, int action,
-               const char *opt[], int optc)
+int hip_conf_handle_nat(struct hip_common *msg, int action,
+		   const char *opt[], int optc)
 {
 	int err;
 	int status = 0;
@@ -647,11 +645,10 @@ int handle_nat(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_puzzle(struct hip_common *msg, int action,
-		  const char *opt[], int optc) 
+int hip_conf_handle_puzzle(struct hip_common *msg, int action,
+			   const char *opt[], int optc) 
 {
 	int err = 0, ret, msg_type, all;
-
 	hip_hit_t hit = {0};
 
 	if (optc != 1) {
@@ -737,8 +734,8 @@ int handle_puzzle(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_opp(struct hip_common *msg, int action,
-		  const char *opt[], int optc)
+int hip_conf_handle_opp(struct hip_common *msg, int action,
+		   const char *opt[], int optc)
 {
 	unsigned int oppmode = 0;
 	int err = 0;
@@ -748,8 +745,6 @@ int handle_opp(struct hip_common *msg, int action,
 		err = -EINVAL;
 		goto out;
 	}
-
-	
 
 	if (!strcmp("on",opt[0])) {
 		oppmode = 1;
@@ -790,15 +785,14 @@ int handle_opp(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_escrow(struct hip_common *msg, int action, const char *opt[], 
-					int optc)
+int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], 
+		      int optc)
 {
-	HIP_DEBUG("hipconf: using escrow");
-	
 	struct in6_addr hit;
 	struct in6_addr ip;
-	
 	int err = 0;
+
+	HIP_DEBUG("hipconf: using escrow");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
@@ -839,12 +833,12 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_service(struct hip_common *msg, int action, const char *opt[], 
-		   int optc)
+int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], 
+		       int optc)
 {
-	HIP_DEBUG("hipconf: handling service.\n");
-	
 	int err = 0;
+
+	HIP_DEBUG("hipconf: handling service.\n");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
 	HIP_IFEL((action != ACTION_ADD), -1,
@@ -871,38 +865,6 @@ int handle_service(struct hip_common *msg, int action, const char *opt[],
 	
 }
 
-int hip_read_conf(char *prog)
-{
-  	int arg_len, err = 0;
-	char c[45], *hip_arg, ch, str[128];
-	FILE *hip_config = NULL;  
-
-	hip_config = fopen(HIPD_CONFIG_FILE, "r");
-        if (hip_config==NULL) {
-                HIP_ERROR("Error: can't open config file.\n");
-		err = -1;
-                goto out_err;
-	}
-        
-	while(fgets(c,sizeof(c),hip_config) != NULL) {
-	  if ((c[0] !='#') && (c[0] !='\n')) {
-		  memset(str, '\0', sizeof(str));
-		  strcpy(str, prog);
-		  str[strlen(str)] = ' ';
-		  hip_arg = strcat(str,c);
-		  arg_len = strlen(prog);
-		  handle_exec_application(0, arg_len, &hip_arg, 1);
-		  
-	  }
-	}
-
- out_err:
-	if (hip_config)
-		fclose(hip_config);
-
-	return err;
-}
-
 /**
  * Handles the hipconf commands where the type is @c load.
  *
@@ -914,24 +876,120 @@ int hip_read_conf(char *prog)
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int handle_load(struct hip_common *msg, int action,
-               const char *opt[], int optc)
+int hip_conf_handle_load(struct hip_common *msg, int action,
+		    const char *opt[], int optc)
 {
-	int err = 0;
-	
-	HIP_DEBUG("Options:%s\n", opt[0]);
+  	int arg_len, err = 0, i, len;
+	char c[45], *hip_arg, ch, str[128], *fname, *args[64];
+	FILE *hip_config = NULL;  
+	List list;
 
-	if (optc != 1) {
-		HIP_ERROR("Missing arguments\n");
-		err = -EINVAL;
-		goto out;
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	if (!strcmp(opt[0], "default"))
+		fname = HIPD_CONFIG_FILE;
+	else
+		fname = (char *) opt[1];
+
+
+	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
+		 "Error: can't open config file %s.\n", fname);
+        
+	while(err == 0 && fgets(c,sizeof(c),hip_config) != NULL) {
+		if ((c[0] =='#') || (c[0] =='\n'))
+			continue;
+
+		/* prefix the contents of the line with" hipconf"  */
+		memset(str, '\0', sizeof(str));
+		strcpy(str, "hipconf");
+		str[strlen(str)] = ' ';
+		hip_arg = strcat(str, c);
+		/* replace \n with \0  */
+		hip_arg[strlen(hip_arg) - 1] = '\0';
+
+		/* split the line into an array of strings and feed it
+		   recursively to hipconf */
+		initlist(&list);
+		extractsubstrings(hip_arg, &list);
+		len = length(&list);
+		for(i = 0; i < len; i++) {
+			/* the list is backwards ordered */
+			args[len - i - 1] = getitem(&list, i);
+		}
+		err = hip_do_hipconf(len, args);
+		destroy(&list);
 	}
 
-	err = 1;
+ out_err:
+	if (hip_config)
+		fclose(hip_config);
 
- out:
 	return err;
 
+}
+
+int hip_do_hipconf(int argc, char *argv[]) {
+	int err = 0, type_arg;
+	long int action, type;
+	struct hip_common *msg = NULL;
+	char *text;
+
+	/* we don't want log messages via syslog */
+	hip_set_logtype(LOGTYPE_STDERR);
+	
+	/* parse args */
+
+	HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
+		 argv[0], usage);
+
+	action = hip_conf_get_action(argv[1]);
+	HIP_IFEL((action <= 0 || action >= ACTION_MAX), -1,
+	       "Invalid action argument '%s'\n", argv[1]);
+
+	HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
+		 "Not enough arguments given for the action '%s'\n",
+		 argv[1]);
+	
+	HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
+		 "Could not parse type\n");
+
+	type = hip_conf_get_type(argv[type_arg]);
+	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
+		 "Invalid type argument '%s'\n", argv[type_arg]);
+
+	/* allocated space for return value and call hipd */
+
+	/* @todo REWRITE THE RUN STUFF */
+	if (action == ACTION_RUN) {
+		hip_handle_exec_application(0, type,
+					    (char **)&argv[3], argc - 3);
+		goto out_err;
+	}
+	
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+
+	/* Call handler function from the handler function pointer
+	   array at index "type" with given commandline arguments. */
+        err = (*action_handler[type])(msg, action, (const char **) &argv[3],
+                                              argc - 3);
+	HIP_IFEL(err, -1, "failed to handle msg\n");
+
+	/* hipconf new hi does not involve any messages to hipd */
+	if (hip_get_msg_type(msg) == 0)
+		goto out_err;
+	
+	/* send msg to hipd */
+	HIP_IFEL(hip_send_daemon_info(msg), -1,
+		 "sending msg failed\n");
+
+	HIP_INFO("hipconf command successfull\n");
+
+out_err:
+	if (msg)
+		free(msg);
+	
+	return err;
 }
 
 /**
@@ -944,97 +1002,7 @@ int handle_load(struct hip_common *msg, int action,
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
-	int type_arg, err = 0;
-	long int action, type;
-	char *text;
-	struct hip_common *msg;
-	HIP_INFO("Hi, we are testing hipconf\n");
-
-	if (argc < 2) {
-		err = -EINVAL;
-		/*  display_usage(); */
-		HIP_ERROR("Invalid args.\n%s usage:\n%s\n", argv[0], usage);
-		goto out;
-	}
-
-	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
-
-	action = get_action(argv[1]);
-	if (action <= 0 || action >= ACTION_MAX) {
-		err = -EINVAL;
-		HIP_ERROR("Invalid action argument '%s'\n", argv[1]);
-		goto out;
-	}
-
-	_HIP_INFO("action=%d\n", action);
-	
-	if (argc-2 < check_action_argc(action)) {
-		err = -EINVAL;
-		HIP_ERROR("Not enough arguments given for the action '%s'\n",
-			  argv[1]);
-		goto out;
-	}
-	
-	
-	type_arg = get_type_arg(action);
-	if (type_arg < 0) {
-		HIP_ERROR("Could not parse type\n");
-		goto out;
-	}
-
-	type = get_type(argv[type_arg]);
-	if (type <= 0 || type >= TYPE_MAX) {
-		err = -EINVAL;
-		HIP_ERROR("Invalid type argument '%s'\n", argv[type_arg]);
-		goto out;
-	}
-	
-
-	_HIP_INFO("type=%d\n", type);
-
-	if (action == ACTION_RUN)
-	{
-		handle_exec_application(0, type, (char **)&argv[3], argc - 3);
-		goto out;
-	}
-	
-	msg = malloc(HIP_MAX_PACKET);
-	if (!msg) {
-		HIP_ERROR("malloc failed\n");
-		goto out;
-	}
-	hip_msg_init(msg);
-
-	/* Call handler function from the handler function pointer
-	   array at index "type" with given commandline arguments. */
-        err = (*action_handler[type])(msg, action, (const char **) &argv[3],
-                                              argc - 3);
-	if (err) {
-		HIP_ERROR("failed to handle msg\n");
-		goto out_malloc;
-	}
-
-	/* hipconf new hi does not involve any messages to kernel */
-	if (hip_get_msg_type(msg) == 0){
-	  _HIP_DEBUG("!!!!  new hi does not involve any messages to kernel\n");
-	  goto skip_msg;
-	}
-	
-	/* send msg to hipd */
-	err = hip_send_daemon_info(msg);
-	if (err) {
-		HIP_ERROR("sending msg failed\n");
-		goto out_malloc;
-	}
-	HIP_INFO("!!!! msg to hipd sent\n");
-
-skip_msg:
-
-out_malloc:
-	free(msg);
-out:
-	
-	return err;
+	return hip_do_hipconf(argc, argv);
 }
+
 #endif /* HIP_UNITTEST_MODE */

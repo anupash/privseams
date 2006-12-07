@@ -26,7 +26,7 @@
  * @param argc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int handle_exec_application(int do_fork, int type, char *argv[], int argc)
+int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
 	char *libs;

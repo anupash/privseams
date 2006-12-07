@@ -61,7 +61,7 @@ HIP_UNIT_TEST_CASE(test_add_default_hi) {
   hip_msg_init(msg);
 
   opts[1] = "default";
-  err = handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
+  err = hip_conf_handle_hi(msg, ACTION_ADD, (const char **) opts, 1);
   HIP_UNIT_ASSERT(!err);
 }
 

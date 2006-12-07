@@ -109,7 +109,7 @@
 
 #define HIPD_CONFIG_FILE "/etc/hip/hipd_config"
 
-int handle_exec_application(int fork, int type, char **argv, int argc);
+int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 
 
 #endif /* HIPCONF */
