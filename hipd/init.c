@@ -15,6 +15,16 @@
 
 extern struct hip_common *hipd_msg;
 
+void hip_load_configuration() {
+	const char *cfile = "default";
+	pid_t pid = fork();
+	
+	if (pid == 0) {
+		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+		exit(0);
+	}
+}
+
 /**
  * Main initialization function for HIP daemon.
  */
@@ -149,7 +159,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 	
 	register_to_dht();
-	
+	hip_load_configuration();
 out_err:
 	return err;
 }

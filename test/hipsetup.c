@@ -90,14 +90,14 @@ int main(int argc, char *argv[])
 			/* BOS  */
 			printf("BOS\n");
 #if 0
-			HIP_IFEL(handle_bos(msg, 0, (const char **) NULL, 0), -1, "Failed to handle BOS\n");
+			HIP_IFEL(hip_conf_handle_bos(msg, 0, (const char **) NULL, 0), -1, "Failed to handle BOS\n");
 
 			/* hipconf new hi does not involve any messages to kernel */
 			HIP_IFE((hip_get_msg_type(msg)), -1);
 
 			HIP_IFEL(hip_send_daemon_info(msg), -1, "Sending msg failed\n");
 #endif
-			err = handle_bos(msg, 0, (const char **) NULL, 0);
+			err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
 			if (err) {
 				HIP_ERROR("failed to handle msg\n");
 				goto out_err;

@@ -20,19 +20,4 @@
 
 #include "hipconf.h"
 
-
-int handle_hi(struct hip_common *, int type, const char *opt[], int optc);
-int handle_map(struct hip_common *, int type, const char *opt[], int optc);
-int handle_rst(struct hip_common *, int type, const char *opt[], int optc);
-int handle_bos(struct hip_common *, int type, const char *opt[], int optc);
-int handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
-int handle_del(struct hip_common *, int type, const char *opt[], int optc);
-int handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
-int handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
-int handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
-int handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
-int get_action(char *action);
-int get_type(char *type);
-
 #endif /* HIPCONFTOOL_H */
