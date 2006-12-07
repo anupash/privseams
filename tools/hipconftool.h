@@ -32,6 +32,8 @@ int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], i
 int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+			       const char *opt[], int optc);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 #endif /* HIPCONFTOOL_H */

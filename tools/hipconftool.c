@@ -67,7 +67,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_escrow,
 	hip_conf_handle_service,
 	hip_conf_handle_load,
-	NULL, /* run */
+	hip_conf_handle_run_normal, /* run */
 	NULL, /* run */
 };
 
@@ -740,6 +740,10 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
 	unsigned int oppmode = 0;
 	int err = 0;
 
+	if (action == ACTION_RUN)
+		return hip_handle_exec_application(0, EXEC_LOADLIB_OPP,
+						   (char **) &opt[0],
+						   optc);
 	if (optc != 1) {
 		HIP_ERROR("Incorrect number of arguments\n");
 		err = -EINVAL;
@@ -928,6 +932,14 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 }
 
+int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+			       const char *opt[], int optc)
+{
+		return hip_handle_exec_application(0, EXEC_LOADLIB_HIP,
+						   (char **) &opt[0],
+						   optc);
+}
+
 int hip_do_hipconf(int argc, char *argv[]) {
 	int err = 0, type_arg;
 	long int action, type;
@@ -959,13 +971,6 @@ int hip_do_hipconf(int argc, char *argv[]) {
 
 	/* allocated space for return value and call hipd */
 
-	/* @todo REWRITE THE RUN STUFF */
-	if (action == ACTION_RUN) {
-		hip_handle_exec_application(0, type,
-					    (char **)&argv[3], argc - 3);
-		goto out_err;
-	}
-	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_msg_init(msg);
 
