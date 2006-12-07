@@ -249,29 +249,24 @@ int main(int argc, char *argv[]) {
 			  memmove(hipd_msg, ((char *)hipd_msg) + IPV4_HDR_SIZE,
 				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
 
-			  pkt_info.src_port = 0;
+			  //pkt_info.src_port = 0;
 	
 			  err = hip_receive_control_packet(hipd_msg, &saddr,
 							   &daddr, &pkt_info);
 			}
 
 		} else if(FD_ISSET(hip_nat_sock_udp, &read_fdset)) {
-			/* Receiving of a UDP message from NAT socket. */
-			HIP_DEBUG("Receiving a message on UDP from NAT "\
-				  "socket (file descriptor: %d).\n",
-				  hip_nat_sock_udp);
-			
 			/* Data structures for storing the source and
 			   destination addresses and ports of the incoming
 			   packet. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
 
-			/* The NAT socket is bound on port 50500, thus packets
-			   received from NAT socket must have had 50500 as
-			   destination port. */
-			pkt_info.dst_port = HIP_NAT_UDP_PORT; 
-
+			/* Receiving of a UDP message from NAT socket. */
+			HIP_DEBUG("Receiving a message on UDP from NAT "\
+				  "socket (file descriptor: %d).\n",
+				  hip_nat_sock_udp);
+			
 			/* Initialization of the hip_common header struct. We'll
 			   store the HIP header data here. */
 			hip_msg_init(hipd_msg);
@@ -305,14 +300,15 @@ int main(int argc, char *argv[]) {
 				err = hip_handle_user_msg(hipd_msg, &app_src);
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			/* Receiving of a message from agent socket. */
+			int n;
+			socklen_t alen;
+			hip_hdr_type_t msg_type;
+			err = 0;
+			
 			HIP_DEBUG("Receiving a message from agent socket "\
 				  "(file descriptor: %d).\n",
 				  hip_agent_sock);
-			int n;
-			socklen_t alen;
-			err = 0;
-			hip_hdr_type_t msg_type;
-			
+
 			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 			alen = sizeof(hip_agent_addr);
 			n = recvfrom(hip_agent_sock, hipd_msg, sizeof(struct hip_common), 0,

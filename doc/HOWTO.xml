@@ -317,6 +317,7 @@
             tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
+      You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
       It is also possible to use DNS or OpenDHT (<xref linkend="opendht" />)
       for the mappings.
     </para>
@@ -604,7 +605,7 @@
     4. You can also use HITs directly in the application. Insert the HIT of
        the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
        the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
-       do e.g. "ping6 PEER_HIT".
+       do e.g. "ping6 PEER_HIT". You can set this also to /etc/hip/hipd_config.
     </para>
 
     </section>

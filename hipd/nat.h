@@ -42,7 +42,7 @@
 /** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Amount of time to sleep between transmission and retransmissions. */
-#define HIP_NAT_SLEEP_TIME 1
+#define HIP_NAT_SLEEP_TIME 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 /** For setting socket to listen for beet-udp packets. */

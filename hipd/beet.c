@@ -384,6 +384,9 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 		   int sport, int dport) {
 
+	HIP_DEBUG("spi=%d\n", spi);
+	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
+
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
 }
@@ -417,6 +420,11 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_ASSERT(spi);
 
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
+
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_IN6ADDR("saddr", saddr);
+	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
