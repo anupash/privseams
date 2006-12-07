@@ -889,7 +889,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 	if (!strcmp(opt[0], "default"))
 		fname = HIPD_CONFIG_FILE;
 	else
-		fname = (char *) opt[1];
+		fname = (char *) opt[0];
 
 
 	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
