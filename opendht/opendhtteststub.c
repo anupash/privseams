@@ -12,6 +12,7 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include "libhipopendht.h"
+#include "debug.h"
 
 int main(int argc, char *argv[])
 {
@@ -55,14 +56,9 @@ int main(int argc, char *argv[])
     ret = opendht_put_b(s, (unsigned char *)val_host,
                         (unsigned char *)val_hit, (unsigned char *)host_addr, dht_response); 
     close(s);
-    if (ret == -5) exit(1);
+    if (ret == -1) exit(1);
     printf("Put packet (fqdn->hit) sent and ...\n");
-    if (ret == -3)
-    {
-        printf("Error from the DHT :: %s\n", dht_response);
-        exit(1);
-    }  
-    print_explanation(ret); 
+    printf("Put was success\n");
 
     /*!!!! put hit->ip !!!!*/  
     s = resolve_dht_gateway_info (opendht, AF_INET);
@@ -71,14 +67,9 @@ int main(int argc, char *argv[])
     ret = opendht_put_b(s, (unsigned char *)val_hit,
                         (unsigned char *)val_ip, (unsigned char *)host_addr, dht_response);
     close(s);
-    if (ret == -5) exit(1);
+    if (ret == -1) exit(1);
     printf("Put packet (hit->ip) sent and ...\n");
-    if (ret == -3)
-    {
-        printf("Error from the DHT :: %s\n", dht_response);
-        exit(1);
-    }
-    print_explanation(ret);
+    printf("Put was success\n", dht_response);
 
     /*!!!! get fqdn !!!!*/
     s = resolve_dht_gateway_info (opendht, AF_INET);
@@ -88,14 +79,9 @@ int main(int argc, char *argv[])
     memset(dht_response, '\0', sizeof(dht_response));
     ret = opendht_get_b(s, (unsigned char *)val_host, (unsigned char *)host_addr, dht_response);
     close(s);
-    if (ret == -5) exit (1);
+    if (ret == -1) exit (1);
     printf("Get packet (fqdn) sent and ...\n");
-    if (ret == -3)
-    {
-        printf("Error from the DHT :: %s\n", dht_response);
-        exit(1);
-    }
-    if (ret == 3) 
+    if (ret == 0) 
     {
         printf("Value received from DHT: %s\n", dht_response);
         if (!strcmp(dht_response, val_hit)) 
@@ -103,8 +89,6 @@ int main(int argc, char *argv[])
         else
             printf("Did NOT match the sent value!\n");
     }
-    else
-        print_explanation(ret);
 
     /*!!!! get hit !!!!*/
     s = resolve_dht_gateway_info (opendht, AF_INET);
@@ -113,14 +97,9 @@ int main(int argc, char *argv[])
     memset(dht_response2, '\0', sizeof(dht_response2));
     ret = opendht_get_b(s, (unsigned char *)val_hit, (unsigned char *)host_addr, dht_response2); 
     close(s);
-    if (ret == -5) exit (1);
+    if (ret == -1) exit (1);
     printf("Get packet (hit) sent and ...\n");
-    if (ret == -3)
-    {
-        printf("Error from the DHT :: %s\n", dht_response2);
-        exit(1);
-    }
-    if (ret == 3)
+    if (ret == 0)
     {
         printf("Value received from DHT: %s\n",dht_response2);
         if (!strcmp(dht_response2, val_ip))
@@ -128,8 +107,5 @@ int main(int argc, char *argv[])
         else
             printf("Did NOT match the sent value!\n");
     }
-    else
-        print_explanation(ret);
-  
-    exit(0);
+    exit(EXIT_SUCCESS);
 }

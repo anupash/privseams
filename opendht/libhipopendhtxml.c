@@ -6,6 +6,7 @@
 #include <openssl/evp.h>
 #include <libxml2/libxml/tree.h>
 #include "libhipopendhtxml.h"
+#include "debug.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
 
@@ -120,21 +121,14 @@ int build_packet_get(unsigned char * key,
 
 /** 
  * read_packet_content - Builds HTTP XML packet for put
- * TODO: Change the return values to just 0 and -1 and move messages to HIP_DEBUG
  * @param in_buffer Should contain packet to be parsed including the HTTP header
  * @param out_value Value received is stored here
  *
- * @return Integer telling about the success
- * -3: Error message from the DHT (error message stored to out_value)
- * -2: Parser error
- * -1: Error in header
- * 0: success
- * 1: over capacity
- * 2: try again
- * 3: value(s) retrieved
+ * @return Integer -1 if error, on success 0
  */
 int read_packet_content(char * in_buffer, char * out_value)
 {
+    int ret = 0;
     int evpret = 0;
     char * place = NULL;
     char tmp_buffer[2048]; 
@@ -147,104 +141,149 @@ int read_packet_content(char * in_buffer, char * out_value)
 
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
-        return(-1);
-    else
+    { 
+        HIP_DEBUG("Parser error: no HTTP header in the packet.\n");
+        ret = -1;
+        goto out_err;
+    }
+    
+    /* is there a xml document */
+    if ((place = strstr(in_buffer, "<?xml")) == NULL)
     {
-        /* is there a xml document */
-        if ((place = strstr(in_buffer, "<?xml")) == NULL)
-            return(-1);
-        else 
-        {
-            /* copy the xml part to tmp_buffer */
-            sprintf(tmp_buffer, "%s\n", place);
+        HIP_DEBUG("Parser error: no XML content in the packet.\n");
+        ret = -1;
+        goto out_err;
+    }
 
-            if ((xml_doc = xmlParseMemory(tmp_buffer, strlen(tmp_buffer))) == NULL)   
-                return(-2);
-            xml_node = xmlDocGetRootElement(xml_doc);
-            if (xml_node->children) /* params or fault */
-            {
-                 xml_node = xml_node->children;
-                 /* check if error from DHT 
-                    <fault><value><struct><member><name>faultString</name><value>java...
-		 */
-                 if (!strcmp((char *)xml_node->name, "fault"))
- 		 {
-                     if (xml_node->children)
-                         xml_node = xml_node->children; /* value */
-                     if (xml_node->children) 
-                         xml_node = xml_node->children; /* struct */
-                     if (xml_node->children)
-                         xml_node = xml_node->children; /* member */
-                     if (xml_node->children)
-                         xml_node = xml_node->children; /* name */
-                     if (xml_node->next)
-                     {
-                         xml_node_value = xml_node->next; /* value */
-                         xml_data = xmlNodeGetContent(xml_node_value);
-                         strcpy((char *)out_value, (char *)xml_data);
-                         xmlFree(xml_data);
-                         return(-3);
-                     }
-                 }
-            }
-            if (xml_node->children) /* param */
-                xml_node = xml_node->children;
-            if (!xml_node)
-                return(-2);
-            xml_node_value = NULL;
-            if (!strcmp((char *)xml_node->name, "param") &&
-                xml_node->children &&
-                !strcmp((char *)xml_node->children->name, "value"))
-                xml_node_value = xml_node->children->children;
-            if(!xml_node_value)
-                return(-2);
-            
-            /* If there is a string "<int>" in the response, then there is only status code */
-            place = NULL;
-            if ((place = strstr(tmp_buffer, "<int>")) != NULL)
-            {
-                /* retrieve status code only */
-                int return_value = 0;
-                xml_data = xmlNodeGetContent(xml_node_value);
-                if (strcmp((char *)xml_node_value->name, "int")==0)
-                {
-                    sscanf((const char *)xml_data, "%d", &return_value);
-                    xmlFree(xml_data);
-                    xmlFreeDoc(xml_doc);
-                    return(return_value);
-                }
-                else
-                    return(-2);
-            }
-            else
-            {
-                /* retrieve the first value in array */
-                if (!strcmp((char *)xml_node_value->name, "array") &&
-                    xml_node_value->children &&
-                    !strcmp((char *)xml_node_value->children->name, "data"))
-                    xml_node = xml_node_value->children->children;
-                      
-                if (!strcmp((char *)xml_node->name, "value") &&
-                    xml_node->children &&
-                    !strcmp((char *)xml_node->children->name, "array"))
-                    xml_node = xml_node->children->children; /* inner data element */
-              
-                if (!strcmp((char *)xml_node->children->children->name, "base64"))
-                {         
-                    xml_node_value = xml_node->children->children; /* should be base64 */
-                    xml_data = xmlNodeGetContent(xml_node_value);
-                    evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
-                                             strlen((char *)xml_data));
-                    out_value[evpret] = '\0';
-                    xmlFree(xml_data);
-                    return(3);
-                }
-                return(-2);
-            }
-            /* should be impossible to get here */
-            return(-10); 
+    /* copy the xml part to tmp_buffer */
+    sprintf(tmp_buffer, "%s\n", place);
+
+    if ((xml_doc = xmlParseMemory(tmp_buffer, strlen(tmp_buffer))) == NULL)    
+    { 
+        HIP_DEBUG("Libxml2 encountered error while parsing content.\n");
+        ret = -1;
+        goto out_err;
+    }
+
+    xml_node = xmlDocGetRootElement(xml_doc);
+    if (xml_node->children) /* params or fault */
+    {
+        xml_node = xml_node->children;
+        /* check if error from DHT 
+           <fault><value><struct><member><name>faultString</name><value>java...
+        */
+        if (!strcmp((char *)xml_node->name, "fault"))
+        {
+             if (xml_node->children)
+                  xml_node = xml_node->children; /* value */
+             if (xml_node->children) 
+                  xml_node = xml_node->children; /* struct */
+             if (xml_node->children)
+                  xml_node = xml_node->children; /* member */
+             if (xml_node->children)
+                  xml_node = xml_node->children; /* name */
+             if (xml_node->next)
+             {
+                  xml_node_value = xml_node->next; /* value */
+                  xml_data = xmlNodeGetContent(xml_node_value);
+                  /* strcpy((char *)out_value, (char *)xml_data); */
+                  xmlFree(xml_data);
+                  HIP_DEBUG("Error from the openDHT: %s\n", xml_data);
+                  ret = -1;
+                  goto out_err;
+             }
         }
     }
+
+    if (xml_node->children) /* param */
+        xml_node = xml_node->children;
+    if (!xml_node)
+    {
+        HIP_DEBUG("Parser error: unknown XML format.\n");
+        ret = -1;
+        goto out_err;
+    }
+    xml_node_value = NULL;
+    if (!strcmp((char *)xml_node->name, "param") &&
+        xml_node->children &&
+        !strcmp((char *)xml_node->children->name, "value"))
+        xml_node_value = xml_node->children->children;
+    if(!xml_node_value)
+    {
+        HIP_DEBUG("Parser error: element has no content.\n");
+        ret = -1;
+        goto out_err;
+    }    
+
+    /* If there is a string "<int>" in the response, then there is only status code */
+    place = NULL;
+    if ((place = strstr(tmp_buffer, "<int>")) != NULL)
+    {
+        /* retrieve status code only */
+        xml_data = xmlNodeGetContent(xml_node_value);
+        if (strcmp((char *)xml_node_value->name, "int")==0)
+        {
+            sscanf((const char *)xml_data, "%d", &ret);
+            xmlFree(xml_data);
+           // xmlFreeDoc(xml_doc);
+            if (ret == 0) /* put success */
+                goto out_err;
+            if (ret == 1);
+            {
+                HIP_DEBUG("OpenDHT error: over capacity.\n");
+                ret = -1;
+                goto out_err;
+            }
+            if (ret == 2)
+            {
+                HIP_DEBUG("OpenDHT error: try again.\n");
+                ret = -1;
+                goto out_err;
+            }
+        }
+        else
+        {
+            HIP_DEBUG("Parser error: did not find status code.\n");
+            ret = -1;
+            goto out_err;
+        }
+    }
+    else
+    {
+        /* retrieve the first value in array */
+        if (!strcmp((char *)xml_node_value->name, "array") &&
+            xml_node_value->children &&
+            !strcmp((char *)xml_node_value->children->name, "data"))
+            xml_node = xml_node_value->children->children;
+                      
+        if (!strcmp((char *)xml_node->name, "value") &&
+            xml_node->children &&
+            !strcmp((char *)xml_node->children->name, "array"))
+            xml_node = xml_node->children->children; /* inner data element */
+              
+         if (!strcmp((char *)xml_node->children->children->name, "base64"))
+         {         
+             xml_node_value = xml_node->children->children; /* should be base64 */
+             xml_data = xmlNodeGetContent(xml_node_value);
+             evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
+                                      strlen((char *)xml_data));
+             out_value[evpret] = '\0';
+             xmlFree(xml_data);
+             ret = 0;
+             goto out_err;
+         }
+         HIP_DEBUG("Parser error: couldn't parse response value.\n");
+         ret = -1;
+         goto out_err;
+    }
+    /* should be impossible to get here */
+    HIP_DEBUG("Parser error: unknown error.\n");
+    ret = -1; 
+
+ out_err:
+    if (xml_doc != NULL) 
+        xmlFreeDoc(xml_doc);
+    return(ret);
 }
 
 /* build_packet_get and build_packet_put helper function*/

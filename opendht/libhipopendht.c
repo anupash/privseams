@@ -14,6 +14,7 @@
 #include <errno.h>
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
+#include "debug.h"
 
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
@@ -68,8 +69,7 @@ int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family)
  * @param host Host address
  * @param response Buffer where the possible error message is saved 
  *
- * @return Returns integer, same as in read_packet_content + -5 for packet creation problems
- * TODO: see read_packet_content
+ * @return Returns integer -1 on error, on success 0
  */
 int opendht_put_b(int sockfd, 
                   unsigned char * key,
@@ -118,14 +118,14 @@ int opendht_put_b(int sockfd,
                          (unsigned char *)host,
                          put_packet) != 0)
     {
-        printf("Packet (put) creation failed.\n"); /* test line */ 
-        return(-5);
+        HIP_DEBUG("Put packet creation failed.\n");
+        return(-1);
     }
     
     send(sockfd, put_packet, strlen(put_packet), 0);
  
     r = opendht_read_response_b(sockfd, answer);
-    if (r == -3)
+    if (r == 0)
         memcpy(response, answer, sizeof(answer)); 
     else 
         response[0] = '\0';
@@ -141,8 +141,7 @@ int opendht_put_b(int sockfd,
  * @param host Host address
  * @param response Buffer where the possible error message is saved 
  *
- * @return Returns integer, same as in read_packet_content + -5 for packet creation problems
- * TODO: see read_packet_content
+ * @return Returns integer -1 on error, on success 0
  */
 int opendht_get_b(int sockfd, 
                   unsigned char * key, 
@@ -188,8 +187,8 @@ int opendht_get_b(int sockfd,
                          (unsigned char *)host,
                          get_packet) !=0)
     {
-        printf("Packet (get) creation failed.\n"); /* test line */ 
-        return(-5);
+        HIP_DEBUG("Get packet creation failed.\n");  
+        return(-1);
     }
   
     send(sockfd, get_packet, strlen(get_packet), 0);
