@@ -62,7 +62,7 @@ copy_files ()
  for suffix in "" -gai -native -native-user-key;do
    cp test/conntest-client$suffix $PKGDIR/usr/local/bin/
  done
- for suffix in "" -legacy -native;do
+ for suffix in "" -native;do
    cp test/conntest-server$suffix $PKGDIR/usr/local/bin/
  done
  cp test/hipsetup $PKGDIR/usr/local/sbin/
