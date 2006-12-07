@@ -97,10 +97,10 @@
 #define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
 #define TYPE_ESCROW  	9
 #define TYPE_SERVICE 	10
+#define TYPE_CONFIG     11
 #define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
 #define TYPE_RESERVED	EXEC_LOADLIB_NONE /* Should be 13 */
-#define TYPE_CONFIG     14
-#define TYPE_MAX    	15 /* exclusive */
+#define TYPE_MAX    	14 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

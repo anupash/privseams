@@ -68,9 +68,9 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	handle_opp,
 	handle_escrow,
 	handle_service,
+	handle_load,
 	NULL, /* run */
 	NULL, /* run */
-	handle_load
 };
 
 /**
