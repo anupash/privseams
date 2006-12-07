@@ -106,7 +106,10 @@
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
 
-#define HIPD_CONFIG_FILE "/etc/hip/hipd_config"
+#define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
+#define HIPD_CONFIG_FILE_EX \
+"# Format of this file is as with hipconf, but without hipconf prefix.\n\
+# Example: add map HIT IP\n"
 
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);

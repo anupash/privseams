@@ -39,7 +39,7 @@ const char *hipconf_usage =
 "hip rst all|peer_hit\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
-"load conf default\n"
+"load config default\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -181,7 +181,7 @@ int hip_conf_get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-	else if (!strcmp("conf", text))
+	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 	return ret;
 }
