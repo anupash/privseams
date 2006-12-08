@@ -1994,7 +1994,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		    const char *opt[], int optc)
 {
   	int arg_len, err = 0, i, len;
-	char c[45], *hip_arg, ch, str[128], *fname, *args[64];
+	char c[128], *hip_arg, ch, str[128], *fname, *args[64];
 	FILE *hip_config = NULL;  
 	List list;
 
@@ -2009,7 +2009,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
 		 "Error: can't open config file %s.\n", fname);
         
-	while(err == 0 && fgets(c,sizeof(c),hip_config) != NULL) {
+	while(err == 0 && fgets(c, sizeof(c), hip_config) != NULL) {
 		if ((c[0] =='#') || (c[0] =='\n'))
 			continue;
 
