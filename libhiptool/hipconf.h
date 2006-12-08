@@ -83,8 +83,9 @@
 #define ACTION_GET 8
 #define ACTION_RUN 9
 #define ACTION_LOAD 10
+#define ACTION_DHT 11
 
-#define ACTION_MAX 11 /* exclusive */
+#define ACTION_MAX 12 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -99,7 +100,12 @@
 #define TYPE_SERVICE 	10
 #define TYPE_CONFIG     11
 #define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-#define TYPE_MAX    	13 /* exclusive */
+/* 3 points below for DHT TTL/GET/GW */
+#define TYPE_TTL        13
+#define TYPE_GW         14
+#define TYPE_GET        15
+
+#define TYPE_MAX    	16 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -124,6 +130,9 @@ int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], i
 int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_action(char *action);

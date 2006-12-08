@@ -45,6 +45,11 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
+#ifdef CONFIG_HIP_OPENDHT
+"dht ttl <int>\n"
+"dht gw <ip/hostname>\n"
+"dht get <fqdn/hit>\n"
+#endif 
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -66,6 +71,9 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_service,
 	hip_conf_handle_load,
 	hip_conf_handle_run_normal, /* run */
+        hip_conf_handle_ttl,
+        hip_conf_handle_gw,
+        hip_conf_handle_get,
 	NULL, /* run */
 };
 
@@ -97,9 +105,10 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_HIP;
 	else if (!strcmp("run", text))
 		ret = ACTION_RUN;
-	else if (!strcmp("load",text))
-		ret =ACTION_LOAD;
-
+	else if (!strcmp("load", text))
+		ret = ACTION_LOAD;
+        else if (!strcmp("dht", text))
+                ret = ACTION_DHT;
 	return ret;
 }
 
@@ -140,7 +149,9 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_LOAD:
 		count=2;
 		break;
-
+        case ACTION_DHT:
+                count=2;
+                break;
 	}
 
 	return count;
@@ -181,6 +192,14 @@ int hip_conf_get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
+#ifdef CONFIG_HIP_OPENDHT
+        else if (!strcmp("ttl", text))
+                ret = TYPE_TTL;
+        else if (!strcmp("gw", text))
+                ret = TYPE_GW;
+        else if (!strcmp("get", text))
+                 ret = TYPE_GET;
+#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 	return ret;
@@ -200,6 +219,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_GET:
         case ACTION_RUN:
 	case ACTION_LOAD:
+        case ACTION_DHT:
                 type_arg = 2;
                 break;
         }
@@ -778,6 +798,31 @@ out_err:
 	return err;
 	
 }
+
+/* ================================================================================== */
+
+int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+    printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+    return(ret);
+}
+
+int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+    printf("Got to the DHT gw handle for hipconf, NO FUNCTIONALITY YET\n");
+    return(ret);
+}
+
+int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+    printf("Got to the DHT get handle for hipconf, NO FUNCTIONALITY YET\n");
+    return(ret);
+}
+
+/* ================================================================================== */
 
 /**
  * Handles @c service commands received from @c hipconf.
