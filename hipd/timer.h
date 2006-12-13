@@ -1,12 +1,13 @@
-#ifndef HIP_TIMER
-#define HIP_TIMER
-#if 1
+#ifndef HIP_TIMER_H
+#define HIP_TIMER_H
 
-#include <linux/time.h>
+#ifdef __KERNEL__
 
-#define KMM_GLOBAL 1
-#define KMM_PARTIAL 2
-#define KMM_SPINLOCK 3
+/* XX TODO: hipmod */
+
+#else
+#  include <sys/time.h>
+#  include <time.h>
 
 typedef struct timeval hip_timer_t;
 
@@ -23,5 +24,5 @@ typedef struct timeval hip_timer_t;
                hip_timer_result.tv_usec + hip_timer_result.tv_sec * 1000000);\
  } while(0)
 
-#endif /* 0 */
-#endif
+#endif /* !__KERNEL__ */
+#endif /* HIP_TIMER_H  */
