@@ -29,12 +29,12 @@ void nh_set_remote_rgroup_info(HIT_Group *g)
 	i = find_from_cb(g->l->name, widget(ID_NH_LOCAL));
 	gtk_combo_box_set_active(widget(ID_NH_LOCAL), i);
 
-	if (g->type == HIT_DB_TYPE_ACCEPT) ps = "accept";
-	else ps = "deny";
+	if (g->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+	else ps = lang_get("group-type-deny");
 	i = find_from_cb(ps, widget(ID_NH_TYPE1));
 	gtk_combo_box_set_active(widget(ID_NH_TYPE1), i);
-	if (g->lightweight == 1) ps = "lightweight";
-	else ps = "normal";
+	if (g->lightweight == 1) ps = lang_get("group-type2-lightweight");
+	else ps = lang_get("group-type2-normal");
 	i = find_from_cb(ps, widget(ID_NH_TYPE2));
 	gtk_combo_box_set_active(widget(ID_NH_TYPE2), i);
 }
