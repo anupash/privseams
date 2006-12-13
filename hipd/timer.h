@@ -1,6 +1,6 @@
 #ifndef HIP_TIMER
 #define HIP_TIMER
-#ifdef HIP_TIMING
+#if 1
 
 #include <linux/time.h>
 
@@ -8,30 +8,20 @@
 #define KMM_PARTIAL 2
 #define KMM_SPINLOCK 3
 
-#define HIP_START_TIMER(mod) do {\
-   if (mod == kmm) {\
-      gtv_inuse = 1;\
-      do_gettimeofday(&gtv_start);\
-   }\
+typedef struct timeval hip_timer_t;
+
+#define HIP_START_TIMER(timer) do {\
+      do_gettimeofday(&timer);\
  } while(0)
 
-#define HIP_STOP_TIMER(mod,msg) do {\
-   if (mod == kmm) {\
-      do_gettimeofday(&gtv_stop);\
-      gtv_inuse = 0;\
-      hip_timeval_diff(&gtv_start,&gtv_stop,&gtv_result);\
+#define HIP_STOP_TIMER(timer, msg) do {\
+      hip_timer_t hip_stop_timer; \
+      hip_timer_t hip_timer_result; \
+      do_gettimeofday(&hip_stop_timer);\
+      hip_timeval_diff(&timer, &hip_stop_timer, &hip_timer_result);\
       HIP_INFO("%s: %ld usec\n", msg, \
-               gtv_result.tv_usec + gtv_result.tv_sec * 1000000);\
-   }\
+               hip_timer_result.tv_usec + hip_timer_result.tv_sec * 1000000);\
  } while(0)
 
-extern int kmm; // timer.c
-extern struct timeval gtv_start, gtv_stop, gtv_result;
-extern int gtv_inuse;
-#else
-
-#define HIP_START_TIMER(x)
-#define HIP_STOP_TIMER(x,y)
-
-#endif /* HIP_TIMING */
+#endif /* 0 */
 #endif
