@@ -10,7 +10,6 @@
 #  include "kerncompat.h"
 #  include "list.h"
 #  include "debug.h"
-#  include "timer.h"
 #  include "cookie.h"
 #endif
 
@@ -19,17 +18,14 @@
         RW_LOCK_UNLOCKED, id, 0}
 
 #define HIP_READ_LOCK_DB(db) do { \
-	HIP_START_TIMER(KMM_SPINLOCK);\
         read_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_WRITE_LOCK_DB(db) do { \
-        HIP_START_TIMER(KMM_SPINLOCK);\
 	write_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_READ_UNLOCK_DB(db) do { \
-        HIP_STOP_TIMER(KMM_SPINLOCK,"read lock "__FUNCTION__);\
 	read_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
 
