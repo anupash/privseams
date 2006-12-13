@@ -489,7 +489,7 @@ void hip_probe_kernel_modules()
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
-		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe",
 			 mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
 		system(cmd);
