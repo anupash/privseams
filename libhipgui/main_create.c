@@ -18,6 +18,12 @@ GtkTreeIter local_top, remote_top, process_top;
 /******************************************************************************/
 /* FUNCTIONS */
 
+gboolean e(void)
+{
+	printf("moi\n");
+	return FALSE;
+}
+
 /******************************************************************************/
 /**
 	Create contents of the gui in here.
@@ -28,7 +34,7 @@ int main_create_content(void)
 {
 	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
-	GtkWidget *pane, *pbox, *notebook, *w, *w2;
+	GtkWidget *pane, *pbox, *notebook, *w, *w2, *w3;
 	GtkWidget *button, *scroll, *chat, *div, *hiubox;
 	GtkWidget *label, *label2, *cframe, *menu_bar;
 	GtkTreeStore *model;
@@ -42,6 +48,7 @@ int main_create_content(void)
 	GtkTreeViewColumn *column;
 	GtkTreeSelection *select;
 	GtkTreeIter top, child;
+	GtkTargetEntry dndtarget;
 	char str[320];
 	int i, err;
 	
@@ -100,20 +107,56 @@ int main_create_content(void)
 	gtk_box_pack_start(pane, menu_bar, FALSE, FALSE, 0);
 	gtk_widget_show(menu_bar);
 	
+	/* File-menu. */
 	w = gtk_menu_item_new_with_label(lang_get("menu-file"));
 	gtk_widget_show(w);
+	w2 = gtk_menu_new();
+	
+	label = gtk_menu_item_new_with_label(lang_get("menu-file-exit"));
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(main_destroy), (gpointer)"exit");
+	gtk_widget_show(label);
 
-	/* File-menu. */
+	gtk_menu_item_set_submenu(w, w2);
+	gtk_menu_bar_append(menu_bar, w);
+
+	/* Edit-menu. */
+	w = gtk_menu_item_new_with_label(lang_get("menu-edit"));
+	gtk_widget_show(w);
+	w2 = gtk_menu_new();
+	
+	label = gtk_menu_item_new_with_label(lang_get("menu-edit-locals"));
+	gtk_menu_shell_append(w2, label);
+//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	gtk_widget_show(label);
+
+	/* Submenu for locals. */
+	w3 = gtk_menu_new();
+	gtk_menu_item_set_submenu(label, w3);
+	widget_set(ID_LOCALSMENU, w3);
+	
+	gtk_menu_item_set_submenu(w, w2);
+	gtk_menu_bar_append(menu_bar, w);
+
+	
+	/* Tools-menu. */
+	w = gtk_menu_item_new_with_label(lang_get("menu-tools"));
+	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
 	label = gtk_menu_item_new_with_label(lang_get("menu-tools-runapp"));
 	gtk_menu_shell_append(w2, label);
 //	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 	gtk_widget_show(label);
-	
-	label = gtk_menu_item_new_with_label(lang_get("menu-file-exit"));
+
+	label = gtk_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
 	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(main_destroy), (gpointer)"exit");
+//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	gtk_widget_show(label);
+
+	label = gtk_menu_item_new_with_label(lang_get("menu-tools-addhit"));
+	gtk_menu_shell_append(w2, label);
+//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 	gtk_widget_show(label);
 
 	gtk_menu_item_set_submenu(w, w2);
@@ -175,11 +218,6 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), remote_pane, label);
 	gtk_widget_show(remote_pane);
 
-	local_pane = gtk_hpaned_new();
-	label = gtk_label_new("Local");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), local_pane, label);
-	gtk_widget_show(local_pane);
-
 	hiubox = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new("HITs in use");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
@@ -227,15 +265,32 @@ int main_create_content(void)
 //	gtk_tree_store_set(model, &remote_top, 0, "Remote HITs", -1);
 
 	list = gtk_tree_view_new();
-//	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
+	g_signal_connect(list, "row-activated", G_CALLBACK(list_double_click), (gpointer)"double_clicked");
 	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)0);
 	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)0);
 	widget_set(ID_RLISTVIEW, list);
+	
+	/* Set up for drag n drop. */
+	dndtarget.target = "hit";
+	dndtarget.flags = GTK_TARGET_SAME_APP;
+	dndtarget.info = 0;
+	gtk_tree_view_enable_model_drag_source(list, GDK_MODIFIER_MASK, &dndtarget, 1, GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
+	dndtarget.info = 1;
+	gtk_tree_view_enable_model_drag_dest(list, &dndtarget, 1, GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
+	g_signal_connect(list, "drag_begin", G_CALLBACK(rh_drag_begin), (gpointer)0);
+	g_signal_connect(list, "drag_motion", G_CALLBACK(rh_drag_motion), (gpointer)0);
+	g_signal_connect(list, "drag_data_get", G_CALLBACK(rh_drag_data_get), (gpointer)0);
+	g_signal_connect(list, "drag_data_delete", G_CALLBACK(rh_drag_data_delete), (gpointer)0);
+	g_signal_connect(list, "drag_drop", G_CALLBACK(rh_drag_drop), (gpointer)0);
+	g_signal_connect(list, "drag_end", G_CALLBACK(rh_drag_end), (gpointer)0);
+	g_signal_connect(list, "drag_data_received", G_CALLBACK(rh_drag_data_received), (gpointer)0);
+	gtk_tree_view_set_column_drag_function(list, e, NULL, NULL);
+
 	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Remote groups and HITs", cell, "text", 0, NULL);
+	column = gtk_tree_view_column_new_with_attributes(NULL, cell, "text", 0, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
-
+	
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);
 	gtk_paned_add1(GTK_PANED(remote_pane), scroll);
@@ -247,36 +302,6 @@ int main_create_content(void)
 	gtk_paned_add2(GTK_PANED(remote_pane), widget(ID_TOOLWND));
 	gtk_widget_show(widget(ID_TOOLWND));
 	widget_set(ID_REMOTEPANE, remote_pane);
-
-	/***************************************
-	/* Setup local HITs. */
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	model = gtk_tree_store_new(1, G_TYPE_STRING);
-//	gtk_tree_store_append(model, &local_top, NULL);
-//	gtk_tree_store_set(model, &local_top, 0, "Local HITs", -1);
-
-	list = gtk_tree_view_new();
-	g_signal_connect(list, "cursor-changed", G_CALLBACK(list_click), (gpointer)1);
-	g_signal_connect(list, "button-press-event", G_CALLBACK(list_press), (gpointer)1);
-	widget_set(ID_LLISTVIEW, list);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
-	cell = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes("Local HITs", cell, "text", 0, NULL);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
-
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
-	gtk_widget_set_size_request(scroll, 200, 0);
-	gtk_paned_add1(GTK_PANED(local_pane), scroll);
-	select = gtk_tree_view_get_selection(GTK_TREE_VIEW(list));
-	gtk_tree_selection_set_mode(select, GTK_SELECTION_SINGLE);
-	gtk_widget_show(list);
-	gtk_widget_show(scroll);
-	widget_set(ID_LLISTMODEL, model);
-	gtk_paned_add2(GTK_PANED(local_pane), widget(ID_LTOOLWND));
-	gtk_widget_show(widget(ID_LTOOLWND));
-	widget_set(ID_LOCALPANE, local_pane);
 
 	/***************************************
 	/* HITs in use -list. */

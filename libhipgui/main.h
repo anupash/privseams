@@ -18,6 +18,7 @@
 #include "widgets.h"
 #include "str_var.h"
 #include "language.h"
+#include "rhit_dnd.h"
 
 
 /*!

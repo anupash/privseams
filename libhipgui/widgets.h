@@ -29,9 +29,7 @@ enum WIDGET_IDS
 
 	/* Main window IDs. */
 	ID_RLISTMODEL,
-	ID_LLISTMODEL,
 	ID_RLISTVIEW,
-	ID_LLISTVIEW,
 	ID_STATUSBAR,
 	ID_TOOLBAR,
 	ID_PLISTMODEL,
@@ -100,6 +98,7 @@ enum WIDGET_IDS
 	/* Some misc. */
 	ID_SYSTRAYMENU,
 	ID_RLISTMENU,
+	ID_LOCALSMENU,
 
 	/* IDs for hipstart. */
 	ID_HS_MAIN,

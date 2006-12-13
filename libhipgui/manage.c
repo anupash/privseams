@@ -27,12 +27,6 @@ extern GtkTreeIter local_top, remote_top, process_top;
 void gui_add_local_hit(HIT_Local *hit)
 {
 	/* Variables. */
-	GtkWidget *w;
-	GtkTreeIter iter;
-
-	w = widget(ID_LLISTMODEL);
-	gtk_tree_store_append(w, &iter, NULL);
-	gtk_tree_store_set(w, &iter, 0, hit->name, -1);
 }
 /* END OF FUNCTION */
 
@@ -313,7 +307,6 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 			err = -1;
 			break;
 		}
-		HIP_IFEL(err, -1, "Packet was dropped.\n");
 
 		ps = gtk_combo_box_get_active_text(widget(ID_NH_RGROUP));
 		group = hit_db_find_rgroup(ps);
@@ -349,7 +342,8 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	} while (1);
 
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
-	          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
+	          hit->g->type == HIT_DB_TYPE_ACCEPT ? lang_get("group-type-accept")
+	                                             : lang_get("group-type-deny"));
 
 out_err:
 	gtk_widget_hide(dialog);
@@ -509,12 +503,21 @@ void *create_remote_group_thread(void *data)
 	Add local HITs to all combo boxes and such.
 	This is a enumeration callback function.
 */
-int all_add_local(HIT_Remote *hit, void *p)
+int all_add_local(HIT_Local *hit, void *p)
 {
+	/* Variables. */
+	GtkWidget *w;
+	
 	gtk_combo_box_append_text(widget(ID_TWR_LOCAL), hit->name);
 	gtk_combo_box_append_text(widget(ID_TWG_LOCAL), hit->name);
 	gtk_combo_box_append_text(widget(ID_NG_LOCAL), hit->name);
 	gtk_combo_box_append_text(widget(ID_NH_LOCAL), hit->name);
+	
+	w = gtk_menu_item_new_with_label(hit->name);
+	gtk_menu_shell_append(widget(ID_LOCALSMENU), w);
+	g_signal_connect(w, "activate", G_CALLBACK(tw_set_local_info), (gpointer)hit->name);
+	gtk_widget_show(w);
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -528,6 +531,8 @@ void all_update_local(char *old_name, char *new_name)
 {
 	/* Variables. */
 	GtkTreeModel *model;
+	GtkWidget *w;
+	GList *gl;
 	Update_data ud;
 
 	ud.depth = -1;
@@ -546,6 +551,21 @@ void all_update_local(char *old_name, char *new_name)
 
 	model = gtk_combo_box_get_model(widget(ID_NH_LOCAL));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
+	
+	gl = gtk_container_get_children(widget(ID_LOCALSMENU));
+	while (gl)
+	{
+		w = gtk_bin_get_child(gl->data);
+		if (GTK_IS_LABEL(w) == FALSE);
+		else if (strcmp(gtk_label_get_text(w), old_name) != 0);
+		else
+		{
+			gtk_label_set_text(w, new_name);
+			break;
+		}
+		gl = gl->next;
+	}
+	g_list_free(gl);
 }
 /* END OF FUNCTION */
 

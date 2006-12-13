@@ -34,7 +34,6 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 */
 gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
-	gtk_toggle_button_set_active(widget(ID_TB_TW), FALSE);
 	gtk_widget_hide(w);
 	return (TRUE);
 }
@@ -96,10 +95,6 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 				tw_set_mode(TWMODE_REMOTE);
 				tw_set_remote_info(str);
 			}
-		}
-		else if (data == 1)
-		{
-			tw_set_local_info(str);
 		}
 		
 		gtk_tree_path_free(path);
@@ -163,8 +158,7 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
 						   GtkTreeViewColumn *column, gpointer data)
 {
-	gtk_widget_show(widget(ID_TOOLWND));
-	gtk_toggle_button_set_active(widget(ID_TB_TW), TRUE);
+	tw_apply();
 }
 /* END OF FUNCTION */
 
@@ -315,12 +309,6 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	case ID_TOOLBAR_NEWHIT:
 		HIP_DEBUG("Toolbar: Popup for new HIT.\n");
 		gui_ask_new_hit(NULL, 2);
-		break;
-
-	case ID_TOOLBAR_TOGGLETOOLWINDOW:
-		HIP_DEBUG("Toolbar: Toggle toolwindow visibility.\n");
-		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(widget(ID_TOOLWND));
-		else gtk_widget_hide(widget(ID_TOOLWND));
 		break;
 
 	case ID_TOOLBAR_NEWGROUP:

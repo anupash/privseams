@@ -35,6 +35,11 @@ int find_from_cb(char *, GtkWidget *);
 void delete_all_items_from_cb(GtkWidget *);
 int check_group_name(char *, HIT_Group *);
 int check_hit_name(char *, HIT_Remote *);
+int check_lhit_name(char *, HIT_Local *);
+
+int check_apply_group(char *, HIT_Group *);
+int check_apply_hit(char *, HIT_Remote *);
+int check_apply_hit_move(char *, HIT_Remote *);
 
 
 /*! @} addtogroup libhipgui */

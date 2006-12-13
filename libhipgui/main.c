@@ -47,7 +47,6 @@ int gui_init(void)
 	widget_set(ID_MAINWND, w);
 	gtk_widget_show(w);
 	gtk_window_set_title(w, lang_get("title-main"));
-//	gtk_widget_set_size_request(w, 400, 300);
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
@@ -56,10 +55,16 @@ int gui_init(void)
 	w = gtk_vbox_new(FALSE, 0);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
+	
 	/* Create toolwindow for local HITs. */
-	w = gtk_vbox_new(TRUE, 0);
+/*	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_widget_hide(w);
+	gtk_window_set_title(w, lang_get("title-locals"));*/
+	w = gtk_dialog_new_with_buttons(lang_get("title-locals"), NULL, GTK_DIALOG_MODAL,
+	                                lang_get("lhdlg-button-apply"), GTK_RESPONSE_YES,
+	                                lang_get("lhdlg-button-cancel"), GTK_RESPONSE_NO, NULL);
+	gtk_widget_hide(w);
 	widget_set(ID_LTOOLWND, w);
-	gtk_widget_show(w);
 
 	/* Create accept-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-newhit"), NULL, GTK_DIALOG_MODAL,
@@ -90,8 +95,7 @@ int gui_init(void)
 	gui_set_info("HIP GUI started.");
 	cmd_help("");
 	term_print("* HIP GUI started.\n");
-	tw_set_mode(TWMODE_NONE);
-
+	
 	/* Default nickname. */
 	set_nick("user");
 
@@ -119,7 +123,10 @@ int gui_main(void)
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
 	
+	/* Set default mode. */
 	tw_clear();
+	tw_set_mode(TWMODE_RGROUP);
+ 	tw_set_rgroup_info(lang_get("default-group-name"));
 
 	/* Initialize terminal server. */
 	if (term_get_mode() == TERM_MODE_SERVER)

@@ -44,6 +44,7 @@ int tw_create_content(void)
 	w = gtk_button_new_with_label(lang_get("tw-button-apply"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
+	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);
 	gtk_widget_grab_default(w);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
@@ -65,42 +66,13 @@ int tw_create_content(void)
 	
 	/* Create local -tab content. */
 	vb = gtk_vbox_new(FALSE, 5);
-	gtk_container_add(widget(ID_LTOOLWND), vb);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(widget(ID_LTOOLWND))->vbox), vb, TRUE, TRUE, 3);
 	gtk_widget_show(vb);
 	widget_set(ID_TWL_CONTAINER, vb);
 	
 	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
 
-	hb = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_start(widget(ID_TWL_CONTAINER), hb, FALSE, FALSE, 1);
-	gtk_widget_show(hb);
-	
-	w = gtk_button_new_with_label(lang_get("lh-button-apply"));
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_APPLY);
-	gtk_widget_grab_default(w);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_show(w);
-	widget_set(ID_TWL_APPLY, w);
-	
-	w = gtk_button_new_with_label(lang_get("lh-button-cancel"));
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_CANCEL);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_show(w);
-	widget_set(ID_TWL_CANCEL, w);
-
-	w = gtk_button_new_with_label(lang_get("lh-button-delete"));
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TWL_DELETE);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_hide(w);
-	widget_set(ID_TWL_DELETE, w);
-
-	/* Set default mode. */
- 	tw_set_mode(TWMODE_REMOTE);
 	gtk_widget_show(widget(ID_TOOLWND));
-	gtk_widget_show(widget(ID_LTOOLWND));
 
 out_err:
 	return (err);

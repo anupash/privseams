@@ -16,7 +16,7 @@
 char *lang_finnish[] =
 {
 	/* Set language prefix. */
-	"finnish",
+	"fi",
 	/* Set language description. */
 	"Suomi",
 	
@@ -27,7 +27,8 @@ char *lang_finnish[] =
 	"title-newhit",				"Uusi HIT",
 	"title-newgroup",			"Luo uusi ryhmä",
 	"title-runapp",				"Käynnistä sovellus",
-	
+	"title-locals",				"Paikallinen HIT",
+
 	/* System tray menu. */
 	"systray-hide",				"Piilota",
 	"systray-show",				"Näytä",
@@ -37,6 +38,10 @@ char *lang_finnish[] =
 	"menu-file",				"Tiedosto",
 	"menu-file-exit",			"Lopeta",
 	
+	"menu-edit",				"Muokkaa",
+	"menu-edit-locals",			"Paikalliset HIT:t",
+	
+	"menu-tools",				"Työkalut",
 	"menu-tools-runapp",		"Käynnistä",
 	"menu-tools-newgroup",		"Uusi ryhmä",
 	"menu-tools-addhit",		"Lisää HIT",
@@ -60,6 +65,17 @@ char *lang_finnish[] =
 	"nhdlg-err-reserved",		"Annettu HIT:n nimi on varattu!",
 	"nhdlg-err-invchar",		"HIT:n nimi sisältää ei hyväksyttyjä merkkejä.",
 	"nhdlg-err-hit",			"HIT ei ole hyväksyttävä.",
+	"nhdlg-newinfo",			"Uuden HIT:n tiedot",
+	"nhdlg-newhit",				"Uusi HIT:",
+	"nhdlg-name",				"Nimi:",
+	"nhdlg-group",				"Ryhmä:",
+	"nhdlg-advanced",			"Kehittyneet valinnat",
+	"nhdlg-url",				"URL:",
+	"nhdlg-port",				"Portti:",
+	"nhdlg-g-info",				"Ryhmän tiedot",
+	"nhdlg-g-localhit",			"Paikallinen HIT:",
+	"nhdlg-g-type",				"Tyyppi:",
+	"nhdlg-g-lightweight",		"Salaus:",
 
 	/* New group dialog. */
 	"ngdlg-name",				"Nimi:",
@@ -77,6 +93,7 @@ char *lang_finnish[] =
 	"tw-button-apply",			"Hyväksy",
 	"tw-button-cancel",			"Peruuta",
 	"tw-button-delete",			"Poista",
+	"tw-button-edit",			"Muokkaa",
 	"tw-hit-info",				"HIT:n tiedot",
 	"tw-hit-name",				"Nimi:",
 	"tw-hit-group",				"Ryhmä:",
@@ -95,18 +112,23 @@ char *lang_finnish[] =
 	"tw-hitgroup-lightweight",	"Salaus:",
 	
 	/* Local HIT handling. */
-	"lh-button-apply",			"Hyväksy",
-	"lh-button-cancel",			"Peruuta",
-	"lh-button-delete",			"Poista",
+	"lhdlg-button-apply",		"Hyväksy",
+	"lhdlg-button-cancel",		"Peruuta",
 	"lh-info",					"Paikallisen HIT:n tiedot:",
 	"lh-hit",					"HIT:",
 	"lh-name",					"Nimi:",
+	"lhdlg-err-invalid",		"Paikallisen HIT:n nimi ei ole hyväksyttävä!",
+	"lhdlg-err-exists",			"Paikallisen HIT:n nimi on jo käytössä!",
+	"lhdlg-err-invchar",		"Paikallisen HIT:n nimi sisältää ei hyväksyttyjä merkkejä.",
 	
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Ei voi luoda uutta ryhmää,\npaikallisia HIT:jä ei ole määritelty.\nTarkista HIP daemon.",
 	"hits-group-emptyitem",		" <tyhjä ryhmä> ",
 	"ask-delete-hit",			"Oletko varma että haluat poistaa valitun HIT:n?",
 	"ask-delete-group",			"Oletko varma että haluat poistaa valitun ryhmän?",
+	"ask-apply-hit",			"Oletko varma että haluat toteuttaa muokkauksen?",
+	"ask-apply-hit-move",		"Haluatko varmasti siirtää ryhmän?",
+	"ask-apply-group",			"Oletko varma että haluat toteuttaa muokkauksen?",
 	
 	"group-type-accept",		"hyväksy",
 	"group-type-deny",			"kiellä",

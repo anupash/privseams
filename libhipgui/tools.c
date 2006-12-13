@@ -194,6 +194,124 @@ out_err:
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/** Check local hit name. */
+int check_lhit_name(char *name, HIT_Local *le)
+{
+	/* Variables. */
+	HIT_Local *l;
+	int i, err = 1;
+	char *msg = lang_get("lhdlg-err-invalid");
+	char *pch;
+
+	HIP_IFE(name == NULL, 0);
+	
+	/* Remove whitespaces from start and end. */
+	for (i = 0; isspace(name[i]) && i < strlen(name); i++);
+	strcpy(name, &name[i]);
+	HIP_IFE(strlen(name) < 1, 0);
+	for (i = (strlen(name) - 1); isspace(name[i]) && i > 0; i--);
+	name[i + 1] = '\0';
+	HIP_IFE(strlen(name) < 1, 0);
+	
+	/* Some characters can be reserved for internal purposes. */
+	msg = lang_get("lhdlg-err-invchar");
+	pch = strpbrk(name, NAME_INVALID_CHARS);
+	HIP_IFE(pch, 0);
+	
+	/* Check that HIT with this name does not already exist. */
+	l = hit_db_find_local(name, NULL);
+	msg = lang_get("lhdlg-err-exists");
+	if (l != le) HIP_IFE(l, 0);
+
+out_err:
+	if (!err)
+	{
+		GtkDialog *dialog;
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(dialog, TRUE);
+		gtk_widget_show(dialog);
+		gtk_dialog_run(dialog);
+		gtk_widget_destroy(dialog);
+	}
+	
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Check apply for group. */
+int check_apply_group(char *name, HIT_Group *ge)
+{
+	/* Variables. */
+	GtkDialog *dialog;
+	int err = 0;
+
+	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+	                                GTK_BUTTONS_OK_CANCEL,
+	                                lang_get("ask-apply-group"));
+	gtk_window_set_keep_above(dialog, TRUE);
+	gtk_widget_show(dialog);
+	err = gtk_dialog_run(dialog);
+	gtk_widget_destroy(dialog);
+	if (err == GTK_RESPONSE_OK) err = 1;
+	else err = 0;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Check apply for hit. */
+int check_apply_hit(char *name, HIT_Remote *re)
+{
+	/* Variables. */
+	GtkDialog *dialog;
+	int err = 0;
+
+	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+	                                GTK_BUTTONS_OK_CANCEL,
+	                                lang_get("ask-apply-hit"));
+	gtk_window_set_keep_above(dialog, TRUE);
+	gtk_widget_show(dialog);
+	err = gtk_dialog_run(dialog);
+	gtk_widget_destroy(dialog);
+	if (err == GTK_RESPONSE_OK) err = 1;
+	else err = 0;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Check apply hit move. */
+int check_apply_hit_move(char *name, HIT_Remote *re)
+{
+	/* Variables. */
+	GtkDialog *dialog;
+	int err = 0;
+
+	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+	                                GTK_BUTTONS_OK_CANCEL,
+	                                lang_get("ask-apply-hit-move"));
+	gtk_window_set_keep_above(dialog, TRUE);
+	gtk_widget_show(dialog);
+	err = gtk_dialog_run(dialog);
+	gtk_widget_destroy(dialog);
+	if (err == GTK_RESPONSE_OK) err = 1;
+	else err = 0;
+
+out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

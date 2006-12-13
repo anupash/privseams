@@ -63,7 +63,7 @@ int askdlg_add_lhits(HIT_Remote *, void *);
 void create_remote_group(char *);
 void *create_remote_group_thread(void *);
 
-int all_add_local(HIT_Remote *hit, void *p);
+int all_add_local(HIT_Local *, void *);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 

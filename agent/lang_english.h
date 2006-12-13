@@ -16,7 +16,7 @@
 char *lang_english[] =
 {
 	/* Set language prefix. */
-	"english",
+	"en",
 	/* Set language description. */
 	"English",
 	
@@ -27,7 +27,8 @@ char *lang_english[] =
 	"title-newhit",				"New HIT",
 	"title-newgroup",			"Create new group",
 	"title-runapp",				"Run application",
-	
+	"title-locals",				"Local HIT",
+
 	/* System tray menu. */
 	"systray-hide",				"Hide",
 	"systray-show",				"Show",
@@ -37,6 +38,10 @@ char *lang_english[] =
 	"menu-file",				"File",
 	"menu-file-exit",			"Exit",
 	
+	"menu-edit",				"Edit",
+	"menu-edit-locals",			"Local HITs",
+	
+	"menu-tools",				"Tools",
 	"menu-tools-runapp",		"Run",
 	"menu-tools-newgroup",		"New group",
 	"menu-tools-addhit",		"Add HIT",
@@ -60,7 +65,18 @@ char *lang_english[] =
 	"nhdlg-err-reserved",		"Given HIT name is reserved!\nChoose another one.",
 	"nhdlg-err-invchar",		"HIT name contains invalid characters!\nRename.",
 	"nhdlg-err-hit",			"HIT is invalid, check it.",
-	
+	"nhdlg-newinfo",			"New HIT information",
+	"nhdlg-newhit",				"New HIT:",
+	"nhdlg-name",				"Name:",
+	"nhdlg-group",				"Group:",
+	"nhdlg-advanced",			"Advanced",
+	"nhdlg-url",				"URL:",
+	"nhdlg-port",				"Port:",
+	"nhdlg-g-info",				"Group info",
+	"nhdlg-g-localhit",			"Local HIT:",
+	"nhdlg-g-type",				"Type:",
+	"nhdlg-g-lightweight",		"Lightweight:",
+
 	/* New group dialog. */
 	"ngdlg-name",				"Name:",
 	"ngdlg-localhit",			"Local HIT:",
@@ -77,6 +93,7 @@ char *lang_english[] =
 	"tw-button-apply",			"Apply",
 	"tw-button-cancel",			"Cancel",
 	"tw-button-delete",			"Delete",
+	"tw-button-edit",			"Edit",
 	"tw-hit-info",				"HIT information",
 	"tw-hit-name",				"Name:",
 	"tw-hit-group",				"Group:",
@@ -95,18 +112,23 @@ char *lang_english[] =
 	"tw-hitgroup-lightweight",	"Encryption:",
 	
 	/* Local HIT handling. */
-	"lh-button-apply",			"Apply",
-	"lh-button-cancel",			"Cancel",
-	"lh-button-delete",			"Delete",
+	"lhdlg-button-apply",		"Apply",
+	"lhdlg-button-cancel",		"Cancel",
 	"lh-info",					"Local HIT information:",
 	"lh-hit",					"HIT:",
 	"lh-name",					"Name:",
+	"lhdlg-err-invalid",		"Invalid name for local HIT!",
+	"lhdlg-err-exists",			"Local HIT name is already in use!",
+	"lhdlg-err-invchar",		"Name of local HIT contains invalid characters!",
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
 	"hits-group-emptyitem",		" <empty> ",
 	"ask-delete-hit",			"Are you sure you want to delete selected HIT?",
 	"ask-delete-group",			"Are you sure you want to delete selected group?",
+	"ask-apply-hit",			"Are you sure you want to apply?",
+	"ask-apply-hit-move",		"Are you sure you want move the hit?",
+	"ask-apply-group",			"Are you sure you want to apply?",
 	
 	"group-type-accept",		"accept",
 	"group-type-deny",			"deny",
