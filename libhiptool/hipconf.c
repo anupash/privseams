@@ -16,6 +16,7 @@
  * @todo    read the output message from send_msg?
  */
 #include "hipconf.h"
+#include "libhipopendht.h"
 
 /* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
    the nat mapping only when the communication takes place with specified
@@ -818,7 +819,28 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
     int ret = 0;
-    printf("Got to the DHT get handle for hipconf, NO FUNCTIONALITY YET\n");
+    int s;
+    char dht_response[1024];
+    char opendht[] = "planetlab1.diku.dk";
+    char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+
+    s = resolve_dht_gateway_info (opendht, AF_INET);
+    if (s < 0) 
+    {
+        HIP_DEBUG("Socket/Resolve/Connect error!\n");
+        exit(-1);
+    }
+
+    memset(dht_response, '\0', sizeof(dht_response));
+    ret = opendht_get_b(s, (unsigned char *)opt[0], (unsigned char *)host_addr, dht_response);
+    close(s);
+    if (ret == -1) 
+    {
+        HIP_DEBUG("Get error!\n");
+        exit (-1);
+    }
+    if (ret == 0)
+        HIP_DEBUG("Value received from the DHT: %s\n",dht_response);
     return(ret);
 }
 

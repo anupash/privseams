@@ -178,7 +178,8 @@ AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=no])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        AC_CHECK_PROG(RPCGEN, rpcgen,,)
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
@@ -216,9 +217,11 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
+AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
+AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
+AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile

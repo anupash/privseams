@@ -13,4 +13,4 @@ int opendht_read_response_b(int, char *);
 /* For TEST purposes - Prints explanation of return code to stdout */
 void print_explanation(int);
 
-#endif lib_opendht
+#endif /* lib_opendht */

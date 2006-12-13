@@ -1,5 +1,3 @@
-/* xmlparser.c reads/writes the xml messages */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -139,6 +137,8 @@ int read_packet_content(char * in_buffer, char * out_value)
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
     memset(out_value, '\0', sizeof(out_value));
 
+    //HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
+
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
     { 
@@ -250,16 +250,25 @@ int read_packet_content(char * in_buffer, char * out_value)
     }
     else
     {
-        /* retrieve the first value in array */
-        if (!strcmp((char *)xml_node_value->name, "array") &&
+         /* retrieve the first value in array */
+         if (!strcmp((char *)xml_node_value->name, "array") &&
             xml_node_value->children &&
             !strcmp((char *)xml_node_value->children->name, "data"))
             xml_node = xml_node_value->children->children;
                       
-        if (!strcmp((char *)xml_node->name, "value") &&
+         if (!strcmp((char *)xml_node->name, "value") &&
             xml_node->children &&
             !strcmp((char *)xml_node->children->name, "array"))
             xml_node = xml_node->children->children; /* inner data element */
+         
+         /* check if there was no corresponging data for the key (<data> has no children) */
+         if (!xml_node->children && !strcmp((char *)xml_node->name, "data")) 
+         {
+            HIP_DEBUG("Key was not found from the DHT\n");
+            out_value[0] = '\0';
+            ret = 0;
+            goto out_err;
+         }   
               
          if (!strcmp((char *)xml_node->children->children->name, "base64"))
          {         

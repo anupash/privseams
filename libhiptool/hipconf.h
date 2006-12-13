@@ -41,6 +41,7 @@
 #include "builder.h"
 #include "hipd.h"
 #include "util.h"
+#include "libhipopendht.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.

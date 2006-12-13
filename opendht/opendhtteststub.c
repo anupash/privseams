@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
     char dht_response2[1024];
 
     /* Test values */  
+    char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
     char val_hit[] = "2001:0071:7c97:a5b4:6c73:1b1b:081e:126d";
     char val_ip[] = "128.196.1.100";
@@ -107,5 +108,17 @@ int main(int argc, char *argv[])
         else
             printf("Did NOT match the sent value!\n");
     }
+
+    /* Finally let's try to get a key that doesn't exist */
+    s = resolve_dht_gateway_info (opendht, AF_INET);
+    if (s < 0) exit(0);
+    ret = 0;
+    memset(dht_response2, '\0', sizeof(dht_response2));
+    ret = opendht_get_b(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, dht_response2); 
+    close(s);
+    if (ret == -1) exit (1);
+    printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
+    printf("Value received from DHT: %s\n",dht_response2);   
+
     exit(EXIT_SUCCESS);
 }
