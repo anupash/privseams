@@ -1053,9 +1053,9 @@
 		Package: xbase-clients - miscellaneous X clients
 </para></listitem>
 <listitem><para>
-		GTK 2.x and development files for it (Package called libgtk2.0-dev).
-           If you want to use 'system tray' icon, you need atleast 2.10.0 version
-		   of GTK.
+		   GTK 2.x and development files for it (Package called libgtk2.0-dev).
+		   If you want to use 'system  tray' icon, you need atleast 2.10.0 version
+		   of GTK. See info about manual GTK 2.10 installation below.
 </para></listitem>
 <listitem><para>
 
@@ -1063,6 +1063,26 @@
 </para></listitem>
 	</itemizedlist>
 
+	 <para>
+		   In order to install GTK 2.10 manually into
+		   debian/ubuntu, you should do following:
+		   Download glib, atk, cairo, pango and gtk from gtk.org.
+		   Atk and cairo are found under depencies-link. Also some
+		   other libraries are needed, but they can be found using
+		   "aptitude search" and then installed using "aptitude install".
+		   When you have all listed libraries dowloaded,
+		   install them in following order: glib->atk->cairo->pango->gtk.
+		   If you dont like to overide default libraries,
+		   install the libraries using "./configure --prefix=/opt".
+		   If you do it in that way, you need to set some envars:
+		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
+		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
+		   Example like this:
+		   "export PATH=/opt/bin:$PATH", 
+		   "export LD_LIBRARY_PATH=/opt/lib:$LID_LIBRARY_PATH"
+		   "export PKG_CONFIG_PATH=/opt/lib/pkgconfig:$PKG_CONFIG_PATH"
+	  </para>
+	  
 	  <para>
 		  In order to the agent start properly with right window and system tray icon,
 		  you must first do 'make install' to install the data files in right directory.

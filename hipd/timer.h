@@ -20,8 +20,8 @@ typedef struct timeval hip_timer_t;
       hip_timer_t hip_timer_result; \
       do_gettimeofday(&hip_stop_timer);\
       hip_timeval_diff(&timer, &hip_stop_timer, &hip_timer_result);\
-      HIP_INFO("%s: %ld usec\n", msg, \
-               hip_timer_result.tv_usec + hip_timer_result.tv_sec * 1000000);\
+      HIP_DEBUG("%s: %ld usec\n", msg, \
+              hip_timer_result.tv_usec + hip_timer_result.tv_sec * 1000000);\
  } while(0)
 
 #endif /* !__KERNEL__ */
