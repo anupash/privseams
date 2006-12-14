@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) 
 
 opendhtteststub_LDFLAGS= -lhipopendht -lcrypto -lhiptool $(HIP_XMLL) 
 

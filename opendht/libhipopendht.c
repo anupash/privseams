@@ -15,6 +15,10 @@
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 #include "debug.h"
+#include "time.h"
+
+struct timeval opendht_timer_before, opendht_timer_after;
+unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
@@ -45,6 +49,8 @@ int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family)
         perror("Socket");
     else
     {
+        //HIP_START_TIMER(opendht_timer); /* For testing */
+        gettimeofday(&opendht_timer_before, NULL);
         if (connect(s, res->ai_addr, res->ai_addrlen) < 0) 
         {
             perror("Connect");
@@ -222,6 +228,14 @@ int opendht_read_response_b(int sockfd, char * answer)
             memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
     }
     while (bytes_read > 0);
+
+    //HIP_STOP_TIMER(opendht_timer, "OpenDHT get/put connection"); /* For testing */
+    gettimeofday(&opendht_timer_after, NULL);    
+    opendht_timer_diff_sec  = (opendht_timer_after.tv_sec - opendht_timer_before.tv_sec) * 1000000;
+    opendht_timer_diff_usec = opendht_timer_after.tv_usec - opendht_timer_before.tv_usec;
+    HIP_INFO("OpenDHT connect took %.3f sec\n",
+             (opendht_timer_diff_sec+opendht_timer_diff_usec) / 1000000.0);
+
 
     /* Parse answer */
     memset(answer, '\0', sizeof(answer));
