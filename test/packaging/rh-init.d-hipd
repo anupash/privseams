@@ -15,7 +15,7 @@
 [ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
 
 RETVAL=0
-DAEMON="/usr/local/sbin/hipd"
+DAEMON="/usr/sbin/hipd"
 BASENAME="hipd"
 
 #PID_FILE=/var/run/hipd.pid

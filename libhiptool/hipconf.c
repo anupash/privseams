@@ -914,7 +914,7 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
 	char *libs;
-	char *path = "/usr/local/lib:/usr/lib:/lib";
+	char *path = "/usr/lib:/lib:/usr/local/lib";
 	va_list args;
 	int err = 0;
 
