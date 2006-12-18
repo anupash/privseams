@@ -186,7 +186,7 @@ int hipd_init(int flush_ipsec)
 	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 	
-	/* register_to_dht(); */
+	register_to_dht();
 	hip_load_configuration();
 
 out_err:
