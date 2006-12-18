@@ -819,20 +819,22 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
     int ret = 0;
-    int s;
+    int s, error;
     char dht_response[1024];
     char opendht[] = "planetlab1.diku.dk";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
 
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) 
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) 
     {
         HIP_DEBUG("Socket/Resolve/Connect error!\n");
         exit(-1);
     }
 
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get_b(s, (unsigned char *)opt[0], (unsigned char *)host_addr, dht_response);
+    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr);
+    ret = opendht_read_response(s, dht_response); 
     close(s);
     if (ret == -1) 
     {

@@ -68,6 +68,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "debug.h"
 #include "message.h"
 #include "util.h"
+#include "libhipopendht.h"
 
 /*
 #ifdef CONFIG_HIP_OPENDHT

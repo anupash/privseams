@@ -17,8 +17,23 @@
 #include "debug.h"
 #include "time.h"
 
+/*
 struct timeval opendht_timer_before, opendht_timer_after;
 unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
+*/
+
+/**
+ * init_dht_gateway_socket - Initializes socket for the openDHT communications
+ * @param sockfd Socket descriptor to be initialized.
+ *
+ * @return Returns positive if socket creation was ok negative on error.
+ */
+int init_dht_gateway_socket(int sockfd)
+{
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+        perror("Socket");
+    return(sockfd);      
+}
 
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
@@ -27,44 +42,42 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
  *
  * @return Returns 0 on success otherwise -1
  */
-int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family)
+/* int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family) */
+int resolve_dht_gateway_info(char * gateway, int sockfd)
 {
     struct addrinfo hints, *res;
-    int s, error;
+    int error, err;
     
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = sock_family;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
+    err = 0;
 
     error = getaddrinfo(gateway, "5851", &hints, &res);
     if (error != 0) 
     {
         printf("Could NOT resolve %s\n", gateway);
-        return(-1);
+        err = -1;
+        goto out_err;
     }
-
-    s = -1;   
-    s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (s < 0) 
-        perror("Socket");
+    /*
+        gettimeofday(&opendht_timer_before, NULL);
+    */      
+    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) 
+    {
+        perror("Connect");
+        err = -1;
+        goto out_err;
+    }
     else
     {
-        //HIP_START_TIMER(opendht_timer); /* For testing */
-        gettimeofday(&opendht_timer_before, NULL);
-        if (connect(s, res->ai_addr, res->ai_addrlen) < 0) 
-        {
-            perror("Connect");
-            s = -1;
-        }
-        else
-	{
-	  /* printf("Connected to gateway.\n"); */  /* test line */
-        }
+        /* printf("Connected to gateway.\n"); */  /* test line */
     }
 
-    if (s < 0)  printf("Resolving and connecting failed.\n");
+ out_err:
+    if (err < 0)  printf("Resolving and connecting failed.\n");
     freeaddrinfo(res);
-    return(s);
+    return(err);
 }
 
 /** 
@@ -77,17 +90,14 @@ int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family)
  *
  * @return Returns integer -1 on error, on success 0
  */
-int opendht_put_b(int sockfd, 
-                  unsigned char * key,
-                  unsigned char * value, 
-                  unsigned char * host, 
-                  char * response)
+int opendht_put(int sockfd, 
+                unsigned char * key,
+                unsigned char * value, 
+                unsigned char * host)
 {
-    int r = 0;
     int key_len = 0;
     int dht_port = 5851;
     char put_packet[2048];
-    char answer[1024];
     char tmp_key[21];
     struct in6_addr addrkey;
 
@@ -130,6 +140,7 @@ int opendht_put_b(int sockfd,
     
     send(sockfd, put_packet, strlen(put_packet), 0);
  
+    /*
     r = opendht_read_response_b(sockfd, answer);
     if (r == 0)
         memcpy(response, answer, sizeof(answer)); 
@@ -137,6 +148,8 @@ int opendht_put_b(int sockfd,
         response[0] = '\0';
 
     return(r);
+    */
+    return(0);
 }
 
 /** 
@@ -149,16 +162,13 @@ int opendht_put_b(int sockfd,
  *
  * @return Returns integer -1 on error, on success 0
  */
-int opendht_get_b(int sockfd, 
-                  unsigned char * key, 
-                  unsigned char * host,
-                  char * response)
+int opendht_get(int sockfd, 
+                unsigned char * key, 
+                unsigned char * host)
 {
-    int r = 0;
     int key_len = 0;
     int dht_port = 5851;
     char get_packet[2048];
-    char answer[1024];
     char tmp_key[21];
     struct in6_addr addrkey;
 
@@ -198,11 +208,13 @@ int opendht_get_b(int sockfd,
     }
   
     send(sockfd, get_packet, strlen(get_packet), 0);
+    /*
     r = opendht_read_response_b(sockfd, answer); 
     memcpy(response, answer, sizeof(answer));
- 
+    
     return(r);
-
+    */
+    return(0);
 }
 /** 
  * opendht_read_respoonse_b - Reads from the given socket and parses the XML RPC response
@@ -212,7 +224,7 @@ int opendht_get_b(int sockfd,
  * @return Returns integer, same as in read_packet_content
  * TODO: see read_packet_content
  */
-int opendht_read_response_b(int sockfd, char * answer)
+int opendht_read_response(int sockfd, char * answer)
 {
     int ret = 0;
     int bytes_read;
@@ -228,14 +240,13 @@ int opendht_read_response_b(int sockfd, char * answer)
             memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
     }
     while (bytes_read > 0);
-
-    //HIP_STOP_TIMER(opendht_timer, "OpenDHT get/put connection"); /* For testing */
+    /*
     gettimeofday(&opendht_timer_after, NULL);    
     opendht_timer_diff_sec  = (opendht_timer_after.tv_sec - opendht_timer_before.tv_sec) * 1000000;
     opendht_timer_diff_usec = opendht_timer_after.tv_usec - opendht_timer_before.tv_usec;
     HIP_INFO("OpenDHT connect took %.3f sec\n",
              (opendht_timer_diff_sec+opendht_timer_diff_usec) / 1000000.0);
-
+    */
 
     /* Parse answer */
     memset(answer, '\0', sizeof(answer));

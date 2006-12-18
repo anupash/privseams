@@ -16,7 +16,7 @@
 
 int main(int argc, char *argv[])
 {
-    int s, ret;
+    int s, ret, error;
     /*
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr;
@@ -51,35 +51,39 @@ int main(int argc, char *argv[])
            val_host, val_hit, val_ip);
   
     /*!!!! put fqdn->hit !!!!*/
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) exit(0);
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) exit(0);
     ret = 0;
-    ret = opendht_put_b(s, (unsigned char *)val_host,
-                        (unsigned char *)val_hit, (unsigned char *)host_addr, dht_response); 
-    close(s);
+    ret = opendht_put(s, (unsigned char *)val_host,
+                        (unsigned char *)val_hit, (unsigned char *)host_addr);   
+    ret = opendht_read_response(s, dht_response); 
     if (ret == -1) exit(1);
     printf("Put packet (fqdn->hit) sent and ...\n");
     printf("Put was success\n");
+    close(s);
 
     /*!!!! put hit->ip !!!!*/  
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) exit(0);
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) exit(0);
     ret = 0;
-    ret = opendht_put_b(s, (unsigned char *)val_hit,
-                        (unsigned char *)val_ip, (unsigned char *)host_addr, dht_response);
-    close(s);
+    ret = opendht_put(s, (unsigned char *)val_hit,
+                        (unsigned char *)val_ip, (unsigned char *)host_addr);
+    ret = opendht_read_response(s, dht_response); 
     if (ret == -1) exit(1);
     printf("Put packet (hit->ip) sent and ...\n");
     printf("Put was success\n", dht_response);
+    close(s);
 
     /*!!!! get fqdn !!!!*/
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) exit(0);
-
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) exit(0);
     ret = 0;
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get_b(s, (unsigned char *)val_host, (unsigned char *)host_addr, dht_response);
-    close(s);
+    ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr);
+    ret = opendht_read_response(s, dht_response); 
     if (ret == -1) exit (1);
     printf("Get packet (fqdn) sent and ...\n");
     if (ret == 0) 
@@ -90,14 +94,16 @@ int main(int argc, char *argv[])
         else
             printf("Did NOT match the sent value!\n");
     }
+    close(s);
 
     /*!!!! get hit !!!!*/
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) exit(0);
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
-    ret = opendht_get_b(s, (unsigned char *)val_hit, (unsigned char *)host_addr, dht_response2); 
-    close(s);
+    ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr); 
+    ret = opendht_read_response(s, dht_response2); 
     if (ret == -1) exit (1);
     printf("Get packet (hit) sent and ...\n");
     if (ret == 0)
@@ -108,17 +114,19 @@ int main(int argc, char *argv[])
         else
             printf("Did NOT match the sent value!\n");
     }
+    close(s);
 
     /* Finally let's try to get a key that doesn't exist */
-    s = resolve_dht_gateway_info (opendht, AF_INET);
-    if (s < 0) exit(0);
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
-    ret = opendht_get_b(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, dht_response2); 
-    close(s);
+    ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr); 
+    ret = opendht_read_response(s, dht_response2); 
     if (ret == -1) exit (1);
     printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
     printf("Value received from DHT: %s\n",dht_response2);   
-
+    close(s);
     exit(EXIT_SUCCESS);
 }
