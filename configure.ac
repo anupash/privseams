@@ -172,10 +172,10 @@ AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is NO)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
+                            [OpenDHT support (default is YES)]),
+             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
 AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=no])
+               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
         AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
