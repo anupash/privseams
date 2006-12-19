@@ -16,6 +16,7 @@
  * @todo    read the output message from send_msg?
  */
 #include "hipconf.h"
+#include "libhipopendht.h"
 
 /* hip nat on|off|peer_hit is currently specified. For peer_hit we should 'on'
    the nat mapping only when the communication takes place with specified
@@ -45,6 +46,11 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
+#ifdef CONFIG_HIP_OPENDHT
+"dht ttl <int>\n"
+"dht gw <ip/hostname>\n"
+"dht get <fqdn/hit>\n"
+#endif 
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -66,6 +72,9 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_service,
 	hip_conf_handle_load,
 	hip_conf_handle_run_normal, /* run */
+        hip_conf_handle_ttl,
+        hip_conf_handle_gw,
+        hip_conf_handle_get,
 	NULL, /* run */
 };
 
@@ -97,9 +106,10 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_HIP;
 	else if (!strcmp("run", text))
 		ret = ACTION_RUN;
-	else if (!strcmp("load",text))
-		ret =ACTION_LOAD;
-
+	else if (!strcmp("load", text))
+		ret = ACTION_LOAD;
+        else if (!strcmp("dht", text))
+                ret = ACTION_DHT;
 	return ret;
 }
 
@@ -140,7 +150,9 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_LOAD:
 		count=2;
 		break;
-
+        case ACTION_DHT:
+                count=2;
+                break;
 	}
 
 	return count;
@@ -181,6 +193,14 @@ int hip_conf_get_type(char *text) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
+#ifdef CONFIG_HIP_OPENDHT
+        else if (!strcmp("ttl", text))
+                ret = TYPE_TTL;
+        else if (!strcmp("gw", text))
+                ret = TYPE_GW;
+        else if (!strcmp("get", text))
+                 ret = TYPE_GET;
+#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 	return ret;
@@ -200,6 +220,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_GET:
         case ACTION_RUN:
 	case ACTION_LOAD:
+        case ACTION_DHT:
                 type_arg = 2;
                 break;
         }
@@ -779,6 +800,56 @@ out_err:
 	
 }
 
+/* ================================================================================== */
+
+int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+    printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+    return(ret);
+}
+
+int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+    printf("Got to the DHT gw handle for hipconf, NO FUNCTIONALITY YET\n");
+    return(ret);
+}
+
+int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int ret = 0;
+#ifdef CONFIG_HIP_OPENDHT
+    int s, error;
+    char dht_response[1024];
+    char opendht[] = "planetlab1.diku.dk";
+    char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+
+    s = init_dht_gateway_socket(s);
+    error = resolve_dht_gateway_info (opendht, s);
+    if (error < 0) 
+    {
+        HIP_DEBUG("Socket/Resolve/Connect error!\n");
+        exit(-1);
+    }
+
+    memset(dht_response, '\0', sizeof(dht_response));
+    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr);
+    ret = opendht_read_response(s, dht_response); 
+    close(s);
+    if (ret == -1) 
+    {
+        HIP_DEBUG("Get error!\n");
+        exit (-1);
+    }
+    if (ret == 0)
+        HIP_DEBUG("Value received from the DHT %s\n",dht_response);
+#endif 
+    return(ret);
+}
+
+/* ================================================================================== */
+
 /**
  * Handles @c service commands received from @c hipconf.
  *  
@@ -914,7 +985,7 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
 	char *libs;
-	char *path = "/usr/local/lib:/usr/lib:/lib";
+	char *path = "/usr/lib:/lib:/usr/local/lib";
 	va_list args;
 	int err = 0;
 

@@ -49,6 +49,9 @@
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
+      libxml2 and development headers for OpenDHT support
+      </para></listitem>
+      <listitem><para>
       GNU make
       </para></listitem>
       <listitem><para>
@@ -1126,13 +1129,15 @@
     <title>OpenDHT Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           Compile hipl--main--2.6 with ./configure --enable-opendht
-    </para></listitem>
-    <listitem><para>
            With OpenDHT support, the hip daemon pushes the hostname,
            RSA public HIT and public IP address to the OpenDHT. The resolver
            can then look up this information automatically without DNS or manual
            /etc/(hip)/hosts configuration.
+    </para></listitem>
+    <listitem><para>
+           Once you start hipd, it will send its hostname, HIT and IP address
+           to OpenDHT. You can query this information with
+           "hipconf dht get &lt;hostname|HIT&gt;".
     </para></listitem>
     <listitem><para>
            To test, just run normally conntest-server 

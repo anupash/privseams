@@ -11,7 +11,7 @@ Group: System Environment/Kernel
 Requires: openssl
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
-Prefix: /usr/local
+Prefix: /usr
 
 %description
 
