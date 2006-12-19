@@ -282,6 +282,18 @@ void button_event(GtkWidget *warg, gpointer data)
 	case IDM_RLIST_DELETE:
 		HIP_DEBUG("Delete\n");
 		break;
+	
+	case IDM_RUNAPP:
+		exec_application();
+		break;
+	
+	case IDM_NEWHIT:
+		gui_ask_new_hit(NULL, 2);
+		break;
+	
+	case IDM_NEWGROUP:
+		create_remote_group("");
+		break;
 	}
 }
 /* END OF FUNCTION */

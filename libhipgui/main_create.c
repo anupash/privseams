@@ -146,17 +146,17 @@ int main_create_content(void)
 	
 	label = gtk_menu_item_new_with_label(lang_get("menu-tools-runapp"));
 	gtk_menu_shell_append(w2, label);
-//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
 	gtk_widget_show(label);
 
 	label = gtk_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
 	gtk_menu_shell_append(w2, label);
-//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
 	gtk_widget_show(label);
 
 	label = gtk_menu_item_new_with_label(lang_get("menu-tools-addhit"));
 	gtk_menu_shell_append(w2, label);
-//	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
 	gtk_widget_show(label);
 
 	gtk_menu_item_set_submenu(w, w2);
