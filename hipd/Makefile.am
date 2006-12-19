@@ -21,7 +21,7 @@ hipd_SOURCES += escrow.c reg.c init.c maintenance.c accessor.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
-hipd_LDFLAGS = -lcrypto
+hipd_LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_HI3
  hipd_SOURCES += hi3.c
@@ -30,7 +30,7 @@ if HIP_HI3
 endif
 
 if HIP_OPENDHT
- hipd_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+ hipd_LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 # KeyNotev2

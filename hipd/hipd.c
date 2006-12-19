@@ -44,6 +44,17 @@ struct sockaddr_un hip_agent_addr;
 int hip_firewall_sock = 0;
 struct sockaddr_un hip_firewall_addr;
 
+/* 
+For uploading and downloading openDHT mappings 
+Used also from maintenance.c register_to_dht()
+*/
+int hip_opendht_sock_fqdn = 0; /* FQDN->HIT mapping */
+int hip_opendht_sock_hit = 0; /* HIT->IP mapping */
+int hip_opendht_fqdn_sent = 0;
+int hip_opendht_hit_sent = 0;
+int opendht_error = 0;
+char opendht_response[1024];
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -158,10 +169,11 @@ int main(int argc, char *argv[]) {
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec), 1, "hipd_init() failed!\n");
 
-	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
+	highest_descriptor = maxof(10, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_agent_sock, hip_raw_sock_v4,
-				   hip_nat_sock_udp, hip_firewall_sock);
+				   hip_nat_sock_udp, hip_firewall_sock,
+                                   hip_opendht_sock_fqdn, hip_opendht_sock_hit);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -186,6 +198,12 @@ int main(int argc, char *argv[]) {
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
 		FD_SET(hip_firewall_sock, &read_fdset);
+                if (hip_opendht_fqdn_sent == 1) {
+                    FD_SET(hip_opendht_sock_fqdn, &read_fdset);
+                }
+                if (hip_opendht_hit_sent == 1) {
+                    FD_SET(hip_opendht_sock_hit, &read_fdset);
+                }
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 
@@ -298,6 +316,42 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Reading user msg failed\n");
 			else
 				err = hip_handle_user_msg(hipd_msg, &app_src);
+                } else if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset)) {
+                    /* Receive answer from openDHT FQDN->HIT mapping */
+#ifdef CONFIG_HIP_OPENDHT
+                    if (hip_opendht_fqdn_sent == 1) 
+                    {
+                        memset(opendht_response, '\0', sizeof(opendht_response));
+                        opendht_error = opendht_read_response(hip_opendht_sock_fqdn, 
+                                                              opendht_response); 
+                        if (opendht_error == -1)
+                            HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
+                        else 
+                            HIP_DEBUG("Put was success (FQDN->HIT)\n");
+                        close(hip_opendht_sock_fqdn);
+                        hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                        hip_opendht_fqdn_sent = 0;
+                        opendht_error = 0;
+                    }
+#endif
+                } else if (FD_ISSET(hip_opendht_sock_hit, &read_fdset)) {
+#ifdef CONFIG_HIP_OPENDHT
+                    /* Receive answer from openDHT HIT->IP mapping */
+                    if (hip_opendht_hit_sent == 1) 
+                    {
+                        memset(opendht_response, '\0', sizeof(opendht_response));
+                        opendht_error = opendht_read_response(hip_opendht_sock_hit, 
+                                                              opendht_response); 
+                        if (opendht_error == -1)
+                            HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
+                        else 
+                            HIP_DEBUG("Put was success (HIT->IP)\n");
+                        close(hip_opendht_sock_hit);
+                        hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                        hip_opendht_hit_sent = 0;
+                        opendht_error= 0;
+                    }
+#endif
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			/* Receiving of a message from agent socket. */
 			int n;

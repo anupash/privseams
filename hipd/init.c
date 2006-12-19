@@ -188,6 +188,7 @@ int hipd_init(int flush_ipsec)
 	
 	register_to_dht();
 	hip_load_configuration();
+
 out_err:
 	return err;
 }

@@ -253,6 +253,13 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), chat, label2);
 	//gtk_widget_show(chat);
 
+#ifdef CONFIG_HIP_CERT
+	label = gtk_hbox_new(TRUE, 1);
+	label2 = gtk_label_new("Cert");
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
+	gtk_widget_show(label);        
+#endif
+
 	/***************************************
 	/* Setup remote HITs. */
 	scroll = gtk_scrolled_window_new(NULL, NULL);

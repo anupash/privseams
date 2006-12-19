@@ -29,10 +29,12 @@
 #include "i3_client_api.h"
 #endif
 
+/*
 #ifdef CONFIG_HIP_OPENDHT
 #include "tracker.h"
 #include "dhtresolver.h"
 #endif
+*/
 
 #define HIPL_VERSION 1.0
 
