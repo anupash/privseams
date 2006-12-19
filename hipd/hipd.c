@@ -318,6 +318,7 @@ int main(int argc, char *argv[]) {
 				err = hip_handle_user_msg(hipd_msg, &app_src);
                 } else if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset)) {
                     /* Receive answer from openDHT FQDN->HIT mapping */
+#ifdef CONFIG_HIP_OPENDHT
                     if (hip_opendht_fqdn_sent == 1) 
                     {
                         memset(opendht_response, '\0', sizeof(opendht_response));
@@ -332,7 +333,9 @@ int main(int argc, char *argv[]) {
                         hip_opendht_fqdn_sent = 0;
                         opendht_error = 0;
                     }
+#endif
                 } else if (FD_ISSET(hip_opendht_sock_hit, &read_fdset)) {
+#ifdef CONFIG_HIP_OPENDHT
                     /* Receive answer from openDHT HIT->IP mapping */
                     if (hip_opendht_hit_sent == 1) 
                     {
@@ -348,6 +351,7 @@ int main(int argc, char *argv[]) {
                         hip_opendht_hit_sent = 0;
                         opendht_error= 0;
                     }
+#endif
 		} else if (FD_ISSET(hip_agent_sock, &read_fdset)) {
 			/* Receiving of a message from agent socket. */
 			int n;

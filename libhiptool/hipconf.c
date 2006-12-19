@@ -819,6 +819,7 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
     int ret = 0;
+#ifdef CONFIG_HIP_OPENDHT
     int s, error;
     char dht_response[1024];
     char opendht[] = "planetlab1.diku.dk";
@@ -842,7 +843,8 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit (-1);
     }
     if (ret == 0)
-        HIP_DEBUG("Value received from the DHT: %s\n",dht_response);
+        HIP_DEBUG("Value received from the DHT %s\n",dht_response);
+#endif 
     return(ret);
 }
 

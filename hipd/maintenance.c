@@ -377,11 +377,9 @@ void register_to_dht ()
             HIP_ERROR("No HIT found\n");
             return;
         } 
-        /*
-        printf("FAMILY AF_INET = %d, WAS %d\n", AF_INET, &n->addr.ss_family);
-        */
-      /*if (&n->addr.ss_family == AF_INET) { */
-    
+
+        if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
+        {    
             tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
             tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
             HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", 
@@ -429,7 +427,7 @@ void register_to_dht ()
                         hip_opendht_hit_sent = 1;
                 }
             }
-      /*} */    
+      }     
     } 
 
 #endif

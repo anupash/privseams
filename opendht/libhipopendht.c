@@ -51,6 +51,7 @@ int resolve_dht_gateway_info(char * gateway, int sockfd)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NODHT;
     err = 0;
 
     error = getaddrinfo(gateway, "5851", &hints, &res);
@@ -76,7 +77,7 @@ int resolve_dht_gateway_info(char * gateway, int sockfd)
 
  out_err:
     if (err < 0)  printf("Resolving and connecting failed.\n");
-    freeaddrinfo(res);
+    //  freeaddrinfo(res);
     return(err);
 }
 
