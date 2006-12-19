@@ -1069,14 +1069,12 @@
 	 <para>
 		   In order to install GTK 2.10 manually into
 		   debian/ubuntu, you should do following:
-		   Download glib, atk, cairo, pango and gtk from gtk.org.
-		   Atk and cairo are found under depencies-link. Also some
-		   other libraries are needed, but they can be found using
-		   "aptitude search" and then installed using "aptitude install".
-		   When you have all listed libraries dowloaded,
-		   install them in following order: glib->atk->cairo->pango->gtk.
-		   If you dont like to overide default libraries,
-		   install the libraries using "./configure --prefix=/opt".
+		   Download gtk from gtk.org.
+		   Also some other libraries are needed, but they can be found using
+		   "aptitude search" and then installed using "aptitude install"
+		   (Atleast cairo, pango, atk, glib and development versions of those are needed).
+		   If you dont like to overide default gtk library,
+		   install gtk using "./configure --prefix=/opt".
 		   If you do it in that way, you need to set some envars:
 		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
 		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
