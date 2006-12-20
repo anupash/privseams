@@ -27,7 +27,10 @@ enum TOOLWINDOW_MODES
 	TWMODE_NONE = 0,
 	TWMODE_LOCAL,
 	TWMODE_REMOTE,
-	TWMODE_RGROUP
+	TWMODE_RGROUP,
+	TWMODE_LOCAL_EDIT,
+	TWMODE_REMOTE_EDIT,
+	TWMODE_RGROUP_EDIT,
 };
 
 
@@ -41,14 +44,18 @@ int tw_create_local(void);
 int tw_create_rgroup(void);
 
 /* file: tw_manage.c */
+void tw_clear(void);
+void tw_clear_remote(void);
 void tw_set_mode(int);
 void tw_set_remote_info(char *);
 void tw_set_remote_rgroup_info(HIT_Group *);
-void tw_set_local_info(char *);
+void tw_set_local_info(GtkWidget *, char *);
 void tw_set_rgroup_info(char *);
 void tw_apply(void);
 void tw_cancel(void);
 void tw_delete(void);
+int twl_apply(void);
+void twl_cancel(void);
 
 
 /*! @} addtogroup libhipgui */

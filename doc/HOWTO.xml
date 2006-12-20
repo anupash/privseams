@@ -49,6 +49,9 @@
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
+      libxml2 and development headers for OpenDHT support
+      </para></listitem>
+      <listitem><para>
       GNU make
       </para></listitem>
       <listitem><para>
@@ -1053,9 +1056,9 @@
 		Package: xbase-clients - miscellaneous X clients
 </para></listitem>
 <listitem><para>
-		GTK 2.x and development files for it (Package called libgtk2.0-dev).
-           If you want to use 'system tray' icon, you need atleast 2.10.0 version
-		   of GTK.
+		   GTK 2.x and development files for it (Package called libgtk2.0-dev).
+		   If you want to use 'system  tray' icon, you need atleast 2.10.0 version
+		   of GTK. See info about manual GTK 2.10 installation below.
 </para></listitem>
 <listitem><para>
 
@@ -1063,6 +1066,24 @@
 </para></listitem>
 	</itemizedlist>
 
+	 <para>
+		   In order to install GTK 2.10 manually into
+		   debian/ubuntu, you should do following:
+		   Download gtk from gtk.org.
+		   Also some other libraries are needed, but they can be found using
+		   "aptitude search" and then installed using "aptitude install"
+		   (Atleast cairo, pango, atk, glib and development versions of those are needed).
+		   If you dont like to overide default gtk library,
+		   install gtk using "./configure --prefix=/opt".
+		   If you do it in that way, you need to set some envars:
+		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
+		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
+		   Example like this:
+		   "export PATH=/opt/bin:$PATH", 
+		   "export LD_LIBRARY_PATH=/opt/lib:$LID_LIBRARY_PATH"
+		   "export PKG_CONFIG_PATH=/opt/lib/pkgconfig:$PKG_CONFIG_PATH"
+	  </para>
+	  
 	  <para>
 		  In order to the agent start properly with right window and system tray icon,
 		  you must first do 'make install' to install the data files in right directory.
@@ -1106,13 +1127,15 @@
     <title>OpenDHT Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           Compile hipl--main--2.6 with ./configure --enable-opendht
-    </para></listitem>
-    <listitem><para>
            With OpenDHT support, the hip daemon pushes the hostname,
            RSA public HIT and public IP address to the OpenDHT. The resolver
            can then look up this information automatically without DNS or manual
            /etc/(hip)/hosts configuration.
+    </para></listitem>
+    <listitem><para>
+           Once you start hipd, it will send its hostname, HIT and IP address
+           to OpenDHT. You can query this information with
+           "hipconf dht get &lt;hostname|HIT&gt;".
     </para></listitem>
     <listitem><para>
            To test, just run normally conntest-server 

@@ -465,6 +465,7 @@ In short:
 * cd linux-2.6.xx
 * apply hip patches
 * cp /boot/config-something .config
+* edit Makefile: e.g. EXTRAVERSION = .14-hipl
 * make rpm
 
 To install, do this:

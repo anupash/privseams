@@ -45,10 +45,23 @@ void hip_load_configuration() {
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0;
+	int err = 0, fd;
 	struct sockaddr_un daemon_addr;
 
 	hip_probe_kernel_modules();
+
+	/* Write pid to file. */
+/*	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Dont lock now, make this feature available later. */
+		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+//		sprintf(str, "%d\n", getpid());
+//		write(fd, str, strlen(str)); /* record pid to lockfile */
+//	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -175,6 +188,7 @@ int hipd_init(int flush_ipsec)
 	
 	register_to_dht();
 	hip_load_configuration();
+
 out_err:
 	return err;
 }
@@ -476,7 +490,7 @@ void hip_probe_kernel_modules()
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
-		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe",
 			 mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
 		system(cmd);
