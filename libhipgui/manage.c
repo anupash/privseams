@@ -304,7 +304,7 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 			break;
 		case GTK_RESPONSE_NO:
 		default:
-			err = -1;
+			HIP_IFEL(1, -1, "HIT add cancelled\n");
 			break;
 		}
 
