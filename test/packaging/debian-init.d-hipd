@@ -16,12 +16,12 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 case "$1" in
   start)
         echo -n "Starting hipd"
-	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd -- $HIPD_OPTS
+	start-stop-daemon --start --exec /usr/sbin/hipd -- $HIPD_OPTS
         echo "."
 	;;
   stop)
-        echo -n "Stopping hipd"
-	start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/hipd.pid
+        echo -n "Stopping hipd: "
+	start-stop-daemon --stop --quiet --oknodo --name hipd
         echo "."
 	;;
 
