@@ -15,12 +15,12 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
 case "$1" in
   start)
-        echo -n "Starting HIPL hipd"
+        echo -n "Starting hipd"
 	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd -- $HIPD_OPTS
         echo "."
 	;;
   stop)
-        echo -n "Stopping OpenBSD Secure Shell server: hipd"
+        echo -n "Stopping hipd"
 	start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/hipd.pid
         echo "."
 	;;

@@ -465,8 +465,7 @@ In short:
 * cd linux-2.6.xx
 * apply hip patches
 * cp /boot/config-something .config
-* edit Makefile: e.g. EXTRAVERSION = .14-hipl
-* make rpm
+* make rpm # or bin-rpm??
 
 To install, do this:
 * rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
