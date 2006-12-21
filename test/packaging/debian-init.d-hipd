@@ -16,19 +16,19 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 case "$1" in
   start)
         echo -n "Starting hipd"
-	start-stop-daemon --start --exec /usr/sbin/hipd -- $HIPD_OPTS
+	start-stop-daemon -q --start --exec /usr/sbin/hipd -- $HIPD_OPTS
         echo "."
 	;;
   stop)
-        echo -n "Stopping hipd: "
-	start-stop-daemon --stop --quiet --oknodo --name hipd
+        echo -n "Stopping hipd"
+	start-stop-daemon --stop --quiet --oknodo --name hipd 
         echo "."
 	;;
 
   reload|force-reload)
 	check_for_no_start
         echo -n "Reloading OpenBSD Secure Shell server's configuration"
-	start-stop-daemon --stop --signal 1 --quiet --oknodo --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd
+	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd
 	echo "."
 	;;
 
