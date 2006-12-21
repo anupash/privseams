@@ -1,9 +1,10 @@
 #! /bin/sh
+# /etc/init.d/hipd: start and stop the HIP daemon
+
 set -e
 
 HIPD_OPTS="-b"
-
-# /etc/init.d/hipd: start and stop the HIP daemon
+PIDFILE=/var/run/hipd.pid
 
 test -x /usr/sbin/hipd || exit 0
 
@@ -11,17 +12,17 @@ if test -f /etc/default/hipd; then
     . /etc/default/hipd
 fi
 
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+#export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
 case "$1" in
   start)
         echo -n "Starting hipd"
-	start-stop-daemon -q --start --exec /usr/sbin/hipd -- $HIPD_OPTS
+	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
         echo "."
 	;;
   stop)
         echo -n "Stopping hipd"
-	start-stop-daemon --stop --quiet --oknodo --name hipd 
+	start-stop-daemon --stop --quiet --oknodo --name hipd
         echo "."
 	;;
 
