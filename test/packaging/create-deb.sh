@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 # This script allows for building binary and source debian packages
 
 # XX FIXME: ADD OPP + RVS OPTIONS
@@ -52,12 +52,12 @@ copy_files ()
     echo "** Copying binary files to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
- # create directory structure
+
+    # create directory structure
     mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
     cd "$HIPL"
     
     cp hipd/hipd $PKGDIR/usr/sbin/
-    
     cp tools/hipconf $PKGDIR/usr/sbin/
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
@@ -155,7 +155,7 @@ if [ ! -d "$HIPL" ];then
   exit 1
 fi
 
-if [ $TYPE == "binary" ];then
+if [ $TYPE = "binary" ];then
 # Binary Debian Package
 # First compile all programs
     echo "** Compiling user space software"
