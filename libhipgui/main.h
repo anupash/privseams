@@ -16,6 +16,10 @@
 #include "nh.h"
 #include "tw.h"
 #include "widgets.h"
+#include "str_var.h"
+#include "language.h"
+#include "rhit_dnd.h"
+
 
 /*!
 	\addtogroup libhipgui

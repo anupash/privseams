@@ -1918,9 +1918,9 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   struct hip_lhi hit;
   char *filenamebase = NULL;
   int filenamebase_len, ret;
-  List list;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
+  List list;
 
   _HIP_DEBUG("\n");
 
@@ -1977,4 +1977,108 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   
   return err;
   
+}
+
+/**
+ * Handles the hipconf commands where the type is @c load. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_load(struct hip_common *msg, int action,
+		    const char *opt[], int optc)
+{
+  	int arg_len, err = 0, i, len;
+	char c[128], *hip_arg, ch, str[128], *fname, *args[64];
+	FILE *hip_config = NULL;  
+	List list;
+
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	if (!strcmp(opt[0], "default"))
+		fname = HIPD_CONFIG_FILE;
+	else
+		fname = (char *) opt[0];
+
+
+	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
+		 "Error: can't open config file %s.\n", fname);
+        
+	while(err == 0 && fgets(c, sizeof(c), hip_config) != NULL) {
+		if ((c[0] =='#') || (c[0] =='\n'))
+			continue;
+
+		/* prefix the contents of the line with" hipconf"  */
+		memset(str, '\0', sizeof(str));
+		strcpy(str, "hipconf");
+		str[strlen(str)] = ' ';
+		hip_arg = strcat(str, c);
+		/* replace \n with \0  */
+		hip_arg[strlen(hip_arg) - 1] = '\0';
+
+		/* split the line into an array of strings and feed it
+		   recursively to hipconf */
+		initlist(&list);
+		extractsubstrings(hip_arg, &list);
+		len = length(&list);
+		for(i = 0; i < len; i++) {
+			/* the list is backwards ordered */
+			args[len - i - 1] = getitem(&list, i);
+		}
+		err = hip_do_hipconf(len, args);
+		destroy(&list);
+	}
+
+ out_err:
+	if (hip_config)
+		fclose(hip_config);
+
+	return err;
+
+}
+
+/**
+ * Handles the hipconf commands where the type is @c del. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ *
+ */
+int hip_conf_handle_hi_get(struct hip_common *msg, int action,
+		      const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	err = get_local_hits(NULL, &at);
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
 }

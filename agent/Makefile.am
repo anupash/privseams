@@ -14,13 +14,14 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_IN
 if HIP_AGENT
 
 bin_PROGRAMS = hipagent
-hipagent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
+hipagent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c str_var.c language.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Somewhy @GTK_LIBS@ must be includec here, not enough that its in libhipgui
 # Makefile.am... Fix someday?
 #hipagent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 hipagent_LDADD = ../libhipgui/libhipgui.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+hipagent_LDADD += ../opendht/.libs/libhipopendht.a
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 
 endif

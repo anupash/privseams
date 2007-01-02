@@ -26,9 +26,11 @@ endif
 LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
-  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
-  conntest_client_LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
-  INCLUDES += -I../opendht
+#  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
+  LDADD += ../opendht/.libs/libhipopendht.a
+#  INCLUDES += -I../opendht
+  CFLAGS += $(HIPL_XMLL)
 endif
 
 bin_PROGRAMS = conntest-client
@@ -37,7 +39,7 @@ bin_PROGRAMS += conntest-client-gai
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
-bin_PROGRAMS += unittest
+#bin_PROGRAMS += unittest
 bin_PROGRAMS += hipsetup
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
@@ -59,7 +61,7 @@ conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
 conntest_server_native_SOURCES = conntest-server-native.c conntest.c
 conntest_server_SOURCES = conntest-server.c conntest.c
-unittest_SOURCES = unit.c unittest.c hipconftool.c suite.c
+#unittest_SOURCES = unit.c unittest.c hipconftool.c suite.c
 hipsetup_SOURCES = hipsetup.c hipconftool.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconftool.c misc_install.c conntest.c
 cookietest_SOURCES = cookietest.c

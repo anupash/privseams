@@ -1,41 +1,42 @@
 #! /bin/sh
+# /etc/init.d/hipd: start and stop the HIP daemon
+
 set -e
 
 HIPD_OPTS="-b"
+PIDFILE=/var/run/hipd.pid
 
-# /etc/init.d/hipd: start and stop the HIP daemon
-
-test -x /usr/local/sbin/hipd || exit 0
+test -x /usr/sbin/hipd || exit 0
 
 if test -f /etc/default/hipd; then
     . /etc/default/hipd
 fi
 
-export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+#export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
 case "$1" in
   start)
-        echo -n "Starting HIPL hipd"
-	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/local/sbin/hipd -- $HIPD_OPTS
+        echo -n "Starting hipd"
+	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
         echo "."
 	;;
   stop)
-        echo -n "Stopping OpenBSD Secure Shell server: hipd"
-	start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/hipd.pid
+        echo -n "Stopping hipd"
+	start-stop-daemon --stop --quiet --oknodo --name hipd
         echo "."
 	;;
 
   reload|force-reload)
 	check_for_no_start
         echo -n "Reloading OpenBSD Secure Shell server's configuration"
-	start-stop-daemon --stop --signal 1 --quiet --oknodo --pidfile /var/run/hipd.pid --exec /usr/local/sbin/hipd
+	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd
 	echo "."
 	;;
 
   restart)
         echo -n "Restarting OpenBSD Secure Shell server: hipd"
 	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile /var/run/hipd.pid
-	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/local/sbin/hipd -- $HIPD_OPTS
+	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd -- $HIPD_OPTS
 	echo "."
 	;;
 
