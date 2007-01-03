@@ -47,6 +47,7 @@ int hipd_init(int flush_ipsec)
 {
 	int err = 0, fd;
 	struct sockaddr_un daemon_addr;
+        extern struct addrinfo opendht_serving_gateway;
 
 	hip_probe_kernel_modules();
 
@@ -80,6 +81,11 @@ int hipd_init(int flush_ipsec)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
+#ifdef CONFIG_HIP_OPENDHT
+        err = resolve_dht_gateway_info("planetlab1.diku.dk", &opendht_serving_gateway);
+        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+        err = 0;
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();

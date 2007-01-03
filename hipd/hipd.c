@@ -54,6 +54,7 @@ int hip_opendht_fqdn_sent = 0;
 int hip_opendht_hit_sent = 0;
 int opendht_error = 0;
 char opendht_response[1024];
+struct addrinfo opendht_serving_gateway;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
