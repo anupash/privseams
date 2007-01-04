@@ -434,6 +434,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   char dht_response_hit[1024];
   char dht_response_addr[1024];
   struct in6_addr tmp_hit, tmp_addr;
+  struct addrinfo serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
   if (flags & AI_NODHT)
@@ -446,20 +447,44 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   ret_addr = -1;
 
   s = init_dht_gateway_socket(s);
-  error = resolve_dht_gateway_info ("planetlab1.diku.dk", s);
+  if (s < 0) 
+  {
+    HIP_DEBUG("Socket creation for openDHT failed skipping openDHT\n");
+    goto skip_dht;
+  }
+  error = 0;
+  error = resolve_dht_gateway_info ("planetlab1.diku.dk", &serving_gateway);
+  if (error < 0)
+  {
+    HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
+    close(s);
+    goto skip_dht;
+  }
+  error = 0;
+  error = connect_dht_gateway(s, &serving_gateway);
+  if (error < 0)
+  {
+    HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+    close(s);
+    goto skip_dht;
+  }
   ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr);
   ret_hit = opendht_read_response(s, dht_response_hit);
   if (ret_hit == 0)
     HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
   close(s);
-  if (ret_hit == 0)
+  if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
   {
     s = init_dht_gateway_socket(s);
-    error = resolve_dht_gateway_info ("planetlab1.diku.dk", s);
+    error = connect_dht_gateway(s, &serving_gateway);
+    if (error < 0)
+    {
+      HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+    }
     ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr);
     ret_addr = opendht_read_response(s, dht_response_addr);
     if (ret_addr == 0)
-      printf("Address received from DHT: %s\n",dht_response_addr);
+      HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
     close(s);
   }
   if ((ret_hit == 0) && (ret_addr == 0) && 
