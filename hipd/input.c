@@ -1576,7 +1576,18 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
 
 	/* check solution for cookie */
+
 	{
+		struct hip_solution *sol;
+		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
+			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
+		I = sol->I;
+		J = sol->J;
+		/*HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
+			 -ENOMSG, "Cookie solution rejected\n");*/
+	}
+
+	/*{
 		struct hip_solution *sol;
 		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
 			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
@@ -1584,7 +1595,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		J = sol->J;
 		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
 			 -ENOMSG, "Cookie solution rejected\n");
-	}
+	}*/
 
  	HIP_DEBUG("Cookie accepted\n");
 
@@ -2007,7 +2018,7 @@ int hip_receive_i2(struct hip_common *i2,
                	if (icomp==1) {
 		HIP_IFEL(hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info), -ENOSYS,
 		"Dropping HIP packet\n");
-		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) == hip_hadb_hit_is_our(&entry->hit_our)){
+		} else if (icomp==0){
 		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
 		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){
 		hip_receive_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
