@@ -1147,23 +1147,20 @@ int hip_handle_r1(struct hip_common *r1,
 	
 	/* Store the peer's public key to HA and validate it */
 	/** @todo Do not store the key if the verification fails. */
-	/*HIP_IFEL(entry->sign(&entry->hit_our, r1), -EINVAL, "Could not create signature\n");*/
-	/*peer_host_id=hip_hadb_try_to_find_by_peer_hit(&entry->hit_our);*/
-		
+			
 	HIP_IFEL(!(peer_host_id = hip_get_param(r1,HIP_PARAM_HOST_ID)), -ENOENT,
 		 "No HOST_ID found in R1\n");
-	/*HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);*/
-	
+
 	HIP_IFE(hip_init_peer(entry,peer_host_id,&entry->hit_our), -EINVAL);
-	
+	entry->verify(entry->peer_pub,&entry->hit_our);
 	
 	/*HIP_IFEL(entry->verify(entry->peer_pub,&entry->hit_our), -EINVAL,
 	 "Verification of R1 signature failed\n");*/
 	/*HIP_IFEL(entry->sign(entry->our_priv, r1), -EINVAL, "Could not create signature\n");*/
 	/*hip_init_us(entry,&entry->hit_our);	*/
 	/*entry->verify = hip_init_us(entry,&entry->hit_our);*/
-	HIP_IFEL(entry->verify(&entry->hit_our, r1), -EINVAL,
-		 "Verification of R1 signature failed\n");
+	/*HIP_IFEL(entry->verify(&entry->hit_our, r1), -EINVAL,
+		 "Verification of R1 signature failed\n");*/
 
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
