@@ -14,6 +14,7 @@ static struct list_head hadb_byhit[HIP_HADB_SIZE];
 hip_xmit_func_set_t default_xmit_func_set;
 /** A transmission function set for NAT traversal. */
 hip_xmit_func_set_t nat_xmit_func_set;
+static int flgpeer=0;
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -46,7 +47,28 @@ void hip_hadb_put_hs(void *entry)
 
 void hip_hadb_hold_entry(void *entry)
 {
-	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
+hip_hit_t hit_our, hit_peer;
+hip_ha_t *ha;
+int hldentry;
+int checkdb=1;
+
+if (checkdb==1)
+{
+	
+	hldentry = hip_hadb_find_byhits(&hit_our,&hit_peer);
+	if (hldentry!=0) {
+		HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
+	}
+	else
+	{
+	hip_hadb_put_entry(entry);
+	/*HIP_DB_HOLD_ENTRY(entry,hip_ha_t);*/
+	
+	}
+
+}
+hip_hadb_put_entry(entry);
+
 }
 
 void hip_hadb_put_entry(void *entry)
@@ -803,6 +825,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		return -ENOENT;
 	}
 
+
 	if (!ipv6_addr_any(addr)) {
 	  	hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
@@ -824,7 +847,8 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 
-	return 0;
+
+	return ha;
 }
 
 /* assume already locked entry */
@@ -1713,15 +1737,36 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	}
 
 	/* Verify sender HIT */
- 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
+	if (ipv6_addr_cmp(&entry->hit_our, &entry->hit_peer)==0)
+ 	{
+	
+	HIP_IFEL(ipv6_addr_cmp(&entry->hit_peer, &entry->hit_our),
+		 -1, "Unable to verify sender's HOST_ID\n");
+	
+	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
+		 "Out of memory\n");
+	memcpy(&entry->hit_our, peer, len);
+
+	/*entry->verify = hip_init_us(entry,&entry->hit_peer);*/
+
+	entry->verify = hip_get_host_id_algo(&entry->hit_peer) == HIP_HI_RSA ? 
+		hip_rsa_verify : hip_dsa_verify;
+	}
+
+	else
+	{
+	HIP_IFEL(hip_host_id_to_hit(peer,&hit, HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
+	
 	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
 		 "Out of memory\n");
 	memcpy(entry->peer_pub, peer, len);
 	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
 
+	}
+	
  out_err:
 	return err;
 }
@@ -2313,8 +2358,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	HIP_DEBUG("ha=0x%p\n", ha);
 
 	/* Delete SAs */
+	
 	hip_hadb_delete_inbound_spi(ha, 0);
 	hip_hadb_delete_outbound_spi(ha, 0);
+	
 
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
@@ -2328,6 +2375,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_pub);
 	if (ha)
 		HIP_FREE(ha);
+
+
 }
 
 

@@ -81,6 +81,14 @@ int hip_verify_network_header(struct hip_common *hip_common,
  *
  * @return HIP message type as a string.
  */
+int ident;
+#define ICMP_ECHOREPLY 20;
+int nsend;
+static int statuship=1;
+static int statushipI2=1;
+static int loopcnt=0;
+
+
 static inline const char *hip_msg_type_str(int type) 
 {
         const char *str = "UNKNOWN";
@@ -170,5 +178,5 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
- 
+
 #endif /* HIP_INPUT_H */
