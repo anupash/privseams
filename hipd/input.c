@@ -685,12 +685,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		err = -ENOSYS;
 	}
 
-/*if (entry->state == HIP_I1) {
-		entry->state = HIP_R1;
-	}*/
-/*	entry->state = HIP_R1;
-	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry);*/
 
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
 	if (err)
@@ -1150,17 +1144,10 @@ int hip_handle_r1(struct hip_common *r1,
 			
 	HIP_IFEL(!(peer_host_id = hip_get_param(r1,HIP_PARAM_HOST_ID)), -ENOENT,
 		 "No HOST_ID found in R1\n");
-
 	HIP_IFE(hip_init_peer(entry,peer_host_id,&entry->hit_our), -EINVAL);
-	entry->verify(entry->peer_pub,&entry->hit_our);
-	
-	/*HIP_IFEL(entry->verify(entry->peer_pub,&entry->hit_our), -EINVAL,
-	 "Verification of R1 signature failed\n");*/
-	/*HIP_IFEL(entry->sign(entry->our_priv, r1), -EINVAL, "Could not create signature\n");*/
-	/*hip_init_us(entry,&entry->hit_our);	*/
-	/*entry->verify = hip_init_us(entry,&entry->hit_our);*/
-	/*HIP_IFEL(entry->verify(&entry->hit_our, r1), -EINVAL,
-		 "Verification of R1 signature failed\n");*/
+	entry->verify(entry->peer_pub, ctx->input);
+		
+	/*HIP_IFE(entry->verify(entry->peer_pub, ctx->input), -EINVAL);*/
 
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
