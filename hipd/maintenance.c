@@ -359,6 +359,7 @@ void register_to_dht ()
     extern int hip_opendht_hit_sent;
     extern int opendht_error;
     extern char opendht_response[];
+    extern struct addrinfo opendht_serving_gateway;
 
     struct netdev_address *n, *t;
     char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
@@ -392,8 +393,8 @@ void register_to_dht ()
                 if (hip_opendht_sock_fqdn < 1)
                     hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                 opendht_error = 0;
-                opendht_error = resolve_dht_gateway_info ("planetlab1.diku.dk", 
-                                                          hip_opendht_sock_fqdn);
+                opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
+                                                    &opendht_serving_gateway);
                 if (opendht_error > -1) 
                 {
                     opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
@@ -413,8 +414,8 @@ void register_to_dht ()
                if (hip_opendht_sock_hit < 1)
                    hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
                 opendht_error = 0;
-                opendht_error = resolve_dht_gateway_info ("planetlab1.diku.dk", 
-                                                          hip_opendht_sock_hit);
+                opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
+                                                    &opendht_serving_gateway);
                if (opendht_error > -1)
                {
                     opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,

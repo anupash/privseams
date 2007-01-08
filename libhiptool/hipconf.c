@@ -824,12 +824,27 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     char dht_response[1024];
     char opendht[] = "planetlab1.diku.dk";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+    struct addrinfo serving_gateway;
+    memset(&serving_gateway, '0', sizeof(struct addrinfo));
 
     s = init_dht_gateway_socket(s);
-    error = resolve_dht_gateway_info (opendht, s);
+    if (s < 0) 
+    {
+        HIP_DEBUG("Socket creation failed!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = resolve_dht_gateway_info (opendht, &serving_gateway);
     if (error < 0) 
     {
-        HIP_DEBUG("Socket/Resolve/Connect error!\n");
+        HIP_DEBUG("Resolve error!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = connect_dht_gateway(s, &serving_gateway);
+    if (error < 0) 
+    {
+        HIP_DEBUG("Connect error!\n");
         exit(-1);
     }
 
