@@ -30,6 +30,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int msg_type;
 	int n = 0;
 	hip_ha_t * server_entry = NULL;
+        extern struct addrinfo opendht_serving_gateway;
 	HIP_KEA * kea = NULL;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -148,6 +149,33 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
+
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_GW:
+          {
+            char tmp_ip_str[20];
+            int *pret;
+            int ret;
+            struct in_addr tmp_v4;
+            struct sockaddr_in new_gw;
+            memset(&tmp_ip_str,'\0',20);
+            HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
+                                                       HIP_PARAM_IPV6_ADDR)),
+                                                        -1, 
+                                                       "no ip found\n");
+            IPV6_TO_IPV4_MAP(dst_ip, &tmp_v4); 
+            pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
+            HIP_DEBUG("Got address from hipconf %s\n", tmp_ip_str);
+            /* HIP_DUMP_MSG(msg); */
+            /*            new_gw.sin_family = AF_INET;
+            new_gw.sin_port = htons(5851);
+            inet_aton(tmp_ip_str, &new_gw.sin_addr.s_addr);
+            memcpy(&opendht_serving_gateway.ai_addr, &new_gw, sizeof(new_gw)); */
+            ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+          }
+          break;
+#endif 
+
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message (add).\n");

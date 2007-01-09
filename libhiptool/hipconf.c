@@ -48,7 +48,7 @@ const char *hipconf_usage =
 #endif
 #ifdef CONFIG_HIP_OPENDHT
 "dht ttl <int>\n"
-"dht gw <ip/hostname>\n"
+"dht gw <IPv4|hostname>\n"
 "dht get <fqdn/hit>\n"
 #endif 
 ;
@@ -811,9 +811,60 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
 
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-    int ret = 0;
-    printf("Got to the DHT gw handle for hipconf, NO FUNCTIONALITY YET\n");
-    return(ret);
+	int err;
+	int status = 0;
+	int ret;
+	struct in_addr ip_gw;
+        struct in6_addr ip_gw_mapped;
+        struct addrinfo new_gateway;
+
+	HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
+        
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+        memset(&new_gateway, '0', sizeof(new_gateway));
+        ret = 0;   
+        /* resolve the new gateway */
+        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+        if (ret < 0) goto out_err;
+        /* to presentation and back to in6_addr */
+        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
+        /*   printf("osoite %s\n", inet_ntoa(sa->sin_addr)); */       
+        ret = 0;
+	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out_err;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out_err;
+	}
+	status = SO_HIP_DHT_GW;
+
+	err = hip_build_param_contents(msg, (void *) &ip_gw_mapped, HIP_PARAM_IPV6_ADDR,
+				       sizeof(struct in6_addr));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+	err = hip_build_user_hdr(msg, status, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out_err;
+	}
+       
+        /* HIP_DUMP_MSG(msg); */
+
+ out_err:
+	return err;
 }
 
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)

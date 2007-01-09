@@ -73,13 +73,15 @@ int resolve_dht_gateway_info(char * gateway_name, struct addrinfo * gateway)
 int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
 {
     int ret = 0;
+    struct sockaddr_in *sa;
     if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
     {
         perror("Connect");
         ret = -1;
     }
     else
-        HIP_DEBUG("Connected to gateway.\n"); 
+      sa = (struct sockaddr_in *)gateway->ai_addr;
+        HIP_DEBUG("Connected to gateway %s.\n", inet_ntoa(sa->sin_addr)); 
     return(ret);
 }
 
