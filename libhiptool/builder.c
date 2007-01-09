@@ -2786,3 +2786,23 @@ int hip_build_netlink_dummy_header(struct hip_common *msg)
 {
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
 }
+
+int hip_build_param_opendht_gw_info(struct hip_common *msg,
+				    struct in6_addr *addr,
+				    uint32_t ttl,
+				    uint16_t port)
+{
+	int err = 0;
+	struct hip_opendht_gw_info gw_info;
+	
+	hip_set_param_type(&gw_info, HIP_PARAM_OPENDHT_GW_INFO);
+	hip_calc_param_len(&gw_info,
+			   sizeof(struct hip_opendht_gw_info) -
+			   sizeof(struct hip_tlv_common));
+	gw_info.ttl = ttl;
+	gw_info.port = htons(port);
+	ipv6_addr_copy(&gw_info.addr, addr);
+	
+	err = hip_build_param(msg, &gw_info);
+	return err;
+}
