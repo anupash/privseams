@@ -154,24 +154,26 @@ int hip_handle_user_msg(struct hip_common *msg,
         case SO_HIP_DHT_GW:
           {
             char tmp_ip_str[20];
+            int tmp_ttl, tmp_port;
             int *pret;
             int ret;
             struct in_addr tmp_v4;
-            struct sockaddr_in new_gw;
+            struct hip_opendht_gw_info *gw_info;
+            HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
+                     "no gw struct found\n");
             memset(&tmp_ip_str,'\0',20);
-            HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
-                                                       HIP_PARAM_IPV6_ADDR)),
-                                                        -1, 
-                                                       "no ip found\n");
-            IPV6_TO_IPV4_MAP(dst_ip, &tmp_v4); 
+            tmp_ttl = gw_info->ttl;
+            tmp_port = gw_info->port;
+
+            IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
             pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
-            HIP_DEBUG("Got address from hipconf %s\n", tmp_ip_str);
-            /* HIP_DUMP_MSG(msg); */
-            /*            new_gw.sin_family = AF_INET;
-            new_gw.sin_port = htons(5851);
-            inet_aton(tmp_ip_str, &new_gw.sin_addr.s_addr);
-            memcpy(&opendht_serving_gateway.ai_addr, &new_gw, sizeof(new_gw)); */
+            HIP_DEBUG("Got address %s port %d ttl %d from hipconf\n", 
+                      tmp_ip_str, htons(tmp_port), tmp_ttl);
             ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+            if (ret == 0)
+              HIP_DEBUG("Serving gateway changed\n");
+            else
+              HIP_DEBUG("Error in changing the serving gateway!");
           }
           break;
 #endif 

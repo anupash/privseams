@@ -47,8 +47,7 @@ const char *hipconf_usage =
 "set opp on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPENDHT
-"dht ttl <int>\n"
-"dht gw <IPv4|hostname>\n"
+"dht gw <IPv4|hostname> <port> <ttl>\n"
 "dht get <fqdn/hit>\n"
 #endif 
 ;
@@ -817,10 +816,11 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 	struct in_addr ip_gw;
         struct in6_addr ip_gw_mapped;
         struct addrinfo new_gateway;
+        struct hip_opendht_gw_info *gw_info;
 
 	HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
         
-	if (optc != 1) {
+	if (optc != 3) {
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
 		goto out_err;
@@ -831,9 +831,11 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
         /* resolve the new gateway */
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
         if (ret < 0) goto out_err;
-        /* to presentation and back to in6_addr */
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
-        /*   printf("osoite %s\n", inet_ntoa(sa->sin_addr)); */       
+        /*
+        HIP_DEBUG("addr %s ", inet_ntoa(sa->sin_addr));       
+        HIP_DEBUG("port %s ttl %s\n", opt[1], opt[2]);      
+        */  
         ret = 0;
 	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
         IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -846,23 +848,19 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		err = -EINVAL;
 		goto out_err;
 	}
-	status = SO_HIP_DHT_GW;
 
-	err = hip_build_param_contents(msg, (void *) &ip_gw_mapped, HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr));
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out_err;
 	}
 
-	err = hip_build_user_hdr(msg, status, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out_err;
 	}
        
-        /* HIP_DUMP_MSG(msg); */
-
  out_err:
 	return err;
 }

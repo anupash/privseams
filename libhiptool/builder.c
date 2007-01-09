@@ -2802,7 +2802,6 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	gw_info.ttl = ttl;
 	gw_info.port = htons(port);
 	ipv6_addr_copy(&gw_info.addr, addr);
-	
 	err = hip_build_param(msg, &gw_info);
 	return err;
 }
