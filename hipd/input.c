@@ -555,14 +555,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DUMP_MSG(msg);
 	type = hip_get_msg_type(msg);
 	
-	/*if (statuship=1)
-	{
-		type = hip_get_msg_type(msg);
-	}else{
-		type = HIP_STATE_I2_SENT;
-	}*/
-	
-
 	/** @todo Check packet csum.*/
 	
 	/* fetch the state from the hadb database to be able to choose the
@@ -2058,11 +2050,7 @@ int hip_receive_i2(struct hip_common *i2,
 
 	return err;
 }
-/*if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
-			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, 			i2_daddr, entry, i2_info);
 
-		}*/
 
 /**
  * hip_handle_r2 - handle incoming R2 packet
@@ -2477,9 +2465,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
-	/*entry->state = HIP_STATE_I2_SENT;
-	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry);*/
+	
 	switch(state) {
 	case HIP_STATE_NONE:
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
@@ -2501,25 +2487,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		
 	
 	}
-	/*if (statuship==2)
-	{
-	hip_handle_r1(i1, i1_saddr, i1_daddr, entry, i1_info);
-	}*/
+	
 	break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
-/*	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-               	if (cmphits==1) {
-		HIP_IFEL(hip_receive_i2(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
-		"Dropping HIP packet\n");
-		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) == hip_hadb_hit_is_our(&entry->hit_our)){
-		hip_receive_i2(i1,i1_saddr,i1_daddr,entry,i1_info);
-		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){
-		hip_receive_i2(i1,i1_saddr,i1_daddr,entry,i1_info);
-		
-	}*/
-
-	
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSED:
