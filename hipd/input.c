@@ -1376,9 +1376,9 @@ int hip_receive_r1(struct hip_common *r1,
 	HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_I1_SENT:
-	/*peer_host_id=hip_hadb_hit_is_our(&entry->hit_our)*/
-	/*err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);*/
-	hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
+	
+	err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
+	/*hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);*/
 	
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_CLOSING:
@@ -1575,7 +1575,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
 		I = sol->I;
 		J = sol->J;
-		/*HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
+	/*	HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
 			 -ENOMSG, "Cookie solution rejected\n");*/
 	}
 
@@ -1616,9 +1616,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   retransmission but then we'd had to fill ctx->hmac etc. TH: I'm not
 	   sure if this could be replaced with a function pointer which is set
 	   from hadb. Usually you shouldn't have state here, right? */
-	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
-		 "Unable to produce keying material. Dropping I2\n");
-
+	/*HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, I), -1,
+		 "Unable to produce keying material. Dropping I2\n");*/
+	hip_produce_keying_material(ctx->input, ctx, I, J);
 	/* Verify HMAC. */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
 		 "HMAC validation on i2 failed\n");
@@ -1756,8 +1756,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		 "init peer failed\n");		
 
 	/* Validate signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
-		 "Verification of I2 signature failed\n");
+	entry->verify(entry->peer_pub, ctx->input);
+	/*HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
+		 "Verification of I2 signature failed\n");*/
 
 	/* If we have old SAs with these HITs delete them */
 	hip_hadb_delete_inbound_spi(entry, 0);
@@ -2501,8 +2502,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		/* should not happen */
 		HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
 	}
-
-
 
 out_err:
 	return err;
