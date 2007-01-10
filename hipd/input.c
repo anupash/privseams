@@ -613,21 +613,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	  	/* State. */
 		/*HIP_ASSERT(entry)*/
 		
-		if (entry) {
-		
+		HIP_ASSERT(entry);
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
-		} 
-
-		else {
-
-		err = ((hip_rcv_func_set_t *)
-		 hip_get_rcv_default_func_set())->
-		  hip_receive_r1(msg, src_addr, dst_addr, entry, msg_info);
-		
-		}
-
 		
 		break;
 		
@@ -1618,9 +1607,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   retransmission but then we'd had to fill ctx->hmac etc. TH: I'm not
 	   sure if this could be replaced with a function pointer which is set
 	   from hadb. Usually you shouldn't have state here, right? */
-	/*HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, I), -1,
-		 "Unable to produce keying material. Dropping I2\n");*/
-	hip_produce_keying_material(ctx->input, ctx, I, J);
+	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
+		 "Unable to produce keying material. Dropping I2\n");
+	/*hip_produce_keying_material(ctx->input, ctx, I, J);*/
 	/* Verify HMAC. */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
 		 "HMAC validation on i2 failed\n");
