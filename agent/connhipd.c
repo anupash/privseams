@@ -360,12 +360,11 @@ int connhipd_thread(void *data)
 		if (hip_agent_connected < 1)
 		{
 			/* Test connection. */
-			HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
-			HIP_DEBUG("Pinging daemon...\n");
+			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
+			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
 			n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
-			if (n < 0) HIP_DEBUG("Could not send ping to daemon, timeout in %d seconds.\n",
-			                     60 + hip_agent_connected);
+			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
 		}
 		

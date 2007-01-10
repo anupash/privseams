@@ -101,7 +101,7 @@ AC_CACHE_CHECK([whether to use agent],
 if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
-        AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
+        AC_CHECK_LIB(gtk-x11-2.0, gtk_init,, AC_MSG_ERROR(libgtk not found))
 #        hipl_opt_build="$hipl_opt_build libhipgui agent"
 # autogen.sh fails on a system without gtk:
 #		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
@@ -127,6 +127,16 @@ AC_CACHE_CHECK([whether to use cookie extensions],
                [ac_cv_use_cookie], [ac_cv_use_cookie=no])
 if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
+fi
+
+AC_ARG_ENABLE(cert,
+             AC_HELP_STRING([--enable-cert],
+                            [Samu's cert extensions (default is NO)]),
+             [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
+AC_CACHE_CHECK([whether to use cert extensions],
+               [ac_cv_use_cert], [ac_cv_use_cert=no])
+if test x"$ac_cv_use_cert" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_CERT, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -162,13 +172,14 @@ AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is NO)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
+                            [OpenDHT support (default is YES)]),
+             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
 AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=no])
+               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        AC_CHECK_PROG(RPCGEN, rpcgen,,)
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
@@ -206,9 +217,12 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
+AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
+AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
+AC_PREFIX_DEFAULT("/usr")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
+AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile

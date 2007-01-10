@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -xv
 # This script allows for building binary and source debian packages
 
 # XX FIXME: ADD OPP + RVS OPTIONS
@@ -22,83 +22,86 @@ PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
 # copy the tarball from the HIPL directory
 copy_tarball ()
 {
- set -e
-
- echo "** Copying the tarball"
+    set -e
+    
+    echo "** Copying the tarball"
  #cd ${PKGDIR}
- cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
- 
- echo "** Copying Debian control files to '${SRCDIR}/debian'"
- mkdir -p "${SRCDIR}/debian"
- cp ${PKGROOT}/DEBIAN/control-src ${SRCDIR}/debian/control
- for f in changelog copyright;do
-     cp ${PKGROOT}/DEBIAN/$f "${SRCDIR}/debian"
- done
-
- set +e
+    cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+    
+    echo "** Copying Debian control files to '${SRCDIR}/debian'"
+    mkdir -p "${SRCDIR}/debian"
+    cp ${PKGROOT}/DEBIAN/control-src ${SRCDIR}/debian/control
+    for f in changelog copyright;do
+	cp ${PKGROOT}/DEBIAN/$f "${SRCDIR}/debian"
+    done
+    
+    set +e
 }
 
 # copy files
 copy_files ()
 {
- echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
+    echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
+    
+    set -e
+    mkdir -p "$PKGDIR/DEBIAN"
+    for f in control changelog copyright postinst prerm;do
+	cp DEBIAN/$f "$PKGDIR/DEBIAN"
+    done
+    
+    echo "** Copying binary files to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
 
- set -e
- mkdir -p "$PKGDIR/DEBIAN"
- for f in control changelog copyright postinst prerm;do
-   cp DEBIAN/$f "$PKGDIR/DEBIAN"
- done
-
- echo "** Copying binary files to '$PKGDIR'"
- mkdir -p "$PKGDIR/usr/local"
- cd "$PKGDIR"
- # create directory structure
- mkdir -p usr/local/sbin usr/local/bin usr/local/lib etc/hip /usr/share/doc
- cd "$HIPL"
-
- cp hipd/hipd $PKGDIR/usr/local/sbin/
-
- cp tools/hipconf $PKGDIR/usr/local/sbin/
- for suffix in "" -gai -native -native-user-key;do
-   cp test/conntest-client$suffix $PKGDIR/usr/local/bin/
- done
- for suffix in "" -native;do
-   cp test/conntest-server$suffix $PKGDIR/usr/local/bin/
- done
- cp test/hipsetup $PKGDIR/usr/local/sbin/
- for suffix in a so so.0 so.0.0.0;do
-   cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/local/lib/
-   cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/local/lib/
-   cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/local/lib/
- done
- cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/local/lib/
- cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/local/lib/
- cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/local/lib/
-
- echo "** Copying documentation to '$PKGDIR'"
- cd "$HIPL/doc"
- DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
- set +e
+    # create directory structure
+    mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    cd "$HIPL"
+    
+    cp hipd/hipd $PKGDIR/usr/sbin/
+    cp tools/hipconf $PKGDIR/usr/sbin/
+    for suffix in "" -gai -native -native-user-key;do
+	cp test/conntest-client$suffix $PKGDIR/usr/bin/
+    done
+    for suffix in "" -native;do
+	cp test/conntest-server$suffix $PKGDIR/usr/bin/
+    done
+    cp test/hipsetup $PKGDIR/usr/sbin/
+    for suffix in a so so.0 so.0.0.0;do
+	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
+	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
+    done
+    cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
+    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+    cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    
+    echo "** Copying documentation to '$PKGDIR'"
+    cd "$HIPL/doc"
+    DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+    set +e
 }
 
 error_cleanup()
 {
- if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
-   echo "** Removing '$PKGDIR'"
-   if ! rm -rf "$PKGDIR";then
-     echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
-   fi
- fi
+    if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
+	echo "** Removing '$PKGDIR'"
+	if ! rm -rf "$PKGDIR";then
+	    echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
+	fi
+    fi
 }
 
 error_cleanup_src()
 {
- if [ -n "$PKGDIR_SRC" -a -d "$PKGDIR_SRC" ];then
-   echo "** Removing '$PKGDIR'"
-   if ! rm -rf "$PKGDIR";then
-     echo "** Warning: Some error occurred while removing directory '$PKGDIR_SRC'"
-   fi
- fi
+    if [ -n "$PKGDIR_SRC" -a -d "$PKGDIR_SRC" ];then
+	echo "** Removing '$PKGDIR'"
+	if ! rm -rf "$PKGDIR";then
+	    echo "** Warning: Some error occurred while removing directory '$PKGDIR_SRC'"
+	fi
+    fi
 }
 
 die() {
@@ -152,7 +155,7 @@ if [ ! -d "$HIPL" ];then
   exit 1
 fi
 
-if [ $TYPE == "binary" ];then
+if [ $TYPE = "binary" ];then
 # Binary Debian Package
 # First compile all programs
     echo "** Compiling user space software"

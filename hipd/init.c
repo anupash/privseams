@@ -17,12 +17,28 @@ extern struct hip_common *hipd_msg;
 
 void hip_load_configuration() {
 	const char *cfile = "default";
-	pid_t pid = fork();
+	struct stat status;
+	pid_t pid;
+	FILE *fp = NULL;
+	size_t items = 0;
+	int len = strlen(HIPD_CONFIG_FILE_EX);
+
+	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_CONFIG_FILE_EX, len, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	pid = fork();
 	
 	if (pid == 0) {
 		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
 		exit(0);
 	}
+	wait(NULL);
 }
 
 /**
@@ -30,10 +46,24 @@ void hip_load_configuration() {
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0;
+	int err = 0, fd;
 	struct sockaddr_un daemon_addr;
+        extern struct addrinfo opendht_serving_gateway;
 
 	hip_probe_kernel_modules();
+
+	/* Write pid to file. */
+/*	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Dont lock now, make this feature available later. */
+		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+//		sprintf(str, "%d\n", getpid());
+//		write(fd, str, strlen(str)); /* record pid to lockfile */
+//	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -52,6 +82,11 @@ int hipd_init(int flush_ipsec)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
+#ifdef CONFIG_HIP_OPENDHT
+        err = resolve_dht_gateway_info("planetlab1.diku.dk", &opendht_serving_gateway);
+        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+        err = 0;
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
@@ -61,7 +96,7 @@ int hipd_init(int flush_ipsec)
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_init_opp_db();
+	hip_init_opp_db();
 #endif
 
 	/* Resolve our current addresses, afterwards the events from kernel
@@ -147,7 +182,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
 //	TODO: initialize firewall socket
-    hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_firewall_sock < 0), 1,
 		 "Could not create socket for firewall communication.\n");
 	unlink(HIP_FIREWALLADDR_PATH);
@@ -160,6 +195,7 @@ int hipd_init(int flush_ipsec)
 	
 	register_to_dht();
 	hip_load_configuration();
+
 out_err:
 	return err;
 }
@@ -461,7 +497,7 @@ void hip_probe_kernel_modules()
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
-		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe",
 			 mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
 		system(cmd);

@@ -65,8 +65,8 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 		_t2.tv_sec -= nsec;
 	}
 
-	result->tv_sec = _t1.tv_sec - _t2.tv_sec;
-	result->tv_usec = _t1.tv_usec - _t2.tv_usec;
+	result->tv_sec = _t2.tv_sec - _t1.tv_sec;
+	result->tv_usec = _t2.tv_usec - _t1.tv_usec;
 
 	return _t1.tv_sec >= _t2.tv_sec;
 }

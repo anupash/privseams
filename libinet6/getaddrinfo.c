@@ -68,11 +68,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "debug.h"
 #include "message.h"
 #include "util.h"
+#include "libhipopendht.h"
 
-
+/*
 #ifdef CONFIG_HIP_OPENDHT
 #include "dhtresolver.h"
 #endif
+*/
 
 #include "bos.h"
 
@@ -415,7 +417,7 @@ gethosts(const char *name, int _family,
  }
 
 int 
-gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
+gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
  {									
   struct in6_addr hit;							
   FILE *fp = NULL;							
@@ -427,21 +429,70 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
   int found_hits = 0;
 
 #ifdef CONFIG_HIP_OPENDHT
-  char tmp_hit_str[INET6_ADDRSTRLEN], tmp_addr_str[INET6_ADDRSTRLEN];	
+ 
+  int s, error, ret_hit, ret_addr;
+  char dht_response_hit[1024];
+  char dht_response_addr[1024];
   struct in6_addr tmp_hit, tmp_addr;
+  struct addrinfo serving_gateway;
+  char ownaddr[] = "127.0.0.1";
 
-  memset(tmp_hit_str, '\0', sizeof(tmp_hit_str));
-  memset(tmp_addr_str, '\0', sizeof(tmp_addr_str));
+  if (flags & AI_NODHT)
+    goto skip_dht;
 
-  if (!gethiphostbyname(name, tmp_hit_str) 
-      && !gethiphostbyhit(tmp_hit_str, tmp_addr_str)) 
+  memset(dht_response_hit, '\0', sizeof(dht_response_hit));
+  memset(dht_response_addr, '\0', sizeof(dht_response_addr));
+
+  ret_hit = -1;  
+  ret_addr = -1;
+
+  s = init_dht_gateway_socket(s);
+  if (s < 0) 
+  {
+    HIP_DEBUG("Socket creation for openDHT failed skipping openDHT\n");
+    goto skip_dht;
+  }
+  error = 0;
+  error = resolve_dht_gateway_info ("planetlab1.diku.dk", &serving_gateway);
+  if (error < 0)
+  {
+    HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
+    close(s);
+    goto skip_dht;
+  }
+  error = 0;
+  error = connect_dht_gateway(s, &serving_gateway);
+  if (error < 0)
+  {
+    HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+    close(s);
+    goto skip_dht;
+  }
+  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr);
+  ret_hit = opendht_read_response(s, dht_response_hit);
+  if (ret_hit == 0)
+    HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
+  close(s);
+  if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
+  {
+    s = init_dht_gateway_socket(s);
+    error = connect_dht_gateway(s, &serving_gateway);
+    if (error < 0)
+    {
+      HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+    }
+    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr);
+    ret_addr = opendht_read_response(s, dht_response_addr);
+    if (ret_addr == 0)
+      HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
+    close(s);
+  }
+  if ((ret_hit == 0) && (ret_addr == 0) && 
+      (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) 
     { 
 
-      if (inet_pton(AF_INET6, tmp_hit_str, &tmp_hit) >0 &&
-          inet_pton(AF_INET6, tmp_addr_str, &tmp_addr) >0) {
-
-	HIP_DEBUG("Obtained HIT=%s with IP=%s for hostname %s from DHT\n",
-                      tmp_hit_str, tmp_addr_str, name);
+      if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
+          inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
 
 	if (**pat == NULL) {						
 	  **pat = malloc(sizeof(struct gaih_addrtuple));
@@ -459,7 +510,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat)
 	*pat = &((**pat)->next);
 	return 1;
       }
-    }
+    } 
+  /* CONFIG_HIP_OPENDHT */
+ skip_dht:
 #endif
 									
   /*! \todo check return values */
@@ -925,9 +978,10 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	   with some filtering. */
       }
 #endif
+
       if (hip_transparent_mode) {
 	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-	found_hits |= gethosts_hit(name, &pat);
+	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
 	if (req->ai_flags & AI_HIP) {
 	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
 	} else {
@@ -936,7 +990,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       } else /* not hip_transparent_mode */ {
 	if (req->ai_flags & AI_HIP) {
 	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
-	  found_hits |= gethosts_hit(name, &pat);
+	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
 	} else {
 	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
 	}
@@ -949,7 +1003,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	_res.options &= ~RES_USE_INET6;
       
       if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6 
-	|| hip_transparent_mode || req->ai_flags & AI_HIP)
+	|| hip_transparent_mode || req->ai_flags & AI_HIP || req->ai_flags & AI_NODHT)
 	 no_inet6_data = gethosts (name, AF_INET6, &pat);
 
       if (req->ai_family == AF_UNSPEC)
@@ -958,7 +1012,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (req->ai_family == AF_INET ||
 	  (!v4mapped && req->ai_family == AF_UNSPEC) ||
 	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
-  	  || hip_transparent_mode || req->ai_flags & AI_HIP)
+  	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 	no_data = gethosts (name, AF_INET, &pat);
       HIP_DEBUG("Dumping the structure\n");
       dump_pai(*at);
@@ -1212,7 +1266,7 @@ getaddrinfo (const char *name, const char *service,
   printf("flags: %x\n", hints->ai_flags);
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE|AI_KERNEL_LIST))
+			  AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
     return EAI_BADFLAGS;
 
   if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
