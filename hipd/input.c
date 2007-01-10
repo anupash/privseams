@@ -1495,12 +1495,13 @@ int hip_create_r2(struct hip_context *ctx,
 	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
-	/*HIP_IFEL(!(rva = hip_rvs_ha2rva(
+
+	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 -1, "Inserting rendezvous association failed..\n");
 
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
-		  "Error while inserting RVA into hash table\n");*/
+		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
 
  out_err:
