@@ -1272,9 +1272,9 @@ int hip_handle_r1(struct hip_common *r1,
 	ctx->dh_shared_key = NULL;
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
-	/*HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
+	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
 								solved_puzzle),
-			 -EINVAL, "Could not produce keying material\n");*/
+			 -EINVAL, "Could not produce keying material\n");
 
 	/* Everything ok, save host id to HA */
 	{
@@ -2481,13 +2481,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		
 		} else if (cmphits == 0){
 		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-		
-/*		HIP_IFCS(entry, err = entry->hadb_rcv_func->hip_receive_r1(i1,i1_saddr,i1_daddr,entry,i1_info));*/
 		statuship=2;
 		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){
 		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
-	
 	}
 	
 	break;
