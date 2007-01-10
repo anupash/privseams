@@ -568,11 +568,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 	
 	HIP_DEBUG("nat setting. Options:%s\n", opt[0]);
 
-	if (optc != 1) {
-		HIP_ERROR("Missing arguments\n");
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	if (!strcmp("on",opt[0])) {
 		memset(&hit,0,sizeof(struct in6_addr));
@@ -581,33 +577,31 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 		memset(&hit,0,sizeof(struct in6_addr));
                 status = SO_HIP_SET_NAT_OFF;
 	} else {
+		HIP_IFEL(0, -1, "bad args\n");
+	}
+#if 0 /* Not used currently */
+	else {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
 			err = -EAFNOSUPPORT;
-			goto out;
+			goto out_err;
 		} else if (ret == 0) {
 			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 			err = -EINVAL;
-			goto out;
+			goto out_err;
 		}
 		status = SO_HIP_SET_NAT_ON;
 	}
 
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed: %s\n", strerror(err));
+#endif
 
-	err = hip_build_user_hdr(msg, status, 0);
-	if (err) {
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
 
- out:
+ out_err:
 	return err;
 
 }
@@ -824,12 +818,27 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     char dht_response[1024];
     char opendht[] = "planetlab1.diku.dk";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+    struct addrinfo serving_gateway;
+    memset(&serving_gateway, '0', sizeof(struct addrinfo));
 
     s = init_dht_gateway_socket(s);
-    error = resolve_dht_gateway_info (opendht, s);
+    if (s < 0) 
+    {
+        HIP_DEBUG("Socket creation failed!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = resolve_dht_gateway_info (opendht, &serving_gateway);
     if (error < 0) 
     {
-        HIP_DEBUG("Socket/Resolve/Connect error!\n");
+        HIP_DEBUG("Resolve error!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = connect_dht_gateway(s, &serving_gateway);
+    if (error < 0) 
+    {
+        HIP_DEBUG("Connect error!\n");
         exit(-1);
     }
 
