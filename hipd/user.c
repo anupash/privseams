@@ -30,6 +30,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int msg_type;
 	int n = 0;
 	hip_ha_t * server_entry = NULL;
+        extern struct addrinfo opendht_serving_gateway;
 	HIP_KEA * kea = NULL;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -148,6 +149,35 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
+
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_GW:
+          {
+            char tmp_ip_str[20];
+            int tmp_ttl, tmp_port;
+            int *pret;
+            int ret;
+            struct in_addr tmp_v4;
+            struct hip_opendht_gw_info *gw_info;
+            HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
+                     "no gw struct found\n");
+            memset(&tmp_ip_str,'\0',20);
+            tmp_ttl = gw_info->ttl;
+            tmp_port = gw_info->port;
+
+            IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+            pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
+            HIP_DEBUG("Got address %s port %d ttl %d from hipconf\n", 
+                      tmp_ip_str, htons(tmp_port), tmp_ttl);
+            ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+            if (ret == 0)
+              HIP_DEBUG("Serving gateway changed\n");
+            else
+              HIP_DEBUG("Error in changing the serving gateway!");
+          }
+          break;
+#endif 
+
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message (add).\n");

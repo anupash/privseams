@@ -15,9 +15,9 @@
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 #include "debug.h"
+/*
 #include "time.h"
 
-/*
 struct timeval opendht_timer_before, opendht_timer_after;
 unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 */
@@ -37,48 +37,52 @@ int init_dht_gateway_socket(int sockfd)
 
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
- * @param gateway FQDN of the gateway
- * @param sock_family Desired protocol family
+ * @param gateway_name FQDN of the gateway
+ * @param gateway Addrinfo struct here the result will be stored
  *
  * @return Returns 0 on success otherwise -1
  */
-/* int resolve_dht_gateway_info(char * gateway, sa_family_t sock_family) */
-int resolve_dht_gateway_info(char * gateway, int sockfd)
+int resolve_dht_gateway_info(char * gateway_name, struct addrinfo * gateway)
 {
     struct addrinfo hints, *res;
-    int error, err;
+    int error;
     
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NODHT;
-    err = 0;
+    error = 0;
 
-    error = getaddrinfo(gateway, "5851", &hints, &res);
+    error = getaddrinfo(gateway_name, "5851", &hints, &res);
     if (error != 0) 
-    {
-        printf("Could NOT resolve %s\n", gateway);
-        err = -1;
-        goto out_err;
-    }
-    /*
-        gettimeofday(&opendht_timer_before, NULL);
-    */      
-    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) 
+        HIP_DEBUG("Resolving failed\n");
+    else
+        memcpy(gateway, res, sizeof(struct addrinfo));
+
+    struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
+    HIP_DEBUG("OpenDHT gateway port=%d IPv4/%s\n", ntohs(sa->sin_port), inet_ntoa(sa->sin_addr));
+
+    return(error);
+}
+
+/**
+ *  connect_dht_gateway - Connects to given gateway
+ *  @param sockfd
+ *
+ */
+int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
+{
+    int ret = 0;
+    struct sockaddr_in *sa;
+    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
     {
         perror("Connect");
-        err = -1;
-        goto out_err;
+        ret = -1;
     }
     else
-    {
-        /* printf("Connected to gateway.\n"); */  /* test line */
-    }
-
- out_err:
-    if (err < 0)  printf("Resolving and connecting failed.\n");
-    //  freeaddrinfo(res);
-    return(err);
+      sa = (struct sockaddr_in *)gateway->ai_addr;
+        HIP_DEBUG("Connected to gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+    return(ret);
 }
 
 /** 
@@ -140,16 +144,6 @@ int opendht_put(int sockfd,
     }
     
     send(sockfd, put_packet, strlen(put_packet), 0);
- 
-    /*
-    r = opendht_read_response_b(sockfd, answer);
-    if (r == 0)
-        memcpy(response, answer, sizeof(answer)); 
-    else 
-        response[0] = '\0';
-
-    return(r);
-    */
     return(0);
 }
 
@@ -209,12 +203,6 @@ int opendht_get(int sockfd,
     }
   
     send(sockfd, get_packet, strlen(get_packet), 0);
-    /*
-    r = opendht_read_response_b(sockfd, answer); 
-    memcpy(response, answer, sizeof(answer));
-    
-    return(r);
-    */
     return(0);
 }
 /** 
@@ -241,13 +229,6 @@ int opendht_read_response(int sockfd, char * answer)
             memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
     }
     while (bytes_read > 0);
-    /*
-    gettimeofday(&opendht_timer_after, NULL);    
-    opendht_timer_diff_sec  = (opendht_timer_after.tv_sec - opendht_timer_before.tv_sec) * 1000000;
-    opendht_timer_diff_usec = opendht_timer_after.tv_usec - opendht_timer_before.tv_usec;
-    HIP_INFO("OpenDHT connect took %.3f sec\n",
-             (opendht_timer_diff_sec+opendht_timer_diff_usec) / 1000000.0);
-    */
 
     /* Parse answer */
     memset(answer, '\0', sizeof(answer));
@@ -256,23 +237,3 @@ int opendht_read_response(int sockfd, char * answer)
     return(ret);
 }
 
-/** 
- * print_explanation - Prints explanation of the parsers return values, JUST for test purposes
- * TO BE REMOVED
- * @param return_code Integer returned by read_packet_content
- */
-void print_explanation(int return_code)
-{
-    if (return_code == -2)
-        printf("Error in XML content.\n");
-    if (return_code == -1)
-        printf("Error: Didn't receive HTTP header/XML payload\n");
-    if (return_code == 0)
-        printf("Put was succesfull\n");
-    if (return_code == 1)
-        printf("Put failed: over capacity.\n");
-    if (return_code == 2)
-        printf("Put failed: try again\n");
-    if (return_code == 3)
-        printf("Received (a) value(s)\n");
-}

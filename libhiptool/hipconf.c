@@ -47,8 +47,7 @@ const char *hipconf_usage =
 "set opp on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPENDHT
-"dht ttl <int>\n"
-"dht gw <ip/hostname>\n"
+"dht gw <IPv4|hostname> <port> <ttl>\n"
 "dht get <fqdn/hit>\n"
 #endif 
 ;
@@ -568,11 +567,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 	
 	HIP_DEBUG("nat setting. Options:%s\n", opt[0]);
 
-	if (optc != 1) {
-		HIP_ERROR("Missing arguments\n");
-		err = -EINVAL;
-		goto out;
-	}
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	if (!strcmp("on",opt[0])) {
 		memset(&hit,0,sizeof(struct in6_addr));
@@ -581,33 +576,31 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 		memset(&hit,0,sizeof(struct in6_addr));
                 status = SO_HIP_SET_NAT_OFF;
 	} else {
+		HIP_IFEL(0, -1, "bad args\n");
+	}
+#if 0 /* Not used currently */
+	else {
 		ret = inet_pton(AF_INET6, opt[0], &hit);
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
 			err = -EAFNOSUPPORT;
-			goto out;
+			goto out_err;
 		} else if (ret == 0) {
 			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 			err = -EINVAL;
-			goto out;
+			goto out_err;
 		}
 		status = SO_HIP_SET_NAT_ON;
 	}
 
-	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr));
-	if (err) {
-		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed: %s\n", strerror(err));
+#endif
 
-	err = hip_build_user_hdr(msg, status, 0);
-	if (err) {
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
-	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
 
- out:
+ out_err:
 	return err;
 
 }
@@ -811,9 +804,59 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
 
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-    int ret = 0;
-    printf("Got to the DHT gw handle for hipconf, NO FUNCTIONALITY YET\n");
-    return(ret);
+	int err;
+	int status = 0;
+	int ret;
+	struct in_addr ip_gw;
+        struct in6_addr ip_gw_mapped;
+        struct addrinfo new_gateway;
+        struct hip_opendht_gw_info *gw_info;
+
+	HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
+        
+	if (optc != 3) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+        memset(&new_gateway, '0', sizeof(new_gateway));
+        ret = 0;   
+        /* resolve the new gateway */
+        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+        if (ret < 0) goto out_err;
+        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
+        /*
+        HIP_DEBUG("addr %s ", inet_ntoa(sa->sin_addr));       
+        HIP_DEBUG("port %s ttl %s\n", opt[1], opt[2]);      
+        */  
+        ret = 0;
+	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+	if (ret < 0 && errno == EAFNOSUPPORT) {
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out_err;
+	} else if (ret == 0) {
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+	err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out_err;
+	}
+       
+ out_err:
+	return err;
 }
 
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
@@ -824,12 +867,27 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     char dht_response[1024];
     char opendht[] = "planetlab1.diku.dk";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+    struct addrinfo serving_gateway;
+    memset(&serving_gateway, '0', sizeof(struct addrinfo));
 
     s = init_dht_gateway_socket(s);
-    error = resolve_dht_gateway_info (opendht, s);
+    if (s < 0) 
+    {
+        HIP_DEBUG("Socket creation failed!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = resolve_dht_gateway_info (opendht, &serving_gateway);
     if (error < 0) 
     {
-        HIP_DEBUG("Socket/Resolve/Connect error!\n");
+        HIP_DEBUG("Resolve error!\n");
+        exit(-1);
+    }
+    error = 0;
+    error = connect_dht_gateway(s, &serving_gateway);
+    if (error < 0) 
+    {
+        HIP_DEBUG("Connect error!\n");
         exit(-1);
     }
 
@@ -1000,14 +1058,14 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP) {
-			libs = "libinet6.so:libhiptool.so";
+			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
 			setenv("LD_PRELOAD", libs, 1);
 		} else {
-			libs = "libopphip.so:libinet6.so:libhiptool.so";
+			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 			setenv("LD_PRELOAD", libs, 1);
 		}
 
-		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so" : "libopphip.so:libinet6.so:libhiptool.so");
+		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so:libhipopendht.so" : "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so");
 		err = execvp(argv[0], argv);
 		if (err != 0) {
 			HIP_DEBUG("Executing new application failed!\n");
