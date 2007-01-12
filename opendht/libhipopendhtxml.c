@@ -137,8 +137,9 @@ int read_packet_content(char * in_buffer, char * out_value)
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
     memset(out_value, '\0', sizeof(out_value));
 
-    //HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-
+    /*
+    HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
+    */
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
     { 
