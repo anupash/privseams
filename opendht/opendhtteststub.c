@@ -70,8 +70,9 @@ int main(int argc, char *argv[])
     printf("Put packet (fqdn->hit) sent and ...\n");
     printf("Put was success\n");
     close(s);
-
-    /*!!!! put hit->ip !!!!*/  
+ 
+    /*!!!! put hit->ip !!!!*/ 
+  
     s = init_dht_gateway_socket(s);
     error = connect_dht_gateway(s, &serving_gateway);
     if (error < 0) exit(0);
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
     close(s);
 
     /*!!!! get fqdn !!!!*/
+  
     s = init_dht_gateway_socket(s);
     error = connect_dht_gateway(s, &serving_gateway);
     if (error < 0) exit(0);
@@ -92,7 +94,7 @@ int main(int argc, char *argv[])
     memset(dht_response, '\0', sizeof(dht_response));
     ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr);
     ret = opendht_read_response(s, dht_response); 
-    if (ret == -1) exit (1);
+    // if (ret == -1) exit (1);
     printf("Get packet (fqdn) sent and ...\n");
     if (ret == 0) 
     {
@@ -103,8 +105,9 @@ int main(int argc, char *argv[])
             printf("Did NOT match the sent value!\n");
     }
     close(s);
-
+   
     /*!!!! get hit !!!!*/
+   
     s = init_dht_gateway_socket(s);
     error = connect_dht_gateway(s, &serving_gateway);
     if (error < 0) exit(0);
@@ -123,8 +126,9 @@ int main(int argc, char *argv[])
             printf("Did NOT match the sent value!\n");
     }
     close(s);
-
+    
     /* Finally let's try to get a key that doesn't exist */
+    
     s = init_dht_gateway_socket(s);
     error = connect_dht_gateway(s, &serving_gateway);
     if (error < 0) exit(0);
@@ -132,7 +136,7 @@ int main(int argc, char *argv[])
     memset(dht_response2, '\0', sizeof(dht_response2));
     ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr); 
     ret = opendht_read_response(s, dht_response2); 
-    if (ret == -1) exit (1);
+    // if (ret == -1) exit (1);
     printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
     printf("Value received from DHT: %s\n",dht_response2);   
     close(s);

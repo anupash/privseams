@@ -126,6 +126,10 @@
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
 #define HIP_PARAM_REG_INFO		32781
+#define HIP_PARAM_REG_REQUEST		32782
+#define HIP_PARAM_REG_RESPONSE		32783
+#define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_OPENDHT_GW_INFO       32785
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505
@@ -734,6 +738,14 @@ struct hip_keys {
 	uint16_t 		key_len;
 	struct hip_crypto_key enc;
 	//int direction; // ?
+} __attribute__ ((packed));
+
+struct hip_opendht_gw_info {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	struct in6_addr addr;
+	uint32_t        ttl;
+	uint16_t        port;
 } __attribute__ ((packed));
 
 /* @} */
