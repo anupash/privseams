@@ -1058,14 +1058,21 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP) {
+#ifdef CONFIG_HIP_OPENDHT
 			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
-			setenv("LD_PRELOAD", libs, 1);
+#else
+			libs = "libinet6.so:libhiptool.so";
+#endif
 		} else {
+#ifdef CONFIG_HIP_OPENDHT
 			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
-			setenv("LD_PRELOAD", libs, 1);
+#else
+			libs = "libopphip.so:libinet6.so:libhiptool.so";
+#endif
 		}
+		setenv("LD_PRELOAD", libs, 1);
 
-		HIP_DEBUG("Set following libraries to LD_PRELOAD: %s\n", type == TYPE_RUN ? "libinet6.so:libhiptool.so:libhipopendht.so" : "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so");
+		HIP_DEBUG("LD_PRELOADing\n");
 		err = execvp(argv[0], argv);
 		if (err != 0) {
 			HIP_DEBUG("Executing new application failed!\n");
