@@ -823,7 +823,12 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
         memset(&new_gateway, '0', sizeof(new_gateway));
         ret = 0;   
         /* resolve the new gateway */
+#ifdef CONFIG_HIP_OPENDHT
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+#else
+	HIP_ERROR("OpenDHT support not compiled in\n");
+	goto out_err;
+#endif /* CONFIG_HIP_OPENDHT */
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
         /*
