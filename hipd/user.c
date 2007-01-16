@@ -31,6 +31,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int n = 0;
 	hip_ha_t * server_entry = NULL;
         extern struct addrinfo opendht_serving_gateway;
+        extern int hip_opendht_fqdn_sent;
+        extern int hip_opendht_hit_sent;
 	HIP_KEA * kea = NULL;
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -159,6 +161,7 @@ int hip_handle_user_msg(struct hip_common *msg,
             int ret;
             struct in_addr tmp_v4;
             struct hip_opendht_gw_info *gw_info;
+
             HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
                      "no gw struct found\n");
             memset(&tmp_ip_str,'\0',20);
@@ -171,9 +174,15 @@ int hip_handle_user_msg(struct hip_common *msg,
                       tmp_ip_str, htons(tmp_port), tmp_ttl);
             ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
             if (ret == 0)
+            {
               HIP_DEBUG("Serving gateway changed\n");
+              hip_opendht_fqdn_sent = 0;
+              hip_opendht_hit_sent = 0;
+            }
             else
+            {
               HIP_DEBUG("Error in changing the serving gateway!");
+            }
           }
           break;
 #endif 
