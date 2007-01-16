@@ -187,23 +187,23 @@ void dump_pai (struct gaih_addrtuple *at)
   struct gaih_addrtuple *a;
 
   if (at == NULL)
-    printf("dump_pai: input NULL!\n");
+    HIP_DEBUG("dump_pai: input NULL!\n");
   
   for(a = at; a != NULL; a = a->next) {        
-    //printf("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+    //HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
     if (a->family == AF_INET6) {
       struct in6_addr *s = (struct in6_addr *)a->addr;
       int i = 0;
-      printf("AF_INET6\tin6_addr=0x");
+      HIP_DEBUG("AF_INET6\tin6_addr=0x");
       for (i = 0; i < 16; i++)
-	printf("%02x ", (unsigned char) (s->in6_u.u6_addr8[i]));
-      printf("\n");
+	HIP_DEBUG("%02x ", (unsigned char) (s->in6_u.u6_addr8[i]));
+      HIP_DEBUG("\n");
     } else if (a->family == AF_INET) {
       struct in_addr *s = (struct in_addr *)a->addr;
       long unsigned int ad = ntohl(s->s_addr);
-      printf("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+      HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
     } else 
-      printf("Unknown family\n");
+      HIP_DEBUG("Unknown family\n");
  }
 }
 
@@ -480,6 +480,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     if (error < 0)
     {
       HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+      goto skip_dht;
     }
     ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr);
     ret_addr = opendht_read_response(s, dht_response_addr);
@@ -1263,7 +1264,7 @@ getaddrinfo (const char *name, const char *service,
     _HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   }
 
-  printf("flags: %x\n", hints->ai_flags);
+  HIP_DEBUG("flags: %x\n", hints->ai_flags);
   if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
 			  AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))

@@ -360,9 +360,9 @@ void register_to_dht ()
     extern int opendht_error;
     extern char opendht_response[];
     extern struct addrinfo opendht_serving_gateway;
-
     struct netdev_address *n, *t;
     char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
     if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
         return;
     HIP_INFO("Using hostname: %s\n", hostname);
