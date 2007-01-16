@@ -392,8 +392,10 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 				HIP_PUZZLE_OPAQUE_LEN), 0, 
 			 "Solution's opaque data does not match the opaque data sent\n");
 	}
+
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-		 "Puzzle incorrectly solved\n");
+	 "Puzzle incorrectly solved\n");
+	
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	return err;

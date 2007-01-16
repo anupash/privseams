@@ -539,7 +539,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
 
-
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore printing
 	   packet data here works for all packets. To avoid excessive debug
@@ -553,8 +552,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
+
 	type = hip_get_msg_type(msg);
-	
+
 	/** @todo Check packet csum.*/
 	
 	/* fetch the state from the hadb database to be able to choose the
@@ -589,9 +589,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		/* No state. */
 	  err = ((hip_rcv_func_set_t *)
 		 hip_get_rcv_default_func_set())->
-		 hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
-	
-		
+		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -606,18 +604,14 @@ int hip_receive_control_packet(struct hip_common *msg,
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
 					       msg_info);
 		}
-	
 		break;
 		
 	case HIP_R1:
 	  	/* State. */
-		/*HIP_ASSERT(entry)*/
-		
 		HIP_ASSERT(entry);
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
-		
 		break;
 		
 	case HIP_R2:
@@ -665,9 +659,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 		HIP_ERROR("Unknown packet %d\n", type);
 		err = -ENOSYS;
 	}
-
-
+	
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
+	
 	if (err)
 		goto out_err;
 	
@@ -1096,24 +1090,19 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
-	char *hoststr;
-	int hostlen;
+
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
-	entry->state = HIP_STATE_I2_SENT;
+
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
 		retransmission = 1;
 	} else {
-		
-		
 		HIP_DEBUG("Not a retransmission\n");
 	}
 
 	HIP_DEBUG("\n");
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM,
 		 "Could not allocate memory for context\n");
-	
-	
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
 
@@ -1122,20 +1111,27 @@ int hip_handle_r1(struct hip_common *r1,
 	
 	/* Store the peer's public key to HA and validate it */
 	/** @todo Do not store the key if the verification fails. */
-			
-	HIP_IFEL(!(peer_host_id = hip_get_param(r1,HIP_PARAM_HOST_ID)), -ENOENT,
+	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
 		 "No HOST_ID found in R1\n");
-	HIP_IFE(hip_init_peer(entry,peer_host_id,&entry->hit_our), -EINVAL);
-	entry->verify(entry->peer_pub, ctx->input);
-		
-	/*HIP_IFE(entry->verify(entry->peer_pub, ctx->input), -EINVAL);*/
+	
+	if (ipv6_addr_cmp(r1_saddr,r1_daddr)==0)
+	{
+		HIP_IFE(hip_init_peer(entry,r1,&entry->hit_our), -EINVAL);
+		entry->verify(entry->peer_pub, ctx->input);	
+	}
+	else
+	{
+		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
+		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		 "Verification of R1 signature failed\n");
+
+	}
 
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is allready locked... */
-	if(r1_info->dst_port == HIP_NAT_UDP_PORT) 
-	{
+	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
 		HIP_LOCK_HA(entry);
 		entry->nat_mode = 1;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
@@ -1318,7 +1314,6 @@ int hip_receive_r1(struct hip_common *r1,
 		   hip_ha_t *entry,
 		   hip_portpair_t *r1_info)
 {
-
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
@@ -1329,6 +1324,7 @@ int hip_receive_r1(struct hip_common *r1,
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
+
  	HIP_IFEL(!hip_controls_sane(ntohs(r1->control), mask), 0, 
 		 "Received illegal controls in R1: 0x%x Dropping\n",
 		 ntohs(r1->control));
@@ -1356,7 +1352,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	/*HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);*/
+	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1365,10 +1361,6 @@ int hip_receive_r1(struct hip_common *r1,
 	HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
 	switch(state) {
 	case HIP_STATE_I1_SENT:
-	
-	err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
-	/*hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);*/
-	
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
@@ -1377,7 +1369,6 @@ int hip_receive_r1(struct hip_common *r1,
 		HIP_LOCK_HA(entry);
 		if (err < 0)
 			HIP_ERROR("Handling of R1 failed\n");
-			
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
@@ -1392,12 +1383,10 @@ int hip_receive_r1(struct hip_common *r1,
 		break;
 	}
 
-
 	hip_put_ha(entry);
  out_err:
 	return err;
 }
-
 
 /**
  * hip_create_r2 - Creates and transmits R2 packet.
@@ -1484,7 +1473,6 @@ int hip_create_r2(struct hip_context *ctx,
 	   rendezvous database. */
 	/** @todo Insert only if REG_REQUEST parameter with Reg Type
 	    RENDEZVOUS was received. */
-
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 -1, "Inserting rendezvous association failed..\n");
@@ -1558,19 +1546,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
 
 	/* check solution for cookie */
-
 	{
-		struct hip_solution *sol;
-		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
-			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
-		I = sol->I;
-		J = sol->J;
-	hip_verify_cookie(i2_saddr, i2_daddr, i2, sol);
-	/*	HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
-			 -ENOMSG, "Cookie solution rejected\n");*/
-	}
-
-	/*{
 		struct hip_solution *sol;
 		HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
 			 -EINVAL, "Invalid I2: SOLUTION parameter missing\n");
@@ -1578,7 +1554,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		J = sol->J;
 		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
 			 -ENOMSG, "Cookie solution rejected\n");
-	}*/
+	}
 
  	HIP_DEBUG("Cookie accepted\n");
 
@@ -1609,7 +1585,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   from hadb. Usually you shouldn't have state here, right? */
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
 		 "Unable to produce keying material. Dropping I2\n");
-	/*hip_produce_keying_material(ctx->input, ctx, I, J);*/
+
 	/* Verify HMAC. */
 	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
 		 "HMAC validation on i2 failed\n");
@@ -1747,9 +1723,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		 "init peer failed\n");		
 
 	/* Validate signature */
-	entry->verify(entry->peer_pub, ctx->input);
-	/*HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
-		 "Verification of I2 signature failed\n");*/
+	HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
+		 "Verification of I2 signature failed\n");
 
 	/* If we have old SAs with these HITs delete them */
 	hip_hadb_delete_inbound_spi(entry, 0);
@@ -1970,9 +1945,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		   hip_portpair_t *i2_info)
 {
-	int state = 0, err = 0;
-	int icomp;
-
+	int state = 0, err = 0, icomp=0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
 	_HIP_DEBUG("hip_receive_i2() invoked.\n");
 
@@ -1989,26 +1962,33 @@ int hip_receive_i2(struct hip_common *i2,
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
+
 	HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
-	entry->state = HIP_STATE_I2_SENT;
- 	
-	switch(state) {
+	
+ 	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
+
 		icomp=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
                	if (icomp==1) {
 		HIP_IFEL(hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info), -ENOSYS,
 		"Dropping HIP packet\n");
 		} else if (icomp==0){
 		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
-		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){
-		hip_receive_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
-		
-	}
-	
+		} else{
+		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
+		/* (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){*/		
+		}
+
+	/*	if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+			HIP_DEBUG("Our HIT is bigger\n");
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+		} else {
+			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
+		}*/
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
@@ -2076,7 +2056,6 @@ int hip_handle_r2(struct hip_common *r2,
 		retransmission = 1;
 		HIP_DEBUG("Retransmission\n");
 	} else {
-		entry=HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Not a retransmission\n");
 	}
 
@@ -2388,6 +2367,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   hip_portpair_t *i1_info)
 {
 	int err = 0, state, mask = 0,cmphits=0;
+	
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
  	hip_rva_t *rva;
@@ -2457,13 +2437,14 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
-	
+
 	switch(state) {
 	case HIP_STATE_NONE:
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
-		cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+                
+cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
                	if (cmphits==1) {
 		
 		HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
@@ -2472,12 +2453,16 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		} else if (cmphits == 0){
 		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		statuship=2;
-		} else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){
-		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-		
-	}
-	
-	break;
+		} 
+
+
+/*if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+			HIP_DEBUG("Our HIT is bigger\n");
+			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+		} else {
+			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
+		}*/
+		break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
@@ -2485,13 +2470,13 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
-	break;
+		break;
 	default:
 		/* should not happen */
 		HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
 	}
 
-out_err:
+ out_err:
 	return err;
 }
 
@@ -2505,8 +2490,6 @@ out_err:
  *
  * @return 0 if R2 was processed succesfully, < 0 otherwise.
  */
-
-
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
@@ -2515,7 +2498,9 @@ int hip_receive_r2(struct hip_common *hip_common,
 {
 	int err = 0, state;
 	uint16_t mask = 0;
+
 	_HIP_DEBUG("hip_receive_i2() invoked.\n");
+
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");
 	
@@ -2527,9 +2512,10 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 	HIP_IFEL(!entry, -EFAULT,
 		 "Received R2 by unknown sender\n");
- 
+		 
 	HIP_LOCK_HA(entry);
 	state = entry->state;
+
 	HIP_DEBUG("Received R2 in state %s\n", hip_state_str(state));
  	switch(state) {
  	case HIP_STATE_I2_SENT:
@@ -2540,6 +2526,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 			goto out_err;
  		}
 	break;
+
 	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_UNASSOCIATED:
@@ -2547,12 +2534,12 @@ int hip_receive_r2(struct hip_common *hip_common,
  	default:
 		HIP_IFEL(1, -EFAULT, "Dropping\n");
  	}
+
  out_err:
 	if (entry) {
 		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
-}
-
+	}
 	return err;
 }
 
@@ -2571,7 +2558,6 @@ int hip_receive_r2(struct hip_common *hip_common,
  *                     packet was sent to (own address).
  * @param entry        a pointer to the current host association database state.
  */
-
 int hip_receive_notify(const struct hip_common *notify,
 		       const struct in6_addr *notify_saddr,
 		       const struct in6_addr *notify_daddr, hip_ha_t* entry)
@@ -2828,4 +2814,3 @@ int hip_receive_bos(struct hip_common *bos,
  out_err:
 	return err;
 }
-
