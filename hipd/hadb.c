@@ -52,7 +52,7 @@ hip_ha_t *ha;
 int hldentry;
 int checkdb=1;
 
-if (checkdb==1)
+/*if (checkdb==1)
 {
 	
 	hldentry = hip_hadb_find_byhits(&hit_our,&hit_peer);
@@ -61,14 +61,14 @@ if (checkdb==1)
 	}
 	else
 	{
-	/*hip_hadb_put_entry(entry);*/
+	hip_hadb_put_entry(entry);
 	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
 	
 	}
 
-}
+}*/
 /*hip_hadb_put_entry(entry);*/
-
+HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
 }
 
 void hip_hadb_put_entry(void *entry)

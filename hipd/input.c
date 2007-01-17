@@ -1127,6 +1127,11 @@ int hip_handle_r1(struct hip_common *r1,
 
 	}
 
+
+	/*HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
+	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+		 "Verification of R1 signature failed\n");*/
+
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
@@ -1352,7 +1357,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
+	/*HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);*/
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1972,23 +1977,17 @@ int hip_receive_i2(struct hip_common *i2,
 		break;
 	case HIP_STATE_I2_SENT:
 
-		icomp=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+		/*icomp=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
                	if (icomp==1) {
 		HIP_IFEL(hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info), -ENOSYS,
 		"Dropping HIP packet\n");
 		} else if (icomp==0){
 		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
 		} else{
-		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
+		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);*/
 		/* (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer) > hip_hadb_hit_is_our(&entry->hit_our)){*/		
-		}
-
-	/*	if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
-			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
-		} else {
-			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
-		}*/
+	/*	}*/
+	
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
@@ -2444,7 +2443,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		break;
 	case HIP_STATE_I1_SENT:
                 
-cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+ 	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
                	if (cmphits==1) {
 		
 		HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
