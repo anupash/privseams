@@ -284,7 +284,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
 	
 	entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
-	HIP_ASSERT(entry_tmp);
 
  out_err:
 	return entry_tmp;
