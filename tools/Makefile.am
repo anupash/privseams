@@ -21,10 +21,10 @@ if HIP_HI3
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-LDADD    = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a
-
 if HIP_OPENDHT
-LDADD += ../opendht/.libs/libhipopendht.a
+LDADD = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a ../opendht/.libs/libhipopendht.a
+else
+LDADD    = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a
 endif
 
 sbin_PROGRAMS = hipconf
