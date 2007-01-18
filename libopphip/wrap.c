@@ -104,6 +104,8 @@ void hip_initialize_db_when_not_exist()
 	if (hip_db_exist)
 		return;
 
+	hip_set_logtype(LOGTYPE_SYSLOG);
+
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
 	HIP_DEBUG("socketdb initialized\n");
@@ -682,11 +684,11 @@ int socket(int domain, int type, int protocol)
 {
 	int socket_fd = -1, err = 0;
 
+	hip_initialize_db_when_not_exist();
+	
 	HIP_DEBUG("creating socket domain=%d type=%d protocol=%d\n",
 		  domain, type, protocol);
 
-	hip_initialize_db_when_not_exist();
-	
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
 
 	if (socket_fd > 0)

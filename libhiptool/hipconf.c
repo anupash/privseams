@@ -560,9 +560,8 @@ int hip_conf_handle_bos(struct hip_common *msg, int action,
 int hip_conf_handle_nat(struct hip_common *msg, int action,
 		   const char *opt[], int optc)
 {
-	int err;
+	int err = 0;
 	int status = 0;
-	int ret;
 	struct in6_addr hit;
 	
 	HIP_DEBUG("nat setting. Options:%s\n", opt[0]);

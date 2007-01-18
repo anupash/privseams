@@ -538,12 +538,13 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry;
 	int err = 0, type, skip_sync = 0;
+	struct sockaddr_storage sa_src, sa_dst;
 
 	/* Debug printing of received packet information. All received HIP
-	   control packets are first passed to this function. Therefore printing
-	   packet data here works for all packets. To avoid excessive debug
-	   printing do not print this information inside the individual receive
-	   or handle functions. */
+	   control packets are first passed to this function. Therefore
+	   printing packet data here works for all packets. To avoid excessive
+	   debug printing do not print this information inside the individual
+	   receive or handle functions. */
 	_HIP_DEBUG("hip_receive_control_packet() invoked.\n");
 	HIP_DEBUG_IN6ADDR("Source IP", src_addr);
 	HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
