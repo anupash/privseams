@@ -55,6 +55,7 @@ int hip_opendht_hit_sent = 0;
 int opendht_error = 0;
 char opendht_response[1024];
 struct addrinfo opendht_serving_gateway;
+int opendht_serving_gateway_flag;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -227,17 +228,17 @@ int main(int argc, char *argv[]) {
 
                 if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
 			/* Receiving of a raw HIP message from IPv6 socket. */
+			struct in6_addr saddr, daddr;
+			hip_portpair_t pkt_info;
+
 			HIP_DEBUG("Receiving a message on raw HIP from "\
 				  "IPv6/HIP socket (file descriptor: %d).\n",
 				  hip_raw_sock_v6);
 			
-			struct in6_addr saddr, daddr;
-			hip_portpair_t pkt_info;
-
 			hip_msg_init(hipd_msg);
 		
 			if (hip_read_control_msg_v6(hip_raw_sock_v6, hipd_msg,
-						    1, &saddr, &daddr,
+						    &saddr, &daddr,
 						    &pkt_info, 0))
 				HIP_ERROR("Reading network msg failed\n");
 			else
@@ -245,17 +246,16 @@ int main(int argc, char *argv[]) {
 								 &saddr,
 								 &daddr,
 								 &pkt_info);
-			
 		}
 
                 if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			/* Receiving of a raw HIP message from IPv4 socket. */
+			struct in6_addr saddr, daddr;
+			hip_portpair_t pkt_info;
+
 			HIP_DEBUG("Receiving a message on raw HIP from "\
 				  "IPv4/HIP socket (file descriptor: %d).\n",
 				  hip_raw_sock_v4);
-
-			struct in6_addr saddr, daddr;
-			hip_portpair_t pkt_info;
 
 			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
@@ -263,20 +263,14 @@ int main(int argc, char *argv[]) {
 			/* Assuming that IPv4 header does not include any
 			   options */
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hipd_msg,
-						    1, &saddr, &daddr,
-						    &pkt_info, IPV4_HDR_SIZE))
+						    &saddr, &daddr,
+						    &pkt_info, IPV4_HDR_SIZE)){
 				HIP_ERROR("Reading network msg failed\n");
-			else
-			{
-			  /* For some reason, the IPv4 header is always
-			     included. Let's remove it here. */
-			  memmove(hipd_msg, ((char *)hipd_msg) + IPV4_HDR_SIZE,
-				  HIP_MAX_PACKET - IPV4_HDR_SIZE);
-
-			  //pkt_info.src_port = 0;
-	
-			  err = hip_receive_control_packet(hipd_msg, &saddr,
-							   &daddr, &pkt_info);
+			} else {
+				err = hip_receive_control_packet(hipd_msg,
+								 &saddr,
+								 &daddr,
+								 &pkt_info);
 			}
 
 		}
@@ -300,12 +294,12 @@ int main(int argc, char *argv[]) {
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
         		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
-						    1, &saddr, &daddr,
-						    &pkt_info, 0))
+						    &saddr, &daddr,
+						    &pkt_info, 0)) {
                                 HIP_ERROR("Reading network msg failed\n");
-			/* If the values were read in succesfully, we do
-			   the UDP specific stuff next. */
-                        else {
+				/* If the values were read in succesfully, we
+				   do the UDP specific stuff next. */
+                        } else {
 				err =  hip_receive_udp_control_packet(
 					hipd_msg, &saddr, &daddr, &pkt_info);
                         }
@@ -314,13 +308,13 @@ int main(int argc, char *argv[]) {
                 
                 if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			/* Receiving of a message from user socket. */
-			HIP_DEBUG("Receiving a message from user socket "\
-				  "(file descriptor: %d).\n",
-				  hip_user_sock);
-
 			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hipd_msg);
+
+			HIP_DEBUG("Receiving a message from user socket "\
+				  "(file descriptor: %d).\n",
+				  hip_user_sock);
 
 			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
