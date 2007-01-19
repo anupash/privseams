@@ -612,7 +612,9 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = checksum_packet((char*)msg, &src, &dst);
+	msg->checksum = hip_checksum_packet((char*)msg,
+					    (struct sockaddr *) &src,
+					    (struct sockaddr *) &dst);
 
 	if (!retransmit)
 	{
