@@ -78,13 +78,6 @@ void hip_inbound(cl_trigger *t, void *data, void *ctx);
  *
  * @return HIP message type as a string.
  */
-int ident;
-#define ICMP_ECHOREPLY 20;
-int nsend;
-static int statuship=1;
-static int statushipI2=1;
-static int loopcnt=0;
-
 
 static inline const char *hip_msg_type_str(int type) 
 {

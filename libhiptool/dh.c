@@ -86,8 +86,8 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
 		return -1;
         }
 
-	HIP_HEXDUMP("Peer DH pubkey", public_value, len);
-	HIP_HEXDUMP("Shared key", buffer, bufsize);
+	_HIP_HEXDUMP("Peer DH pubkey", public_value, len);
+	_HIP_HEXDUMP("Shared key", buffer, bufsize);
 
 	return err;
 }
