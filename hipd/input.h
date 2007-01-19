@@ -70,9 +70,6 @@ struct pseudo_header
 
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
-int hip_verify_network_header(struct hip_common *hip_common,
-			      struct sockaddr *src, struct sockaddr *dst, int len);
 #endif
 
 /**

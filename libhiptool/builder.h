@@ -108,6 +108,11 @@ int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
 void hip_calc_hdr_len(struct hip_common *);
 int hip_check_msg_len(const struct hip_common *);
 int hip_check_network_msg(const struct hip_common *);
+int hip_verify_network_header(struct hip_common *hip_common,
+			      struct sockaddr *src, struct sockaddr *dst,
+			      int len);
+u16 hip_checksum_packet(char *data, struct sockaddr *src,
+			struct sockaddr *dst);
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t);
