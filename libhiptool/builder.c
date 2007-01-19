@@ -1633,8 +1633,10 @@ int hip_verify_network_header(struct hip_common *hip_common,
 #endif
 	}
 
+#if 0
         HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
 		 "Dropping HIP packet. Loopback not supported.\n");
+#endif
 
         /* Check checksum. */
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {

@@ -46,11 +46,11 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
 
 	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
-				 hip_get_msg_total_len(buffer), hmac_res), -EINVAL,
-		 "Could not build hmac\n");
+				 hip_get_msg_total_len(buffer), hmac_res),
+		 -EINVAL, "Could not build hmac\n");
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
-	/*HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);*/
+	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
 	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN);
  out_err:
 	if (hmac_res)
@@ -96,12 +96,9 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_HEXDUMP("HMACced data", msg, len);
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
 
-	/*HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
-		 -1, "HMAC validation failed\n");*/
-
-	hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
-				 HIP_DIGEST_SHA1_HMAC);
+		 -1, "HMAC validation failed\n");
 
 	/* revert the changes to the packet */
 	hip_set_msg_total_len(msg, orig_len);
@@ -990,19 +987,9 @@ int hip_handle_r1(struct hip_common *r1,
 	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
 		 "No HOST_ID found in R1\n");
 	
-	if (ipv6_addr_cmp(r1_saddr,r1_daddr)==0)
-	{
-		HIP_IFE(hip_init_peer(entry,r1,&entry->hit_our), -EINVAL);
-		entry->verify(entry->peer_pub, ctx->input);	
-	}
-	else
-	{
-		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
-		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
+	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
-
-	}
-
 	
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
@@ -1229,7 +1216,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	/*HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);*/
+	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1464,8 +1451,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* Verify HMAC. */
-	HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in), -ENOENT,
-		 "HMAC validation on i2 failed\n");
+	if (hip_hadb_hit_is_our(&i2->hitr)) {
+		/* loopback */
+		HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_out),
+			 -ENOENT, "HMAC validation on i2 failed\n");
+	} else {
+		HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in),
+			 -ENOENT, "HMAC validation on i2 failed\n");
+	}
 	
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
 	HIP_IFEL(!(enc = hip_get_param(ctx->input, HIP_PARAM_ENCRYPTED)),
@@ -1534,7 +1527,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			 "The decrypted parameter is not a host id\n");
 	}
 
-	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
+	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
 		     hip_get_param_total_len(host_id_in_enc));
 
 	/* HMAC cannot be validated until we draw key material */
@@ -1602,18 +1595,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	/* Store peer's public key and HIT to HA */
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL); 
 		
-	if (ipv6_addr_cmp(i2_saddr,i2_daddr)==0)
-	{				
-		/* Validate signature */
-		entry->verify(entry->peer_pub, ctx->input);	
-	}
-	else
-	{	
-		/* Validate signature */
-		HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
+	/* Validate signature */
+	HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
 		 "Verification of I2 signature failed\n");
-	}
-
+	
 	/* If we have old SAs with these HITs delete them */
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
@@ -1833,7 +1818,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		   hip_portpair_t *i2_info)
 {
-	int state = 0, err = 0, icomp=0;
+	int state = 0, err = 0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
 	_HIP_DEBUG("hip_receive_i2() invoked.\n");
 
@@ -1859,16 +1844,15 @@ int hip_receive_i2(struct hip_common *i2,
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
-
-	icomp=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-        if (icomp==1) {
-		HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,i2_info), -ENOSYS,
-		"Dropping HIP packet\n");
-	
-	} else if (icomp == 0){
-		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
-	} 
-	
+		/* WTF */
+		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+			HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,
+						i2_info), -ENOSYS,
+				 "Dropping HIP packet\n");
+		} else if (hip_hadb_hit_is_our(&entry->hit_peer)) {
+			/* loopback */
+			hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
+		}
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
@@ -1945,8 +1929,15 @@ int hip_handle_r2(struct hip_common *r2,
         ctx->input = r2;
 
         /* Verify HMAC */
-	HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in, entry->peer_pub), -1, 
+	if (hip_hadb_hit_is_our(&entry->hit_peer)) {
+		HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_out,
+						 entry->peer_pub), -1, 
 		 "HMAC validation on R2 failed\n");
+	} else {
+		HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in,
+						 entry->peer_pub), -1, 
+		 "HMAC validation on R2 failed\n");
+	}
 
 	/* Assign a local private key to HA */
 	//HIP_IFEL(hip_init_our_hi(entry), -EINVAL, "Could not assign a local host id\n");
@@ -2393,15 +2384,26 @@ int hip_receive_r2(struct hip_common *hip_common,
  	switch(state) {
  	case HIP_STATE_I2_SENT:
  		/* The usual case. */
- 		err = entry->hadb_handle_func->hip_handle_r2(hip_common, r2_saddr, r2_daddr, entry, r2_info);
+ 		err = entry->hadb_handle_func->hip_handle_r2(hip_common,
+							     r2_saddr,
+							     r2_daddr,
+							     entry,
+							     r2_info);
 		if (err) {
 			HIP_ERROR("hip_handle_r2 failed (err=%d)\n", err);
 			goto out_err;
  		}
 	break;
 
-	case HIP_STATE_R2_SENT:
  	case HIP_STATE_ESTABLISHED:
+		if (hip_hadb_hit_is_our(&entry->hit_peer))
+		    err = entry->hadb_handle_func->hip_handle_r2(hip_common,
+								 r2_saddr,
+								 r2_daddr,
+								 entry,
+								 r2_info);
+		break;
+	case HIP_STATE_R2_SENT:
 	case HIP_STATE_UNASSOCIATED:
  	case HIP_STATE_I1_SENT:
  	default:
