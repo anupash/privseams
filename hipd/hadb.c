@@ -49,26 +49,9 @@ void hip_hadb_hold_entry(void *entry)
 {
 hip_hit_t hit_our, hit_peer;
 hip_ha_t *ha;
-int hldentry;
-int checkdb=1;
 
-/*if (checkdb==1)
-{
-	
-	hldentry = hip_hadb_find_byhits(&hit_our,&hit_peer);
-	if (hldentry!=0) {
-		HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
-	}
-	else
-	{
-	hip_hadb_put_entry(entry);
-	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
-	
-	}
-
-}*/
-/*hip_hadb_put_entry(entry);*/
 HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
+
 }
 
 void hip_hadb_put_entry(void *entry)
@@ -1727,8 +1710,11 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
  */
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		  struct hip_host_id *peer) {
+	
+	/* public key and verify function might be initialized already in the case of
+           loopback */
+	
 	int err = 0;
-	static int hosthit=0;
 	int len = hip_get_param_total_len(peer); 
 	struct in6_addr hit;
 
@@ -1740,34 +1726,30 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	/* Verify sender HIT */
 	if (ipv6_addr_cmp(&entry->hit_our, &entry->hit_peer)==0)
  	{
+			
+		HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
+		 	"Out of memory\n");
+		memcpy(&entry->hit_our, peer, len);
 
-	hosthit=1;
-	HIP_IFEL(ipv6_addr_cmp(&entry->hit_peer, &entry->hit_our),
-		 -1, "Unable to verify sender's HOST_ID\n");
-	
-	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
-		 "Out of memory\n");
-	memcpy(&entry->hit_our, peer, len);
-	
-	/*entry->verify = hip_init_us(entry,&entry->hit_peer);*/
-
-	entry->verify = hip_get_host_id_algo(&entry->hit_peer) == HIP_HI_RSA ? 
+		entry->verify = hip_get_host_id_algo(&entry->hit_peer) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
 	}
 
 	else
 	{
-	HIP_IFEL(hip_host_id_to_hit(peer,&hit, HIP_HIT_TYPE_HASH100) ||
-		 ipv6_addr_cmp(&hit, &entry->hit_peer),
+		HIP_IFEL(hip_host_id_to_hit(peer,&hit, HIP_HIT_TYPE_HASH100) ||
+		 	ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
 	
-	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
+		HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
 		 "Out of memory\n");
-	memcpy(entry->peer_pub, peer, len);
-	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
+
+		memcpy(entry->peer_pub, peer, len);
+		entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
 
 	}
+	
 	
  out_err:
 	return err;
