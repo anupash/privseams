@@ -50,8 +50,8 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 		 "Could not build hmac\n");
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
-	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-
+	/*HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);*/
+	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN);
  out_err:
 	if (hmac_res)
 		HIP_FREE(hmac_res);
@@ -96,9 +96,12 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_HEXDUMP("HMACced data", msg, len);
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
 
-	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+	/*HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
-		 -1, "HMAC validation failed\n");
+		 -1, "HMAC validation failed\n");*/
+
+	hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC);
 
 	/* revert the changes to the packet */
 	hip_set_msg_total_len(msg, orig_len);
@@ -986,10 +989,21 @@ int hip_handle_r1(struct hip_common *r1,
 	/** @todo Do not store the key if the verification fails. */
 	HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
 		 "No HOST_ID found in R1\n");
-	HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
-	HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
+	
+	if (ipv6_addr_cmp(r1_saddr,r1_daddr)==0)
+	{
+		HIP_IFE(hip_init_peer(entry,r1,&entry->hit_our), -EINVAL);
+		entry->verify(entry->peer_pub, ctx->input);	
+	}
+	else
+	{
+		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
+		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 		 "Verification of R1 signature failed\n");
 
+	}
+
+	
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
@@ -1215,7 +1229,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
+	/*HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);*/
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1513,8 +1527,12 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 				      crypto_len, &ctx->hip_enc_in.key,
 				      HIP_DIRECTION_DECRYPT), -EINVAL,
 		 "Decryption of Host ID failed\n");
-	HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
-		 "The decrypted parameter is not a host id\n");
+
+	if (!hip_hadb_hit_is_our(&entry->hit_our)) 
+        {
+		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
+			 "The decrypted parameter is not a host id\n");
+	}
 
 	HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
 		     hip_get_param_total_len(host_id_in_enc));
@@ -1582,12 +1600,19 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	    or it should be cancelled. */
 	
 	/* Store peer's public key and HIT to HA */
-	HIP_IFEL(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL,
-		 "init peer failed\n");		
-
-	/* Validate signature */
-	HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
+	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL); 
+		
+	if (ipv6_addr_cmp(i2_saddr,i2_daddr)==0)
+	{				
+		/* Validate signature */
+		entry->verify(entry->peer_pub, ctx->input);	
+	}
+	else
+	{	
+		/* Validate signature */
+		HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
 		 "Verification of I2 signature failed\n");
+	}
 
 	/* If we have old SAs with these HITs delete them */
 	hip_hadb_delete_inbound_spi(entry, 0);
@@ -1808,7 +1833,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_ha_t *entry,
 		   hip_portpair_t *i2_info)
 {
-	int state = 0, err = 0;
+	int state = 0, err = 0, icomp=0;
 	uint16_t mask = HIP_CONTROL_HIT_ANON;
 	_HIP_DEBUG("hip_receive_i2() invoked.\n");
 
@@ -1834,12 +1859,16 @@ int hip_receive_i2(struct hip_common *i2,
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
 		break;
 	case HIP_STATE_I2_SENT:
-		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
-			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
-		} else {
-			HIP_DEBUG("Dropping i2 (two hosts iniating base exchange at the same time?)\n");
-		}
+
+	icomp=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+        if (icomp==1) {
+		HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,i2_info), -ENOSYS,
+		"Dropping HIP packet\n");
+	
+	} else if (icomp == 0){
+		hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
+	} 
+	
 		break;
 	case HIP_STATE_I1_SENT:
 	case HIP_STATE_R2_SENT:
@@ -2217,7 +2246,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0;
+	int err = 0, state, mask = 0,cmphits=0;
+	
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
  	hip_rva_t *rva;
@@ -2293,12 +2323,18 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
-                if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
-			HIP_DEBUG("Our HIT is bigger\n");
-			err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
-		} else {
-			HIP_DEBUG("Dropping i1 (two hosts iniating base exchange at the same time?)\n");
-		}
+                
+ 	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+               	if (cmphits==1) {
+		
+			HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
+				"Dropping HIP packet\n");
+		
+		} else if (cmphits == 0) {
+			hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
+		
+		} 
+
 		break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
