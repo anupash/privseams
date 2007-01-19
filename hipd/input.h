@@ -70,9 +70,6 @@ struct pseudo_header
 
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
-int hip_verify_network_header(struct hip_common *hip_common,
-			      struct sockaddr *src, struct sockaddr *dst, int len);
 #endif
 
 /**
@@ -81,6 +78,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
  *
  * @return HIP message type as a string.
  */
+
 static inline const char *hip_msg_type_str(int type) 
 {
         const char *str = "UNKNOWN";
@@ -170,5 +168,5 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
- 
+
 #endif /* HIP_INPUT_H */
