@@ -1451,7 +1451,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* Verify HMAC. */
-	if (hip_hadb_hit_is_our(&i2->hitr)) {
+	if (hip_hadb_hit_is_our(&i2->hits)) {
 		/* loopback */
 		HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_out),
 			 -ENOENT, "HMAC loopback validation on i2 failed\n");
