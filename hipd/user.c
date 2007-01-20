@@ -123,14 +123,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  HIP_ERROR("query ip hit mapping failed.\n");
 		  goto out_err;
 		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
-		HIP_DEBUG("mapping result sent\n");
 	  }
 	  break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
@@ -317,6 +309,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
+
+	/* send a response (assuming that it is written to the msg */
+	n = hip_sendto(msg, src);
+	if(n < 0){
+	  HIP_ERROR("hip_sendto() failed.\n");
+	  err = -1;
+	  goto out_err;
+
+	}
+	HIP_DEBUG("mapping result sent ok\n");
 
  out_err:
 	return err;
