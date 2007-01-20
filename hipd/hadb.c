@@ -46,7 +46,7 @@ void hip_hadb_put_hs(void *entry)
 
 void hip_hadb_hold_entry(void *entry)
 {
-	HIP_DB_HOLD_ENTRY(entry, hip_ha_t);
+	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
 }
 
 void hip_hadb_put_entry(void *entry)
@@ -803,6 +803,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		return -ENOENT;
 	}
 
+
 	if (!ipv6_addr_any(addr)) {
 	  	hip_hadb_delete_inbound_spi(ha, 0);
 		hip_hadb_delete_outbound_spi(ha, 0);
@@ -824,7 +825,8 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 
-	return 0;
+
+	return ha;
 }
 
 /* assume already locked entry */
@@ -1707,30 +1709,35 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	int len = hip_get_param_total_len(peer); 
 	struct in6_addr hit;
 
-	if (entry->peer_pub) {
+	/* public key and verify function might be initialized already in the
+	   case of loopback */
+	
+	if (entry->peer_pub)  {
 		HIP_DEBUG("Not initializing peer host id, old exists\n");
 		goto out_err;
 	}
 
-	/* Verify sender HIT */
- 	HIP_IFEL(hip_host_id_to_hit(peer, &hit, HIP_HIT_TYPE_HASH100) ||
+	HIP_IFEL(hip_host_id_to_hit(peer,&hit,HIP_HIT_TYPE_HASH100) ||
 		 ipv6_addr_cmp(&hit, &entry->hit_peer),
 		 -1, "Unable to verify sender's HOST_ID\n");
-	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)), -ENOMEM,
-		 "Out of memory\n");
+	
+	HIP_IFEL(!(entry->peer_pub = HIP_MALLOC(len, GFP_KERNEL)),
+		 -ENOMEM, "Out of memory\n");
+	
 	memcpy(entry->peer_pub, peer, len);
-	entry->verify = hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
+	entry->verify =
+		hip_get_host_id_algo(entry->peer_pub) == HIP_HI_RSA ? 
 		hip_rsa_verify : hip_dsa_verify;
-
+	
  out_err:
 	return err;
 }
 
 int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our) {
 	int err = 0, len, alg;
+
 	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
-						HIP_HI_RSA)))
-	{
+						HIP_HI_RSA))) {
 		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
 		HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID,
 							     hit_our,
@@ -2313,8 +2320,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 	HIP_DEBUG("ha=0x%p\n", ha);
 
 	/* Delete SAs */
+	
 	hip_hadb_delete_inbound_spi(ha, 0);
 	hip_hadb_delete_outbound_spi(ha, 0);
+	
 
 	if (ha->dh_shared_key)
 		HIP_FREE(ha->dh_shared_key);
@@ -2328,6 +2337,8 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_pub);
 	if (ha)
 		HIP_FREE(ha);
+
+
 }
 
 

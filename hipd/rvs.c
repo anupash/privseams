@@ -77,7 +77,7 @@ hip_rva_t *hip_rvs_allocate(int gfpmask)
  */
 hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
-	hip_rva_t *rva;
+	hip_rva_t *rva = NULL;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;

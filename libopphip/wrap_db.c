@@ -27,8 +27,8 @@ int hip_exists_translation(int pid, int socket)
 	if(entry) {
 		if(entry->pid == pid && entry->orig_socket == socket)
 			return 1;
-		else // this should not happen
-			HIP_ASSERT(0);
+		else
+			return 0;
 	} else
 		return 0;
 }
