@@ -1967,7 +1967,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    adr = &((*adr)->next);
+    adr = &((*adr)->next); // for opp mode -miika
   }
 
  err_out:

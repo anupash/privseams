@@ -388,7 +388,6 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 		hit->sin6_port = htons(rand());
 	} while (ntohs(hit->sin6_port) < 1024);
 
-	HIP_DEBUG_HIT("xxxx", SA2IP(hit));
   	HIP_IFE(hip_set_translation(entry, hit, 0), -1);
 
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
