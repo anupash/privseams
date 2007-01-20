@@ -343,15 +343,12 @@ int hip_receive_opp_r1(struct hip_common *msg,
 						 dst_addr, src_addr), -1,
 		 "Failed to insert peer map\n");
 	
-	// we should get entry by both real hits
-	//	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(entry);
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
+		 "Did not find opp entry\n");
 
-	// Bing, we need entry->our_pub and our_priv, so init_us
 	HIP_IFEL(hip_init_us(entry, &msg->hitr), -1,
 		 "hip_init_us failed\n");
-	// old HA has state 2, new HA has state 1, so copy it
+	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
 
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
@@ -363,8 +360,9 @@ int hip_receive_opp_r1(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr);
-	//HIP_ASSERT(entry);
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
 		 "unblock failed\n");
@@ -434,8 +432,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	HIP_DEBUG_HIT("phit", &phit);
 	
 	err = hip_hadb_add_peer_info(&phit, &dst_ip);
-	ha = hip_hadb_find_byhits(&hit_our, &phit);
-	HIP_ASSERT(ha);
+	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
+		 "Did not find entry\n")
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;

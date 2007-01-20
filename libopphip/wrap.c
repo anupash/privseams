@@ -104,7 +104,7 @@ void hip_initialize_db_when_not_exist()
 	if (hip_db_exist)
 		return;
 
-	hip_set_logtype(LOGTYPE_SYSLOG);
+	//hip_set_logtype(LOGTYPE_SYSLOG);
 
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
@@ -125,7 +125,8 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	else
 		memcpy(hit, &at->addr, sizeof(hip_hit_t));
 	
-	HIP_FREE(at);
+	if (at)
+		HIP_FREE(at);
 	
 	return err;
 }
@@ -379,18 +380,19 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
 	pid_t pid = getpid();
 
-	HIP_DEBUG("autobind\n");
+	HIP_DEBUG("autobind called\n");
 
 	srand(pid);
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
 		hit->sin6_port = rand();
 	} while (hit->sin6_port < 1024);
-	
+
 	HIP_IFE(hip_set_translation(entry, hit, 0), -1);
+
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
 					 (struct sockaddr *) &entry->translated_local_id,
-					 sizeof(struct sockaddr_in6));
+					 SALEN(&entry->translated_local_id));
 	if (err) {
 		HIP_ERROR("autobind failed\n");
 		goto out_err;
@@ -420,9 +422,12 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	
 	HIP_DEBUG("Translating to new socket (orig %d)\n", orig_socket);
 	
+	memset(&src_hit, 0, sizeof(src_hit));
+	memset(&dst_hit, 0, sizeof(dst_hit));
+	src_hit.sin6_family = AF_INET6;
+
 	HIP_IFEL(hip_get_local_hit_wrapper(&src_hit.sin6_addr), -1,
 		 "Querying of local HIT failed (no hipd running?)\n");
-	src_hit.sin6_family = AF_INET6;
 
 	if (is_peer && !entry->local_id_is_translated) {
 		/* Can happen also with UDP based sockets with
