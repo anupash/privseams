@@ -1612,7 +1612,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
-
   _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
@@ -1679,6 +1678,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       memcpy((*res)->ei_canonname, hostname, len);
     }
   }
+
  out_err:
 
   if (rsa)
@@ -1967,8 +1967,9 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    //adr = &((*adr)->next);
+    adr = &((*adr)->next);
   }
+
  err_out:
   if(filenamebase_len)
     free(filenamebase);

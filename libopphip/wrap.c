@@ -127,7 +127,7 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	
 	if (at)
 		HIP_FREE(at);
-	
+
 	return err;
 }
 
@@ -385,16 +385,17 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	srand(pid);
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
-		hit->sin6_port = rand();
-	} while (hit->sin6_port < 1024);
+		hit->sin6_port = htons(rand());
+	} while (ntohs(hit->sin6_port) < 1024);
 
-	HIP_IFE(hip_set_translation(entry, hit, 0), -1);
+	HIP_DEBUG_HIT("xxxx", SA2IP(hit));
+  	HIP_IFE(hip_set_translation(entry, hit, 0), -1);
 
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
 					 (struct sockaddr *) &entry->translated_local_id,
 					 SALEN(&entry->translated_local_id));
 	if (err) {
-		HIP_ERROR("autobind failed\n");
+		HIP_PERROR("autobind");
 		goto out_err;
 	}
 	
