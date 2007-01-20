@@ -1521,7 +1521,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 				      HIP_DIRECTION_DECRYPT), -EINVAL,
 		 "Decryption of Host ID failed\n");
 
-	if (!hip_hadb_hit_is_our(&entry->hit_our)) 
+	if (!hip_hadb_hit_is_our(&i2->hits)) 
         {
 		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
 			 "The decrypted parameter is not a host id\n");
