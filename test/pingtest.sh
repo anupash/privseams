@@ -17,9 +17,13 @@ echo ""
 echo "dst IP: $DST_IP"
 echo ""
 
+hipconf hip rst all
+sleep 3
+
 for DST_HIT in $DST_HITS
   do
   hipconf add map $DST_HIT $DST_IP
+  sleep 5
   for SRC_HIT in $SRC_HITS
     do
     echo "--- Round $ROUND ---"

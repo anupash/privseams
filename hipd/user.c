@@ -54,13 +54,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  HIP_ERROR("add peer mapping failed.\n");
 		  goto out_err;
 		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
 		break;
 #if 0
 	case SO_HIP_DEL_PEER_MAP_HIT_IP:
