@@ -34,6 +34,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
 	HIP_KEA * kea = NULL;
+
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -101,13 +102,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-	  { 
-	    err = hip_opp_get_peer_hit(msg, src);
-	    if(err){
-	      HIP_ERROR("get pseudo hit failed.\n");
-	      goto out_err;
-	    }
-	  }
+		err = hip_opp_get_peer_hit(msg, src);
+		if(err){
+			HIP_ERROR("get pseudo hit failed.\n");
+			goto out_err;
+		}
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
 	  break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
 	  {
