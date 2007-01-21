@@ -1339,7 +1339,7 @@ int hip_create_r2(struct hip_context *ctx,
 	    RENDEZVOUS was received. */
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
-		 -1, "Inserting rendezvous association failed..\n");
+		 0, "Inserting rendezvous association failed\n");
 
 	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
@@ -1451,10 +1451,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* Verify HMAC. */
-	if (hip_hadb_hit_is_our(&i2->hitr)) {
+	if (hip_hidb_hit_is_our(&i2->hits)) {
 		/* loopback */
 		HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_out),
-			 -ENOENT, "HMAC validation on i2 failed\n");
+			 -ENOENT, "HMAC loopback validation on i2 failed\n");
 	} else {
 		HIP_IFEL(hip_verify_packet_hmac(i2, &ctx->hip_hmac_in),
 			 -ENOENT, "HMAC validation on i2 failed\n");
@@ -1521,8 +1521,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 				      HIP_DIRECTION_DECRYPT), -EINVAL,
 		 "Decryption of Host ID failed\n");
 
-	if (!hip_hadb_hit_is_our(&entry->hit_our)) 
-        {
+	if (!hip_hidb_hit_is_our(&i2->hits))  {
 		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
 			 "The decrypted parameter is not a host id\n");
 	}
@@ -1849,8 +1848,7 @@ int hip_receive_i2(struct hip_common *i2,
 			HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,
 						i2_info), -ENOSYS,
 				 "Dropping HIP packet\n");
-		} else if (hip_hadb_hit_is_our(&entry->hit_peer)) {
-			/* loopback */
+		} else if (entry->is_loopback) {
 			hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
 		}
 		break;
@@ -1929,7 +1927,7 @@ int hip_handle_r2(struct hip_common *r2,
         ctx->input = r2;
 
         /* Verify HMAC */
-	if (hip_hadb_hit_is_our(&entry->hit_peer)) {
+	if (entry->is_loopback) {
 		HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_out,
 						 entry->peer_pub), -1, 
 		 "HMAC validation on R2 failed\n");
@@ -2396,7 +2394,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 	break;
 
  	case HIP_STATE_ESTABLISHED:
-		if (hip_hadb_hit_is_our(&entry->hit_peer))
+		if (entry->is_loopback)
 		    err = entry->hadb_handle_func->hip_handle_r2(hip_common,
 								 r2_saddr,
 								 r2_daddr,

@@ -80,7 +80,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		      strlen(app_addr.sun_path) + sizeof(app_addr.sun_family)),
 		 -1, "app_addr bind failed");
 
-	err = connect(hip_user_sock,(struct sockaddr *)&daemon_addr, sizeof(daemon_addr));
+	err = connect(hip_user_sock,(struct sockaddr *)&daemon_addr,
+		      sizeof(daemon_addr));
 	if (err) {
 	  HIP_ERROR("connect failed\n");
 	  goto out_err;
@@ -115,6 +116,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 }
 
 int hip_send_daemon_info(const struct hip_common *msg) {
+#if 0
   	int err = 0, n, len, hip_user_sock = 0;
 	struct sockaddr_un user_addr;
 	socklen_t alen;
@@ -146,13 +148,16 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 		err = -1;
 		goto out_err;
 	}
-		
+#endif
+	return hip_send_recv_daemon_info(msg);
 
+#if 0
  out_err:
 	if (hip_user_sock)
 		close(hip_user_sock);
 
 	return err;
+#endif
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
@@ -191,7 +196,8 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	/* TODO: Compiler warning;
 	   warning: pointer targets in passing argument 6 of 'recvfrom'
 	   differ in signedness. */
-	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0, (struct sockaddr *)saddr,
+	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
+				    (struct sockaddr *)saddr,
 				    &len)) != total), -1, "recv\n");
 
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
