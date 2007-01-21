@@ -84,11 +84,6 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 	hip_ht_delete(&hadb_hit, entry);
 }
 
-int hip_hadb_hit_is_our(const hip_hit_t *our) {
-	/* FIXME: This full scan is stupid, but we have no hashtables anyway... tkoponen */
-	return hip_for_each_ha(hit_match, (void *) our);
-}
-
 /**
  * hip_hadb_remove_state_hit - Remove HA from HIT hash table.
  * @param ha HA
@@ -339,6 +334,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	else {
 		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
+	}
+
+	if (hip_hidb_hit_is_our(peer_hit)) {
+		HIP_DEBUG("Peer HIT is ours (loopback)\n");
+		entry->is_loopback = 1;
 	}
 
 	hip_hadb_insert_state(entry);
@@ -826,7 +826,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 	}
 
 
-	return ha;
+	return 0;
 }
 
 /* assume already locked entry */
