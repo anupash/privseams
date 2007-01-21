@@ -74,15 +74,25 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(id_entry->host_id));
+		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
+			  algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
-		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
+		    (algo == HIP_ANY_ALGO ||
+		     (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
 	HIP_DEBUG("***************RETURNING NULL***************\n");
 	return NULL;
 
+}
+
+int hip_hidb_hit_is_our(const hip_hit_t *our) {
+	/* FIXME: This full scan is stupid, but we have no hashtables
+	   anyway... tkoponen */
+	return hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+						    our, HIP_ANY_ALGO, -1);
+	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
 /*
