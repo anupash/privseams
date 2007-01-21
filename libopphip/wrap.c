@@ -104,7 +104,8 @@ void hip_initialize_db_when_not_exist()
 	if (hip_db_exist)
 		return;
 
-	//hip_set_logtype(LOGTYPE_SYSLOG);
+	hip_set_logtype(LOGTYPE_SYSLOG);
+	hip_set_logfmt(LOGFMT_LONG);
 
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
@@ -576,7 +577,7 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	hip_opp_socket_t *entry = NULL;
 	int pid = 0, err = 0;
 	
-	_HIP_DEBUG("socket fd %d\n", socket_fd);
+	HIP_DEBUG("socket fd %d\n", socket_fd);
 	
 	if(socket_fd == -1) {
 		HIP_ERROR("Socket error\n");
@@ -584,6 +585,12 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	}
 
 	pid = getpid();
+
+	/* Workaround: see bug id 271. For some unknown reason, the library
+	   is not catching all close() calls from libinet6. */
+	if (entry = hip_socketdb_find_entry(pid, socket_fd)) {
+		hip_socketdb_del_entry_by_entry(entry);
+	}
 
 	entry = hip_create_new_opp_entry(pid, socket_fd);
 	HIP_ASSERT(entry);
@@ -678,6 +685,10 @@ int hip_translate_socket(const int *orig_socket,
 	
 	HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  pid, orig_socket, *translated_socket);
+	_HIP_DEBUG_HIT("orig_local_id", SA2IP(&entry->orig_local_id));
+	_HIP_DEBUG_HIT("orig_dst_id", SA2IP(&entry->orig_peer_id));
+	_HIP_DEBUG_HIT("trans_local_id", SA2IP(&entry->translated_local_id));
+	_HIP_DEBUG_HIT("trans_dst_id", SA2IP(&entry->translated_peer_id));
 	HIP_DEBUG("orig_id %p, translated_id %p\n", orig_id, *translated_id);
 	HIP_DEBUG("orig fd %d, translated fd %d\n", entry->orig_socket,
 		  entry->translated_socket);
