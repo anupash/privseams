@@ -1628,7 +1628,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 #ifdef CONFIG_HIP_RVS
                 HIP_DEBUG("Received HIT is ours or we are RVS\n");
 #else
-		HIP_IFEL(!hip_hadb_hit_is_our(&hip_common->hitr), -EFAULT,
+		HIP_IFEL(!hip_hidb_hit_is_our(&hip_common->hitr), -EFAULT,
 			 "Receiver HIT is not ours\n");
 #endif
 	}

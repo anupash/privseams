@@ -235,6 +235,7 @@ struct hip_hadb_state
 	int                  update_state;
 	uint16_t             local_controls;
 	uint16_t             peer_controls;
+	int                  is_loopback;
 	/** The HIT we use with this host. */
 	hip_hit_t            hit_our;
 	/** Peer's HIT. */

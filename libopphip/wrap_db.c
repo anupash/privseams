@@ -226,7 +226,7 @@ int hip_socketdb_add_entry(int pid, int socket)
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	err = hip_ht_add(&socketdb, new_item);
-	_HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
+	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
 		  new_item->pid, new_item->orig_socket,  new_item); 
 	//hip_socketdb_dump();
 	

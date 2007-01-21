@@ -99,5 +99,7 @@ int hip_handle_del_local_hi(const struct hip_common *input);
 
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
+/* existence */
+int hip_hidb_hit_is_our(const hip_hit_t *src);
 
 #endif /* _HIP_DB */
