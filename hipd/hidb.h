@@ -10,7 +10,6 @@
 #  include "kerncompat.h"
 #  include "list.h"
 #  include "debug.h"
-#  include "timer.h"
 #  include "cookie.h"
 #  include "blind.h"
 #endif
@@ -20,17 +19,14 @@
         RW_LOCK_UNLOCKED, id, 0}
 
 #define HIP_READ_LOCK_DB(db) do { \
-	HIP_START_TIMER(KMM_SPINLOCK);\
         read_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_WRITE_LOCK_DB(db) do { \
-        HIP_START_TIMER(KMM_SPINLOCK);\
 	write_lock_irqsave(&(db)->db_lock,lf); \
 	} while(0)
 
 #define HIP_READ_UNLOCK_DB(db) do { \
-        HIP_STOP_TIMER(KMM_SPINLOCK,"read lock "__FUNCTION__);\
 	read_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
 
@@ -104,7 +100,9 @@ int hip_handle_del_local_hi(const struct hip_common *input);
 
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
 
-int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit, struct in6_addr *local_hit);
-
+int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
+			    struct in6_addr *local_hit);
+/* existence */
+int hip_hidb_hit_is_our(const hip_hit_t *src);
 
 #endif /* _HIP_DB */

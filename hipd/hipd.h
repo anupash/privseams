@@ -29,10 +29,12 @@
 #include "i3_client_api.h"
 #endif
 
+/*
 #ifdef CONFIG_HIP_OPENDHT
 #include "tracker.h"
 #include "dhtresolver.h"
 #endif
+*/
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
@@ -75,7 +77,7 @@
 #define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
-#define HIP_NETLINK_TALK_ACK 1 /* see netlink_talk */
+#define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
 
 extern struct rtnl_handle hip_nl_route;
@@ -99,7 +101,9 @@ int hip_agent_is_alive();
 int hip_agent_filter(struct hip_common *msg);
 
 int hip_firewall_is_alive();
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys);
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys);
+int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
 #define IPV4_HDR_SIZE 20
 

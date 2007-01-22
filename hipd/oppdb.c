@@ -284,7 +284,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
 	
 	entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
-	HIP_ASSERT(entry_tmp);
 
  out_err:
 	return entry_tmp;
@@ -293,26 +292,17 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					struct in6_addr *src_addr,
 					struct in6_addr *dst_addr,
-					struct hip_stateless_info *msg_info)
+					hip_portpair_t *msg_info)
 {
 	hip_hdr_type_t type = hip_get_msg_type(msg);
 	hip_ha_t *entry = NULL;
 
 	if (type == HIP_I1) {
-		struct gaih_addrtuple *at = NULL;
-		struct gaih_addrtuple **pat = &at;
-
 		if(!hit_is_opportunistic_null(&msg->hitr)){
 			goto out_err;
 		}
-			
-		/* Rewrite responder HIT of i1  */
-		get_local_hits(NULL, pat);
-		HIP_DEBUG_HIT("The local HIT =", &at->addr);
-		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);
-		
-		memcpy(&msg->hitr, &at->addr, sizeof(at->addr));
-		HIP_DEBUG_HIT("msg->hitr =", &msg->hitr);    
+
+		hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
 	} else if (type == HIP_R1) {
 		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	} else {
@@ -327,7 +317,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
-		       struct hip_stateless_info *msg_info)
+		       hip_portpair_t *msg_info)
 {
 	hip_opp_block_t *block_entry = NULL;
 	hip_ha_t *entry_tmp = NULL, *entry;
@@ -353,15 +343,12 @@ int hip_receive_opp_r1(struct hip_common *msg,
 						 dst_addr, src_addr), -1,
 		 "Failed to insert peer map\n");
 	
-	// we should get entry by both real hits
-	//	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(entry);
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
+		 "Did not find opp entry\n");
 
-	// Bing, we need entry->our_pub and our_priv, so init_us
 	HIP_IFEL(hip_init_us(entry, &msg->hitr), -1,
 		 "hip_init_us failed\n");
-	// old HA has state 2, new HA has state 1, so copy it
+	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
 
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
@@ -373,8 +360,9 @@ int hip_receive_opp_r1(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr);
-	//HIP_ASSERT(entry);
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
 		 "unblock failed\n");
@@ -444,8 +432,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	HIP_DEBUG_HIT("phit", &phit);
 	
 	err = hip_hadb_add_peer_info(&phit, &dst_ip);
-	ha = hip_hadb_find_byhits(&hit_our, &phit);
-	HIP_ASSERT(ha);
+	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
+		 "Did not find entry\n")
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
@@ -479,7 +467,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	}
 	
  send_i1:
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+ 	/** @todo Not filtering I1 trough agent, if in opportunistic mode! */
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha, 1), -1,
 		 "sending of I1 failed\n");
 	
  out_err:

@@ -31,28 +31,30 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	int err = 0;
 	time_t *now = (time_t*) current_time;	
 
-	if (!entry->hip_msg_retrans.buf)
+	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING)
+	if (entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		HIP_DEBUG("Waiting reply from agent...\n");
 		goto out_err;
 	}
 	
-	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %d\n",
- 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
-		   entry->hip_msg_retrans.count, entry->state);
+	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
+		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
+		   entry->hip_msg_retrans.count, hip_state_str(entry->state));
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-
+	
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
-		    entry->state != HIP_STATE_ESTABLISHED) {
+		    entry->state != HIP_STATE_ESTABLISHED &&
+		    entry->retrans_state == entry->state) {
 			
-			entry->hadb_xmit_func->
+			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     HIP_NAT_UDP_PORT,
@@ -67,6 +69,11 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_R2) {
+				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
+				entry->state = HIP_STATE_ESTABLISHED;
+			}
 			
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
@@ -80,6 +87,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	}
 
  out_err:
+	entry->retrans_state = entry->state;
+		
 	return err;
 }
 
@@ -286,14 +295,15 @@ int hip_agent_filter(struct hip_common *msg)
 		err = -1;
 		goto out_err;
 	}
-	
+
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 	/*
 		If message is type I1, then user action might be needed to filter the packet.
 		Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1)
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
@@ -343,32 +353,84 @@ out_err:
 void register_to_dht ()
 {
 #ifdef CONFIG_HIP_OPENDHT
+    extern int hip_opendht_sock_fqdn;
+    extern int hip_opendht_sock_hit;
+    extern int hip_opendht_fqdn_sent;
+    extern int hip_opendht_hit_sent;
+    extern int opendht_error;
+    extern char opendht_response[];
+    extern struct addrinfo opendht_serving_gateway;
+    struct netdev_address *n, *t;
+    char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-  struct netdev_address *n, *t;
-  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
-    return;
+    if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+        return;
+    HIP_INFO("Using hostname: %s\n", hostname);
   
-  HIP_INFO("Using hostname: %s\n", hostname);
-  
-  list_for_each_entry_safe(n, t, &addresses, next) {
-    //AG this should be replaced with a loop with hip_for_each_hi
-    struct in6_addr tmp_hit;
-    char *tmp_hit_str, *tmp_addr_str;
-    if (ipv6_addr_is_hit(SA2IP(&n->addr)))
-	continue;
+    list_for_each_entry_safe(n, t, &addresses, next) 
+    {
+        struct in6_addr tmp_hit;
+        char *tmp_hit_str, *tmp_addr_str;
+        if (ipv6_addr_is_hit(SA2IP(&n->addr)))
+	    continue;
+        if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
+        {
+            HIP_ERROR("No HIT found\n");
+            return;
+        } 
 
-    if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
-      HIP_ERROR("No HIT found\n");
-      return;
-    }
-	 
-    tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-    tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
-    
-    // HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", tmp_hit_str, tmp_addr_str, hostname);
-    updateMAPS(hostname, tmp_hit_str, tmp_addr_str);
-  } 	
+        if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
+        {    
+            tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+            tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+            HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", 
+                      tmp_hit_str, tmp_addr_str, hostname);
+      
+           /* send the fqdn->hit mapping */
+           if (hip_opendht_fqdn_sent == 0) 
+           {
+                HIP_DEBUG("Sending mapping FQDN->HIT to the openDHT\n");
+                if (hip_opendht_sock_fqdn < 1)
+                    hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                opendht_error = 0;
+                opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
+                                                    &opendht_serving_gateway);
+                if (opendht_error > -1) 
+                {
+                    opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
+                                    (unsigned char *)tmp_hit_str, (unsigned char *)tmp_addr_str);
+                    if (opendht_error < 0)
+                    {
+                        HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+                    }
+                    else
+                        hip_opendht_fqdn_sent = 1;
+                }
+            }
+            /* send the hit->ip mapping */
+           if (hip_opendht_hit_sent == 0) 
+           {
+               HIP_DEBUG("Sending mapping HIT->IP to the openDHT\n");
+               if (hip_opendht_sock_hit < 1)
+                   hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                opendht_error = 0;
+                opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
+                                                    &opendht_serving_gateway);
+               if (opendht_error > -1)
+               {
+                    opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
+                                    (unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
+                    if (opendht_error < 0)
+                    {
+                        HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+                    }
+                    else
+                        hip_opendht_hit_sent = 1;
+                }
+            }
+      }     
+    } 
+
 #endif
 }
 
@@ -463,62 +525,37 @@ int hip_firewall_is_alive()
 }
 
 
-int hip_firewall_add_escrow_data(hip_ha_t *entry, struct hip_keys *keys)
+int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
+        struct in6_addr * hit_r, struct hip_keys *keys)
 {
 		struct hip_common *msg;
 		int err = 0;
 		int n;
 		socklen_t alen;
-		struct in6_addr * hit_s;
-		struct in6_addr * hit_r;
+		//struct in6_addr * hit_s;
+		//struct in6_addr * hit_r;
 				
-		msg = malloc(HIP_MAX_PACKET);
-		if (!msg)
-		{
-			HIP_ERROR("malloc failed\n");
-			goto out_err;
-		}
+		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
-
-		err = hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0);
-		if (err)
-		{
-			HIP_ERROR("build hdr failed: %s\n", strerror(err));
-			goto out_err;
-		}
+		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
+                        "Build hdr failed\n");
 		
-		if (hip_match_hit(&keys->hit, &entry->hit_our)) {
+		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
 			hit_s = &entry->hit_peer;
 			hit_r = &entry->hit_our;
 		}
 		else {
 			hit_r = &entry->hit_peer;
 			hit_s = &entry->hit_our;
-		}
-		
-		err = hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-		if (err)
-		{
-			HIP_ERROR("build param hit with hit_our failed: %s\n", strerror(err));
-			goto out_err;
-		}
-		err = hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
-	                               sizeof(struct in6_addr));
-		if (err)
-		{
-			HIP_ERROR("build param hit with hit_peer failed: %s\n", strerror(err));
-			goto out_err;
-		}
-		
-		err = hip_build_param(msg, (struct hip_tlv_common *)keys);
-		if (err)
-		{
-			HIP_ERROR("build param failed: %s\n", strerror(err));
-			goto out_err;
-		}
-	
-		HIP_DEBUG("Sending test msg to firewall\n");
+		}*/
+                
+                HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+		HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                        sizeof(struct in6_addr)), -1, "build param contents failed\n");
+                
+		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
+                        "hip build param failed\n");
 
 		n = hip_sendto(msg, &hip_firewall_addr);                   
 		if (n < 0)
@@ -534,5 +571,62 @@ out_err:
 
 }
 
+int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        struct in6_addr * hit_s;
+        struct in6_addr * hit_r;                        
+                                
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, HIP_DELETE_ESCROW_DATA, 0), -1, 
+                "Build hdr failed\n");
+                
+        HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
+                sizeof(struct in6_addr)), -1, "build param contents failed\n");
+        HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
+                sizeof(unsigned int)), -1, "build param contents failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0)
+        {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else HIP_DEBUG("Sendto firewall OK.\n");
+                
+out_err:
+        return err;        
+}
 
+
+int hip_firewall_set_escrow_active(int activate)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending activate msg to firewall (value=%d)\n", activate);                        
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, 
+                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                -1, "Build hdr failed\n");
+                
+        n = hip_sendto(msg, &hip_firewall_addr);                   
+        if (n < 0) {
+                HIP_ERROR("Sendto firewall failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else {
+                HIP_DEBUG("Sendto firewall OK.\n");
+        }  
+out_err:
+        return err;        
+}
 

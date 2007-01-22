@@ -11,7 +11,7 @@
 
 int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
-#ifndef CONFIG_HIP_SPAM /* see also spam.c for overriding functions */
+#ifndef CONFIG_HIP_ICOOKIE /* see also spam.c for overriding functions */
 
 void hip_init_puzzle_defaults() {
 	return;
@@ -70,7 +70,7 @@ int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	return (base) % HIP_R1TABLESIZE;
 }
-#endif /* !CONFIG_HIP_SPAM */
+#endif /* !CONFIG_HIP_ICOOKIE */
 
 /**
  * hip_fetch_cookie_entry - Get a copy of R1entry structure
@@ -211,7 +211,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	} else if (mode == HIP_SOLVE_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
-		maxtries = 1ULL << (u->pz.K + 2); /* fix */
+		maxtries = 1ULL << (u->pz.K + 3);
 		get_random_bytes(&randval, sizeof(u_int64_t));
 	} else {
 		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
@@ -278,7 +278,7 @@ struct hip_r1entry * hip_init_r1(void)
 }
 
 
-#ifndef CONFIG_HIP_SPAM
+#ifndef CONFIG_HIP_ICOOKIE
 /*
  * @sign the signing function to use
  */
@@ -307,7 +307,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
  err_out:
 	return 0;
 }
-#endif /* !CONFIG_HIP_SPAM */
+#endif /* !CONFIG_HIP_ICOOKIE */
 
 void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 {
@@ -422,8 +422,10 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 				HIP_PUZZLE_OPAQUE_LEN), 0, 
 			 "Solution's opaque data does not match the opaque data sent\n");
 	}
+
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-		 "Puzzle incorrectly solved\n");
+	 "Puzzle incorrectly solved\n");
+	
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	if(plain_local_hit)

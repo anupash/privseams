@@ -155,9 +155,9 @@ void hip_vlog(int debug_level, const char *file, const int line,
       goto err;
     break;
   case LOGTYPE_SYSLOG:
-    openlog(prefix, SYSLOG_OPT, SYSLOG_FACILITY);
+    openlog(NULL, SYSLOG_OPT, SYSLOG_FACILITY);
     printed = vsnprintf(syslog_msg, DEBUG_MSG_MAX_LEN, fmt, args);
-    syslog(syslog_level|SYSLOG_FACILITY, "%s", syslog_msg);
+    syslog(syslog_level|SYSLOG_FACILITY, "%s %s", prefix, syslog_msg);
     /* the result of vsnprintf depends on glibc version; handle them both
        (note about barriers: printed has \0 excluded,
        DEBUG_MSG_MAX_LEN has \0 included) */
@@ -359,6 +359,136 @@ void hip_hexdump(const char *file, int line, const char *function,
 
 }
 
+
+/**
+ * Example of the output:
+ * 13 88 94 64 0d b9 89 ff f3 cc 4c a1 80 11 05 94 ...d......L.....
+ * 6c 3c 00 00 01 01 08 0a 00 10 a2 58 00 0f 98 30 l<.........X....
+ */
+int hip_hexdump_parsed(const char *file, int line, const char *function,
+		 const char *prefix, const void *str, int len) 
+{
+	int hexdump_total_size = 0;
+	int hexdump_count = 0;
+	int hexdump_written = 0;
+	int hexdump_index = 0;
+	int char_index = 0;
+	char *hexdump = NULL;
+	
+	int bytes_per_line = 16;
+	char space = ' ';
+	char nonascii = '.';
+	char * asciidump = NULL;
+	int lines = 0;
+	int line_index = 0;
+	
+	int pad_length = 0;
+	int pad_start_position = 0;
+
+	// Count lines
+	if (len % 16 == 0)
+		lines = (int) len / 16;
+	else 
+		lines = (int) len / 16 + 1;	
+	
+  	hexdump_total_size = lines * 4 * bytes_per_line + 1; // one byte requires 4 bytes in the output (two for hex, one for ascii and one space)
+  	pad_start_position = len * 3 + ((lines - 1) * bytes_per_line) + 1;
+  	hexdump_count = hexdump_total_size;
+	pad_length = (hexdump_total_size - bytes_per_line) - pad_start_position;
+
+  	hexdump = (char *) calloc(hexdump_total_size, sizeof(char));
+	asciidump = (char *) calloc((bytes_per_line + 2), sizeof(char));
+
+	_HIP_DEBUG("hexdump_total_size: %d, pad_start_position: %d, pad_length: %d\n", 
+		hexdump_total_size, pad_start_position, pad_length);
+  	if (hexdump == NULL || asciidump == NULL) {
+    	HIP_DIE("memory allocation failed\n");
+  	}
+  	
+  	if(len > 0) {
+  		while(char_index < len) {
+			
+			// Write the character in hex
+			hexdump_written = snprintf((char *) (hexdump + hexdump_index),
+				hexdump_count, "%02x", (unsigned char)(*(((unsigned char *)str) + char_index)));
+			if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
+				free(hexdump);
+				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
+			} 
+			char written = (unsigned char)(*(((unsigned char *)str) + char_index));
+			
+			// Write space between		
+			hexdump_index += hexdump_written;
+			hexdump_count -= hexdump_written;
+			hexdump_written = snprintf((char *) (hexdump + hexdump_index),
+					hexdump_count, "%c", space);
+			if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
+				free(hexdump);
+				free(asciidump);
+				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
+			}
+			hexdump_count -= hexdump_written;
+			assert(hexdump_count >=0);
+			hexdump_index += hexdump_written;
+			assert(hexdump_index + hexdump_count == hexdump_total_size);
+			
+			// Wite the character in ascii to asciidump line	
+			if (written > 32 && written < 127)
+				memset(asciidump + line_index, written, 1);
+			else 	
+				memset(asciidump + line_index, nonascii, 1);
+			line_index++;
+			/* If line is full or input is all read, copy data to hexdump */
+			if (line_index >= 16 || (char_index + 1) == len) {
+				// Add padding
+				_HIP_DEBUG("Line ready\n");
+				if ((char_index + 1) == len && pad_length > 0
+					&& ((hexdump_index + line_index + pad_length) < hexdump_total_size)) 
+				{
+					char * padding = (char *) calloc(pad_length + 1, sizeof(char));
+					_HIP_DEBUG("Creating padding for the last line... \n");
+					_HIP_DEBUG("hexdump_index: %d, line_index: %d\n", hexdump_index, line_index);
+					memset(padding, ' ', pad_length);
+					memset(padding + pad_length, '\0', 1);
+					hexdump_written = snprintf((char *) (hexdump + hexdump_index), 
+						hexdump_count, "%s", padding);
+					if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
+						free(hexdump);
+						free(asciidump);
+						free(padding);
+						HIP_DIE("hexdump msg too long(%d)", hexdump_written);
+					}
+					hexdump_index += hexdump_written;
+					hexdump_count -= hexdump_written;
+					free(padding);
+				}
+				memset(asciidump + line_index, '\n', 1);
+				memset(asciidump + line_index + 1, '\0', 1);
+				hexdump_written = snprintf((char *) (hexdump + hexdump_index), 
+					hexdump_count, "%s", asciidump);
+				if (hexdump_written < 0 || hexdump_written > hexdump_total_size - 1) {
+					free(hexdump);
+					free(asciidump);
+					HIP_DIE("hexdump msg too long(%d)", hexdump_written);
+				}
+				hexdump_index += hexdump_written;
+				hexdump_count -= hexdump_written;
+				line_index = 0;
+				memset(asciidump, 0, bytes_per_line + 2);
+			}
+			char_index++;
+		} 
+		hip_info(file, line, function, "%s%s\n", prefix, hexdump);
+  	}
+	else {
+	  HIP_ERROR("hexdump length was 0\n");  
+	}
+	
+  	free(hexdump);
+  	free(asciidump);
+}
+
+
 /**
  * hip_print_sockaddr - print a socket address structure
  * @param file the file from where the debug call was made        
@@ -420,7 +550,7 @@ void hip_print_lsi(const char *str, const struct in_addr *lsi)
  */
 void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
-	if(!hit) { // Null check added 27.07.2006
+	if(hit == NULL) {
 		HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}

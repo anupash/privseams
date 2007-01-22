@@ -29,10 +29,13 @@
 //static
 int hip_db_exist = 0;
 
-
 // used for dlsym_util
-#define NUMBER_OF_DLSYM_FUNCTIONS 10
+#define NUMBER_OF_DLSYM_FUNCTIONS 16
 
+/* open() has varying number of args, so it is not in the list. fopen(),
+   fdopen and create() are not in the list because they operate only on
+   files, similarly as open. The separation between files and sockets is
+   done with in socket() or dynamically in read() or write() calls. */
 struct {
 	int (*socket_dlsym)(int domain, int type, int protocol);
 	int (*bind_dlsym)(int socket, const struct sockaddr *sa,
@@ -46,34 +49,90 @@ struct {
 	ssize_t (*recvfrom_dlsym)(int s, void *buf, size_t len, int flags, 
 				  struct sockaddr *from, socklen_t *fromlen);
 	ssize_t (*recvmsg_dlsym)(int s, struct msghdr *msg, int flags);
-	int (*close_dlsym)(int fd);
 	int (*accept_dlsym)(int sockfd, struct sockaddr *addr,
 			    socklen_t *addrlen);
+	ssize_t (*write_dlsym)(int fd, const void *buf, size_t count);
+	ssize_t (*read_dlsym)(int fd, void *buf, size_t count);
+	int (*close_dlsym)(int fd);
+	int (*listen_dlsym)(int sockfd, int backlog);
+	ssize_t (*readv_dlsym)(int fd, const struct iovec *vector, int count);
+	ssize_t (*writev_dlsym)(int fd, const struct iovec *vector, int count);
 } dl_function_ptr;
+/* XX TODO: ADD: clone() dup(), dup2(), fclose(), select ? */
 
 void *dl_function_fd[NUMBER_OF_DLSYM_FUNCTIONS];
 void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
- "sendmsg", "recv", "recvfrom", "recvmsg", "close", "accept"};
+ "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
+ "write", "read", "close", "listen", "readv",
+ "writev"};
+
+void hip_init_dlsym_functions()
+{
+	int err = 0, i;
+	char *error = NULL;
+	
+	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
+		dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
+		HIP_ASSERT(dl_function_fd[i]);
+		((int **) (&dl_function_ptr))[i] =
+			dlsym(dl_function_fd[i], dl_function_name[i]);
+	}
+	
+	error = dlerror();
+	if (err){
+		HIP_DIE("dlerror: %s\n", error);
+	}
+}
+
+void hip_uninit_dlsym_functions()
+{
+	int i = 0;
+	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
+		dlclose(dl_function_fd[i]);
+	}
+}
+
+void hip_uninitialize_db()
+{
+	hip_uninit_dlsym_functions();
+	hip_uninit_socket_db();
+}
+
+void hip_initialize_db_when_not_exist()
+{
+	if (hip_db_exist)
+		return;
+
+	hip_set_logtype(LOGTYPE_SYSLOG);
+	hip_set_logfmt(LOGFMT_LONG);
+
+	hip_init_dlsym_functions();
+	hip_init_socket_db();
+	HIP_DEBUG("socketdb initialized\n");
+	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
+	atexit(hip_uninitialize_db);
+	hip_db_exist = 1;
+}
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
 	int err = 0;
 	struct gaih_addrtuple *at = NULL;
-	struct gaih_addrtuple **pat = &at;
 	
-	err = get_local_hits(NULL, pat);
+	err = get_local_hits(NULL, &at);
 	if (err)
 		HIP_ERROR("getting local hit failed\n");
 	else
 		memcpy(hit, &at->addr, sizeof(hip_hit_t));
 	
-	HIP_FREE(*pat);
-	
+	if (at)
+		HIP_FREE(at);
+
 	return err;
 }
 
-inline int hip_domain_is_pf_inet6(int domain)
+inline int hip_domain_is_inet(int domain)
 {
 	return (domain == PF_INET || domain == PF_INET6);
 }
@@ -85,7 +144,7 @@ inline int hip_type_is_stream_or_dgram(int type)
 
 inline int hip_check_domain_type_protocol(int domain, int type, int protocol)
 {
-	return (!hip_domain_is_pf_inet6(domain)) ||
+	return (!hip_domain_is_inet(domain)) ||
 		(!hip_type_is_stream_or_dgram(type)) || 
 		(!(protocol == 0));
 }
@@ -116,54 +175,89 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 			return 0;
 		if (!(sa->sa_family == AF_INET || sa->sa_family == AF_INET6))
 			return 0;
+		if (sa->sa_family == AF_INET) {
+			struct in_addr *oip = SA2IP(sa);
+			if (oip->s_addr == htonl(INADDR_LOOPBACK))
+				return 0;
+		}
+		if (sa->sa_family == AF_INET6 &&
+		    IN6_IS_ADDR_LOOPBACK(SA2IP(sa)))
+			return 0;
+
 	}
-	
 	return 1;
 }
 
-void hip_uninit_dlsym_functions()
+#if 0
+/* Some unfinished code for msg header handling. We probably need a complete
+   msghdr in opp entry. Consider that pktinfo may be for IPv4 communications
+   and we need to wrap it to IPv6. */
+int hip_get_pktinfo_addr(struct msghdr *msg, int is_ipv4,
+			 struct in6_addr **saddr,
+			 struct in6_addr **daddr)
 {
-	int i = 0;
-	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-		dlclose(dl_function_fd[i]);
-	}
-}
+	struct sockaddr_storage addr_from;
+	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
+	struct sockaddr_in6 *addr_from6 =
+		((struct sockaddr_in6 *) &addr_from);
+        struct cmsghdr *cmsg;
+        //struct msghdr msg;
+	union {
+		struct in_pktinfo *pktinfo_in4;
+		struct in6_pktinfo *pktinfo_in6;
+	} pktinfo;
+        int err = 0;
+	int cmsg_level, cmsg_type;
 
-void hip_init_dlsym_functions()
-{
-	int err = 0, i;
-	char *error = NULL;
-	
-	for (i = 0; i < NUMBER_OF_DLSYM_FUNCTIONS; i++) {
-		dl_function_fd[i] = dlopen(SOFILE, RTLD_LAZY);
-		HIP_ASSERT(dl_function_fd[i]);
-		((int **) (&dl_function_ptr))[i] = dlsym(dl_function_fd[i],
-							 dl_function_name[i]);
-	}
-	
-	error = dlerror();
-	if (err){
-		HIP_DIE("dlerror: %s\n", error);
-	}
-}
+	pktinfo.pktinfo_in4 = NULL;
 
-void hip_uninitialize_db()
-{
-	hip_uninit_dlsym_functions();
-	hip_uninit_socket_db();
-}
+	cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
+	cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
 
-void hip_initialize_db_when_not_exist()
-{
-	if(!hip_db_exist) {
-		hip_init_dlsym_functions();
-		hip_init_socket_db();
-		HIP_DEBUG("socketdb initialized\n");
-		// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
-		atexit(hip_uninitialize_db);
-		hip_db_exist = 1;
+	/* destination address comes from ancillary data passed
+	 * with msg due to IPV6_PKTINFO socket option */
+	for (cmsg=CMSG_FIRSTHDR(&msg); cmsg; cmsg=CMSG_NXTHDR(&msg,cmsg)){
+		if ((cmsg->cmsg_level == cmsg_level) && 
+		    (cmsg->cmsg_type == cmsg_type)) {
+			/* The structure is a union, so this fills also the
+			   pktinfo_in6 pointer */
+			pktinfo.pktinfo_in4 =
+				(struct in_pktinfo*)CMSG_DATA(cmsg);
+			break;
+		}
 	}
+        
+	/* If this fails, change IPV6_2292PKTINFO to IPV6_PKTINFO in
+	   hip_init_raw_sock_v6 */
+	HIP_IFEL(!pktinfo.pktinfo_in4 && read_addr, -1,
+		 "Could not determine dst addr, dropping\n");
+
+	/* IPv4 addresses */
+	if (is_ipv4) {
+		if (saddr)
+			IPV4_TO_IPV6_MAP(&addr_from4->sin_addr, saddr);
+		if (daddr)
+			IPV4_TO_IPV6_MAP(&pktinfo.pktinfo_in4->ipi_addr,
+					 daddr);
+	} else {
+		/* IPv6 addresses */
+		if (saddr)
+			memcpy(saddr, &addr_from6->sin6_addr,
+			       sizeof(struct in6_addr));
+		if (daddr)
+			memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+			       sizeof(struct in6_addr));
+	}
+
+	if (saddr)
+		HIP_DEBUG_IN6ADDR("src", saddr);
+	if (daddr)
+		HIP_DEBUG_IN6ADDR("dst", daddr);
+
+ out_err:
+	return err;
 }
+#endif
 
 void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int socket,
 			    const struct sockaddr *sa, const socklen_t sa_len)
@@ -179,15 +273,6 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 	}
 }
 
-void hip_copy_orig_to_translated(hip_opp_socket_t *entry)
-{
-	entry->translated_socket = entry->orig_socket;
-	memcpy(&entry->translated_peer_id, &entry->orig_peer_id,
-	       sizeof(struct sockaddr_storage));
-	memcpy(&entry->translated_local_id, &entry->orig_local_id,
-	       sizeof(struct sockaddr_storage));
-}
-
 inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					  struct in6_addr *peer_hit,
 					  const struct in6_addr *local_hit,
@@ -200,8 +285,6 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	int ret = 0;
 
 	*fallback = 1;
-	
-	HIP_IFE(ipv6_addr_any(peer_ip), -1);
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
@@ -240,22 +323,37 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	return err;
 }
 
-void hip_translate_to_original(hip_opp_socket_t *entry)
+void hip_translate_to_original(hip_opp_socket_t *entry, int is_peer)
 {
 	/* translated entries correspond to originals   */
-	HIP_DEBUG("Translating to original\n");
-	hip_copy_orig_to_translated(entry);
-	entry->local_id_is_translated = 1;
-	entry->peer_id_is_translated = 1;
+	HIP_DEBUG("Translating to original %d\n", entry->orig_socket);
+
+	entry->translated_socket = entry->orig_socket;
+	if (is_peer) {
+		memcpy(&entry->translated_peer_id, &entry->orig_peer_id,
+		       sizeof(struct sockaddr_storage));
+		entry->peer_id_is_translated = 1;
+	} else {
+		memcpy(&entry->translated_local_id, &entry->orig_local_id,
+		       sizeof(struct sockaddr_storage));
+		entry->local_id_is_translated = 1;
+	}
 }
 
-int set_translation(hip_opp_socket_t *entry,
-		    struct sockaddr_in6 *hit,
-		    int is_peer) {
+inline int hip_create_new_hit_socket(hip_opp_socket_t *entry) {
+	return dl_function_ptr.socket_dlsym(AF_INET6,
+					    entry->type,
+					    entry->protocol);
+}
+
+int hip_set_translation(hip_opp_socket_t *entry,
+			struct sockaddr_in6 *hit,
+			int is_peer) {
 	int err = 0;
 	
 	if (!entry->translated_socket) {
-		int new_socket = socket(AF_INET6, entry->type, 0);
+		int new_socket = hip_create_new_hit_socket(entry);
+		HIP_DEBUG("Created new translatable socket %d\n", new_socket);
 		if (new_socket <= 0) {
 			err = -1;
 			HIP_ERROR("socket allocation failed\n");
@@ -279,22 +377,25 @@ int set_translation(hip_opp_socket_t *entry,
 	
 }
 
-int hip_autobind(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
+int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 	int err = 0;
 	pid_t pid = getpid();
+
+	HIP_DEBUG("autobind called\n");
 
 	srand(pid);
 	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
-		hit->sin6_port = rand();
-	} while(hit->sin6_port < 1024);
-	
-	HIP_IFE(set_translation(entry, hit, 0), -1);
+		hit->sin6_port = htons(rand());
+	} while (ntohs(hit->sin6_port) < 1024);
+
+  	HIP_IFE(hip_set_translation(entry, hit, 0), -1);
+
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
 					 (struct sockaddr *) &entry->translated_local_id,
-					 sizeof(struct sockaddr_in6));
+					 SALEN(&entry->translated_local_id));
 	if (err) {
-		HIP_ERROR("bind failed\n");
+		HIP_PERROR("autobind");
 		goto out_err;
 	}
 	
@@ -314,22 +415,31 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	socklen_t translated_id_len;
 	struct sockaddr_in6 mapped_addr;
+
+	//HIP_ASSERT((entry->type == SOCK_STREAM) || orig_id);
+
+	/* i.e. socket(PF_FILE), connect and read */
+	HIP_IFEL(!orig_id, 0, "No new id to translate, bailing out\n");
 	
-	HIP_DEBUG("Translating new id\n");
+	HIP_DEBUG("Translating to new socket (orig %d)\n", orig_socket);
 	
-	HIP_ASSERT(entry->type == SOCK_STREAM || orig_id);
-	
-	err = hip_get_local_hit_wrapper(&src_hit.sin6_addr);
-	if (err) {
-		HIP_ERROR("No local HIT: is hipd running?\n");
-		src_hit.sin6_family = AF_INET6;
-		goto out_err;
+	memset(&src_hit, 0, sizeof(src_hit));
+	memset(&dst_hit, 0, sizeof(dst_hit));
+	src_hit.sin6_family = AF_INET6;
+
+	HIP_IFEL(hip_get_local_hit_wrapper(&src_hit.sin6_addr), -1,
+		 "Querying of local HIT failed (no hipd running?)\n");
+
+	if (is_peer && !entry->local_id_is_translated) {
+		/* Can happen also with UDP based sockets with
+		   connect() + send() */
+		HIP_IFEL(hip_autobind_port(entry, &src_hit), -1,
+			 "autobind failed\n");
+	} else {
+		HIP_DEBUG("autobind was not necessary\n");
 	}
-	
-	if (entry->type == SOCK_STREAM && is_peer &&
-	    !entry->local_id_is_translated) {
-		HIP_IFE(hip_autobind(entry, &src_hit), -1);
-	}
+
+	_HIP_DEBUG_IN6ADDR("translate new: src addr", &src_hit.sin6_addr);
 	
 	/* hipd requires IPv4 addresses in IPv6 mapped format */
 	if (orig_id->sa_family == AF_INET) {
@@ -351,6 +461,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	
 	_HIP_DEBUG("sin_port=%d\n", ntohs(port));
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
+
+	/* Try opportunistic base exchange to retrieve peer's HIT */
 	
 	if (is_peer) {
 		int fallback;
@@ -360,6 +472,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		   opportunistic HIP fails, it can return an IP address
 		   instead of a HIT */
 		HIP_DEBUG("requesting hit from hipd\n");
+		HIP_DEBUG_IN6ADDR("ip addr", &mapped_addr.sin6_addr);
 		HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 							&dst_hit.sin6_addr,
 							&src_hit.sin6_addr,
@@ -370,25 +483,30 @@ int hip_translate_new(hip_opp_socket_t *entry,
 			goto out_err;
 		}
 		dst_hit.sin6_family = AF_INET6;
-	} else if (!entry->local_id_is_translated) {
-		HIP_DEBUG("Local id already translated\n");
+	} else {
+		/* Called e.g. in bind() */
+		HIP_DEBUG("Binding to inaddr6_any\n");
+		src_hit.sin6_addr = in6addr_any;
+		src_hit.sin6_family = AF_INET6;
 	}
 	
 	if (err || IN6_IS_ADDR_V4MAPPED(&hit->sin6_addr) ||
-	    !ipv6_addr_is_hit(&hit->sin6_addr)) {
+	    (!ipv6_addr_any(&hit->sin6_addr) && !ipv6_addr_is_hit(&hit->sin6_addr))) {
 		HIP_DEBUG("Localhost/peer does not support HIP, falling back to IP\n");
 		goto out_err;
 	}
+
+	HIP_DEBUG("HIT translation was successfull\n");
 	
 	/* We have now successfully translated an IP to an HIT. The HIT
 	   requires a new socket. Also, we need set the return values
 	   correctly */
-	HIP_IFE(set_translation(entry, hit, is_peer), -1);
+	HIP_IFE(hip_set_translation(entry, hit, is_peer), -1);
 	
 	return err;
 	
  out_err:
-	hip_translate_to_original(entry);
+	hip_translate_to_original(entry, is_peer);
 	return err;
 }
 
@@ -420,7 +538,7 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 	    (!is_dgram ||                                   /* 2 */
 	     !orig_id  ||                                   /* 3 */
 	     !memcmp(translated_id, orig_id, orig_id_len))) /* 4 */ {
-		HIP_DEBUG("Old translation ok\n");
+		HIP_DEBUG("Old translation ok %d\n", entry->orig_socket);
 		return 1;
 	} else {
 		HIP_DEBUG("New translation required\n");
@@ -428,36 +546,112 @@ int hip_old_translation_is_ok(hip_opp_socket_t *entry,
 	}
 }
 
+hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd)
+{
+	hip_opp_socket_t *entry = NULL;
+	int err = 0;
+
+	HIP_DEBUG("\n");
+	
+	hip_initialize_db_when_not_exist();
+
+	if (!hip_exists_translation(pid, fd))
+		err = hip_socketdb_add_entry(pid, fd);
+	if(err) {
+		HIP_ERROR("Could not add entry\n");
+		goto out_err;
+	}
+
+	entry = hip_socketdb_find_entry(pid, fd);
+	HIP_ASSERT(entry);
+	
+ out_err:
+	HIP_DEBUG("Called socket_dlsym fd=%d\n", fd);  
+
+	return entry;
+}
+
+int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
+			      int protocol)
+{
+	hip_opp_socket_t *entry = NULL;
+	int pid = 0, err = 0;
+	
+	HIP_DEBUG("socket fd %d\n", socket_fd);
+	
+	if(socket_fd == -1) {
+		HIP_ERROR("Socket error\n");
+		goto out_err;
+	}
+
+	pid = getpid();
+
+	/* Workaround: see bug id 271. For some unknown reason, the library
+	   is not catching all close() calls from libinet6. */
+	if (entry = hip_socketdb_find_entry(pid, socket_fd)) {
+		hip_socketdb_del_entry_by_entry(entry);
+	}
+
+	entry = hip_create_new_opp_entry(pid, socket_fd);
+	HIP_ASSERT(entry);
+	entry->domain = domain;
+	entry->type = type;
+	entry->protocol = protocol;
+
+ out_err:
+	return err;
+}
+
 int hip_translate_socket(const int *orig_socket,
-		     const struct sockaddr *orig_id,
-		     const socklen_t *orig_id_len,
-		     int **translated_socket,
-		     struct sockaddr **translated_id,
-		     socklen_t **translated_id_len,
-		     int is_peer, int is_dgram)
+			 const struct sockaddr *orig_id,
+			 const socklen_t *orig_id_len,
+			 int **translated_socket,
+			 struct sockaddr **translated_id,
+			 socklen_t **translated_id_len,
+			 int is_peer, int is_dgram, int force_orig)
 {
 	int err = 0, pid = getpid(), is_translated, wrap_applicable;
-	hip_opp_socket_t *entry;
+	hip_opp_socket_t * entry;
 	
-	entry = hip_socketdb_find_entry(pid, *orig_socket);
-	HIP_ASSERT(entry);
+	hip_initialize_db_when_not_exist();
+
 	HIP_ASSERT(orig_socket);
+	entry = hip_socketdb_find_entry(pid, *orig_socket);
+	if (!entry) {
+		/* Can happen in the case of read() or write() on a fd;
+		   we are not wrapping open() or creat() calls which means
+		   that we don't have an entry for them. */
+		entry = hip_create_new_opp_entry(pid, *orig_socket);
+		/* PF_LOCAL guarantees that the socket won't be translated */
+		entry->domain = PF_LOCAL;
+		HIP_DEBUG("created untranslated entry\n");
+	}
+	HIP_ASSERT(entry);
 	
 	is_translated =
 		(is_peer ? entry->peer_id_is_translated :
 		 entry->local_id_is_translated);
 	wrap_applicable = hip_wrapping_is_applicable(orig_id, entry);
 
-	HIP_DEBUG("orig_id=%p is_dgram=%d wrap_applicable=%d already=%d is_peer=%d\n",
-		  orig_id, is_dgram, wrap_applicable, is_translated, is_peer);
+	HIP_DEBUG("orig_id=%p is_dgram=%d wrap_applicable=%d already=%d is_peer=%d force=%d\n",
+		  orig_id, is_dgram, wrap_applicable, is_translated, is_peer,
+		  force_orig);
+
+	if (orig_id) {
+		if (orig_id->sa_family == AF_INET)
+			HIP_DEBUG_INADDR("orig_id", SA2IP(orig_id));
+		else if (orig_id->sa_family == AF_INET6)
+			HIP_DEBUG_IN6ADDR("orig_id", SA2IP(orig_id));
+		else
+			HIP_DEBUG("orig_id family %d\n", orig_id->sa_family);
+	}
 	
 	if (!is_translated)
 		hip_store_orig_socket_info(entry, is_peer, *orig_socket,
 					   orig_id, *orig_id_len);
 	
-	
-	if (!wrap_applicable)
-		hip_translate_to_original(entry);
+	if (!wrap_applicable || force_orig)
+		hip_translate_to_original(entry, is_peer);
 	else if (hip_old_translation_is_ok(entry, *orig_socket, orig_id,
 					   *orig_id_len, is_peer, is_dgram,
 					   is_translated, wrap_applicable))
@@ -491,45 +685,85 @@ int hip_translate_socket(const int *orig_socket,
 	
 	HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  pid, orig_socket, *translated_socket);
+	_HIP_DEBUG_HIT("orig_local_id", SA2IP(&entry->orig_local_id));
+	_HIP_DEBUG_HIT("orig_dst_id", SA2IP(&entry->orig_peer_id));
+	_HIP_DEBUG_HIT("trans_local_id", SA2IP(&entry->translated_local_id));
+	_HIP_DEBUG_HIT("trans_dst_id", SA2IP(&entry->translated_peer_id));
 	HIP_DEBUG("orig_id %p, translated_id %p\n", orig_id, *translated_id);
+	HIP_DEBUG("orig fd %d, translated fd %d\n", entry->orig_socket,
+		  entry->translated_socket);
 	
 	return err;
 }
 
 int socket(int domain, int type, int protocol)
 {
-	int pid = 0;
-	int socket_fd = 0;
-	int err = 0;
-	hip_opp_socket_t *entry = NULL;
-	
+	int socket_fd = -1, err = 0;
+
 	hip_initialize_db_when_not_exist();
 	
+	HIP_DEBUG("creating socket domain=%d type=%d protocol=%d\n",
+		  domain, type, protocol);
+
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
-	
-	if(socket_fd != -1){
-		pid = getpid();    
-		if(hip_exists_translation(pid, socket_fd)){
-			HIP_DEBUG("pid %d, socket_fd %d\n", pid, socket_fd);
-		} else {
-			err = hip_socketdb_add_entry(pid, socket_fd);
-			if(err)
-				return err;
-			
-			entry = hip_socketdb_find_entry(pid, socket_fd);
-			HIP_ASSERT(entry);
-			if(entry){
-				entry->domain = domain;
-				entry->type = type;
-				entry->protocol = protocol;
-			}
-		} 
+
+	if (socket_fd > 0)
+		err = hip_add_orig_socket_to_db(socket_fd, domain, type,
+						protocol);
+	if (err) {
+		HIP_ERROR("Failed to add orig socket to db\n");
+		goto out_err;
 	}
-	else{
-		HIP_ASSERT(0);
-	}
+
+  out_err:
 	HIP_DEBUG("Called socket_dlsym socket_fd=%d\n", socket_fd);  
-	return socket_fd;
+	 return socket_fd;
+}
+
+int close(int orig_fd)
+{
+	int err = 0, pid = 0;
+	hip_opp_socket_t *entry = NULL;
+	char *error = NULL;
+
+	/* The database and the function pointers may not be initialized
+	   because e.g. open call is not wrapped. We need only the
+	   dl_function_ptr.close_dlsym to be initialized here, but let's
+	   initialize everything anyway. This way, there is no need to
+	   check hip_db_exist value everywhere. */
+	hip_initialize_db_when_not_exist();
+	
+	HIP_DEBUG("close() orig fd %d\n", orig_fd);
+
+	//if (hip_db_exist) hip_socketdb_dump();
+
+	/* close original socket */
+	err = dl_function_ptr.close_dlsym(orig_fd);
+
+	pid = getpid();
+
+	entry = hip_socketdb_find_entry(pid, orig_fd);
+	if (!entry)
+		goto out_err;
+
+	//HIP_ASSERT(entry);
+
+	/* close new_socket */
+	if(entry->translated_socket &&
+	   entry->orig_socket != entry->translated_socket) {
+		err = dl_function_ptr.close_dlsym(entry->translated_socket);
+		hip_socketdb_del_entry_by_entry(entry);
+		HIP_DEBUG("old_socket %d new_socket %d\n", 
+			  entry->orig_socket,
+			  entry->translated_socket);	  
+	}
+	if (err)
+		HIP_ERROR("Err %d close trans socket\n", err);
+	
+ out_err:
+	HIP_DEBUG("close_dlsym called with err %d\n", err);
+	
+  return err;
 }
 
 int bind(int orig_socket, const struct sockaddr *orig_id,
@@ -538,19 +772,46 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 	int err = 0, *translated_socket;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
-	
+
+	HIP_DEBUG("bind: orig sock = %d\n", orig_socket);
+
+	/* the address will be translated to in6addr_any */
+
 	err = hip_translate_socket(&orig_socket, orig_id, &orig_id_len,
 				   &translated_socket, &translated_id,
-				   &translated_id_len, 0, 0);
+				   &translated_id_len, 0, 0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
 	
- skip:
-	
 	err = dl_function_ptr.bind_dlsym(*translated_socket, translated_id,
 					 *translated_id_len);
+	if (err) {
+		HIP_PERROR("bind error:");
+	}
+	
+ out_err:
+	return err;
+}
+
+int listen(int orig_socket, int backlog)
+{
+	int err = 0, *translated_socket, zero = 0;
+	socklen_t *translated_id_len;
+	struct sockaddr *translated_id;
+
+	HIP_DEBUG("listen: orig sock = %d\n", orig_socket);
+
+	err = hip_translate_socket(&orig_socket, NULL, &zero,
+				   &translated_socket, &translated_id,
+				   &translated_id_len, 0, 0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+	
+	err = dl_function_ptr.listen_dlsym(*translated_socket, backlog);
 	if (err) {
 		HIP_PERROR("connect error:");
 	}
@@ -561,11 +822,73 @@ int bind(int orig_socket, const struct sockaddr *orig_id,
 
 int accept(int orig_socket, struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
-	int err = 0;
-	err = dl_function_ptr.accept_dlsym(orig_socket, orig_id, orig_id_len);
-	// XX TODO: REMEMBER THAT OADDR CAN BE NULL
-	HIP_DEBUG("Accept called\n");
-	return err;
+	int err = 0, *translated_socket, new_sock;
+	socklen_t *translated_id_len;
+	struct sockaddr *translated_id;
+	hip_opp_socket_t *entry = NULL;
+	struct sockaddr_storage peer_id;
+	socklen_t peer_id_len = 0;
+
+	HIP_DEBUG("accept: orig_socket %d orig_id %p\n",
+		  orig_socket, orig_id);
+
+	entry = hip_socketdb_find_entry(getpid(), orig_socket);
+	if (!entry) {
+		HIP_DEBUG("Did not find entry, should not happen? Fallbacking..\n");
+		new_sock = dl_function_ptr.accept_dlsym(orig_socket,
+							(struct sockaddr *) &peer_id,
+							&peer_id_len);
+		goto out_err;
+	}
+
+	HIP_ASSERT(entry);
+
+	/* The bind() was done on in6_addr any. It supports also ipv4 mapped
+	   addresses and we can therefore safely just accept() that. */
+
+	new_sock = dl_function_ptr.accept_dlsym(entry->translated_socket,
+						(struct sockaddr *) &peer_id,
+						&peer_id_len);
+	if (new_sock < 0) {
+		HIP_PERROR("accept error:");
+		goto out_err;
+	}
+
+	err = hip_add_orig_socket_to_db(new_sock,
+					entry->domain,
+					entry->type,
+					entry->protocol);
+	if (err) {
+		HIP_ERROR("Failed to add orig socket to db\n");
+		goto out_err;
+	}
+	
+	err = hip_translate_socket(&new_sock,
+				   (struct sockaddr *) &entry->translated_local_id,
+				   &entry->translated_local_id_len,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len, 0, 0, 1);
+	if (err) {
+		HIP_ERROR("Local id translation failure\n");
+		goto out_err;
+	}
+
+	err = hip_translate_socket(&new_sock, (struct sockaddr *) &peer_id,
+				   &peer_id_len,
+				   &translated_socket, &translated_id,
+				   &translated_id_len, 1, 0, 1);
+	if (err) {
+		HIP_ERROR("Peer id translation failure\n");
+		goto out_err;
+	}
+
+ out_err:
+
+	memcpy(orig_id, &peer_id, peer_id_len);
+	memcpy(orig_id_len, &peer_id_len, sizeof(socklen_t));
+
+	return new_sock;
 }
 
 int connect(int orig_socket, const struct sockaddr *orig_id,
@@ -575,11 +898,11 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("connect: orig_socket=%d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket, orig_id, &orig_id_len,
 				   &translated_socket, &translated_id,
-				   &translated_id_len, 1, 0);
+				   &translated_id_len, 1, 0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
@@ -588,13 +911,12 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
 	err = dl_function_ptr.connect_dlsym(*translated_socket, translated_id,
 					    *translated_id_len);
 	if (err) {
-		HIP_PERROR("connect error:");
+		HIP_PERROR("connect error\n");
 	}
-	
+
  out_err:
 	return err;
 }
-
 
 /* 
  * The calls return the number of characters sent, or -1 if an error occurred.
@@ -604,22 +926,94 @@ ssize_t send(int orig_socket, const void * b, size_t c, int flags)
 	int err = 0, *translated_socket;
 	socklen_t *translated_id_len, zero = 0;
 	struct sockaddr *translated_id;
+	ssize_t chars = -1;
+
+	HIP_DEBUG("send: %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket, NULL, &zero,
 				   &translated_socket, &translated_id,
-				   &translated_id_len, 1, 0);
+				   &translated_id_len, 1, 0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
 	
-	err = dl_function_ptr.send_dlsym(*translated_socket, b, c, flags);
+	chars = dl_function_ptr.send_dlsym(*translated_socket, b, c, flags);
 	
-	HIP_DEBUG("Called send_dlsym with number of returned char=%d\n", err);
+	HIP_DEBUG("Called send_dlsym with number of returned char=%d\n",
+		  chars);
 	
  out_err:
 	
-	return err;
+	return chars;
+}
+
+ssize_t write(int orig_socket, const void * b, size_t c)
+{
+	int err = 0, *translated_socket;
+	ssize_t chars = -1;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	
+	/* This functions is almost identical with send() */
+
+	HIP_DEBUG("write: orig_socket %d\n", orig_socket);
+	
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   1, 0, 0);
+
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+
+	chars = dl_function_ptr.write_dlsym(*translated_socket, b, c);
+	
+	HIP_DEBUG("Called write_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
+}
+
+ssize_t writev(int orig_socket, const struct iovec *vector, int count)
+{
+	int err = 0, *translated_socket;
+	ssize_t chars = -1;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	
+	/* This functions is almost identical with send() */
+
+	HIP_DEBUG("writev: orig_socket %d\n", orig_socket);
+	
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   1, 0, 0);
+
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+
+	chars = dl_function_ptr.writev_dlsym(*translated_socket, vector, count);
+	
+	HIP_DEBUG("Called writev_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
 }
 
 /* 
@@ -632,8 +1026,9 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
 	int err = 0, *translated_socket;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
+	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("sendto: orig sock = %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket,
 				   orig_id,
@@ -641,20 +1036,20 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len,
-				   1, 1);
+				   1, 1, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
 	
-	err = dl_function_ptr.sendto_dlsym(*translated_socket, buf, buf_len,
+	chars = dl_function_ptr.sendto_dlsym(*translated_socket, buf, buf_len,
 					   flags,
 					   translated_id,
 					   *translated_id_len);
 
  out_err:
 
-  return err;
+  return chars;
 }
 
 /* 
@@ -663,8 +1058,8 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
 	int charnum;
-	// XX TODO
-	charnum = dl_function_ptr.sendmsg_dlsym(socket, msg, flags);
+	// XX TODO: see hip_get_pktinfo_addr
+	charnum = dl_function_ptr.sendmsg_dlsym(a, msg, flags);
 	
 	HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
 	
@@ -676,8 +1071,9 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 	int err = 0, *translated_socket;
 	socklen_t *translated_id_len, zero = 0;
 	struct sockaddr *translated_id;
+	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("recv: orig sock = %d\n", orig_socket);
 	
 	err = hip_translate_socket(&orig_socket,
 				   NULL,
@@ -685,19 +1081,86 @@ ssize_t recv(int orig_socket, void *b, size_t c, int flags)
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len,
-				   0, 0);
+				   0, 0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+
+	chars = dl_function_ptr.recv_dlsym(*translated_socket, b, c, flags);
+
+	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
+}
+
+ssize_t read(int orig_socket, void *b, size_t c)
+{
+	int err = 0, *translated_socket;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	ssize_t chars = -1;
+	
+	/* This functions is almost identical with recv() */
+
+	HIP_DEBUG("read: orig_socket %d\n", orig_socket);
+
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   0, 0, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
 	
-	err = dl_function_ptr.recv_dlsym(*translated_socket, b, c, flags);
+	chars = dl_function_ptr.read_dlsym(*translated_socket, b, c);
 	
-	HIP_DEBUG("Called recv_dlsym with number of returned char=%d\n", err);
+	HIP_DEBUG("Called read_dlsym with number of returned char=%d\n",
+		  chars);
 	
  out_err:
 	
-	return err;
+	return chars;
+}
+
+ssize_t readv(int orig_socket, const struct iovec *vector, int count)
+{
+	int err = 0, *translated_socket;
+	socklen_t *translated_id_len, zero = 0;
+	struct sockaddr *translated_id;
+	ssize_t chars = -1;
+	
+	/* This functions is almost identical with recv() */
+
+	HIP_DEBUG("readv: orig_socket %d\n", orig_socket);
+
+	err = hip_translate_socket(&orig_socket,
+				   NULL,
+				   &zero,
+				   &translated_socket,
+				   &translated_id,
+				   &translated_id_len,
+				   0, 0, 0);
+	if (err) {
+		HIP_ERROR("Translation failure\n");
+		goto out_err;
+	}
+	
+	chars = dl_function_ptr.readv_dlsym(*translated_socket, vector, count);
+	
+	HIP_DEBUG("Called readv_dlsym with number of returned char=%d\n",
+		  chars);
+	
+ out_err:
+	
+	return chars;
 }
 
 ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags, 
@@ -706,8 +1169,13 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 	int err = 0, *translated_socket;
 	socklen_t *translated_id_len;
 	struct sockaddr *translated_id;
+	ssize_t chars = -1;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("recvfrom: orig sock = %d\n", orig_socket);
+
+	/* XX FIXME: in the case of UDP server, this creates additional
+	   HIP traffic even though the connection is not necessarily
+	   secured */
 	
 	err = hip_translate_socket(&orig_socket,
 				   orig_id,
@@ -715,22 +1183,19 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 				   &translated_socket,
 				   &translated_id,
 				   &translated_id_len,
-				   0, 1);
+				   0, 1, 0);
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
 	}
 	
-	err = dl_function_ptr.recvfrom_dlsym(*translated_socket, buf, len,
-					     flags,
-					     translated_id,
-					     translated_id_len);
-	if (err) {
-		HIP_PERROR("connect error:");
-	}
+	chars = dl_function_ptr.recvfrom_dlsym(*translated_socket, buf, len,
+					       flags,
+					       translated_id,
+					       translated_id_len);
 	
  out_err:
-	return err;
+	return chars;
 }
 
 ssize_t recvmsg(int s, struct msghdr *msg, int flags)
@@ -738,11 +1203,9 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	int err;
 	int charnum = 0;  
 	int socket = 0;
-	void *dp = NULL;
 	char *error = NULL;
-	char *name = "recvmsg";
 	
-	// XX TODO
+	// XX TODO: see hip_get_pktinfo_addr
 	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
 	
 	HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n",
@@ -750,46 +1213,6 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 	
 	return charnum;
 }
-int close(int fd)
-{
-	int err = 0, pid = 0;
-	hip_opp_socket_t *entry = NULL;
-	void *dp = NULL;
-	char *error = NULL, *name = "close";
-	
-	if(!hip_db_exist)
-		goto out_err;
-
-	pid = getpid();
-	entry = hip_socketdb_find_entry(pid, fd);
-	HIP_DEBUG("close() pid %d, fd %d\n", pid, fd);
-	
-	if(!entry){
-		_HIP_DEBUG("should not happen, dumping socket db\n");
-		hip_socketdb_dump();
-		goto out_err;
-			//assert(0);
-	}
-
-	if (entry->translated_socket) {
-		// close new_socket too
-		if(entry->orig_socket != entry->translated_socket){
-			err = dl_function_ptr.close_dlsym(entry->translated_socket);
-			if (err)
-				HIP_ERROR("Err %d close trans socket\n", err);
-		}
-	}
-	
-	HIP_DEBUG("old_socket %d new_socket %d\n", 
-		  entry->orig_socket,
-		  entry->translated_socket);	  
- out_err:
-	err = dl_function_ptr.close_dlsym(fd);
-	HIP_DEBUG("close_dlsym called with err %d\n", err);
-	
-  return err;
-}
-
 
 // used to test socketdb
 void test_db(){
@@ -808,7 +1231,6 @@ void test_db(){
 	entry =  hip_socketdb_find_entry(pid, socket);
 	HIP_ASSERT(entry);
 	hip_socketdb_dump();
-	
 	
 	//  pid++; 
 	socket++;
@@ -877,4 +1299,6 @@ void test_db(){
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
 }
-#endif
+#endif /* CONFIG_HIP_OPPORTUNISTIC */
+
+

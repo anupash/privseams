@@ -50,7 +50,7 @@ int hip_insert_dh(u8 *buffer, int bufsize, int group_id)
 		goto err_free;
 	}
 
-	HIP_HEXDUMP("DH public key: ", buffer, res);
+	_HIP_HEXDUMP("DH public key: ", buffer, res);
 
  err_free:
 	return res;
@@ -86,8 +86,8 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
 		return -1;
         }
 
-	HIP_HEXDUMP("Peer DH pubkey", public_value, len);
-	HIP_HEXDUMP("Shared key", buffer, bufsize);
+	_HIP_HEXDUMP("Peer DH pubkey", public_value, len);
+	_HIP_HEXDUMP("Shared key", buffer, bufsize);
 
 	return err;
 }

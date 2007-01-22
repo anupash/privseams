@@ -46,35 +46,40 @@ int gui_init(void)
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_MAINWND, w);
 	gtk_widget_show(w);
-	gtk_window_set_title(w, "HIP Config");
-//	gtk_widget_set_size_request(w, 400, 300);
+	gtk_window_set_title(w, lang_get("title-main"));
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
 
-	/* Create toolwindow. */
-	w = gtk_hbox_new(TRUE, 0); //gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	/* Create toolwindow for remote HITs/groups. */
+	w = gtk_vbox_new(FALSE, 0);
 	widget_set(ID_TOOLWND, w);
 	gtk_widget_show(w);
-//	gtk_window_set_title(w, "HIP tool window");
-//	gtk_widget_set_size_request(w, 450, 300);
-
-	g_signal_connect(w, "delete_event", G_CALLBACK(tw_delete_event), NULL);
-	g_signal_connect(w, "destroy", G_CALLBACK(tw_destroy), NULL);
+	
+	/* Create toolwindow for local HITs. */
+/*	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_widget_hide(w);
+	gtk_window_set_title(w, lang_get("title-locals"));*/
+	w = gtk_dialog_new_with_buttons(lang_get("title-locals"), NULL, GTK_DIALOG_MODAL,
+	                                lang_get("lhdlg-button-apply"), GTK_RESPONSE_YES,
+	                                lang_get("lhdlg-button-cancel"), GTK_RESPONSE_NO, NULL);
+	gtk_widget_hide(w);
+	widget_set(ID_LTOOLWND, w);
 
 	/* Create accept-dialog. */
-	w = gtk_dialog_new_with_buttons("New HIT received, accept?", NULL, GTK_DIALOG_MODAL,
-	                                "Add", GTK_RESPONSE_YES, "Drop", GTK_RESPONSE_NO, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-newhit"), NULL, GTK_DIALOG_MODAL,
+	                                lang_get("nhdlg-button-accept"), GTK_RESPONSE_YES,
+	                                lang_get("nhdlg-button-drop"), GTK_RESPONSE_NO, NULL);
 	widget_set(ID_NHDLG, w);
 	gtk_widget_hide(w);
 
 	/* Create execute-dialog. */
-	w = gtk_dialog_new_with_buttons("Run application", NULL, GTK_DIALOG_MODAL, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-runapp"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_EXECDLG, w);
 	gtk_widget_hide(w);
 
 	/* Create create-dialog. */
-	w = gtk_dialog_new_with_buttons("Create new remote group", NULL, GTK_DIALOG_MODAL, NULL);
+	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
 	
@@ -90,7 +95,7 @@ int gui_init(void)
 	gui_set_info("HIP GUI started.");
 	cmd_help("");
 	term_print("* HIP GUI started.\n");
-
+	
 	/* Default nickname. */
 	set_nick("user");
 
@@ -110,13 +115,18 @@ int gui_main(void)
 	/* Variables. */
 	GtkWidget *w;
 	
-	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), "<create new...>");
-	gtk_combo_box_append_text(widget(ID_NH_RGROUP), "<create new...>");
+	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), lang_get("combo-newgroup"));
+	gtk_combo_box_append_text(widget(ID_NH_RGROUP), lang_get("combo-newgroup"));
 
 	hit_db_enum_locals(all_add_local, NULL);
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
 	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
+	
+	/* Set default mode. */
+	tw_clear();
+	tw_set_mode(TWMODE_RGROUP);
+ 	tw_set_rgroup_info(lang_get("default-group-name"));
 
 	/* Initialize terminal server. */
 	if (term_get_mode() == TERM_MODE_SERVER)

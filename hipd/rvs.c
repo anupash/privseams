@@ -24,7 +24,7 @@
  * @author  (version 1.0) Kristian Slavov
  * @author  (version 1.1) Lauri Silvennoinen
  * @version 1.1
- * @date    24.08.2006
+ * @date    27.10.2006
  * @note    Related draft:
  *          <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
@@ -46,9 +46,9 @@ static struct list_head rvadb[HIP_RVA_SIZE];
  * @return        a pointer to a newly allocated and initialized rendezvous 
  *                association structure or NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_allocate(int gfpmask)
+hip_rva_t *hip_rvs_allocate(int gfpmask)
 {
-	HIP_RVA *res;
+	hip_rva_t *res;
 
 	if((res = HIP_MALLOC(sizeof(*res), gfpmask)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
@@ -75,15 +75,15 @@ HIP_RVA *hip_rvs_allocate(int gfpmask)
  * @return         a pointer to a newly allocated rendezvous association or
  *                 NULL if failed to allocate memory.
  */
-HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
+hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
-	HIP_RVA *rva;
+	hip_rva_t *rva = NULL;
 	struct hip_peer_addr_list_item *item;
 	int ipcnt = 0;
 	struct hip_spi_out_item *spi_out, *spi_tmp;
 
-	HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
-	HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
+	_HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
+	_HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 
 	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
@@ -117,7 +117,7 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	/* If the host association has a preferred address, copy it as the
 	   first IP address of the rendezvous association. */
 	if (!ipv6_addr_any(&ha->preferred_address)) {
-		HIP_DEBUG("Copying bex address.\n");
+		HIP_DEBUG("Copying base exchange address.\n");
 		ipv6_addr_copy(&rva->ip_addrs[ipcnt], &ha->preferred_address);
 		ipcnt++;
 		if (ipcnt >= HIP_RVA_MAX_IPS)
@@ -154,9 +154,9 @@ HIP_RVA *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
  * @return    a pointer to a matching rendezvous association or NULL if
  *            a matching rendezvous association was not found.
  */
-HIP_RVA *hip_rvs_get(struct in6_addr *hit)
+hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
- 	return (HIP_RVA*)hip_ht_find(&rva_table, hit);
+ 	return (hip_rva_t*)hip_ht_find(&rva_table, hit);
 }
 
 /**
@@ -172,11 +172,11 @@ HIP_RVA *hip_rvs_get(struct in6_addr *hit)
  * @return a pointer to a matching valid rendezvous association or NULL if
  *         a matching valid rendezvous association was not found.
  */
-HIP_RVA *hip_rvs_get_valid(struct in6_addr *hit)
+hip_rva_t *hip_rvs_get_valid(struct in6_addr *hit)
 {
-	HIP_RVA *rva;
+	hip_rva_t *rva;
 
- 	rva = hip_ht_find(&rva_table, hit);
+ 	rva = (hip_rva_t*)hip_ht_find(&rva_table, hit);
  	if (rva) {
  		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
 			HIP_ERROR("A matching rendezvous association was found, "\
@@ -202,7 +202,7 @@ HIP_RVA *hip_rvs_get_valid(struct in6_addr *hit)
  * @param ip    the IP address to insert.
  * @param index the index of the IP address to be modified.
  */
-void hip_rvs_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
+void hip_rvs_put_ip(hip_rva_t *rva, struct in6_addr *ip, unsigned int index)
 {
 	HIP_ASSERT(rva);
  	HIP_ASSERT(index < HIP_RVA_MAX_IPS);
@@ -223,7 +223,7 @@ void hip_rvs_put_ip(HIP_RVA *rva, struct in6_addr *ip, unsigned int index)
  * @param dst   a pointer to a buffer where to put the IP address.
  * @param index the index of the IP address to get.
  */
-void hip_rvs_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
+void hip_rvs_get_ip(hip_rva_t *rva, struct in6_addr *dst, unsigned int index)
 {
 	HIP_ASSERT(rva);
 	HIP_ASSERT(dst);
@@ -245,7 +245,7 @@ void hip_rvs_get_ip(HIP_RVA *rva, struct in6_addr *dst, unsigned int index)
  * @param rva the rendezvous association to be added into the hashtable.
  * @return    zero on success, or negative error value on error.
  */
-int hip_rvs_put_rva(HIP_RVA *rva)
+int hip_rvs_put_rva(hip_rva_t *rva)
 {
 	int err;
 	HIP_DEBUG_HIT("hip_rvs_put_rva(): Inserting rendezvous association "\
@@ -279,7 +279,7 @@ int hip_rvs_put_rva(HIP_RVA *rva)
  */
 static void hip_rvs_hold_entry(void *entry)
 {
-	HIP_RVA *rva = entry;
+	hip_rva_t *rva = entry;
 
 	HIP_ASSERT(entry);
 	atomic_inc(&rva->refcnt);
@@ -296,7 +296,7 @@ static void hip_rvs_hold_entry(void *entry)
  */
 static void hip_rvs_put_entry(void *entry)
 {
-	HIP_RVA *rva = entry;
+	hip_rva_t *rva = entry;
 
 	HIP_ASSERT(entry);
 	if (atomic_dec_and_test(&rva->refcnt)) {
@@ -323,7 +323,7 @@ static void hip_rvs_put_entry(void *entry)
  */
 static void *hip_rvs_get_key(void *entry)
 {
-	return (void *)&(((HIP_RVA *)entry)->hit);
+	return (void *)&(((hip_rva_t *)entry)->hit);
 }
 
 /**
@@ -343,7 +343,7 @@ void hip_rvs_init_rvadb()
 
 	rva_table.head = rvadb;
 	rva_table.hashsize = HIP_RVA_SIZE;
-	rva_table.offset = offsetof(HIP_RVA, list_hit);
+	rva_table.offset = offsetof(hip_rva_t, list_hit);
 	rva_table.hash = hip_hash_hit;
 	rva_table.compare = hip_match_hit;
 	rva_table.hold = hip_rvs_hold_entry;
@@ -364,7 +364,6 @@ void hip_rvs_init_rvadb()
  */ 
 void hip_rvs_uninit_rvadb()
 {
-	HIP_DEBUG("hip_rvs_uninit_rvadb() invoked.\n");
 	hip_ht_uninit(&rva_table);
 }
 
@@ -377,7 +376,7 @@ void hip_rvs_uninit_rvadb()
  * @note      this function should be called only after the last reference to
  *            the parameter @c rva is deleted. 
  */ 
-void hip_rvs_free_rva(HIP_RVA *rva)
+void hip_rvs_free_rva(hip_rva_t *rva)
 {
 	HIP_FREE(rva);
 }
@@ -390,7 +389,7 @@ void hip_rvs_free_rva(HIP_RVA *rva)
  *
  * @param rva the rendezvous association to remove.
  */ 
-void hip_rvs_remove(HIP_RVA *rva)
+void hip_rvs_remove(hip_rva_t *rva)
 {
 	HIP_ASSERT(rva);
 
@@ -422,8 +421,9 @@ void hip_rvs_remove(HIP_RVA *rva)
  * node can also be another rendezvous server. In this case the @c FROM
  * (@c FROM_NAT) parameter is appended after the existing ones. Thus current RVS
  * appends the address of previous RVS and the final RVS (n) in the RVS chain
- * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code> or in case of
- * NAT @c FROM_NAT:I, @c FROM_NAT:RVS1, ... , <code>FROM_NAT:RVS(n-1)</code>.
+ * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code>. If initiator
+ * is located behind a NAT, the first @c FROM parameter is replaced with a
+ * @c FROM_NAT parameter.
  * 
  * @param i1       a pointer to the I1 HIP packet common header with source and
  *                 destination HITs.
@@ -437,24 +437,24 @@ void hip_rvs_remove(HIP_RVA *rva)
  *                 in use).
  * @return         zero on success, or negative error value on error.
  * @note           This code has not been tested thoroughly with multiple RVSes.
- * @warning        This code does not work correctly if there are multiple
- *                 RVSes of which some are behind NAT and others are not.
  */
-int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
-		     struct in6_addr *i1_daddr, HIP_RVA *rva, 
-		     struct hip_stateless_info *i1_info)
+int hip_rvs_relay_i1(const struct hip_common *i1,
+		     const struct in6_addr *i1_saddr,
+		     const struct in6_addr *i1_daddr, hip_rva_t *rva,
+		     const hip_portpair_t *i1_info)
 {
 	struct hip_common *i1_to_be_relayed = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0, from_added = 0;
-	struct in6_addr final_dst, local_addr;
+	struct in6_addr final_dst;
 	hip_tlv_type_t param_type = 0;
 	/* A function pointer to either hip_build_param_from() or
 	   hip_build_param_from_nat(). */
-	int (*builder_function) (struct hip_common *msg, struct in6_addr *addr,
-				 in_port_t port);
+	int (*builder_function) (struct hip_common *msg,
+				 const struct in6_addr *addr,
+				 const in_port_t port);
 
-	HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
+	_HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
 	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
@@ -472,8 +472,6 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		builder_function = hip_build_param_from;
 		param_type = HIP_PARAM_FROM;
 	}
-
-	/** @todo Zero HIP message checksum when R is behind NAT. */
 
 	/* Get the destination IP address which the client has registered from
 	   the rendezvous association. */
@@ -494,8 +492,8 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   cases the incoming I1 has no paramaters at all, and this "while" loop
 	   is skipped. Multiple rvses en route to responder is one (and only?)
 	   case when the incoming I1 packet has parameters. */
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL)
-	{
+	while ((current_param = hip_get_next_param(i1, current_param)) != NULL){
+		
 		HIP_DEBUG("Found parameter in I1.\n");
 		/* Copy while type is smaller than or equal to FROM (FROM_NAT)
 		   or a new FROM (FROM_NAT) has already been added. */
@@ -531,6 +529,9 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
 	}
 
+	/* Zero message HIP checksum. */
+	hip_zero_msg_checksum(i1_to_be_relayed);
+
 	/* Adding RVS_HMAC parameter as the last parameter of the relayed
 	   packet. Notice, that this presumes that there are no parameters
 	   whose type value is greater than RVS_HMAC in the incoming I1
@@ -554,9 +555,76 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Relayed I1 to", &final_dst);
 
  out_err:
-	if(i1_to_be_relayed)
+	if(i1_to_be_relayed != NULL)
 	{
 		HIP_FREE(i1_to_be_relayed);
+	}
+	return err;
+}
+
+
+/**
+ * Sends a UDP encapsulated NOTIFY packet to the initiator.
+ * 
+ * Sends a UDP encapsulated NOTIFY packet with a NOTIFICATION parameter of type
+ * RVS_NAT to the initiator located at @c i1_saddr. NOTIFICATION parameter has
+ * responder's HIT, IP and port number.
+ *
+ * @param i1       a pointer to the I1 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param rva      a pointer to a rendezvous association matching the HIT of
+ *                 next hop.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error.
+ */ 
+int hip_rvs_reply_with_notify(const struct hip_common *i1,
+			      struct in6_addr *i1_saddr,
+			      hip_rva_t *rva,
+			      const hip_portpair_t *i1_info)
+{
+	int err = 0; 
+	struct hip_common *notify = NULL;
+	struct in6_addr responder_ip;
+	void *data = NULL;
+	size_t data_len = 2 * sizeof(struct in6_addr) + sizeof(in_port_t);
+	_HIP_DEBUG("hip_rvs_reply_with_notify() invoked.\n");
+
+	HIP_IFEL((notify = hip_msg_alloc()) == NULL, -ENOMEM,
+		 "No memory to create a NOTIFY packet.\n");
+	
+	HIP_IFEL((data = HIP_MALLOC(data_len, 0)) == NULL,
+		 -ENOMEM, "No memory for notification data.\n");
+	
+	/* Get the destination IP address which the client has registered from
+	   the rendezvous association. */
+	/** @todo How to decide which IP address of rva->ip_addrs the to use? */
+	hip_rvs_get_ip(rva, &responder_ip, 0);
+	hip_build_network_hdr(notify, HIP_NOTIFY, 0, &(i1->hitr), &(i1->hits));
+	
+	/* Create NOTIFICATION data. */
+	ipv6_addr_copy(data, &(i1->hitr));
+	data += sizeof((i1->hitr));
+	ipv6_addr_copy(data, &responder_ip);
+	data += sizeof(responder_ip);
+	memcpy(data, &(rva->client_udp_port), sizeof(rva->client_udp_port));
+	data -= sizeof((i1->hitr)) + sizeof(responder_ip);
+	
+	hip_build_param_notification(notify, HIP_NTF_RVS_NAT, data, data_len); 
+	
+	HIP_IFEL(hip_send_udp(NULL, i1_saddr, HIP_NAT_UDP_PORT,
+			      i1_info->src_port, notify,
+			      NULL, 0),
+		 -ECOMM, "Sending NOTIFY packet on UDP failed.\n");
+	
+ out_err:
+	if (notify != NULL) {
+		HIP_FREE(notify);
+	}
+	if (data != NULL) {
+		HIP_FREE(data);
 	}
 	return err;
 }
@@ -576,11 +644,11 @@ int hip_rvs_relay_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
  *         not found.
  */ 
 int hip_rvs_set_request_flag(hip_hit_t *src_hit,
-			      hip_hit_t *dst_hit)
+			     hip_hit_t *dst_hit)
 {
 	int err = 0;
 	hip_ha_t *entry;
-
+	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
 		 -1, "Could not set RVS request bit\n");
 

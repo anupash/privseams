@@ -27,8 +27,8 @@ int hip_exists_translation(int pid, int socket)
 	if(entry) {
 		if(entry->pid == pid && entry->orig_socket == socket)
 			return 1;
-		else // this should not happen
-			HIP_ASSERT(0);
+		else
+			return 0;
 	} else
 		return 0;
 }
@@ -37,7 +37,7 @@ inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
 {
 	int hash = 0;
 	
-	HIP_DEBUG("range %d\n", range);
+	_HIP_DEBUG("range %d\n", range);
 	
 	hash = *(int*)hashed_pid_socket;
 	_HIP_DEBUG("hash %d\n", hash);
@@ -99,10 +99,10 @@ void hip_uninit_socket_db()
 	hip_opp_socket_t *item = NULL;
 	hip_opp_socket_t *tmp = NULL;
 	
-	HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
-	hip_socketdb_dump();
+	_HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
+	//hip_socketdb_dump();
 	
-	HIP_DEBUG("DELETING\n");
+	_HIP_DEBUG("DELETING\n");
 	//  hip_ht_uninit();
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
 		list_for_each_entry_safe(item, tmp,
@@ -118,7 +118,7 @@ void hip_uninit_socket_db()
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
-	HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
 	HIP_LOCK_SOCKET(entry);
 	hip_ht_delete(&socketdb, entry);
@@ -135,7 +135,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
         int key = 0;
 		
 	hip_xor_pid_socket(&key, pid, socket);
-	HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
+	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
 
 	return (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
 }
@@ -149,8 +149,9 @@ void hip_socketdb_dump()
 	char dst_hit[INET6_ADDRSTRLEN] = "\0";
 	hip_opp_socket_t *item = NULL;
 	hip_opp_socket_t *tmp = NULL;
-	
+
 	HIP_DEBUG("start socketdb dump\n");
+
 	HIP_LOCK_HT(&socketdb);
 	
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
@@ -227,7 +228,7 @@ int hip_socketdb_add_entry(int pid, int socket)
 	err = hip_ht_add(&socketdb, new_item);
 	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
 		  new_item->pid, new_item->orig_socket,  new_item); 
-	hip_socketdb_dump();
+	//hip_socketdb_dump();
 	
 	return err;
 }

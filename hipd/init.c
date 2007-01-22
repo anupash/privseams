@@ -15,15 +15,55 @@
 
 extern struct hip_common *hipd_msg;
 
+void hip_load_configuration() {
+	const char *cfile = "default";
+	struct stat status;
+	pid_t pid;
+	FILE *fp = NULL;
+	size_t items = 0;
+	int len = strlen(HIPD_CONFIG_FILE_EX);
+
+	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_CONFIG_FILE_EX, len, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	pid = fork();
+	
+	if (pid == 0) {
+		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+		exit(0);
+	}
+	wait(NULL);
+}
+
 /**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0;
+	int err = 0, fd;
 	struct sockaddr_un daemon_addr;
+        extern struct addrinfo opendht_serving_gateway;
 
 	hip_probe_kernel_modules();
+
+	/* Write pid to file. */
+/*	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Dont lock now, make this feature available later. */
+		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+//		sprintf(str, "%d\n", getpid());
+//		write(fd, str, strlen(str)); /* record pid to lockfile */
+//	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -42,6 +82,18 @@ int hipd_init(int flush_ipsec)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
+#ifdef CONFIG_HIP_OPENDHT
+        memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
+  /*
+        err = resolve_dht_gateway_info("planetlab1.diku.dk", &opendht_serving_gateway);
+  */
+        err = resolve_dht_gateway_info("192.38.109.143", &opendht_serving_gateway);
+        if (err < 0)
+        {
+          HIP_DEBUG("Error resolving openDHT gateway!\n");
+        }
+        err = 0;
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
@@ -51,7 +103,7 @@ int hipd_init(int flush_ipsec)
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_init_opp_db();
+	hip_init_opp_db();
 #endif
 
 	/* Resolve our current addresses, afterwards the events from kernel
@@ -90,7 +142,6 @@ int hipd_init(int flush_ipsec)
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
-	//HIP_IFEL(hip_init_nat_sock_udp_data(&hip_nat_sock_udp_data), -1, "raw sock udp for data\n");
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
@@ -138,7 +189,7 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
 //	TODO: initialize firewall socket
-    hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_firewall_sock < 0), 1,
 		 "Could not create socket for firewall communication.\n");
 	unlink(HIP_FIREWALLADDR_PATH);
@@ -150,7 +201,8 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 	
 	register_to_dht();
-	
+	hip_load_configuration();
+
 out_err:
 	return err;
 }
@@ -312,48 +364,6 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 }
 
 /**
- * Init udp socket for nat data usage.
- */
-int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data)
-{
-	HIP_DEBUG("hip_init_nat_sock_udp_data() invoked.\n");
-	int on = HIP_UDP_ENCAP_ESPINUDP, err = 0;
-	int off = 0;
-	
-	if((*hip_nat_sock_udp_data = socket(AF_INET, SOCK_DGRAM, 0))<0)
-        {
-                HIP_ERROR("Can not open socket for UDP\n");
-                return -1;
-        }
-	
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp_data, SOL_UDP, HIP_UDP_ENCAP, &on,
-			    sizeof(on)), -1, "setsockopt udp encap failed\n");
-	
-        struct sockaddr_in myaddr;
-	
-        myaddr.sin_family = AF_INET;
-	/** @todo Change this inaddr_any -- Abi */
-        myaddr.sin_addr.s_addr = INADDR_ANY;
-        myaddr.sin_port=htons(HIP_UDP_DATA_PORT);
-
-	if( bind(*hip_nat_sock_udp_data, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
-        {
-                HIP_ERROR("Unable to bind udp socket to port\n");
-                err = -1;
-		goto out_err;
-        }
-	
-        HIP_DEBUG_INADDR("UDP data socket created and binded to addr",
-			 &myaddr.sin_addr);
-        return 0;
-
- out_err:
-	return err;
-
-}
-
-
-/**
  * Start closing HIP daemon.
  */
 void hip_close(int signal)
@@ -432,8 +442,6 @@ void hip_exit(int signal)
 		close(hip_raw_sock_v4);
 	if(hip_nat_sock_udp)
 		close(hip_nat_sock_udp);
-	if(hip_nat_sock_udp_data)
-		close(hip_nat_sock_udp_data);
 	if (hip_user_sock)
 		close(hip_user_sock);
 	if (hip_nl_ipsec.fd)
@@ -488,14 +496,15 @@ void hip_probe_kernel_modules()
 	int count;
 	char cmd[40];
         /* update also this if you add more modules */
-	const int mod_total = 10;
+	const int mod_total = 12;
 	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
 			    "xfrm_user", "dummy", "esp6", "esp4",
-			    "ipv6", "aes", "crypto_null", "des"};
+			    "ipv6", "aes", "crypto_null", "des",
+			    "xfrm4_mode_beet", "xfrm6_mode_beet"};
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
-		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe",
 			 mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
 		system(cmd);

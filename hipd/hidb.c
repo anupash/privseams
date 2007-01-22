@@ -80,15 +80,25 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_str
 {
 	struct hip_host_id_entry *id_entry;
 	list_for_each_entry(id_entry, &db->db_head, next) {
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",algo, hip_get_host_id_algo(id_entry->host_id));
+		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
+			  algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
-		    (algo == HIP_ANY_ALGO || (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
+		    (algo == HIP_ANY_ALGO ||
+		     (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
 	HIP_DEBUG("***************RETURNING NULL***************\n");
 	return NULL;
 
+}
+
+int hip_hidb_hit_is_our(const hip_hit_t *our) {
+	/* FIXME: This full scan is stupid, but we have no hashtables
+	   anyway... tkoponen */
+	return hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+						    our, HIP_ANY_ALGO, -1);
+	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
 /*
@@ -259,8 +269,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		goto out_err;
 	}
 
-	_HIP_DUMP_MSG(response);
-
 	/* Iterate through all host identities in the input */
 	while((param = hip_get_next_param(input, param)) != NULL) {
 	  
@@ -301,14 +309,13 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	  /* Adding the route just in case it does not exist */
 	  hip_add_iface_local_route(&lhi.hit);
-	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
-#if 0 /* LSIs are not supported yet  */
-	  hip_add_iface_local_route_lsi(lsi_tmp);
-#endif
 
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
+
 #if 0 /* LSIs are not supported yet  */
+	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
+	  hip_add_iface_local_route_lsi(lsi_tmp);
 	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
 		   "Failed to add LSI to the device\n");
 #endif

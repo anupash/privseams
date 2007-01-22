@@ -214,7 +214,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int authkey_len,
 			  int preferred_family,
 			  int sport, int dport )
-			//struct hip_stateless_info *sa_info)
+			//hip_portpair_t *sa_info)
 {
 	int err = 0;
 	struct xfrm_encap_tmpl encap;
@@ -384,46 +384,11 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
 		   int sport, int dport) {
 
+	HIP_DEBUG("spi=%d\n", spi);
+	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
+
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
 			      dport);
-
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_try_to_find_by_peer_hit(peer_addr);	
-		if (entry) {
-			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				kea = hip_kea_find(&server_entry->hit_our);	
-				if (server_entry && kea) {
-					int err;
-					// TODO: check correctness
-					if (spi == kea->spi_out)		
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							peer_addr, &entry->hit_peer, 0, spi, 0, 0, 0);
-					else
-						err = hip_send_escrow_update(server_entry, HIP_ESCROW_OPERATION_DELETE, 
-							&entry->local_address, &entry->hit_our, 0, spi, 0, 0, 0);
-						
-				}
-				else {
-					HIP_DEBUG("No server entry or kea base found.\n");
-					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
-				}
-			}
-			else {
-				HIP_DEBUG("Escrow not in use - not sending update.\n");
-			}
-		}
-		else {
-			HIP_DEBUG("Could not find ha_state entry.\n");
-		}
-	} 		
-
-#endif //CONFIG_HIP_ESCROW
-	
-
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
@@ -445,7 +410,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired,
 		    int direction, int update,
 		    int sport, int dport) {
-			// struct hip_stateless_info *sa_info) {
+			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
 	int err = 0, enckey_len, authkey_len;
@@ -455,6 +420,11 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_ASSERT(spi);
 
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
+
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_IN6ADDR("saddr", saddr);
+	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
@@ -472,49 +442,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
 				      sport, dport), -1);
-
-#ifdef CONFIG_HIP_ESCROW
-	{
-		HIP_KEA *kea;
-		hip_ha_t *entry = hip_hadb_find_byhits(src_hit, dst_hit);	
-		if (entry) {
-			if (entry->escrow_used) {
-				hip_ha_t *server_entry = 
-					hip_hadb_try_to_find_by_peer_hit(&entry->escrow_server_hit);
-				if (server_entry) {
-					int err;
-					kea = hip_kea_find(&server_entry->hit_our);
-					if (kea->keastate == HIP_KEASTATE_VALID) {
-						// TODO: Fix values. Spi usage needs to be checked. 
-						// direction should propably be checked
-						err = hip_send_escrow_update(server_entry, 
-							(update ? HIP_ESCROW_OPERATION_MODIFY : HIP_ESCROW_OPERATION_ADD), 
-							daddr, dst_hit, *spi, *spi, ealg, (uint16_t)enckey_len, enckey);
-					
-						if (ipv6_addr_cmp(&kea->hit, dst_hit))
-							kea->spi_in = *spi;
-						else 
-							kea->spi_out = *spi;		
-					}
-					else {
-						HIP_DEBUG("keastate not valid (%d) - not sending update\n", kea->keastate);
-					}
-				}
-				else {
-					HIP_DEBUG("No server entry found\n");
-					HIP_DEBUG_HIT("server hit: ", &entry->escrow_server_hit);
-				}
-			}
-			else {
-				HIP_DEBUG("Escrow not in use - not sending update\n");
-			}
-		}
-		else {
-			HIP_DEBUG("Could not find ha_state entry");
-		}
-	} 		
-
-#endif //CONFIG_HIP_ESCROW
 				      
  out_err:
 	return err;

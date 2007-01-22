@@ -203,12 +203,13 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	{
 		if (group_db_n < 1)
 		{
-			HIP_DEBUG("Group database emty, adding default group.\n");
-			hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
+			//HIP_DEBUG("Group database emty, adding default group.\n");
+			//hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
 		}
 		group = group_db;
 	}
 	r->g = group;
+	r->g->remotec++;
 
 	/* Add remote group item to database. */
 	if (remote_db == NULL) remote_db = r;
@@ -218,8 +219,8 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_n++;
 
 	/* Then call GUI to show new HIT. */
-	HIP_DEBUG("Calling GUI to show new HIT...\n");
-	gui_add_remote_hit(name, group->name);
+	HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+	gui_add_remote_hit(r->name, group->name);
 
 	HIP_DEBUG("%d items in database.\n", remote_db_n);
 
@@ -256,6 +257,7 @@ int hit_db_del(char *n)
 	if (strncmp(remote_db->name, name, MAX_NAME_LEN) == 0)
 	{
 		r1 = remote_db;
+		r1->g->remotec--;
 		remote_db = (HIT_Remote *)remote_db->next;
 		free(r1);
 		remote_db_n--;
@@ -283,6 +285,7 @@ int hit_db_del(char *n)
 		if (r2 != NULL)
 		{
 			r1->next = r2->next;
+			r2->g->remotec--;
 			if (remote_db_last == r2) remote_db_last = r1;
 			free(r2);
 		}
@@ -508,7 +511,7 @@ int hit_db_load_from_file(char *file)
 		if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
 		else if (buf[0] == 'l') hit_db_parse_local(&buf[2]);
 		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
-	
+
 	loop_end:
 		/* Clear buffer. */
 		memset(buf, '\0', sizeof(buf)); i = 0;
@@ -656,6 +659,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	g->l = lhit;
 	g->type = type;
 	g->lightweight = lightweight;
+	g->remotec = 0;
 
 	/* Add remote group item to database. */
 	if (group_db == NULL) group_db = g;
@@ -685,10 +689,35 @@ out_err:
 int hit_db_del_rgroup(char *name)
 {
 	/* Variables. */
-	int err = -1;
+	HIT_Group *g, *g2;
+	int err = 0;
 
-	/*! \todo Implement! */
-	HIP_DEBUG("Group delete not implemented yet!!!\n");
+	/* Find group from database first. */
+	g = hit_db_find_rgroup(name);
+	HIP_IFEL(!g, -1, "Tried to delete unexisting group \"%s\" from database", name);
+	
+	/* If group is first group.. */
+	if (g == group_db)
+	{
+		group_db = (HIT_Group *)g->next;
+		if (g == group_db_last) group_db_last = NULL;
+	}
+	else
+	{
+		/* Find previous group from database. */
+		g2 = group_db;
+		while (g2->next != (void *)g && g2) g2 = (HIT_Group *)g2->next;
+		HIP_IFEL(!g2, -1, "Could not find previous group for group \"%s\"!\n", name);
+		g2->next = g->next;
+		if (g == group_db_last) group_db_last = g2;
+	}
+	
+	gui_delete_rgroup(name);
+	free(g);
+	group_db_n--;
+
+	/* If this was last group, re-create default group. */
+	if (group_db_n < 1) hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
 	
 out_err:
 	return (err);
@@ -795,7 +824,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	if (group_db_n < 1)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
-		hit_db_add_rgroup("default", h, HIT_DB_TYPE_ACCEPT, 0);
+		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_DB_TYPE_ACCEPT, 0);
 	}
 
 	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
@@ -889,6 +918,24 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 	HIP_DEBUG("Enumerated %d local HITs.\n", n);
 	
 	return (n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return number of local HITs in database. */
+int hit_db_count_locals(void)
+{
+	return (local_db_n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return default local HIT. */
+HIT_Local *hit_db_default_local(void)
+{
+	return (local_db);
 }
 /* END OF FUNCTION */
 

@@ -83,7 +83,7 @@ int main_server(int type, int port)
       
 			while((recvnum = recv(peer, mylovemostdata, sizeof(mylovemostdata), 0)) > 0 ) {
 				mylovemostdata[recvnum] = '\0';
-				printf("mylovemostdate %s", mylovemostdata);
+				printf("Client sends: %s", mylovemostdata);
 				fflush(stdout);
 				if (recvnum == 0) {
 					close(peer);
@@ -96,7 +96,7 @@ int main_server(int type, int port)
 					perror("send");
 					exit(2);
 				}
-				printf("mylovemostdate send back\n");
+				printf("Client has been replied.\n");
 			}
 		} else { /* UDP */
 			peerlen = sizeof(struct sockaddr_in6);
@@ -184,7 +184,6 @@ int hip_connect_func(struct addrinfo *res, const char* filename)
 		
 		printf("Trying to connect to %s\n", addr_str);
 		gettimeofday(&stats_before, NULL);
-		// Bing, failed with phit
 		e = connect(sock, ai->ai_addr, ai->ai_addrlen);
 		printf("After call conntest.c: connect to %s\n", addr_str);
 		
@@ -310,10 +309,11 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 		}
 	}
 
+	printf("=== connection test result: ");
 	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		printf("OK\n");
+		printf("OK ===\n");
 	} else {
-		printf("FAIL\n");
+		printf("FAIL ===\n");
 		return(1);
 	}
 

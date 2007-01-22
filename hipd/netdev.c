@@ -25,8 +25,8 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
 	if (addr->sa_family == AF_INET6) {
-		struct sockaddr_in6 *a = SA2IP(addr);
-		HIP_DEBUG_INADDR("IPv6 addr", &a->sin6_addr);
+		struct in6_addr *a = SA2IP(addr);
+		HIP_DEBUG_INADDR("IPv6 addr", a);
 		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
 		    IN6_IS_ADDR_LOOPBACK(a) ||
 		    IN6_IS_ADDR_MULTICAST(a) ||
@@ -36,11 +36,10 @@ int filter_address(struct sockaddr *addr, int ifindex)
 #endif
 		    IN6_IS_ADDR_V4MAPPED(a) ||
 		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(&a->sin6_addr)) {
+		    ipv6_addr_is_hit(a)) {
 			return 0;
-		} else {
-			return 1;
 		}
+		return 1;
 	}
 
 	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
@@ -50,17 +49,12 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	if (addr->sa_family == AF_INET)
 	{
 		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		HIP_DEBUG_INADDR("IPv4 addr", &a);
-		a = ntohl(a);
-		if ((a == INADDR_ANY) ||
-                    (a == INADDR_LOOPBACK) ||
-		    //IN_MULTICAST(a)|| mixes i.e. 128.214.113.228
-		    (a == INADDR_BROADCAST) ||
-		    IS_LSI32(a)) {
-			return 0;
-		} else {
-			return 1;
-		}
+		if (a == INADDR_ANY ||
+		    a == INADDR_BROADCAST ||
+			IN_MULTICAST(a)||
+			IS_LSI32(a))
+				return 0;
+		return 1;
 	}
 	/* add more filtering tests here */
 	return 0;
@@ -404,7 +398,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("entry->hit_our", &entry->hit_our);
         HIP_DEBUG_HIT("entry->hit-peer", &entry->hit_peer);
 
-	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;
@@ -542,10 +536,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].locator_length =
 						sizeof(struct in6_addr) / 4;
 					/* For testing preferred address */
-				//	locators[i].reserved =
-				//		i == 0 ? htonl(1 << 31) : 0;
+					//locators[i].reserved =
+					//	i == 0 ? htonl(1 << 31) : 0;
 					locators[i].lifetime = 0;
-					i++;
+ i++;
 				}
 				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
@@ -655,12 +649,13 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
 	int err = 0;
 	char *hit_str = NULL;
+	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(hit_str = hip_convert_hit_to_str(local_hit, HIP_HIT_FULL_PREFIX_STR))), -1);
 	HIP_DEBUG("Adding local HIT route: %s\n", hit_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET6, hit_str, HIP_HIT_DEV),
+				   AF_INET6, hit_str, HIP_HIT_DEV, idxmap),
 		-1);
 
  out_err:
@@ -674,6 +669,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 {
 	int err = 0;
+	struct idxmap *idxmap[16] = {0};
 	char lsi_str[INET_ADDRSTRLEN+5];
 
 	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))),
@@ -681,7 +677,7 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	HIP_DEBUG("Adding local LSI route: %s\n", lsi_str);
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
 				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET, lsi_str, HIP_HIT_DEV),
+				   AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
 		-1);
 
  out_err:
@@ -689,28 +685,14 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
-/**
- * Selects a source IP address.
- *
- * Selection criteria is explained in [RFC1122] for IPv4 and in [RFC3484] for
- * IPv6.
- *
- * @param src 
- * @param dst
- * @return zero on success, or negative error value on error.
- */ 
 int hip_select_source_address(struct in6_addr *src,
 			      struct in6_addr *dst)
 {
-	HIP_DEBUG("hip_select_source_address() invoked.\n");
-	int err = 0, i;
+	int err = 0;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[HIP_RTDS_TAB_LEN];
+	char *rtnl_rtdsfield_tab[256] = { "0",};
 	struct idxmap *idxmap[16] = { 0 };
-
-	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
-		rtnl_rtdsfield_tab[i] = NULL;
 
 	/* rtnl_rtdsfield_initialize() */
         rtnl_rtdsfield_init = 1;
@@ -720,12 +702,9 @@ int hip_select_source_address(struct in6_addr *src,
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,
 				 family, idxmap), -1,
 		 "Finding ip route failed\n");
-	
-	HIP_DEBUG_IN6ADDR("Source address selected", src);
+
+	HIP_DEBUG_IN6ADDR("src", src);
  out_err:
-	for (i = 0; i < HIP_RTDS_TAB_LEN; i++)
-		if (rtnl_rtdsfield_tab[i])
-			HIP_FREE(rtnl_rtdsfield_tab[i]);
 
 	return err;
 }

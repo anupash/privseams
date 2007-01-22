@@ -29,6 +29,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int err = 0;
 	int msg_type;
 	int n = 0;
+	hip_ha_t * server_entry = NULL;
+        extern struct addrinfo opendht_serving_gateway;
+        extern int hip_opendht_fqdn_sent;
+        extern int hip_opendht_hit_sent;
+	HIP_KEA * kea = NULL;
+
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -47,13 +53,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_add_peer_map(msg);
 		if(err){
 		  HIP_ERROR("add peer mapping failed.\n");
-		  goto out_err;
-		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
 		  goto out_err;
 		}
 		break;
@@ -103,13 +102,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-	  { 
-	    err = hip_opp_get_peer_hit(msg, src);
-	    if(err){
-	      HIP_ERROR("get pseudo hit failed.\n");
-	      goto out_err;
-	    }
-	  }
+		err = hip_opp_get_peer_hit(msg, src);
+		if(err){
+			HIP_ERROR("get pseudo hit failed.\n");
+			goto out_err;
+		}
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
 	  break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
 	  {
@@ -118,14 +117,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  HIP_ERROR("query ip hit mapping failed.\n");
 		  goto out_err;
 		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
-		HIP_DEBUG("mapping result sent\n");
 	  }
 	  break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
@@ -156,11 +147,43 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_GW:
+          {
+            char tmp_ip_str[20];
+            int tmp_ttl, tmp_port;
+            int *pret;
+            int ret;
+            struct in_addr tmp_v4;
+            struct hip_opendht_gw_info *gw_info;
+
+            HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
+                     "no gw struct found\n");
+            memset(&tmp_ip_str,'\0',20);
+            tmp_ttl = gw_info->ttl;
+            tmp_port = gw_info->port;
+
+            IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+            pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
+            HIP_DEBUG("Got address %s port %d ttl %d from hipconf\n", 
+                      tmp_ip_str, htons(tmp_port), tmp_ttl);
+            ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+            if (ret == 0)
+            {
+              HIP_DEBUG("Serving gateway changed\n");
+              hip_opendht_fqdn_sent = 0;
+              hip_opendht_hit_sent = 0;
+            }
+            else
+            {
+              HIP_DEBUG("Error in changing the serving gateway!");
+            }
+          }
+          break;
+#endif 
 #ifdef CONFIG_HIP_ESCROW
-/** @todo create kea with own hit (params: server_hit, rules) 
-    - send i1 hip_add_peer_map */
 	case SO_HIP_ADD_ESCROW:
-		HIP_DEBUG("handling escrow user message.\n");
+		HIP_DEBUG("handling escrow user message (add).\n");
 	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
 							    HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
@@ -168,43 +191,72 @@ int hip_handle_user_msg(struct hip_common *msg,
 							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		
-		HIP_KEA *kea;
-
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
 	         "for_each_hi err.\n");	
-		
 		HIP_DEBUG("Added kea base entry.\n");
-		//ipv6_addr_copy(&kea->server_hit, dst_hit);
 		
-		// TODO: how to know later that we want to do registration? with kea state?
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea) {
-			HIP_DEBUG("Found kea base entry.\n");
-			kea->keastate = HIP_KEASTATE_REGISTERING;
-			hip_keadb_put_entry(kea);
-		}
-		else {
-			HIP_DEBUG("Could not find kea base entry!!!!!!!!!!!\n");
-		}
-		
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
+		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
+	         "for_each_hi err.\n");	
+		break;
 	
+	case SO_HIP_DEL_ESCROW:
+		
+                HIP_DEBUG("handling escrow user message (delete).\n");
+                HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+                        -1, "no hit found\n");
+                HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
+                        HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+                HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
+                        -1, "Could not find server entry");
+                HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
+                	"Could not find kea base entry");
+                if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
+                        // Cancel registration (REG_REQUEST with zero lifetime)
+                        HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
+                                "for_each_hi err.\n");
+                        hip_keadb_put_entry(kea);
+                        HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
+                                0, "for_each_hi err.\n");	
+                        HIP_IFEL(hip_kea_remove_base_entries(), 0,
+                                "Could not remove base entries\n");	
+                        HIP_DEBUG("Removed kea base entries.\n");	
+		}
+		/** @todo Not filtering I1, when handling escrow user message! */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
+			 -1, "sending i1 failed\n");
 		break;
 		
 	case SO_HIP_OFFER_ESCROW:
-		HIP_DEBUG("Handling escrow service user message.\n");
+		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_ESCROW_SERVICE), -1);
+		HIP_IFEL(hip_services_add(HIP_ESCROW_SERVICE), -1, 
+                        "Error while adding service\n");
 	
 		hip_services_set_active(HIP_ESCROW_SERVICE);
 		if (hip_services_is_active(HIP_ESCROW_SERVICE))
 			HIP_DEBUG("Escrow service is now active.\n");
-		err = hip_recreate_all_precreated_r1_packets();	
+		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
+                        "Failed to recreate R1-packets\n"); 
+                
+                if (hip_firewall_is_alive()) {
+                        HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
+                                "Failed to deliver activation message to firewall\n");
+                }
+                
 		break;
+                
+        case SO_HIP_CANCEL_ESCROW:
+                HIP_DEBUG("Handling del escrow service -user message.\n");
+                if (hip_firewall_is_alive()) {
+                         HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
+                                "Failed to deliver activation message to firewall\n");
+                }
+                HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
+                        "Error while removing service\n");
+                HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
+                        "Failed to recreate R1-packets\n"); 
+                
+                break;                
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
@@ -232,7 +284,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 			 -1, "setting of rvs request flag failed\n");
 
 		/* Send a I1 packet to rvs. */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		/** @todo Not filtering I1, when handling rvs message! */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
 			 -1, "sending i1 failed\n");
 		break;
 	
@@ -258,6 +311,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
+
+	/* send a response (assuming that it is written to the msg */
+	n = hip_sendto(msg, src);
+	if(n < 0){
+	  HIP_ERROR("hip_sendto() failed.\n");
+	  err = -1;
+	  goto out_err;
+
+	}
+	HIP_DEBUG("mapping result sent ok\n");
 
  out_err:
 	return err;

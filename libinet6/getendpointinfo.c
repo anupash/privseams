@@ -149,7 +149,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     goto out_err;
   }
 
-  HIP_HEXDUMP("host_id in endpoint: ", &ep_hip->id.host_id,
+  _HIP_HEXDUMP("host_id in endpoint: ", &ep_hip->id.host_id,
 	      hip_get_param_total_len(&ep_hip->id.host_id));
 
   msg = hip_msg_alloc();
@@ -321,10 +321,10 @@ int setpeereid(struct sockaddr_eid *peer_eid,
   {
     
     if (ep_hip->flags & HIP_ENDPOINT_FLAG_HIT) {
-      HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
+      _HIP_HEXDUMP("setpeereid hit: ", &ep_hip->id.hit,
 		  sizeof(struct in6_addr));
     } else {
-      HIP_HEXDUMP("setpeereid hi: ", &ep_hip->id.host_id,
+      _HIP_HEXDUMP("setpeereid hi: ", &ep_hip->id.host_id,
 		  hip_get_param_total_len(&ep_hip->id.host_id));
     }
   }
@@ -990,7 +990,7 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
     endpoint_hip.flags = HIP_ENDPOINT_FLAG_HIT;
     memcpy(&endpoint_hip.id.hit, hit, sizeof(struct in6_addr));
     
-    HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
+    _HIP_HEXDUMP("peer HIT: ", &endpoint_hip.id.hit, sizeof(struct in6_addr));
     
     HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
 
@@ -1546,8 +1546,12 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   hints->ei_flags |= HIP_HI_REUSE_ANY;
   
   /* select between anonymous/public HI based on the file name */
-  if(!findsubstring(basename, pub_suffix))
-    hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+  if(!findsubstring(basename, pub_suffix)) {
+	  hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
+	  HIP_DEBUG("Anonymous HI\n");
+  } else {
+	  HIP_DEBUG("Published HI\n");
+  }
   
   /* check the algorithm from PEM format key */
   /* Bing, replace the following code:
@@ -1605,11 +1609,10 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
     goto out_err;
   }
   
-  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
-
-  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
@@ -1675,6 +1678,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       memcpy((*res)->ei_canonname, hostname, len);
     }
   }
+
  out_err:
 
   if (rsa)
@@ -1793,11 +1797,11 @@ int get_localhost_endpoint(const char *basename,
     goto out_err;
   }
 
-  HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
+  _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
 
-  HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
+  _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
     key_rr_len = rsa_to_dns_key_rr(rsa, &key_rr);
@@ -1906,17 +1910,19 @@ int get_localhost_endpoint(const char *basename,
  *
  * @return zero on success, or negative error value on failure
  *
+ * @todo: rewrite the function to actually return a list
+ *
  */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   int err = 0, i;
   struct hip_lhi hit;
   char *filenamebase = NULL;
   int filenamebase_len, ret;
-  List list;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
-  
-  HIP_DEBUG("\n");
+  List list;
+
+  _HIP_DEBUG("\n");
 
   /* assign default hints */
   memset(&modified_hints, 0, sizeof(struct endpointinfo));
@@ -1961,8 +1967,9 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    //adr = &((*adr)->next);
+    adr = &((*adr)->next); // for opp mode -miika
   }
+
  err_out:
   if(filenamebase_len)
     free(filenamebase);
@@ -1971,4 +1978,108 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   
   return err;
   
+}
+
+/**
+ * Handles the hipconf commands where the type is @c load. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_load(struct hip_common *msg, int action,
+		    const char *opt[], int optc)
+{
+  	int arg_len, err = 0, i, len;
+	char c[128], *hip_arg, ch, str[128], *fname, *args[64];
+	FILE *hip_config = NULL;  
+	List list;
+
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	if (!strcmp(opt[0], "default"))
+		fname = HIPD_CONFIG_FILE;
+	else
+		fname = (char *) opt[0];
+
+
+	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
+		 "Error: can't open config file %s.\n", fname);
+        
+	while(err == 0 && fgets(c, sizeof(c), hip_config) != NULL) {
+		if ((c[0] =='#') || (c[0] =='\n'))
+			continue;
+
+		/* prefix the contents of the line with" hipconf"  */
+		memset(str, '\0', sizeof(str));
+		strcpy(str, "hipconf");
+		str[strlen(str)] = ' ';
+		hip_arg = strcat(str, c);
+		/* replace \n with \0  */
+		hip_arg[strlen(hip_arg) - 1] = '\0';
+
+		/* split the line into an array of strings and feed it
+		   recursively to hipconf */
+		initlist(&list);
+		extractsubstrings(hip_arg, &list);
+		len = length(&list);
+		for(i = 0; i < len; i++) {
+			/* the list is backwards ordered */
+			args[len - i - 1] = getitem(&list, i);
+		}
+		err = hip_do_hipconf(len, args);
+		destroy(&list);
+	}
+
+ out_err:
+	if (hip_config)
+		fclose(hip_config);
+
+	return err;
+
+}
+
+/**
+ * Handles the hipconf commands where the type is @c del. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ *
+ */
+int hip_conf_handle_hi_get(struct hip_common *msg, int action,
+		      const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	err = get_local_hits(NULL, &at);
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
 }
