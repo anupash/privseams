@@ -12,6 +12,7 @@ VERSION="$MAJOR.$MINOR"
 RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
+DEBIAN=i386/DEBIAN
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
@@ -30,9 +31,9 @@ copy_tarball ()
     
     echo "** Copying Debian control files to '${SRCDIR}/debian'"
     mkdir -p "${SRCDIR}/debian"
-    cp ${PKGROOT}/DEBIAN/control-src ${SRCDIR}/debian/control
+    cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
     for f in changelog copyright;do
-	cp ${PKGROOT}/DEBIAN/$f "${SRCDIR}/debian"
+	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
     done
     
     set +e
@@ -46,7 +47,7 @@ copy_files ()
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
     for f in control changelog copyright postinst prerm;do
-	cp DEBIAN/$f "$PKGDIR/DEBIAN"
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
     done
     
     echo "** Copying binary files to '$PKGDIR'"
@@ -58,7 +59,10 @@ copy_files ()
     cd "$HIPL"
     
     cp hipd/hipd $PKGDIR/usr/sbin/
+
     cp tools/hipconf $PKGDIR/usr/sbin/
+    cp agent/hipagent $PKGDIR/usr/sbin/
+
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
     done
@@ -70,11 +74,16 @@ copy_files ()
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
+	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
     cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
     cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
+    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+
+
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
@@ -111,8 +120,8 @@ die() {
 
 help() {
 cat <<EOF
-usage: $0 [-b] | [-s]
-b=binary, s=source
+usage: $0 [-b] | [-s] | [-a]
+b=binary, s=source, a=armel
 default: ${TYPE}
 EOF
 }
@@ -122,15 +131,21 @@ parse_args() {
     OPTIND=1
     while [ $# -ge  $OPTIND ]
       do
-      getopts bsh N "$@"
+      getopts abhs N "$@"
       
       case $N in
+	    a) TYPE=binary
+               DEBIAN=armel/DEBIAN
+		PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
+
             b) TYPE=binary    
-               GIVEN=${GIVEN}+1;;
-            s) TYPE=source    ;;
-            h) help; exit 0      ;;
+               GIVEN=${GIVEN}+1 ;;
+
+            h) help; exit 0 ;;
+
+            s) TYPE=source ;;
             *) help
-               die "bad args"    ;;
+               die "bad args" ;;
         esac
     done
 }
