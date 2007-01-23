@@ -26,7 +26,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry, int fro
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
-	struct hip_common *i1_blind;
+	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
 	int err = 0;
 		

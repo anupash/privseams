@@ -348,9 +348,9 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
+	struct in6_addr *plain_local_hit = NULL;
 	int err = 1;
 	uint16_t nonce;
-	struct in6_addr *plain_local_hit;
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -429,7 +429,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
 	if(plain_local_hit)
-	  HIP_FREE(plain_local_hit);
+		HIP_FREE(plain_local_hit);
 	return err;
 }
 
