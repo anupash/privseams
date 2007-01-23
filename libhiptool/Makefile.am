@@ -34,8 +34,13 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
+if HIP_CORPORATE
 libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
-                        nlink.c sha1ime.c hipconf.c
+                        nlink.c sha1ime.c hipconf.c lhashtable.c
+else
+libhiptool_la_SOURCES = builder.c debug.c message.c crypto.c misc.c pk.c dh.c \
+                        nlink.c sha1ime.c hipconf.c hashtable.c
+endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
 
@@ -45,10 +50,8 @@ include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h hipconf.h
 
 if HIP_CORPORATE
 	include_HEADERS += lhashtable.h
-	libhiptool_la_SOURCES += lhashtable.c
 else
 	include_HEADERS += hashtable.h
-	libhiptool_la_SOURCES += hashtable.c
 endif
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
