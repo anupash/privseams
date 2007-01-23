@@ -100,10 +100,6 @@
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
-#define HIP_PARAM_REG_INFO             930
-#define HIP_PARAM_REG_REQUEST	       932
-#define HIP_PARAM_REG_RESPONSE	       934
-#define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */
@@ -126,7 +122,13 @@
 #define HIP_PARAM_UINT                  32778 /* Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_OPENDHT_GW_INFO       32785
+#define HIP_PARAM_REG_INFO		32781
+#define HIP_PARAM_REG_REQUEST		32782
+#define HIP_PARAM_REG_RESPONSE		32783
+#define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_OPENDHT_GW_INFO       32786
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505
@@ -256,6 +258,7 @@
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
+#define HIP_CONTROL_BLIND	    0x0004   /*3rd bit from the right tells if the blind is in use*/
 
 /* Registration types for registering to a service as specified in
    draft-ietf-hip-registration-02. These are the registration types used in
@@ -735,6 +738,12 @@ struct hip_keys {
 	uint16_t 		key_len;
 	struct hip_crypto_key enc;
 	//int direction; // ?
+} __attribute__ ((packed));
+
+struct hip_blind_nonce {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint16_t       nonce;
 } __attribute__ ((packed));
 
 struct hip_opendht_gw_info {
