@@ -62,9 +62,9 @@ AC_FUNC_SETPGRP
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
-AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
+#AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
 glibc_version=2.3
