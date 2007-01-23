@@ -14,7 +14,7 @@ EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip opendht tools hipd test firewall libhipgui agent
+SUBDIRS = libinet6 libhiptool libopphip opendht tools hipd test firewall libhipgui agent libipsec
 
 showip:
 	cd showip && sh create.sh

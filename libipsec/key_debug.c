@@ -66,7 +66,7 @@
 #include <stdlib.h>
 #endif /* !_KERNEL */
 
-#include "config.h"
+//#include "config.h"
 #include "libpfkey.h"
 
 static void kdebug_sadb_prop __P((struct sadb_ext *));

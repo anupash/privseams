@@ -83,7 +83,7 @@
 
 #include <errno.h>
 
-#include "config.h"
+//#include "config.h"
 
 #include "ipsec_strerror.h"
 #include "libpfkey.h"

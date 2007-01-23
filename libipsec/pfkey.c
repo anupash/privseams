@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
+#include <stdint.h>
 #include <net/pfkeyv2.h>
 #include <netinet/in.h>
 #ifdef HAVE_NETINET6_IPSEC

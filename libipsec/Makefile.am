@@ -1,3 +1,7 @@
+# HIP additions.
+AUTOMAKE_OPTIONS = foreign
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+CFLAGS = $(hipl_common_cflags)
 
 #bin_PROGRAMS = test-policy test-policy-priority
 lib_LTLIBRARIES = libipsec.la
@@ -7,9 +11,11 @@ libipsec_HEADERS = libpfkey.h
 
 man3_MANS = ipsec_set_policy.3 ipsec_strerror.3
 
-AM_CFLAGS = @GLIBC_BUGS@
+#AM_CFLAGS = @GLIBC_BUGS@
 AM_YFLAGS = -d -p __libipsec
 AM_LFLAGS = -P__libipsec -olex.yy.c
+
+if HIP_CORPORATE
 
 libipsec_la_SOURCES = \
   ipsec_dump_policy.c \
@@ -37,3 +43,5 @@ noinst_HEADERS = ipsec_strerror.h policy_parse.h
 EXTRA_DIST = ${man3_MANS} test-policy.c
 
 DISTCLEANFILES = policy_parse.c policy_parse.h policy_token.c policy_token.h
+
+endif

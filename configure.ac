@@ -137,6 +137,7 @@ AC_CACHE_CHECK([whether to use corporate extensions],
                [ac_cv_use_corporate], [ac_cv_use_corporate=no])
 if test x"$ac_cv_use_corporate" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
+        AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
 
@@ -212,6 +213,7 @@ AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
 AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
 AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
+AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
 AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
 AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
 AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
@@ -248,5 +250,6 @@ AC_CONFIG_FILES([ Makefile
                   test/Makefile
                   firewall/Makefile
                   libhipgui/Makefile
-                  agent/Makefile])
+                  agent/Makefile
+		  libipsec/Makefile])
 AC_OUTPUT
