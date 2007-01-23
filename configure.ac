@@ -94,10 +94,10 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
-                            [HIP user agent (default is NO)]),
-             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
+                            [HIP user agent (default is YES)]),
+             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=no])
+               [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
