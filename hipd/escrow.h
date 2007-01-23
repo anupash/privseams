@@ -2,7 +2,11 @@
 #define ESCROW_H_
 
 #include "hadb.h"
-#include "hashtable.h"
+#ifdef CONFIG_HIP_CORPORATE
+#  include "lhashtable.h"
+#else
+#  include "hashtable.h"
+#endif
 #include "misc.h"
 #include "hidb.h"
 

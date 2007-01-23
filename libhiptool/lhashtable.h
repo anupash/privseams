@@ -1,8 +1,10 @@
 #ifndef HIP_HASHTABLE_H
 #define HIP_HASHTABLE_H
+
 #include "list.h"
 #include "debug.h"
 
+// XX FIXME: HAS TO BE CONVERTED
 struct hip_ht_common {
 	/** a pointer to memory area to be used as hashtable. */
 	struct list_head *head;
@@ -32,7 +34,6 @@ struct hip_ht_common {
 
 typedef struct hip_ht_common HIP_HASHTABLE;
 
-
 int hip_ht_init(HIP_HASHTABLE *ht);
 void hip_ht_uninit(HIP_HASHTABLE *ht);
 
@@ -43,5 +44,5 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 
-#endif /* HIP_HASHTABLE_H */
+#endif
 

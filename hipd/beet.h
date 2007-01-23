@@ -19,7 +19,11 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "hashtable.h"
+#ifdef CONFIG_HIP_CORPORATE
+#  include "lhashtable.h"
+#else
+#  include "hashtable.h"
+#endif
 #include "hadb.h"
 #include "user.h"
 #include "misc.h"
