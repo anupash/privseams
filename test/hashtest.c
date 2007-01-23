@@ -1,17 +1,10 @@
-/*
- * libinet6 wrap_db.c
- *
- * Licence: GNU/GPL
- * Authors: 
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- */
-#ifdef CONFIG_HIP_OPPORTUNISTIC
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h>
 #include <sys/types.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stddef.h>
-#include <sys/socket.h>
+#include <netdb.h>
+#include <time.h>
+#include "debug.h"
 #ifdef CONFIG_HIP_CORPORATE
 #  include "lhashtable.h"
 #else
@@ -22,20 +15,6 @@
 
 HIP_HASHTABLE socketdb;
 static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
-
-int hip_exists_translation(int pid, int socket)
-{
-	hip_opp_socket_t *entry = NULL;
-
-	entry = hip_socketdb_find_entry(pid, socket);
-	if(entry) {
-		if(entry->pid == pid && entry->orig_socket == socket)
-			return 1;
-		else
-			return 0;
-	} else
-		return 0;
-}
 
 inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
 {
@@ -77,7 +56,6 @@ inline void hip_xor_pid_socket(int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
-
 void hip_init_socket_db()
 {
 	memset(&socketdb,0,sizeof(socketdb));
@@ -119,21 +97,6 @@ void hip_uninit_socket_db()
 	}  
 }
 
-//void hip_hadb_delete_hs(struct hip_hit_spi *hs)
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
-{
-	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
-		  entry->pid, entry->orig_socket);
-	HIP_LOCK_SOCKET(entry);
-	hip_ht_delete(&socketdb, entry);
-	HIP_UNLOCK_SOCKET(entry);
-	HIP_FREE(entry);
-}
-/**
- * This function searches for a hip_opp_socket_t entry from the socketdb
- * by pid and orig_socket.
- */
-//hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
         int key = 0;
@@ -142,6 +105,32 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
 
 	return (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
+}
+
+int hip_socketdb_add_entry(int pid, int socket)
+{
+	int err = 0;
+	hip_opp_socket_t *tmp = NULL;
+	hip_opp_socket_t *new_item = NULL;
+	
+	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
+	if (!new_item) {                                                     
+		HIP_ERROR("new_item malloc failed\n");                   
+		err = -ENOMEM;                                               
+		return err;
+	}
+	
+	memset(new_item, 0, sizeof(hip_opp_socket_t));
+	
+	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
+	new_item->pid = pid;
+	new_item->orig_socket = socket;
+	err = hip_ht_add(&socketdb, new_item);
+	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
+		  new_item->pid, new_item->orig_socket,  new_item); 
+	//hip_socketdb_dump();
+	
+	return err;
 }
 
 void hip_socketdb_dump()
@@ -188,55 +177,6 @@ src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
 	HIP_DEBUG("end socketdb dump\n");
 }
 
-hip_opp_socket_t *hip_create_opp_entry() 
-{
-	hip_opp_socket_t * entry = NULL;
-	
-	entry = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
-	if (!entry){
-		HIP_ERROR("hip_opp_socket_t memory allocation failed.\n");
-		return NULL;
-	}
-	
-	memset(entry, 0, sizeof(*entry));
-	
-	INIT_LIST_HEAD(&entry->next_entry);
-	
-	HIP_LOCK_SOCKET_INIT(entry);
-	atomic_set(&entry->refcnt, 0);
-	HIP_UNLOCK_SOCKET_INIT(entry);
- out_err:
-	return entry;
-}
-
-
-//int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
-int hip_socketdb_add_entry(int pid, int socket)
-{
-	int err = 0;
-	hip_opp_socket_t *tmp = NULL;
-	hip_opp_socket_t *new_item = NULL;
-	
-	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
-	if (!new_item) {                                                     
-		HIP_ERROR("new_item malloc failed\n");                   
-		err = -ENOMEM;                                               
-		return err;
-	}
-	
-	memset(new_item, 0, sizeof(hip_opp_socket_t));
-	
-	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
-	new_item->pid = pid;
-	new_item->orig_socket = socket;
-	err = hip_ht_add(&socketdb, new_item);
-	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
-		  new_item->pid, new_item->orig_socket,  new_item); 
-	//hip_socketdb_dump();
-	
-	return err;
-}
-
 int hip_socketdb_del_entry(int pid, int socket)
 {
 	hip_opp_socket_t *entry = NULL;
@@ -249,5 +189,105 @@ int hip_socketdb_del_entry(int pid, int socket)
 	return 0;
 }
 
-#endif // CONFIG_HIP_OPPORTUNISTIC
+void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
+{
+	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+		  entry->pid, entry->orig_socket);
+	HIP_LOCK_SOCKET(entry);
+	hip_ht_delete(&socketdb, entry);
+	HIP_UNLOCK_SOCKET(entry);
+	HIP_FREE(entry);
+}
 
+// used to test socketdb
+void test_db(){
+	int pid = getpid();
+	int socket = 1;
+	int err = 0;
+	hip_opp_socket_t *entry = NULL;
+	//  struct hip_opp_socket_entry *entry = NULL;
+	
+	HIP_DEBUG("testing db\n");
+
+	HIP_DEBUG("1111 pid=%d, socket=%d\n", pid, socket);
+	entry =   hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	err = hip_socketdb_add_entry(pid, socket);
+	HIP_ASSERT(!err);
+	entry =  hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(entry);
+	hip_socketdb_dump();
+	
+	//  pid++; 
+	socket++;
+	HIP_DEBUG("2222 pid=%d, socket=%d\n", pid, socket);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	err = hip_socketdb_add_entry(pid, socket);
+	HIP_ASSERT(!err);
+	entry = hip_socketdb_find_entry(pid, socket);
+	entry->translated_socket = socket+100;
+	HIP_ASSERT(entry);
+	hip_socketdb_dump();
+	
+	
+	//pid++; 
+	socket++;
+	HIP_DEBUG("3333 pid=%d, socket=%d\n", pid, socket);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	err = hip_socketdb_add_entry(pid, socket);
+	HIP_ASSERT(!err);
+	entry = NULL;
+	entry =  hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(entry);
+	hip_socketdb_dump();
+	
+	HIP_DEBUG("3333  testing del entry\n\n");
+	HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(entry);
+	entry = NULL;
+	err = hip_socketdb_del_entry(pid, socket);
+	HIP_ASSERT(!err);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	hip_socketdb_dump();
+	
+	
+	HIP_DEBUG("2222 testing del entry by entry\n\n");
+	socket--;
+	HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(entry);
+	hip_socketdb_del_entry_by_entry(entry);
+	entry = NULL;
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	hip_socketdb_dump();
+	
+	HIP_DEBUG("1111 testing del entry by entry\n\n");
+	socket--;
+	HIP_DEBUG("pid=%d, socket=%d\n", pid, socket);
+	entry = NULL;
+	entry = hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(entry);
+	hip_socketdb_del_entry_by_entry(entry);
+	entry = NULL;
+	entry =  hip_socketdb_find_entry(pid, socket);
+	HIP_ASSERT(!entry);
+	hip_socketdb_dump();
+	HIP_DEBUG("end of testing db\n");
+}
+
+int main(int argc, char **argv) {
+	hip_init_socket_db();
+	test_db();
+	hip_uninit_socket_db();
+}
