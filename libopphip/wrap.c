@@ -586,6 +586,8 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 
 	pid = getpid();
 
+	//HIP_ASSERT(!hip_socketdb_find_entry(pid, socket_fd));
+
 	/* Workaround: see bug id 271. For some unknown reason, the library
 	   is not catching all close() calls from libinet6. */
 	if (entry = hip_socketdb_find_entry(pid, socket_fd)) {
