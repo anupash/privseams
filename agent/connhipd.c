@@ -194,15 +194,15 @@ int connhipd_handle_msg(struct hip_common *msg,
 		
 		gui_set_nof_hiu(n);
 	}
-	else if ((type == HIP_I1 || type == HIP_R2) && direction == CONNHIPD_OUT)
+	else if ((type == HIP_I2 || type == HIP_R2) && direction == CONNHIPD_OUT)
 	{
-		NAMECPY(hit.name, "NewHIT");
+		NAMECPY(hit.name, "");
 		URLCPY(hit.url, "<notset>");
 		URLCPY(hit.port, "");
 
 		HIP_DEBUG("Received %s %s from daemon.\n",
 		          direction == CONNHIPD_IN ? "incoming" : "outgoing",
-		          type == HIP_I1 ? "I1" : "R2 ");
+		          type == HIP_I2 ? "I2" : "R2 ");
 
 		/* Check the remote HIT from database. */
 		if (l) 
@@ -241,7 +241,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			                   " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully\n");
 			term_print("* %s: %s\n",
-			           type == HIP_I1 ? "I1" : "R2",
+			           type == HIP_I2 ? "I2" : "R2",
 			           direction == CONNHIPD_OUT ? "sent" : "received");
 		}
 		else
@@ -252,7 +252,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon.\n");
 			HIP_DEBUG("Rejection sent successfully\n");
 			term_print("* %s: %s, rejected\n",
-			           type == HIP_I1 ? "I1" : "R2",
+			           type == HIP_I2 ? "I2" : "R2",
 			           direction == CONNHIPD_OUT ? "outgoing" : "incoming");
 		}
 	}

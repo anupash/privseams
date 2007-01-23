@@ -34,7 +34,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING_I1 ||
+	if (entry->state == HIP_STATE_FILTERING_I2 ||
 	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		HIP_DEBUG("Waiting reply from agent...\n");
@@ -68,6 +68,13 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			    == HIP_I1) {
 				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
+			}
+			/* Set entry state, if previous state was unassosiated
+			   and type is I2. */
+			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
+			    == HIP_I2) {
+				HIP_DEBUG("Sent I2 succcesfully after acception.\n");
+				entry->state = HIP_STATE_I2_SENT;
 			}
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
 			    == HIP_R2) {
@@ -302,7 +309,7 @@ int hip_agent_filter(struct hip_common *msg)
 		If message is type I1, then user action might be needed to filter the packet.
 		Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_I2, 1);
 	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
 	
 	alen = sizeof(hip_agent_addr);

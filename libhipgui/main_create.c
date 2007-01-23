@@ -74,7 +74,7 @@ int main_create_content(void)
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
+		label = gtk_menu_item_new_with_label(lang_get("systray-hide"));
 		gtk_menu_shell_append(w, label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 		gtk_widget_show(label);

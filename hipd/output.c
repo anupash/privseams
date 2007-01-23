@@ -640,10 +640,10 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 	else if (err == 1)
 	{
-		if (hip_get_msg_type(msg) == HIP_I1)
+		if (hip_get_msg_type(msg) == HIP_I2)
 		{
-			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_I1.\n");
-			entry->state = HIP_STATE_FILTERING_I1;
+			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_I2.\n");
+			entry->state = HIP_STATE_FILTERING_I2;
 		}
 		else if (hip_get_msg_type(msg) == HIP_R2)
 		{
