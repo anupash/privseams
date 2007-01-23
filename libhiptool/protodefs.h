@@ -100,10 +100,6 @@
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
-#define HIP_PARAM_REG_INFO             930
-#define HIP_PARAM_REG_REQUEST	       932
-#define HIP_PARAM_REG_RESPONSE	       934
-#define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
 #define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */

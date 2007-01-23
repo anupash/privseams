@@ -126,7 +126,18 @@ int hip_do_blind(char *key, unsigned int key_len, struct in6_addr *blind_hit)
   
   HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), 
 	   err, "Building of digest failed\n");
-  memcpy(blind_hit, digest, sizeof(struct in6_addr));  
+
+  bzero(blind_hit, sizeof(hip_hit_t));
+  HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
+		      ((u8 *) blind_hit) + 3,
+		      sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
+	   -1, "encoding failed\n");
+
+  HIP_DEBUG_HIT("HIT before prefix: ", blind_hit);
+  set_hit_prefix(blind_hit);
+  HIP_DEBUG_HIT("HIT after prefix: ", blind_hit);
+
+  /*memcpy(blind_hit, digest, sizeof(struct in6_addr));*/  
 
  out_err:
   return err;
@@ -260,12 +271,13 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
   
   HIP_DEBUG("/n");
 
+  /*
   *mask |= HIP_CONTROL_BLIND;
     
   // Build network header by using blinded HITs
   entry->hadb_misc_func->
     hip_build_network_hdr(r2, HIP_R2, *mask, &entry->hit_our_blind,
-			  &entry->hit_peer_blind);
+    &entry->hit_peer_blind);*/
   
   /************ Encrypted ***********/
   switch (entry->hip_transform) {

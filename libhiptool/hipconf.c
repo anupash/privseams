@@ -43,6 +43,9 @@ const char *hipconf_usage =
 "load config default\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
+#ifdef CONFIG_HIP_BLIND
+        "set blind on|off\n"
+#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
@@ -74,6 +77,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_ttl,
         hip_conf_handle_gw,
         hip_conf_handle_get,
+	hip_conf_handle_blind,
 	NULL, /* run */
 };
 
@@ -187,6 +191,10 @@ int hip_conf_get_type(char *text) {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
+#endif
+#ifdef CONFIG_HIP_BLIND
+	else if (!strcmp("blind", text))
+		ret = TYPE_BLIND;
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	else if (!strcmp("escrow", text))
@@ -746,6 +754,41 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
 
  out:
 	return err;
+}
+
+int hip_conf_handle_blind(struct hip_common *msg, int action,
+               const char *opt[], int optc)
+{
+	int err = 0;
+	int status = 0;
+
+	HIP_DEBUG("hipconf: using blind\n");
+
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_SET_BLIND_ON; 
+	} else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_SET_BLIND_OFF;
+	} else {
+	        HIP_PERROR("not a valid blind mode\n");
+	        err = -EAFNOSUPPORT;
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, status, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
+
+ out:
+	return err;
+
 }
 
 /**

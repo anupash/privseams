@@ -429,6 +429,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t valid[] =
 		{
 			HIP_PARAM_ACK,
+			HIP_PARAM_BLIND_NONCE,
                         HIP_PARAM_CERT,
                         HIP_PARAM_DIFFIE_HELLMAN,
                         HIP_PARAM_ECHO_REQUEST,
@@ -885,6 +886,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+	case HIP_PARAM_BLIND_NONCE: return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
 	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";

@@ -472,10 +472,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/** @todo Check packet csum.*/
 
 #ifdef CONFIG_HIP_BLIND
+	HIP_DEBUG("Blind block\n");
 	// Packet that was received is blinded
 	if (ntohs(msg->control) & HIP_CONTROL_BLIND) {
-	
+	  HIP_DEBUG("Message is blinded\n");
 	  if(type == HIP_I1) { //Responder receives
+	    HIP_DEBUG("set_blind_on\n");
 	    // Activate blind mode
 	    hip_set_blind_on();
 	  } else if (type == HIP_R1 || // Initiator receives
@@ -811,15 +813,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
 
-	/******** NONCE *************************/
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-	   HIP_DEBUG("add nonce to the message\n");
-	   HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
-		 -1, "Unable to attach nonce to the message.\n");
-	}
-#endif
-
 	/************ Encrypted ***********/
 	switch (transform_hip_suite) {
 	case HIP_HIP_AES_SHA1:
@@ -975,6 +968,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
                 type_count, 1), -1, "Could not build REG_REQUEST parameter\n");
 	}
 		
+	/******** NONCE *************************/
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	  HIP_DEBUG("add nonce to the message\n");
+	  HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
+		   -1, "Unable to attach nonce to the message.\n");
+	}
+#endif
+
 	/********** ECHO_RESPONSE_SIGN (OPTIONAL) **************/
 	/* must reply... */
 	{
@@ -1008,7 +1010,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			HIP_IFEL(hip_build_param_echo(i2, (ping + 1), ln, 0, 0), -1, "Error while creating echo reply parameter\n");
 		}
 	}
-
+	
       	/********** I2 packet complete **********/
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
@@ -1422,8 +1424,13 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_IFEL(hip_blind_build_r2(i2, r2, entry, &mask), 
-	  	   -1, "hip_blind_build_r2 failed\n");
+	  HIP_DEBUG("Set HIP_CONTROL_BLIND for R2\n");
+	  mask |= HIP_CONTROL_BLIND;
+	  
+	  // Build network header by using blinded HITs
+	  entry->hadb_misc_func->
+	    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our_blind,
+				  &entry->hit_peer_blind);
 	}
 #endif
 	
@@ -1441,6 +1448,13 @@ int hip_create_r2(struct hip_context *ctx,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
+#ifdef CONFIG_HIP_BLIND
+	// For blind: we must add encrypted public host id
+	if (hip_blind_get_status()) {
+	  HIP_IFEL(hip_blind_build_r2(i2, r2, entry, &mask), 
+	  	   -1, "hip_blind_build_r2 failed\n");
+	}
+#endif
 	/* Check if the incoming I2 has a REG_REQUEST parameter. */
 
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
@@ -1490,7 +1504,8 @@ int hip_create_r2(struct hip_context *ctx,
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 0, "Inserting rendezvous association failed\n");
 
-	HIP_IFEBL(hip_rvs_put_rva(rva), -1, hip_put_rva(rva),
+	/*Returns zero because blind code requires it*/
+	HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
 
@@ -1918,6 +1933,15 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         HIP_DEBUG("Could not deliver escrow data to server\n");
     }
 #endif //CONFIG_HIP_ESCROW
+
+#ifdef CONFIG_HIP_BLIND
+    if (hip_blind_get_status()) {
+      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
+				     &entry->hit_our,
+				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+	       -1, "Setting up SP pair failed\n");
+    }
+#endif
     if (!hip_blind_get_status()) {
 	    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 					   &ctx->input->hitr,
@@ -2194,7 +2218,7 @@ int hip_handle_r2(struct hip_common *r2,
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
-	if (hip_blind_get_status()) {
+	if (!hip_blind_get_status()) {
 		err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
@@ -2356,6 +2380,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	/* @todo: how to the handle the blind code with RVS?? */
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
+	  HIP_DEBUG("Blind is on\n");
 	  // We need for R2 transmission: see hip_xmit_r1 below
 	  HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
 		   -1, "hip_blind_get_nonce failed\n");
