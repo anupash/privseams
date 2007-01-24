@@ -37,17 +37,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry, int fro
 		mask |= HIP_CONTROL_RVS_CAPABLE;
 	}
 #endif
-
-	if (!from_agent)
-	{
-//		entry = hip_hadb_find_byhits(src_hit, dst_hit);
-/*		err = entry->hadb_output_filter_func->hip_output_filter(msg);
-		if (err == 1)
-		{
-			err = 0;
-			goto out_err;
-		}*/
-	}
 	
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
