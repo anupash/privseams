@@ -22,7 +22,7 @@
  *                the peer.
  * @return        zero on success, or negative error value on error.
  */
-int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry, int from_agent)
+int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common i1;
 	struct in6_addr daddr;
@@ -655,55 +655,6 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 					    (struct sockaddr *) &src,
 					    (struct sockaddr *) &dst);
 
-	if (!retransmit)
-	{
-		HIP_DEBUG("Retransmit, no filtering required.\n");
-		err = -ENOENT;
-	}
-	else if (entry)
-	{
-		err = entry->hadb_output_filter_func->hip_output_filter(msg);
-	}
-	else
-	{
-		err = ((hip_output_filter_func_set_t *)hip_get_output_filter_default_func_set())->hip_output_filter(msg);
-	}
-
-	if (err == -ENOENT)
-	{
-		err = 0;
-	}
-	else if (err == 0)
-	{
-		HIP_DEBUG("Agent accepted the packet.\n");
-	}
-	else if (err == 1)
-	{
-		if (hip_get_msg_type(msg) == HIP_I2)
-		{
-			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_I2.\n");
-			entry->state = HIP_STATE_FILTERING_I2;
-		}
-		else if (hip_get_msg_type(msg) == HIP_R2)
-		{
-			HIP_DEBUG("Agent is waiting user action, setting entry state to HIP_STATE_FILTERING_R2.\n");
-			entry->state = HIP_STATE_FILTERING_R2;
-		}
-		else
-		{
-			err = -1;
-			goto out_err;
-		}
-		
-		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1, "queue failed\n");
-		err = 1;
-		goto out_err;
-	}
-	else if (err)
-	{
-		HIP_ERROR("Agent reject packet\n");
-		err = -1;
-	}	
 	/* Note that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind
 	   can fail the first time during mobility events (duplicate address

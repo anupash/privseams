@@ -98,7 +98,6 @@ extern struct sockaddr_un hip_firewall_addr;
 
 
 int hip_agent_is_alive();
-int hip_agent_filter(struct hip_common *msg);
 
 int hip_firewall_is_alive();
 int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 

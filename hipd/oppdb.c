@@ -467,8 +467,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	}
 	
  send_i1:
- 	/** @todo Not filtering I1 trough agent, if in opportunistic mode! */
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha, 1), -1,
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
 	
  out_err:

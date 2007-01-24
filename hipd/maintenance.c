@@ -34,13 +34,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING_I2 ||
-	    entry->state == HIP_STATE_FILTERING_R2)
-	{
-		HIP_DEBUG("Waiting reply from agent...\n");
-		goto out_err;
-	}
-	
 	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
 		   entry->hip_msg_retrans.count, hip_state_str(entry->state));
@@ -49,7 +42,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
 	
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
-	If(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
+	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED &&
 		    entry->retrans_state == entry->state) {
@@ -68,18 +61,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			    == HIP_I1) {
 				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
-			}
-			/* Set entry state, if previous state was unassosiated
-			   and type is I2. */
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_I2) {
-				HIP_DEBUG("Sent I2 succcesfully after acception.\n");
-				entry->state = HIP_STATE_I2_SENT;
-			}
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_R2) {
-				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
-				entry->state = HIP_STATE_ESTABLISHED;
 			}
 			
 			entry->hip_msg_retrans.count--;
@@ -274,8 +255,13 @@ out_err:
 /**
  * Filter packet trough agent.
  */
-int hip_agent_filter(struct hip_common *msg)
+int hip_agent_filter(struct hip_common *msg,
+                     struct in6_addr *src_addr,
+                     struct in6_addr *dst_addr,
+	                 hip_portpair_t *msg_info)
 {
+	/* Variables. */
+	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
 	socklen_t alen;
@@ -290,11 +276,21 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Filtering hip control message trough agent,"
 	          " message body size is %d bytes.\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-/*	HIP_HEXDUMP("contents start: ", msg, sizeof(struct hip_common));
-	memcpy(&hits, &msg->hits, sizeof(hits));*/
 
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
+	/* Create packet for agent. */	
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+	HIP_IFE(hip_build_user_hdr(user_msg, hip_get_msg_type(msg), 0), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, msg, HIP_PARAM_ENCAPS_MSG,
+	                                 hip_get_msg_total_len(msg)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, src_addr, HIP_PARAM_SRC_ADDR,
+	                                 sizeof(*src_addr)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, dst_addr, HIP_PARAM_DST_ADDR,
+	                                 sizeof(*dst_addr)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, msg_info, HIP_PARAM_PORTPAIR,
+	                                 sizeof(*msg_info)), -1);
+
+	alen = sizeof(hip_agent_addr);
+	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
 	           0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
 	{
@@ -306,11 +302,11 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 	/*
-		If message is type I1, then user action might be needed to filter the packet.
-		Not receiving the packet directly from agent.
+		If message is type I1 or R1, then user action might be needed
+		to filter the packet. Not receiving the packet directly from agent.
 	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I2, 1);
-	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
+/*	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 0);
+	HIP_IFE(hip_get_msg_type(msg) == HIP_R1, 0);
 	
 	alen = sizeof(hip_agent_addr);
 	sendn = n;
@@ -323,7 +319,7 @@ int hip_agent_filter(struct hip_common *msg)
 		goto out_err;
 	}
 	/* This happens, if agent rejected the packet. */
-	else if (sendn != n)
+/*	else if (sendn != n)
 	{
 		err = 1;
 	}
@@ -350,7 +346,7 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));*/
 
 out_err:
-       return (err);
+	return (err);
 }
 
 
