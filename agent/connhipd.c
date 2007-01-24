@@ -405,7 +405,8 @@ int connhipd_thread(void *data)
 			goto out_err;
 		}
 
-		HIP_ASSERT(n == len);
+		//HIP_ASSERT(n == len);
+	        if (n != len) HIP_ERROR("Received packet length and HIP msg len dont match %d != %d!!!\n", n, len);
 
 		connhipd_handle_msg(msg, &agent_addr);
 	}

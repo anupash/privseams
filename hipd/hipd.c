@@ -417,14 +417,14 @@ int main(int argc, char *argv[]) {
 				HIP_DEBUG("Agent quit.\n");
 				hip_agent_status = 0;
 			}
-			else if (msg_type == HIP_I1)
+			else if (msg_type == HIP_I2)
 			{
 				hip_ha_t *ha;
  				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
 				if (ha)
 				{
-					ha->state = HIP_STATE_FILTERED_I1;
-					HIP_DEBUG("Agent accepted I1.\n");
+					ha->state = HIP_STATE_FILTERED_I2;
+					HIP_DEBUG("Agent accepted I2.\n");
 				}
 			}
 			else if (msg_type == HIP_R2)

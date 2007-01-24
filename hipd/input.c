@@ -1028,15 +1028,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
+
+        /* Agent needs retransmit in opportunistic mode. */
 	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
 	/* R1 packet source port becomes the I2 packet destination port. */
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, 
-			      r1_info->src_port, i2, entry, 0),
-		 -ECOMM, "Sending I2 packet failed.\n");
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 1);
+        HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
 	if (i2)
@@ -1269,13 +1269,14 @@ int hip_handle_r1(struct hip_common *r1,
 
 	entry->peer_controls = ntohs(r1->control);
 
- 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
-		 "Creation of I2 failed\n");
+ 	err = entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info);
+	HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
-	if (entry->state == HIP_STATE_I1_SENT) {
+	if (entry->state == HIP_STATE_I1_SENT && err == 0) {
 		entry->state = HIP_STATE_I2_SENT;
 	}
-
+        err = 0;
+ 
  out_err:
 	if (ctx->dh_shared_key)
 		HIP_FREE(ctx->dh_shared_key);
