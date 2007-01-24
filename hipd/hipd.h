@@ -36,6 +36,10 @@
 #endif
 */
 
+#ifdef CONFIG_HIP_BLIND
+#include "blind.h"
+#endif
+
 #define HIPL_VERSION 1.0
 
 #define HIP_HIT_DEV "dummy0"

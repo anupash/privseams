@@ -18,6 +18,7 @@
 /* XX FIXME: these should be hashes instead of plain linked lists */
 HIP_INIT_DB(hip_local_hostid_db, "local_hid");
 
+
 /*
  *
  *
@@ -49,6 +50,11 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
 		tmp = list_entry(curr,struct hip_host_id_entry,next);
 		if (tmp->r1)
 			hip_uninit_r1(tmp->r1);
+#ifdef CONFIG_HIP_BLIND
+		if (tmp->blindr1)
+		        hip_uninit_r1(tmp->blindr1);
+#endif			
+		
 		if (tmp->host_id)
 			HIP_FREE(tmp->host_id);
 		HIP_FREE(tmp);
@@ -192,13 +198,18 @@ int hip_add_host_id(struct hip_db_struct *db,
 
 	list_add(&id_entry->next, &db->db_head);
 
-	_HIP_DEBUG("Generating a new R1 set.\n");
-	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");
-	
+	HIP_DEBUG("Generating a new R1 set.\n");
+	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
 	pubkey = hip_get_public_key(pubkey);
        	HIP_IFEL(!hip_precreate_r1(id_entry->r1, (struct in6_addr *)&lhi->hit,
 				   (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
 				   id_entry->host_id, pubkey), -ENOENT, "Unable to precreate R1s.\n");
+#ifdef CONFIG_HIP_BLIND
+	HIP_IFEL(!(id_entry->blindr1 = hip_init_r1()), -ENOMEM, "Unable to allocate blind R1s.\n");
+        HIP_IFEL(!hip_blind_precreate_r1(id_entry->blindr1, (struct in6_addr *)&lhi->hit,
+			           (hip_get_host_id_algo(id_entry->host_id) == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign),
+			            id_entry->host_id, pubkey), -ENOENT, "Unable to precreate blind R1s.\n");
+#endif
 
 	/* Called while the database is locked, perhaps not the best
            option but HIs are not added often */
@@ -356,6 +367,10 @@ int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
 	   set host_id to null to signal that it is free */
 	if (id->r1)
 		hip_uninit_r1(id->r1);
+#ifdef CONFIG_HIP_BLIND
+	if (id->blindr1)
+	  hip_uninit_r1(id->blindr1);
+#endif
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
 	err = 0;
@@ -730,6 +745,59 @@ out_err:
 	return (err);
 }
 
+//#ifdef CONFIG_HIP_BLIND
+int hip_blind_find_local_hi(uint16_t *nonce, 
+			    struct in6_addr *test_hit,
+			    struct in6_addr *local_hit)
+{
+  struct list_head *curr, *iter;
+  struct hip_host_id_entry *tmp;
+  struct endpoint_hip *hits = NULL;
+  int err = 0;
+  char *key = NULL;
+  unsigned int key_len = sizeof(struct in6_addr);
+  struct in6_addr *blind_hit;
+
+  // generate key = nonce|hit_our
+  HIP_IFEL((key = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0)) == NULL, 
+	   -1, "Couldn't allocate memory\n");
+
+  HIP_IFEL((blind_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
+  	   -1, "Couldn't allocate memory\n");
+   
+  HIP_READ_LOCK_DB(db);
+  
+  list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
+    {
+      tmp = list_entry(curr,struct hip_host_id_entry,next);
+      HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
+      
+      // let's test the hit
+      memcpy(key, &tmp->lhi.hit, sizeof(struct in6_addr));
+      memcpy(key + sizeof(struct in6_addr), &nonce, sizeof(uint16_t));
+      HIP_IFEL(hip_do_blind(key, key_len, blind_hit), -1, "hip_do_blind failed \n");
+      if (blind_hit == NULL) {
+	err = -1;
+	goto out_err;
+      }
+      HIP_HEXDUMP("test HIT:", test_hit, 16);
+      if (hip_match_hit(test_hit, blind_hit)) {
+	HIP_HEXDUMP("Plain HIT found:", &tmp->lhi.hit, 16);
+	memcpy(local_hit, &tmp->lhi.hit, sizeof(struct in6_addr));
+	goto out_err;
+      }
+    }
+  
+  HIP_READ_UNLOCK_DB(db);
+  
+ out_err:
+  if(key)
+    HIP_FREE(key);
+  if(blind_hit)
+    HIP_FREE(blind_hit);
+  return err;  
+}
+//#endif
 
 #undef HIP_READ_LOCK_DB
 #undef HIP_WRITE_LOCK_DB
