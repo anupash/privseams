@@ -513,15 +513,14 @@ int hip_receive_control_packet(struct hip_common *msg,
                err = -ENOSYS;
                goto out_err;
              }
-        }
-
+        }	  
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
 	if (!(ntohs(msg->control) & HIP_CONTROL_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #else
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
