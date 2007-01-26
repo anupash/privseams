@@ -214,6 +214,7 @@ struct hip_host_id_entry {
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 	struct hip_r1entry *r1; /* precreated R1s */
+	struct hip_r1entry *blindr1; /* precreated R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
 	int (*insert)(struct hip_host_id_entry *, void **arg);
 	/* Handler to call before remove with an argument, return 0 if OK*/
@@ -258,49 +259,59 @@ struct hip_hadb_state
 	uint64_t             birthday;
 	char                 *dh_shared_key;
 	size_t               dh_shared_key_len;
-	/** A boolean value indicating whether there is a NAT between this
-	    host and the peer. */
-	uint8_t	             nat_mode;
-        /** NAT mangled port (source port of I2 packet). */
-	in_port_t	     peer_udp_port;
+
+ 	/** A boolean value indicating whether there is a NAT between this
+ 	    host and the peer. */
+ 	uint8_t	             nat_mode;
+         /** NAT mangled port (source port of I2 packet). */
+ 	in_port_t	     peer_udp_port;
         int                  escrow_used;
 	struct in6_addr	     escrow_server_hit;
 	/* The initiator computes the keys when it receives R1.
 	 * The keys are needed only when R2 is received. We store them
-	 * here in the mean time. */
-	/** Outgoing HIP packets. */
-	struct hip_crypto_key hip_enc_out;
-	struct hip_crypto_key hip_hmac_out;
-	/** Outgoing ESP packets. */
-	struct hip_crypto_key esp_out;
-	struct hip_crypto_key auth_out;
-	/** Incoming HIP packets. */
-	struct hip_crypto_key hip_enc_in;
-	struct hip_crypto_key hip_hmac_in;
-	/** Incoming ESP packets. */
-	struct hip_crypto_key esp_in;
-	struct hip_crypto_key auth_in;
-	/** The byte offset index in draft chapter HIP KEYMAT. */
-	uint16_t current_keymat_index;
-	/** The one byte index number used during the keymat calculation. */
-	uint8_t keymat_calc_index;
-	/** For @c esp_info. */
-	uint16_t esp_keymat_index;
-	/* Last Kn, where n is @c keymat_calc_index. */
-	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
-	/** Stored outgoing UPDATE ID counter. */
-	uint32_t update_id_out;
-	/** Stored incoming UPDATE ID counter. */
-	uint32_t update_id_in;
+	 * here in the mean time.
+	 */
+ 	/** Outgoing HIP packets. */
+ 	struct hip_crypto_key hip_enc_out;
+  	struct hip_crypto_key hip_hmac_out;
+ 	/** Outgoing ESP packets. */
+ 	struct hip_crypto_key esp_out;
+  	struct hip_crypto_key auth_out;
+ 	/** Incoming HIP packets. */
+ 	struct hip_crypto_key hip_enc_in;
+  	struct hip_crypto_key hip_hmac_in;
+ 	/** Incoming ESP packets. */
+ 	struct hip_crypto_key esp_in;
+ 	struct hip_crypto_key auth_in;
+ 	/** The byte offset index in draft chapter HIP KEYMAT. */
+ 	uint16_t current_keymat_index;
+ 	/** The one byte index number used during the keymat calculation. */
+ 	uint8_t keymat_calc_index;
+ 	/** For @c esp_info. */
+ 	uint16_t esp_keymat_index;
+ 	/* Last Kn, where n is @c keymat_calc_index. */
+ 	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
+ 	/** Stored outgoing UPDATE ID counter. */
+ 	uint32_t update_id_out;
+ 	/** Stored incoming UPDATE ID counter. */
+ 	uint32_t update_id_in;
+
 	/* Our host identity functions */
 	struct hip_host_id *our_pub;
 	struct hip_host_id *our_priv;
 	int (*sign)(struct hip_host_id *, struct hip_common *);
-	/* Peer host identity functions */
+        /* Peer host identity functions */
         struct hip_host_id *peer_pub;
  	int (*verify)(struct hip_host_id *, struct hip_common *);
-	/** For retransmission. */
+ 	/** For retransmission. */
         uint64_t puzzle_solution;
+
+       /* Blind */           
+        uint16_t	     blind;  /* 1, if hadb_state uses blind protocol*/
+        hip_hit_t            hit_our_blind; /* The HIT we use with this host */
+        hip_hit_t            hit_peer_blind; /* Peer's HIT */
+        uint16_t             blind_nonce_i;
+
 	/** For retransmission. */
 	uint64_t puzzle_i;
 	/** For base exchange or CLOSE. @b Not for UPDATE. */
