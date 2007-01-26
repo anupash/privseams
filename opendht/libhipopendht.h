@@ -6,11 +6,10 @@
 #define DHT_PORT 5851
 
 int init_dht_gateway_socket(int);
-int resolve_dht_gateway_info(char *, int);
+int resolve_dht_gateway_info(char *, struct addrinfo *);
+int connect_dht_gateway(int, struct addrinfo *);
 int opendht_put(int, unsigned char *, unsigned char *, unsigned char *);
 int opendht_get(int, unsigned char *, unsigned char *);
 int opendht_read_response(int, char *);
-/* For TEST purposes - Prints explanation of return code to stdout */
-void print_explanation(int);
 
 #endif /* lib_opendht */

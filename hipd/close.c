@@ -61,7 +61,6 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	HIP_IFEL(hip_build_param_hmac_contents(close,
 					       &entry->hip_hmac_out),
 		 -1, "Building of HMAC failed.\n");
-
 	/********** Signature **********/
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
 		 "Could not create signature.\n");
@@ -88,8 +87,13 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	int echo_len;
 
 	/* verify HMAC */
-	HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
-		 -ENOENT, "HMAC validation on close failed.\n");
+        if (entry->is_loopback) {
+		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_out),
+			 -ENOENT, "HMAC validation on close failed.\n");
+        } else {
+		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
+			 -ENOENT, "HMAC validation on close failed.\n");
+	}
 
 	/* verify signature */
 	HIP_IFEL(entry->verify(entry->peer_pub, close), -EINVAL,
@@ -216,9 +220,15 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 		 "Echo response did not match request\n");
 
 	/* verify HMAC */
-	HIP_IFEL(hip_verify_packet_hmac(close_ack, &entry->hip_hmac_in),
-		 -ENOENT, "HMAC validation on close ack failed\n");
-
+        if (entry->is_loopback) {
+		HIP_IFEL(hip_verify_packet_hmac(close_ack,
+						&entry->hip_hmac_out),
+			 -ENOENT, "HMAC validation on close ack failed\n");
+	} else {
+		HIP_IFEL(hip_verify_packet_hmac(close_ack,
+						&entry->hip_hmac_in),
+			 -ENOENT, "HMAC validation on close ack failed\n");
+	}
 	/* verify signature */
 	HIP_IFEL(entry->verify(entry->peer_pub, close_ack), -EINVAL,
 		 "Verification of close ack signature failed\n");

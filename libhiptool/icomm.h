@@ -66,9 +66,13 @@
 #define SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY	134
 #define SO_HIP_GET_PEER_HIT			136
 #define SO_HIP_SET_PEER_HIT			137
+#define SO_HIP_SET_BLIND_ON                     138
+#define SO_HIP_SET_BLIND_OFF                    139
 #define SO_HIP_CANCEL_ESCROW                    138
 #define SO_HIP_CANCEL_RENDEZVOUS                139
 #define SO_HIP_GET_LOCAL_HI                     140
+/* Socket option for hipconf to change the used gateway with openDHT */
+#define SO_HIP_DHT_GW                           141
 /** @} */
 
 #endif /* _HIP_ICOMM */

@@ -126,6 +126,9 @@
 #define HIP_PARAM_REG_REQUEST		32782
 #define HIP_PARAM_REG_RESPONSE		32783
 #define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_OPENDHT_GW_INFO       32786
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505
@@ -255,6 +258,7 @@
 #define HIP_CONTROL_CONCEAL_IP               /* still undefined */
 #define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
 #define HIP_CONTROL_NONE            0x0000
+#define HIP_CONTROL_BLIND	    0x0004   /*3rd bit from the right tells if the blind is in use*/
 
 /* Registration types for registering to a service as specified in
    draft-ietf-hip-registration-02. These are the registration types used in
@@ -734,6 +738,20 @@ struct hip_keys {
 	uint16_t 		key_len;
 	struct hip_crypto_key enc;
 	//int direction; // ?
+} __attribute__ ((packed));
+
+struct hip_blind_nonce {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint16_t       nonce;
+} __attribute__ ((packed));
+
+struct hip_opendht_gw_info {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	struct in6_addr addr;
+	uint32_t        ttl;
+	uint16_t        port;
 } __attribute__ ((packed));
 
 /* @} */

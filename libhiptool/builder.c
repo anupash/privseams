@@ -428,9 +428,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t i;
 	hip_tlv_type_t valid[] =
 		{
-			
-
 			HIP_PARAM_ACK,
+			HIP_PARAM_BLIND_NONCE,
                         HIP_PARAM_CERT,
                         HIP_PARAM_DIFFIE_HELLMAN,
                         HIP_PARAM_ECHO_REQUEST,
@@ -441,8 +440,8 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
-                        //HIP_PARAM_FROM,
-			//HIP_PARAM_FROM_NAT,
+                        HIP_PARAM_FROM,
+			HIP_PARAM_FROM_NAT,
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -454,14 +453,14 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_NOTIFICATION,
                         HIP_PARAM_PUZZLE,
                         HIP_PARAM_R1_COUNTER,
-                        //HIP_PARAM_REG_FAILED,
-                        //HIP_PARAM_REG_INFO,
-                        //HIP_PARAM_REG_REQUEST,
-                        //HIP_PARAM_REG_RESPONSE,
+                        HIP_PARAM_REG_FAILED,
+                        HIP_PARAM_REG_INFO,
+                        HIP_PARAM_REG_REQUEST,
+                        HIP_PARAM_REG_RESPONSE,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
-                        //HIP_PARAM_VIA_RVS,
-			//HIP_PARAM_VIA_RVS_NAT
+                        HIP_PARAM_VIA_RVS,
+			HIP_PARAM_VIA_RVS_NAT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -585,14 +584,14 @@ void *hip_get_param(const struct hip_common *msg,
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
 
-	_HIP_DEBUG("searching for type %d\n", param_type);
+	HIP_DEBUG("searching for type %d\n", param_type);
 
        /** @todo Optimize: stop when next parameter's type is greater than the
 	   searched one. */
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		_HIP_DEBUG("current param %d\n",
+		HIP_DEBUG("current param %d\n",
 			   hip_get_param_type(current_param));
 		if (hip_get_param_type(current_param) == param_type) {
 			matched = current_param;
@@ -887,6 +886,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+	case HIP_PARAM_BLIND_NONCE: return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
 	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
@@ -1510,6 +1510,148 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 
 	return err;
 }
+
+/**
+ * Calculates the checksum of a HIP packet with pseudo-header.
+ * 
+ * @c src and @c dst are IPv4 or IPv6 addresses in network byte order.
+ *
+ * @param data a pointer to...
+ * @param src  a pointer to...
+ * @param dst  a pointer to...
+ * @note       Checksumming is from Boeing's HIPD.
+ * @return     ...
+ */
+u16 hip_checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst)
+{
+	u16 checksum = 0;
+	unsigned long sum = 0;
+	int count = 0, length = 0;
+	unsigned short *p = NULL; /* 16-bit */
+	struct pseudo_header pseudoh;
+	struct pseudo_header6 pseudoh6;
+	u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	struct hip_common *hiph = (struct hip_common *) data;
+	
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+		
+		memset(&pseudoh, 0, sizeof(struct pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = IPPROTO_HIP;
+		length = (hiph->payload_len + 1) * 8;
+		pseudoh.packet_length = htons(length);
+		
+		count = sizeof(struct pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+		
+		memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = (hiph->payload_len + 1) * 8;
+		pseudoh6.packet_length = htonl(length);
+		pseudoh6.next_hdr = IPPROTO_HIP;
+                
+		count = sizeof(struct pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+	
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+
+	/* one's complement sum 16-bit words of data */
+	HIP_DEBUG("Checksumming %d bytes of data.\n", length);
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+	
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = ~sum;
+	
+	return(checksum);
+}
+
+int hip_verify_network_header(struct hip_common *hip_common,
+			      struct sockaddr *src, struct sockaddr *dst,
+			      int len)
+{
+	int err = 0, plen;
+
+	plen = hip_get_msg_total_len(hip_common);
+
+        /* Currently no support for piggybacking */
+        HIP_IFEL(len != hip_get_msg_total_len(hip_common), -EINVAL, 
+		 "Invalid HIP packet length (%d,%d). Dropping\n",
+		 len, plen);
+        HIP_IFEL(hip_common->payload_proto != IPPROTO_NONE, -EOPNOTSUPP,
+		 "Protocol in packet (%u) was not IPPROTO_NONE. Dropping\n",
+		 hip_common->payload_proto);
+	HIP_IFEL(hip_common->ver_res != ((HIP_VER_RES << 4) | 1), -EPROTOTYPE,
+		 "Invalid version in received packet. Dropping\n");
+	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hitr) &&
+		 !ipv6_addr_any(&hip_common->hitr),
+		 -EAFNOSUPPORT,
+		 "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
+	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
+		 "Received a NULL in HIT-sender. Dropping\n");
+
+        /** @todo handle the RVS case better. */
+        if (ipv6_addr_any(&hip_common->hitr)) {
+                /* Required for e.g. BOS */
+                HIP_DEBUG("Received opportunistic HIT\n");
+	} else {
+#ifdef CONFIG_HIP_RVS
+                HIP_DEBUG("Received HIT is ours or we are RVS\n");
+#else
+		HIP_IFEL(!hip_hidb_hit_is_our(&hip_common->hitr), -EFAULT,
+			 "Receiver HIT is not ours\n");
+#endif
+	}
+
+#if 0
+        HIP_IFEL(!ipv6_addr_cmp(&hip_common->hits, &hip_common->hitr), -ENOSYS,
+		 "Dropping HIP packet. Loopback not supported.\n");
+#endif
+
+        /* Check checksum. */
+	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
+		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
+	} else {
+		HIP_IFEL(hip_checksum_packet((char*)hip_common, src, dst),
+			 -EBADMSG, "HIP checksum failed.\n");
+	}
+	
+out_err:
+        return err;
+}
+
 #endif /* __KERNEL__ */
 
 /**
@@ -2786,3 +2928,36 @@ int hip_build_netlink_dummy_header(struct hip_common *msg)
 {
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
 }
+
+int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
+{
+	struct hip_blind_nonce param;
+	int err = 0;
+
+	hip_set_param_type(&param, HIP_PARAM_BLIND_NONCE);
+	hip_calc_generic_param_len(&param, sizeof(param), 0);	
+	param.nonce = htons(nonce);
+	err = hip_build_param(msg, &param);
+
+	return err;
+}
+
+int hip_build_param_opendht_gw_info(struct hip_common *msg,
+				    struct in6_addr *addr,
+				    uint32_t ttl,
+				    uint16_t port)
+{
+	int err = 0;
+	struct hip_opendht_gw_info gw_info;
+	
+	hip_set_param_type(&gw_info, HIP_PARAM_OPENDHT_GW_INFO);
+	hip_calc_param_len(&gw_info,
+			   sizeof(struct hip_opendht_gw_info) -
+			   sizeof(struct hip_tlv_common));
+	gw_info.ttl = ttl;
+	gw_info.port = htons(port);
+	ipv6_addr_copy(&gw_info.addr, addr);
+	err = hip_build_param(msg, &gw_info);
+	return err;
+}
+

@@ -95,8 +95,17 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)), 
 		 NULL, "Requested source HIT no more available.\n");
 	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
-	hip_r1table = hid->r1;
 
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	   hip_r1table = hid->blindr1;
+        }
+#endif
+	if (!hip_blind_get_status()) {
+	   hip_r1table = hid->r1;
+        }
+	
+	// BLIND TODO: indexing?
 	idx = hip_calc_cookie_idx(ip_i, ip_r, peer_hit);
 	HIP_DEBUG("Calculated index: %d\n", idx);
 
@@ -202,7 +211,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	} else if (mode == HIP_SOLVE_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
-		maxtries = 1ULL << (u->pz.K + 2); /* fix */
+		maxtries = 1ULL << (u->pz.K + 3);
 		get_random_bytes(&randval, sizeof(u_int64_t));
 	} else {
 		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
@@ -339,13 +348,34 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	struct hip_puzzle *puzzle;
 	struct hip_r1entry *result;
 	struct hip_host_id_entry *hid;
+	struct in6_addr *plain_local_hit = NULL;
 	int err = 1;
+	uint16_t nonce;
 
-	/* Find the proper R1 table */
-	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
-		 0, "Requested source HIT not (any more) available.\n");
-	result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	  HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+		   -1, "Couldn't allocate memory\n");
+	  HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
+	  HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
+		   -1, "hip_plain_fingerprint failed\n");
+	  HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
+	  
+	  /* Find the proper R1 table, use plain hit */
+	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
+		   0, "Requested source HIT not (any more) available.\n");
+	  result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+	}
+#endif
+
+	/* Find the proper R1 table, no blind used */
+	if (!hip_blind_get_status()) {
+	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
+		   0, "Requested source HIT not (any more) available.\n");
+	  result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+	}
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
 	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
@@ -392,10 +422,14 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 				HIP_PUZZLE_OPAQUE_LEN), 0, 
 			 "Solution's opaque data does not match the opaque data sent\n");
 	}
+
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-		 "Puzzle incorrectly solved\n");
+	 "Puzzle incorrectly solved\n");
+	
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
+	if(plain_local_hit)
+		HIP_FREE(plain_local_hit);
 	return err;
 }
 

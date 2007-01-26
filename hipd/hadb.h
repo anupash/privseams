@@ -11,6 +11,10 @@
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
 
+#ifdef CONFIG_HIP_BLIND
+#include "blind.h"
+#endif
+
 #define HIP_LOCK_INIT(ha)
 #define HIP_LOCK_HA(ha) 
 #define HIP_UNLOCK_HA(ha)
@@ -62,6 +66,9 @@ hip_misc_func_set_t default_misc_func_set;
 #endif
 
 extern int hip_nat_status;
+#ifdef CONFIG_HIP_BLIND
+extern int hip_blind_status;
+#endif
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
@@ -138,9 +145,6 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
 int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
-
-/* existence */
-int hip_hadb_hit_is_our(const hip_hit_t *src);
 
 /* debugging */
 void hip_hadb_dump_hits(void);
@@ -259,5 +263,8 @@ int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
+hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
+				      hip_hit_t *peer_blind_hit);
+
 
 #endif /* HIP_HADB_H */
