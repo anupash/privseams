@@ -82,8 +82,14 @@ int gui_init(void)
 	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
+
+	/* Create own custom message-dialog. */
+	w = gtk_dialog_new_with_buttons(lang_get("title-msgdlg"), NULL, GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_MSGDLG, w);
+	gtk_widget_hide(w);
 	
 	/* Create window content for all windows. */
+	HIP_IFEL(msgdlg_create_content(), -1, "Failed to create message-dialog contents.\n");
 	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
 	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
 	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");

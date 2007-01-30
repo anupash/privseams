@@ -28,6 +28,7 @@ char *lang_english[] =
 	"title-newgroup",			"Create new group",
 	"title-runapp",				"Run application",
 	"title-locals",				"Local HIT",
+	"title-msgdlg",				"Question",
 
 	/* System tray menu. */
 	"systray-hide",				"Hide",
@@ -120,6 +121,10 @@ char *lang_english[] =
 	"lhdlg-err-invalid",		"Invalid name for local HIT!",
 	"lhdlg-err-exists",			"Local HIT name is already in use!",
 	"lhdlg-err-invchar",		"Name of local HIT contains invalid characters!",
+
+	/* General message dialog. */
+	"msgdlg-button-ok",			"OK",
+	"msgdlg-button-cancel",		"Cancel",
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",

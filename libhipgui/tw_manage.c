@@ -31,9 +31,6 @@ void tw_clear(void)
 	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWL_APPLY), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWL_DELETE), FALSE);
 	
 	gtk_widget_set_sensitive(widget(ID_TWR_NAME), FALSE);
 	gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), FALSE);
@@ -215,8 +212,6 @@ void tw_set_local_info(GtkWidget *warg, char *hit_name)
 
 	dialog = widget(ID_LTOOLWND);
 
-	gtk_widget_set_sensitive(widget(ID_TWL_APPLY), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), FALSE);
 	hit = hit_db_find_local(hit_name, NULL);
 
 	if (hit)
@@ -225,9 +220,6 @@ void tw_set_local_info(GtkWidget *warg, char *hit_name)
 		print_hit_to_buffer(str, &hit->lhit);
 		gtk_entry_set_text(widget(ID_TWL_LOCAL), str);
 		twl_current_item = (void *)hit;
-		gtk_widget_set_sensitive(widget(ID_TWL_APPLY), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TWL_CANCEL), TRUE);
-		gtk_widget_grab_default(widget(ID_TWL_APPLY));
 		gtk_entry_select_region(widget(ID_TWL_NAME), 0, -1);
 		gtk_widget_grab_focus(widget(ID_TWL_NAME));
 		
@@ -364,7 +356,10 @@ void tw_apply(void)
 	case TWMODE_REMOTE_EDIT:
 		strcpy(str, gtk_entry_get_text(widget(ID_TWR_NAME)));
 		if (!check_hit_name(str, r));
-		else if (!check_apply_hit(str, r));
+		else if (!check_apply_hit(str, r))
+		{
+			tw_cancel();
+		}
 		else
 		{
 			NAMECPY(ud.old_name, r->name);
@@ -406,7 +401,10 @@ void tw_apply(void)
 	case TWMODE_RGROUP_EDIT:
 		strcpy(str, gtk_entry_get_text(widget(ID_TWG_NAME)));
 		if (!check_group_name(str, g));
-		else if (!check_apply_group(str, g));
+		else if (!check_apply_group(str, g))
+		{
+			tw_cancel();
+		}
 		else
 		{
 			NAMECPY(ud.old_name, g->name);

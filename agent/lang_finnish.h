@@ -28,6 +28,7 @@ char *lang_finnish[] =
 	"title-newgroup",			"Luo uusi ryhmä",
 	"title-runapp",				"Käynnistä sovellus",
 	"title-locals",				"Paikallinen HIT",
+	"title-msgdlg",				"Kysymys",
 
 	/* System tray menu. */
 	"systray-hide",				"Piilota",
@@ -120,7 +121,11 @@ char *lang_finnish[] =
 	"lhdlg-err-invalid",		"Paikallisen HIT:n nimi ei ole hyväksyttävä!",
 	"lhdlg-err-exists",			"Paikallisen HIT:n nimi on jo käytössä!",
 	"lhdlg-err-invchar",		"Paikallisen HIT:n nimi sisältää ei hyväksyttyjä merkkejä!",
-	
+
+	/* General message dialog. */
+	"msgdlg-button-ok",			"Hyväksy",
+	"msgdlg-button-cancel",		"Peruuta",
+
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Ei voi luoda uutta ryhmää,\npaikallisia HIT:jä ei ole määritelty!\nTarkista HIP daemon.",
 	"hits-group-emptyitem",		" <tyhjä ryhmä> ",

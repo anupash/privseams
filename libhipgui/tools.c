@@ -247,16 +247,8 @@ int check_apply_group(char *name, HIT_Group *ge)
 	/* Variables. */
 	GtkDialog *dialog;
 	int err = 0;
-
-	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-	                                GTK_BUTTONS_OK_CANCEL,
-	                                lang_get("ask-apply-group"));
-	gtk_window_set_keep_above(dialog, TRUE);
-	gtk_widget_show(dialog);
-	err = gtk_dialog_run(dialog);
-	gtk_widget_destroy(dialog);
-	if (err == GTK_RESPONSE_OK) err = 1;
-	else err = 0;
+	
+	err = message_dialog(lang_get("ask-apply-group"));
 
 out_err:
 	return (err);
@@ -272,15 +264,7 @@ int check_apply_hit(char *name, HIT_Remote *re)
 	GtkDialog *dialog;
 	int err = 0;
 
-	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-	                                GTK_BUTTONS_OK_CANCEL,
-	                                lang_get("ask-apply-hit"));
-	gtk_window_set_keep_above(dialog, TRUE);
-	gtk_widget_show(dialog);
-	err = gtk_dialog_run(dialog);
-	gtk_widget_destroy(dialog);
-	if (err == GTK_RESPONSE_OK) err = 1;
-	else err = 0;
+	err = message_dialog(lang_get("ask-apply-hit"));
 
 out_err:
 	return (err);
@@ -296,17 +280,36 @@ int check_apply_hit_move(char *name, HIT_Remote *re)
 	GtkDialog *dialog;
 	int err = 0;
 
-	dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-	                                GTK_BUTTONS_OK_CANCEL,
-	                                lang_get("ask-apply-hit-move"));
-	gtk_window_set_keep_above(dialog, TRUE);
-	gtk_widget_show(dialog);
-	err = gtk_dialog_run(dialog);
-	gtk_widget_destroy(dialog);
-	if (err == GTK_RESPONSE_OK) err = 1;
-	else err = 0;
+	err = message_dialog(lang_get("ask-apply-hit-move"));
 
 out_err:
+	return (err);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+ * Show message dialog.
+ * 
+ * @param msg Message to be shown in dialog.
+ * @return 1 if user selected "ok"-button, 0 if user selected "cancel"-button.
+ */
+int message_dialog(char *msg)
+{
+	/* Variables. */
+	GtkDialog *dialog = (GtkDialog *)widget(ID_MSGDLG);
+	GtkWidget *label = widget(ID_MSGDLG_MSG);
+	int err = 0;
+	
+	gtk_label_set_text(label, msg);
+	gtk_widget_show(dialog);
+	gtk_window_set_keep_above(dialog, TRUE);
+	err = gtk_dialog_run(dialog);
+	gtk_widget_hide(dialog);
+	if (err == GTK_RESPONSE_YES) err = 1;
+	else err = 0;
+	
 	return (err);
 }
 /* END OF FUNCTION */

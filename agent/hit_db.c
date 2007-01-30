@@ -545,9 +545,6 @@ int hit_db_parse_hit(char *buf)
 	           lhit, item.name, item.url, item.port, group);
 
 	HIP_IFEL(n != 5, -1, "Broken line in database file: %s\n", buf);
-		
-	HIP_DEBUG("Scanned HIT line with values: %s %s %s %s %s\n",
-	          lhit, item.name, item.url, item.port, group);
 
 	read_hit_from_buffer(&item.hit, lhit);
 	item.g = hit_db_find_rgroup(group);
@@ -581,8 +578,6 @@ int hit_db_parse_rgroup(char *buf)
 	n = sscanf(buf, "\"%64[^\"]\" \"%64[^\"]\" %d %d",
 	           name, hit, &type, &lightweight);
 	HIP_IFEL(n != 4, -1, "Broken line in database file: %s\n", buf);
-	HIP_DEBUG("Scanned remote group line with values: %s %s %d %d\n",
-	          name, hit, type, lightweight);
 	l = hit_db_find_local(hit, NULL);
 	HIP_IFEL(!l, -1, "Failed to find local HIT for remote group!\n");
 	g = hit_db_add_rgroup(name, l, type, lightweight);
@@ -617,7 +612,6 @@ int hit_db_parse_local(char *buf)
 	/* Parse values from current line. */
 	n = sscanf(buf, "\"%64[^\"]\" %s", name, hit);
 	HIP_IFEL(n != 2, -1, "Broken line in database file: %s\n", buf);
-	HIP_DEBUG("Scanned local HIT line with values: %s %s\n", name, hit);
 	read_hit_from_buffer(&lhit, hit);
 	hit_db_add_local(name, &lhit);
 	
