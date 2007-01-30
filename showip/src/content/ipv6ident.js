@@ -267,7 +267,7 @@ updatestatus: function(host) {
 	// Check if HIP is used
 	this.hipUsed = isHipUsed(ips);
 	if (this.hipUsed == 1) {
-		panel.setAttribute("value", "HIP: " + ips.join(','));
+		panel.setAttribute("value", "HIP");
 		//panel.setAttribute("style", "color:#6030f0");
 	}
 	else {
@@ -276,7 +276,7 @@ updatestatus: function(host) {
 	// Check if HIP is used
 	this.hipUsed = isHipUsed(ips);
 	if (this.hipUsed == 1) {
-		this.currentLocation = "HIP: " + text;
+		this.currentLocation = "HIP";
 	}
 	else {
 		this.currentLocation = text;
