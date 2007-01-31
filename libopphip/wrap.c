@@ -104,6 +104,8 @@ void hip_initialize_db_when_not_exist()
 	if (hip_db_exist)
 		return;
 
+	srand(getpid());
+	
 	hip_set_logtype(LOGTYPE_SYSLOG);
 	hip_set_logfmt(LOGFMT_LONG);
 
@@ -383,8 +385,6 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 
 	_HIP_DEBUG("autobind called\n");
 
-	srand(pid);
-	
 	do { /* XX FIXME: CHECK UPPER BOUNDARY */
 		hit->sin6_port = htons(rand());
 	} while (ntohs(hit->sin6_port) < 1024);
@@ -496,12 +496,22 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		goto out_err;
 	}
 
-	HIP_DEBUG("HIT translation was successfull\n");
+	HIP_DEBUG("HIT translation was successful\n");
 	
 	/* We have now successfully translated an IP to an HIT. The HIT
 	   requires a new socket. Also, we need set the return values
 	   correctly */
 	HIP_IFE(hip_set_translation(entry, hit, is_peer), -1);
+
+	HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
+		  entry->pid, entry->orig_socket, entry->translated_socket);
+	if (!is_peer) {
+		HIP_DEBUG_HIT("orig_local_id", SA2IP(&entry->orig_local_id));
+		HIP_DEBUG_HIT("trans_local_id", SA2IP(&entry->translated_local_id));
+	} else {
+		HIP_DEBUG_HIT("orig_dst_id", SA2IP(&entry->orig_peer_id));
+		HIP_DEBUG_HIT("trans_dst_id", SA2IP(&entry->translated_peer_id));
+	}
 	
 	return err;
 	
@@ -569,6 +579,15 @@ hip_opp_socket_t *hip_create_new_opp_entry(int pid, const int fd)
 	_HIP_DEBUG("Called socket_dlsym fd=%d\n", fd);  
 
 	return entry;
+}
+
+int hip_create_nontranslable_socket(int domain, int type, int protocol) {
+	hip_opp_socket_t *entry;
+	int fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
+	
+	entry = hip_create_new_opp_entry(getpid(), fd);
+	entry->protocol = -1; /* prevents translation */
+	return fd;
 }
 
 int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,

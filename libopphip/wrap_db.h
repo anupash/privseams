@@ -2,26 +2,26 @@
 #define WRAP_DB_H
 
 struct hip_opp_socket_entry {
-  struct list_head     	next_entry;
-  spinlock_t           	lock;
-  atomic_t             	refcnt;
-  pid_t 		pid;
-  int 			orig_socket;
-  int  			translated_socket;
-  int 			hash_key;// pid XOR old_socket
-  int 	       		domain;
-  int 			type;
-  int 			protocol;
-  int                   local_id_is_translated;
-  int                   peer_id_is_translated;
-  struct sockaddr_storage orig_local_id;
-  struct sockaddr_storage orig_peer_id;
-  struct sockaddr_storage translated_local_id;
-  struct sockaddr_storage translated_peer_id;
-  socklen_t orig_local_id_len;
-  socklen_t orig_peer_id_len;
-  socklen_t translated_local_id_len;
-  socklen_t translated_peer_id_len;
+	struct list_head     	next_entry;
+	spinlock_t           	lock;
+	atomic_t             	refcnt;
+	pid_t 		        pid;
+	int 			orig_socket;
+	int  			translated_socket;
+	int 			hash_key; /* pid XOR old_socket */
+	int 	       		domain;
+	int 			type;
+	int 			protocol;
+	int                     local_id_is_translated;
+	int                     peer_id_is_translated;
+	struct sockaddr_storage orig_local_id;
+	struct sockaddr_storage orig_peer_id;
+	struct sockaddr_storage translated_local_id;
+	struct sockaddr_storage translated_peer_id;
+	socklen_t               orig_local_id_len;
+	socklen_t               orig_peer_id_len;
+	socklen_t               translated_local_id_len;
+	socklen_t               translated_peer_id_len;
 };
 
 typedef struct hip_opp_socket_entry hip_opp_socket_t;
@@ -51,5 +51,6 @@ int exists_mapping(int pid, int socket);
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry);
 
 extern hip_hit_t *get_local_hits_wrapper();
+int hip_create_nontranslable_socket(int domain, int type, int protocol);
 
 #endif
