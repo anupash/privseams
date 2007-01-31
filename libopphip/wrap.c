@@ -730,7 +730,7 @@ int socket(int domain, int type, int protocol)
 
 	if (socket_fd > 0)
 		err = hip_add_orig_socket_to_db(socket_fd, domain, type,
-						protocol);
+						((protocol == -1) ? 0 : protocol));
 	if (err) {
 		HIP_ERROR("Failed to add orig socket to db\n");
 		goto out_err;

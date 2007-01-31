@@ -69,7 +69,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-#include "wrap_db.h"
 
 /*
 #ifdef CONFIG_HIP_OPENDHT
@@ -162,7 +161,8 @@ static int addrconfig (sa_family_t af)
   _HIP_DEBUG("af=%d", af);
   
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-  s = hip_create_nontranslable_socket(af, SOCK_DGRAM, 0);
+  s = socket(af, SOCK_DGRAM, -1);
+  //s = hip_create_nontranslable_socket(af, SOCK_DGRAM, 0);
 #else
   s = socket(af, SOCK_DGRAM, 0);
 #endif

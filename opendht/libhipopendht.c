@@ -31,7 +31,8 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 int init_dht_gateway_socket(int sockfd)
 {
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-    if ((sockfd = hip_create_nontranslable_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+  //    if ((sockfd = hip_create_nontranslable_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, -1)) < 0)
         perror("Socket");
 #else
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
