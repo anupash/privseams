@@ -524,9 +524,18 @@ int hip_receive_control_packet(struct hip_common *msg,
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
-		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
-						       msg_info);
+	    if (!entry && opportunistic_mode &&
+		(type == HIP_I1 || type == HIP_R1)) {
+		    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
+							   dst_addr,
+							   msg_info);
+	    } else {
+		    /* Ugly bug fix for "conntest-client hostname tcp 12345"
+		       where hostname maps to HIT and IP in hosts files.
+		       Why the heck the receive function points here to
+		       receive_opp_r1 even though we have a regular entry? */
+		    entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+	    }
 #endif
 	
 	switch(type) {
