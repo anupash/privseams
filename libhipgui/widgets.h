@@ -98,6 +98,7 @@ enum WIDGET_IDS
 	ID_RLISTMENU,
 	ID_LOCALSMENU,
 	ID_MSGDLG_MSG,
+	ID_TOOLTIPS,
 
 	/* IDs for hipstart. */
 	ID_HS_MAIN,

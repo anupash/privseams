@@ -2,6 +2,7 @@
 
 $using_hip = 0;
 $domain = $_SERVER['REMOTE_ADDR'];
+$server_hit = $_SERVER['SERVER_ADDR'];
 if (substr($domain, 0, 6) == "2001:7")
 {
 	$using_hip = 1;
@@ -32,6 +33,7 @@ if ($index < 100)
 		<a href='index.php?index=7'>|Trash|</a>
 		<a href='index.php?index=8'>|Compose|</a>
 		<a href='index.php?index=9'>|Preferences|</a>
+		<a href='index.php?index=1'>|Logout|</a>
 		<hr>");
 		
 		if ($index == 6) echo ("<font color='#303030'>Inbox is empty.</font>");
@@ -94,8 +96,9 @@ if ($index < 100)
 	if ($index == 5 || $using_hip == 1)
 	echo ("
 		<br /><hr>
-		<center><p>This connection is secure and encrypted by
-		<a href='index.php?index=100'><font color='#2040e0'>HIP</font></a>.</p></center>
+		<p><center>This connection is secured and encrypted by
+		<a href='index.php?index=100'><font color='#2040e0'>HIP</font></a>.</center>
+		<center><font>Server HIT is $server_hit.</font></center></p>
 		");
 	else
 	echo ("

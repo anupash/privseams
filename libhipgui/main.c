@@ -23,6 +23,7 @@ int gui_init(void)
 {
 	/* Variables. */
 	GtkWidget *w;
+	GtkTooltips *tooltips;
 	int err = 0;
 	char str[320];
 
@@ -41,6 +42,12 @@ int gui_init(void)
 	/* Set default icon. */
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
 	gtk_window_set_default_icon_from_file(str, NULL);
+
+	/* Initialize tooltips. */
+	tooltips = gtk_tooltips_new();
+	widget_set(ID_TOOLTIPS, tooltips);
+//	gtk_tooltips_enable(tooltips);
+//	gtk_tooltips_set_delay(tooltips, 500);
 
 	/* Create main GUI window. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
