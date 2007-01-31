@@ -476,14 +476,8 @@ void tw_delete(void)
 	{
 	case TWMODE_REMOTE:
 		g = r->g;
-		w = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-		                           GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-		                           lang_get("ask-delete-hit"));
-		gtk_widget_show(w);
-		gtk_window_set_keep_above(w, TRUE);
-		err = gtk_dialog_run(w);
-		gtk_widget_destroy(w);
-		if (err != GTK_RESPONSE_YES);
+		err = message_dialog(lang_get("ask-delete-hit"));
+		if (err != 1);
 		else if (hit_db_del(r->name) == 0)
 		{
 			tw_clear_remote();
@@ -493,14 +487,8 @@ void tw_delete(void)
 		break;
 
 	case TWMODE_RGROUP:
-		w = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-		                           GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-		                           lang_get("ask-delete-group"));
-		gtk_widget_show(w);
-		gtk_window_set_keep_above(w, TRUE);
-		err = gtk_dialog_run(w);
-		gtk_widget_destroy(w);
-		if (err != GTK_RESPONSE_YES);
+		err = message_dialog(lang_get("ask-delete-group"));
+		if (err != 1);
 		else if (hit_db_del_rgroup(g->name) == 0)
 		{
 			tw_clear_remote();

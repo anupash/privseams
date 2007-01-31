@@ -268,19 +268,14 @@ updatestatus: function(host) {
 	this.hipUsed = isHipUsed(ips);
 	if (this.hipUsed == 1) {
 		panel.setAttribute("value", "HIP");
+		this.currentLocation = "HIP";
 		//panel.setAttribute("style", "color:#6030f0");
 	}
 	else {
+		this.currentLocation = text;
 		//panel.setAttribute("style", "color:" + this.prefs.color[status]+";");
 	}
-	// Check if HIP is used
-	this.hipUsed = isHipUsed(ips);
-	if (this.hipUsed == 1) {
-		this.currentLocation = "HIP";
-	}
-	else {
-		this.currentLocation = text;
-	}	
+	
 	var popup = document.getElementById("showip_ipmenu");
 	if (popup)
 		// re-arm
@@ -297,13 +292,13 @@ updateHipStatus: function(aState) {
 	var hipToUrlbar = 1;
 	switch (aState) {
 	case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_HIGH:
-		hipToUrlbar = 0;
+		hipToUrlbar = 1;
 	break;
 	case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_LOW:
-		hipToUrlbar = 0;
+		hipToUrlbar = 1;
 	break;
 	case wpl.STATE_IS_BROKEN:
-		hipToUrlbar = 0;
+		hipToUrlbar = 1;
 	break;
 	case wpl.STATE_IS_INSECURE:
 		hipToUrlbar = 1;

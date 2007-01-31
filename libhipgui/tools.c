@@ -307,7 +307,7 @@ int message_dialog(char *msg)
 	gtk_window_set_keep_above(dialog, TRUE);
 	err = gtk_dialog_run(dialog);
 	gtk_widget_hide(dialog);
-	if (err == GTK_RESPONSE_YES) err = 1;
+	if (err == GTK_RESPONSE_OK) err = 1;
 	else err = 0;
 	
 	return (err);

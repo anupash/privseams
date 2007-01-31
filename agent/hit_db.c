@@ -451,7 +451,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
 	
 	print_hit_to_buffer(hit, &r->hit);
 	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
-	        r->url, r->port, r->g->name);
+	        "x", r->port, r->g->name);
 
 	return (0);
 }
