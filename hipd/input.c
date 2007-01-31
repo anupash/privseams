@@ -489,7 +489,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 		   where hostname maps to HIT and IP in hosts files.
 		   Why the heck the receive function points here to
 		   receive_opp_r1 even though we have a regular entry? */
-		entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+		if (entry)
+			entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	}
 #endif
 	
