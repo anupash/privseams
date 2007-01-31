@@ -344,6 +344,8 @@ struct hip_hadb_state
 	/* For e.g. GUI agent */
 	hip_input_filter_func_set_t *hadb_input_filter_func;
 	hip_output_filter_func_set_t *hadb_output_filter_func;
+        /* true when agent is prompting user and fallback is disabled */
+	int hip_opp_fallback_disable; 
 };
 
 /** @addtogroup hadb_func

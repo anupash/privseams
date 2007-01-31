@@ -31,24 +31,6 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	return err;
 }
 
-int hip_handle_opp_fallback(hip_opp_block_t *entry,
-			    void *current_time) {
-	int err = 0;
-	time_t *now = (time_t*) current_time;	
-
-	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
-	
-	if(*now - HIP_OPP_WAIT > entry->creation_time) {
-		HIP_DEBUG("Timeout for opp entry, falling back to\n");
-		err = hip_opp_unblock_app(&entry->caller, NULL);
-		HIP_DEBUG("Unblock returned %d\n", err);
-		err = hip_oppdb_entry_clean_up(entry);
-	}
-	
- out_err:
-	return err;
-}
-
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
                     void *opaque) {
        int i = 0, fail = 0;
@@ -469,6 +451,36 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
  send_i1:
 	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
+	
+ out_err:
+	return err;
+}
+
+int hip_handle_opp_fallback(hip_opp_block_t *entry,
+			    void *current_time) {
+	int err = 0, disable_fallback = 0;
+	time_t *now = (time_t*) current_time;	
+
+	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+
+#if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
+	/* If agent is prompting user, let's make sure that
+	   the death counter in maintenance does not expire */
+	if (hip_agent_is_alive()) {
+		hip_ha_t *ha = NULL;
+		ha = hip_oppdb_get_hadb_entry(&entry->our_real_hit,
+					      &entry->peer_ip);
+		if (ha)
+			disable_fallback = ha->hip_opp_fallback_disable;
+	}
+#endif
+	
+	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
+		HIP_DEBUG("Timeout for opp entry, falling back to\n");
+		err = hip_opp_unblock_app(&entry->caller, NULL);
+		HIP_DEBUG("Unblock returned %d\n", err);
+		err = hip_oppdb_entry_clean_up(entry);
+	}
 	
  out_err:
 	return err;

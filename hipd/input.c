@@ -473,6 +473,26 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	/** @todo Check packet csum.*/
 
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	if (!entry && opportunistic_mode &&
+	    (type == HIP_I1 || type == HIP_R1)) {
+		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
+						       dst_addr,
+						       msg_info);
+		/* If agent is prompting user, let's make sure that
+		   the death counter in maintenance does not expire */
+		if (hip_agent_is_alive())
+		    entry->hip_opp_fallback_disable = filter;
+	} else {
+		/* Ugly bug fix for "conntest-client hostname tcp 12345"
+		   where hostname maps to HIT and IP in hosts files.
+		   Why the heck the receive function points here to
+		   receive_opp_r1 even though we have a regular entry? */
+		entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+	}
+#endif
+	
 #ifdef CONFIG_HIP_AGENT
 	/** Filter packet trough agent here. */
 	if ((type == HIP_I1 || type == HIP_R1) && filter)
@@ -519,25 +539,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	if (!(ntohs(msg->control) & HIP_CONTROL_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
-#else
-	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 #endif
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	    if (!entry && opportunistic_mode &&
-		(type == HIP_I1 || type == HIP_R1)) {
-		    entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
-							   dst_addr,
-							   msg_info);
-	    } else {
-		    /* Ugly bug fix for "conntest-client hostname tcp 12345"
-		       where hostname maps to HIT and IP in hosts files.
-		       Why the heck the receive function points here to
-		       receive_opp_r1 even though we have a regular entry? */
-		    entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
-	    }
-#endif
-	
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
