@@ -171,6 +171,9 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 	
 	if (!(entry->type == SOCK_STREAM || entry->type == SOCK_DGRAM))
 		return 0;
+
+	if (entry->force_orig)
+		HIP_ASSERT(0);
 	
 	if (sa) {
 		if (sa->sa_family == AF_INET6 && ipv6_addr_is_hit(SA2IP(sa)))
@@ -187,6 +190,7 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 			return 0;
 
 	}
+
 	return 1;
 }
 
@@ -617,7 +621,12 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	HIP_ASSERT(entry);
 	entry->domain = domain;
 	entry->type = type;
-	entry->protocol = protocol;
+	if (protocol == -1) {
+		entry->protocol = protocol;
+		entry->force_orig = 1;
+	} else {
+		entry->protocol = protocol;
+	}
 
  out_err:
 	return err;
@@ -729,8 +738,7 @@ int socket(int domain, int type, int protocol)
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
 
 	if (socket_fd > 0)
-		err = hip_add_orig_socket_to_db(socket_fd, domain, type,
-						((protocol == -1) ? 0 : protocol));
+		err = hip_add_orig_socket_to_db(socket_fd, domain, type, protocol);
 	if (err) {
 		HIP_ERROR("Failed to add orig socket to db\n");
 		goto out_err;

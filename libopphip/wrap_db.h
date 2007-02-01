@@ -14,6 +14,7 @@ struct hip_opp_socket_entry {
 	int 			protocol;
 	int                     local_id_is_translated;
 	int                     peer_id_is_translated;
+	int                     force_orig;
 	struct sockaddr_storage orig_local_id;
 	struct sockaddr_storage orig_peer_id;
 	struct sockaddr_storage translated_local_id;
