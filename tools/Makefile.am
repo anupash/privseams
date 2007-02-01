@@ -20,11 +20,16 @@ if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 endif
 
+# XX FIXME: DOES NOT COMPILE WITHOUT OPPLIB
+LDADD = ../libopphip/.libs/libopphip.a ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
+
+if HIP_OPENDHT
+   LDADD += ../libopphip/.libs/libhipopendht.a
+endif
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 if HIP_OPENDHT
-LDADD = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a ../opendht/.libs/libhipopendht.a
-else
-LDADD    = ../libhiptool/.libs/libhiptool.a  ../libinet6/.libs/libinet6.a
+#  hipconf_LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 sbin_PROGRAMS = hipconf

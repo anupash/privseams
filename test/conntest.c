@@ -275,7 +275,7 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 	sock = hip_connect_func(res, NULL);
 	if (!sock)
 		goto out_err;
-	HIP_INFO("!!!! conntest.c got sock\n");
+	HIP_INFO("!!!! conntest.c got sock %d\n", sock);
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;

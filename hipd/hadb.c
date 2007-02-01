@@ -2395,7 +2395,7 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
 	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_I2 ||
 	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		(*counter)++;

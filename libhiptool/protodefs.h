@@ -129,6 +129,11 @@
 #define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 
+#define HIP_PARAM_ENCAPS_MSG			32787
+#define HIP_PARAM_PORTPAIR				32788
+#define HIP_PARAM_SRC_ADDR				32789
+#define HIP_PARAM_DST_ADDR				32790
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505
