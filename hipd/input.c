@@ -1384,7 +1384,9 @@ int hip_receive_r1(struct hip_common *r1,
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
+		break;
 	case HIP_STATE_ESTABLISHED:
+		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:

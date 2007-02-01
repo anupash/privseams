@@ -368,6 +368,48 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
+
+/**
+ * Receive opportunistic R1 when entry is in established mode already.
+ * This is because we need to send right HIT to client app and not
+ * empty packet. If this is not done, client app will fallback to normal
+ * tcp connection without HIP after one connection to host has already
+ * been made earlier.
+ */
+int hip_receive_opp_r1_in_established(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       hip_ha_t *opp_entry,
+		       hip_portpair_t *msg_info)
+{
+	hip_opp_block_t *block_entry = NULL;
+	hip_hit_t phit;
+	int err = 0;
+
+	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
+					       HIP_HIT_TYPE_HASH100), -1,
+		 "pseudo hit conversion failed\n");
+	
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
+		 "unblock failed\n");
+ 
+out_err:
+	if (block_entry) {
+		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
+		hip_oppdb_entry_clean_up(block_entry);
+	}
+	return err;
+}
+
+
 /**
  * No description.
  */

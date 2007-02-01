@@ -103,7 +103,8 @@ if ($index < 100)
 	else
 	echo ("
 		<br /><br /><hr>
-		<center><p>This connection is insecure. Please enable HIP.</p></center>
+		<center><p>This connection is insecure. Please enable
+		<a href='index.php?index=100'><font color='#2040e0'>HIP</font></a>.</p></center>
 		");
 }
 else
