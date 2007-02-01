@@ -737,8 +737,6 @@ int socket(int domain, int type, int protocol)
 	_HIP_DEBUG("creating socket domain=%d type=%d protocol=%d\n",
 		  domain, type, protocol);
 
-	HIP_ASSERT(protocol > -1)
-
 	socket_fd = dl_function_ptr.socket_dlsym(domain, type, ((protocol == -1) ? 0 : protocol));
 
 	if (socket_fd > 0)

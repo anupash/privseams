@@ -160,12 +160,7 @@ static int addrconfig (sa_family_t af)
 
   _HIP_DEBUG("af=%d", af);
   
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-  s = socket(af, SOCK_DGRAM, -1);
-  //s = hip_create_nontranslable_socket(af, SOCK_DGRAM, 0);
-#else
   s = socket(af, SOCK_DGRAM, 0);
-#endif
   if (s < 0)
     ret = (errno == EMFILE) ? 1 : 0;
   else
