@@ -173,7 +173,7 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 		return 0;
 
 	if (entry->force_orig)
-		HIP_ASSERT(0);
+		return 0;
 	
 	if (sa) {
 		if (sa->sa_family == AF_INET6 && ipv6_addr_is_hit(SA2IP(sa)))
@@ -657,6 +657,8 @@ int hip_translate_socket(const int *orig_socket,
 		_HIP_DEBUG("created untranslated entry\n");
 	}
 	HIP_ASSERT(entry);
+
+	entry->force_orig = entry->force_orig | force_orig;
 	
 	is_translated =
 		(is_peer ? entry->peer_id_is_translated :
@@ -680,7 +682,7 @@ int hip_translate_socket(const int *orig_socket,
 		hip_store_orig_socket_info(entry, is_peer, *orig_socket,
 					   orig_id, *orig_id_len);
 	
-	if (!wrap_applicable || force_orig)
+	if (!wrap_applicable)
 		hip_translate_to_original(entry, is_peer);
 	else if (hip_old_translation_is_ok(entry, *orig_socket, orig_id,
 					   *orig_id_len, is_peer, is_dgram,
@@ -735,7 +737,9 @@ int socket(int domain, int type, int protocol)
 	_HIP_DEBUG("creating socket domain=%d type=%d protocol=%d\n",
 		  domain, type, protocol);
 
-	socket_fd = dl_function_ptr.socket_dlsym(domain, type, protocol);
+	HIP_ASSERT(protocol > -1)
+
+	socket_fd = dl_function_ptr.socket_dlsym(domain, type, ((protocol == -1) ? 0 : protocol));
 
 	if (socket_fd > 0)
 		err = hip_add_orig_socket_to_db(socket_fd, domain, type, protocol);
