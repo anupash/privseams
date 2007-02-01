@@ -301,50 +301,6 @@ int hip_agent_filter(struct hip_common *msg,
 
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
-	/*
-		If message is type I1 or R1, then user action might be needed
-		to filter the packet. Not receiving the packet directly from agent.
-	*/
-/*	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 0);
-	HIP_IFE(hip_get_msg_type(msg) == HIP_R1, 0);
-	
-	alen = sizeof(hip_agent_addr);
-	sendn = n;
-	n = recvfrom(hip_agent_sock, msg, n, 0,
-	             (struct sockaddr *)&hip_agent_addr, &alen);
-	if (n < 0)
-	{
-		HIP_ERROR("Recvfrom() failed.\n");
-		err = -1;
-		goto out_err;
-	}
-	/* This happens, if agent rejected the packet. */
-/*	else if (sendn != n)
-	{
-		err = 1;
-	}
-
-/*	if (hip_get_msg_type(msg) == HIP_I1 &&
-	    memcmp(&msg->hits, &hits, sizeof(msg->hits)) != 0)
-	{
-		HIP_DEBUG("Updating selected local HIT state in hadb to I1_SENT...\n");
-		ha_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-		if (ha_entry)
-		{
-			HIP_DEBUG("1. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_I1_SENT);
-			ha_entry->state = HIP_STATE_I1_SENT;
-		}
-		ha_entry = hip_hadb_find_byhits(&hits, &msg->hitr);
-		if (ha_entry)
-		{
-			HIP_DEBUG("2. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_UNASSOCIATED);
-			ha_entry->state = HIP_STATE_UNASSOCIATED;
-		}
-		err = 1;
-	}
-
-	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));*/
-
 out_err:
 	return (err);
 }
