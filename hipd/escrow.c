@@ -112,7 +112,7 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
         hip_keadb_put_entry(kea);
 	
         if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -149,7 +149,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
         if (entry->state == HIP_STATE_UNASSOCIATED) {
                 /* TODO: can this situation ever happen? */
                 HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {

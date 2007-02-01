@@ -23,6 +23,7 @@ int gui_init(void)
 {
 	/* Variables. */
 	GtkWidget *w;
+	GtkTooltips *tooltips;
 	int err = 0;
 	char str[320];
 
@@ -41,6 +42,12 @@ int gui_init(void)
 	/* Set default icon. */
 	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
 	gtk_window_set_default_icon_from_file(str, NULL);
+
+	/* Initialize tooltips. */
+	tooltips = gtk_tooltips_new();
+	widget_set(ID_TOOLTIPS, tooltips);
+//	gtk_tooltips_enable(tooltips);
+//	gtk_tooltips_set_delay(tooltips, 500);
 
 	/* Create main GUI window. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -82,8 +89,14 @@ int gui_init(void)
 	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
 	gtk_widget_hide(w);
+
+	/* Create own custom message-dialog. */
+	w = gtk_dialog_new_with_buttons(lang_get("title-msgdlg"), NULL, GTK_DIALOG_MODAL, NULL);
+	widget_set(ID_MSGDLG, w);
+	gtk_widget_hide(w);
 	
 	/* Create window content for all windows. */
+	HIP_IFEL(msgdlg_create_content(), -1, "Failed to create message-dialog contents.\n");
 	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
 	HIP_IFEL(nhdlg_create_content(), -1, "Failed to create accept-dialog contents.\n");
 	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");

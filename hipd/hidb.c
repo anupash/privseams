@@ -221,16 +221,6 @@ int hip_add_host_id(struct hip_db_struct *db,
 	if (pubkey) 
 		HIP_FREE(pubkey);
 
-#ifdef CONFIG_HIP_AGENT
-	/*! \todo
-		Send HIT to agent here.
-	*/
-/*	if (hip_agent_is_alive())
-	{
-		HIP_DEBUG("Sending new local HIT to agent.\n");
-	}*/
-#endif /* CONFIG_HIP_AGENT */
-
 	return err;
 
  out_err:

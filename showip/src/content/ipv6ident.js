@@ -1,4 +1,13 @@
 
+const PREFS_CID = "@mozilla.org/preferences;1";
+const PREFS_I_PREF = "nsIPref";
+const PREF_STRING = "browser.dom.window.dump.enabled";
+try {
+	var Pref =new Components.Constructor(PREFS_CID, PREFS_I_PREF); 
+	var pref =new Pref( );
+	pref.SetBoolPref(PREF_STRING, true);
+} catch(e) {}
+
 const IPV6_NOTIFY_STATE_DOCUMENT =
 	Components.interfaces.nsIWebProgress.NOTIFY_STATE_DOCUMENT;
 const IPV6_NOTIFY_LOCATION =
@@ -19,6 +28,8 @@ init: function()  {
 	this.dnscache = new Array();
 	this.rdnscache = new Array();
 	this.localip = null;
+	this.hipUsed = 1;
+	this.currentLocation = "";
 	this.dnscache['none'] = new Array();
 	this.strings = document.getElementById("showip_strings");
 	// shamelessly taken from flagfox extension 
@@ -46,7 +57,9 @@ init: function()  {
 	},
 	onProgressChange:function(a,b,c,d,e,f){},
 	onStatusChange:function(a,b,c,d){},
-	onSecurityChange:function(a,b,c){},
+	onSecurityChange:function(aWebProgress, aRequest, aState){
+		this.parent.updateHipStatus(aState);
+	},
 	onLinkIconAvailable:function(a){}
 	}; // this.Listener
 	this.Listener.parent = this;
@@ -180,6 +193,7 @@ dec2radix: function(num, radix, pad) {
 
 // update the statusbar panel
 updatestatus: function(host) {
+	dump("updatestatus\n");
 	if (!host)
 		return;
 	var panel = document.getElementById("showip_status_text");
@@ -250,32 +264,62 @@ updatestatus: function(host) {
 	panel.setAttribute("tooltiptext", this.strings.getFormattedString("localips",  [this.getLocalIp()])); 
 	panel.setAttribute("status", status);
 	
-	// Try to detect, whether using HIP...
-	var iphip = ips.join(',');
-	var i = iphip.indexOf(':');
-	var iship = 0;
-	if (i != -1)
-	{
-		var v1 = iphip.substring(0, i);
-		var v2 = iphip.substring(i + 1, i + 5);
-		var i1 = parseInt(v1, 16);
-		var i2 = parseInt(v2, 16) & 0xfff0;
-		if (i1 == 0x2001) iship = 1;
-		if (i2 != 0x0070) iship = 0;
+	// Check if HIP is used
+	this.hipUsed = isHipUsed(ips);
+	if (this.hipUsed == 1) {
+		panel.setAttribute("value", ips[0]);
+		this.currentLocation = "HIP";
+		//panel.setAttribute("style", "color:#6030f0");
 	}
-	
-	if (iship == 1)
-	{
-		panel.setAttribute("value", "HIP: " + ips.join(','));
-		panel.setAttribute("style", "color:#6030f0");
+	else {
+		this.currentLocation = text;
+		//panel.setAttribute("style", "color:" + this.prefs.color[status]+";");
 	}
-	else
-		panel.setAttribute("style", "color:" + this.prefs.color[status]+";");
 	
 	var popup = document.getElementById("showip_ipmenu");
 	if (popup)
 		// re-arm
 		popup.onpopupshowing = function() {showipExt.AddIPItems(this);};
+},
+
+updateHipStatus: function(aState) {
+	dump("updateHipStatus\n");
+	var urlbar = document.getElementById("urlbar"); //TODO
+	var securityButton = document.getElementById("security-button");
+	const wpl = Components.interfaces.nsIWebProgressListener;
+	//securityButton.removeAttribute("label");
+
+	var hipToUrlbar = 1;
+	switch (aState) {
+	case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_HIGH:
+		hipToUrlbar = 0;
+	break;
+	case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_LOW:
+		hipToUrlbar = 0;
+	break;
+	case wpl.STATE_IS_BROKEN:
+		hipToUrlbar = 0;
+	break;
+	case wpl.STATE_IS_INSECURE:
+		hipToUrlbar = 1;
+	default:
+	break;
+	}
+	if (this.hipUsed == 1) {
+		if (urlbar && (hipToUrlbar == 1)) {
+			urlbar.setAttribute("level", "hip");
+			var lockIcon = document.getElementById("lock-icon");
+			if (lockIcon)
+				lockIcon.setAttribute("tooltiptext", "Host Identity Protocol");
+		
+		}
+		if (securityButton) {
+			securityButton.setAttribute("level", "hip");
+			securityButton.setAttribute("tooltiptext", "Host Identity Protocol");
+			securityButton.setAttribute("label", this.currentLocation);
+		}
+		
+	}
 },
 
 // build popup menu
@@ -450,3 +494,24 @@ copytoclip: function(host) {
 }
 
 }; // showipExt
+
+function isHipUsed(aIps) {
+        // Try to detect, whether using HIP...
+        var iphip = aIps.join(',');
+        var i = iphip.indexOf(':');
+        var iship = 0;
+        if (i != -1)
+        {
+                var v1 = iphip.substring(0, i);
+                var v2 = iphip.substring(i + 1, i + 5);
+                var i1 = parseInt(v1, 16);
+                var i2 = parseInt(v2, 16) & 0xfff0;
+                if (i1 == 0x2001) iship = 1;
+                if (i2 != 0x0070) iship = 0;
+        }
+        //return iship;
+	return iship;
+}
+
+
+

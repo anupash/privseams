@@ -96,6 +96,40 @@ int ngdlg_create_content(void)
 /* END OF FUNCTION */
 
 
+/******************************************************************************/
+/**
+	Create message-dialog contents.
+
+	@return 0 if success, -1 on errors.
+*/
+int msgdlg_create_content(void)
+{
+	/* Variables. */
+	GtkWidget *window = (GtkWidget *)widget(ID_MSGDLG);
+	GtkWidget *vb, *w;
+
+	gtk_container_set_border_width(GTK_CONTAINER(window), 1);
+
+	/* This box is for adding everything inside previous frame. */
+	vb = gtk_vbox_new(FALSE, 1);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), vb, FALSE, FALSE, 0);
+	gtk_widget_show(vb);
+	
+	w = gtk_label_new("");
+	gtk_box_pack_start(vb, w, FALSE, FALSE, 0);
+	widget_set(ID_MSGDLG_MSG, w);
+	gtk_widget_show(w);
+
+	/* Add buttons to dialog. */
+	w = gtk_dialog_add_button(window, lang_get("msgdlg-button-ok"), GTK_RESPONSE_OK);
+	gtk_widget_grab_default(w);
+	gtk_dialog_add_button(window, lang_get("msgdlg-button-cancel"), GTK_RESPONSE_CANCEL);
+
+	return (0);
+}
+/* END OF FUNCTION */
+
+
 /* END OF SOURCE FILE */
 /******************************************************************************/
 

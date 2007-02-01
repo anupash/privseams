@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
 			goto to_maintenance;
 		} 
 
-                if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
+		if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
 			/* Receiving of a raw HIP message from IPv6 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
@@ -247,10 +247,10 @@ int main(int argc, char *argv[]) {
 				err = hip_receive_control_packet(hipd_msg,
 								 &saddr,
 								 &daddr,
-								 &pkt_info);
+								 &pkt_info, 1);
 		}
 
-                if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
+		if (FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
 			/* Receiving of a raw HIP message from IPv4 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
@@ -266,18 +266,21 @@ int main(int argc, char *argv[]) {
 			   options */
 			if (hip_read_control_msg_v4(hip_raw_sock_v4, hipd_msg,
 						    &saddr, &daddr,
-						    &pkt_info, IPV4_HDR_SIZE)){
+						    &pkt_info, IPV4_HDR_SIZE))
+			{
 				HIP_ERROR("Reading network msg failed\n");
-			} else {
+			}
+			else
+			{
 				err = hip_receive_control_packet(hipd_msg,
 								 &saddr,
 								 &daddr,
-								 &pkt_info);
+								 &pkt_info, 1);
 			}
 
 		}
-                
-                if (FD_ISSET(hip_nat_sock_udp, &read_fdset)) {
+
+		if (FD_ISSET(hip_nat_sock_udp, &read_fdset)) {
 			/* Data structures for storing the source and
 			   destination addresses and ports of the incoming
 			   packet. */
@@ -307,8 +310,8 @@ int main(int argc, char *argv[]) {
                         }
 
 		}
-                
-                if (FD_ISSET(hip_user_sock, &read_fdset)) {
+
+		if (FD_ISSET(hip_user_sock, &read_fdset)) {
 			/* Receiving of a message from user socket. */
 			struct sockaddr_un app_src;
 			HIP_DEBUG("Receiving user message.\n");
@@ -343,7 +346,7 @@ int main(int argc, char *argv[]) {
                     }
 #endif
                 } 
-                
+
                 if (FD_ISSET(hip_opendht_sock_hit, &read_fdset)) {
 #ifdef CONFIG_HIP_OPENDHT
                     /* Receive answer from openDHT HIT->IP mapping */
@@ -364,7 +367,8 @@ int main(int argc, char *argv[]) {
 #endif
 		} 
 
-                if (FD_ISSET(hip_agent_sock, &read_fdset)) {
+		if (FD_ISSET(hip_agent_sock, &read_fdset))
+		{
 			/* Receiving of a message from agent socket. */
 			int n;
 			socklen_t alen;
@@ -372,12 +376,21 @@ int main(int argc, char *argv[]) {
 			err = 0;
 			
 			HIP_DEBUG("Receiving a message from agent socket "\
-				  "(file descriptor: %d).\n",
-				  hip_agent_sock);
+			          "(file descriptor: %d).\n", hip_agent_sock);
 
 			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 			alen = sizeof(hip_agent_addr);
-			n = recvfrom(hip_agent_sock, hipd_msg, sizeof(struct hip_common), 0,
+			n = recvfrom(hip_agent_sock, hipd_msg, sizeof(struct hip_common), MSG_PEEK,
+			             (struct sockaddr *)&hip_agent_addr, &alen);
+			if (n < 0)
+			{
+				HIP_ERROR("Recvfrom() failed.\n");
+				err = -1;
+				continue;
+			}
+			bzero(&hip_agent_addr, sizeof(hip_agent_addr));
+			alen = sizeof(hip_agent_addr);
+			n = recvfrom(hip_agent_sock, hipd_msg, hip_get_msg_total_len(hipd_msg), 0,
 			             (struct sockaddr *) &hip_agent_addr, &alen);
 			if (n < 0)
 			{
@@ -386,13 +399,15 @@ int main(int argc, char *argv[]) {
 				continue;
 			}
 			
+			HIP_DEBUG("Received %d bytes from agent.\n", n);
+
 			msg_type = hip_get_msg_type(hipd_msg);
 			
 			if (msg_type == HIP_AGENT_PING)
 			{
 				memset(hipd_msg, 0, sizeof(struct hip_common));
 				hip_build_user_hdr(hipd_msg, HIP_AGENT_PING_REPLY, 0);
-				alen = sizeof(hip_agent_addr);                    
+				alen = sizeof(hip_agent_addr);
 				n = sendto(hip_agent_sock, hipd_msg, sizeof(struct hip_common),
 				           0, (struct sockaddr *) &hip_agent_addr, alen);
 				if (n < 0)
@@ -417,27 +432,24 @@ int main(int argc, char *argv[]) {
 				HIP_DEBUG("Agent quit.\n");
 				hip_agent_status = 0;
 			}
-			else if (msg_type == HIP_I1)
+			else if (msg_type == HIP_R1 || msg_type == HIP_I1)
 			{
-				hip_ha_t *ha;
- 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
-				if (ha)
+				struct hip_common *emsg;
+				struct in6_addr *src_addr, *dst_addr;
+				hip_portpair_t *msg_info;
+
+				emsg = hip_get_param_contents(hipd_msg, HIP_PARAM_ENCAPS_MSG);
+				src_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_SRC_ADDR);
+				dst_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_DST_ADDR);
+				msg_info = hip_get_param_contents(hipd_msg, HIP_PARAM_PORTPAIR);
+
+				if (emsg && src_addr && dst_addr && msg_info)
 				{
-					ha->state = HIP_STATE_FILTERED_I1;
-					HIP_DEBUG("Agent accepted I1.\n");
+					HIP_DEBUG("Received accepted I1/R1 packet from agent.\n");
+					hip_receive_control_packet(emsg, src_addr, dst_addr, msg_info, 0);
 				}
 			}
-			else if (msg_type == HIP_R2)
-			{
-				hip_ha_t *ha;
- 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
-				if (ha)
-				{
-					ha->state = HIP_STATE_FILTERED_R2;
-					HIP_DEBUG("Agent accepted R2.\n");
-				}
-			}
-			else if (msg_type == HIP_I1_REJECT)
+/*			else if (msg_type == HIP_AGENT_REJECT)
 			{
 				hip_ha_t *ha;
 				ha = hip_hadb_find_byhits(&hipd_msg->hits, &hipd_msg->hitr);
@@ -447,11 +459,10 @@ int main(int argc, char *argv[]) {
 					ha->hip_msg_retrans.count = 0;
 					HIP_DEBUG("Agent rejected I1.\n");
 				}
-			}
-
+			}*/
 		}
  
-                if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
+		if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
 			/* Receiving of a message from firewall socket. */
 			HIP_DEBUG("Receiving a message from firewall socket "\
 				  "(file descriptor: %d).\n",
