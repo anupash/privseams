@@ -63,7 +63,7 @@
 /* wait about n seconds before retransmitting.
    the actual time is between n and n + RETRANSMIT_INIT seconds */
 #define HIP_RETRANSMIT_WAIT 5 
-#define HIP_R1_PRECREATE_INTERVAL 60 /* seconds */
+#define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
 #define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
