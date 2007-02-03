@@ -27,5 +27,11 @@ deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
 
+armel-deb:
+	test/packaging/create-deb.sh -a
+
+source-deb:
+	test/packaging/create-deb.sh -s
+
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`

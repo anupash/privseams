@@ -45,7 +45,6 @@ int tw_create_content(void)
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
 	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);
-	gtk_widget_grab_default(w);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TW_APPLY, w);
@@ -73,6 +72,7 @@ int tw_create_content(void)
 	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
 
 	gtk_widget_show(widget(ID_TOOLWND));
+//	gtk_widget_grab_default(widget(ID_TW_APPLY));
 
 out_err:
 	return (err);

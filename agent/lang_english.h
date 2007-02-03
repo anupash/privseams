@@ -23,11 +23,12 @@ char *lang_english[] =
 	/* First is variable name, second is content. */
 	
 	/* Different window titles. */
-	"title-main",				"HIP Config",
+	"title-main",				"HIP configuration",
 	"title-newhit",				"New HIT",
 	"title-newgroup",			"Create new group",
 	"title-runapp",				"Run application",
 	"title-locals",				"Local HIT",
+	"title-msgdlg",				"Question",
 
 	/* System tray menu. */
 	"systray-hide",				"Hide",
@@ -44,7 +45,7 @@ char *lang_english[] =
 	"menu-tools",				"Tools",
 	"menu-tools-runapp",		"Run",
 	"menu-tools-newgroup",		"New group",
-	"menu-tools-addhit",		"Add HIT",
+	"menu-tools-addhit",		"Add new HIT",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"New group",
@@ -52,7 +53,7 @@ char *lang_english[] =
 	"tb-runapp",				"Run",
 	"tb-runapp-tooltip",		"Run new application using HIP libraries",
 	"tb-newhit",				"New HIT",
-	"tb-newhit-tooltip",		"Add new HIT manually",
+	"tb-newhit-tooltip",		"Add new HIT",
 	
 	/* Tabs. */
 	"tabs-hits",				"HITs",
@@ -64,7 +65,7 @@ char *lang_english[] =
 	"nhdlg-err-exists",			"HIT with given name already exists!",
 	"nhdlg-err-reserved",		"Given HIT name is reserved!\nChoose another one.",
 	"nhdlg-err-invchar",		"HIT name contains invalid characters!\nRename.",
-	"nhdlg-err-hit",			"HIT is invalid, check it.",
+	"nhdlg-err-hit",			"HIT is invalid!",
 	"nhdlg-newinfo",			"New HIT information",
 	"nhdlg-newhit",				"New HIT:",
 	"nhdlg-name",				"Name:",
@@ -84,7 +85,7 @@ char *lang_english[] =
 	"ngdlg-type2",				"Encryption:",
 	"ngdlg-button-create",		"Create",
 	"ngdlg-button-cancel",		"Cancel",
-	"ngdlg-err-invalid",		"Invalid group name given!",
+	"ngdlg-err-invalid",		"Invalid group name!",
 	"ngdlg-err-exists",			"Group already exists!",
 	"ngdlg-err-reserved",		"Given group name is reserved!\nChoose another one.",
 	"ngdlg-err-invchar",		"Group name contains invalid characters!\nRename.",
@@ -121,14 +122,18 @@ char *lang_english[] =
 	"lhdlg-err-exists",			"Local HIT name is already in use!",
 	"lhdlg-err-invchar",		"Name of local HIT contains invalid characters!",
 
+	/* General message dialog. */
+	"msgdlg-button-ok",			"OK",
+	"msgdlg-button-cancel",		"Cancel",
+
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
 	"hits-group-emptyitem",		" <empty> ",
 	"ask-delete-hit",			"Are you sure you want to delete selected HIT?",
 	"ask-delete-group",			"Are you sure you want to delete selected group?",
-	"ask-apply-hit",			"Are you sure you want to apply?",
+	"ask-apply-hit",			"Are you sure you want to apply the changes?",
 	"ask-apply-hit-move",		"Are you sure you want move the hit?",
-	"ask-apply-group",			"Are you sure you want to apply?",
+	"ask-apply-group",			"Are you sure you want to apply the changes?",
 	
 	"group-type-accept",		"accept",
 	"group-type-deny",			"deny",

@@ -34,6 +34,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
 	HIP_KEA * kea = NULL;
+
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -52,13 +53,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_add_peer_map(msg);
 		if(err){
 		  HIP_ERROR("add peer mapping failed.\n");
-		  goto out_err;
-		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
 		  goto out_err;
 		}
 		break;
@@ -108,13 +102,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-	  { 
-	    err = hip_opp_get_peer_hit(msg, src);
-	    if(err){
-	      HIP_ERROR("get pseudo hit failed.\n");
-	      goto out_err;
-	    }
-	  }
+		err = hip_opp_get_peer_hit(msg, src);
+		if(err){
+			HIP_ERROR("get pseudo hit failed.\n");
+			goto out_err;
+		}
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
 	  break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
 	  {
@@ -123,14 +117,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  HIP_ERROR("query ip hit mapping failed.\n");
 		  goto out_err;
 		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
-		HIP_DEBUG("mapping result sent\n");
 	  }
 	  break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
@@ -151,7 +137,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  }
 	  break;
 #endif
-
+#ifdef CONFIG_HIP_BLIND
+	case SO_HIP_SET_BLIND_ON:
+		HIP_DEBUG("Blind on!!\n");
+		HIP_IFEL(hip_set_blind_on(), -1, "hip_set_blind_on failed\n");
+		break;
+	case SO_HIP_SET_BLIND_OFF:
+		HIP_DEBUG("Blind off!!\n");
+		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
+		break;
+#endif
 #ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_GW:
           {
@@ -186,7 +181,6 @@ int hip_handle_user_msg(struct hip_common *msg,
           }
           break;
 #endif 
-
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message (add).\n");
@@ -228,7 +222,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                         HIP_DEBUG("Removed kea base entries.\n");	
 		}
 		/** @todo Not filtering I1, when handling escrow user message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
 		
@@ -291,7 +285,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 		/* Send a I1 packet to rvs. */
 		/** @todo Not filtering I1, when handling rvs message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
 	
@@ -317,6 +311,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
+
+	/* send a response (assuming that it is written to the msg */
+	n = hip_sendto(msg, src);
+	if(n < 0){
+	  HIP_ERROR("hip_sendto() failed.\n");
+	  err = -1;
+	  goto out_err;
+
+	}
+	HIP_DEBUG("mapping result sent ok\n");
 
  out_err:
 	return err;

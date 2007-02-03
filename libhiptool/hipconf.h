@@ -105,8 +105,9 @@
 #define TYPE_TTL        13
 #define TYPE_GW         14
 #define TYPE_GET        15
+#define TYPE_BLIND      16
+#define TYPE_MAX    	17 /* exclusive */
 
-#define TYPE_MAX    	16 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -128,6 +129,7 @@ int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);
 int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
@@ -138,5 +140,6 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
+int hip_do_hipconf(int argc, char *argv[]);
 
 #endif /* HIPCONF */
