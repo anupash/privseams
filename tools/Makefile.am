@@ -13,24 +13,25 @@ include_HEADERS = hipconftool.h
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_OPENDHT
- INCLUDES += -I../opendht
+INCLUDES += -I../opendht
 endif
 
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 endif
 
-# XX FIXME: DOES NOT COMPILE WITHOUT OPPLIB
-LDADD = ../libopphip/.libs/libopphip.a ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
+LDADD=
+if HIP_OPPORTUNISTIC
+LDADD += ../libopphip/.libs/libopphip.a
+endif
+
+LDADD += ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
 
 if HIP_OPENDHT
-   LDADD += ../libopphip/.libs/libhipopendht.a
+LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-if HIP_OPENDHT
-#  hipconf_LDADD += ../opendht/.libs/libhipopendht.a
-endif
 
 sbin_PROGRAMS = hipconf
 hipconf_SOURCES = hipconftool.c
