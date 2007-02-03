@@ -134,6 +134,17 @@ void tw_set_mode(int mode)
 
 /******************************************************************************/
 /**
+ * Get current mode in toolwindow.
+ */
+int tw_get_mode(void)
+{
+	return (tw_current_mode);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
 	Set remote HIT info to toolwindow from HIT with given name.
 
 	@param hit_name Name of remote HIT.

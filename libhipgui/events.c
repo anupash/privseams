@@ -218,6 +218,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			HIP_DEBUG("Create new group.\n");
 			create_remote_group("");
+			gtk_combo_box_set_active(widget(ID_TWR_RGROUP), 0);
 		}
 		break;
 
@@ -232,6 +233,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			HIP_DEBUG("Create new group.\n");
 			create_remote_group("");
+			gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
 		}
 		break;
 

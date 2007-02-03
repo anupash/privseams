@@ -49,7 +49,9 @@ void gui_add_rgroup(HIT_Group *group)
 
 	gtk_combo_box_insert_text(widget(ID_TWR_RGROUP), 0, group);
 	gtk_combo_box_insert_text(widget(ID_NH_RGROUP), 0, group);
-
+	if (tw_get_mode() == TWMODE_REMOTE_EDIT) gtk_combo_box_set_active(widget(ID_TWR_RGROUP), 0);
+	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
+	
 	gui_add_remote_hit(lang_get("hits-group-emptyitem"), group->name);
 }
 /* END OF FUNCTION */
@@ -264,12 +266,17 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
+	/* Use thread support, when not adding new HIT manually trough GUI. */
 	if (inout != 2) gdk_threads_enter();
 	gtk_window_get_size(dialog, &w, &h);
 	gtk_window_move(dialog, (gdk_screen_width() - w) / 2, (gdk_screen_height() - h) / 2);
 	gtk_window_set_keep_above(dialog, TRUE);
 	gtk_widget_show(dialog);
 	
+	/* Select ungrouped as default group. */
+	i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
+	gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
+
 	/* If manual input wanted. */
 	if (inout == 2)
 	{
@@ -414,7 +421,7 @@ void gui_add_hiu(HIT_Remote *hit)
 
 	@return Name of new remote group.
 */
-void create_remote_group(char *name)
+int create_remote_group(char *name)
 {
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
@@ -433,7 +440,7 @@ void create_remote_group(char *name)
 		gtk_window_set_keep_above(dialog, TRUE);
 		gtk_dialog_run(dialog);
 		gtk_widget_destroy(dialog);
-		return;
+		return (err);
 	}
 	
 	gtk_widget_show(dialog);
@@ -463,6 +470,7 @@ void create_remote_group(char *name)
 		if (l == NULL)
 		{
 			HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
+			err = -1;
 		}
 		else if (strlen(psn) > 0)
 		{
@@ -474,12 +482,16 @@ void create_remote_group(char *name)
 			g->lightweight = lw;
 
 			pthread_create(&pt, NULL, create_remote_group_thread, g);
+			pthread_join(pt, NULL);
+			err = 0;
 		}
+		else err = -1;
 	}
+	else err = -1;
 
 out_err:
 	gtk_widget_hide(dialog);
-	return;
+	return (err);
 }
 /* END OF FUNCTION */
 
