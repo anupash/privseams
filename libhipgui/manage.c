@@ -277,10 +277,14 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
 	gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
 
+	/* Close expander as default. */
+	gtk_expander_set_expanded(widget(ID_NH_EXPANDER), FALSE);
+	
 	/* If manual input wanted. */
 	if (inout == 2)
 	{
-		gtk_widget_set_sensitive(widget(ID_NH_HIT), TRUE);
+		gtk_editable_set_editable(widget(ID_NH_HIT), TRUE);
+//		gtk_widget_set_sensitive(widget(ID_NH_HIT), TRUE);
 		gtk_entry_set_text(widget(ID_NH_HIT), "2001:0070:0000:0000:0000:0000:0000:0000");
 		gtk_editable_select_region(widget(ID_NH_HIT), 0, -1);
 		gtk_entry_set_text(widget(ID_NH_NAME), "");
@@ -289,7 +293,8 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	}
 	else
 	{
-		gtk_widget_set_sensitive(widget(ID_NH_HIT), FALSE);
+		gtk_editable_set_editable(widget(ID_NH_HIT), FALSE);
+//		gtk_widget_set_sensitive(widget(ID_NH_HIT), FALSE);
 		print_hit_to_buffer(phit, &hit->hit);
 		gtk_entry_set_text(widget(ID_NH_HIT), phit);
 		gtk_entry_set_text(widget(ID_NH_NAME), hit->name);

@@ -57,6 +57,7 @@ void tw_cancel(void);
 void tw_delete(void);
 int twl_apply(void);
 void twl_cancel(void);
+void *tw_get_curitem(void);
 
 
 /*! @} addtogroup libhipgui */

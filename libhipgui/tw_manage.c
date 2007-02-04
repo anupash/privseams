@@ -115,7 +115,7 @@ void tw_set_mode(int mode)
 		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
 		gtk_container_add(container, widget(ID_TWREMOTE));
 		gtk_widget_show(widget(ID_TWREMOTE));
-		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-edit"), NULL);
+		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		break;
 
 	case TWMODE_RGROUP:
@@ -123,7 +123,7 @@ void tw_set_mode(int mode)
 //		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
 		gtk_container_add(container, widget(ID_TWRGROUP));
 		gtk_widget_show(widget(ID_TWRGROUP));
-		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-edit"), NULL);
+		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		break;
 	}
 
@@ -139,6 +139,17 @@ void tw_set_mode(int mode)
 int tw_get_mode(void)
 {
 	return (tw_current_mode);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/**
+ * Get currently selected item pointer.
+ */
+void *tw_get_curitem(void)
+{
+	return (tw_current_item);
 }
 /* END OF FUNCTION */
 
@@ -231,7 +242,7 @@ void tw_set_local_info(GtkWidget *warg, char *hit_name)
 		print_hit_to_buffer(str, &hit->lhit);
 		gtk_entry_set_text(widget(ID_TWL_LOCAL), str);
 		twl_current_item = (void *)hit;
-		gtk_entry_select_region(widget(ID_TWL_NAME), 0, -1);
+		//gtk_entry_select_region(widget(ID_TWL_NAME), 0, -1);
 		gtk_widget_grab_focus(widget(ID_TWL_NAME));
 		
 		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
@@ -345,8 +356,9 @@ void tw_apply(void)
 		gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TWR_PORT), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
-		gtk_entry_select_region(widget(ID_TWR_NAME), 0, -1);
+		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
+		//gtk_entry_select_region(widget(ID_TWR_NAME), 0, -1);
+		gtk_editable_set_position(widget(ID_TWR_NAME), -1);
 		gtk_widget_grab_focus(widget(ID_TWR_NAME));
 		gtk_widget_grab_default(widget(ID_TW_APPLY));
 		break;
@@ -358,8 +370,9 @@ void tw_apply(void)
 		gtk_widget_set_sensitive(widget(ID_TWG_NAME), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TWG_TYPE1), TRUE);
 		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
-		gtk_entry_select_region(widget(ID_TWG_NAME), 0, -1);
+		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
+		//gtk_entry_select_region(widget(ID_TWG_NAME), 0, -1);
+		gtk_editable_set_position(widget(ID_TWG_NAME), -1);
 		gtk_widget_grab_focus(widget(ID_TWG_NAME));
 		gtk_widget_grab_default(widget(ID_TW_APPLY));
 		break;
@@ -404,7 +417,7 @@ void tw_apply(void)
 				gui_add_remote_hit(r->name, g->name);
 				if (g2->remotec < 1) gui_add_remote_hit("", g2->name);
 			}
-			tw_set_mode(TWMODE_REMOTE);
+			//tw_set_mode(TWMODE_REMOTE);
 			tw_set_remote_info(r->name);
 		}
 		break;
@@ -429,7 +442,7 @@ void tw_apply(void)
 			HIP_DEBUG("Updating remote group %s -> %s.\n", ud.old_name, ud.new_name);
 			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 			all_update_rgroups(ud.old_name, ud.new_name);
-			tw_set_mode(TWMODE_RGROUP);
+			//tw_set_mode(TWMODE_RGROUP);
 			tw_set_rgroup_info(g->name);
 		}
 		break;
@@ -458,12 +471,12 @@ void tw_cancel(void)
 		break;
 
 	case TWMODE_REMOTE_EDIT:
-		tw_set_mode(TWMODE_REMOTE);
+		//tw_set_mode(TWMODE_REMOTE);
 		tw_set_remote_info(r->name);
 		break;
 
 	case TWMODE_RGROUP_EDIT:
-		tw_set_mode(TWMODE_RGROUP);
+		//tw_set_mode(TWMODE_RGROUP);
 		tw_set_rgroup_info(g->name);
 		break;
 	}
@@ -486,6 +499,7 @@ void tw_delete(void)
 	switch (tw_current_mode)
 	{
 	case TWMODE_REMOTE:
+	case TWMODE_REMOTE_EDIT:
 		g = r->g;
 		err = message_dialog(lang_get("ask-delete-hit"));
 		if (err != 1);
@@ -498,6 +512,7 @@ void tw_delete(void)
 		break;
 
 	case TWMODE_RGROUP:
+	case TWMODE_RGROUP_EDIT:
 		err = message_dialog(lang_get("ask-delete-group"));
 		if (err != 1);
 		else if (hit_db_del_rgroup(g->name) == 0)

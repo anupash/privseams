@@ -104,7 +104,7 @@ if ($index < 100)
 	echo ("
 		<br /><br /><hr>
 		<center><p>This connection is insecure. Please enable
-		<a href='index.php?index=100'><font color='#2040e0'>HIP</font></a>.</p></center>
+		<font color='#2040e0'>HIP</font>.</p></center>
 		");
 }
 else

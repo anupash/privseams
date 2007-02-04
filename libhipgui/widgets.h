@@ -82,6 +82,7 @@ enum WIDGET_IDS
 	ID_NH_LOCAL,
 	ID_NH_TYPE1,
 	ID_NH_TYPE2,
+	ID_NH_EXPANDER,
 
 	/* Exec dialog IDs. */
 	ID_EXEC_COMMAND,
