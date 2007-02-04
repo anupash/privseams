@@ -40,7 +40,7 @@ int hip_ipdb_check(struct in6_addr *addr)
 {
 	int i;
 	
-	HIP_HEXDUMP("\n\n\nChecking ip from ip database: ",
+	HIP_HEXDUMP("Checking ip from ip database: ",
 	            addr, sizeof(*addr));
 
 	for (i = 0; i < HIP_OPP_IP_DB_SIZE; i++)
