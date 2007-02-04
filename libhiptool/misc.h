@@ -16,6 +16,9 @@
 
 #define HOST_ID_FILENAME_MAX_LEN 256
 
+#define HIP_OPP_IP_DB_SIZE		16
+
+
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {

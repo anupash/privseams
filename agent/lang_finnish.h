@@ -77,6 +77,8 @@ char *lang_finnish[] =
 	"nhdlg-g-localhit",			"Paikallinen HIT:",
 	"nhdlg-g-type",				"Tyyppi:",
 	"nhdlg-g-lightweight",		"Salaus:",
+	"nhdlg-tt-hit",				"Etäkoneen sormenjälki (HIT, Host Identity Tag)",
+	"nhdlg-tt-hit-priv",		"HIT (Host Identity Tag) identifioi koneet toisistaan.",
 
 	/* New group dialog. */
 	"ngdlg-name",				"Nimi:",
@@ -125,6 +127,11 @@ char *lang_finnish[] =
 	/* General message dialog. */
 	"msgdlg-button-ok",			"Hyväksy",
 	"msgdlg-button-cancel",		"Peruuta",
+
+	/* GUI info (status bar) strings. */
+	"gui-info-000",				"HIP palvelu käytössä.",
+	"gui-info-001",				"HIP palvelu ei ole saatavilla.",
+	"gui-info-002",				"Käyttöliittymä käynnistetty.",
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Ei voi luoda uutta ryhmää,\npaikallisia HIT:jä ei ole määritelty!\nTarkista HIP daemon.",

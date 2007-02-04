@@ -238,6 +238,7 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed\n");
 	}
+	
 	n = hip_sendto(message, app_id);
 	if(n < 0){
 	  HIP_ERROR("hip_sendto() failed.\n");
@@ -349,7 +350,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
 		 "unblock failed\n");
 	// we should still get entry after delete old phit HA
-        entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
 
 	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
@@ -449,6 +450,19 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 	
+	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
+	{
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		         "Building of user header failed\n");
+		n = hip_sendto(msg, src);
+		if(n < 0){
+			HIP_ERROR("hip_sendto() failed.\n");
+			err = -1;
+		}
+		goto out_err;
+	}
+	
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
 		 -1, "Opp HIT conversion failed\n");
@@ -518,6 +532,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 #endif
 	
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
+		hip_ipdb_add(&entry->peer_ip);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL);
 		HIP_DEBUG("Unblock returned %d\n", err);

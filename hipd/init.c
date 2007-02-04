@@ -69,6 +69,8 @@ int hipd_init(int flush_ipsec)
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
 
+	HIP_IFEL(hip_ipdb_clear(), -1, "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
+
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
 	HIP_IFE(init_random_seed(), -1);

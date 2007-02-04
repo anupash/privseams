@@ -53,6 +53,9 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 3);
 	gtk_widget_show(w);
 	widget_set(ID_NH_HIT, w);
+	gtk_tooltips_set_tip(widget(ID_TOOLTIPS), w,
+                         lang_get("nhdlg-tt-hit"),
+                         lang_get("nhdlg-tt-hit-priv"));
 
 	hb = gtk_hbox_new(FALSE, 1);
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 3);
@@ -87,6 +90,9 @@ int nhdlg_create_content(void)
 	exp = gtk_expander_new(lang_get("nhdlg-advanced"));
 	gtk_box_pack_start(vb, exp, FALSE, TRUE, 2);
 	gtk_widget_show(exp);
+	widget_set(ID_NH_EXPANDER, exp);
+	g_signal_connect(exp, "activate", G_CALLBACK(button_event), IDB_NH_EXPANDER);
+	g_signal_connect(exp, "check-resize", G_CALLBACK(button_event), IDB_NH_EXPANDER);
 
 	vb2 = gtk_vbox_new(FALSE, 2);
 	gtk_container_add(exp, vb2);
