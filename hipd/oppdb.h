@@ -17,6 +17,7 @@
 #include "hashtable.h"
 #include "builder.h"
 #include "util.h"
+#include "oppipdb.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)

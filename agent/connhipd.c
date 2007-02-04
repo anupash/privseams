@@ -121,13 +121,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 	if (type == HIP_AGENT_PING_REPLY)
 	{
 		term_print("Received ping reply from daemon. Connection to daemon established.\n");
-		gui_set_info("Connection do daemon established.");
+		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
 	else if (type == HIP_DAEMON_QUIT)
 	{
 		term_print("Daemon quit. Waiting daemon to wake up again...\n");
-		gui_set_info("Connection do daemon lost.");
+		gui_set_info(lang_get("gui-info-001"));
 		hip_agent_connected = 0;
 	}
 	else if (type == HIP_ADD_DB_HI)

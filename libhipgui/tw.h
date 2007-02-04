@@ -47,6 +47,7 @@ int tw_create_rgroup(void);
 void tw_clear(void);
 void tw_clear_remote(void);
 void tw_set_mode(int);
+int tw_get_mode(void);
 void tw_set_remote_info(char *);
 void tw_set_remote_rgroup_info(HIT_Group *);
 void tw_set_local_info(GtkWidget *, char *);
@@ -56,6 +57,7 @@ void tw_cancel(void);
 void tw_delete(void);
 int twl_apply(void);
 void twl_cancel(void);
+void *tw_get_curitem(void);
 
 
 /*! @} addtogroup libhipgui */

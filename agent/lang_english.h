@@ -77,6 +77,8 @@ char *lang_english[] =
 	"nhdlg-g-localhit",			"Local HIT:",
 	"nhdlg-g-type",				"Type:",
 	"nhdlg-g-lightweight",		"Lightweight:",
+	"nhdlg-tt-hit",				"The fingerprint (HIT, Host Identity Tag) of the remote host.",
+	"nhdlg-tt-hit-priv",		"HIT (Host Identity Tag) identifies hosts from each other.",
 
 	/* New group dialog. */
 	"ngdlg-name",				"Name:",
@@ -125,6 +127,11 @@ char *lang_english[] =
 	/* General message dialog. */
 	"msgdlg-button-ok",			"OK",
 	"msgdlg-button-cancel",		"Cancel",
+
+	/* GUI info (status bar) strings. */
+	"gui-info-000",				"HIP service available on this computer.",
+	"gui-info-001",				"HIP service unavailable.",
+	"gui-info-002",				"HIP GUI started.",
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
