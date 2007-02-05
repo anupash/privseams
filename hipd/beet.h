@@ -46,6 +46,7 @@
 extern int  hip_nat_status;
 struct rtnl_handle;
 
+#if 0
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
 	struct list_head     next;
@@ -65,6 +66,7 @@ struct hip_xfrm_state {
 };
 
 typedef struct hip_xfrm_state hip_xfrm_t;
+#endif
 
 void hip_beetdb_hold_entry(void *entry);
 void hip_beetdb_put_entry(void *entry);
