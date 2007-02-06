@@ -73,7 +73,7 @@ int gui_init(void)
 	gtk_widget_hide(w);
 	widget_set(ID_LTOOLWND, w);
 
-	/* Create accept-dialog. */
+	/* Create new hit -dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-newhit"), NULL, GTK_DIALOG_MODAL,
 	                                lang_get("nhdlg-button-accept"), GTK_RESPONSE_YES,
 	                                lang_get("nhdlg-button-drop"), GTK_RESPONSE_NO, NULL);

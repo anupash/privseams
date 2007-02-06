@@ -36,6 +36,8 @@
 #include "state.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
+#include "oppipdb.h"
+
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
