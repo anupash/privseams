@@ -144,9 +144,9 @@
 #define HIP_PARAM_ECHO_RESPONSE   63425
 #define HIP_PARAM_FROM_NAT        63998
 #define HIP_PARAM_VIA_RVS_NAT     64002
-#define HIP_PARAM_FROM            65300
-#define HIP_PARAM_RVS_HMAC        65320
-#define HIP_PARAM_VIA_RVS         65500
+#define HIP_PARAM_FROM            65498
+#define HIP_PARAM_RVS_HMAC        65500
+#define HIP_PARAM_VIA_RVS         65502
 /** Defines the maximum parameter type value.
  * @note exclusive
  */
