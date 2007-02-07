@@ -44,12 +44,13 @@ char *lang_finnish[] =
 	
 	"menu-tools",				"Työkalut",
 	"menu-tools-runapp",		"Käynnistä",
-	"menu-tools-newgroup",		"Uusi ryhmä",
+	"menu-tools-newgroup",		"Luo uusi ryhmä",
 	"menu-tools-addhit",		"Lisää uusi HIT",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"Uusi ryhmä",
-	"tb-newgroup-tooltip",		"Luo uusi ryhmä",
+	"tb-newgroup-tooltip",		"Luo uusi ryhmä\n"
+								"Ryhmät auttavat HIT:en järjestelyssä ja hallinnassa.",
 	"tb-runapp",				"Käynnistä",
 	"tb-runapp-tooltip",		"Käynnistä uusi sovellus käyttäen HIP kirjastoja",
 	"tb-newhit",				"Uusi HIT",

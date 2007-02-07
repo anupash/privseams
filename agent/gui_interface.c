@@ -32,7 +32,7 @@ int check_hit(HIT_Remote *hit, int inout)
 	{
 		HIP_DEBUG("Found HIT from database.\n");
 
-		if (fhit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
+		if (fhit->g->accept == HIT_ACCEPT) err = 0;
 		else err = -1;
 		memcpy(hit, fhit, sizeof(HIT_Remote));
 
@@ -50,9 +50,9 @@ int check_hit(HIT_Remote *hit, int inout)
 	if (err == 0)
 	{
 		HIP_DEBUG("Adding new remote HIT to database with type %s.\n",
-		          hit->g->type == HIT_DB_TYPE_ACCEPT ? "accept" : "deny");
+		          hit->g->accept == HIT_ACCEPT ? "accept" : "deny");
 		hit_db_add(hit->name, &hit->hit, hit->url, hit->port, hit->g, 0);
-		if (hit->g->type == HIT_DB_TYPE_ACCEPT) err = 0;
+		if (hit->g->accept == HIT_ACCEPT) err = 0;
 		else err = -1;
 	}
 	else
