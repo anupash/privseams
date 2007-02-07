@@ -448,6 +448,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_HMAC,
                         HIP_PARAM_HMAC,
                         HIP_PARAM_HMAC2,
+			HIP_PARAM_RVS_HMAC,
                         HIP_PARAM_HOST_ID,
                         HIP_PARAM_LOCATOR,
                         HIP_PARAM_NOTIFICATION,
