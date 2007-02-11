@@ -25,6 +25,7 @@ int check_hit(HIT_Remote *hit, int inout)
 	/* Variables. */
 	HIT_Remote *fhit;
 	int err = 0;
+	char str[128];
 
 	fhit = hit_db_find(NULL, &hit->hit);
 
@@ -58,6 +59,9 @@ int check_hit(HIT_Remote *hit, int inout)
 	else
 	{
 		HIP_DEBUG("User dropped new HIT, not adding to database, denie the packet.\n");
+		print_hit_to_buffer(str, &hit->hit);
+		hit->g = hit_db_find_rgroup(" deny");
+		if (hit->g) hit_db_add(str, &hit->hit, "none", "0", hit->g, 0);
 		err = -1;
 	}
 

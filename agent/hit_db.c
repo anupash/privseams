@@ -214,8 +214,11 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_n++;
 
 	/* Then call GUI to show new HIT. */
-	HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
-	gui_add_remote_hit(r->name, group->name);
+	if (group->name[0] != ' ')
+	{
+		HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+		gui_add_remote_hit(r->name, group->name);
+	}
 
 	HIP_DEBUG("%d items in database.\n", remote_db_n);
 
@@ -407,6 +410,7 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
+	if (g->name[0] == ' ' || !g->l) return (0);
 	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->accept, g->lightweight);
 	
 	return (0);
@@ -444,6 +448,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
+	if (r->g->name[0] == ' ') return (0);
 	print_hit_to_buffer(hit, &r->hit);
 	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
 	        "x", r->port, r->g->name);
@@ -657,10 +662,12 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	group_db_last = g;
 	group_db_n++;
 
-	HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
-
 	/* Tell GUI to show new group item. */
-	gui_add_rgroup(g);
+	if (g->name[0] != ' ')
+	{
+		HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
+		gui_add_rgroup(g);
+	}
 	err = g;
 
 out_err:

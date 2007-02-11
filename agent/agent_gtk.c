@@ -154,6 +154,7 @@ int main(int argn, char *argv[])
 	/* Initialize database. */
 	HIP_DEBUG("##### 2. Initializing database...\n");
 	HIP_IFEL(hit_db_init(str_var_get("db-file")), -1, "Failed to load agent database!\n");
+	hit_db_add_rgroup(" deny", NULL, HIT_DENY, 0);
 
 	/* Initialize connection to HIP daemon. */
 	HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
