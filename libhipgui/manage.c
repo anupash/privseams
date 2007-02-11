@@ -332,10 +332,10 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 		hit->g = group;
 		ps = gtk_entry_get_text(widget(ID_NH_NAME));
 		NAMECPY(hit->name, ps);
-		ps = gtk_entry_get_text(widget(ID_NH_URL));
-		URLCPY(hit->url, ps);
-		ps = gtk_entry_get_text(widget(ID_NH_PORT));
-		URLCPY(hit->port, ps);
+//		ps = gtk_entry_get_text(widget(ID_NH_URL));
+		URLCPY(hit->url, "none");
+//		ps = gtk_entry_get_text(widget(ID_NH_PORT));
+		URLCPY(hit->port, "0");
 		/* If HIT added manually. */
 		if (inout == 2)
 		{
