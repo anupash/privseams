@@ -115,14 +115,15 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	return err;
 }
 
-int hip_send_daemon_info(const struct hip_common *msg) {
-#if 0
+int hip_send_daemon_info(const struct hip_common *msg, int send_only) {
   	int err = 0, n, len, hip_user_sock = 0;
 	struct sockaddr_un user_addr;
 	socklen_t alen;
+
+	if (!send_only)
+	  return hip_send_recv_daemon_info(msg);
+	  
 	
-  	// return hip_send_recv_daemon_info(msg);
-  
   	// do not call send_recv function here,
   	// since this function is called at several other places
 	// TODO: copy send_recv function's recvfrom to hip_recv_daemon_info()
@@ -148,16 +149,12 @@ int hip_send_daemon_info(const struct hip_common *msg) {
 		err = -1;
 		goto out_err;
 	}
-#endif
-	return hip_send_recv_daemon_info(msg);
 
-#if 0
  out_err:
 	if (hip_user_sock)
 		close(hip_user_sock);
 
 	return err;
-#endif
 }
 
 int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
