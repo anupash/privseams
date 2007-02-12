@@ -450,9 +450,36 @@ int main(int argc, char *argv[]) {
 					HIP_DEBUG("Received accepted I1/R1 packet from agent.\n");
 					hip_receive_control_packet(emsg, src_addr, dst_addr, msg_info, 0);
 				}
-				else
+				else if (emsg && src_addr && dst_addr && msg_info)
 				{
-					HIP_DEBUG("Received rejected I1/R1 packet from agent.\n");
+					hip_opp_block_t *entry;
+					struct hip_common *message = NULL;
+					int err = 0, n;
+					
+					HIP_DEBUG("Received rejected R1 packet from agent.\n");
+					
+					/** @todo Make this to go trough whole oppdb.
+					 * There might me multiple connections to same host. */
+					entry = hip_oppdb_get_hadb_entry(&emsg->hitr, src_addr);
+				
+					if (entry)
+					{
+						HIP_DEBUG("Sending rejection to opportunistic library.\n");
+						HIP_IFE(!(message = hip_msg_alloc()), -1);
+						HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
+								"build user header failed\n");
+						n = 1;
+						HIP_IFE(hip_build_param_contents(message, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
+						
+						n = hip_sendto(message, &entry->caller);
+						if (n < 0)
+						{
+							HIP_ERROR("hip_sendto() failed.\n");
+	//						err = -1;
+	//						goto out_err;
+						}
+						hip_oppdb_entry_clean_up(entry);
+					}
 				}
 			}
 /*			else if (msg_type == HIP_AGENT_REJECT)

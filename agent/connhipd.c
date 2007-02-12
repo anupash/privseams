@@ -188,7 +188,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		HIP_IFEL(!emsg, -1, "Could not get msg parameter!\n");
 
 		HIP_HEXDUMP("msg->hits: ", &emsg->hits, 16);
-		HIP_HEXDUMP("msg->hitr: ", &emsg->hits, 16);
+		HIP_HEXDUMP("msg->hitr: ", &emsg->hitr, 16);
 
 		/* Find out, which of the HITs in the message is local HIT. */
 		l = hit_db_find_local(NULL, &emsg->hits);
@@ -243,7 +243,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
 		}
-		else
+		else if (type == HIP_R1)
 		{
 			HIP_DEBUG("Message rejected.\n");
 			n = 1;
@@ -252,6 +252,10 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
+		}
+		else
+		{
+			HIP_DEBUG("Message rejected.\n");
 		}
 	}
 
