@@ -817,7 +817,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	local_db_last = h;
 	local_db_n++;
 
-	if (group_db_n < 1)
+//	if (group_db_n < 2)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
 		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_ACCEPT, 0);
