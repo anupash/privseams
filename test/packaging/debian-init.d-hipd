@@ -2,8 +2,8 @@
 # /etc/init.d/hipd: start and stop the HIP daemon
 
 HIPD_OPTS="-b"
-PIDFILE=/var/run/hipd.pid
-MYPID=`pidof -o $$ hipd`
+#PIDFILE=/var/run/hipd.pid
+PID=`pidof -o $$ hipd`
 
 set -e
 
@@ -18,9 +18,9 @@ fi
 stop_hipd() {
     # Ensure that we don't try to kill init.d script itself
     #start-stop-daemon --stop --quiet --oknodo --retry 30
-    if [ $MYPID ]
+    if [ $PID ]
     then
-	kill `pidof -o $$ hipd`
+	kill $1 $PID
     fi
 }
 
@@ -44,7 +44,8 @@ case "$1" in
 
   restart)
         echo -n "Restarting hipd"
-	stop_hipd
+        # Daemon waits N seconds for closing of connections - just kill it
+	stop_hipd -KILL
 	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
 	echo "."
 	;;
