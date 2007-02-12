@@ -279,10 +279,11 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 	}
 }
 
-inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
-					  struct in6_addr *peer_hit,
-					  const struct in6_addr *local_hit,
-					  int *fallback)
+int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
+				   struct in6_addr *peer_hit,
+				   const struct in6_addr *local_hit,
+				   int *fallback,
+				   int *reject)
 {
 	struct hip_common *msg = NULL;
 	struct in6_addr *hit_recv = NULL;
@@ -291,6 +292,7 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	int ret = 0;
 
 	*fallback = 1;
+	*reject = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
@@ -319,6 +321,12 @@ inline int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("peer_hit", peer_hit);
 		*fallback = 0;
+	}
+
+        ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
+	if (ptr) {
+		HIP_DEBUG("Connection is to be rejected\n");
+		*reject = 1;
 	}
 	
  out_err:
@@ -471,7 +479,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	/* Try opportunistic base exchange to retrieve peer's HIT */
 	
 	if (is_peer) {
-		int fallback;
+		int fallback, reject;
 		/* Request a HIT of the peer from hipd. This will possibly
 		   launch an I1 with NULL HIT that will block until R1 is
 		   received. Called e.g. in connect() or sendto(). If
@@ -482,8 +490,15 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 							&dst_hit.sin6_addr,
 							&src_hit.sin6_addr,
-							&fallback),
+							&fallback,
+							&reject),
 			 -1, "Request from hipd failed\n");
+		if (reject) {
+			HIP_DEBUG("Connection should be rejected\n");
+			err = -1;
+			goto out_err;
+		}
+
 		if (fallback) {
 			HIP_DEBUG("Peer does not support HIP, fallback\n");
 			goto out_err;
