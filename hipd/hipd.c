@@ -438,7 +438,10 @@ int main(int argc, char *argv[]) {
 				struct in6_addr *src_addr, *dst_addr;
 				hip_portpair_t *msg_info;
 				void *reject;
-
+				hip_opp_block_t *entry;
+				struct hip_common *message = NULL;
+				int err = 0, n;
+					
 				emsg = hip_get_param_contents(hipd_msg, HIP_PARAM_ENCAPS_MSG);
 				src_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_SRC_ADDR);
 				dst_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_DST_ADDR);
@@ -452,34 +455,30 @@ int main(int argc, char *argv[]) {
 				}
 				else if (emsg && src_addr && dst_addr && msg_info)
 				{
-					hip_opp_block_t *entry;
-					struct hip_common *message = NULL;
-					int err = 0, n;
-					
 					HIP_DEBUG("Received rejected R1 packet from agent.\n");
 					
 					/** @todo Make this to go trough whole oppdb.
 					 * There might me multiple connections to same host. */
 					entry = hip_oppdb_get_hadb_entry(&emsg->hitr, src_addr);
 				
-					if (entry)
+					if (!entry)
+						goto gui_cont;
+
+					HIP_DEBUG("Sending rejection to opportunistic library.\n");
+					HIP_IFE(!(message = hip_msg_alloc()), -1);
+					HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
+						 "build user header failed\n");
+					n = 1;
+					HIP_IFE(hip_build_param_contents(message, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
+					
+					n = hip_sendto(message, &entry->caller);
+					if (n < 0)
 					{
-						HIP_DEBUG("Sending rejection to opportunistic library.\n");
-						HIP_IFE(!(message = hip_msg_alloc()), -1);
-						HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
-								"build user header failed\n");
-						n = 1;
-						HIP_IFE(hip_build_param_contents(message, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
-						
-						n = hip_sendto(message, &entry->caller);
-						if (n < 0)
-						{
-							HIP_ERROR("hip_sendto() failed.\n");
-	//						err = -1;
-	//						goto out_err;
-						}
-						hip_oppdb_entry_clean_up(entry);
+						HIP_ERROR("hip_sendto() failed.\n");
+						//						err = -1;
+						//						goto out_err;
 					}
+					hip_oppdb_entry_clean_up(entry);
 				}
 			}
 /*			else if (msg_type == HIP_AGENT_REJECT)
@@ -494,6 +493,7 @@ int main(int argc, char *argv[]) {
 				}
 			}*/
 		}
+	gui_cont:
  
 		if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
 			/* Receiving of a message from firewall socket. */
