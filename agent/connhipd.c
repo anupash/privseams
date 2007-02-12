@@ -246,6 +246,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 		else
 		{
 			HIP_DEBUG("Message rejected.\n");
+			n = 1;
+			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
+			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
+			                    " (%d: %s).\n", errno, strerror(errno));
+			HIP_DEBUG("Reply sent successfully.\n");
 		}
 	}
 

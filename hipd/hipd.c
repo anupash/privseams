@@ -437,16 +437,22 @@ int main(int argc, char *argv[]) {
 				struct hip_common *emsg;
 				struct in6_addr *src_addr, *dst_addr;
 				hip_portpair_t *msg_info;
+				void *reject;
 
 				emsg = hip_get_param_contents(hipd_msg, HIP_PARAM_ENCAPS_MSG);
 				src_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_SRC_ADDR);
 				dst_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_DST_ADDR);
 				msg_info = hip_get_param_contents(hipd_msg, HIP_PARAM_PORTPAIR);
+				reject = hip_get_param(hipd_msg, HIP_PARAM_AGENT_REJECT);
 
-				if (emsg && src_addr && dst_addr && msg_info)
+				if (emsg && src_addr && dst_addr && msg_info && !reject)
 				{
 					HIP_DEBUG("Received accepted I1/R1 packet from agent.\n");
 					hip_receive_control_packet(emsg, src_addr, dst_addr, msg_info, 0);
+				}
+				else
+				{
+					HIP_DEBUG("Received rejected I1/R1 packet from agent.\n");
 				}
 			}
 /*			else if (msg_type == HIP_AGENT_REJECT)
