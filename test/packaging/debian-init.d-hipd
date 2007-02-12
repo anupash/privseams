@@ -1,10 +1,11 @@
 #! /bin/sh
 # /etc/init.d/hipd: start and stop the HIP daemon
 
-set -e
-
 HIPD_OPTS="-b"
 PIDFILE=/var/run/hipd.pid
+MYPID=`pidof -o $$ hipd`
+
+set -e
 
 test -x /usr/sbin/hipd || exit 0
 
@@ -14,6 +15,15 @@ fi
 
 #export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
+stop_hipd() {
+    # Ensure that we don't try to kill init.d script itself
+    #start-stop-daemon --stop --quiet --oknodo --retry 30
+    if [ $MYPID ]
+    then
+	kill `pidof -o $$ hipd`
+    fi
+}
+
 case "$1" in
   start)
         echo -n "Starting hipd"
@@ -22,12 +32,11 @@ case "$1" in
 	;;
   stop)
         echo -n "Stopping hipd"
-	start-stop-daemon --stop --quiet --oknodo --name hipd
+	stop_hipd
         echo "."
 	;;
 
   reload|force-reload)
-	check_for_no_start
         echo -n "Reloading hipd"
 	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd
 	echo "."
@@ -35,8 +44,8 @@ case "$1" in
 
   restart)
         echo -n "Restarting hipd"
-	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile /var/run/hipd.pid
-	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd -- $HIPD_OPTS
+	stop_hipd
+	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
 	echo "."
 	;;
 
