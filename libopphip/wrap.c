@@ -106,8 +106,8 @@ void hip_initialize_db_when_not_exist()
 
 	srand(getpid());
 	
-//	hip_set_logtype(LOGTYPE_SYSLOG);
-//	hip_set_logfmt(LOGFMT_LONG);
+	hip_set_logtype(LOGTYPE_SYSLOG);
+	hip_set_logfmt(LOGFMT_LONG);
 
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
@@ -324,7 +324,8 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	}
 
 	ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-	if (ptr) {
+	if (ptr)
+	{
 		HIP_DEBUG("Connection is to be rejected\n");
 		*reject = 1;
 	}
