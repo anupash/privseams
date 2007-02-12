@@ -28,13 +28,13 @@ case "$1" in
 
   reload|force-reload)
 	check_for_no_start
-        echo -n "Reloading OpenBSD Secure Shell server's configuration"
+        echo -n "Reloading hipd"
 	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipd -name hipd
 	echo "."
 	;;
 
   restart)
-        echo -n "Restarting OpenBSD Secure Shell server: hipd"
+        echo -n "Restarting hipd"
 	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile /var/run/hipd.pid
 	start-stop-daemon --start --quiet --pidfile /var/run/hipd.pid --exec /usr/sbin/hipd -- $HIPD_OPTS
 	echo "."
