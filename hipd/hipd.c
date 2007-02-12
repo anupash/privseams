@@ -456,6 +456,7 @@ int main(int argc, char *argv[]) {
 					HIP_IFEL(hip_for_each_opp(hip_handle_opp_reject, src_addr), 0, 
 					         "for_each_ha err.\n");
 
+					hip_delete_hit_sp_pair(&emsg->hits, &emsg->hitr, IPPROTO_ESP, 1);
 				}
 			}
 /*			else if (msg_type == HIP_AGENT_REJECT)
