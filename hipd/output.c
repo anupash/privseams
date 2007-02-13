@@ -129,7 +129,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
- 	int err = 0,dh_size,written, mask;
+ 	int err = 0,dh_size,written, mask = 0;
  	u8 *dh_data = NULL;
 	int * service_list = NULL;
 	int service_count = 0;
