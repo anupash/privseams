@@ -201,11 +201,6 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	/* Check that group is not NULL and set group. */
 	if (group == NULL)
 	{
-		if (group_db_n < 1)
-		{
-			//HIP_DEBUG("Group database emty, adding default group.\n");
-			//hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
-		}
 		group = group_db;
 	}
 	r->g = group;
@@ -219,8 +214,11 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_n++;
 
 	/* Then call GUI to show new HIT. */
-	HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
-	gui_add_remote_hit(r->name, group->name);
+	if (group->name[0] != ' ')
+	{
+		HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+		gui_add_remote_hit(r->name, group->name);
+	}
 
 	HIP_DEBUG("%d items in database.\n", remote_db_n);
 
@@ -412,7 +410,8 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
-	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->type, g->lightweight);
+	if (g->name[0] == ' ' || !g->l) return (0);
+	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->accept, g->lightweight);
 	
 	return (0);
 }
@@ -449,6 +448,7 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
+	if (r->g->name[0] == ' ') return (0);
 	print_hit_to_buffer(hit, &r->hit);
 	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
 	        "x", r->port, r->g->name);
@@ -538,7 +538,7 @@ int hit_db_parse_hit(char *buf)
 	HIT_Remote item;
 	struct in6_addr slhit, srhit;
 	int err = 0, n;
-	char type[128], lhit[128], group[320];
+	char lhit[128], group[320];
 
 	/* Parse values from current line. */
 	n = sscanf(buf, "%s \"%64[^\"]\" \"%1024[^\"]\" \"%1024[^\"]\" \"%64[^\"]\"",
@@ -572,19 +572,19 @@ int hit_db_parse_rgroup(char *buf)
 	HIT_Group *g;
 	int err = 0, n;
 	char name[MAX_NAME_LEN + 1], hit[128];
-	int type, lightweight;
+	int accept, lightweight;
 	
 	/* Parse values from current line. */
 	n = sscanf(buf, "\"%64[^\"]\" \"%64[^\"]\" %d %d",
-	           name, hit, &type, &lightweight);
+	           name, hit, &accept, &lightweight);
 	HIP_IFEL(n != 4, -1, "Broken line in database file: %s\n", buf);
 	l = hit_db_find_local(hit, NULL);
 	HIP_IFEL(!l, -1, "Failed to find local HIT for remote group!\n");
-	g = hit_db_add_rgroup(name, l, type, lightweight);
-	if (g && strncmp("default", name, MAX_NAME_LEN) == 0)
+	g = hit_db_add_rgroup(name, l, accept, lightweight);
+	if (g && strncmp(lang_get("default-group-name"), name, MAX_NAME_LEN) == 0)
 	{
 		g->l = l;
-		g->type = type;
+		g->accept = accept;
 		g->lightweight = lightweight;
 	}
 
@@ -630,7 +630,7 @@ out_err:
 	        to old one. Returns NULL on errors.
 */
 HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
-                             int type, int lightweight)
+                             int accept, int lightweight)
 {
 	/* Variables. */
 	HIT_Group *g, *err = NULL;
@@ -651,7 +651,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	memset(g, 0, sizeof(HIT_Group));
 	NAMECPY(g->name, name);
 	g->l = lhit;
-	g->type = type;
+	g->accept = accept;
 	g->lightweight = lightweight;
 	g->remotec = 0;
 
@@ -662,10 +662,12 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	group_db_last = g;
 	group_db_n++;
 
-	HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
-
 	/* Tell GUI to show new group item. */
-	gui_add_rgroup(g);
+	if (g->name[0] != ' ')
+	{
+		HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
+		gui_add_rgroup(g);
+	}
 	err = g;
 
 out_err:
@@ -710,8 +712,8 @@ int hit_db_del_rgroup(char *name)
 	free(g);
 	group_db_n--;
 
-	/* If this was last group, re-create default group. */
-	if (group_db_n < 1) hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
+	/* If this was last group, (re-)create default group. */
+	if (group_db_n < 1) hit_db_add_rgroup(lang_get("default-group-name"), local_db, HIT_ACCEPT, 0);
 	
 out_err:
 	return (err);
@@ -815,10 +817,10 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	local_db_last = h;
 	local_db_n++;
 
-	if (group_db_n < 1)
+//	if (group_db_n < 2)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
-		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_DB_TYPE_ACCEPT, 0);
+		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_ACCEPT, 0);
 	}
 
 	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);

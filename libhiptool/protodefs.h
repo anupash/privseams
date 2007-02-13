@@ -134,6 +134,9 @@
 #define HIP_PARAM_SRC_ADDR				32789
 #define HIP_PARAM_DST_ADDR				32790
 
+#define HIP_PARAM_AGENT_REJECT			32791
+
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505

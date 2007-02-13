@@ -206,7 +206,7 @@ void tw_set_remote_rgroup_info(HIT_Group *g)
 	i = find_from_cb(g->l->name, widget(ID_TWR_LOCAL));
 	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), i);
 
-	if (g->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+	if (g->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
 	else ps = lang_get("group-type-deny");
 	i = find_from_cb(ps, widget(ID_TWR_TYPE1));
 	gtk_combo_box_set_active(widget(ID_TWR_TYPE1), i);
@@ -284,7 +284,7 @@ void tw_set_rgroup_info(char *group_name)
 		{
 			gtk_entry_set_text(widget(ID_TWG_NAME), group->name);
 			gtk_combo_box_set_active(widget(ID_TWG_LOCAL), i);
-			if (group->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+			if (group->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
 			else ps = lang_get("group-type-deny");
 			i = find_from_cb(ps, widget(ID_TWG_TYPE1));
 			gtk_combo_box_set_active(widget(ID_TWG_TYPE1), i);
@@ -435,8 +435,8 @@ void tw_apply(void)
 			NAMECPY(ud.new_name, str);
 			NAMECPY(g->name, str);
 			ps = gtk_combo_box_get_active_text(widget(ID_TWG_TYPE1));
-			if (strcmp(lang_get("hit-type-accept"), ps) == 0) g->type = HIT_DB_TYPE_ACCEPT;
-			else g->type = HIT_DB_TYPE_DENY;
+			if (strcmp(lang_get("group-type-accept"), ps) == 0) g->accept = HIT_ACCEPT;
+			else g->accept = HIT_DENY;
 			ud.depth = 1;
 			ud.indices_first = -1;
 			HIP_DEBUG("Updating remote group %s -> %s.\n", ud.old_name, ud.new_name);
