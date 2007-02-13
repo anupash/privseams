@@ -44,7 +44,8 @@ char *lang_english[] =
 	
 	"menu-tools",				"Tools",
 	"menu-tools-runapp",		"Run",
-	"menu-tools-newgroup",		"New group",
+	"menu-tools-newgroup",		"Create new group\n"
+								"Groups help in ordering and managing HIT's.",
 	"menu-tools-addhit",		"Add new HIT",
 
 	/* Toolbar items. */

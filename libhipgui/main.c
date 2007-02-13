@@ -153,6 +153,9 @@ int gui_main(void)
 		term_client_init();
 	}
 
+	/* Close all groups as default. */
+	gtk_tree_view_collapse_all(widget(ID_RLISTVIEW));
+
 	gtk_main();
 
 	gui_quit();

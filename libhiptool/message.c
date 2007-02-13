@@ -170,6 +170,8 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
 	unsigned int len;
 	
+	memset(saddr, 0, sizeof(*saddr));
+
 	len = sizeof(*saddr);
 	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
 

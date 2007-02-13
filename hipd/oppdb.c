@@ -225,7 +225,7 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -234,11 +234,22 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 		 "build user header failed\n");
 	if (hit) {
 		HIP_IFEL(hip_build_param_contents(message, hit,
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
+		                                  HIP_PARAM_HIT,
+		                                  sizeof(struct in6_addr)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
 	}
 	
+	if (reject)
+	{
+		n = 1;
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+		HIP_IFEL(hip_build_param_contents(message, &n,
+		                                  HIP_PARAM_AGENT_REJECT,
+		                                  sizeof(n)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+	}
+
 	n = hip_sendto(message, app_id);
 	if(n < 0){
 	  HIP_ERROR("hip_sendto() failed.\n");
@@ -347,7 +358,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "Failed to find opp entry by hit\n");
 
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
-	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
 	// we should still get entry after delete old phit HA
 	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -399,7 +410,7 @@ int hip_receive_opp_r1_in_established(struct hip_common *msg,
 	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
 		 "Failed to find opp entry by hit\n");
 
-	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
  
 out_err:
@@ -496,12 +507,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
-		goto out_err;
 	}
 	
  send_i1:
@@ -534,12 +539,32 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		hip_ipdb_add(&entry->peer_ip);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
-		err = hip_opp_unblock_app(&entry->caller, NULL);
+		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);
 		err = hip_oppdb_entry_clean_up(entry);
 	}
 	
  out_err:
+	return err;
+}
+
+
+
+int hip_handle_opp_reject(hip_opp_block_t *entry, void *data)
+{
+	int err = 0;
+	struct in6_addr *resp_ip = data;
+	
+	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
+
+	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
+	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
+	HIP_DEBUG("Rejecting blocked opp entry\n");
+	err = hip_opp_unblock_app(&entry->caller, NULL, 1);
+	HIP_DEBUG("Unblock returned %d\n", err);
+	err = hip_oppdb_entry_clean_up(entry);
+	
+out_err:
 	return err;
 }
 

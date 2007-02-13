@@ -585,7 +585,7 @@ void *hip_get_param(const struct hip_common *msg,
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
 
-	HIP_DEBUG("searching for type %d\n", param_type);
+	_HIP_DEBUG("searching for type %d\n", param_type);
 
        /** @todo Optimize: stop when next parameter's type is greater than the
 	   searched one. */
