@@ -307,7 +307,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 
 	/* send a response (assuming that it is written to the msg */
-	n = hip_sendto(msg, src);
+	if (src->sun_family == AF_FILE)
+		n = hip_sendto(msg, src);
 	if(n < 0){
 	  HIP_ERROR("hip_sendto() failed.\n");
 	  err = -1;
