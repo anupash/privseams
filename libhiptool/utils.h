@@ -72,18 +72,10 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 static inline void set_hit_prefix(struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
-	//printf("*************** %x\n", *hit);
 	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
-	//printf("*************** %x\n", hit_begin);
-	hit_begin &= HIP_HIT_TYPE_MASK_CLEAR;
-	//printf("*************** %x\n", hit_begin);
-	hit_begin = htonl(hit_begin);
-	hit_begin |= HIP_HIT_PREFIX;
-	//printf("*************** %x\n", hit_begin);
-	hit_begin = htonl(hit_begin);
-	//printf("*************** %x\n", hit_begin);
+	hit_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
+	hit_begin |= htonl(HIP_HIT_PREFIX);
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
-	//printf("*************** %x\n", *hit);
 }
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
