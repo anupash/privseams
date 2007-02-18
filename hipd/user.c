@@ -28,7 +28,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	int err = 0, msg_type, n = 0, len = 0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
-	int send_response = (src && src->sun_family == AF_FILE) ? 1 : 0;
+	int send_response = (src && src->sun_family == AF_FILE);
 
 	HIP_DEBUG("handling user msg: family=%d sender=%s\n",
 		  src->sun_family, &src->sun_path);
