@@ -225,7 +225,8 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int reject) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit,
+			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -239,8 +240,7 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int re
 		         "build param HIP_PARAM_HIT  failed\n");
 	}
 	
-	if (reject)
-	{
+	if (reject) {
 		n = 1;
 		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
 		HIP_IFEL(hip_build_param_contents(message, &n,
@@ -252,16 +252,15 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int re
 
 	n = hip_sendto(message, app_id);
 	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
+		HIP_ERROR("hip_sendto() failed.\n");
+		err = -1;
+		goto out_err;
 	}
  out_err:
 	if (message)
 		HIP_FREE(message);
 	return err;
 }
-
 
 hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 				   struct in6_addr *resp_addr)
