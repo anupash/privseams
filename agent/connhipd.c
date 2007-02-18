@@ -48,7 +48,7 @@ int connhipd_init(void)
 
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
-	strcpy(agent_addr.sun_path, tmpnam(NULL));
+	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
 
@@ -71,8 +71,10 @@ int connhipd_init(void)
 	return (0);
 
 out_err:
-	if (hip_agent_sock) close(hip_agent_sock);
-	if (msg != NULL) HIP_FREE(msg);
+	if (hip_agent_sock)
+		close(hip_agent_sock);
+	if (msg != NULL)
+		HIP_FREE(msg);
 
 	return err;
 }

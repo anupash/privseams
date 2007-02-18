@@ -85,11 +85,11 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  	HIP_DEBUG("hip_sendto() invoked.\n");
-	int n = 0;
-	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-	return n;
+        int n = 0;
+        HIP_DEBUG("hip_sendto() invoked.\n");
+        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+        return n;
 }
 
 /*int hip_sendto_firewall(const struct hip_common *msg){
@@ -496,8 +496,9 @@ int main(int argc, char *argv[]) {
 			{
 				HIP_DEBUG("Received ping from firewall\n");
 				memset(hipd_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
-				alen = sizeof(hip_firewall_addr);                    
+				hip_build_user_hdr(hipd_msg,
+						   HIP_FIREWALL_PING_REPLY, 0);
+				alen = sizeof(hip_firewall_addr);
 				n = hip_sendto(hipd_msg, &hip_firewall_addr);
 				if (n < 0)
 				{

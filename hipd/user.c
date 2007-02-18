@@ -22,18 +22,16 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, 
 			const struct sockaddr_un *src) {
-	hip_hit_t *hit;
-	hip_hit_t *src_hit, *dst_hit;
+	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
-	int err = 0;
-	int msg_type;
-	int n = 0;
+	int err = 0, msg_type, n = 0, len = 0;
 	hip_ha_t * server_entry = NULL;
-        extern struct addrinfo opendht_serving_gateway;
-        extern int hip_opendht_fqdn_sent;
-        extern int hip_opendht_hit_sent;
 	HIP_KEA * kea = NULL;
+	int send_response = (src && src->sun_family == AF_FILE) ? 1 : 0;
+
+	HIP_DEBUG("handling user msg: family=%d sender=%s\n",
+		  src->sun_family, &src->sun_path);
 
 	err = hip_check_userspace_msg(msg);
 	if (err) {
@@ -306,17 +304,23 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = -ESOCKTNOSUPPORT;
 	}
 
-	/* send a response (assuming that it is written to the msg */
-	if (src->sun_family == AF_FILE)
-		n = hip_sendto(msg, src);
-	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
-
-	}
-	HIP_DEBUG("mapping result sent ok\n");
-
  out_err:
+
+	if (send_response) {
+		if (err)
+			hip_set_msg_err(msg, 1);
+		/* send a response (assuming that it is written to the msg */
+		len = hip_get_msg_total_len(msg);
+		n = hip_sendto(msg, src);
+		if(n != len) {
+			HIP_ERROR("hip_sendto() failed.\n");
+			err = -1;
+		} else {
+			HIP_DEBUG("Response sent ok\n");
+		}
+	} else {
+		HIP_DEBUG("No response sent\n");
+	}
+
 	return err;
 }

@@ -70,7 +70,7 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
 #define HIP_HIT_TYPE_MASK_100   0x20010070
-#define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000
+#define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
 #define HIP_HIT_PREFIX_LEN      28     /* bits */
