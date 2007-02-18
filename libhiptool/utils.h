@@ -13,8 +13,19 @@
 #  include "kerncompat.h"
 #  include "sys/un.h"
 #  include "protodefs.h"
+#  include "stdlib.h"
 #endif
 
+#define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
+#define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
+
+static int hip_tmpname(char *fname) {
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
+	if (mktemp(fname) == NULL)
+		return -1;
+	else
+		return 0;
+} 
 
 /*
  * HIP header and parameter related constants and structures.
@@ -123,7 +134,6 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
-
 
 #endif /* _HIP_UTILS */
 
