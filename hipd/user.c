@@ -100,6 +100,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
+		send_response = 0;
 		err = hip_opp_get_peer_hit(msg, src);
 		if(err){
 			HIP_ERROR("get pseudo hit failed.\n");
