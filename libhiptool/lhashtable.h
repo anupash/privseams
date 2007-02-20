@@ -1,16 +1,31 @@
 #ifndef HIP_LHASHTABLE_H
 #define HIP_LHASHTABLE_H
-
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <openssl/bio.h>
+#include <openssl/crypto.h>
+#include <openssl/lhash.h>
 #include "list.h"
 #include "debug.h"
 
+#undef MIN_NODES
+#define MIN_NODES	16
+#define UP_LOAD		(2*LH_LOAD_MULT) /* load times 256  (default 2) */
+#define DOWN_LOAD	(LH_LOAD_MULT)   /* load times 256  (default 1) */
+
 // XX FIXME: HAS TO BE CONVERTED
+
+static LHASH *amih;
+static LHASH *tblhash=NULL;
+static uint reclength=37;
+
+
 struct hip_ht_common {
+	LHASH_NODE *b;
 	/** a pointer to memory area to be used as hashtable. */
+	
 	struct list_head *head;
-	/** spinlock. */
-	spinlock_t lock;
-	/** size (number of chains) of the hashtable. */
 	int hashsize;
 	/** offset of the struct list_head that links the elements. */
 	int offset;
@@ -29,20 +44,51 @@ struct hip_ht_common {
 	    the element structure. */
 	void *(*get_key)(void *entry);
 	/** name of the hashtable. */
+
+	unsigned int num_nodes;
+     	unsigned int num_alloc_nodes;
+     	unsigned int p;
+     	unsigned int pmax;
+	unsigned int error;
+     	unsigned long up_load; /* load times 256 */
+     	unsigned long down_load; /* load times 256 */
+    	unsigned long num_items;
+     	unsigned long num_expands;
+     	unsigned long num_expand_reallocs;
+     	unsigned long num_contracts;
+     	unsigned long num_contract_reallocs;
+     	unsigned long num_hash_calls;
+     	unsigned long num_comp_calls;
+     	unsigned long num_insert;
+     	unsigned long num_replace;
+     	unsigned long num_delete;
+     	unsigned long num_no_delete;
+     	unsigned long num_retrieve;
+     	unsigned long num_retrieve_miss;
+     	unsigned long num_hash_comps;
+	int comp;
+	
+	
 	char name[16];
 };
 
 typedef struct hip_ht_common HIP_HASHTABLE;
+/*typedef struct lhash_st HIP_LHASH;*/
 
-int hip_ht_init(HIP_HASHTABLE *ht);
-void hip_ht_uninit(HIP_HASHTABLE *ht);
+
+int hip_ht_init( HIP_HASHTABLE  *ht);
+void hip_ht_uninit( HIP_HASHTABLE *ht);
+
+void lh_insert1(HIP_HASHTABLE *ht, void *entry);
+static LHASH_NODE **getrn1( HIP_HASHTABLE *lh, const void *data, unsigned long *rhash);
+static void expand(HIP_HASHTABLE *lh);
+int hashfc(char *s);
 
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
-int hip_ht_add(HIP_HASHTABLE *ht, void *entry);
+int hip_ht_add(HIP_HASHTABLE *ht, void *data);
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
-
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 
-#endif
+#endif /* LHASHTABLE_H */
 

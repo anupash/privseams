@@ -7,28 +7,23 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+INCLUDES += -I../opendht
 
 include_HEADERS = hipconftool.h
 
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
-if HIP_OPENDHT
-INCLUDES += -I../opendht
-endif
+hipconf_LDADD =
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
-
-LDADD=
 if HIP_OPPORTUNISTIC
-LDADD += ../libopphip/.libs/libopphip.a
+hipconf_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-LDADD += ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
+hipconf_LDADD += ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
 
 if HIP_OPENDHT
-LDADD += ../opendht/.libs/libhipopendht.a
+hipconf_LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below

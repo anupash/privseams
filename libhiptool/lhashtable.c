@@ -15,7 +15,44 @@
  */
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 {
-  return NULL;
+	int j;
+	int recs,size,ind;
+	struct list_head *chain;
+	void *entry;
+	void *key_to_be_matched;
+	int hash;
+
+	hash = ht->hash(key, ht->hashsize);
+	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+	
+			
+		if (ht->num_items !=0)
+		{
+			 
+			for (j=0;j < ht->num_items;j++)
+			{
+				entry = hip_ht_get_content(void, chain, ht->offset);
+		
+			 	lh_retrieve(ht,&key);
+			  	ht->hold(entry);
+				HIP_UNLOCK_HT(ht);
+				return entry;
+
+			}
+
+			
+		}
+		else
+			{
+			/*	HIP_DEBUG("no of items: %d\n",ht->num_items);
+				HIP_DEBUG("no of key: %d\n",&key);
+				
+				HIP_DEBUG("no of items retrieved in the retrive function: %d\n",ht->num_retrieve);
+				HIP_DEBUG("no of deleted items after  insert : %d\n",ht->num_delete);*/
+				return NULL;
+			}
+
+		
 }
 
 /**
@@ -30,7 +67,32 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
  */
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 {
-  return NULL;
+	LHASH *conf;
+        char buf[256];
+        int i;
+	void *ret;
+     	LHASH_NODE *insert ,**rn1;
+     	
+	
+	LHASH *nm;
+	LHASH_NODE *newentry;
+	LHASH_NODE *oldentry;
+
+	
+	char *key;
+	char *key_to_be_matched1;
+	int hipcom;
+
+		nm=lh_new(NULL,NULL);
+		int hash = ht->hash(ht->get_key(entry), ht->hashsize);
+		_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+		HIP_LOCK_HT(ht);
+		lh_insert(nm,&entry);
+		ht=nm;
+		HIP_DEBUG("Entry inserted in HIP HT %d:\n",ht->num_items);
+		HIP_DEBUG("Inserting entry HASH Table sucessfull %d\n", nm->num_items);
+		
+		return 0;
 }
 
 /**
@@ -43,7 +105,11 @@ int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
  */
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
 {
-  return NULL;
+ 	
+	/*lh_del(hip_ht_get_list(entry, ht->offset));*/
+	/*lh_delete(ht, ht->offset);
+	ht->put(entry);
+	HIP_UNLOCK_HT(ht);*/
 }
 
 /**
@@ -66,7 +132,20 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
  */
 int hip_ht_init(HIP_HASHTABLE *ht)
 {
-  return NULL;
+  int i;
+	char *entry;
+	char *key;
+	char *key_to_be_matched;
+	int hipcom;
+	
+ 	if (ht->name)
+		HIP_DEBUG("Initializing hash table: %s\n",ht->name);
+	else
+		HIP_DEBUG("Initializing hash table\n");
+
+	ht=lh_new(ht->hash(key, ht->hashsize),ht->compare(key, key_to_be_matched));
+	return NULL;
+
 }
 
 /**
@@ -78,5 +157,13 @@ int hip_ht_init(HIP_HASHTABLE *ht)
  */
 void hip_ht_uninit(HIP_HASHTABLE *ht)
 {
-  return NULL;
+  int i;
+	struct list_head *item, *tmp;
+
+	for(i=0;i<ht->hashsize;i++) {
+		list_for_each_safe(item, tmp, &ht->b[i]) {
+			list_del(item);
+			ht->put(hip_ht_get_content(void, item, ht->offset));
+		}
+	}
 }
