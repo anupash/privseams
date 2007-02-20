@@ -31,13 +31,13 @@ endif
 
 if HIP_OPENDHT
 hipd_LDADD += ../opendht/.libs/libhipopendht.a
-hipd_SOURCES += pfkeyapi.c
-else
-hipd_SOURCES += xfrm.c
 endif
 
 if HIP_CORPORATE
 hipd_LDADD += ../libipsec/.libs/libipsec.a
+hipd_SOURCES += pfkeyapi.c
+else
+hipd_SOURCES += xfrm.c
 endif
 
 # KeyNotev2
