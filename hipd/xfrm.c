@@ -1,5 +1,7 @@
 #include "beet.h"
 
+#ifndef CONFIG_HIP_CORPORATE
+
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
  * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
@@ -514,3 +516,5 @@ int hip_setup_default_sp_prefix_pair() {
  out_err:
 	return err;
 }
+
+#endif /* ! CONFIG_HIP_CORPORATE */

@@ -11,33 +11,28 @@ include_HEADERS += bos.h input.h output.h icookie.h xfrm.h
 include_HEADERS += close.h hi3.h keymat.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h update.h
 include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths) -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = rvs.c update.c hipd.c keymat.c
 hipd_SOURCES += user.c hadb.c oppdb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
-hipd_SOURCES += escrow.c reg.c init.c maintenance.c accessor.c
+hipd_SOURCES += escrow.c reg.c init.c maintenance.c accessor.c pfkeyapi.c hi3.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 hipd_LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_HI3
-hipd_SOURCES += hi3.c
-INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
+LDADD += ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
 endif
 
 if HIP_OPENDHT
-hipd_LDADD += ../opendht/.libs/libhipopendht.a
+LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 if HIP_CORPORATE
-hipd_LDADD += ../libipsec/.libs/libipsec.a
-hipd_SOURCES += pfkeyapi.c
-else
-hipd_SOURCES += xfrm.c
+LDADD += ../libipsec/.libs/libipsec.a
 endif
 
 # KeyNotev2

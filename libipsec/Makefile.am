@@ -29,8 +29,8 @@ libipsec_la_SOURCES = \
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
-libipsec_la_LDFLAGS = -version-info 0:0:0
-libipsec_la_LIBADD = $(LEXLIB)
+#libipsec_la_LDFLAGS = -version-info 0:0:0
+#libipsec_la_LIBADD = $(LEXLIB)
 
 noinst_HEADERS = ipsec_strerror.h policy_parse.h
 
@@ -40,7 +40,7 @@ noinst_HEADERS = ipsec_strerror.h policy_parse.h
 #test_policy_priority_SOURCES = test-policy-priority.c
 #test_policy_priority_LDFLAGS = libipsec.la
 
-EXTRA_DIST = ${man3_MANS} test-policy.c
+#EXTRA_DIST = ${man3_MANS} test-policy.c
 
 DISTCLEANFILES = policy_parse.c policy_parse.h policy_token.c policy_token.h
 
