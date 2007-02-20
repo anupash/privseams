@@ -102,7 +102,7 @@ int nhdlg_create_content(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new(lang_get("nhdlg-url"));
+/*	w = gtk_label_new(lang_get("nhdlg-url"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
@@ -111,9 +111,9 @@ int nhdlg_create_content(void)
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
 	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
-	widget_set(ID_NH_URL, w);
+	widget_set(ID_NH_URL, w);*/
 
-	w = gtk_label_new(lang_get("nhdlg-port"));
+/*	w = gtk_label_new(lang_get("nhdlg-port"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
@@ -123,7 +123,7 @@ int nhdlg_create_content(void)
 	gtk_entry_set_max_length(w, 8);
 	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
-	widget_set(ID_NH_PORT, w);
+	widget_set(ID_NH_PORT, w);*/
 
 	frame = gtk_frame_new(NULL);
 	gtk_frame_set_label(frame, lang_get("nhdlg-g-info"));

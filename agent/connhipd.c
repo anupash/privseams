@@ -48,7 +48,7 @@ int connhipd_init(void)
 
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
-	strcpy(agent_addr.sun_path, tmpnam(NULL));
+	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
 
@@ -71,8 +71,10 @@ int connhipd_init(void)
 	return (0);
 
 out_err:
-	if (hip_agent_sock) close(hip_agent_sock);
-	if (msg != NULL) HIP_FREE(msg);
+	if (hip_agent_sock)
+		close(hip_agent_sock);
+	if (msg != NULL)
+		HIP_FREE(msg);
 
 	return err;
 }
@@ -188,7 +190,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		HIP_IFEL(!emsg, -1, "Could not get msg parameter!\n");
 
 		HIP_HEXDUMP("msg->hits: ", &emsg->hits, 16);
-		HIP_HEXDUMP("msg->hitr: ", &emsg->hits, 16);
+		HIP_HEXDUMP("msg->hitr: ", &emsg->hitr, 16);
 
 		/* Find out, which of the HITs in the message is local HIT. */
 		l = hit_db_find_local(NULL, &emsg->hits);
@@ -238,6 +240,16 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon, %d bytes.\n",
                       hip_get_msg_total_len(msg));
+			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
+			                    " (%d: %s).\n", errno, strerror(errno));
+			HIP_DEBUG("Reply sent successfully.\n");
+		}
+		else if (type == HIP_R1)
+		{
+			HIP_DEBUG("Message rejected.\n");
+			n = 1;
+			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
 			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));

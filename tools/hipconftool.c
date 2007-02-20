@@ -30,7 +30,7 @@
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
-	return hip_do_hipconf(argc, argv);
+	return hip_do_hipconf(argc, argv, 0);
 }
 
 #endif /* HIP_UNITTEST_MODE */

@@ -104,7 +104,7 @@ if ($index < 100)
 	echo ("
 		<br /><br /><hr>
 		<center><p>This connection is insecure. Please enable
-		<font color='#2040e0'>HIP</font>.</p></center>
+		HIP.</p></center>
 		");
 }
 else

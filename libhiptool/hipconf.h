@@ -140,6 +140,6 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
-int hip_do_hipconf(int argc, char *argv[]);
+int hip_do_hipconf(int argc, char *argv[], int send_only);
 
 #endif /* HIPCONF */

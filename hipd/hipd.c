@@ -85,11 +85,11 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  	HIP_DEBUG("hip_sendto() invoked.\n");
-	int n = 0;
-	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-	return n;
+        int n = 0;
+        HIP_DEBUG("hip_sendto() invoked.\n");
+        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+        return n;
 }
 
 /*int hip_sendto_firewall(const struct hip_common *msg){
@@ -190,8 +190,6 @@ int main(int argc, char *argv[]) {
 	hipd_set_state(HIPD_STATE_EXEC);
 	while (hipd_get_state() != HIPD_STATE_CLOSED)
 	{
-		struct hip_work_order *hwo;
-		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
@@ -437,16 +435,25 @@ int main(int argc, char *argv[]) {
 				struct hip_common *emsg;
 				struct in6_addr *src_addr, *dst_addr;
 				hip_portpair_t *msg_info;
+				void *reject;
 
 				emsg = hip_get_param_contents(hipd_msg, HIP_PARAM_ENCAPS_MSG);
 				src_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_SRC_ADDR);
 				dst_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_DST_ADDR);
 				msg_info = hip_get_param_contents(hipd_msg, HIP_PARAM_PORTPAIR);
+				reject = hip_get_param(hipd_msg, HIP_PARAM_AGENT_REJECT);
 
-				if (emsg && src_addr && dst_addr && msg_info)
+				if (emsg && src_addr && dst_addr && msg_info && !reject)
 				{
 					HIP_DEBUG("Received accepted I1/R1 packet from agent.\n");
 					hip_receive_control_packet(emsg, src_addr, dst_addr, msg_info, 0);
+				}
+				else if (emsg && src_addr && dst_addr && msg_info)
+				{
+					HIP_DEBUG("Received rejected R1 packet from agent.\n");
+					HIP_IFEL(hip_for_each_opp(hip_handle_opp_reject, src_addr), 0, 
+					         "for_each_ha err.\n");
+
 				}
 			}
 /*			else if (msg_type == HIP_AGENT_REJECT)
@@ -489,8 +496,9 @@ int main(int argc, char *argv[]) {
 			{
 				HIP_DEBUG("Received ping from firewall\n");
 				memset(hipd_msg, 0, sizeof(struct hip_common));
-				hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
-				alen = sizeof(hip_firewall_addr);                    
+				hip_build_user_hdr(hipd_msg,
+						   HIP_FIREWALL_PING_REPLY, 0);
+				alen = sizeof(hip_firewall_addr);
 				n = hip_sendto(hipd_msg, &hip_firewall_addr);
 				if (n < 0)
 				{

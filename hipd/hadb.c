@@ -447,7 +447,7 @@ int hip_add_peer_map(const struct hip_common *input)
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
- 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+ 		HIP_ERROR("Failed to insert peer map (%d)\n", err);
 		goto out_err;
 	}
 

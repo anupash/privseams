@@ -29,7 +29,7 @@ void nh_set_remote_rgroup_info(HIT_Group *g)
 	i = find_from_cb(g->l->name, widget(ID_NH_LOCAL));
 	gtk_combo_box_set_active(widget(ID_NH_LOCAL), i);
 
-	if (g->type == HIT_DB_TYPE_ACCEPT) ps = lang_get("group-type-accept");
+	if (g->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
 	else ps = lang_get("group-type-deny");
 	i = find_from_cb(ps, widget(ID_NH_TYPE1));
 	gtk_combo_box_set_active(widget(ID_NH_TYPE1), i);
