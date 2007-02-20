@@ -292,7 +292,6 @@ int main(int argc, char *argv[])
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
-	
 	HIP_IFEL(!i3_config, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
