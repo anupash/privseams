@@ -1,5 +1,5 @@
-#ifndef HIP_HASHTABLE_H
-#define HIP_HASHTABLE_H
+#ifndef HIP_LHASHTABLE_H
+#define HIP_LHASHTABLE_H
 
 #include "list.h"
 #include "debug.h"
