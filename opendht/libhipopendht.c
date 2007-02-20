@@ -146,7 +146,6 @@ int opendht_put(int sockfd,
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
-    
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }
