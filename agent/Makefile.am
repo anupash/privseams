@@ -8,7 +8,9 @@ GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
 GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
-include_HEADERS = agent_tools.h gui_interface.h connhipd.h agent.h hit_db.h
+include_HEADERS = agent.h connhipd.h hit_db.h lang_finnish.h str_var.h x.h
+include_HEADERS += agent_tools.h  gui_interface.h  lang_english.h  language.h
+
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)
 
 if HIP_AGENT
@@ -21,7 +23,10 @@ hipagent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 # Makefile.am... Fix someday?
 #hipagent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
 hipagent_LDADD = ../libhipgui/libhipgui.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
-hipagent_LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_OPENDHT
+  hipagent_LDADD += ../opendht/.libs/libhipopendht.a
+endif
+
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 
 endif

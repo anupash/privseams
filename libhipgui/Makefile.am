@@ -8,7 +8,8 @@ GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
 CFLAGS = $(hipl_common_cflags)
 
-include_HEADERS =
+include_HEADERS = create.h exec.h main.h nh.h terminal.h tw.h x.h events.h 
+include_HEADERS += hipstart.h manage.h rhit_dnd.h tools.h widgets.h
 
 if HIP_AGENT
 

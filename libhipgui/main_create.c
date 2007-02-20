@@ -74,7 +74,7 @@ int main_create_content(void)
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
+		label = gtk_menu_item_new_with_label(lang_get("systray-hide"));
 		gtk_menu_shell_append(w, label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 		gtk_widget_show(label);
@@ -281,9 +281,11 @@ int main_create_content(void)
 	dndtarget.target = "hit";
 	dndtarget.flags = GTK_TARGET_SAME_APP;
 	dndtarget.info = 0;
-	gtk_tree_view_enable_model_drag_source(list, GDK_MODIFIER_MASK, &dndtarget, 1, GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
+	gtk_tree_view_enable_model_drag_source(list, GDK_MODIFIER_MASK, &dndtarget, 1,
+	                                       GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
 	dndtarget.info = 1;
-	gtk_tree_view_enable_model_drag_dest(list, &dndtarget, 1, GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
+	gtk_tree_view_enable_model_drag_dest(list, &dndtarget, 1,
+	                                     GDK_ACTION_MOVE | GDK_ACTION_COPY | GDK_ACTION_ASK);
 	g_signal_connect(list, "drag_begin", G_CALLBACK(rh_drag_begin), (gpointer)0);
 	g_signal_connect(list, "drag_motion", G_CALLBACK(rh_drag_motion), (gpointer)0);
 	g_signal_connect(list, "drag_data_get", G_CALLBACK(rh_drag_data_get), (gpointer)0);

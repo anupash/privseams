@@ -21,13 +21,13 @@
 #endif
 #include "builder.h"
 #include "util.h"
+#include "oppipdb.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
 #define HIP_UNLOCK_OPP_INIT(entry)
 #define HIP_LOCK_OPP(entry)  
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
-#define HIP_OPP_WAIT 5
 
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
@@ -52,8 +52,6 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
 		       hip_portpair_t *msg_info);
-hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, 
-				       const hip_hit_t *hit_our);
 
 hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					 struct in6_addr *src_addr,
@@ -61,4 +59,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 					 hip_portpair_t *msg_info);
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
 		     void *opaque);
+
+int hip_handle_opp_reject(hip_opp_block_t *entry, void *ips);
+
 #endif /* HIP_HADB_H */

@@ -28,10 +28,12 @@
 
 /******************************************************************************/
 /* DEFINES */
-#define HIT_DB_TYPE_NONE				0
+/*#define HIT_DB_TYPE_NONE				0
 #define HIT_DB_TYPE_ACCEPT				1
 #define HIT_DB_TYPE_DENY				2
-#define HIT_DB_TYPE_ALL					0xffffffff
+#define HIT_DB_TYPE_ALL					0xffffffff*/
+#define HIT_ACCEPT				1
+#define HIT_DENY				2
 
 /**
 	Maximum length for name-strings. Notice that this and the max URL length
@@ -87,8 +89,8 @@ typedef struct
 	char name[MAX_NAME_LEN + 1];
 	/** Stores pointer to local HIT with which this group is associated. */
 	HIT_Local *l;
-	/** What is the type of the group. */
-	int type;
+	/** Style of this group, 1 for accept, 0 for deny. */
+	int accept;
 	/** Is group lightweight or not. */
 	int lightweight;
 	/** Number of remote HITs in this group. */

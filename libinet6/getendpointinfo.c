@@ -408,7 +408,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
 
     hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    hip_send_daemon_info(msg_mapping);
+    hip_send_daemon_info(msg_mapping, 0);
   }
   free(msg_mapping);
 
@@ -2031,7 +2031,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 			/* the list is backwards ordered */
 			args[len - i - 1] = getitem(&list, i);
 		}
-		err = hip_do_hipconf(len, args);
+		err = hip_do_hipconf(len, args, 1);
 		destroy(&list);
 	}
 

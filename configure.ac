@@ -62,9 +62,9 @@ AC_FUNC_SETPGRP
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
-AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
+#AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
 glibc_version=2.3
@@ -94,10 +94,10 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
-                            [HIP user agent (default is NO)]),
-             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
+                            [HIP user agent (default is YES)]),
+             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=no])
+               [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
@@ -194,6 +194,16 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
         #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
+
+AC_ARG_ENABLE(blind,
+             AC_HELP_STRING([--enable-blind],
+                            [HIP BLIND extensions (default is NO)]),
+             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
+AC_CACHE_CHECK([whether to use BLIND],
+               [ac_cv_use_blind], [ac_cv_use_blind=no])
+if test x"$ac_cv_use_blind" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
+fi
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],

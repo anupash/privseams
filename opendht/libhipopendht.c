@@ -32,6 +32,7 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         perror("Socket");
+
     return(sockfd);      
 }
 

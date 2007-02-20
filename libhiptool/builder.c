@@ -429,6 +429,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	hip_tlv_type_t valid[] =
 		{
 			HIP_PARAM_ACK,
+			HIP_PARAM_BLIND_NONCE,
                         HIP_PARAM_CERT,
                         HIP_PARAM_DIFFIE_HELLMAN,
                         HIP_PARAM_ECHO_REQUEST,
@@ -447,6 +448,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_HMAC,
                         HIP_PARAM_HMAC,
                         HIP_PARAM_HMAC2,
+			HIP_PARAM_RVS_HMAC,
                         HIP_PARAM_HOST_ID,
                         HIP_PARAM_LOCATOR,
                         HIP_PARAM_NOTIFICATION,
@@ -885,6 +887,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+	case HIP_PARAM_BLIND_NONCE: return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
 	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
@@ -2927,6 +2930,19 @@ int hip_build_netlink_dummy_header(struct hip_common *msg)
 	return hip_build_user_hdr(msg, SO_HIP_NETLINK_DUMMY, 0);
 }
 
+int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
+{
+	struct hip_blind_nonce param;
+	int err = 0;
+
+	hip_set_param_type(&param, HIP_PARAM_BLIND_NONCE);
+	hip_calc_generic_param_len(&param, sizeof(param), 0);	
+	param.nonce = htons(nonce);
+	err = hip_build_param(msg, &param);
+
+	return err;
+}
+
 int hip_build_param_opendht_gw_info(struct hip_common *msg,
 				    struct in6_addr *addr,
 				    uint32_t ttl,
@@ -2945,3 +2961,4 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	err = hip_build_param(msg, &gw_info);
 	return err;
 }
+

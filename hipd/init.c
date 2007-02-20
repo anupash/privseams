@@ -69,6 +69,8 @@ int hipd_init(int flush_ipsec)
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
 
+	HIP_IFEL(hip_ipdb_clear(), -1, "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
+
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
 	HIP_IFE(init_random_seed(), -1);
@@ -480,10 +482,21 @@ int init_random_seed()
 {
 	struct timeval tv;
 	struct timezone tz;
+	struct {
+		struct timeval tv;
+		pid_t pid;
+		long int rand;
+	} rand_data;
 	int err = 0;
 
 	err = gettimeofday(&tv, &tz);
 	srandom(tv.tv_usec);
+
+	memcpy(&rand_data.tv, &tv, sizeof(tv));
+	rand_data.pid = getpid();
+	rand_data.rand = random();
+
+	RAND_seed(&rand_data, sizeof(rand_data));
 
 	return err;
 }
@@ -496,11 +509,11 @@ void hip_probe_kernel_modules()
 	int count;
 	char cmd[40];
         /* update also this if you add more modules */
-	const int mod_total = 12;
+	const int mod_total = 13;
 	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
 			    "xfrm_user", "dummy", "esp6", "esp4",
 			    "ipv6", "aes", "crypto_null", "des",
-			    "xfrm4_mode_beet", "xfrm6_mode_beet"};
+			    "xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"};
 
 	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
 	for (count = 0; count < mod_total; count++) {
