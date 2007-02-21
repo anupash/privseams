@@ -206,7 +206,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
 		//randval = ntoh64(u->sl.J);
 		randval = u->sl.J;
-		HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
+		_HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
 		maxtries = 1;
 	} else if (mode == HIP_SOLVE_PUZZLE) {
 		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
@@ -248,7 +248,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 		 * order (above).
 		 */
 		if ((digest & mask) == 0) {
-			HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n",randval);
+			_HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n",randval);
 			_HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
 			_HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
 			return randval;

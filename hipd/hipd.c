@@ -85,11 +85,11 @@ void usage() {
 }
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
-  	HIP_DEBUG("hip_sendto() invoked.\n");
-	int n = 0;
-	n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-		   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
-	return n;
+        int n = 0;
+        HIP_DEBUG("hip_sendto() invoked.\n");
+        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+        return n;
 }
 
 /**
@@ -333,8 +333,6 @@ int main(int argc, char *argv[])
 	hipd_set_state(HIPD_STATE_EXEC);
 	while (hipd_get_state() != HIPD_STATE_CLOSED)
 	{
-		struct hip_work_order *hwo;
-		
 		/* prepare file descriptor sets */
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);

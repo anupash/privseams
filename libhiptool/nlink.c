@@ -33,8 +33,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 			hip_filter_t handler,
 			void *arg)
 {
-	struct hip_work_order *result = NULL;
-	struct hip_work_order *hwo;
 	struct nlmsghdr *h;
 	struct sockaddr_nl nladdr;
 	struct iovec iov;
@@ -46,6 +44,13 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         };
 	int msg_len, status;
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
+
+        msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
+			   MSG_PEEK, NULL, NULL);
+	if (msg_len != sizeof(struct nlmsghdr)) {
+		HIP_ERROR("Bad netlink msg\n");
+		return -1;
+	}
 
 	HIP_DEBUG("Received a netlink message\n");
 
@@ -878,8 +883,8 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 	len = slen;
 	if (len > 0) {
 		if (len > max) {
-			return -1;
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+			return -1;
 		}
 		memcpy(alg->alg_key, key, key_len * 8);
 	}

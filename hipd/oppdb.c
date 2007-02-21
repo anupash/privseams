@@ -225,7 +225,8 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int reject) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit,
+			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -239,8 +240,7 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int re
 		         "build param HIP_PARAM_HIT  failed\n");
 	}
 	
-	if (reject)
-	{
+	if (reject) {
 		n = 1;
 		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
 		HIP_IFEL(hip_build_param_contents(message, &n,
@@ -252,16 +252,15 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit, int re
 
 	n = hip_sendto(message, app_id);
 	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
+		HIP_ERROR("hip_sendto() failed.\n");
+		err = -1;
+		goto out_err;
 	}
  out_err:
 	if (message)
 		HIP_FREE(message);
 	return err;
 }
-
 
 hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 				   struct in6_addr *resp_addr)
@@ -439,11 +438,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
 		goto out_err;
 	}
 
@@ -466,11 +460,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
 		goto out_err;
 	}
 	
@@ -507,12 +496,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
-		goto out_err;
 	}
 	
  send_i1:

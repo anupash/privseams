@@ -91,19 +91,20 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 #endif
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
-		hip_send_pkt(&entry->local_address, &daddr,
-			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
-			     &i1, entry, 1);
+			hip_send_pkt(&entry->local_address, &daddr,
+				     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+				     &i1, entry, 1);
 	}
 
 	HIP_DEBUG("err after sending: %d.\n", err);
 	
 	if (!err) {
-	  HIP_LOCK_HA(entry);
-	  entry->state = HIP_STATE_I1_SENT;
-	  HIP_UNLOCK_HA(entry);
+		HIP_LOCK_HA(entry);
+		entry->state = HIP_STATE_I1_SENT;
+		HIP_UNLOCK_HA(entry);
 	}
-	else if (err == 1) err = 0;
+	else if (err == 1)
+		err = 0;
 	
 out_err:
 	if (i1_blind)
@@ -129,7 +130,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
- 	int err = 0,dh_size,written, mask;
+ 	int err = 0,dh_size,written, mask = 0;
  	u8 *dh_data = NULL;
 	int * service_list = NULL;
 	int service_count = 0;
@@ -586,7 +587,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
-	HIP_DUMP_MSG(msg);
+	_HIP_DUMP_MSG(msg);
 
 	dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	len = hip_get_msg_total_len(msg);

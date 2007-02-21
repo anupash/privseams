@@ -13,8 +13,19 @@
 #  include "kerncompat.h"
 #  include "sys/un.h"
 #  include "protodefs.h"
+#  include "stdlib.h"
 #endif
 
+#define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
+#define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
+
+static int hip_tmpname(char *fname) {
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
+	if (mktemp(fname) == NULL)
+		return -1;
+	else
+		return 0;
+} 
 
 /*
  * HIP header and parameter related constants and structures.
@@ -72,18 +83,10 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 static inline void set_hit_prefix(struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
-	//printf("*************** %x\n", *hit);
 	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
-	//printf("*************** %x\n", hit_begin);
-	hit_begin &= HIP_HIT_TYPE_MASK_CLEAR;
-	//printf("*************** %x\n", hit_begin);
-	hit_begin = htonl(hit_begin);
-	hit_begin |= HIP_HIT_PREFIX;
-	//printf("*************** %x\n", hit_begin);
-	hit_begin = htonl(hit_begin);
-	//printf("*************** %x\n", hit_begin);
+	hit_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
+	hit_begin |= htonl(HIP_HIT_PREFIX);
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
-	//printf("*************** %x\n", *hit);
 }
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
@@ -109,7 +112,14 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
 
-#define IS_LSI32(a) ((a & 0xFF000000) == 0x01000000)
+/*
+ * TRUE if a is from 1.0.0.0/8
+ */
+#define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
+/*
+ * TRUE if a is from 127.0.0.0/8
+ */
+#define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
 
 #define HIT_IS_LSI(a) \
         ((((__const uint32_t *) (a))[0] == 0)                                 \
@@ -131,7 +141,6 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
-
 
 #endif /* _HIP_UTILS */
 

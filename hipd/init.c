@@ -480,10 +480,21 @@ int init_random_seed()
 {
 	struct timeval tv;
 	struct timezone tz;
+	struct {
+		struct timeval tv;
+		pid_t pid;
+		long int rand;
+	} rand_data;
 	int err = 0;
 
 	err = gettimeofday(&tv, &tz);
 	srandom(tv.tv_usec);
+
+	memcpy(&rand_data.tv, &tv, sizeof(tv));
+	rand_data.pid = getpid();
+	rand_data.rand = random();
+
+	RAND_seed(&rand_data, sizeof(rand_data));
 
 	return err;
 }

@@ -585,14 +585,14 @@ void *hip_get_param(const struct hip_common *msg,
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
 
-	HIP_DEBUG("searching for type %d\n", param_type);
+	_HIP_DEBUG("searching for type %d\n", param_type);
 
        /** @todo Optimize: stop when next parameter's type is greater than the
 	   searched one. */
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		HIP_DEBUG("current param %d\n",
+		_HIP_DEBUG("current param %d\n",
 			   hip_get_param_type(current_param));
 		if (hip_get_param_type(current_param) == param_type) {
 			matched = current_param;
