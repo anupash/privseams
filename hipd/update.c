@@ -908,7 +908,6 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	addr->seq_update_id = entry->update_id_out;
 
 
-
 	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */

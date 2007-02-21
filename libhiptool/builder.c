@@ -592,7 +592,7 @@ void *hip_get_param(const struct hip_common *msg,
 
 	while((current_param = hip_get_next_param(msg, current_param))
 	      != NULL) {
-		HIP_DEBUG("current param %d\n",
+		_HIP_DEBUG("current param %d\n",
 			   hip_get_param_type(current_param));
 		if (hip_get_param_type(current_param) == param_type) {
 			matched = current_param;

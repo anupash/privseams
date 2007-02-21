@@ -352,19 +352,22 @@ void register_to_dht ()
                 if (hip_opendht_sock_fqdn < 1)
                     hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                 opendht_error = 0;
+                
                 opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
                                                     &opendht_serving_gateway);
                 if (opendht_error > -1) 
-                {
+                { 
+                
                     opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
                                     (unsigned char *)tmp_hit_str, (unsigned char *)tmp_addr_str);
+                    
                     if (opendht_error < 0)
                     {
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
                     }
                     else
-                        hip_opendht_fqdn_sent = 1;
-                }
+                        hip_opendht_fqdn_sent = 1; 
+                } 
             }
             /* send the hit->ip mapping */
            if (hip_opendht_hit_sent == 0) 
@@ -373,10 +376,12 @@ void register_to_dht ()
                if (hip_opendht_sock_hit < 1)
                    hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
                 opendht_error = 0;
+                
                 opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
                                                     &opendht_serving_gateway);
                if (opendht_error > -1)
                {
+               
                     opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
                                     (unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
@@ -384,8 +389,8 @@ void register_to_dht ()
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
                     }
                     else
-                        hip_opendht_hit_sent = 1;
-                }
+                        hip_opendht_hit_sent = 1; 
+               } 
             }
       }     
     } 
@@ -447,7 +452,7 @@ int periodic_maintenance()
 	}
 
 #ifdef CONFIG_HIP_OPENDHT
-	if (precreate_counter < 0) {
+	if (opendht_counter < 0) {
 		register_to_dht();
 		opendht_counter = OPENDHT_REFRESH_INIT;
 	} else {
