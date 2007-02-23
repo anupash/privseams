@@ -1090,8 +1090,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	*at = p;
       }
 
-      HIP_DEBUG("Dumping the structure after removing IP addreses\n");
-      dump_pai(*at);
+      _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
+      //dump_pai(*at);
     } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
   return 0;
 }
