@@ -48,24 +48,61 @@ void hip_load_configuration()
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0, fd;
+	int err = 0, fd, pid = 0;
+	char str[64];
 	struct sockaddr_un daemon_addr;
-        extern struct addrinfo opendht_serving_gateway;
+	extern struct addrinfo opendht_serving_gateway;
 
 	hip_probe_kernel_modules();
 
+	/* Kill hip daemon, if it already exists. */
+	for (pid = 0; pid >= 0; )
+	{
+		/* Open daemon lock file and read pid from it. */
+		fd = open(HIP_DAEMON_LOCK_FILE, O_RDONLY, 0644);
+		
+		/* If pid not read yet. */
+		if (fd > 0 && pid == 0)
+		{
+			memset(str, 0, sizeof(str));
+			read(fd, str, sizeof(str) - 1);
+			close(fd);
+			pid = atoi(str);
+			/* Check if pid number is not valid. */
+			if (pid < 1) break;
+			HIP_INFO("Daemon is already running with pid %d?"
+			         " Trying to stop old one...\n", pid);
+			/* Signal old daemon to stop. */
+			kill(pid, SIGINT);
+			/* Wait a second for daemon to stop. */
+			HIP_INFO("Waiting old daemon to stop...\n");
+			sleep(2);
+		}
+		/*
+		 * If pid already read, just check whether daemon has really stopped.
+		 * If not, then kill it brutally.
+		 */
+		else if (fd > 0)
+		{
+			HIP_INFO("Daemon did not stop, just kill it.\n");
+			close(fd);
+			kill(pid, SIGKILL);
+			break;
+		}
+		else break;
+	}
+
 	/* Write pid to file. */
-/*	unlink(HIP_DAEMON_LOCK_FILE);
+	unlink(HIP_DAEMON_LOCK_FILE);
 	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
 	if (fd > 0)
 	{
-		char str[64];
 		/* Dont lock now, make this feature available later. */
-		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		//if (lockf(i, F_TLOCK, 0) < 0) exit (1);
 		/* Only first instance continues. */
-//		sprintf(str, "%d\n", getpid());
-//		write(fd, str, strlen(str)); /* record pid to lockfile */
-//	}
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -470,6 +507,8 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
+	unlink(HIP_DAEMON_LOCK_FILE);
+
 	return;
 }
 

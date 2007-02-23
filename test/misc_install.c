@@ -85,7 +85,7 @@ int main_install(struct hip_common *msg)
 
 	/* hipconf new hi does not involve any messages to kernel */
 	HIP_IFE((!hip_get_msg_type(msg)), -1);
-	HIP_IFEL(hip_send_daemon_info(msg), -1, "sending msg failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "sending msg failed\n");
 out_err:
 	return err;
 }
