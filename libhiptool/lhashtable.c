@@ -6,6 +6,12 @@
 #define hip_ht_get_list(ptr, offset) \
         (struct list_head *)((u8 *)ptr + offset)
 
+void *entrybuf;
+LHASH *nm;
+LHASH_NODE *hipchain;
+
+
+
 /**
  * hip_ht_find - Find an element in a hash table
  * @param ht hash table
@@ -16,41 +22,54 @@
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 {
 	int j;
-	int recs,size,ind;
 	struct list_head *chain;
 	void *entry;
-	void *key_to_be_matched;
-	int hash;
-
-	hash = ht->hash(key, ht->hashsize);
-	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
 	
-			
-		if (ht->num_items !=0)
-		{
-			 
-			for (j=0;j < ht->num_items;j++)
-			{
-				entry = hip_ht_get_content(void, chain, ht->offset);
+	
+	LHASH *retr;
+	
+	hipchain=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));
+	nm=ht->ami;
+	hipchain=nm->b;
+	
+	if (nm->num_items !=0)
+	{
+
+
 		
-			 	lh_retrieve(ht,&key);
-			  	ht->hold(entry);
-				HIP_UNLOCK_HT(ht);
+		for(j=0;j<nm->num_items;j++)
+		{	
+			
+			HIP_DEBUG("The hash entry is %u\n", hipchain->data);
+			HIP_DEBUG("the data entry is %u\n", hipchain->hash);
+			HIP_DEBUG("the number insert is %d\n", nm->num_insert);
+			HIP_DEBUG("the number delete is %d\n", nm->num_delete);
+			HIP_DEBUG("the number item is %d\n", nm->num_items);
+			
+			entry = lh_retrieve(ht->ami,&hipchain->hash);
+			nm=ht->ami;
+			ht->hipb=nm->b;
+			hipchain=nm->b;
+			HIP_DEBUG("Entry retrieved in if condition %d:\n",nm->num_retrieve);
+						
+		
+		
+		}		
+				
+			
 				return entry;
 
-			}
+			
 
 			
-		}
-		else
-			{
-			/*	HIP_DEBUG("no of items: %d\n",ht->num_items);
-				HIP_DEBUG("no of key: %d\n",&key);
-				
-				HIP_DEBUG("no of items retrieved in the retrive function: %d\n",ht->num_retrieve);
-				HIP_DEBUG("no of deleted items after  insert : %d\n",ht->num_delete);*/
-				return NULL;
-			}
+	}
+	else
+	{                     
+						
+		return 0;
+			
+
+	}
 
 		
 }
@@ -67,32 +86,34 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
  */
 int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 {
-	LHASH *conf;
-        char buf[256];
+
         int i;
-	void *ret;
-     	LHASH_NODE *insert ,**rn1;
-     	
-	
-	LHASH *nm;
-	LHASH_NODE *newentry;
-	LHASH_NODE *oldentry;
-
-	
-	char *key;
-	char *key_to_be_matched1;
 	int hipcom;
+	LHASH_NODE *nadd;
+	/*nadd=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));*/
+	int hash = ht->hash(ht->get_key(entry), ht->hashsize);
+	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
+	HIP_LOCK_HT(ht);
+	
+	nadd=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));
+	
 
-		nm=lh_new(NULL,NULL);
-		int hash = ht->hash(ht->get_key(entry), ht->hashsize);
-		_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
-		HIP_LOCK_HT(ht);
-		lh_insert(nm,&entry);
-		ht=nm;
-		HIP_DEBUG("Entry inserted in HIP HT %d:\n",ht->num_items);
-		HIP_DEBUG("Inserting entry HASH Table sucessfull %d\n", nm->num_items);
-		
-		return 0;
+	nm=ht->ami;
+	ht->hipb=nm->b;
+	nadd=nm->b;
+	nadd->data=entry;
+	lh_insert(ht->ami,&entry);
+	nm=ht->ami;
+	ht->hipb=nm->b;
+	nadd=nm->b;
+	
+
+
+	HIP_DEBUG("The hash entry in add function %u\n",entry);
+	HIP_DEBUG("The hash entry in add function %u\n", nadd->data);
+	HIP_DEBUG("Entry retrieve from AMI HT %d  %d:\n",nm->num_retrieve,nm->num_items);
+	
+	return 0;	
 }
 
 /**
@@ -106,10 +127,12 @@ int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
 {
  	
-	/*lh_del(hip_ht_get_list(entry, ht->offset));*/
-	/*lh_delete(ht, ht->offset);
+	HIP_DEBUG("I am in delete function %u\n",entry);
+	nm=ht->ami;
+
+	lh_delete(ht->ami,&entry);
 	ht->put(entry);
-	HIP_UNLOCK_HT(ht);*/
+	HIP_UNLOCK_HT(ht);
 }
 
 /**
@@ -132,7 +155,7 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
  */
 int hip_ht_init(HIP_HASHTABLE *ht)
 {
-  int i;
+ 
 	char *entry;
 	char *key;
 	char *key_to_be_matched;
@@ -143,7 +166,8 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	else
 		HIP_DEBUG("Initializing hash table\n");
 
-	ht=lh_new(ht->hash(key, ht->hashsize),ht->compare(key, key_to_be_matched));
+	ht->ami=lh_new(ht->hash(key, ht->hashsize),ht->compare(key, key_to_be_matched));
+
 	return NULL;
 
 }
@@ -157,13 +181,5 @@ int hip_ht_init(HIP_HASHTABLE *ht)
  */
 void hip_ht_uninit(HIP_HASHTABLE *ht)
 {
-  int i;
-	struct list_head *item, *tmp;
-
-	for(i=0;i<ht->hashsize;i++) {
-		list_for_each_safe(item, tmp, &ht->b[i]) {
-			list_del(item);
-			ht->put(hip_ht_get_content(void, item, ht->offset));
-		}
-	}
+  
 }

@@ -22,9 +22,9 @@ static uint reclength=37;
 
 
 struct hip_ht_common {
-	LHASH_NODE *b;
+	LHASH_NODE **hipb;
 	/** a pointer to memory area to be used as hashtable. */
-	
+	LHASH *ami;
 	struct list_head *head;
 	int hashsize;
 	/** offset of the struct list_head that links the elements. */
@@ -78,11 +78,6 @@ typedef struct hip_ht_common HIP_HASHTABLE;
 
 int hip_ht_init( HIP_HASHTABLE  *ht);
 void hip_ht_uninit( HIP_HASHTABLE *ht);
-
-void lh_insert1(HIP_HASHTABLE *ht, void *entry);
-static LHASH_NODE **getrn1( HIP_HASHTABLE *lh, const void *data, unsigned long *rhash);
-static void expand(HIP_HASHTABLE *lh);
-int hashfc(char *s);
 
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *data);
