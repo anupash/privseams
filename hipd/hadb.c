@@ -307,6 +307,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 	
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
+	if (entry) hip_hadb_dump_spis_out(entry);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
 	
 	entry = hip_hadb_create_state(GFP_KERNEL);
