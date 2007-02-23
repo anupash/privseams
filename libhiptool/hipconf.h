@@ -117,7 +117,9 @@
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
-# Example: add map HIT IP\n"
+# add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
+# add service rvs   # the host acts as HIP rendezvous\n\
+# hip nat on        # the host is behind a NAT\n"
 
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);

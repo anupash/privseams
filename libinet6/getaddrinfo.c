@@ -616,7 +616,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-      hip_send_recv_daemon_info(msg);// hip_send_daemon_info(msg);
+      hip_send_recv_daemon_info(msg);
     }
   }  
   free(msg);
