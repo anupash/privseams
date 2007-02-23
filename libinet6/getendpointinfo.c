@@ -408,7 +408,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
 
     hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    hip_send_daemon_info(msg_mapping, 0);
+    hip_send_daemon_info_wrapper(msg_mapping, 0);
   }
   free(msg_mapping);
 
