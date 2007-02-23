@@ -194,9 +194,9 @@ void dump_pai (struct gaih_addrtuple *at)
     if (a->family == AF_INET6) {
       struct in6_addr *s = (struct in6_addr *)a->addr;
       int i = 0;
-      HIP_DEBUG("AF_INET6\tin6_addr=0x");
+      HIP_DEBUG("AF_INET6\tin6_addr=0x\n");
       for (i = 0; i < 16; i++)
-	HIP_DEBUG("%02x ", (unsigned char) (s->in6_u.u6_addr8[i]));
+	HIP_DEBUG("%02x\n", (unsigned char) (s->in6_u.u6_addr8[i]));
       HIP_DEBUG("\n");
     } else if (a->family == AF_INET) {
       struct in_addr *s = (struct in_addr *)a->addr;
@@ -961,6 +961,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
   if ((*at)->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0)
     {     
       struct gaih_addrtuple **pat = at;
+      struct gaih_addrtuple *at_dns = *at;
       int no_data = 0;
       int no_inet6_data;
       int old_res_options = _res.options;
@@ -1022,6 +1023,21 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 AG: now the loop also takes in IPv4 addresses */
       if (found_hits) 
 	send_hipd_addr(*at);
+
+      /*
+        Check if DNS returned HITs incase hosts file and DHT checks didn't contain HITs 
+      */
+      if (!found_hits)
+        {
+          for (at_dns = at; at_dns != NULL; at_dns = at_dns->next)
+            {
+              if (ipv6_addr_is_hit((struct in6_addr *)at_dns->addr)) 
+                {
+                  send_hipd_addr(*at);
+                  break;
+                }
+            }
+        } 
 
       if (no_data != 0 && no_inet6_data != 0)
 	{
