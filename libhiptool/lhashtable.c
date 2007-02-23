@@ -56,8 +56,8 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 		
 		}		
 				
-			
-				return entry;
+		if (entry != NULL)
+			return entry;
 
 			
 
@@ -166,8 +166,8 @@ int hip_ht_init(HIP_HASHTABLE *ht)
 	else
 		HIP_DEBUG("Initializing hash table\n");
 
-	ht->ami=lh_new(ht->hash(key, ht->hashsize),ht->compare(key, key_to_be_matched));
-
+	/*ht->ami=lh_new(ht->hash(key, ht->hashsize),ht->compare(key, key_to_be_matched));*/
+	ht->ami=lh_new(NULL,NULL);
 	return NULL;
 
 }
