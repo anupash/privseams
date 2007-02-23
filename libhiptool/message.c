@@ -42,51 +42,54 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	return bytes;
 }
 
-int hip_send_recv_daemon_info(struct hip_common *msg) {
-	int err = 0, n, len, hip_user_sock = 0, app_fd = 0;
+int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
+	int err = 0, n, len, app_fd = 0;
 	int hip_agent_sock = 0;
 	socklen_t alen = 0;
 	struct sockaddr_un app_addr, daemon_addr;
-	char app_name[HIP_TMP_FNAME_LEN];
-
-	/* Create and bind daemon socket. */
-	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (hip_user_sock < 0) {
-		HIP_ERROR("Failed to create socket.\n");
-		err = -1;
-		goto out_err;
-	}
 
 	bzero(&app_addr, sizeof(app_addr));
 	HIP_IFEL(hip_tmpname(app_addr.sun_path), -1,
 		 "app_name\n");
 	app_addr.sun_family = AF_UNIX;
 
-	HIP_IFEL(bind(hip_user_sock,(struct sockaddr *)&app_addr, 
+	/* Without bind, the daemon won't see the sun_path of this process */
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &app_addr, 
 		      sizeof(app_addr)),
-		 -1, "app_addr bind failed");
+		 -1, "app_addr bind failed\n");
 
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sun_family = AF_UNIX;
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
 	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
 
-	err = connect(hip_user_sock,(struct sockaddr *) &daemon_addr,
-		      sizeof(daemon_addr));
-	if (err) {
-	  HIP_ERROR("connection to daemon failed\n");
-	  goto out_err;
-	}
+	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
+			 sizeof(daemon_addr)), -1,
+		 "connection to daemon failed\n");
+
+ out_err:
+
+	return err;
+}
+
+int hip_send_recv_daemon_info(struct hip_common *msg) {
+	int hip_user_sock = 0, err = 0, n, len;
+
+	HIP_IFE(((hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0), -1);
+
+	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
+		 "Sending of msg failed (no rcv)\n");
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
-	if (n != len) {
+	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;
 		goto out_err;
 	}
 
 	HIP_DEBUG("waiting to receive daemon info\n");
+
 	n = recv(hip_user_sock, msg,
 		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
 	if (n < sizeof(struct hip_common)) {
@@ -102,44 +105,24 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
  out_err:
-#if 0
-	if (app_fd)
-		close(app_fd);
-#endif
+
 	if (hip_user_sock)
 		close(hip_user_sock);
 	return err;
 }
 
 
-int hip_send_daemon_info(const struct hip_common *msg, int send_only) {
-  	int err = 0, n, len, hip_user_sock = 0;
-	struct sockaddr_un user_addr;
-	socklen_t alen;
+int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
+	int hip_user_sock = 0, err = 0, n, len;
 
 	if (!send_only)
-	  return hip_send_recv_daemon_info(msg);
-	  
-	// Create and bind daemon socket.
-	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (hip_user_sock < 0) {
-		HIP_ERROR("Failed to create socket.\n");
-		err = -1;
-		goto out_err;
-	}
+		return hip_send_recv_daemon_info(msg);
+	
+	HIP_IFE(((hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0), -1);
 
-	bzero(&user_addr, sizeof(user_addr));
-	user_addr.sun_family = AF_UNIX;
-	strcpy(user_addr.sun_path, HIP_DAEMONADDR_PATH);
-	alen = sizeof(user_addr);
+	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
+		 "Sending of msg failed (no rcv)\n");
 
-	err = connect(hip_user_sock,(struct sockaddr *)&user_addr, alen);
-	if (err) {
-		HIP_ERROR("connection to daemon failed\n");
-		goto out_err;
-	}
-
-	//HIP_HEXDUMP("packet", msg,  hip_get_msg_total_len(msg));
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
 	if (n < len) {

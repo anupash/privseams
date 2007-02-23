@@ -105,6 +105,11 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
         struct in6_addr * hit_r, struct hip_keys *keys);
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 
+/* Functions for handling incoming packets. */
+int hip_sock_recv_agent(void);
+int hip_sock_recv_firewall(void);
+
+
 #define IPV4_HDR_SIZE 20
 
 
