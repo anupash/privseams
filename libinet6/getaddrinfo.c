@@ -1016,8 +1016,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
   	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 	no_data = gethosts (name, AF_INET, &pat);
-      HIP_DEBUG("Dumping the structure\n");
-      dump_pai(*at);
+      _HIP_DEBUG("Dumping the structure\n");
+      //dump_pai(*at);
       
       /* perform HIT-IPv6 mapping if both are found 
 	 AG: now the loop also takes in IPv4 addresses */
