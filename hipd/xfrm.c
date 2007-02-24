@@ -1,6 +1,6 @@
 #include "beet.h"
 
-#ifndef CONFIG_HIP_CORPORATE
+#ifndef CONFIG_HIP_PFKEY
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
@@ -517,4 +517,4 @@ int hip_setup_default_sp_prefix_pair() {
 	return err;
 }
 
-#endif /* ! CONFIG_HIP_CORPORATE */
+#endif /* ! CONFIG_HIP_PFKEY */
