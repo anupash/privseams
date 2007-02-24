@@ -340,36 +340,34 @@ void register_to_dht ()
 
         if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
         {    
-            tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-            tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
-            HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", 
-                      tmp_hit_str, tmp_addr_str, hostname);
-      
+           tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+           tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+
            /* send the fqdn->hit mapping */
            if (hip_opendht_fqdn_sent == 0) 
            {
-                HIP_DEBUG("Sending mapping FQDN->HIT to the openDHT\n");
+                HIP_DEBUG("Sending mapping FQDN (%s) -> HIT (%s) to the openDHT\n", 
+                          hostname, tmp_hit_str);
                 if (hip_opendht_sock_fqdn < 1)
                     hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                 opendht_error = 0;
                 opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
                                                     &opendht_serving_gateway);
                 if (opendht_error > -1) 
-                {
+                { 
                     opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
                                     (unsigned char *)tmp_hit_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
-                    {
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-                    }
                     else
-                        hip_opendht_fqdn_sent = 1;
-                }
+                        hip_opendht_fqdn_sent = 1; 
+                } 
             }
             /* send the hit->ip mapping */
-           if (hip_opendht_hit_sent == 0) 
-           {
-               HIP_DEBUG("Sending mapping HIT->IP to the openDHT\n");
+            if (hip_opendht_hit_sent == 0) 
+            {
+               HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
+                         tmp_hit_str, tmp_addr_str);
                if (hip_opendht_sock_hit < 1)
                    hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
                 opendht_error = 0;
@@ -380,14 +378,12 @@ void register_to_dht ()
                     opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
                                     (unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
-                    {
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-                    }
                     else
-                        hip_opendht_hit_sent = 1;
-                }
+                        hip_opendht_hit_sent = 1; 
+               } 
             }
-      }     
+        }     
     } 
 
 #endif
@@ -447,7 +443,7 @@ int periodic_maintenance()
 	}
 
 #ifdef CONFIG_HIP_OPENDHT
-	if (precreate_counter < 0) {
+	if (opendht_counter < 0) {
 		register_to_dht();
 		opendht_counter = OPENDHT_REFRESH_INIT;
 	} else {
