@@ -20,7 +20,7 @@ else
   conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-hashtest_LDADD = ../libhiptool/.libs/libhiptool.a
+hashtest_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
@@ -49,7 +49,7 @@ bin_PROGRAMS += first_test
 sbin_PROGRAMS = modtest
 bin_PROGRAMS += cookietest
 bin_PROGRAMS += keygentest
-bin_PROGRAMS += sha1ime_test
+#bin_PROGRAMS += sha1ime_test
 bin_PROGRAMS += ttcp
 bin_PROGRAMS += hashtest
 #bin_PROGRAMS += hipconf
@@ -69,7 +69,7 @@ hipsetup_SOURCES = hipsetup.c hipconftool.c misc_install.c conntest.c
 first_test_SOURCES = first_test.c hipconftool.c misc_install.c conntest.c
 cookietest_SOURCES = cookietest.c
 keygentest_SOURCES = keygentest.c
-sha1ime_test_SOURCES = sha1ime_test.c
+#sha1ime_test_SOURCES = sha1ime_test.c
 #second_test_SOURCES = second_test.c hipconftool.c misc_install.c conntest.c
 modtest_SOURCES = modtest.c
 hashtest_SOURCES = hashtest.c

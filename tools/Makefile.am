@@ -25,7 +25,7 @@ if HIP_OPPORTUNISTIC
 LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-LDADD += ../libhiptool/.libs/libhiptool.a ../libinet6/.libs/libinet6.a 
+LDADD += ../libinet6/.libs/libinet6.a  ../libhiptool/.libs/libhiptool.a
 
 if HIP_OPENDHT
 LDADD += ../opendht/.libs/libhipopendht.a
