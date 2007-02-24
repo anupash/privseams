@@ -49,7 +49,7 @@ endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
 
-include_HEADERS =  crypto.h dh.h list.h
+include_HEADERS =  crypto.h dh.h list.h qlist.h
 include_HEADERS += nlink.h pk.h xfrm.h xfrmapi.h
 
 if HIP_CORPORATE

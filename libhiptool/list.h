@@ -1,6 +1,12 @@
 #ifndef HIP_LIST_H
 #define HIP_LIST_H
 
+#ifdef CONFIG_HIP_CORPORATE
+
+#include "qlist.h"
+
+#else
+
 #include "kerncompat.h"
 
 static inline void prefetch(const void *x) {;}
@@ -462,4 +468,5 @@ static inline void hlist_add_after(struct hlist_node *n,
 		({ tpos = hlist_entry(pos, typeof(*tpos), member); 1;}); \
 	     pos = n)
 
+#endif /* HIP_CORPORATE */
 #endif /* HIP_LIST_H */
