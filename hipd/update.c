@@ -271,11 +271,12 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 		hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 		
-		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
+		hip_delete_sa(entry->default_spi_out, &list_item->address, &entry->local_address, 
+			      AF_INET6, 0,  (int)entry->peer_udp_port);	
 		
 		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 
-		hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+		hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 
 		if(ipv6_addr_cmp(&entry->preferred_address, 
@@ -653,8 +654,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, entry->peer_udp_port);
-	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, entry->peer_udp_port,0);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, &entry->local_address, AF_INET6, 0, entry->peer_udp_port);
+	hip_delete_sa(prev_spi_in, &entry->local_address, &entry->preferred_address, AF_INET6, entry->peer_udp_port,0);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -724,7 +725,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_out != new_spi_out) {
 		HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
 		/* SA is bounded to IP addresses! */
-		//hip_delete_sa(prev_spi_out, hits, AF_INET6);
+		//hip_delete_sa(prev_spi_out, hits, hitr, AF_INET6);
 		HIP_DEBUG("TODO: set new spi to 0\n");
 		_HIP_DEBUG("delete_sa out retval=%d\n", err);
 		err = 0;
@@ -734,7 +735,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 		/* SA is bounded to IP addresses! */
-		/////hip_delete_sa(prev_spi_in, hitr, AF_INET6);
+		/////hip_delete_sa(prev_spi_in, hitr, hits, AF_INET6);
 		/* remove old HIT-SPI mapping and add a new mapping */
 
 		/* actually should change hip_hadb_delete_inbound_spi
@@ -1584,14 +1585,14 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
-			      (int)entry->peer_udp_port);
+	hip_delete_sa(entry->default_spi_out, &addr->address, &entry->local_address, 
+		      AF_INET6, 0, (int)entry->peer_udp_port);
 #endif
 
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+	hip_delete_sa(spi_in, &addr->address, &entry->local_address, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 #endif
 
@@ -1937,7 +1938,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, daddr, AF_INET6,0,
+	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
@@ -1957,7 +1958,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+	hip_delete_sa(spi_in, &entry->local_address, daddr, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");

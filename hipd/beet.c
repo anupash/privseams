@@ -384,9 +384,10 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
-		   int sport, int dport) {
-
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
+		   int family, int sport, int dport) {
+	// Ignore the dst_addr, because xfrm accepts only one address.
+	// dst_addr is used only in pfkeyapi.c
 	HIP_DEBUG("spi=%d\n", spi);
 	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
 

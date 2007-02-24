@@ -1,5 +1,7 @@
 #include "beet.h"
 #ifdef CONFIG_HIP_PFKEY
+#include </usr/include/linux/pfkeyv2.h>
+#include </usr/include/linux/ipsec.h>
 
 int hip_flush_all_policy() {
 	int so, len, err = 0;
@@ -7,27 +9,52 @@ int hip_flush_all_policy() {
 	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
 
 	HIP_DEBUG("FLushing all SP's\n");
-	HIP_IFEBL(((len = pfkey_send_spdflush(so))<0), -1, pfkey_close(so), "ERROR in flushing %s", ipsec_strerror());
+	HIP_IFEBL(((len = pfkey_send_spdflush(so))<0), -1, 
+		  pfkey_close(so), "ERROR in flushing policies %s", ipsec_strerror());
 	return len;
 out_err:
 	return err;
 }
 
 int hip_flush_all_sa() {
-	int so;
+	int so, len, err = 0;
 	HIP_DEBUG("\n");
-	if ((so = pfkey_open()) < 0) {
-		HIP_ERROR("ERROR: %s\n", ipsec_strerror());
-		goto out_err;
-	}
+	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
+
 	HIP_DEBUG("Flushing all SA's\n");
+	HIP_IFEBL(((len = pfkey_send_flush(so, SADB_SATYPE_ESP))<0), -1,
+		   pfkey_close(so), "ERROR in flushing policies %s", ipsec_strerror());
+	return len;
 out_err:
-	return -1; // pfkey_send_x3
+	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
-		   int sport, int dport) {
-	// pfkey_send_delete
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
+		   int family, int sport, int dport) {
+	int so, len, err = 0;
+	struct sockaddr_storage ss_addr, dd_addr;
+	struct sockaddr *saddr;
+	struct sockaddr *daddr;
+
+	// CHECK: sport and dport are currently not used.
+
+	saddr = (struct sockaddr*) &ss_addr;
+	daddr = (struct sockaddr*) &dd_addr;
+
+	HIP_DEBUG("\n");
+	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
+
+	memset(saddr, 0, sizeof(struct sockaddr_storage));
+	memset(daddr, 0, sizeof(struct sockaddr_storage));
+	saddr->sa_family = family;
+	daddr->sa_family = family;
+	memcpy(SA2IP(saddr), peer_addr, SAIPLEN(saddr));
+	memcpy(SA2IP(daddr), dst_addr, SAIPLEN(daddr));
+
+	HIP_IFEBL(((len = pfkey_send_delete(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL, saddr, daddr, spi))<0), -1,
+		  pfkey_close(so), "ERROR in deleting sa %s", ipsec_strerror());
+out_err:
+	return;
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
