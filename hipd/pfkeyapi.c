@@ -1,7 +1,9 @@
-#include "beet.h"
 #ifdef CONFIG_HIP_PFKEY
+
+#include "xfrmapi.h"
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
+
 
 int hip_flush_all_policy() {
 	int so, len, err = 0;

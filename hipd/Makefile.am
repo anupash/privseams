@@ -6,7 +6,7 @@ CFLAGS = $(hipl_common_cflags)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
-include_HEADERS =  beet.h hadb.h oppdb.h hipd.h netdev.h rvs.h user.h
+include_HEADERS =  xfrmapi.h hadb.h oppdb.h hipd.h netdev.h rvs.h user.h
 include_HEADERS += bos.h input.h output.h icookie.h xfrm.h blind.h
 include_HEADERS += close.h hi3.h keymat.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h update.h
@@ -37,7 +37,7 @@ if HIP_PFKEY
 hipd_LDADD += ../libipsec/.libs/libipsec.a
 hipd_SOURCES += pfkeyapi.c
 else
-hipd_SOURCES += beet.c
+hipd_SOURCES += xfrmapi.c
 endif
 
 # KeyNotev2
@@ -68,7 +68,7 @@ bos.c: bos.h
 input.c: input.h
 output.c: output.h
 nat.c : nat.h
-beet.c: beet.h
+xfrmapi.c: xfrmapi.h
 netdev.c: netdev.h
 update.c: update.h
 rvs.c: rvs.h

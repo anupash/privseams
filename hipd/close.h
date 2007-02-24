@@ -9,7 +9,7 @@
 #include "cookie.h"
 #include "builder.h"
 #include "output.h"
-#include "beet.h"
+#include "xfrmapi.h"
 #include "debug.h"
 #include "keymat.h"
 #include "crypto.h"

@@ -18,7 +18,7 @@
 #include "cookie.h"
 #include "builder.h"
 #include "output.h"
-#include "beet.h"
+#include "xfrmapi.h"
 #include "close.h"
 #include "user.h"
 #include "string.h"
