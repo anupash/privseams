@@ -15,8 +15,6 @@ man3_MANS = ipsec_set_policy.3 ipsec_strerror.3
 AM_YFLAGS = -d -p __libipsec
 AM_LFLAGS = -P__libipsec -olex.yy.c
 
-if HIP_CORPORATE
-
 libipsec_la_SOURCES = \
   ipsec_dump_policy.c \
   ipsec_get_policylen.c \
@@ -43,5 +41,3 @@ noinst_HEADERS = ipsec_strerror.h policy_parse.h
 #EXTRA_DIST = ${man3_MANS} test-policy.c
 
 DISTCLEANFILES = policy_parse.c policy_parse.h policy_token.c policy_token.h
-
-endif
