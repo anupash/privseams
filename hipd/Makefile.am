@@ -68,7 +68,6 @@ bos.c: bos.h
 input.c: input.h
 output.c: output.h
 nat.c : nat.h
-xfrm.c: xfrm.h
 beet.c: beet.h
 netdev.c: netdev.h
 update.c: update.h
