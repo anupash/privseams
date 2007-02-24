@@ -18,7 +18,7 @@ struct hip_host_id_entry {
 };
 
 int main(int argc, char **argv) {
-	struct hip_db_struct db = LIST_HEAD_INIT(name.db_head);
+	struct hip_db_struct db = LIST_HEAD_INIT(db.db_head);
 	struct hip_host_id_entry *id_entry;
 	id_entry = malloc(sizeof(*id_entry));
 	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
