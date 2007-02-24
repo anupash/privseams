@@ -215,8 +215,8 @@ void test_db(){
 	err = hip_socketdb_add_entry(pid, socket);
 	HIP_ASSERT(!err);
 	entry =  hip_socketdb_find_entry(pid, socket);
-	HIP_ASSERT(entry);
 	hip_socketdb_dump();
+	HIP_ASSERT(entry);
 	
 	//  pid++; 
 	socket++;

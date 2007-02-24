@@ -18,21 +18,24 @@ struct hip_host_id_entry {
 };
 
 int main(int argc, char **argv) {
-	struct hip_db_struct db = LIST_HEAD_INIT(db.db_head);
-	struct hip_host_id_entry *id_entry;
+	struct list_head db[20];
+	struct hip_host_id_entry *id_entry, *tmp;
+
+	memset(&db, 0, sizeof(db));
+
 	id_entry = malloc(sizeof(*id_entry));
 	memset(id_entry, 0, sizeof(struct hip_host_id_entry));
 							       
-	list_add(&id_entry->next, &db.db_head);
-	list_add(&id_entry->next, &db.db_head);
-	free(id_entry);
+	list_add((struct list_head *) id_entry, db);
+	list_add((struct list_head *) id_entry, db);
 	printf("should find two entries now\n");
-	list_for_each_entry(id_entry, &db.db_head, next) {
+
+	list_for_each_entry_safe(id_entry, tmp, db, next) {
 		printf("found entry\n");
 	}
-	list_del(&db.db_head);
+	list_del(db);
 	printf("and only one now\n");
-	list_for_each_entry(id_entry, &db.db_head, next) {
+	list_for_each_entry_safe(id_entry, tmp, db, next) {
 		printf("found entry\n");
 	}
 }
