@@ -1,6 +1,6 @@
 #include "beet.h"
 
-#ifdef CONFIG_HIP_CORPORATE
+#ifdef CONFIG_HIP_PFKEY
 
 int hip_flush_all_policy() {
   return -1; 	// pfkey_send_spdflush
@@ -65,4 +65,4 @@ int hip_setup_default_sp_prefix_pair() {
 	return -1; // currently this function is not needed
 }
 
-#endif /* CONFIG_HIP_CORPORATE */
+#endif /* CONFIG_HIP_PFKEY */

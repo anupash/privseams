@@ -33,7 +33,7 @@ if HIP_OPENDHT
  hipd_LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
-if HIP_CORPORATE
+if HIP_PFKEY
 hipd_LDADD += ../libipsec/.libs/libipsec.a
 hipd_SOURCES += pfkeyapi.c
 else
