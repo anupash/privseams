@@ -1,13 +1,28 @@
 #include "beet.h"
-
 #ifdef CONFIG_HIP_PFKEY
 
 int hip_flush_all_policy() {
-  return -1; 	// pfkey_send_spdflush
+	int so, len, err = 0;
+	HIP_DEBUG("\n");
+	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
+
+	HIP_DEBUG("FLushing all SP's\n");
+	HIP_IFEBL(((len = pfkey_send_spdflush(so))<0), -1, pfkey_close(so), "ERROR in flushing %s", ipsec_strerror());
+	return len;
+out_err:
+	return err;
 }
 
 int hip_flush_all_sa() {
-  return -1; // pfkey_send_x3
+	int so;
+	HIP_DEBUG("\n");
+	if ((so = pfkey_open()) < 0) {
+		HIP_ERROR("ERROR: %s\n", ipsec_strerror());
+		goto out_err;
+	}
+	HIP_DEBUG("Flushing all SA's\n");
+out_err:
+	return -1; // pfkey_send_x3
 }
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
