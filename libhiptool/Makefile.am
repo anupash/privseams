@@ -42,11 +42,15 @@ libhiptool_la_SOURCES = crypto.c pk.c dh.c \
                         nlink.c hashtable.c
 endif
 
+if HIP_PFKEY
+else
+libhiptool_la_SOURCES += xfrmapi.c
+endif
+
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
 
-include_HEADERS =  crypto.h dh.h kerncompat.h list.h
-include_HEADERS += nlink.h pk.h
-include_HEADERS += protodefs.h state.h utils.h icomm.h ife.h
+include_HEADERS =  crypto.h dh.h list.h
+include_HEADERS += nlink.h pk.h xfrm.h xfrmapi.h
 
 if HIP_CORPORATE
 	include_HEADERS += lhashtable.h

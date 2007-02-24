@@ -61,7 +61,9 @@ CFLAGS += -DHIP_TRANSPARENT_API
 # HIP library added
 LDADD  = #../libhiptool/.libs/libhiptool.a
 
-include_HEADERS = libc-compat.h util.h debug.h builder.h misc.h hipconf.h message.h
+include_HEADERS = libc-compat.h util.h debug.h builder.h misc.h hipconf.h
+include_HEADERS += message.h icomm.h ife.h kerncompat.h protodefs.h state.h
+include_HEADERS += utils.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
