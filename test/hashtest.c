@@ -107,7 +107,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 	return (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
 }
 
-int hip_socketdb_add_entry(int pid, int socket)
+int hip_socketdb_add_entry(pid_t pid, int socket)
 {
 	int err = 0;
 	hip_opp_socket_t *tmp = NULL;
@@ -125,9 +125,9 @@ int hip_socketdb_add_entry(int pid, int socket)
 	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
-	err = hip_ht_add(&socketdb, &new_item);
 	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p, err = %d\n",
 		  new_item->pid, new_item->orig_socket,  new_item, err); 
+	err = hip_ht_add(&socketdb, new_item);
 	//hip_socketdb_dump();
 	
 	return err;
@@ -201,7 +201,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 
 // used to test socketdb
 void test_db(){
-	int pid = getpid();
+	pid_t pid = getpid();
 	int socket = 1;
 	int err = 0;
 	hip_opp_socket_t *entry = NULL;
@@ -284,6 +284,8 @@ void test_db(){
 	HIP_ASSERT(!entry);
 	hip_socketdb_dump();
 	HIP_DEBUG("end of testing db\n");
+
+	HIP_DEBUG("*** success ***\n");
 }
 
 int main(int argc, char **argv) {
