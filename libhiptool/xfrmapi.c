@@ -433,7 +433,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
-	HIP_IFEL((enckey < 0 || authkey_len < 0), -1,
+	HIP_IFEL((enckey < 0 || authkey_len < 0), 1,
 		 "Bad enc or auth key len\n");
 
 	/* XX CHECK: is there some kind of range for the SPIs ? */
@@ -445,7 +445,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      sport, dport), -1);
+				      sport, dport), 1);
 				      
  out_err:
 	return err;
