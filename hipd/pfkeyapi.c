@@ -88,18 +88,6 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_add
 	get_sock_addr_from_in6(saddr, peer_addr);
 	get_sock_addr_from_in6(daddr, dst_addr);
 
-	/*if(IN6_IS_ADDR_V4MAPPED(peer_addr) || IN6_IS_ADDR_V4MAPPED(dst_addr)) {	
-		saddr->sa_family = AF_INET;
-		daddr->sa_family = AF_INET;
-		memcpy(SA2IP(saddr), &peer_addr->s6_addr32[3], SAIPLEN(saddr));
-		memcpy(SA2IP(daddr), &dst_addr->s6_addr32[3], SAIPLEN(daddr));
-	} else {
-		saddr->sa_family = AF_INET6;
-		daddr->sa_family = AF_INET6;
-		memcpy(SA2IP(saddr), peer_addr, SAIPLEN(saddr));
-		memcpy(SA2IP(daddr), dst_addr, SAIPLEN(daddr));
- 	}
-	*/
 	HIP_IFEBL(((len = pfkey_send_delete(so, SADB_SATYPE_ESP,  HIP_IPSEC_DEFAULT_MODE, saddr, daddr, spi))<0), -1,
 		  pfkey_close(so), "ERROR in deleting sa %s", ipsec_strerror());
 out_err:
@@ -163,19 +151,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	get_sock_addr_from_in6(s_saddr, saddr);
 	get_sock_addr_from_in6(d_saddr, daddr);
 
-	/*if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr)) {	
-		s_saddr->sa_family = AF_INET;
-		d_saddr->sa_family = AF_INET;
-		memcpy(SA2IP(s_saddr), &saddr->s6_addr32[3], SAIPLEN(s_saddr));
-		memcpy(SA2IP(d_saddr), &daddr->s6_addr32[3], SAIPLEN(d_saddr));
-	} else {
-		s_saddr->sa_family = AF_INET6;
-		d_saddr->sa_family = AF_INET6;
-		memcpy(SA2IP(saddr), saddr, SAIPLEN(s_saddr));
-		memcpy(SA2IP(d_saddr), daddr, SAIPLEN(d_saddr));
- 	}
-	*/
-
 	// NOTE: port numbers remains in host representation
 	if (update) {
 		if (sport) {
@@ -187,7 +162,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 								0, lifebyte, lifetime, 0, seq,
 								l_natt_type, sport, dport, NULL,
 								l_natt_frag)) < 0),
-				  1, pfkey_close(so), "ERROR in updating sa for nat: %s", ipsec_strerror());
+				  1, pfkey_close(so), "ERROR in updating sa for nat: %s\n", ipsec_strerror());
 		} else {
 			// pfkey_send_update when update = 1 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_update(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
@@ -195,7 +170,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 							    (void*) enckey, e_type, e_keylen,
 							    a_type, a_keylen, flags,
 							    0, lifebyte, lifetime, 0, seq)) < 0),
-				  1, pfkey_close(so), "ERROR in updating sa: %s", ipsec_strerror());
+				  1, pfkey_close(so), "ERROR in updating sa: %s\n", ipsec_strerror());
 		}
 	} else {
 		if (sport) {
@@ -207,7 +182,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 							     0, lifebyte, lifetime, 0, seq,
 							     l_natt_type, sport, dport, NULL,
 							     l_natt_frag)) < 0),
-				  1, pfkey_close(so), "ERROR in adding sa for nat: %s", ipsec_strerror());
+				  1, pfkey_close(so), "ERROR in adding sa for nat: %s\n", ipsec_strerror());
 		} else {
 			// pfkey_send_add when update = 0 and sport == 0
 			HIP_IFEBL(((len = pfkey_send_add(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
@@ -215,7 +190,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 							 (void*) enckey, e_type, e_keylen,
 							 a_type, a_keylen, flags,
 							 0, lifebyte, lifetime, 0, seq)) < 0),
-				  1, pfkey_close(so), "ERROR in adding sa: %s", ipsec_strerror());
+				  1, pfkey_close(so), "ERROR in adding sa: %s\n", ipsec_strerror());
 		}
 	}
 
@@ -225,6 +200,8 @@ out_err:
 	return err;
 }
 
+// This function fills in policy0 and policylen0 according to the given parameters
+// The full implementation can be found in racoon
 // direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
 int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
 		  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
@@ -354,8 +331,6 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			  struct in6_addr *dst_addr, u8 proto,
 			  int use_full_prefix, int update)
 {
-	// call twice pfkey_send_x4
-	// We could call pfkey_send_spdadd
 	int so, len, err = 0;
 	u_int prefs, prefd;
 	HIP_DEBUG("\n");
@@ -366,16 +341,6 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
 
 	HIP_DEBUG("Adding a pair of SP\n");
-
-	/*if (s_saddr->sa_family == AF_INET)
-		prefs = HIP_HIT_PREFIX_LEN;
-	else
-		prefs = 128;
-
-	if (d_saddr->sa_family == AF_INET)
-		prefd = HIP_HIT_PREFIX_LEN;
-	else
-	prefd = 128;*/
 
 	HIP_IFEBL((hip_pfkey_policy_modify(so, dst_hit, prefix, src_hit, 
 					   prefix, src_addr, dst_addr, 
@@ -396,7 +361,6 @@ out_err:
 void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 			    int use_full_prefix)
 {
-	// call twice pfkey_send_x5
 	int so, len, err = 0;
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
@@ -426,6 +390,7 @@ void hip_delete_default_prefix_sp_pair()
 
 int hip_setup_default_sp_prefix_pair()
 {
+	HIP_DEBUG("\n");
 	return 0; // currently this function is not needed
 }
 
