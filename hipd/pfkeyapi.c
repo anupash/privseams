@@ -5,7 +5,8 @@
 #include </usr/include/linux/ipsec.h>
 
 // FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
-#define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_TUNNEL
+#define HIP_IPSEC_DEFAULT_MODE XFRM_MODE_BEET //IPSEC_MODE_TUNNEL
+
 static __inline u_int8_t
 sysdep_sa_len (const struct sockaddr *sa)
 {

@@ -32,6 +32,8 @@
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
+// NOTE: kernel versions which have BEET natively included, this value is 4
+// See include/linux/xfrm.h of the kernel source code
 #define XFRM_MODE_BEET   2
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
