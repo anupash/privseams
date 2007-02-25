@@ -2072,6 +2072,7 @@ void hip_delete_all_sp()
 	for(i = 0; i < HIP_HADB_SIZE; i++) {
 		list_for_each_entry_safe(ha, tmp, &hadb_byhit[i], next_hit) {
 			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
+			hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, 0, 1);
 
 
 			list_for_each_entry_safe(item, tmp_spi, &ha->spis_in, list) {
