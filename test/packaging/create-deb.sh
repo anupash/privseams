@@ -14,6 +14,7 @@ SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
 DEBIAN=i386/DEBIAN
+DEBIANGPL=i386/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
@@ -52,7 +53,7 @@ copy_files_gpl()
 	set -e
 	mkdir -p "$PKGDIRGPL/DEBIAN"
 	for f in control changelog copyright postinst prerm;do
-	cp $DEBIAN/$f "$PKGDIRGPL/DEBIAN"
+	cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
 	done
 	
 	echo "** Copying binary files to '$PKGDIRGPL'"
@@ -64,9 +65,9 @@ copy_files_gpl()
 	cd "$HIPL"
 	
 	for suffix in a so so.0 so.0.0.0;do
-	cp -d libinet6/.libs/libinet6.$suffix $PKGDIRGPL/usr/lib/
+	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
 	done
-	cp -L libinet6/.libs/libinet6.la $PKGDIRGPL/usr/lib/
+	cp -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
 	
 	set +e
 }
@@ -103,17 +104,17 @@ copy_files ()
     done
     cp test/hipsetup $PKGDIR/usr/sbin/
     for suffix in a so so.0 so.0.0.0;do
+	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
-		cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
+		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
-	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
 	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
+    cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
-	    cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
+	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
-    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
