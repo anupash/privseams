@@ -1,3 +1,10 @@
+/* 
+ * Implements interfaces used to set IpSec SA/SP through PFKEY API's
+ *
+ * Authors:
+ * - Diego Beltrami <diego.beltrami@gmail.com>
+ */
+
 #include "xfrmapi.h"
 #ifdef CONFIG_HIP_PFKEY
 #include <libinet6/include/net/pfkeyv2.h>
