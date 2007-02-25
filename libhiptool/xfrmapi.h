@@ -27,7 +27,6 @@
 #include "hadb.h"
 #include "user.h"
 #include "misc.h"
-#include "xfrm.h"
 #include "state.h"
 
 #define HIP_BEETDB_SIZE  53
@@ -75,6 +74,7 @@ void hip_beetdb_put_entry(void *entry);
  * daemon to the kernel XFRM management). The functions are used to
  * manage the replica of HADB within the kernel.
  */
+void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec);
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);

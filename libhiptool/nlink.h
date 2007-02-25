@@ -7,6 +7,7 @@
 #include "builder.h"
 #include "debug.h"
 #include "hipd.h"
+#include "xfrm.h"
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
