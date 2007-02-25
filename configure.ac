@@ -137,7 +137,6 @@ AC_CACHE_CHECK([whether to use corporate extensions],
                [ac_cv_use_corporate], [ac_cv_use_corporate=no])
 if test x"$ac_cv_use_corporate" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
-        AM_PROG_LEX
 fi
 AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
 
