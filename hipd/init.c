@@ -170,10 +170,8 @@ int hipd_init(int flush_ipsec)
 		goto out_err;
 	}
 
-#if 0
 #ifndef CONFIG_HIP_PFKEY
 	hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
-#endif
 #endif
 
 #if 0
