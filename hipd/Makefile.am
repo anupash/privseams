@@ -20,7 +20,13 @@ hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c reg.c init.c maintenance.c accessor.c oppipdb.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+hipd_LDADD = ../libinet6/.libs/libinet6.a
+if HIP_CORPORATE
+  hipd_LDADD += -lhiptool
+else
+  hipd_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
 hipd_LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_HI3

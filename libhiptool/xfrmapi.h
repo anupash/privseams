@@ -29,6 +29,7 @@
 #include "misc.h"
 #include "xfrm.h"
 #include "state.h"
+#include "nlink.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
@@ -43,10 +44,6 @@
 #ifndef NETLINK_XFRM
 #  define NETLINK_XFRM            6       /* ipsec */
 #endif
-
-
-extern int  hip_nat_status;
-struct rtnl_handle;
 
 #if 0
 /* BEET database entry struct and access functions to retrieve them. */

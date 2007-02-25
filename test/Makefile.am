@@ -10,28 +10,34 @@ include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
+conntest_client_LDADD = 
 if HIP_OPPORTUNISTIC
   # currently opp. library does not work with conntest-client-gai
-  conntest_client_LDADD = ../libopphip/.libs/libopphip.a
-  conntest_client_LDADD += ../libinet6/.libs/libinet6.a
-  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
-else
-  conntest_client_LDADD = ../libinet6/.libs/libinet6.a
-  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+  conntest_client_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-hashtest_LDADD = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+conntest_client_LDADD += ../libinet6/.libs/libinet6.a
+hashtest_LDADD = ../libinet6/.libs/libinet6.a
+listtest_LDADD =
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
 #
-LDADD  = ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+LDADD  = ../libinet6/.libs/libinet6.a
+
+if HIP_CORPORATE
+  conntest_client_LDADD += -lhiptool
+  hashtest_LDADD += -lhiptool
+  LDADD += -lhiptool
+else
+  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+  hashtest_LDADD += ../libhiptool/.libs/libhiptool.a
+  LDADD += ../libhiptool/.libs/libhiptool.a
+endif
 
 if HIP_OPENDHT
-#  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
   conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
   LDADD += ../opendht/.libs/libhipopendht.a
-#  INCLUDES += -I../opendht
   CFLAGS += $(HIPL_XMLL)
 endif
 
@@ -46,7 +52,7 @@ bin_PROGRAMS += hipsetup
 bin_PROGRAMS += libinet6test
 bin_PROGRAMS += listifaces
 bin_PROGRAMS += first_test
-sbin_PROGRAMS = modtest
+#sbin_PROGRAMS = modtest
 bin_PROGRAMS += cookietest
 bin_PROGRAMS += keygentest
 #bin_PROGRAMS += sha1ime_test

@@ -13,7 +13,7 @@ include_HEADERS = hipconftool.h
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_OPENDHT
-INCLUDES += -I../opendht
+  INCLUDES += -I../opendht
 endif
 
 if HIP_HI3
@@ -22,13 +22,18 @@ endif
 
 LDADD=
 if HIP_OPPORTUNISTIC
-LDADD += ../libopphip/.libs/libopphip.a
+  LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-LDADD += ../libinet6/.libs/libinet6.a  ../libhiptool/.libs/libhiptool.a
+LDADD += ../libinet6/.libs/libinet6.a
+if HIP_CORPORATE
+  LDADD += -lhiptool
+else
+  LDADD += ../libhiptool/.libs/libhiptool.a
+endif
 
 if HIP_OPENDHT
-LDADD += ../opendht/.libs/libhipopendht.a
+  LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below

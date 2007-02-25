@@ -2,6 +2,8 @@
 
 #ifndef CONFIG_HIP_PFKEY
 
+/* For receiving netlink IPsec events (acquire, expire, etc) */
+struct rtnl_handle hip_nl_ipsec  = { 0 };
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
@@ -228,8 +230,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	} req;
 
 	HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
-	HIP_DEBUG("hip_nat_status %d, sport %d, dport %d\n",
-		  hip_nat_status,  sport, dport);
+	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
 	HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
 	
@@ -262,7 +263,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
 			   0, 0, 0,0, AF_INET6), -1);
-	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
+	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
@@ -363,7 +364,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	
         /** @todo Fill in information for UDP-NAT SAs. */
-	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
+	if(req.xsid.family == AF_INET && (sport || dport))
 	{
 		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
