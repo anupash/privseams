@@ -13,6 +13,7 @@ RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 DEBIAN=i386/DEBIAN
+CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
@@ -141,9 +142,13 @@ parse_args() {
             b) TYPE=binary    
                GIVEN=${GIVEN}+1 ;;
 
+            s) TYPE=source ;;
+
+            # XX FIXME!!!
+	    c) CORPORATE=1 ;;
+
             h) help; exit 0 ;;
 
-            s) TYPE=source ;;
             *) help
                die "bad args" ;;
         esac

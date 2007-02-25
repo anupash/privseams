@@ -53,7 +53,7 @@ bin_PROGRAMS += keygentest
 bin_PROGRAMS += ttcp
 bin_PROGRAMS += hashtest
 #bin_PROGRAMS += hipconf
-#bin_PROGRAMS += listtest
+bin_PROGRAMS += listtest
 
 #sbin_SCRIPTS = hipsetup
 
@@ -75,7 +75,7 @@ keygentest_SOURCES = keygentest.c
 modtest_SOURCES = modtest.c
 hashtest_SOURCES = hashtest.c
 #hipconf_SOURCE = hipconftool.c
-#listtest_SOURCES = listtest.c
+listtest_SOURCES = listtest.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

@@ -33,5 +33,8 @@ armel-deb:
 source-deb:
 	test/packaging/create-deb.sh -s
 
+corporate-deb:
+	test/packaging/create-deb.sh -c
+
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
