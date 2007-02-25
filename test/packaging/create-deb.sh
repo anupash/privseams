@@ -103,14 +103,14 @@ copy_files ()
     done
     cp test/hipsetup $PKGDIR/usr/sbin/
     for suffix in a so so.0 so.0.0.0;do
-	if [ $CORPORATE != 1 ];then
+	if [ ! $CORPORATE ];then
 		cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	fi
 	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
 	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
-	if [ $CORPORATE != 1 ];then
+	if [ ! $CORPORATE ];then
 	    cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	fi
     cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
