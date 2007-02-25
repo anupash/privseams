@@ -54,7 +54,7 @@ int hip_flush_all_policy()
 
 	HIP_DEBUG("FLushing all SP's\n");
 	HIP_IFEBL(((len = pfkey_send_spdflush(so))<0), -1, 
-		  pfkey_close(so), "ERROR in flushing policies %s", ipsec_strerror());
+		  pfkey_close(so), "ERROR in flushing policies %s\n", ipsec_strerror());
 	HIP_DEBUG("FLushing all SP's was successful\n");
 	return len;
 out_err:
@@ -70,7 +70,7 @@ int hip_flush_all_sa()
 
 	HIP_DEBUG("Flushing all SA's\n");
 	HIP_IFEBL(((len = pfkey_send_flush(so, SADB_SATYPE_ESP))<0), -1,
-		   pfkey_close(so), "ERROR in flushing policies %s", ipsec_strerror());
+		   pfkey_close(so), "ERROR in flushing policies %s\n", ipsec_strerror());
 	return len;
 out_err:
 	return err;
@@ -142,7 +142,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	u_int8_t l_natt_type = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
 	// FIXME: this parameter maybe should be related to some esp parameters (according to racoon source code)
 	u_int16_t l_natt_frag = 0;
-	/* Mappings from HIP to XFRM algo names */
+	/* Mappings from HIP to PFKEY algo names */
 	u_int e_types[] = {SADB_EALG_NULL, SADB_X_EALG_AESCBC, SADB_EALG_3DESCBC, SADB_EALG_3DESCBC,
 			   SADB_X_EALG_BLOWFISHCBC, SADB_EALG_NULL, SADB_EALG_NULL};
 	u_int a_algos[] = {SADB_AALG_NONE, SADB_AALG_SHA1HMAC, SADB_AALG_SHA1HMAC, SADB_AALG_MD5HMAC,
@@ -402,14 +402,15 @@ out_err:
 
 void hip_delete_default_prefix_sp_pair()
 {
-	// you don't have to implement this, currently unused
+	// Currently unused
 	HIP_DEBUG("\n");
 }
 
 int hip_setup_default_sp_prefix_pair()
 {
+	// currently this function is not needed
 	HIP_DEBUG("\n");
-	return 0; // currently this function is not needed
+	return 0;
 }
 
 #endif /* CONFIG_HIP_PFKEY */
