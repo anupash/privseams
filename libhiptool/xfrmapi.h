@@ -29,7 +29,6 @@
 #include "misc.h"
 #include "xfrm.h"
 #include "state.h"
-#include "nlink.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048

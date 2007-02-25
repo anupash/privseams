@@ -9,6 +9,8 @@
 
 #include "kerncompat.h"
 
+#ifndef HIP_CORPORATE
+
 static inline void prefetch(const void *x) {;}
 
 /**
@@ -467,6 +469,8 @@ static inline void hlist_add_after(struct hlist_node *n,
 	     pos && ({ n = pos->next; 1; }) && 				 \
 		({ tpos = hlist_entry(pos, typeof(*tpos), member); 1;}); \
 	     pos = n)
+
+#endif /* HIP_CORPORATE */
 
 #endif /* HIP_CORPORATE */
 #endif /* HIP_LIST_H */

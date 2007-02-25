@@ -170,6 +170,8 @@ int hipd_init(int flush_ipsec)
 		goto out_err;
 	}
 
+	void hip_xfrm_set_nl_ipsec(hip_nl_ipsec);
+
 #if 0
 	{
 		const int ipsec_buf_size = 200000;
