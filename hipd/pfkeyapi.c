@@ -1,6 +1,5 @@
 #include "xfrmapi.h"
 #ifdef CONFIG_HIP_PFKEY
-//#include <libpfkey.h>
 #include <libinet6/include/net/pfkeyv2.h>
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
@@ -83,6 +82,12 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_add
 	daddr = (struct sockaddr*) &dd_addr;
 
 	HIP_DEBUG("\n");
+	HIP_DEBUG("spi=0x%x\n", spi);
+	HIP_DEBUG_IN6ADDR("peer_addr", peer_addr);
+	HIP_DEBUG_IN6ADDR("dst_addr", dst_addr);
+	// Sanity check
+	HIP_IFEL((!peer_addr || !dst_addr), -1, "Addresses not valid when deleting SA's\n");
+
 	HIP_IFEL(((so = pfkey_open()) < 0), -1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
 
 	get_sock_addr_from_in6(saddr, peer_addr);
@@ -144,6 +149,12 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	get_random_bytes(&seq, sizeof(uint32_t));
 
 	HIP_DEBUG("\n");
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_IN6ADDR("saddr", saddr);
+	HIP_DEBUG_IN6ADDR("daddr", daddr);
+	HIP_IFEL((!saddr || !daddr), 1, "Addresses not valid when adding SA's\n");
+
 	HIP_IFEL(((so = pfkey_open()) < 0), 1, "ERROR in opening pfkey socket: %s\n", ipsec_strerror());
 
 	s_saddr = (struct sockaddr*) &ss_addr;
@@ -333,7 +344,6 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 {
 	int so, len, err = 0;
 	u_int prefs, prefd;
-	HIP_DEBUG("\n");
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 	int cmd = update ? SADB_X_SPDUPDATE : SADB_X_SPDADD;
 

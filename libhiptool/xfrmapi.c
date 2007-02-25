@@ -388,7 +388,7 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_add
 		   int family, int sport, int dport) {
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
-	HIP_DEBUG("spi=%d\n", spi);
+	HIP_DEBUG("spi=0x%x\n", spi);
 	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
 
 	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
