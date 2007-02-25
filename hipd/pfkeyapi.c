@@ -5,6 +5,8 @@
 #include </usr/include/linux/pfkeyv2.h>
 #include </usr/include/linux/ipsec.h>
 
+// FIXME: This must be turned to BEET when BEET will be supported by pfkey as well
+#define HIP_IPSEC_DEFAULT_MODE IPSEC_MODE_TUNNEL
 static __inline u_int8_t
 sysdep_sa_len (const struct sockaddr *sa)
 {
@@ -98,7 +100,7 @@ void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_add
 		memcpy(SA2IP(daddr), dst_addr, SAIPLEN(daddr));
  	}
 	*/
-	HIP_IFEBL(((len = pfkey_send_delete(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL, saddr, daddr, spi))<0), -1,
+	HIP_IFEBL(((len = pfkey_send_delete(so, SADB_SATYPE_ESP,  HIP_IPSEC_DEFAULT_MODE, saddr, daddr, spi))<0), -1,
 		  pfkey_close(so), "ERROR in deleting sa %s", ipsec_strerror());
 out_err:
 	return;
@@ -178,7 +180,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (update) {
 		if (sport) {
 			// pfkey_send_update_nat when update = 1 and sport != 0
-			HIP_IFEBL(((len = pfkey_send_update_nat(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL, 
+			HIP_IFEBL(((len = pfkey_send_update_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE, 
 								s_saddr, d_saddr, *spi, reqid, wsize,
 								(void*) enckey, e_type, e_keylen, 
 								a_type, a_keylen, flags,
@@ -188,7 +190,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				  1, pfkey_close(so), "ERROR in updating sa for nat: %s", ipsec_strerror());
 		} else {
 			// pfkey_send_update when update = 1 and sport == 0
-			HIP_IFEBL(((len = pfkey_send_update(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL,
+			HIP_IFEBL(((len = pfkey_send_update(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
 							    s_saddr, d_saddr, *spi, reqid, wsize,
 							    (void*) enckey, e_type, e_keylen,
 							    a_type, a_keylen, flags,
@@ -198,7 +200,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	} else {
 		if (sport) {
 			// pfkey_send_add_nat when update = 0 and sport != 0 	
-			HIP_IFEBL(((len = pfkey_send_add_nat(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL,
+			HIP_IFEBL(((len = pfkey_send_add_nat(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
 							     s_saddr, d_saddr, *spi, reqid, wsize,
 							     (void*) enckey, e_type, e_keylen, 
 							     a_type, a_keylen, flags,
@@ -208,7 +210,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				  1, pfkey_close(so), "ERROR in adding sa for nat: %s", ipsec_strerror());
 		} else {
 			// pfkey_send_add when update = 0 and sport == 0
-			HIP_IFEBL(((len = pfkey_send_add(so, SADB_SATYPE_ESP, IPSEC_MODE_TUNNEL,
+			HIP_IFEBL(((len = pfkey_send_add(so, SADB_SATYPE_ESP, HIP_IPSEC_DEFAULT_MODE,
 							 s_saddr, d_saddr, *spi, reqid, wsize,
 							 (void*) enckey, e_type, e_keylen,
 							 a_type, a_keylen, flags,
@@ -225,7 +227,7 @@ out_err:
 
 // direction IPSEC_DIR_INBOUND | IPSEC_DIR_OUTBOUND
 int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
-		  struct sockaddr *src, struct sockaddr *dst, int cmd)
+		  struct sockaddr *src, struct sockaddr *dst, u_int mode, int cmd)
 {
 	struct sadb_x_policy *xpl;
 	struct sadb_x_ipsecrequest *xisr;
@@ -233,7 +235,7 @@ int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
 	caddr_t policy, p;
 	int policylen;
 	int xisrlen, src_len, dst_len;
-	u_int satype, mode;
+	u_int satype;
 	HIP_DEBUG("\n");
 	/* get policy buffer size */
 	policylen = sizeof(struct sadb_x_policy);
@@ -265,7 +267,7 @@ int getsadbpolicy(caddr_t *policy0, int *policylen0, int direction,
 	xisr = (struct sadb_x_ipsecrequest *)(xpl + 1);
 
 	xisr->sadb_x_ipsecrequest_proto = SADB_SATYPE_ESP;
-	xisr->sadb_x_ipsecrequest_mode = IPSEC_MODE_TUNNEL;
+	xisr->sadb_x_ipsecrequest_mode = mode;
 	xisr->sadb_x_ipsecrequest_level = IPSEC_LEVEL_REQUIRE;
 	xisr->sadb_x_ipsecrequest_reqid = 0;
 	p = (caddr_t)(xisr + 1);
@@ -301,6 +303,7 @@ int hip_pfkey_policy_modify(int so, hip_hit_t *src_hit, u_int prefs,
 	caddr_t policy = NULL;
 	int policylen = 0;
 	int len = 0;
+	u_int mode;
 	HIP_DEBUG("\n");
 	// Sanity check
 	HIP_IFEL((src_hit == NULL || dst_hit == NULL), -1, "Invalid hit's\n");
@@ -319,8 +322,12 @@ int hip_pfkey_policy_modify(int so, hip_hit_t *src_hit, u_int prefs,
 	get_sock_addr_from_in6(s_shit, src_hit);
 	d_shit = (struct sockaddr*) &dd_hit;
 	get_sock_addr_from_in6(d_shit, dst_hit);
+	if (proto)
+		mode = HIP_IPSEC_DEFAULT_MODE;
+	else
+		mode = IPSEC_MODE_TRANSPORT;
 
-	HIP_IFEL((getsadbpolicy(&policy, &policylen, direction, s_saddr, d_saddr, cmd)<0),
+	HIP_IFEL((getsadbpolicy(&policy, &policylen, direction, s_saddr, d_saddr, mode, cmd)<0),
 		 -1, "Error in building the policy\n");
 
 	if (cmd == SADB_X_SPDUPDATE) {
