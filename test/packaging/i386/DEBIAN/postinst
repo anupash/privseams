@@ -2,7 +2,7 @@
 
 ldconfig
 
-if [ -f /etc/hip/hip_host_dsa_key_anon.pub ]
+if [ -s /etc/hip/hip_host_dsa_key_anon.pub ]
 then
  echo "Not creating host keys under /etc/hip, they already exist"
 else

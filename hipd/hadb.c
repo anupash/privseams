@@ -307,6 +307,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 	
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
+	if (entry) hip_hadb_dump_spis_out(entry);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
 	
 	entry = hip_hadb_create_state(GFP_KERNEL);
@@ -336,6 +337,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->peer_udp_port = 0;
 	}
 
+#ifdef CONFIG_HIP_BLIND
+	if(hip_blind_status)
+		entry->blind = 1;
+#endif
 	if (hip_hidb_hit_is_our(peer_hit)) {
 		HIP_DEBUG("Peer HIT is ours (loopback)\n");
 		entry->is_loopback = 1;
@@ -361,7 +366,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
-	
+
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
@@ -443,7 +448,7 @@ int hip_add_peer_map(const struct hip_common *input)
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
- 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+ 		HIP_ERROR("Failed to insert peer map (%d)\n", err);
 		goto out_err;
 	}
 
@@ -1730,6 +1735,8 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 		hip_rsa_verify : hip_dsa_verify;
 	
  out_err:
+	HIP_DEBUG_HIT("peer's hit", &hit);
+	HIP_DEBUG_HIT("entry's hit", &entry->hit_peer);
 	return err;
 }
 
@@ -2389,7 +2396,7 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
 	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_I2 ||
 	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		(*counter)++;
@@ -2462,6 +2469,44 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 	if (err)
 		result = NULL;
 
+	return result;
+}
+#endif
+
+
+#ifdef CONFIG_HIP_BLIND
+hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
+				      hip_hit_t *peer_blind_hit)
+{
+	int err = 0, i;
+	hip_ha_t *this, *tmp, *result = NULL;
+
+	HIP_LOCK_HT(&hadb_hit);
+	for(i = 0; i < HIP_HADB_SIZE; i++) {
+	  _HIP_DEBUG("The %d list is empty? %d\n", i,
+		     list_empty(&hadb_byhit[i]));
+	  list_for_each_entry_safe(this, tmp, &hadb_byhit[i], next_hit)
+	    {
+	      _HIP_DEBUG("List_for_each_entry_safe\n");
+	      hip_hold_ha(this);
+	      if ((ipv6_addr_cmp(local_blind_hit, &this->hit_our_blind) == 0) &&
+		  (ipv6_addr_cmp(peer_blind_hit, &this->hit_peer_blind) == 0)) {
+		result = this;
+		break;
+	      }
+	      hip_db_put_ha(this, hip_hadb_delete_state);
+	      if (err)
+		break;
+	    }
+	  if (err)
+	    break;
+	}
+	HIP_UNLOCK_HT(&hadb_hit);
+	
+ out_err:
+	if (err)
+	  result = NULL;
+	
 	return result;
 }
 #endif

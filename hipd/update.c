@@ -908,7 +908,6 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	addr->seq_update_id = entry->update_id_out;
 
 
-
 	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
 		/* todo: handle overflow if (!update_id_out) */
@@ -2230,15 +2229,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	else if(err)
 		goto out_err;
 
-	if (add_locator) {
-		/* LOCATOR is the first parameter of the UPDATE */
-		err = hip_build_param_locator(update_packet, addr_list,
-					      addr_count);
-
-		HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
-	} else
-		HIP_DEBUG("not adding LOCATOR\n");
-
 	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
 		  esp_info_old_spi, esp_info_new_spi);
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
@@ -2246,8 +2236,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 					  esp_info_old_spi,
 					  esp_info_new_spi),
 			 -1, "Building of ESP_INFO param failed\n");
-
  	
+	if (add_locator) {
+		err = hip_build_param_locator(update_packet, addr_list,
+					      addr_count);
+
+		HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
+	} else
+		HIP_DEBUG("not adding LOCATOR\n");
+
 	hip_update_set_new_spi_in(entry, esp_info_old_spi,
 				  esp_info_new_spi, 0);
 	entry->update_id_out++;

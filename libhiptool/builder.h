@@ -32,6 +32,10 @@ uint32_t hip_get_param_spi_value(const struct hip_esp_info *);
 uint32_t hip_get_param_lsi_value(const struct hip_esp_info *);
 #endif
 
+#ifdef CONFIG_HIP_BLIND
+int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
+#endif	
+
 void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
                             uint8_t, unsigned int);
 void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,

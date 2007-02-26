@@ -87,7 +87,7 @@ int hip_precreate_r1(struct hip_r1entry *r1table, struct in6_addr *hit,
 		cookie_k = hip_get_cookie_difficulty_by_index(i);
 
 		r1table[i].r1 = hip_create_r1(hit, sign, privkey, pubkey,
-					      cookie_k);
+					      cookie_km);
 		if (!r1table[i].r1) {
 			HIP_ERROR("Unable to precreate R1s\n");
 			goto err_out;

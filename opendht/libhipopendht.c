@@ -32,6 +32,7 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         perror("Socket");
+
     return(sockfd);      
 }
 
@@ -145,7 +146,6 @@ int opendht_put(int sockfd,
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
-    
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }

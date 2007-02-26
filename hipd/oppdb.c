@@ -31,24 +31,6 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	return err;
 }
 
-int hip_handle_opp_fallback(hip_opp_block_t *entry,
-			    void *current_time) {
-	int err = 0;
-	time_t *now = (time_t*) current_time;	
-
-	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
-	
-	if(*now - HIP_OPP_WAIT > entry->creation_time) {
-		HIP_DEBUG("Timeout for opp entry, falling back to\n");
-		err = hip_opp_unblock_app(&entry->caller, NULL);
-		HIP_DEBUG("Unblock returned %d\n", err);
-		err = hip_oppdb_entry_clean_up(entry);
-	}
-	
- out_err:
-	return err;
-}
-
 int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
                     void *opaque) {
        int i = 0, fail = 0;
@@ -243,7 +225,8 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit,
+			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -252,22 +235,32 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 		 "build user header failed\n");
 	if (hit) {
 		HIP_IFEL(hip_build_param_contents(message, hit,
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
+		                                  HIP_PARAM_HIT,
+		                                  sizeof(struct in6_addr)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
 	}
+	
+	if (reject) {
+		n = 1;
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+		HIP_IFEL(hip_build_param_contents(message, &n,
+		                                  HIP_PARAM_AGENT_REJECT,
+		                                  sizeof(n)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+	}
+
 	n = hip_sendto(message, app_id);
 	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
+		HIP_ERROR("hip_sendto() failed.\n");
+		err = -1;
+		goto out_err;
 	}
  out_err:
 	if (message)
 		HIP_FREE(message);
 	return err;
 }
-
 
 hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 				   struct in6_addr *resp_addr)
@@ -364,10 +357,10 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "Failed to find opp entry by hit\n");
 
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
-	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
 	// we should still get entry after delete old phit HA
-        entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
 
 	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
@@ -386,6 +379,48 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
+
+/**
+ * Receive opportunistic R1 when entry is in established mode already.
+ * This is because we need to send right HIT to client app and not
+ * empty packet. If this is not done, client app will fallback to normal
+ * tcp connection without HIP after one connection to host has already
+ * been made earlier.
+ */
+int hip_receive_opp_r1_in_established(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       hip_ha_t *opp_entry,
+		       hip_portpair_t *msg_info)
+{
+	hip_opp_block_t *block_entry = NULL;
+	hip_hit_t phit;
+	int err = 0;
+
+	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
+					       HIP_HIT_TYPE_HASH100), -1,
+		 "pseudo hit conversion failed\n");
+	
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
+		 "unblock failed\n");
+ 
+out_err:
+	if (block_entry) {
+		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
+		hip_oppdb_entry_clean_up(block_entry);
+	}
+	return err;
+}
+
+
 /**
  * No description.
  */
@@ -403,11 +438,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
 		goto out_err;
 	}
 
@@ -424,6 +454,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+	
+	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
+	{
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		         "Building of user header failed\n");
+		goto out_err;
+	}
 	
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
@@ -458,20 +496,64 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
-		goto out_err;
 	}
 	
  send_i1:
- 	/** @todo Not filtering I1 trough agent, if in opportunistic mode! */
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha, 1), -1,
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
 	
  out_err:
+	return err;
+}
+
+int hip_handle_opp_fallback(hip_opp_block_t *entry,
+			    void *current_time) {
+	int err = 0, disable_fallback = 0;
+	time_t *now = (time_t*) current_time;	
+
+	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+
+#if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
+	/* If agent is prompting user, let's make sure that
+	   the death counter in maintenance does not expire */
+	if (hip_agent_is_alive()) {
+		hip_ha_t *ha = NULL;
+		ha = hip_oppdb_get_hadb_entry(&entry->our_real_hit,
+					      &entry->peer_ip);
+		if (ha)
+			disable_fallback = ha->hip_opp_fallback_disable;
+	}
+#endif
+	
+	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
+		hip_ipdb_add(&entry->peer_ip);
+		HIP_DEBUG("Timeout for opp entry, falling back to\n");
+		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+		HIP_DEBUG("Unblock returned %d\n", err);
+		err = hip_oppdb_entry_clean_up(entry);
+	}
+	
+ out_err:
+	return err;
+}
+
+
+
+int hip_handle_opp_reject(hip_opp_block_t *entry, void *data)
+{
+	int err = 0;
+	struct in6_addr *resp_ip = data;
+	
+	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
+
+	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
+	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
+	HIP_DEBUG("Rejecting blocked opp entry\n");
+	err = hip_opp_unblock_app(&entry->caller, NULL, 1);
+	HIP_DEBUG("Unblock returned %d\n", err);
+	err = hip_oppdb_entry_clean_up(entry);
+	
+out_err:
 	return err;
 }
 

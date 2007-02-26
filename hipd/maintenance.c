@@ -34,13 +34,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if (entry->hip_msg_retrans.buf == NULL)
 		goto out_err;
 	
-	if (entry->state == HIP_STATE_FILTERING_I1 ||
-	    entry->state == HIP_STATE_FILTERING_R2)
-	{
-		HIP_DEBUG("Waiting reply from agent...\n");
-		goto out_err;
-	}
-	
 	_HIP_DEBUG("Time to retrans: %d Retrans count: %d State: %s\n",
 		   entry->hip_msg_retrans.last_transmit + HIP_RETRANSMIT_WAIT - *now,
 		   entry->hip_msg_retrans.count, hip_state_str(entry->state));
@@ -68,11 +61,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			    == HIP_I1) {
 				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
 				entry->state = HIP_STATE_I1_SENT;
-			}
-			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_R2) {
-				HIP_DEBUG("Sent R2 succcesfully after acception.\n");
-				entry->state = HIP_STATE_ESTABLISHED;
 			}
 			
 			entry->hip_msg_retrans.count--;
@@ -267,8 +255,13 @@ out_err:
 /**
  * Filter packet trough agent.
  */
-int hip_agent_filter(struct hip_common *msg)
+int hip_agent_filter(struct hip_common *msg,
+                     struct in6_addr *src_addr,
+                     struct in6_addr *dst_addr,
+	                 hip_portpair_t *msg_info)
 {
+	/* Variables. */
+	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
 	socklen_t alen;
@@ -283,11 +276,21 @@ int hip_agent_filter(struct hip_common *msg)
 	HIP_DEBUG("Filtering hip control message trough agent,"
 	          " message body size is %d bytes.\n",
 	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-/*	HIP_HEXDUMP("contents start: ", msg, sizeof(struct hip_common));
-	memcpy(&hits, &msg->hits, sizeof(hits));*/
 
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
+	/* Create packet for agent. */	
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+	HIP_IFE(hip_build_user_hdr(user_msg, hip_get_msg_type(msg), 0), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, msg, HIP_PARAM_ENCAPS_MSG,
+	                                 hip_get_msg_total_len(msg)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, src_addr, HIP_PARAM_SRC_ADDR,
+	                                 sizeof(*src_addr)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, dst_addr, HIP_PARAM_DST_ADDR,
+	                                 sizeof(*dst_addr)), -1);
+	HIP_IFE(hip_build_param_contents(user_msg, msg_info, HIP_PARAM_PORTPAIR,
+	                                 sizeof(*msg_info)), -1);
+
+	alen = sizeof(hip_agent_addr);
+	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
 	           0, (struct sockaddr *)&hip_agent_addr, alen);
 	if (n < 0)
 	{
@@ -298,52 +301,8 @@ int hip_agent_filter(struct hip_common *msg)
 
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
-	/*
-		If message is type I1, then user action might be needed to filter the packet.
-		Not receiving the packet directly from agent.
-	*/
-	HIP_IFE(hip_get_msg_type(msg) == HIP_I1, 1);
-	HIP_IFE(hip_get_msg_type(msg) == HIP_R2, 1);
-	
-	alen = sizeof(hip_agent_addr);
-	sendn = n;
-	n = recvfrom(hip_agent_sock, msg, n, 0,
-	             (struct sockaddr *)&hip_agent_addr, &alen);
-	if (n < 0)
-	{
-		HIP_ERROR("Recvfrom() failed.\n");
-		err = -1;
-		goto out_err;
-	}
-	/* This happens, if agent rejected the packet. */
-	else if (sendn != n)
-	{
-		err = 1;
-	}
-
-/*	if (hip_get_msg_type(msg) == HIP_I1 &&
-	    memcmp(&msg->hits, &hits, sizeof(msg->hits)) != 0)
-	{
-		HIP_DEBUG("Updating selected local HIT state in hadb to I1_SENT...\n");
-		ha_entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-		if (ha_entry)
-		{
-			HIP_DEBUG("1. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_I1_SENT);
-			ha_entry->state = HIP_STATE_I1_SENT;
-		}
-		ha_entry = hip_hadb_find_byhits(&hits, &msg->hitr);
-		if (ha_entry)
-		{
-			HIP_DEBUG("2. Changing state from %d to %d\n", ha_entry->state, HIP_STATE_UNASSOCIATED);
-			ha_entry->state = HIP_STATE_UNASSOCIATED;
-		}
-		err = 1;
-	}
-
-	HIP_HEXDUMP("contents end: ", msg, sizeof(struct hip_common));*/
-
 out_err:
-       return (err);
+	return (err);
 }
 
 
@@ -381,36 +340,34 @@ void register_to_dht ()
 
         if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
         {    
-            tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-            tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
-            HIP_DEBUG("Inserting HIT=%s with IP=%s and hostname %s to DHT\n", 
-                      tmp_hit_str, tmp_addr_str, hostname);
-      
+           tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+           tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+
            /* send the fqdn->hit mapping */
            if (hip_opendht_fqdn_sent == 0) 
            {
-                HIP_DEBUG("Sending mapping FQDN->HIT to the openDHT\n");
+                HIP_DEBUG("Sending mapping FQDN (%s) -> HIT (%s) to the openDHT\n", 
+                          hostname, tmp_hit_str);
                 if (hip_opendht_sock_fqdn < 1)
                     hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                 opendht_error = 0;
                 opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
                                                     &opendht_serving_gateway);
                 if (opendht_error > -1) 
-                {
+                { 
                     opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
                                     (unsigned char *)tmp_hit_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
-                    {
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-                    }
                     else
-                        hip_opendht_fqdn_sent = 1;
-                }
+                        hip_opendht_fqdn_sent = 1; 
+                } 
             }
             /* send the hit->ip mapping */
-           if (hip_opendht_hit_sent == 0) 
-           {
-               HIP_DEBUG("Sending mapping HIT->IP to the openDHT\n");
+            if (hip_opendht_hit_sent == 0) 
+            {
+               HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
+                         tmp_hit_str, tmp_addr_str);
                if (hip_opendht_sock_hit < 1)
                    hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
                 opendht_error = 0;
@@ -421,14 +378,12 @@ void register_to_dht ()
                     opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
                                     (unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
-                    {
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-                    }
                     else
-                        hip_opendht_hit_sent = 1;
-                }
+                        hip_opendht_hit_sent = 1; 
+               } 
             }
-      }     
+        }     
     } 
 
 #endif
@@ -488,7 +443,7 @@ int periodic_maintenance()
 	}
 
 #ifdef CONFIG_HIP_OPENDHT
-	if (precreate_counter < 0) {
+	if (opendht_counter < 0) {
 		register_to_dht();
 		opendht_counter = OPENDHT_REFRESH_INIT;
 	} else {

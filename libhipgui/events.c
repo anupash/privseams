@@ -89,11 +89,13 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 			{
 				tw_set_mode(TWMODE_RGROUP);
 				tw_set_rgroup_info(str);
+				tw_apply();
 			}
 			else if (depth == 2)
 			{
 				tw_set_mode(TWMODE_REMOTE);
 				tw_set_remote_info(str);
+				tw_apply();
 			}
 		}
 		
@@ -158,7 +160,7 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
 						   GtkTreeViewColumn *column, gpointer data)
 {
-	tw_apply();
+	//tw_apply();
 }
 /* END OF FUNCTION */
 
@@ -169,7 +171,8 @@ void button_event(GtkWidget *warg, gpointer data)
 {
 	/* Variables. */
 	HIT_Group *g;
-	int id = (int)data, i;
+	HIT_Remote *r;
+	int id = (int)data, i, err;
 	char *ps;
 	static str[1024];
 	time_t rawtime;
@@ -216,8 +219,11 @@ void button_event(GtkWidget *warg, gpointer data)
 		}
 		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
 		{
-			HIP_DEBUG("Create new group.\n");
-			create_remote_group("");
+			r = tw_get_curitem();
+			err = create_remote_group("");
+			if (!err) i = 0;
+			else i = find_from_cb(r->g->name, widget(ID_TWR_RGROUP));
+			gtk_combo_box_set_active(widget(ID_TWR_RGROUP), i);
 		}
 		break;
 
@@ -230,8 +236,10 @@ void button_event(GtkWidget *warg, gpointer data)
 		}
 		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
 		{
-			HIP_DEBUG("Create new group.\n");
-			create_remote_group("");
+			err = create_remote_group("");
+			if (!err) i = 0;
+			else i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
+			gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
 		}
 		break;
 
@@ -293,6 +301,9 @@ void button_event(GtkWidget *warg, gpointer data)
 	
 	case IDM_NEWGROUP:
 		create_remote_group("");
+		break;
+		
+	case IDB_NH_EXPANDER:
 		break;
 	}
 }

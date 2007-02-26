@@ -110,8 +110,17 @@ void exec_application(void)
 		{
 			HIP_DEBUG("Exec new application.\n");
 			/* Set environment variables for new process. */
-			if (opp == FALSE) setenv("LD_PRELOAD", "/usr/lib/libinet6.so:/usr/lib/libhiptool.so", 1);
-			else setenv("LD_PRELOAD", "/usr/lib/libopphip.so:/usr/lib/libinet6.so:/usr/lib/libhiptool.so", 1);
+#ifdef CONFIG_HIP_OPENDHT
+			if (opp == FALSE)
+			  setenv("LD_PRELOAD", "/usr/lib/libinet6.so:/usr/lib/libhiptool.so:libhipopendht.so", 1);
+			else
+			  setenv("LD_PRELOAD", "/usr/lib/libopphip.so:/usr/lib/libinet6.so:/usr/lib/libhiptool.so:libhipopendht.so", 1);
+#else
+			if (opp == FALSE)
+			  setenv("LD_PRELOAD", "/usr/lib/libinet6.so:/usr/lib/libhiptool.so:", 1);
+			else
+			  setenv("LD_PRELOAD", "/usr/lib/libopphip.so:/usr/lib/libinet6.so:/usr/lib/libhiptool.so", 1);
+#endif
 
 			HIP_DEBUG("Set LD_PRELOAD=%s\n", opp == FALSE ? "libinet6.so:libhiptool.so" : "libopphip.so:libhiptool.so");
 			
