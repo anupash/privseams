@@ -971,7 +971,7 @@ uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 
 	HIP_DEBUG("ifindex=%d\n", ifindex);
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
 			HIP_DEBUG("found SPI 0x%x\n", item->spi);
 			return item->spi;
@@ -1013,7 +1013,7 @@ uint32_t hip_get_spi_to_update_in_established(hip_ha_t *entry, struct in6_addr *
 		return 0;
 
         list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
+		HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", item->ifindex, item->spi);
 		if (item->ifindex == ifindex) {
 			item->updating = 1;
 			return item->spi;
@@ -1541,6 +1541,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			ipv6_addr_copy(&entry->preferred_address, addr);
 			new_addr->seq_update_id = 0;
 		} else {
+			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 		}
@@ -1549,8 +1550,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-		ipv6_addr_copy(&entry->preferred_address,&new_addr->address);
+		HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
+
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);

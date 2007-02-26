@@ -42,9 +42,10 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 	HIP_IFE(!func, -1);
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
-	for (i = 0; i < n_addrs; i++, locator_address_item++)
+	for (i = 0; i < n_addrs; i++, locator_address_item++) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
+	}
 	
  out_err:
 
@@ -201,7 +202,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	uint32_t spi = *((uint32_t *) _spi);
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
-	HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
@@ -908,13 +909,27 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	addr->seq_update_id = entry->update_id_out;
 
 
-
 	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
-		/* todo: handle overflow if (!update_id_out) */
+
+	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
+	
+	/* ESP_INFO */
+	HIP_IFEL(hip_build_param_esp_info(update_packet,
+					  entry->current_keymat_index,
+					  esp_info_old_spi,
+					  esp_info_new_spi),
+		 -1, "Building of ESP_INFO param failed\n");
+	/* todo: handle overflow if (!update_id_out) */
+	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
 				       addr->seq_update_id), -1,
 		 return , "Building of SEQ failed\n");
+
+	/* TODO: NEED TO ADD ACK */
+	/*HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
+	  "Building of ACK failed\n");*/
+
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
 						 &entry->hip_hmac_out),
@@ -923,6 +938,8 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
 		   -EINVAL, return , "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
+
+	/* Add ECHO_REQUEST */
 	HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
 			     addr->echo_data, sizeof(addr->echo_data));
 	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
@@ -1569,7 +1586,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	int err = 0;
 	uint32_t spi_in;
 	struct hip_spi_in_item *item, *tmp;
-	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
+	HIP_DEBUG("Checking spi setting 0x%x\n",spi_in); 
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
@@ -1765,7 +1782,7 @@ int hip_receive_update(struct hip_common *msg,
 		//process ack
 		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
 	if (seq)
-		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
+		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,"");
 	
         /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -2052,8 +2069,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	for(i = 0; i < addr_count; i++, loc_addr_item++) {
 		struct in6_addr *saddr =
 			&loc_addr_item->address;
-		if (IN6_IS_ADDR_V4MAPPED(saddr) == 
-		    IN6_IS_ADDR_V4MAPPED(daddr)) {
+		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr)) {
 			loc_addr_item->reserved = ntohl(1 << 31);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
 			HIP_IFEL(hip_update_preferred_address(entry,saddr,
@@ -2126,9 +2142,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 		_HIP_DEBUG("base draft UPDATE\n");
 
 	if (add_locator)
-		_HIP_DEBUG("mm UPDATE, %d addresses in LOCATOR\n", addr_count);
+		HIP_DEBUG("mm UPDATE, %d addresses in LOCATOR\n", addr_count);
 	else
-		_HIP_DEBUG("Plain UPDATE\n");
+		HIP_DEBUG("Plain UPDATE\n");
 
 	/* Start building UPDATE packet */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
@@ -2230,6 +2246,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	else if(err)
 		goto out_err;
 
+	/* Send UPDATE(ESP_INFO, LOCATOR, SEQ) */
 	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
 		  esp_info_old_spi, esp_info_new_spi);
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
@@ -2360,7 +2377,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-        /* AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid
+        /* AB: rk.length = 100 rk is NULL next line opulates rk with all valid
 	ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
