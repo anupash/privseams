@@ -2015,7 +2015,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 		/* Remove whitespace */
 		c = line;
-		while (c == ' ' || c == '\t')
+		while (*c == ' ' || *c == '\t')
 			c++;
 
 		/* Line is a comment or empty */

@@ -1029,7 +1029,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       */
       if (!found_hits)
         {
-          for (at_dns = at; at_dns != NULL; at_dns = at_dns->next)
+          for (at_dns = *at; at_dns != NULL; at_dns = at_dns->next)
             {
               if (ipv6_addr_is_hit((struct in6_addr *)at_dns->addr)) 
                 {
