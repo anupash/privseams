@@ -212,6 +212,16 @@ void hip_socketdb_dump()
 	HIP_DEBUG("end socketdb dump\n");
 }
 
+void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
+{
+	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+		  entry->pid, entry->orig_socket);
+	//HIP_LOCK_SOCKET(entry);
+	hip_ht_delete(socketdb, entry);
+	//HIP_UNLOCK_SOCKET(entry);
+	HIP_FREE(entry);
+}
+
 int hip_socketdb_del_entry(int pid, int socket)
 {
 	hip_opp_socket_t *entry = NULL;
@@ -222,16 +232,6 @@ int hip_socketdb_del_entry(int pid, int socket)
 	}
 	hip_socketdb_del_entry_by_entry(entry);
 	return 0;
-}
-
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
-{
-	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
-		  entry->pid, entry->orig_socket);
-	//HIP_LOCK_SOCKET(entry);
-	hip_ht_delete(socketdb, entry);
-	//HIP_UNLOCK_SOCKET(entry);
-	HIP_FREE(entry);
 }
 
 // used to test socketdb
