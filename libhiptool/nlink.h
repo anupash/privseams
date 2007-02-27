@@ -26,6 +26,8 @@
 #  define  NETLINK_DROP_MEMBERSHIP 2
 #endif
 
+#define PREFIXLEN_SPECIFIED 1
+
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 

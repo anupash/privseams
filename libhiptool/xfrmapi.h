@@ -36,7 +36,6 @@
 #define XFRM_MODE_BEET   2
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
-#define PREFIXLEN_SPECIFIED 1
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM

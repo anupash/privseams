@@ -19,7 +19,6 @@
 
 #include "hipconf.h"
 #include "oppipdb.h"
-#include "xfrmapi.h"
 
 extern char *i3_config;
 

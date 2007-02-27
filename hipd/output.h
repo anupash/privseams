@@ -18,7 +18,6 @@
 #include "cookie.h"
 #include "builder.h"
 #include "output.h"
-#include "xfrmapi.h"
 #include "close.h"
 #include "user.h"
 #include "string.h"

@@ -20,7 +20,6 @@
 #include "oppdb.h"
 #include "user.h"
 #include "debug.h"
-#include "xfrmapi.h"
 #include "hadb.h"
 #include "keymat.h"
 #include "crypto.h"
@@ -31,7 +30,6 @@
 #include "output.h"
 #include "pk.h"
 #include "netdev.h"
-#include "xfrmapi.h"
 #include "util.h"
 #include "state.h"
 #if defined CONFIG_HIP_HI3

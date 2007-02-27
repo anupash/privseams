@@ -6,7 +6,6 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "xfrmapi.h"
 #include "hidb.h"
 #include "hadb.h"
 #include "list.h"
