@@ -25,6 +25,7 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 	LHASH *nm;
 	LHASH_NODE *hipchain;
 	
+	/* WTF: leaks memory */
 	hipchain=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));
 	nm=ht->ami;
 	hipchain=nm->b;
