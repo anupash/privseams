@@ -15,7 +15,7 @@
 #include "limits.h"
 
 //HIP_HASHTABLE socketdb;
-HIP_HASHTABLE *socketdb;
+HIP_HASHTABLE *socketdb = NULL;
 //static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 // inline int, int range removed //miika
@@ -81,6 +81,7 @@ void hip_init_socket_db()
 	
 #endif
 	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
+	if (!socketdb) HIP_ERROR("could not init socketdb!\n");
 }
 
 void hip_uninit_socket_db()
@@ -95,21 +96,21 @@ void hip_uninit_socket_db()
 	
 	_HIP_DEBUG("DELETING\n");
 	//  hip_ht_uninit();
-	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
 #if 0
+	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
 		list_for_each_entry_safe(item, tmp,
 					 socketdb[i],
 					 socketdb,
 					 next_entry) {
 #endif
-		list_for_each_safe(item, tmp, &(socketdb[i]), n)
+		list_for_each_safe(item, tmp, socketdb, n)
 		{ 
 //			if (atomic_read(&item->refcnt) > 2)
 //				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
-			hip_socketdb_put_entry(item);
+			//hip_socketdb_put_entry(item);
 			HIP_FREE(list_entry(item));
 		}
-	}  
+//	}  
 
 	lh_free(socketdb);
 }
@@ -144,6 +145,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	new_item->orig_socket = socket;
 	HIP_DEBUG("added entry %p &p\n", pid, socket);
 	err = hip_ht_add(socketdb, new_item);
+	if (err) HIP_ERROR("hip_ht_add() failed!\n");
 	//hip_socketdb_dump();
 	
 	return err;
@@ -162,13 +164,15 @@ void hip_socketdb_dump()
 	HIP_DEBUG("start socketdb dump\n");
 
 	HIP_LOCK_HT(socketdb);
-	
+
+#if 0
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++)
 	{
 		//if (!list_empty(socketdb[i]))
 		{
 			HIP_DEBUG("HT[%d]\n", i);
-			list_for_each_safe(item, tmp, &(socketdb[i]), n)
+#endif
+			list_for_each_safe(item, tmp, socketdb, n)
 			{
 				data = list_entry(item);
 				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
@@ -176,8 +180,8 @@ void hip_socketdb_dump()
 				          " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
 				          data->pid, data->orig_socket);
 			}
-		}
-	}
+//		}
+//	}
 	HIP_UNLOCK_HT(socketdb);
 	HIP_DEBUG("end socketdb dump\n");
 }
@@ -293,7 +297,8 @@ void test_db(){
 	HIP_DEBUG("*** success ***\n");
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
 	hip_init_socket_db();
 	test_db();
 	hip_uninit_socket_db();
