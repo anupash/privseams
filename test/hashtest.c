@@ -41,6 +41,7 @@ int hip_socketdb_match(const void *key_1, const void *key_2)
 	return *(int *)key_1 == *(int *)key_2;
 }
 
+#if 0
 inline void hip_socketdb_hold_entry(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_socket_entry);
@@ -50,6 +51,7 @@ inline void hip_socketdb_put_entry(void *entry)
 	HIP_DB_PUT_ENTRY(entry, struct hip_opp_socket_entry,
 			 hip_socketdb_del_entry_by_entry);
 }
+#endif
 
 inline void *hip_socketdb_get_key(void *entry)
 {
@@ -83,10 +85,10 @@ void hip_init_socket_db()
 
 void hip_uninit_socket_db()
 {
-#if 0
 	int i = 0;
-	hip_opp_socket_t *item = NULL;
-	hip_opp_socket_t *tmp = NULL;
+	//hip_opp_socket_t *item = NULL;
+	//hip_opp_socket_t *tmp = NULL;
+	hip_list_t *item, *tmp;
 	
 	_HIP_DEBUG("DEBUG: DUMP SOCKETDB LISTS\n");
 	//hip_socketdb_dump();
@@ -94,15 +96,23 @@ void hip_uninit_socket_db()
 	_HIP_DEBUG("DELETING\n");
 	//  hip_ht_uninit();
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
+#if 0
 		list_for_each_entry_safe(item, tmp,
 					 socketdb[i],
+					 socketdb,
 					 next_entry) {
-			if (atomic_read(&item->refcnt) > 2)
-				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
+#endif
+		list_for_each_safe(item, tmp,
+				   socketdb,
+				   i) {					 
+//			if (atomic_read(&item->refcnt) > 2)
+//				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			hip_socketdb_put_entry(item);
+			HIP_FREE(list_entry(item));
 		}
 	}  
-#endif
+
+	lh_free(socketdb);
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)

@@ -25,7 +25,7 @@ typedef LHASH hip_list_t;
  * @param head the head for your list.
  * @param member the name of the list_struct within the struct.
  */
-#define list_for_each(head, pos, counter) \
+#define list_for_each(pos, head, counter) \
 		for (counter = (head->num_nodes - 1); counter >= 0; counter--) \
 			for (pos = head->b[counter]; pos != NULL; pos = pos->next)
 
@@ -36,7 +36,7 @@ typedef LHASH hip_list_t;
  * @param head the head for your list.
  * @param member the name of the list_struct within the struct.
  */
-#define list_for_each_safe(head, pos, iter, counter) \
+#define list_for_each_safe(pos, iter, head, counter) \
 	for (counter = (head->num_nodes - 1); counter >= 0; counter--) \
 	for (pos = head->b[counter], iter = pos->next; \
 	     pos != NULL; pos = iter, iter = pos->next)
