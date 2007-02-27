@@ -44,7 +44,7 @@ typedef struct hip_rendezvous_association
 	/** A linked list head.
 	    @todo Version 1.0 author can(?) explain what is the function
 	    of this.*/
-	struct list_head      list_hit;
+	hip_list_t      list_hit;
 	/** Reference count of this rendezvous association. */
 	atomic_t              refcnt;
 	/** Spinlock. */

@@ -5,12 +5,12 @@
 
 struct hip_ht_common {
 	/** a pointer to memory area to be used as hashtable. */
-	struct list_head *head;
+	hip_list_t *head;
 	/** spinlock. */
 	spinlock_t lock;
 	/** size (number of chains) of the hashtable. */
 	int hashsize;
-	/** offset of the struct list_head that links the elements. */
+	/** offset of the hip_list_t that links the elements. */
 	int offset;
 	/** a pointer to a function that hashes the key. */
 	int (*hash)(const void *key, int range);

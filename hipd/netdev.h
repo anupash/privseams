@@ -21,7 +21,7 @@
 #define HIP_RTDS_TAB_LEN 256
 
 extern int address_count;
-extern struct list_head addresses;
+extern hip_list_t addresses;
 struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);

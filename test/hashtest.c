@@ -14,7 +14,7 @@
 #include "wrap_db.h"
 
 HIP_HASHTABLE socketdb;
-static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
+static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
 {

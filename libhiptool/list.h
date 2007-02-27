@@ -1,7 +1,7 @@
 #ifndef HIP_LIST_H
 #define HIP_LIST_H
 
-#ifdef CONFIG_HIP_CORPORATE__
+#ifdef CONFIG_HIP_CORPORATE_
 
 #include "qlist.h"
 
@@ -9,12 +9,10 @@
 
 #include "kerncompat.h"
 
-#ifndef HIP_CORPORATE__
+#ifndef HIP_CORPORATE_
 
-struct list_t
-{
-	
-};
+typedef struct list_head hip_list_t;
+
 
 static inline void prefetch(const void *x) {;}
 

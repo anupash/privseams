@@ -12,7 +12,7 @@
 #include "oppdb.h"
 
 HIP_HASHTABLE oppdb;
-static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
+static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 extern unsigned int opportunistic_mode;
 
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {

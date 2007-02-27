@@ -21,7 +21,7 @@
 #include "wrap_db.h"
 
 HIP_HASHTABLE socketdb;
-static struct list_head socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
+static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 int hip_exists_translation(int pid, int socket)
 {

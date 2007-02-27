@@ -37,7 +37,7 @@
 /** A hashtable for storing rendezvous associations. */
 HIP_HASHTABLE rva_table;
 /** A linked list head used inside @c rva_table hashtable. */
-static struct list_head rvadb[HIP_RVA_SIZE];
+static hip_list_t rvadb[HIP_RVA_SIZE];
 
 /**
  * Allocates and initializes a rendezvous association.

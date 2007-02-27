@@ -14,6 +14,7 @@
 #  include "sys/un.h"
 #  include "protodefs.h"
 #  include "stdlib.h"
+#  include "list.h"
 #endif
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
@@ -44,7 +45,7 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 }
 
 struct hip_opp_blocking_request_entry {
-  struct list_head     	next_entry;
+  hip_list_t     	next_entry;
   spinlock_t           	lock;
   atomic_t             	refcnt;
 

@@ -40,7 +40,7 @@ HIP_INIT_DB(hip_local_hostid_db, "local_hid");
  */
 void hip_uninit_hostid_db(struct hip_db_struct *db)
 {
-	struct list_head *curr, *iter;
+	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	unsigned long lf;
 
@@ -711,7 +711,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
  */
 int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque)
 {
-	struct list_head *curr, *iter;
+	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	struct endpoint_hip *hits = NULL;
 	int err = 0;
@@ -740,7 +740,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,
 			    struct in6_addr *test_hit,
 			    struct in6_addr *local_hit)
 {
-  struct list_head *curr, *iter;
+  hip_list_t *curr, *iter;
   struct hip_host_id_entry *tmp;
   struct endpoint_hip *hits = NULL;
   int err = 0;

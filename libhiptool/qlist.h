@@ -7,6 +7,9 @@
 
 #define INIT_LIST_HEAD(ptr) /* XX FIXME */
 
+typedef LIST_HEAD hip_list_t;
+
+
 /**
  * list_entry - get the struct for this entry
  * @param ptr the &struct list_head pointer.

@@ -5,7 +5,7 @@
 HIP_HASHTABLE hadb_hit;
 HIP_HASHTABLE hadb_spi_list;
 
-static struct list_head hadb_byhit[HIP_HADB_SIZE];
+static hip_list_t hadb_byhit[HIP_HADB_SIZE];
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -69,7 +69,7 @@ static int hit_match(hip_ha_t *entry, void *our) {
 	return ipv6_addr_cmp(our, &entry->hit_our) == 0;
 }
 
-static struct list_head hadb_byspi_list[HIP_HADB_SIZE];
+static hip_list_t hadb_byspi_list[HIP_HADB_SIZE];
 
 /**
  * hip_hadb_rem_state_hit - Remove HA from HIT table

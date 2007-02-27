@@ -46,7 +46,7 @@
 #if 0
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
-	struct list_head     next;
+	hip_list_t     next;
 	spinlock_t           lock;
 	atomic_t             refcnt;
         uint32_t             spi;                 /* SPI out */

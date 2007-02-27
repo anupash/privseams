@@ -40,12 +40,12 @@ struct hip_work_order {
 	struct hip_work_order_hdr hdr;
 	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
 	uint32_t seq;
-	struct list_head queue;
+	hip_list_t queue;
 	void (*destructor)(struct hip_work_order *hwo);
 };
 
 struct netdev_address {
-	struct list_head next;
+	hip_list_t next;
 	struct sockaddr_storage addr;
 	int if_index;
 };

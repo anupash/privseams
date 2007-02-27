@@ -2,7 +2,7 @@
 #define WRAP_DB_H
 
 struct hip_opp_socket_entry {
-	struct list_head     	next_entry;
+	hip_list_t     	next_entry;
 	spinlock_t           	lock;
 	atomic_t             	refcnt;
 	pid_t 		        pid;

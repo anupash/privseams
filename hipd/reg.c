@@ -9,7 +9,7 @@
 #include "reg.h"
 
 /** A linked list for storing the supported services. */
-static struct list_head services;
+static hip_list_t services;
 
 void hip_init_services(void)
 {

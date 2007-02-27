@@ -4,7 +4,7 @@
         (type *)((u8 *)ptr - offset)
 
 #define hip_ht_get_list(ptr, offset) \
-        (struct list_head *)((u8 *)ptr + offset)
+        (hip_list_t *)((u8 *)ptr + offset)
 
 void *entrybuf;
 LHASH *nm;
@@ -22,7 +22,7 @@ LHASH_NODE *hipchain;
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 {
 	int j;
-	struct list_head *chain;
+	hip_list_t *chain;
 	void *entry;
 	
 	
@@ -141,7 +141,7 @@ void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
  * <ul>
  * <li>head: a pointer to memory area to be used as hashtable.</li>
  * <li>hashsize: size of the hashtable (ie. number of chains).</li>
- * <li>offset: offset of the struct list_head that links the elements.</li>
+ * <li>offset: offset of the hip_list_t that links the elements.</li>
  * <li>hash: a pointer to a function that hashes the key.</li>
  * <li>compare: a pointer to a function that compares two keys.</li>
  * <li>hold: a pointer to a function that increases the element's reference

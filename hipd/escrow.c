@@ -13,8 +13,8 @@ HIP_HASHTABLE kea_table;
 
 HIP_HASHTABLE kea_endpoints;
 
-static struct list_head keadb[HIP_KEA_SIZE];
-static struct list_head kea_endpointdb[HIP_KEA_EP_SIZE];
+static hip_list_t keadb[HIP_KEA_SIZE];
+static hip_list_t kea_endpointdb[HIP_KEA_EP_SIZE];
 
 static void *hip_keadb_get_key(void *entry)
 {

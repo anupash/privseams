@@ -38,7 +38,7 @@
  * ready code, so for now, the linked-list is fine.
  */
 struct hip_db_struct {
-	struct list_head  db_head;
+	hip_list_t  db_head;
 	rwlock_t          db_lock;
 	char *            db_name;
 	int               db_cnt;
@@ -49,14 +49,14 @@ struct hip_db_struct {
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-	struct list_head list;
+	hip_list_t list;
 	struct in6_addr peer_hit;
 	/* These two _MUST_ be left untouched. Feel free to add more
 	 * to the end */
 };
 
 struct hip_hadb_multi {
-	struct list_head m_head;
+	hip_list_t m_head;
 	void *           m_arg;
 	int              m_type;
 };

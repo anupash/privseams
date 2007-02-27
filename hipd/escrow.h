@@ -21,7 +21,7 @@ typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_REGISTERING=1,
 
 struct hip_key_escrow_association 
 {
-	struct list_head       list_hit;
+	hip_list_t       list_hit;
 
 	atomic_t               refcnt;
 	spinlock_t             lock;
@@ -49,7 +49,7 @@ typedef struct hip_kea_ep_id HIP_KEA_EP_ID;
 
 struct hip_kea_endpoint 
 {
-	struct list_head       list_hit;
+	hip_list_t       list_hit;
 	
 	atomic_t               refcnt;
 	spinlock_t             lock;
