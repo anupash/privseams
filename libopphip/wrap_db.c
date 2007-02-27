@@ -78,6 +78,16 @@ void hip_init_socket_db()
 	if (!socketdb) HIP_ERROR("hip_init_socket_db() error!\n");
 }
 
+//void hip_hadb_delete_hs(struct hip_hit_spi *hs)
+void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
+{
+	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+		  entry->pid, entry->orig_socket);
+	HIP_LOCK_SOCKET(entry);
+	HIP_FREE(entry);
+	hip_ht_delete(socketdb, entry);
+	HIP_UNLOCK_SOCKET(entry);
+}
 void hip_uninit_socket_db()
 {
 	int i = 0;
@@ -94,20 +104,11 @@ void hip_uninit_socket_db()
 //		if (atomic_read(&item->refcnt) > 2)
 //			HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 		entry = list_entry(item);
-		hip_socketdb_put_entry(entry);
+		hip_socketdb_del_entry_by_entry(entry);
 	}  
+
 }
 
-//void hip_hadb_delete_hs(struct hip_hit_spi *hs)
-void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
-{
-	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
-		  entry->pid, entry->orig_socket);
-	HIP_LOCK_SOCKET(entry);
-	hip_ht_delete(socketdb, entry);
-	HIP_UNLOCK_SOCKET(entry);
-	HIP_FREE(entry);
-}
 /**
  * This function searches for a hip_opp_socket_t entry from the socketdb
  * by pid and orig_socket.
