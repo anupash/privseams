@@ -128,7 +128,7 @@ void hip_kea_set_state_registering(HIP_KEA *kea);
 void hip_init_kea_endpoints(void);
 void hip_uninit_kea_endpoints(void);
 
-int hip_kea_ep_hash(const void * key, int range);
+unsigned long hip_kea_ep_hash(const void * key);
 
 int hip_kea_ep_match(const void * ep1, const void * ep2);
 
