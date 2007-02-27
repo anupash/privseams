@@ -86,7 +86,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 {
 	struct hip_host_id_entry *id_entry;
 	int c;
-	list_for_each_entry(id_entry, db, c) {
+	list_for_each(id_entry, db, c) {
 		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
@@ -103,7 +103,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
 	/* FIXME: This full scan is stupid, but we have no hashtables
 	   anyway... tkoponen */
-	return hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+	return hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
 						    our, HIP_ANY_ALGO, -1);
 	//return hip_for_each_ha(hit_match, (void *) our);
 }
@@ -136,7 +136,7 @@ int hip_hidb_hit_is_our(const hip_hit_t *our) {
  */
 void hip_uninit_host_id_dbs(void)
 {
-	hip_uninit_hostid_db(&hip_local_hostid_db);
+	hip_uninit_hostid_db(hip_local_hostid_db);
 }
 
 

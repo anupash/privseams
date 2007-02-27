@@ -759,7 +759,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	item->address_state = state;
 	do_gettimeofday(&item->modified_time);
 
-	list_add_tail(&item->list, &spi_out->peer_addr_list);
+	list_add(&item->list, &spi_out->peer_addr_list);
 
  out_err:
 	return err;
