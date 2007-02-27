@@ -16,11 +16,7 @@
 #define HIP_RVS_H
 
 #include "hadb.h"
-#ifdef CONFIG_HIP_CORPORATE
-#  include "lhashtable.h"
-#else
-#  include "hashtable.h"
-#endif
+#include "hashtable.h"
 #include "misc.h"
 #include "builder.h"
 #include "output.h"

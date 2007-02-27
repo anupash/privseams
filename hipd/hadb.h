@@ -6,12 +6,8 @@
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
+#include "hashtable.h"
 #include "state.h"
-#ifdef CONFIG_HIP_CORPORATE
-#  include "lhashtable.h"
-#else
-#  include "hashtable.h"
-#endif
 #include "builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function

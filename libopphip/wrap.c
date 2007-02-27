@@ -21,11 +21,7 @@
 #include <dlfcn.h>
 #include "debug.h"
 #include "hadb.h"
-#ifdef CONFIG_HIP_CORPORATE
-#  include "lhashtable.h"
-#else
-#  include "hashtable.h"
-#endif
+#include "hashtable.h"
 #include "libinet6/util.h"
 #include "icomm.h"
 #include "wrap_db.h"

@@ -14,11 +14,7 @@
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
-#ifdef CONFIG_HIP_CORPORATE
-#  include "lhashtable.h"
-#else
-#  include "hashtable.h"
-#endif
+#include "hashtable.h"
 #include "builder.h"
 #include "util.h"
 #include "oppipdb.h"

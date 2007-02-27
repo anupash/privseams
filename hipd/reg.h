@@ -10,11 +10,7 @@
 
 #include "hadb.h"
 #include "misc.h"
-#ifdef CONFIG_HIP_CORPORATE
-#  include "lhashtable.h"
-#else
-#  include "hashtable.h"
-#endif
+#include "hashtable.h"
 #include "escrow.h"
 
 #define HIP_SERVICE_MAX_COUNT 2

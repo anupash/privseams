@@ -7,7 +7,7 @@
 #ifndef _HIP_STATE
 #define _HIP_STATE
 
-#include "lhashtable.h"
+#include "hashtable.h"
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2

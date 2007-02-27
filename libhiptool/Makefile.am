@@ -34,13 +34,7 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-if HIP_CORPORATE
-libhiptool_la_SOURCES = crypto.c pk.c dh.c \
-                        nlink.c lhashtable.c
-else
-libhiptool_la_SOURCES = crypto.c pk.c dh.c \
-                        nlink.c hashtable.c
-endif
+libhiptool_la_SOURCES = crypto.c pk.c dh.c nlink.c
 
 if HIP_PFKEY
 else
@@ -49,14 +43,7 @@ endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
 
-include_HEADERS =  crypto.h dh.h list.h qlist.h
-include_HEADERS += nlink.h pk.h xfrm.h xfrmapi.h
-
-if HIP_CORPORATE
-	include_HEADERS += lhashtable.h
-else
-	include_HEADERS += hashtable.h
-endif
+include_HEADERS =  crypto.h dh.h nlink.h pk.h xfrm.h xfrmapi.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
