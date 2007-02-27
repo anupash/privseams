@@ -10,12 +10,12 @@
 #else
 #  include "hashtable.h"
 #endif
-#include "hadb.h"
+//#include "hadb.h"
 //#include "wrap_db.h"
 #include "limits.h"
 
 struct hip_opp_socket_entry {
-	unsigned long 		hash_key; /* pid XOR old_socket */
+	unsigned int 		hash_key; /* pid XOR old_socket */
 	//hip_list_t     	next_entry;
 	//spinlock_t           	lock;
 	//	atomic_t             	refcnt;
