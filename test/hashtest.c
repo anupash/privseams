@@ -45,18 +45,9 @@ HIP_HASHTABLE *socketdb = NULL;
 //static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 // inline int, int range removed //miika
-unsigned long hip_hash_pid_socket(const void *hashed_pid_socket)
+unsigned long hip_hash_pid_socket(const void *ptr)
 {
-  //int hash = 0;
-	unsigned long hash;
-	_HIP_DEBUG("range %d\n", range);
-	
-	hash = *(unsigned long *)hashed_pid_socket;
-	_HIP_DEBUG("hash %d\n", hash);
-	
-	_HIP_DEBUG("hashed %d\n", hashed);
-	//return hash % range;
-	return hash % ULONG_MAX;
+	return ((hip_opp_socket_t *) ptr)->hash_key;
 }
 
 
