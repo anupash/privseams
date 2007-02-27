@@ -8,7 +8,7 @@
 
 #define INIT_LIST_HEAD(ptr) /* XX FIXME */
 
-typedef LHASH hip_list_t;
+typedef LHASH_NODE hip_list_t;
 
 
 /**
@@ -37,8 +37,8 @@ typedef LHASH hip_list_t;
  * @param member the name of the list_struct within the struct.
  */
 #define list_for_each_safe(pos, iter, head, counter) \
-	for (counter = (head->num_nodes - 1); counter >= 0; counter--) \
-	for (pos = head->b[counter], iter = pos->next; \
+	for (counter = ((head)->num_nodes - 1); counter >= 0; counter--) \
+	for (pos = (head)->b[counter], iter = pos->next; \
 	     pos != NULL; pos = iter, iter = pos->next)
 
 /**

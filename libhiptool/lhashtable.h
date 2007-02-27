@@ -89,7 +89,11 @@ static inline HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP
 #define hip_ht_uninit(head) lh_free(head)
 
 #define hip_ht_find(head, data) lh_retrieve(head, data)
-#define hip_ht_add(head, data) lh_insert(head, data)
+static inline int hip_ht_add(HIP_HASHTABLE *head, void *data)
+{
+	if (lh_insert(head, data)) return 0;
+	return -1;
+}
 #define hip_ht_delete(head, data) lh_delete(head, data)
 
 #if 0

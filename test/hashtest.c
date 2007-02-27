@@ -85,7 +85,7 @@ void hip_init_socket_db()
 
 void hip_uninit_socket_db()
 {
-	int i = 0;
+	int i = 0, n;
 	//hip_opp_socket_t *item = NULL;
 	//hip_opp_socket_t *tmp = NULL;
 	hip_list_t *item, *tmp;
@@ -102,9 +102,8 @@ void hip_uninit_socket_db()
 					 socketdb,
 					 next_entry) {
 #endif
-		list_for_each_safe(item, tmp,
-				   socketdb,
-				   i) {					 
+		list_for_each_safe(item, tmp, &(socketdb[i]), n)
+		{ 
 //			if (atomic_read(&item->refcnt) > 2)
 //				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			hip_socketdb_put_entry(item);
@@ -152,27 +151,30 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 
 void hip_socketdb_dump()
 {
-	int i;
+	int i, n;
 	char src_ip[INET6_ADDRSTRLEN] = "\0";
 	char dst_ip[INET6_ADDRSTRLEN] = "\0";
 	char src_hit[INET6_ADDRSTRLEN] = "\0";
 	char dst_hit[INET6_ADDRSTRLEN] = "\0";
-	hip_opp_socket_t *item = NULL;
-	hip_opp_socket_t *tmp = NULL;
-
+	hip_list_t *item, *tmp;
+	hip_opp_socket_t *data;
+	
 	HIP_DEBUG("start socketdb dump\n");
 
 	HIP_LOCK_HT(socketdb);
 	
-	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
-		if (!list_empty(socketdb[i])) {
+	for(i = 0; i < HIP_SOCKETDB_SIZE; i++)
+	{
+		//if (!list_empty(socketdb[i]))
+		{
 			HIP_DEBUG("HT[%d]\n", i);
-			list_for_each_entry_safe(item, tmp,
-					     &(socketdb[i]),
-					     next_entry) {
-				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
-src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
-					  item->pid, item->orig_socket);
+			list_for_each_safe(item, tmp, &(socketdb[i]), n)
+			{
+				data = list_entry(item);
+				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
+				          " domain=%d type=%d protocol=%d src_ip=%s dst_ip=%s"
+				          " src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
+				          data->pid, data->orig_socket);
 			}
 		}
 	}
