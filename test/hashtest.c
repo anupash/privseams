@@ -11,8 +11,34 @@
 #  include "hashtable.h"
 #endif
 #include "hadb.h"
-#include "wrap_db.h"
+//#include "wrap_db.h"
 #include "limits.h"
+
+struct hip_opp_socket_entry {
+	unsigned long 		hash_key; /* pid XOR old_socket */
+	//hip_list_t     	next_entry;
+	//spinlock_t           	lock;
+	//	atomic_t             	refcnt;
+	pid_t 		        pid;
+	int 			orig_socket;
+	int  			translated_socket;
+	int 	       		domain;
+	int 			type;
+	int 			protocol;
+	int                     local_id_is_translated;
+	int                     peer_id_is_translated;
+	int                     force_orig;
+	struct sockaddr_storage orig_local_id;
+	struct sockaddr_storage orig_peer_id;
+	struct sockaddr_storage translated_local_id;
+	struct sockaddr_storage translated_peer_id;
+	socklen_t               orig_local_id_len;
+	socklen_t               orig_peer_id_len;
+	socklen_t               translated_local_id_len;
+	socklen_t               translated_peer_id_len;
+};
+
+typedef struct hip_opp_socket_entry hip_opp_socket_t;
 
 //HIP_HASHTABLE socketdb;
 HIP_HASHTABLE *socketdb = NULL;
@@ -58,7 +84,7 @@ inline void *hip_socketdb_get_key(void *entry)
 	return &(((hip_opp_socket_t *)entry)->hash_key);
 }
 
-inline void hip_xor_pid_socket(int *key, int pid, int socket)
+inline void hip_xor_pid_socket(unsigned int *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
@@ -117,7 +143,7 @@ void hip_uninit_socket_db()
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
-        int key = 0;
+	unsigned int key = 0;
 		
 	hip_xor_pid_socket(&key, pid, socket);
 	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
@@ -163,7 +189,7 @@ void hip_socketdb_dump()
 	
 	HIP_DEBUG("start socketdb dump\n");
 
-	HIP_LOCK_HT(socketdb);
+	//HIP_LOCK_HT(socketdb);
 
 #if 0
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++)
@@ -182,7 +208,7 @@ void hip_socketdb_dump()
 			}
 //		}
 //	}
-	HIP_UNLOCK_HT(socketdb);
+			//HIP_UNLOCK_HT(socketdb);
 	HIP_DEBUG("end socketdb dump\n");
 }
 
@@ -202,9 +228,9 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
 	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
-	HIP_LOCK_SOCKET(entry);
+	//HIP_LOCK_SOCKET(entry);
 	hip_ht_delete(socketdb, entry);
-	HIP_UNLOCK_SOCKET(entry);
+	//HIP_UNLOCK_SOCKET(entry);
 	HIP_FREE(entry);
 }
 
