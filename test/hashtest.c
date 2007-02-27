@@ -12,26 +12,30 @@
 #endif
 #include "hadb.h"
 #include "wrap_db.h"
+#include "limits.h"
 
-HIP_HASHTABLE socketdb;
+//HIP_HASHTABLE socketdb;
+HIP_HASHTABLE *socketdb;
 //static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
-inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
+// inline int, int range removed //miika
+unsigned long hip_hash_pid_socket(const void *hashed_pid_socket)
 {
-	int hash = 0;
-	
+  //int hash = 0;
+	unsigned long hash;
 	_HIP_DEBUG("range %d\n", range);
 	
-	hash = *(int*)hashed_pid_socket;
+	hash = *(unsigned long *)hashed_pid_socket;
 	_HIP_DEBUG("hash %d\n", hash);
 	
-	//int hashed = 0;
-	//hashed = hash % range;
 	_HIP_DEBUG("hashed %d\n", hashed);
-	return hash % range;
+	//return hash % range;
+	return hash % ULONG_MAX;
 }
 
-inline int hip_socketdb_match(const void *key_1, const void *key_2)
+
+// removed: inline
+int hip_socketdb_match(const void *key_1, const void *key_2)
 {
 	_HIP_DEBUG("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
 	return *(int *)key_1 == *(int *)key_2;
@@ -58,6 +62,7 @@ inline void hip_xor_pid_socket(int *key, int pid, int socket)
 }
 void hip_init_socket_db()
 {
+#if 0
 	memset(&socketdb,0,sizeof(socketdb));
 	
 	socketdb.head =      socketdb;
@@ -72,11 +77,13 @@ void hip_init_socket_db()
 	strncpy(socketdb.name,"SOCKETDB_BYPSOC", 15);
 	socketdb.name[15] = 0;
 	
-	hip_ht_init(&socketdb);
+#endif
+	socketdb = hip_ht_init(hip_hash_pid_socket, hip_socketdb_match);
 }
 
 void hip_uninit_socket_db()
 {
+#if 0
 	int i = 0;
 	hip_opp_socket_t *item = NULL;
 	hip_opp_socket_t *tmp = NULL;
@@ -88,13 +95,14 @@ void hip_uninit_socket_db()
 	//  hip_ht_uninit();
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
 		list_for_each_entry_safe(item, tmp,
-					 &socketdb[i],
+					 socketdb[i],
 					 next_entry) {
 			if (atomic_read(&item->refcnt) > 2)
 				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			hip_socketdb_put_entry(item);
 		}
 	}  
+#endif
 }
 
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
@@ -104,7 +112,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 	hip_xor_pid_socket(&key, pid, socket);
 	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
 
-	return (hip_opp_socket_t *)hip_ht_find(&socketdb, (void *)&key);
+	return (hip_opp_socket_t *)hip_ht_find(socketdb, (void *)&key);
 }
 
 int hip_socketdb_add_entry(pid_t pid, int socket)
@@ -125,9 +133,8 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
-	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p, err = %d\n",
-		  new_item->pid, new_item->orig_socket,  new_item, err); 
-	err = hip_ht_add(&socketdb, new_item);
+	HIP_DEBUG("added entry %p &p\n", pid, socket);
+	err = hip_ht_add(socketdb, new_item);
 	//hip_socketdb_dump();
 	
 	return err;
@@ -145,10 +152,10 @@ void hip_socketdb_dump()
 
 	HIP_DEBUG("start socketdb dump\n");
 
-	HIP_LOCK_HT(&socketdb);
+	HIP_LOCK_HT(socketdb);
 	
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
-		if (!list_empty(&socketdb[i])) {
+		if (!list_empty(socketdb[i])) {
 			HIP_DEBUG("HT[%d]\n", i);
 			list_for_each_entry_safe(item, tmp,
 					     &(socketdb[i]),
@@ -159,7 +166,7 @@ src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",
 			}
 		}
 	}
-	HIP_UNLOCK_HT(&socketdb);
+	HIP_UNLOCK_HT(socketdb);
 	HIP_DEBUG("end socketdb dump\n");
 }
 
@@ -180,7 +187,7 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
 	HIP_LOCK_SOCKET(entry);
-	hip_ht_delete(&socketdb, entry);
+	hip_ht_delete(socketdb, entry);
 	HIP_UNLOCK_SOCKET(entry);
 	HIP_FREE(entry);
 }
