@@ -46,6 +46,21 @@ void hip_hadb_put_hs(void *entry)
 }
 #endif
 
+unsigned long hip_hash_peer_addr(const void *ptr)
+{
+	unsigned long hash;
+	struct in6_addr *addr = &((struct hip_peer_addr_list_item *)ptr)->address;
+
+	hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), &hash);
+
+	return hash;
+}
+
+int hip_match_peer_addr(const void *ptr1, const void *ptr2)
+{
+	return (hip_hash_peer_addr(ptr1) != hip_hash_peer_addr(ptr2));
+}
+
 void hip_hadb_hold_entry(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry,hip_ha_t);
@@ -799,9 +814,9 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	a_item->address_state = state;
 	do_gettimeofday(&a_item->modified_time);
 
-	list_add(&a_item->list, spi_out->peer_addr_list);
+	list_add(a_item, spi_out->peer_addr_list);
 
- out_err:
+out_err:
 	return err;
 }
 
@@ -913,7 +928,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	}
 	memcpy(item, data, sizeof(struct hip_spi_in_item));
 	spi_item->timestamp = jiffies;
-	list_add(&spi_item->list, entry->spis_in);
+	list_add(spi_item, entry->spis_in);
 	spi_item->addresses = NULL;
 	spi_item->addresses_n = 0;
 	HIP_DEBUG("added SPI 0x%x to the inbound SPI list\n", spi_in);
@@ -958,9 +973,10 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 		goto out_err;
 	}
 	memcpy(spi_item, data, sizeof(struct hip_spi_out_item));
-	INIT_LIST_HEAD(&spi_item->peer_addr_list);
+// 	INIT_LIST_HEAD(&spi_item->peer_addr_list);
+	spi_item->peer_addr_list = hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 	ipv6_addr_copy(&spi_item->preferred_address, &in6addr_any);
-	list_add(&spi_item->list, entry->spis_out);
+	list_add(spi_item, entry->spis_out);
 	HIP_DEBUG("added SPI 0x%x to the outbound SPI list\n", spi_out);
 
  out_err:
@@ -1685,7 +1701,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			goto out_err;
 		}
 	}
-	elseHIP_DEBUG("update old addr item\n");
+	else HIP_DEBUG("update old addr item\n");
 	
 	new_addr->lifetime = lifetime;
 	if (new) ipv6_addr_copy(&new_addr->address, addr);
@@ -1738,7 +1754,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if (new)
 	{
 		HIP_DEBUG("adding new addr to SPI list\n");
-		list_add_tail(&new_addr->list, &spi_list->peer_addr_list);
+		list_add_tail(new_addr, spi_list->peer_addr_list);
 	}
 
  out_err:

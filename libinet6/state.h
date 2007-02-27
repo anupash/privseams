@@ -142,7 +142,8 @@ struct hip_context
 
 struct hip_peer_addr_list_item
 {
-	hip_list_t list;
+//	hip_list_t list;
+	unsigned long    hash_key;
 
 	struct in6_addr  address;
 	int              address_state; /* current state of the
@@ -159,7 +160,7 @@ struct hip_peer_addr_list_item
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-	hip_list_t list;
+//	hip_list_t list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
 	hip_hit_t        hit_our;
@@ -169,7 +170,7 @@ struct hip_hit_spi {
 
 struct hip_spi_in_item
 {
-	hip_list_t list;
+//	hip_list_t list;
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
         /* ifindex if the netdev to which this is related to */
@@ -196,7 +197,7 @@ struct hip_spi_in_item
 
 struct hip_spi_out_item
 {
-	hip_list_t list;
+//	hip_list_t list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,

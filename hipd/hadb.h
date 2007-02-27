@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "misc.h"
 #include "hidb.h"
+#include "state.h"
 #ifdef CONFIG_HIP_CORPORATE
 #  include "lhashtable.h"
 #else
