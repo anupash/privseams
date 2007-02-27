@@ -35,7 +35,7 @@
 #include "rvs.h"
 
 /** A hashtable for storing rendezvous associations. */
-HIP_HASHTABLE rva_table;
+HIP_HASHTABLE *rva_table;
 /** A linked list head used inside @c rva_table hashtable. */
 static hip_list_t rvadb[HIP_RVA_SIZE];
 
@@ -78,9 +78,12 @@ hip_rva_t *hip_rvs_allocate(int gfpmask)
 hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 {
 	hip_rva_t *rva = NULL;
-	struct hip_peer_addr_list_item *item;
+	struct hip_peer_addr_list_item *entry;
 	int ipcnt = 0;
-	struct hip_spi_out_item *spi_out, *spi_tmp;
+	struct hip_spi_out_item *spi_entry;
+	hip_list_t *spi_out, *spi_tmp;
+	hip_list_t *item, *tmp;
+	int i, ii;
 
 	_HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	_HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
@@ -125,12 +128,16 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	}
 
 	/* Copy rest of the IP addresses. */
-	list_for_each_entry_safe(spi_out, spi_tmp, &ha->spis_out, list) {
-		list_for_each_entry(item, &spi_out->peer_addr_list, list) {
-			if (item->address_state != PEER_ADDR_STATE_ACTIVE)
+	list_for_each_safe(spi_out, spi_tmp, &ha->spis_out, i)
+	{
+		spi_entry = list_entry(spi_out);
+		list_for_each_safe(item, tmp, &spi_entry->peer_addr_list, ii)
+		{
+			entry = list_entry(item);
+			if (entry->address_state != PEER_ADDR_STATE_ACTIVE)
 				continue;
 
-			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &item->address);
+			ipv6_addr_copy(&rva->ip_addrs[ipcnt], &entry->address);
 			ipcnt++;
 			if (ipcnt >= HIP_RVA_MAX_IPS)
 				break;
@@ -156,7 +163,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
  */
 hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
- 	return (hip_rva_t*)hip_ht_find(&rva_table, hit);
+ 	return (hip_rva_t*)hip_ht_find(rva_table, hit);
 }
 
 /**
@@ -176,7 +183,7 @@ hip_rva_t *hip_rvs_get_valid(struct in6_addr *hit)
 {
 	hip_rva_t *rva;
 
- 	rva = (hip_rva_t*)hip_ht_find(&rva_table, hit);
+ 	rva = (hip_rva_t*)hip_ht_find(rva_table, hit);
  	if (rva) {
  		if ((rva->rvastate & HIP_RVASTATE_VALID) == 0) {
 			HIP_ERROR("A matching rendezvous association was found, "\
@@ -256,10 +263,10 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 
 	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
 		 "Trying to insert rva entry with NULL hit.\n");
-	HIP_IFEL(hip_ht_find(&rva_table, &rva->hit), -EEXIST,
+	HIP_IFEL(hip_ht_find(rva_table, &rva->hit), -EEXIST,
 		 "Duplicate rva entry. Not adding hit to rva table.\n");
 	
-	err = hip_ht_add(&rva_table, rva);
+	err = hip_ht_add(rva_table, rva);
 	if (err) {
 		HIP_ERROR("Failed to add rva hash table entry.\n");
 	} else {
@@ -267,63 +274,6 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 	}
  out_err:
 	return err;
-}
-
-/**
- * Holds a rendezvous association hashtable entry. 
- * 
- * A function used as the @c hold function of the rendezvous association hashtable.
- *  
- * @param entry the entry to be held.
- * @note        this is a static function and thus can't be used outside this file.
- */
-static void hip_rvs_hold_entry(void *entry)
-{
-	hip_rva_t *rva = entry;
-
-	HIP_ASSERT(entry);
-	atomic_inc(&rva->refcnt);
-	HIP_DEBUG("RVA: %p, refcnt incremented to: %d\n", rva, atomic_read(&rva->refcnt));
-}
-
-/**
- * Puts a rendezvous association hashtable entry. 
- *
- * A function used as the @c put function of the rendezvous association hashtable.
- *
- * @param entry the entry to be put.
- * @note  this is a static function and thus can't be used outside this file.
- */
-static void hip_rvs_put_entry(void *entry)
-{
-	hip_rva_t *rva = entry;
-
-	HIP_ASSERT(entry);
-	if (atomic_dec_and_test(&rva->refcnt)) {
-                HIP_DEBUG("Reference count of rendezvous association at %p "\
-			  "reached zero. Rendezvous association is freed.\n",
-			  rva);
-		hip_rvs_free_rva(rva);
-	} else {
-		HIP_DEBUG("Reference count of rendezvous association at %p "\
-			  "decremented to %d.\n.", rva,
-			  atomic_read(&rva->refcnt));
-	}
-}
-
-/**
- * Gets a key from rendezvous association hashtable. 
- * 
- * A function used as the @c get_key function of the rendezvous association
- * hashtable. Rendezvous association hashtable uses client HITs as keys.
- * 
- * @param entry the entry to be got.
- * @return      a pointer to the matching key or NULL if no match was found.
- * @note        this is a static function and thus can't be used outside this file.
- */
-static void *hip_rvs_get_key(void *entry)
-{
-	return (void *)&(((hip_rva_t *)entry)->hit);
 }
 
 /**
@@ -339,20 +289,8 @@ static void *hip_rvs_get_key(void *entry)
  */ 
 void hip_rvs_init_rvadb()
 {
-	memset(&rva_table,0,sizeof(rva_table));
-
-	rva_table.head = rvadb;
-	rva_table.hashsize = HIP_RVA_SIZE;
-	rva_table.offset = offsetof(hip_rva_t, list_hit);
-	rva_table.hash = hip_hash_hit;
-	rva_table.compare = hip_match_hit;
-	rva_table.hold = hip_rvs_hold_entry;
-	rva_table.put = hip_rvs_put_entry;
-	rva_table.get_key = hip_rvs_get_key;
-	strncpy(rva_table.name, "RVA TABLE", 15);
-	rva_table.name[15] = 0;
-
-	hip_ht_init(&rva_table);
+	rva_table = hip_ht_init(hip_hash_hit, hip_match_hit);
+	if (!rva_table) HIP_ERROR("hip_rvs_init_rvadb() error!\n");
 }
 
 /**
@@ -364,7 +302,7 @@ void hip_rvs_init_rvadb()
  */ 
 void hip_rvs_uninit_rvadb()
 {
-	hip_ht_uninit(&rva_table);
+	hip_ht_uninit(rva_table);
 }
 
 /**
@@ -399,7 +337,7 @@ void hip_rvs_remove(hip_rva_t *rva)
 		return;
 	}
 
-	hip_ht_delete(&rva_table, rva);
+	hip_ht_delete(rva_table, rva);
 	HIP_UNLOCK_HA(rva);
 
 	/* the refcnt should now be at least 1, since we must have at least two

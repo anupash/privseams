@@ -227,7 +227,7 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
-	hip_list_t     next_hit;
+	hip_list_t    next_hit;
 	spinlock_t           lock;
 	atomic_t             refcnt;
 	hip_hastate_t        hastate;
