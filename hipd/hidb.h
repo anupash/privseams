@@ -34,6 +34,12 @@
 #define HIP_WRITE_UNLOCK_DB(db) do { \
 	write_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
+#else
+#define HIP_INIT_DB(name,id)
+#define HIP_READ_LOCK_DB(db)
+#define HIP_WRITE_LOCK_DB(db)
+#define HIP_READ_UNLOCK_DB(db)
+#define HIP_WRITE_UNLOCK_DB(db)
 #endif
 
 typedef  HIP_HASHTABLE hip_db_struct_t;
