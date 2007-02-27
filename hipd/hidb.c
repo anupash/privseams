@@ -32,8 +32,18 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
  *
  */
 
+unsigned long hip_hidb_hash(const void *ptr) {
+	return (unsigned long) *(((char *) &(((struct hip_host_id_entry *) ptr)->lhi.hit)) + 2);
+}
+
+int hip_hidb_match(const void *ptr1, const void *ptr2) {
+	return memcmp(&(((struct hip_host_id_entry *) ptr1)->lhi.hit),
+		      &(((struct hip_host_id_entry *) ptr2)->lhi.hit),
+		      sizeof(hip_hit_t));
+}
+
 void hip_init_hostid_db(hip_db_struct_t **db) {
-	*db = hip_ht_init(NULL, NULL);
+	*db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
 }
 
 /**
@@ -85,8 +95,10 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 							       int algo, int anon)
 {
 	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
 	int c;
-	list_for_each(id_entry, db, c) {
+	list_for_each(item, db, c) {
+		id_entry = list_entry(item);
 		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
@@ -103,8 +115,8 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
 	/* FIXME: This full scan is stupid, but we have no hashtables
 	   anyway... tkoponen */
-	return hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
-						    our, HIP_ANY_ALGO, -1);
+	return (int) hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
+							   our, HIP_ANY_ALGO, -1);
 	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
@@ -203,7 +215,7 @@ int hip_add_host_id(hip_db_struct_t *db,
 	id_entry->remove = remove;
 	id_entry->arg = arg;
 
-	list_add(&id_entry->next, &db->db_head);
+	list_add(id_entry, db);
 
 	HIP_DEBUG("Generating a new R1 set.\n");
 	HIP_IFEL(!(id_entry->r1 = hip_init_r1()), -ENOMEM, "Unable to allocate R1s.\n");	
@@ -351,9 +363,9 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 		return err;
 	}
 
-	list_del(&id->next);
-
 	HIP_WRITE_UNLOCK_DB(db);
+
+	list_del(id, db);
 
 	/* Call the handler to execute whatever required after the
            host id is no more in the database */
@@ -370,6 +382,7 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 #endif
 	HIP_FREE(id->host_id);
 	HIP_FREE(id);
+
 	err = 0;
 	return err;
 }

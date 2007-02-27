@@ -63,7 +63,7 @@ struct hip_hadb_multi {
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
 /* Use this to point your target while accessing a database */
-#define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
+#define HIP_DB_LOCAL_HID   (hip_local_hostid_db)
 
 /* ... and not this! */
 extern hip_db_struct_t *hip_local_hostid_db;
