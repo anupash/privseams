@@ -4,9 +4,11 @@
 #include <openssl/lhash.h>
 //#include "kerncompat.h"
 
+#if 0
 #define LIST_HEAD_INIT(name) { 0 } /* XX FIXME */
 
 #define INIT_LIST_HEAD(ptr) /* XX FIXME */
+#endif
 
 typedef LHASH_NODE hip_list_t;
 
@@ -49,7 +51,7 @@ typedef LHASH_NODE hip_list_t;
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-#define list_add(head, entry) lh_insert(head, entry)
+#define list_add(entry, head) lh_insert(head, entry)
 
 /**
  * list_del - deletes entry from list.
@@ -57,7 +59,7 @@ typedef LHASH_NODE hip_list_t;
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */
-#define list_del(head, entry) lh_delete(head, entry)
+#define list_del(entry, head) lh_delete(head, entry)
 
 /**
  * list_add_tail - add a new entry

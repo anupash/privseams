@@ -14,6 +14,7 @@
 #  include "blind.h"
 #endif
 
+#if 0
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
         RW_LOCK_UNLOCKED, id, 0}
@@ -33,16 +34,9 @@
 #define HIP_WRITE_UNLOCK_DB(db) do { \
 	write_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
+#endif
 
-/* should implement with another data structure. 2.6.x will provide
- * ready code, so for now, the linked-list is fine.
- */
-struct hip_db_struct {
-	hip_list_t  db_head;
-	rwlock_t          db_lock;
-	char *            db_name;
-	int               db_cnt;
-};
+typedef  HIP_HASHTABLE hip_db_struct_t;
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
@@ -72,9 +66,9 @@ struct hip_hadb_multi {
 #define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
 
 /* ... and not this! */
-extern struct hip_db_struct hip_local_hostid_db;
+extern hip_db_struct_t *hip_local_hostid_db;
 
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
 							       const struct in6_addr *hit,
 							       int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
@@ -82,9 +76,9 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo);
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void);
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
-struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
+struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo);
-int hip_add_host_id(struct hip_db_struct *db,
+int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		

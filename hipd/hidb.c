@@ -10,13 +10,14 @@
 
 #include "hidb.h"
 
+HIP_HASHTABLE *hip_local_hostid_db = NULL;
+
 // FIXME: all get_any's should be removed (tkoponen)
 
 /*
  * Do not access these databases directly: use the accessors in this file.
  */
 /* XX FIXME: these should be hashes instead of plain linked lists */
-HIP_INIT_DB(hip_local_hostid_db, "local_hid");
 
 
 /*
@@ -31,6 +32,10 @@ HIP_INIT_DB(hip_local_hostid_db, "local_hid");
  *
  */
 
+void hip_init_hostid_db(hip_db_struct_t **db) {
+	*db = hip_ht_init(NULL, NULL);
+}
+
 /**
  * hip_uninit_hostid_db - uninitialize local/peer Host Id table
  * @param db Database structure to delete. 
@@ -38,16 +43,17 @@ HIP_INIT_DB(hip_local_hostid_db, "local_hid");
  * All elements of the @db are deleted. Since local and peer host id databases
  * include dynamically allocated host_id element, it is also freed.
  */
-void hip_uninit_hostid_db(struct hip_db_struct *db)
+void hip_uninit_hostid_db(hip_db_struct_t *db)
 {
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	unsigned long lf;
+	int count;
 
 	HIP_WRITE_LOCK_DB(db);
 
-	list_for_each_safe(curr,iter,&db->db_head) {
-		tmp = list_entry(curr,struct hip_host_id_entry,next);
+	list_for_each_safe(curr, iter, db, count) {
+		tmp = list_entry(curr);
 		if (tmp->r1)
 			hip_uninit_r1(tmp->r1);
 #ifdef CONFIG_HIP_BLIND
@@ -74,12 +80,13 @@ void hip_uninit_hostid_db(struct hip_db_struct *db)
  *
  * @return %NULL, if failed or non-NULL if succeeded.
  */
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
 							       const struct in6_addr *hit,
 							       int algo, int anon)
 {
 	struct hip_host_id_entry *id_entry;
-	list_for_each_entry(id_entry, &db->db_head, next) {
+	int c;
+	list_for_each_entry(id_entry, db, c) {
 		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
@@ -147,7 +154,7 @@ void hip_uninit_host_id_dbs(void)
  *
  * On success returns 0, otherwise an negative error value is returned.
  */
-int hip_add_host_id(struct hip_db_struct *db,
+int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg), 
@@ -326,7 +333,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
  *
  * @return returns 0, otherwise returns negative.
  */
-int hip_del_host_id(struct hip_db_struct *db, struct hip_lhi *lhi)
+int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 {
 	int err = -ENOENT;
 	struct hip_host_id_entry *id = NULL;
@@ -455,7 +462,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
  * @param lhi HIT to match, if null, any.
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
  */
-struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
+struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo)
 {
 	struct hip_host_id_entry *tmp;

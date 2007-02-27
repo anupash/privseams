@@ -207,10 +207,10 @@ struct hip_spi_out_item
 /* this struct is here instead of hidb.h to avoid some weird compilation
    warnings */
 struct hip_host_id_entry {
+	unsigned long hash_key;
 	/* this needs to be first (list_for_each_entry, list 
 	   head being of different type) */
-	hip_list_t next; 
-
+	//hip_list_t next; 
 	struct hip_lhi lhi;
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
