@@ -60,7 +60,7 @@ int hip_socketdb_match(const void *ptr1, const void *ptr2)
 	key1 = ((hip_opp_socket_t *)ptr1)->hash_key;
 	key2 = ((hip_opp_socket_t *)ptr2)->hash_key;
 	_HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
-	return !(key1 == key2);
+	return (key1 != key2);
 }
 
 #if 0

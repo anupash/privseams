@@ -7,8 +7,10 @@
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
 	unsigned long hash;
+
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
 			 sizeof(struct sockaddr_storage), &hash);
+
 	return hash;
 }
 
@@ -18,11 +20,13 @@ int hip_netdev_match(const void *ptr1, const void *ptr2) {
 
 static int count_if_addresses(int ifindex)
 {
-	struct netdev_address *n, *t;
+	struct netdev_address *na;
+	hip_list_t *n, *t;
 	int i = 0, c;
 
-	list_for_each_entry_safe(n, t, addresses, c) {
-		if (n->if_index == ifindex)
+	list_for_each_safe(n, t, addresses, c) {
+		na = list_entry(n);
+		if (na->if_index == ifindex)
 			i++;
 	}
 	return i;
@@ -118,37 +122,41 @@ int filter_address(struct sockaddr *addr, int ifindex)
 
 int exists_address_in_list(struct sockaddr *addr, int ifindex)
 {
-	struct netdev_address *n, *t;
+	struct netdev_address *n;
+	hip_list_t *tmp, *t;
+	int c;
 
-	list_for_each_entry_safe(n, t, &addresses, next) {
-	  int mapped = 0;
-	  int addr_match = 0;
-	  int family_match = 0;
-
-	  mapped = IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr));
-	  HIP_DEBUG("mapped=%d\n", mapped);
-
-	  if (mapped && addr->sa_family == AF_INET) {
-	    struct in6_addr *in6 = (struct in6_addr * ) SA2IP(&n->addr);
-	    struct in_addr *in = (struct in_addr *) SA2IP(addr);
-	    addr_match = IPV6_EQ_IPV4(in6, in);
-	    family_match = 1;
-	  } else if (!mapped && addr->sa_family == AF_INET6) {
-	    addr_match = !memcmp(SA2IP(&n->addr), SA2IP(addr),
-				 SAIPLEN(&n->addr));
-	    family_match = (n->addr.ss_family == addr->sa_family);
-	  }
-
-	  HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n", n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
-	  if (n->addr.ss_family == AF_INET6) {
-	    HIP_DEBUG_IN6ADDR("addr6", SA2IP(&n->addr));
-	  } else if (n->addr.ss_family == AF_INET) {
-	    HIP_DEBUG_INADDR("addr4", SA2IP(&n->addr));
-	  }
-	  if (n->if_index == ifindex && family_match && addr_match)
-	    return 1;
+	list_for_each_safe(tmp, t, addresses, c) {
+		int mapped = 0;
+		int addr_match = 0;
+		int family_match = 0;
+		n = list_entry(tmp);
+		
+		mapped = IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr));
+		HIP_DEBUG("mapped=%d\n", mapped);
+		
+		if (mapped && addr->sa_family == AF_INET) {
+			struct in6_addr *in6 = (struct in6_addr * ) SA2IP(&n->addr);
+			struct in_addr *in = (struct in_addr *) SA2IP(addr);
+			addr_match = IPV6_EQ_IPV4(in6, in);
+			family_match = 1;
+		} else if (!mapped && addr->sa_family == AF_INET6) {
+			addr_match = !memcmp(SA2IP(&n->addr), SA2IP(addr),
+					     SAIPLEN(&n->addr));
+			family_match = (n->addr.ss_family == addr->sa_family);
+		}
+		
+		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
+			  n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
+		if (n->addr.ss_family == AF_INET6) {
+			HIP_DEBUG_IN6ADDR("addr6", SA2IP(&n->addr));
+		} else if (n->addr.ss_family == AF_INET) {
+			HIP_DEBUG_INADDR("addr4", SA2IP(&n->addr));
+		}
+		if (n->if_index == ifindex && family_match && addr_match)
+			return 1;
 	}
-
+	
 	return 0;
 }
 
