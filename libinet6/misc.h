@@ -62,8 +62,8 @@ void hip_xor_hits(struct in6_addr *res,
 		  const struct in6_addr *hit1, 
 		  const struct in6_addr *hit2);
 
-int hip_hash_hit(const void *hit, int range);
-int hip_hash_spi(const void *spi, int range);
+unsigned long hip_hash_hit(const void *hit);
+unsigned long hip_hash_spi(const void *spi);
 int hip_match_hit(const void *hitA, const void *hitB);
 const char *hip_algorithm_to_string(int algo);
 

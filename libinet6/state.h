@@ -7,6 +7,8 @@
 #ifndef _HIP_STATE
 #define _HIP_STATE
 
+#include "lhashtable.h"
+
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
@@ -200,7 +202,7 @@ struct hip_spi_out_item
 	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
 					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
 
-	hip_list_t peer_addr_list; /* Peer's IPv6 addresses */
+	HIP_HASHTABLE *peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
 
@@ -227,8 +229,11 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
-	hip_list_t    next_hit;
-	spinlock_t           lock;
+	/** @c hit_our XOR @c hit_peer. */
+	unsigned long        hashkey;
+
+//	hip_list_t    next_hit;
+//	spinlock_t           lock;
 	atomic_t             refcnt;
 	hip_hastate_t        hastate;
 	int                  state;
@@ -243,12 +248,10 @@ struct hip_hadb_state
 	hip_hit_t            hit_our;
 	/** Peer's HIT. */
 	hip_hit_t            hit_peer;
-	/** @c hit_our XOR @c hit_peer. */
-	hip_hit_t            hash_key;
 	/** SPIs for inbound SAs, hip_spi_in_item. */
-	hip_list_t     spis_in;
+	HIP_HASHTABLE     *spis_in;
 	/** SPIs for outbound SAs, hip_spi_out_item */
-	hip_list_t     spis_out;
+	HIP_HASHTABLE     *spis_out;
 	uint32_t             default_spi_out;
 	/** Preferred peer address to use when sending data to peer. */
 	struct in6_addr      preferred_address;

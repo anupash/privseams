@@ -52,18 +52,22 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 }
 
 int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
-					      struct hip_peer_addr_list_item *list_item,
-					      struct hip_spi_out_item *spi_out,
-					      void *opaq),
-				  hip_ha_t *entry,
-				  struct hip_spi_out_item *spi_out,
-				  void *opaq) {
-	struct hip_peer_addr_list_item *addr, *tmp;
+                                  struct hip_peer_addr_list_item *list_item,
+                                  struct hip_spi_out_item *spi_out,
+                                  void *opaq),
+                                  hip_ha_t *entry,
+                                  struct hip_spi_out_item *spi_out,
+                                  void *opaq)
+{
+	hip_list_t *item, *tmp;
+	struct hip_peer_addr_list_item *addr;
 	int i = 0, err = 0;
 
 	HIP_IFE(!func, -EINVAL);
 
-	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
+	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
+	{
+		addr = list_entry(item);
 	    HIP_IFE(func(entry, addr, spi_out, opaq), -1);
 	}
 
@@ -72,17 +76,21 @@ int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
 }
 
 int hip_update_for_each_local_addr(int (*func)(hip_ha_t *entry,
-					      struct hip_spi_in_item *spi_in,
-					      void *opaq),
-				  hip_ha_t *entry,
-				  void *opaq) {
-	struct hip_spi_in_item *item, *tmp;
+                                   struct hip_spi_in_item *spi_in,
+                                   void *opaq),
+                                   hip_ha_t *entry,
+                                   void *opaq)
+{
+	hip_list_t *item, *tmp;
+	struct hip_spi_in_item *e;
 	int i = 0, err = 0;
 
 	HIP_IFE(!func, -EINVAL);
 
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-	    HIP_IFE(func(entry, item, opaq), -1);
+	list_for_each_safe(item, tmp, entry->spis_in, i)
+	{
+		e= list_entry(item);
+	    HIP_IFE(func(entry, e, opaq), -1);
 	}
 
  out_err:
@@ -1630,25 +1638,34 @@ out_err:
 
 int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
 
-	int err = 0;
-	struct hip_spi_out_item *out_item, *out_tmp;
+	int err = 0, i;
+	hip_list_t *item, *tmp;
+	struct hip_spi_out_item *out_item;
 
 	HIP_DEBUG("\n");
 
-	list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
+	list_for_each_safe(item, tmp, entry->spis_out, i)
+	{
+		int ii;
+		hip_list_t *a_item, *a_tmp;
+		struct hip_peer_addr_list_item *addr;
+		out_item = list_entry(item);
 
-		struct hip_peer_addr_list_item *addr, *addr_tmp;
-
-		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
+		list_for_each_safe(a_item, a_tmp, out_item->peer_addr_list, ii)
+		{
+			addr = list_entry(a_item);
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0) {
-				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
+			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0)
+			{
+				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data))
+				{
 					HIP_ERROR("echo data len mismatch\n");
 					continue;
 				}
 				if (memcmp(addr->echo_data,
-					  (void *)echo_resp+sizeof(struct hip_tlv_common),
-				   	  sizeof(addr->echo_data)) != 0) {
+				           (void *)echo_resp+sizeof(struct hip_tlv_common),
+				           sizeof(addr->echo_data)) != 0)
+				{
 					HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 					continue;
 				}	
@@ -1659,12 +1676,13 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
 					       "Error while changing SAs for mobility\n");	
 				do_gettimeofday(&addr->modified_time);
-				if (addr->is_preferred) {
+				if (addr->is_preferred)
+				{
 					/* maybe we should do this default address selection
 					   after handling the LOCATOR .. */
 					hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
-				} else
-					HIP_DEBUG("address was not set as preferred address\n");
+				}
+				else HIP_DEBUG("address was not set as preferred address\n");
 			}
 		}
 	}

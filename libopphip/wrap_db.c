@@ -174,7 +174,7 @@ hip_opp_socket_t *hip_create_opp_entry()
 	
 	memset(entry, 0, sizeof(*entry));
 	
-	INIT_LIST_HEAD(&entry->next_entry);
+// 	INIT_LIST_HEAD(&entry->next_entry);
 	
 	HIP_LOCK_SOCKET_INIT(entry);
 	atomic_set(&entry->refcnt, 0);

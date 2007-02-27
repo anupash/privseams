@@ -128,10 +128,10 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	}
 
 	/* Copy rest of the IP addresses. */
-	list_for_each_safe(spi_out, spi_tmp, &ha->spis_out, i)
+	list_for_each_safe(spi_out, spi_tmp, ha->spis_out, i)
 	{
 		spi_entry = list_entry(spi_out);
-		list_for_each_safe(item, tmp, &spi_entry->peer_addr_list, ii)
+		list_for_each_safe(item, tmp, spi_entry->peer_addr_list, ii)
 		{
 			entry = list_entry(item);
 			if (entry->address_state != PEER_ADDR_STATE_ACTIVE)

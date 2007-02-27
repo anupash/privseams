@@ -174,11 +174,11 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  *
  * Returns value in range: 0 <= x < range
  */
-int hip_hash_spi(const void *key, int range)
+unsigned long hip_hash_spi(const void *key)
 {
 	u32 spi = (u32) key;
 	/* SPIs are random, so simple modulo is enough? */
-	return spi % range;
+	return spi % ULONG_MAX;
 }
 
 /**
@@ -188,12 +188,12 @@ int hip_hash_spi(const void *key, int range)
  *
  * Returns value in range: 0 <= x < range
  */
-int hip_hash_hit(const void *key, int range)
+unsigned long hip_hash_hit(const void *key)
 {
 	hip_hit_t *hit = (hip_hit_t *)key;
 
 	/* HITs are random. (at least the 64 LSBs)  */
-	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % range;
+	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % ULONG_MAX;
 }
 
 int hip_match_hit(const void *hitA, const void *hitB)
