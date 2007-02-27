@@ -22,8 +22,7 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 
 /*
  *
- *
- * Static functions follow. These functions _MUST_ only be used in conjunction
+ * * Static functions follow. These functions _MUST_ only be used in conjunction
  * with adequate locking. If the operation only fetches data, then READ lock is
  * enough. All contexts except the hip thread _SHOULD_ use READ locks.
  * The hip thread(s) is/are allowed to write to the databases. For this purpose
@@ -33,13 +32,16 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
  */
 
 unsigned long hip_hidb_hash(const void *ptr) {
-	return (unsigned long) *(((char *) &(((struct hip_host_id_entry *) ptr)->lhi.hit)) + 2);
+	hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
+	unsigned long hash;
+
+	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
+
+	return hash;
 }
 
 int hip_hidb_match(const void *ptr1, const void *ptr2) {
-	return memcmp(&(((struct hip_host_id_entry *) ptr1)->lhi.hit),
-		      &(((struct hip_host_id_entry *) ptr2)->lhi.hit),
-		      sizeof(hip_hit_t));
+	return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
 }
 
 void hip_init_hostid_db(hip_db_struct_t **db) {

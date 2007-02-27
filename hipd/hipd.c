@@ -66,7 +66,7 @@ int opendht_serving_gateway_flag;
    iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
    variable and most of the functions referencing them unnecessary -miika */
 int address_count;
-hip_list_t addresses;
+hip_list_t *addresses;
 
 time_t load_time;
 

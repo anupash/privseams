@@ -45,7 +45,7 @@ struct hip_work_order {
 };
 
 struct netdev_address {
-	hip_list_t next;
+  //hip_list_t next;
 	struct sockaddr_storage addr;
 	int if_index;
 };

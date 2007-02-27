@@ -4,12 +4,24 @@
  */
 #include "netdev.h"
 
+unsigned long hip_netdev_hash(const void *ptr) {
+	struct netdev_address *na = (struct netdev_address *) ptr;
+	unsigned long hash;
+	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
+			 sizeof(struct sockaddr_storage), &hash);
+	return hash;
+}
+
+int hip_netdev_match(const void *ptr1, const void *ptr2) {
+	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
+}
+
 static int count_if_addresses(int ifindex)
 {
 	struct netdev_address *n, *t;
-	int i = 0;
+	int i = 0, c;
 
-	list_for_each_entry_safe(n, t, &addresses, next) {
+	list_for_each_entry_safe(n, t, addresses, c) {
 		if (n->if_index == ifindex)
 			i++;
 	}
@@ -353,7 +365,8 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");
-	INIT_LIST_HEAD(&addresses);
+	//INIT_LIST_HEAD(addresses);
+	addresses = hip_ht_init(hip_netdev_hash, hip_netdev_match);
 
 	HIP_IFEL(getifaddrs(&g_ifaces), -1,
 		 "getifaddrs failed\n");
