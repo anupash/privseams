@@ -181,5 +181,10 @@ int hip_ht_init(HIP_HASHTABLE *ht)
  */
 void hip_ht_uninit(HIP_HASHTABLE *ht)
 {
-  
+  // XX TODO
+}
+
+void hash_for_each_entry(HIP_HASHTABLE *ht, )
+{
+  // XX TODO: 
 }
