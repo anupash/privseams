@@ -9,19 +9,21 @@
 #include "reg.h"
 
 /** A linked list for storing the supported services. */
-static hip_list_t services;
+HIP_HASHTABLE *services;
 
 void hip_init_services(void)
 {
-	INIT_LIST_HEAD(&services);
+	services = hip_ht_init(NULL, NULL);
 }
 
 void hip_uninit_services(void)
 {       
-        HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-        list_for_each_entry_safe(s, tmp, &services, list) {
-                list_del(s);
+        hip_list_t *item = NULL, *tmp = NULL;
+	HIP_SERVICE *s;
+	int c;
+        list_for_each_safe(item, tmp, services, c) {
+		s = list_entry(item);
+                list_del(s, services);
         }	
 }
 
@@ -81,7 +83,7 @@ int hip_services_add(int service_type)
 		goto out_err;
 	}
 	
-	list_add(&service->list, &services);
+	list_add(service, services);
 	
         //TODO: Send information about new service
         
@@ -91,10 +93,12 @@ out_err:
 
 int hip_services_set_active(int service)
 {
-        int err = 0;
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-	list_for_each_entry_safe(s, tmp, &services, list) {
+        int err = 0, c;
+	hip_list_t *item = NULL, *tmp = NULL;
+	HIP_SERVICE *s;
+	
+	list_for_each_safe(item, tmp, services, c) {
+		s = list_entry(item);
 		if (s->service_type == service) {
 			HIP_DEBUG("Activating service.\n");
 			s->state = HIP_SERVICE_ACTIVE;
@@ -106,10 +110,12 @@ out_err:
 
 int hip_services_set_inactive(int service)
 {
-        int err = 0;
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-	list_for_each_entry_safe(s, tmp, &services, list) {
+        int err = 0, c;
+	hip_list_t *item = NULL, *tmp = NULL;
+        HIP_SERVICE *s = NULL;
+
+	list_for_each_safe(item, tmp, services, c) {
+		s = list_entry(item);
 		if (s->service_type == service) {
 			HIP_DEBUG("Inactivating service.\n");
 			s->state = HIP_SERVICE_INACTIVE;
@@ -121,16 +127,17 @@ out_err:
 
 int hip_services_remove(int service)
 {
-        int err = 0;
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
+        int err = 0, c;
+	hip_list_t *item = NULL, *tmp = NULL;
+        HIP_SERVICE *s = NULL;
 	
-	list_for_each_entry_safe(s, tmp, &services, list) {
+	list_for_each_safe(item, tmp, services, c) {
+                s = list_entry(item);
 		if (s->service_type == service) {
 			HIP_DEBUG("Removing service %d.\n", service);
                         HIP_IFEL(s->cancel_service(), -1, 
                                 "Error cancelling service\n");
-			list_del(&s->list);
+			list_del(s, services);
 			HIP_FREE(s);
 		}
 	}
@@ -141,9 +148,12 @@ out_err:
 
 HIP_SERVICE *hip_get_service(int service_type)
 {
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-	list_for_each_entry_safe(s, tmp, &services, list) {
+	hip_list_t *item = NULL, *tmp = NULL;
+        HIP_SERVICE *s = NULL;
+	int c;
+
+	list_for_each_safe(item, tmp, services, c) {
+                s = list_entry(item);
 		if (s->service_type == service_type) {
 			return s;
 		}
@@ -155,14 +165,13 @@ HIP_SERVICE *hip_get_service(int service_type)
 
 int hip_get_services_list(int **service_types)
 {
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-        HIP_SERVICE *s2 = NULL;
-        HIP_SERVICE *tmp2 = NULL;
-	int counter1 = 0;
+	HIP_SERVICE *s = NULL, *s2 = NULL;
+        hip_list_t *item = NULL, *item2 = NULL, *tmp = NULL, *tmp2 = NULL;
+	int counter1 = 0, c;
 	int counter2 = 0;
 	
-	list_for_each_entry_safe(s, tmp, &services, list) {
+	list_for_each_safe(item, tmp, services, c) {
+		s = list_entry(item);
 		if (s->state == HIP_SERVICE_ACTIVE)
 			counter1++;
 	}
@@ -173,7 +182,8 @@ int hip_get_services_list(int **service_types)
 
 	*service_types = HIP_MALLOC((counter1 * sizeof(int)), GFP_KERNEL);	
 	
-	list_for_each_entry_safe(s2, tmp2, &services, list) {
+	list_for_each_safe(item2, tmp2, services, c) {
+		s2 = list_entry(item2);
 		if (counter2 < counter1) {
 			if (s2->state == HIP_SERVICE_ACTIVE) {
 				(*service_types)[counter2] = s2->service_type;
@@ -188,10 +198,11 @@ int hip_get_services_list(int **service_types)
 
 int hip_get_service_count()
 {
+	hip_list_t *item = NULL, *tmp = NULL;
 	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-	int count = 0;
-	list_for_each_entry_safe(s, tmp, &services, list) {
+	int count = 0, c;
+	list_for_each_safe(item, tmp, services, c) {
+                s = list_entry(item);
 		if (s->state == HIP_SERVICE_ACTIVE)
 			count++;
 	}
@@ -201,9 +212,12 @@ int hip_get_service_count()
 
 int hip_services_is_active(int service)
 {
-	HIP_SERVICE *s = NULL;
-        HIP_SERVICE *tmp = NULL;
-	list_for_each_entry_safe(s, tmp, &services, list) {
+	hip_list_t *item = NULL, *tmp = NULL;
+        HIP_SERVICE *s = NULL;
+	int c;
+
+	list_for_each_safe(item, tmp, services, c) {
+                s = list_entry(item);
 		if (s->service_type == service && s->state == HIP_SERVICE_ACTIVE)
 			return 1;
 	}
