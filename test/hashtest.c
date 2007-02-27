@@ -14,7 +14,7 @@
 #include "wrap_db.h"
 
 HIP_HASHTABLE socketdb;
-static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
+//static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 inline int hip_hash_pid_socket(const void *hashed_pid_socket, int range)
 {
@@ -60,7 +60,7 @@ void hip_init_socket_db()
 {
 	memset(&socketdb,0,sizeof(socketdb));
 	
-	socketdb.head =      socketdb_by_pid_socket_list;
+	socketdb.head =      socketdb;
 	socketdb.hashsize =  HIP_SOCKETDB_SIZE;
 	socketdb.offset =    offsetof(hip_opp_socket_t, next_entry);
 	socketdb.hash =      hip_hash_pid_socket;
@@ -88,7 +88,7 @@ void hip_uninit_socket_db()
 	//  hip_ht_uninit();
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
 		list_for_each_entry_safe(item, tmp,
-					 &socketdb_by_pid_socket_list[i],
+					 &socketdb[i],
 					 next_entry) {
 			if (atomic_read(&item->refcnt) > 2)
 				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
@@ -148,10 +148,10 @@ void hip_socketdb_dump()
 	HIP_LOCK_HT(&socketdb);
 	
 	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
-		if (!list_empty(&socketdb_by_pid_socket_list[i])) {
+		if (!list_empty(&socketdb[i])) {
 			HIP_DEBUG("HT[%d]\n", i);
 			list_for_each_entry_safe(item, tmp,
-					     &(socketdb_by_pid_socket_list[i]),
+					     &(socketdb[i]),
 					     next_entry) {
 				HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d domain=%d type=%d protocol=%d \
 src_ip=%s dst_ip=%s src_hit=%s dst_hit=%s lock=%d refcnt=%d\n",

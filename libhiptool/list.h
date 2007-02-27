@@ -1,7 +1,7 @@
 #ifndef HIP_LIST_H
 #define HIP_LIST_H
 
-#ifdef CONFIG_HIP_CORPORATE_
+#ifdef CONFIG_HIP_CORPORATE
 
 #include "qlist.h"
 
@@ -9,7 +9,7 @@
 
 #include "kerncompat.h"
 
-#ifndef HIP_CORPORATE_
+#ifndef HIP_CORPORATE
 
 typedef struct list_head hip_list_t;
 
