@@ -934,9 +934,9 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	HIP_DEBUG("added SPI 0x%x to the inbound SPI list\n", spi_in);
 	// hip_hold_ha(entry); ?
 
-	_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
+	/*_HIP_DEBUG("inserting SPI to HIT-SPI hashtable\n");
 	err = hip_hadb_insert_state_spi_list(&entry->hit_peer, &entry->hit_our, spi_in);
-	if (err == -EEXIST) err = 0;
+	if (err == -EEXIST) err = 0;*/
 
 out_err:
 out:
@@ -1669,7 +1669,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	HIP_DEBUG("spi=0x%x is_preferred_addr=%d\n", spi, is_preferred_addr);
 
 	spi_list = hip_hadb_get_spi_list(entry, spi);
-	if (!spi_list) {
+	if (!spi_list)
+	{
 		HIP_ERROR("SPI list for 0x%x not found\n", spi);
 		err = -EEXIST;
 		goto out_err;
@@ -1754,7 +1755,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if (new)
 	{
 		HIP_DEBUG("adding new addr to SPI list\n");
-		list_add_tail(new_addr, spi_list->peer_addr_list);
+		list_add(new_addr, spi_list->peer_addr_list);
 	}
 
  out_err:
@@ -2481,7 +2482,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 				  "inbound list, item=0x%p addresses=0x%p\n",
 				  spi_item->spi, spi_item->new_spi, item, spi_item->addresses);
 		  	HIP_ERROR("remove SPI from HIT-SPI HT\n");
-			hip_hadb_remove_hs(spi_item->spi);
+			//hip_hadb_remove_hs(spi_item->spi);
 			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
 			hip_delete_sa(spi_item->spi, &entry->local_address, &entry->hit_our,
 				      AF_INET6, entry->peer_udp_port, 0);

@@ -115,7 +115,7 @@ hip_opp_block_t *hip_create_opp_block_entry()
   
 	memset(entry, 0, sizeof(*entry));
   
-	INIT_LIST_HEAD(&entry->next_entry);
+//	INIT_LIST_HEAD(&entry->next_entry);
   
 	HIP_LOCK_OPP_INIT(entry);
 	atomic_set(&entry->refcnt,0);

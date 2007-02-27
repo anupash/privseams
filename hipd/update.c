@@ -749,8 +749,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		/* actually should change hip_hadb_delete_inbound_spi
 		 * somehow, but we do this or else delete_inbound_spi
 		 * would delete both old and new SPIs */
-		hip_hadb_remove_hs(prev_spi_in);
-		err = hip_hadb_insert_state_spi_list(&entry->hit_peer, 
+		//hip_hadb_remove_hs(prev_spi_in);
+		/*err = hip_hadb_insert_state_spi_list(&entry->hit_peer, 
 						     &entry->hit_our,
 						     new_spi_in);
 		if (err == -EEXIST) {
@@ -759,7 +759,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		} else if (err) {
 			HIP_ERROR("Could not add a HIT-SPI mapping for SPI 0x%x (err=%d)\n",
 				  new_spi_in, err);
-		}
+		}*/
 	} else
 		_HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
