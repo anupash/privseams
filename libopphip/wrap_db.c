@@ -108,10 +108,12 @@ void hip_uninit_socket_db()
 	
 	_HIP_DEBUG("DELETING\n");
 	//  hip_ht_uninit();
-	for(i = 0; i < HIP_SOCKETDB_SIZE; i++) {
+	for(i = 0; i < HIP_SOCKETDB_SIZE; i++)
+	{
 		list_for_each_entry_safe(item, tmp,
-					 &socketdb_by_pid_socket_list[i],
-					 next_entry) {
+		                         &socketdb_by_pid_socket_list[i],
+		                         next_entry)
+		{
 			if (atomic_read(&item->refcnt) > 2)
 				HIP_ERROR("socketdb: %p, in use while removing it from socketdb\n", item);
 			hip_socketdb_put_entry(item);

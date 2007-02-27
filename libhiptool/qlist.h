@@ -2,28 +2,10 @@
 #define QLIST_H
 
 #include "kerncompat.h"
-LIST_HEAD(listhead, entry) head;
-#define LIST_HEAD_INIT(name) (name, type)						
-struct name {								
-	struct type *lh_first;
-}	
-#define INIT_LIST_HEAD(type) /* XX FIXME */
-struct entry {								
-	struct type *le_next;	/* next element */			
-	struct type **le_prev;	/* address of previous next element */	
-}
 
-/*static inline void prefetch(const void *x) {;}*/
+#define LIST_HEAD_INIT(name) { 0 } /* XX FIXME */
 
-/**
- * container_of - cast a member of a structure out to the containing structure
- *
- * @param ptr the pointer to the member.
- * @param type the type of the container struct this is embedded in.
- * @param member the name of the member within the struct.
- *
- */
-#define container_of(ptr, type, member) do { } while(0) /* XX FIXME */
+#define INIT_LIST_HEAD(ptr) /* XX FIXME */
 
 /**
  * list_entry - get the struct for this entry
@@ -79,12 +61,9 @@ static inline void list_add(struct list_head *lnew, struct list_head *lhead)
  * Note: list_empty on entry does not return true after this, the entry is
  * in an undefined state.
  */
-static inline void list_del(struct listhead *entry)
+static inline void list_del(struct list_head *entry)
 {
-      while (head.lh_first != NULL)         
-         LIST_REMOVE(head.lh_first, entries);
-
-
+  /* XX FIXME */
 }
 
 /**
