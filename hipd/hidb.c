@@ -445,9 +445,9 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 	int err = 0;
 	unsigned long lf;
 
-	HIP_READ_LOCK_DB(&hip_local_hostid_db);
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
 	
-	entry = hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db,
+	entry = hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
 						     NULL, algo, anon);
 	if (!entry) {
 		err=-ENOENT;
@@ -458,7 +458,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 	err = 0;
 	
  out:
-	HIP_READ_UNLOCK_DB(&hip_local_hostid_db);
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 	return err;
 }
 
@@ -586,7 +586,7 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	struct hip_host_id *tmp; 
 	struct hip_host_id *res; 
 	
-	tmp = hip_get_host_id(&hip_local_hostid_db,NULL,HIP_HI_DSA);
+	tmp = hip_get_host_id(hip_local_hostid_db,NULL, HIP_HI_DSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -662,7 +662,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	struct hip_host_id *tmp, *res;
 	struct in6_addr peer_hit;
 
-	tmp = hip_get_host_id(&hip_local_hostid_db, NULL, HIP_HI_RSA);
+	tmp = hip_get_host_id(hip_local_hostid_db, NULL, HIP_HI_RSA);
 	if (tmp == NULL) {
 		HIP_ERROR("No host id for localhost\n");
 		return NULL;
@@ -734,20 +734,20 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	hip_list_t *curr, *iter;
 	struct hip_host_id_entry *tmp;
 	struct endpoint_hip *hits = NULL;
-	int err = 0;
+	int err = 0, c;
 
-	HIP_READ_LOCK_DB(db);
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
 
-	list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
+	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
-		tmp = list_entry(curr,struct hip_host_id_entry,next);
+		tmp = list_entry(curr);
 		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
 
 		err = func(tmp, opaque);
 		if (err) break;
 	}
 
-	HIP_READ_UNLOCK_DB(db);
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 
 	return (err);
 
@@ -763,7 +763,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,
   hip_list_t *curr, *iter;
   struct hip_host_id_entry *tmp;
   struct endpoint_hip *hits = NULL;
-  int err = 0;
+  int err = 0, c;
   char *key = NULL;
   unsigned int key_len = sizeof(struct in6_addr);
   struct in6_addr *blind_hit;
@@ -775,11 +775,11 @@ int hip_blind_find_local_hi(uint16_t *nonce,
   HIP_IFEL((blind_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
   	   -1, "Couldn't allocate memory\n");
    
-  HIP_READ_LOCK_DB(db);
+  HIP_READ_LOCK_DB(hip_local_hostid_db);
   
-  list_for_each_safe(curr, iter, (&hip_local_hostid_db.db_head))
+  list_for_each_safe(curr, iter, hip_local_hostid_db, c)
     {
-      tmp = list_entry(curr,struct hip_host_id_entry,next);
+      tmp = list_entry(curr);
       HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
       
       // let's test the hit
@@ -798,7 +798,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,
       }
     }
   
-  HIP_READ_UNLOCK_DB(db);
+  HIP_READ_UNLOCK_DB(hip_local_hostid_db);
   
  out_err:
   if(key)
