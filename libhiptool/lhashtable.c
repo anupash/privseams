@@ -6,9 +6,6 @@
 #define hip_ht_get_list(ptr, offset) \
         (hip_list_t *)((u8 *)ptr + offset)
 
-void *entrybuf;
-LHASH *nm;
-LHASH_NODE *hipchain;
 
 
 
@@ -24,9 +21,9 @@ void *hip_ht_find(HIP_HASHTABLE *ht, const void *key)
 	int j;
 	hip_list_t *chain;
 	void *entry;
-	
-	
 	LHASH *retr;
+	LHASH *nm;
+	LHASH_NODE *hipchain;
 	
 	hipchain=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));
 	nm=ht->ami;
@@ -90,6 +87,7 @@ int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
         int i;
 	int hipcom;
 	LHASH_NODE *nadd;
+	LHASH *nm;
 	/*nadd=(struct LHASH_NODE *) malloc(sizeof(LHASH_NODE));*/
 	int hash = ht->hash(ht->get_key(entry), ht->hashsize);
 	_HIP_DEBUG("hash=%d HT=%s\n", hash, ht->name);
@@ -127,6 +125,7 @@ int hip_ht_add(HIP_HASHTABLE *ht, void *entry)
 void hip_ht_delete(HIP_HASHTABLE *ht, void *entry)
 {
  	
+	LHASH *nm;
 	HIP_DEBUG("I am in delete function %u\n",entry);
 	nm=ht->ami;
 
@@ -184,7 +183,3 @@ void hip_ht_uninit(HIP_HASHTABLE *ht)
   // XX TODO
 }
 
-void hash_for_each_entry(HIP_HASHTABLE *ht, )
-{
-  // XX TODO: 
-}
