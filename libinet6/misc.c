@@ -174,11 +174,22 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  *
  * Returns value in range: 0 <= x < range
  */
-unsigned long hip_hash_spi(const void *key)
+unsigned long hip_hash_spi(const void *ptr)
 {
-	u32 spi = (u32) key;
+	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
+	return (hash % ULONG_MAX);
+}
+
+/**
+ * Match spis.
+ */
+int hip_match_spi(const void *ptr1, const void *ptr2)
+{
+	unsigned long hash1 = (unsigned long)(*((uint32_t *)ptr1));
+	unsigned long hash2 = (unsigned long)(*((uint32_t *)ptr2));
+
 	/* SPIs are random, so simple modulo is enough? */
-	return spi % ULONG_MAX;
+	return (hash1 != hash2);
 }
 
 /**
@@ -188,23 +199,35 @@ unsigned long hip_hash_spi(const void *key)
  *
  * Returns value in range: 0 <= x < range
  */
-unsigned long hip_hash_hit(const void *key)
+unsigned long hip_hash_hit(const void *ptr)
 {
-	hip_hit_t *hit = (hip_hit_t *)key;
+	unsigned long hash;
+	hip_hit_t *hit = (hip_hit_t *)ptr;
 
-	/* HITs are random. (at least the 64 LSBs)  */
-	return (hit->s6_addr32[2] ^ hit->s6_addr32[3]) % ULONG_MAX;
+	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
+
+	return hash;
 }
 
-int hip_match_hit(const void *hitA, const void *hitB)
+int hip_match_hit(const void *ptr1, const void *ptr2)
 {
-	hip_hit_t *key_1, *key_2;
-
-	key_1 = (hip_hit_t *)hitA;
-	key_2 = (hip_hit_t *)hitB;
-
-	return !ipv6_addr_cmp(key_1, key_2);
+	return (hip_hash_hit(ptr1) != hip_hash_hit(ptr2));
 }
+
+/*
+unsigned long hip_hidb_hash(const void *ptr) {
+	hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
+	unsigned long hash;
+
+	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
+
+	return hash;
+}
+
+int hip_hidb_match(const void *ptr1, const void *ptr2) {
+	return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
+}
+*/
 
 const char *hip_algorithm_to_string(int algo) 
 {

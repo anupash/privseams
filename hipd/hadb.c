@@ -541,6 +541,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	INIT_LIST_HEAD(&entry->spis_in);
 	INIT_LIST_HEAD(&entry->spis_out);*/
 
+	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
+	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
+	
 	HIP_LOCK_INIT(entry);
 	atomic_set(&entry->refcnt,0);
 

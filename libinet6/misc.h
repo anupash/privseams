@@ -64,7 +64,8 @@ void hip_xor_hits(struct in6_addr *res,
 
 unsigned long hip_hash_hit(const void *hit);
 unsigned long hip_hash_spi(const void *spi);
-int hip_match_hit(const void *hitA, const void *hitB);
+int hip_match_spi(const void *, const void *);
+int hip_match_hit(const void *, const void *);
 const char *hip_algorithm_to_string(int algo);
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
