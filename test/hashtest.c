@@ -10,12 +10,12 @@
 #else
 #  include "hashtable.h"
 #endif
-//#include "hadb.h"
+#include "hadb.h"
 //#include "wrap_db.h"
 #include "limits.h"
 
 struct hip_opp_socket_entry {
-	unsigned int 		hash_key; /* pid XOR old_socket */
+	unsigned long 		hash_key; /* pid XOR old_socket */
 	//hip_list_t     	next_entry;
 	//spinlock_t           	lock;
 	//	atomic_t             	refcnt;
@@ -47,15 +47,20 @@ HIP_HASHTABLE *socketdb = NULL;
 // inline int, int range removed //miika
 unsigned long hip_hash_pid_socket(const void *ptr)
 {
-	return ((hip_opp_socket_t *) ptr)->hash_key;
+	unsigned long key = ((hip_opp_socket_t *)ptr)->hash_key;
+	_HIP_DEBUG("hip_hash_pid_socket(%p): 0x%x\n", ptr, key);
+	return key;
 }
 
 
 // removed: inline
-int hip_socketdb_match(const void *key_1, const void *key_2)
+int hip_socketdb_match(const void *ptr1, const void *ptr2)
 {
-	_HIP_DEBUG("key_1=%d key_2=%d \n", *(int *)key_1, *(int *)key_2);
-	return *(int *)key_1 == *(int *)key_2;
+	unsigned long key1, key2;
+	key1 = ((hip_opp_socket_t *)ptr1)->hash_key;
+	key2 = ((hip_opp_socket_t *)ptr2)->hash_key;
+	_HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
+	return !(key1 == key2);
 }
 
 #if 0
@@ -137,7 +142,7 @@ hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 	unsigned int key = 0;
 		
 	hip_xor_pid_socket(&key, pid, socket);
-	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
+	HIP_DEBUG("pid %d socket %d computed key 0x%x\n", pid, socket, key);
 
 	return (hip_opp_socket_t *)hip_ht_find(socketdb, (void *)&key);
 }
@@ -160,7 +165,7 @@ int hip_socketdb_add_entry(pid_t pid, int socket)
 	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
-	HIP_DEBUG("added entry %p %p\n", pid, socket);
+	HIP_DEBUG("added entry %p %d\n", pid, socket);
 	err = hip_ht_add(socketdb, new_item);
 	if (err) HIP_ERROR("hip_ht_add() failed!\n");
 	//hip_socketdb_dump();
@@ -241,8 +246,8 @@ void test_db(){
 	err = hip_socketdb_add_entry(pid, socket);
 	HIP_ASSERT(!err);
 	entry =  hip_socketdb_find_entry(pid, socket);
-	hip_socketdb_dump();
 	HIP_ASSERT(entry);
+	hip_socketdb_dump();
 	
 	//  pid++; 
 	socket++;
@@ -253,8 +258,8 @@ void test_db(){
 	err = hip_socketdb_add_entry(pid, socket);
 	HIP_ASSERT(!err);
 	entry = hip_socketdb_find_entry(pid, socket);
-	entry->translated_socket = socket+100;
 	HIP_ASSERT(entry);
+	entry->translated_socket = socket+100;
 	hip_socketdb_dump();
 	
 	

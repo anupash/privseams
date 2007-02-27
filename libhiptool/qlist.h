@@ -38,8 +38,8 @@ typedef LHASH_NODE hip_list_t;
  */
 #define list_for_each_safe(pos, iter, head, counter) \
 	for (counter = ((head)->num_nodes - 1); counter >= 0; counter--) \
-	for (pos = (head)->b[counter], iter = pos->next; \
-	     pos != NULL; pos = iter, iter = pos->next)
+	for (pos = (head)->b[counter], (iter = pos ? pos->next : NULL); \
+	     pos != NULL; pos = iter, (iter = pos ? pos->next : NULL))
 
 /**
  * list_add - add a new entry
