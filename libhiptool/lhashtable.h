@@ -20,7 +20,7 @@ static LHASH *amih;
 static LHASH *tblhash=NULL;
 static uint reclength=37;
 
-
+#if 0
 struct hip_ht_common {
 	LHASH_NODE **hipb;
 	/** a pointer to memory area to be used as hashtable. */
@@ -71,17 +71,36 @@ struct hip_ht_common {
 	
 	char name[16];
 };
+#endif
 
-typedef struct hip_ht_common HIP_HASHTABLE;
+typedef LHASH hip_ht_common;
+typedef hip_ht_common HIP_HASHTABLE;
+
 /*typedef struct lhash_st HIP_LHASH;*/
 
+// typedef unsigned long (*LHASH_HASH_FN_TYPE)(const void *);
+// typedef int (*LHASH_COMP_FN_TYPE)(const void *, const void *);
 
+static inline HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
+{
+	return lh_new(hashfunc, cmpfunc);
+}
+
+#define hip_ht_uninit(head) lh_free(head)
+
+#define hip_ht_find(head, data) lh_retrieve(head, data)
+#define hip_ht_add(head, data) lh_insert(head, data)
+#define hip_ht_delete(head, data) lh_delete(head, data)
+
+#if 0
 int hip_ht_init( HIP_HASHTABLE  *ht);
 void hip_ht_uninit( HIP_HASHTABLE *ht);
 
 void *hip_ht_find(HIP_HASHTABLE *ht, const void *key);
 int hip_ht_add(HIP_HASHTABLE *ht, void *data);
-void hip_ht_delete(HIP_HASHTABLE *ht, void *entry);
+void hip_ht_delete(HIP_HASHTABLE *ht, void *data);
+#endif
+
 #define HIP_LOCK_HT(hash)
 #define HIP_UNLOCK_HT(hash)
 

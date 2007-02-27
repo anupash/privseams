@@ -1,5 +1,7 @@
 #include "lhashtable.h"
 
+#if 0
+
 #define hip_ht_get_content(type, ptr, offset) \
         (type *)((u8 *)ptr - offset)
 
@@ -183,4 +185,7 @@ void hip_ht_uninit(HIP_HASHTABLE *ht)
 {
   // XX TODO
 }
+
+#endif
+
 
