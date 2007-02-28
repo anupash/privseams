@@ -558,7 +558,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	
 	HIP_LOCK_INIT(entry);
-	atomic_set(&entry->refcnt,0);
+	//atomic_set(&entry->refcnt,0);
 
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
@@ -1999,7 +1999,7 @@ void hip_hadb_dump_hs_ht(void)
 	{
 		hip_hadb_hold_hs(hs);
 		hip_in6_ntop(&hs->hit_peer, str);
-		HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
+		_HIP_DEBUG("HIT=%s SPI=0x%x refcnt=%d\n",
 					str, hs->spi, atomic_read(&hs->refcnt));
 		hip_hadb_put_hs(hs);
 	}

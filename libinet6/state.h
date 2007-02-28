@@ -237,7 +237,7 @@ struct hip_hadb_state
 
 //	hip_list_t    next_hit;
 //	spinlock_t           lock;
-	atomic_t             refcnt;
+//	atomic_t             refcnt;
 	hip_hastate_t        hastate;
 	int                  state;
 	/** This guarantees that retransmissions work properly also in
