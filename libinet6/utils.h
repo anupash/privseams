@@ -44,15 +44,14 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 	return (hit_begin == HIP_HIT_PREFIX);
 }
 
-struct hip_opp_blocking_request_entry {
-  hip_list_t     	next_entry;
+struct hip_opp_blocking_request_entry
+{
+  hip_hit_t             our_real_hit;
+  hip_hit_t             peer_real_hit;
   spinlock_t           	lock;
   atomic_t             	refcnt;
 
   time_t                creation_time;
-  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
-  hip_hit_t             our_real_hit;
-  hip_hit_t             peer_real_hit;
   struct in6_addr       peer_ip;
   struct in6_addr       our_ip;
   struct sockaddr_un    caller;

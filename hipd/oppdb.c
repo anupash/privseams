@@ -15,6 +15,21 @@ HIP_HASHTABLE *oppdb;
 //static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 extern unsigned int opportunistic_mode;
 
+unsigned long hip_oppdb_hash_hit(const void *ptr)
+{
+	hip_opp_block_t *entry = (hip_opp_block_t *)ptr;
+	uint8_t hash[HIP_AH_SHA_LEN];
+
+	hip_build_digest(HIP_DIGEST_SHA1, &entry->our_real_hit, sizeof(hip_hit_t) * 2, hash);
+
+	return *((unsigned long *)hash);
+}
+
+int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
+{
+	return (hip_hash_hit(ptr1) != hip_hash_hit(ptr2));
+}
+
 int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 {
 	hip_ha_t *hadb_entry;
@@ -54,6 +69,7 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 	return fail;
 }
 
+#if 0
 inline void hip_oppdb_hold_entry(void *entry)
 {
   	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_blocking_request_entry);
@@ -69,6 +85,7 @@ inline void *hip_oppdb_get_key(void *entry)
 {
 	return &(((hip_opp_block_t *)entry)->hash_key);
 }
+#endif
 
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
@@ -95,12 +112,12 @@ void hip_oppdb_uninit()
 
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
 {
-	hip_hit_t key;
-	hip_xor_hits(&key, hit_peer, hit_our);
+	hip_opp_block_t entry;
+	ipv6_addr_copy(&entry.peer_real_hit, hit_peer);
+	ipv6_addr_copy(&entry.our_real_hit, hit_our);
 	HIP_HEXDUMP("hit_peer is: ", hit_peer, sizeof(hip_hit_t));
 	HIP_HEXDUMP("hit_our is: ", hit_our, sizeof(hip_hit_t));
-	HIP_HEXDUMP("the computed key is: ", &key, sizeof(hip_hit_t));
-	return (hip_opp_block_t *)hip_ht_find(oppdb, (void *)&key);
+	return (hip_opp_block_t *)hip_ht_find(oppdb, (void *)&entry);
 }
 
 hip_opp_block_t *hip_create_opp_block_entry() 
@@ -138,12 +155,12 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 	
 	new_item = hip_create_opp_block_entry();
 	if (!new_item) {
-		HIP_ERROR("new_item malloc failed\n");                   
-		err = -ENOMEM;                                               
+		HIP_ERROR("new_item malloc failed\n");
+		err = -ENOMEM;
 		return err;
-	}                                    
+	}
 
-	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
+//	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
 
 	ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
@@ -190,7 +207,7 @@ void hip_init_opp_db()
 	
 	hip_ht_init(&oppdb);
 #endif
-	oppdb = hip_ht_init(hip_hash_hit, hip_match_hit);
+	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
 void hip_oppdb_dump()
@@ -208,8 +225,7 @@ void hip_oppdb_dump()
 		this = list_entry(item);
 
 		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
-		HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n",
-				this->hash_key, this->lock, this->refcnt);
+//		HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
 		HIP_DEBUG_HIT("this->peer_real_hit",
 					&this->peer_real_hit);
 		HIP_HEXDUMP("caller", &this->caller,

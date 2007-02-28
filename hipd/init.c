@@ -53,7 +53,7 @@ int hipd_init(int flush_ipsec)
 	struct sockaddr_un daemon_addr;
 	extern struct addrinfo opendht_serving_gateway;
 
-	hip_init_hostid_db(&hip_local_hostid_db);
+	hip_init_hostid_db(NULL);
 
 	hip_probe_kernel_modules();
 

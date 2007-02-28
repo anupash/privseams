@@ -45,7 +45,7 @@ int hip_hidb_match(const void *ptr1, const void *ptr2) {
 }
 
 void hip_init_hostid_db(hip_db_struct_t **db) {
-	*db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
+	hip_local_hostid_db = hip_ht_init(hip_hidb_hash, hip_hidb_match);
 }
 
 /**
