@@ -71,11 +71,13 @@ void hip_hadb_put_entry(void *entry)
 	HIP_DB_PUT_ENTRY(entry, hip_ha_t, hip_hadb_delete_state);
 }
 
+#if 0
 static void *hip_hadb_get_key_hit(void *entry)
 {
 	return (void *)&(((hip_ha_t *)entry)->hashkey);
         //return HIP_DB_GET_KEY_HIT(entry, hip_ha_t);
 }
+#endif
 
 static void *hip_hadb_get_key_spi_list(void *entry)
 {
@@ -183,12 +185,12 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
  */
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
-	hip_hit_t key;
-	hip_xor_hits(&key, hit, hit2);
+	hip_ha_t ha;
+	memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
+	memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
 	HIP_DEBUG_HIT("HIT1", hit);
 	HIP_DEBUG_HIT("HIT2", hit2);
-	HIP_DEBUG_HIT("XOR", &key);
-	return (hip_ha_t *)hip_ht_find(hadb_hit, (void *)&key);
+	return (hip_ha_t *)hip_ht_find(hadb_hit, &ha);
 }
 
 /**
@@ -254,7 +256,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
-	hip_hit_t hash;
 
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 
@@ -266,12 +267,9 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK))
 	{
-		hip_xor_hits(&hash, &ha->hit_our, &ha->hit_peer);
-		ha->hashkey = hash.s6_addr32[3];
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
-		HIP_HEXDUMP("the hash key is: ", &ha->hashkey, sizeof(ha->hashkey));
-		tmp = hip_ht_find(hadb_hit, (void *)&(ha->hashkey));
+		tmp = hip_ht_find(hadb_hit, ha);
 		if (!tmp)
 		{
 			hip_ht_add(hadb_hit, ha);

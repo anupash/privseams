@@ -229,8 +229,11 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
+	hip_hit_t            hit_our;
+	/** Peer's HIT. */
+	hip_hit_t            hit_peer;
 	/** @c hit_our XOR @c hit_peer. */
-	unsigned long        hashkey;
+	//unsigned long        hashkey;
 
 //	hip_list_t    next_hit;
 //	spinlock_t           lock;
@@ -245,9 +248,6 @@ struct hip_hadb_state
 	uint16_t             peer_controls;
 	int                  is_loopback;
 	/** The HIT we use with this host. */
-	hip_hit_t            hit_our;
-	/** Peer's HIT. */
-	hip_hit_t            hit_peer;
 	/** SPIs for inbound SAs, hip_spi_in_item. */
 	HIP_HASHTABLE     *spis_in;
 	/** SPIs for outbound SAs, hip_spi_out_item */
