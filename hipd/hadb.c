@@ -927,7 +927,8 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 	}
 	
 	spi_item = (struct hip_spi_in_item *)HIP_MALLOC(sizeof(struct hip_spi_in_item), GFP_ATOMIC);
-	if (!spi_item) {
+	if (!spi_item)
+	{
 		HIP_ERROR("item HIP_MALLOC failed\n");
 		err = -ENOMEM;
 		goto out_err;
@@ -973,7 +974,8 @@ int hip_hadb_add_outbound_spi(hip_ha_t *entry, struct hip_spi_out_item *data)
 	}
 
 	spi_item = (struct hip_spi_out_item *)HIP_MALLOC(sizeof(struct hip_spi_out_item), GFP_ATOMIC);
-	if (!item) {
+	if (!spi_item)
+	{
 		HIP_ERROR("item HIP_MALLOC failed\n");
 		err = -ENOMEM;
 		goto out_err;
