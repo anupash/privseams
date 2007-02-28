@@ -89,8 +89,8 @@ int hip_update_for_each_local_addr(int (*func)(hip_ha_t *entry,
 
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
-		e= list_entry(item);
-	    HIP_IFE(func(entry, e, opaq), -1);
+		e = list_entry(item);
+		HIP_IFE(func(entry, e, opaq), -1);
 	}
 
  out_err:

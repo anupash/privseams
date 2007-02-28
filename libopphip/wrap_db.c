@@ -183,9 +183,8 @@ hip_opp_socket_t *hip_create_opp_entry()
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_socketdb_add_entry(int pid, int socket)
 {
+	hip_opp_socket_t *tmp = NULL, *new_item = NULL;
 	int err = 0;
-	hip_opp_socket_t *tmp = NULL;
-	hip_opp_socket_t *new_item = NULL;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
 	if (!new_item) {                                                     
