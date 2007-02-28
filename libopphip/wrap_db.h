@@ -3,8 +3,8 @@
 
 struct hip_opp_socket_entry {
 //	hip_list_t     	next_entry;
-	spinlock_t           	lock;
-	atomic_t             	refcnt;
+//	spinlock_t           	lock;
+//	atomic_t             	refcnt;
 	pid_t 		        pid;
 	int 			orig_socket;
 	int  			translated_socket;

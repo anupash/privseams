@@ -18,6 +18,11 @@
 
 HIP_HASHTABLE *socketdb;
 
+void hip_xor_pid_socket(unsigned long *key, int pid, int socket)
+{
+	*key = pid ^ socket;
+}
+
 int hip_exists_translation(int pid, int socket)
 {
 	hip_opp_socket_t *entry = NULL;
@@ -53,11 +58,6 @@ int hip_socketdb_match(const void *ptr1, const void *ptr2)
 	return (key1 != key2);
 }
 
-inline void hip_xor_pid_socket(unsigned long *key, int pid, int socket)
-{
-	*key = pid ^ socket;
-}
-
 void hip_init_socket_db()
 {
 /*	memset(&socketdb, 0, sizeof(socketdb));
@@ -83,10 +83,10 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
 	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
-	HIP_LOCK_SOCKET(entry);
+	//HIP_LOCK_SOCKET(entry);
 	HIP_FREE(entry);
 	hip_ht_delete(socketdb, entry);
-	HIP_UNLOCK_SOCKET(entry);
+	//HIP_UNLOCK_SOCKET(entry);
 }
 void hip_uninit_socket_db()
 {
@@ -137,7 +137,7 @@ void hip_socketdb_dump()
 
 	HIP_DEBUG("start socketdb dump\n");
 
-	HIP_LOCK_HT(&socketdb);
+	//HIP_LOCK_HT(&socketdb);
 	
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
@@ -150,16 +150,15 @@ void hip_socketdb_dump()
 		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
 		          " domain=%d type=%d protocol=%d"
 		          " src_ip=%s dst_ip=%s src_hit=%s"
-		          " dst_hit=%s lock=%d refcnt=%d\n",
+		          " dst_hit=%s\n",
 		          entry->pid, entry->orig_socket,
 		          entry->translated_socket,
 		          entry->domain,
 		          entry->type, entry->protocol,
-		          src_ip, dst_ip, src_hit, dst_hit,
-		          entry->lock, entry->refcnt);
+		          src_ip, dst_ip, src_hit, dst_hit);
 	}
 	
-	HIP_UNLOCK_HT(&socketdb);
+	//HIP_UNLOCK_HT(&socketdb);
 	HIP_DEBUG("end socketdb dump\n");
 }
 
@@ -177,9 +176,9 @@ hip_opp_socket_t *hip_create_opp_entry()
 	
 // 	INIT_LIST_HEAD(&entry->next_entry);
 	
-	HIP_LOCK_SOCKET_INIT(entry);
-	atomic_set(&entry->refcnt, 0);
-	HIP_UNLOCK_SOCKET_INIT(entry);
+	//HIP_LOCK_SOCKET_INIT(entry);
+	//atomic_set(&entry->refcnt, 0);
+	//HIP_UNLOCK_SOCKET_INIT(entry);
  out_err:
 	return entry;
 }
