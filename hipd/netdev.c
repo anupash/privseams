@@ -57,30 +57,30 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			struct in6_addr *a_in6 = SA2IP(addr);
 
 			if (IN6_IS_ADDR_UNSPECIFIED(a_in6)) {
-				HIP_DEBUG("Ignore: UNSPECIFIED");
+				HIP_DEBUG("Ignore: UNSPECIFIED\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
-				HIP_DEBUG("Ignore: LOOPBACK");
+				HIP_DEBUG("Ignore: LOOPBACK\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
-				HIP_DEBUG("Ignore: MULTICAST");
+				HIP_DEBUG("Ignore: MULTICAST\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
-				HIP_DEBUG("Ignore: LINKLOCAL");
+				HIP_DEBUG("Ignore: LINKLOCAL\n");
 				return FA_IGNORE;
 #if 0 /* For Juha-Matti's experiments  */
 			} else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
-				HIP_DEBUG("Ignore: SITELOCAL");
+				HIP_DEBUG("Ignore: SITELOCAL\n");
 				return FA_IGNORE;
 #endif
 			} else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
-				HIP_DEBUG("Ignore: V4MAPPED");
+				HIP_DEBUG("Ignore: V4MAPPED\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_V4COMPAT(a_in6)) {
-				HIP_DEBUG("Ignore: V4COMPAT");
+				HIP_DEBUG("Ignore: V4COMPAT\n");
 				return FA_IGNORE;
 			} else if (ipv6_addr_is_hit(a_in6)) {
-				HIP_DEBUG("Ignore: hit");
+				HIP_DEBUG("Ignore: hit\n");
 				return FA_IGNORE;
 			} else
 				return FA_ADD;
@@ -97,19 +97,19 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			in_addr_t a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
 
 			if (a_in == INADDR_ANY) {
-				HIP_DEBUG("Ignore: INADDR_ANY");
+				HIP_DEBUG("Ignore: INADDR_ANY\n");
 				return FA_IGNORE;
 			} else if (a_in == INADDR_BROADCAST) {
-				HIP_DEBUG("Ignore: INADDR_BROADCAST");
+				HIP_DEBUG("Ignore: INADDR_BROADCAST\n");
 				return FA_IGNORE;
 			} else if (IN_MULTICAST(a_in)) {
-				HIP_DEBUG("Ignore: MULTICAST");
+				HIP_DEBUG("Ignore: MULTICAST\n");
 				return FA_IGNORE;
 			} else if (IS_LSI32(a_in)) {
-				HIP_DEBUG("Ignore: LSI32");
+				HIP_DEBUG("Ignore: LSI32\n");
 				return FA_IGNORE;
 			} else if (IS_IPV4_LOOPBACK(a_in)) {
-				HIP_DEBUG("Ignore: IPV4_LOOPBACK");
+				HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
 				return FA_IGNORE;
 			} else 
 				return FA_ADD;
@@ -177,6 +177,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		HIP_ERROR("Could not allocate memory\n");
 		return;
 	}
+	memset(n, 0, sizeof(struct netdev_address));
 
 	/* AG convert IPv4 address to IPv6 */
 	if (addr->sa_family == AF_INET)
@@ -189,8 +190,6 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	        memcpy(&n->addr, &temp, SALEN(&temp));
 	}
 	else memcpy(&n->addr, addr, SALEN(addr));
-
-
 
 	n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
