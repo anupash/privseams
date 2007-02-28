@@ -6,12 +6,12 @@
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
-	unsigned long hash;
+	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
 			 sizeof(struct sockaddr_storage), &hash);
 
-	return hash;
+	return *((unsigned long *) hash);
 }
 
 int hip_netdev_match(const void *ptr1, const void *ptr2) {
