@@ -83,10 +83,8 @@ void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
 	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
-	//HIP_LOCK_SOCKET(entry);
-	HIP_FREE(entry);
 	hip_ht_delete(socketdb, entry);
-	//HIP_UNLOCK_SOCKET(entry);
+	HIP_FREE(entry);
 }
 void hip_uninit_socket_db()
 {
