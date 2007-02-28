@@ -48,12 +48,12 @@ void hip_hadb_put_hs(void *entry)
 
 unsigned long hip_hash_peer_addr(const void *ptr)
 {
-	unsigned long hash;
 	struct in6_addr *addr = &((struct hip_peer_addr_list_item *)ptr)->address;
+        uint8_t hash[HIP_AH_SHA_LEN];
 
-	hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), &hash);
+	hip_build_digest(HIP_DIGEST_SHA1, addr, sizeof(*addr), hash);
 
-	return hash;
+	return *((unsigned long *) hash);
 }
 
 int hip_match_peer_addr(const void *ptr1, const void *ptr2)

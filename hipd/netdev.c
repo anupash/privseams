@@ -9,7 +9,7 @@ unsigned long hip_netdev_hash(const void *ptr) {
 	uint8_t hash[HIP_AH_SHA_LEN];
 
 	hip_build_digest(HIP_DIGEST_SHA1, &na->addr,
-			 sizeof(struct sockaddr_storage), &hash);
+			 sizeof(struct sockaddr_storage), hash);
 
 	return *((unsigned long *) hash);
 }
