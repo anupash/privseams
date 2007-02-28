@@ -116,12 +116,13 @@ void hip_uninit_socket_db()
 //hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
-        unsigned long key = 0;
-		
-	hip_xor_pid_socket(&key, pid, socket);
-	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
-
-	return (hip_opp_socket_t *)hip_ht_find(socketdb, (void *)&key);
+	hip_opp_socket_t opp;
+	
+	opp.pid = pid;
+	opp.orig_socket = socket;
+	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket);
+	
+	return (hip_opp_socket_t *)hip_ht_find(socketdb, (void *)&opp);
 }
 
 void hip_socketdb_dump()
@@ -191,9 +192,10 @@ int hip_socketdb_add_entry(int pid, int socket)
 	int err = 0;
 	
 	new_item = (hip_opp_socket_t *)malloc(sizeof(hip_opp_socket_t));
-	if (!new_item) {                                                     
-		HIP_ERROR("new_item malloc failed\n");                   
-		err = -ENOMEM;                                               
+	if (!new_item)
+	{
+		HIP_ERROR("new_item malloc failed\n");
+		err = -ENOMEM;
 		return err;
 	}
 	
