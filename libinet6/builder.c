@@ -2962,3 +2962,127 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	return err;
 }
 
+int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname)
+{
+  int err = 0;
+  unsigned char *dsa_key_rr = NULL;
+  int dsa_key_rr_len;
+  struct endpoint_hip endpoint_hdr;
+
+  _HIP_DEBUG("dsa_to_hip_endpoint called\n");
+
+  dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
+  if (dsa_key_rr_len <= 0) {
+    HIP_ERROR("dsa_key_rr_len <= 0\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  /* build just an endpoint header to see how much memory is needed for the
+     actual endpoint */
+  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
+			 HIP_HI_DSA, dsa_key_rr_len);
+
+  *endpoint = malloc(endpoint_hdr.length);
+  if (!(*endpoint)) {
+    err = -ENOMEM;
+    goto out_err;
+  }
+  memset(*endpoint, 0, endpoint_hdr.length);
+
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
+		     dsa_key_rr, dsa_key_rr_len);
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+
+ out_err:
+
+  if (dsa_key_rr)
+    free(dsa_key_rr);
+
+  return err;
+}
+
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname)
+{
+  int err = 0;
+  unsigned char *rsa_key_rr = NULL;
+  int rsa_key_rr_len;
+  struct endpoint_hip endpoint_hdr;
+
+  HIP_DEBUG("rsa_to_hip_endpoint called\n");
+
+  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
+  if (rsa_key_rr_len <= 0) {
+    HIP_ERROR("rsa_key_rr_len <= 0\n");
+    err = -ENOMEM;
+    goto out_err;
+  }
+
+  /* build just an endpoint header to see how much memory is needed for the
+     actual endpoint */
+  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
+			 HIP_HI_RSA, rsa_key_rr_len);
+
+    *endpoint = malloc(endpoint_hdr.length);
+  if (!(*endpoint)) {
+    err = -ENOMEM;
+    goto out_err;
+  }
+  memset(*endpoint, 0, endpoint_hdr.length);
+
+  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
+
+  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
+		     rsa_key_rr, rsa_key_rr_len);
+			   
+  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
+
+ out_err:
+
+  if (rsa_key_rr)
+    free(rsa_key_rr);
+
+  return err;
+}
+
+int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
+				    unsigned int key_rr_len,
+				    uint8_t algo,
+				    const char *hostname)
+{
+  int err = 0;
+  struct hip_host_id host_id_hdr;
+
+  hip_build_param_host_id_hdr(&host_id_hdr, hostname,
+			      key_rr_len, algo);
+
+  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
+  if (!host_id) {
+    err = -ENOMEM;
+  }  
+
+  memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
+
+  return err;
+}
+
+int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
+				       unsigned char *key_rr, int key_rr_len,
+				       int algo, char *hostname) {
+  int err = 0;
+
+  HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id, key_rr_len, algo,
+					   hostname), -1, "alloc\n");
+  hip_build_param_host_id_only(*host_id, key_rr, "hostname");
+
+ out_err:
+  if (err && *host_id) {
+    *host_id = NULL;
+    HIP_FREE(host_id);
+  }
+
+  return err;
+}

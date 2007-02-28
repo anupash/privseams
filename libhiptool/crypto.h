@@ -70,14 +70,18 @@ void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK NULL
 #endif
 
+#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        (void*)&((struct sockaddr_in*)x)->sin_addr : \
+        (void*)&((struct sockaddr_in6*)x)->sin6_addr
+#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
+        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
+#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 
-int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
-int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
-			 void* enc_key, int direction);
 int hip_init_cipher(void);
 void hip_uninit_cipher(void);
 
@@ -106,6 +110,8 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa);
 int load_dsa_public_key(const char *filenamebase, DSA **dsa);
 
 int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len);
-
+int hip_write_hmac(int type, void *key, void *in, int in_len, void *out);
+int hip_crypto_encrypted(void *data, const void *iv, int enc_alg, int enc_len,
+			 void* enc_key, int direction);
 
 #endif /* HIPD_CRYPTO_H */

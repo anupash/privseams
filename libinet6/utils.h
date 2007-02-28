@@ -127,13 +127,6 @@ static inline void set_hit_prefix(struct in6_addr *hit)
          && (((__const uint32_t *) (a))[2] == 0)                              \
          && IS_LSI32(((__const uint32_t *) (a))[3]))        
 
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
-
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))
 #endif

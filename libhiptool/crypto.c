@@ -293,43 +293,6 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
 unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
 
 /**
- * hip_build_digest - calculate a digest over given data
- * @param type the type of digest, e.g. "sha1"
- * @param in the beginning of the data to be digested
- * @param in_len the length of data to be digested in octets
- * @param out the digest
- *
- * @param out should be long enough to hold the digest. This cannot be
- * checked!
- *
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_digest(const int type, const void *in, int in_len, void *out) {
-	SHA_CTX sha;
-	MD5_CTX md5;
-
-	switch(type) {
-	case HIP_DIGEST_SHA1:
-		SHA1_Init(&sha);
-		SHA1_Update(&sha, in, in_len);
-		SHA1_Final(out, &sha);
-		break;
-
-	case HIP_DIGEST_MD5:
-		MD5_Init(&md5);
-		MD5_Update(&md5, in, in_len);
-		MD5_Final(out, &md5);
-		break;
-
-	default:
-		HIP_ERROR("Unknown digest: %x\n",type);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-/**
  * Calculates a hmac.
  * 
  * @param type   type (digest algorithm) of hmac.
@@ -465,6 +428,43 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 free(result);
 
         return err;
+}
+
+/**
+ * hip_build_digest - calculate a digest over given data
+ * @param type the type of digest, e.g. "sha1"
+ * @param in the beginning of the data to be digested
+ * @param in_len the length of data to be digested in octets
+ * @param out the digest
+ *
+ * @param out should be long enough to hold the digest. This cannot be
+ * checked!
+ *
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_digest(const int type, const void *in, int in_len, void *out) {
+	SHA_CTX sha;
+	MD5_CTX md5;
+
+	switch(type) {
+	case HIP_DIGEST_SHA1:
+		SHA1_Init(&sha);
+		SHA1_Update(&sha, in, in_len);
+		SHA1_Final(out, &sha);
+		break;
+
+	case HIP_DIGEST_MD5:
+		MD5_Init(&md5);
+		MD5_Update(&md5, in, in_len);
+		MD5_Final(out, &md5);
+		break;
+
+	default:
+		HIP_ERROR("Unknown digest: %x\n",type);
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 void get_random_bytes(void *buf, int n)
@@ -828,21 +828,6 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 		ret = dhprime_len[hip_dh_group_type];
 
 	return ret;
-}
-
-int hip_init_cipher(void)
-{
-	int err = 0;
-	u32 supported_groups;
-
-	supported_groups = (1 << HIP_DH_OAKLEY_1 |
-                            1 << HIP_DH_OAKLEY_5 |
-			    1 << HIP_DH_384);
-
-	HIP_DEBUG("Generating DH keys\n");
-	hip_regen_dh_keys(supported_groups);
-
-	return 1;
 }
 
 /**
@@ -1725,131 +1710,6 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
     RSA_free(rsa_tmp);
   if (fp)
     err = fclose(fp);
-
-  return err;
-}
-
-int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname)
-{
-  int err = 0;
-  unsigned char *dsa_key_rr = NULL;
-  int dsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-
-  _HIP_DEBUG("dsa_to_hip_endpoint called\n");
-
-  dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
-  if (dsa_key_rr_len <= 0) {
-    HIP_ERROR("dsa_key_rr_len <= 0\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
-  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
-			 HIP_HI_DSA, dsa_key_rr_len);
-
-  *endpoint = malloc(endpoint_hdr.length);
-  if (!(*endpoint)) {
-    err = -ENOMEM;
-    goto out_err;
-  }
-  memset(*endpoint, 0, endpoint_hdr.length);
-
-  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
-  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
-		     dsa_key_rr, dsa_key_rr_len);
-  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
-
- out_err:
-
-  if (dsa_key_rr)
-    free(dsa_key_rr);
-
-  return err;
-}
-
-int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname)
-{
-  int err = 0;
-  unsigned char *rsa_key_rr = NULL;
-  int rsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-
-  HIP_DEBUG("rsa_to_hip_endpoint called\n");
-
-  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
-  if (rsa_key_rr_len <= 0) {
-    HIP_ERROR("rsa_key_rr_len <= 0\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
-  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
-			 HIP_HI_RSA, rsa_key_rr_len);
-
-    *endpoint = malloc(endpoint_hdr.length);
-  if (!(*endpoint)) {
-    err = -ENOMEM;
-    goto out_err;
-  }
-  memset(*endpoint, 0, endpoint_hdr.length);
-
-  _HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
-
-  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
-		     rsa_key_rr, rsa_key_rr_len);
-			   
-  _HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
-
- out_err:
-
-  if (rsa_key_rr)
-    free(rsa_key_rr);
-
-  return err;
-}
-
-int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
-				    unsigned int key_rr_len,
-				    uint8_t algo,
-				    const char *hostname)
-{
-  int err = 0;
-  struct hip_host_id host_id_hdr;
-
-  hip_build_param_host_id_hdr(&host_id_hdr, hostname,
-			      key_rr_len, algo);
-
-  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
-  if (!host_id) {
-    err = -ENOMEM;
-  }  
-
-  memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
-
-  return err;
-}
-
-int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
-				       unsigned char *key_rr, int key_rr_len,
-				       int algo, char *hostname) {
-  int err = 0;
-
-  HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id, key_rr_len, algo,
-					   hostname), -1, "alloc\n");
-  hip_build_param_host_id_only(*host_id, key_rr, "hostname");
-
- out_err:
-  if (err && *host_id) {
-    *host_id = NULL;
-    HIP_FREE(host_id);
-  }
 
   return err;
 }
