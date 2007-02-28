@@ -17,7 +17,6 @@
 #include "wrap_db.h"
 
 HIP_HASHTABLE *socketdb;
-static hip_list_t socketdb_by_pid_socket_list[HIP_SOCKETDB_SIZE]= { 0 };
 
 int hip_exists_translation(int pid, int socket)
 {
@@ -35,21 +34,26 @@ int hip_exists_translation(int pid, int socket)
 
 unsigned long hip_hash_pid_socket(const void *ptr)
 {
-	unsigned long key = ((hip_opp_socket_t *)ptr)->hash_key;
-	_HIP_DEBUG("hip_hash_pid_socket(%p): 0x%x\n", ptr, key);
-	return key;
+	hip_opp_socket_t *opp = (hip_opp_socket_t *) ptr;
+	unsigned long hash;
+
+	hip_xor_pid_socket(&hash, opp->pid, opp->orig_socket);
+	_HIP_DEBUG("hip_hash_pid_socket(%p): 0x%x\n", ptr, hash);
+
+	return hash;
 }
 
 int hip_socketdb_match(const void *ptr1, const void *ptr2)
 {
 	unsigned long key1, key2;
-	key1 = ((hip_opp_socket_t *)ptr1)->hash_key;
-	key2 = ((hip_opp_socket_t *)ptr2)->hash_key;
+	
+	key1 = hip_hash_pid_socket(ptr1);
+	key2 = hip_hash_pid_socket(ptr2);
 	_HIP_DEBUG("key1=0x%x key2=0x%x\n", key1, key2);
-	return !(key1 == key2);
+	return (key1 != key2);
 }
 
-inline void hip_xor_pid_socket(int *key, int pid, int socket)
+inline void hip_xor_pid_socket(unsigned long *key, int pid, int socket)
 {
 	*key = pid ^ socket;
 }
@@ -112,7 +116,7 @@ void hip_uninit_socket_db()
 //hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 hip_opp_socket_t *hip_socketdb_find_entry(int pid, int socket)
 {
-        int key = 0;
+        unsigned long key = 0;
 		
 	hip_xor_pid_socket(&key, pid, socket);
 	_HIP_DEBUG("pid %d socket %d computed key\n", pid, socket, key);
@@ -142,13 +146,13 @@ void hip_socketdb_dump()
 		hip_in6_ntop(SA2IP(&entry->translated_local_id), src_hit);
 		hip_in6_ntop(SA2IP(&entry->translated_peer_id), dst_hit);
 
-		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d hash_key=%d"
+		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
 		          " domain=%d type=%d protocol=%d"
 		          " src_ip=%s dst_ip=%s src_hit=%s"
 		          " dst_hit=%s lock=%d refcnt=%d\n",
 		          entry->pid, entry->orig_socket,
 		          entry->translated_socket,
-		          entry->hash_key, entry->domain,
+		          entry->domain,
 		          entry->type, entry->protocol,
 		          src_ip, dst_ip, src_hit, dst_hit,
 		          entry->lock, entry->refcnt);
@@ -195,7 +199,6 @@ int hip_socketdb_add_entry(int pid, int socket)
 	
 	memset(new_item, 0, sizeof(hip_opp_socket_t));
 	
-	hip_xor_pid_socket(&new_item->hash_key, pid, socket);
 	new_item->pid = pid;
 	new_item->orig_socket = socket;
 	err = hip_ht_add(socketdb, new_item);

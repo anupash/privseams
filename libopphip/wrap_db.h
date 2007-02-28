@@ -2,7 +2,6 @@
 #define WRAP_DB_H
 
 struct hip_opp_socket_entry {
-	unsigned long		hash_key; /* pid XOR old_socket */
 //	hip_list_t     	next_entry;
 	spinlock_t           	lock;
 	atomic_t             	refcnt;
