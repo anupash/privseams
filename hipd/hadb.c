@@ -932,7 +932,7 @@ int hip_hadb_add_inbound_spi(hip_ha_t *entry, struct hip_spi_in_item *data)
 		err = -ENOMEM;
 		goto out_err;
 	}
-	memcpy(item, data, sizeof(struct hip_spi_in_item));
+	memcpy(spi_item, data, sizeof(struct hip_spi_in_item));
 	spi_item->timestamp = jiffies;
 	list_add(spi_item, entry->spis_in);
 	spi_item->addresses = NULL;
