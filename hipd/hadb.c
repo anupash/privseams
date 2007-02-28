@@ -185,12 +185,20 @@ hip_ha_t *hip_hadb_find_byspi_list(u32 spi)
  */
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
-	hip_ha_t ha;
+	hip_ha_t ha, *ret;
 	memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
 	memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
 	HIP_DEBUG_HIT("HIT1", hit);
 	HIP_DEBUG_HIT("HIT2", hit2);
-	return (hip_ha_t *)hip_ht_find(hadb_hit, &ha);
+
+	ret = hip_ht_find(hadb_hit, &ha);
+	if (!ret) {
+		memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
+		memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
+		ret = hip_ht_find(hadb_hit, &ha);
+	}
+
+	return ret;
 }
 
 /**
