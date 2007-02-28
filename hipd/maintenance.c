@@ -330,6 +330,7 @@ void register_to_dht ()
 	
 	list_for_each_safe(item, tmp, addresses, i)
 	{
+		n = list_entry(item);
 		struct in6_addr tmp_hit;
 		char *tmp_hit_str, *tmp_addr_str;
 		if (ipv6_addr_is_hit(SA2IP(&n->addr))) continue;
