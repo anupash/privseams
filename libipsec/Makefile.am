@@ -9,7 +9,7 @@ lib_LTLIBRARIES = libipsec.la
 libipsecdir = $(includedir)/libipsec
 libipsec_HEADERS = libpfkey.h
 
-man3_MANS = ipsec_set_policy.3 ipsec_strerror.3
+#man3_MANS = ipsec_set_policy.3 ipsec_strerror.3
 
 #AM_CFLAGS = @GLIBC_BUGS@
 AM_YFLAGS = -d -p __libipsec
