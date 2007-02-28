@@ -433,11 +433,12 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	return err;
 }
 
-int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
+int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_hash)
 {
 	struct hip_host_id *private = NULL;
 	struct hip_lhi lhi;
 	int err = 0, len;
+	HIP_HASHTABLE *ht = (HIP_HASHTABLE *) new_hash;
 
 	/* Store private key and lhi, delete the host id entry and readd.
 	   Addition recreates also R1s as a side effect.*/ 
@@ -452,9 +453,9 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
 		 "Failed to delete host id\n");
 
-	HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, private, 
-				 NULL, NULL, NULL),
-		 -EFAULT, "adding of local host identity failed\n");
+	HIP_IFEL(hip_add_host_id(ht, &lhi, private, 
+				 NULL, NULL, NULL), -1,
+		 "add host id failed\n");
 
  out_err:
 	if (private)
@@ -464,5 +465,16 @@ int hip_recreate_r1s_for_entry(struct hip_host_id_entry *entry, void *not_used)
 
 int hip_recreate_all_precreated_r1_packets()
 {
-	return hip_for_each_hi(hip_recreate_r1s_for_entry, NULL);
+	HIP_HASHTABLE *ht = hip_ht_init(hip_hidb_hash, hip_hidb_match);
+	hip_list_t *curr, *iter;
+	struct hip_host_id *tmp;
+	int c;
+
+	hip_for_each_hi(hip_recreate_r1s_for_entry_move, ht);
+
+	list_for_each_safe(curr, iter, ht, c)
+	{
+		tmp = list_entry(curr);
+		hip_ht_add(tmp, HIP_DB_LOCAL_HID);
+	}
 }

@@ -104,5 +104,7 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);
+unsigned long hip_hidb_hash(const void *ptr);
+int hip_hidb_match(const void *ptr1, const void *ptr2);
 
 #endif /* _HIP_DB */
