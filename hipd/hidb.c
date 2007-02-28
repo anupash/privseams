@@ -33,11 +33,11 @@ HIP_HASHTABLE *hip_local_hostid_db = NULL;
 
 unsigned long hip_hidb_hash(const void *ptr) {
 	hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
-	unsigned long hash;
+        uint8_t hash[HIP_AH_SHA_LEN];
 
-	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), &hash);
+	hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(hip_hit_t), hash);
 
-	return hash;
+	return *((unsigned long *) hash);
 }
 
 int hip_hidb_match(const void *ptr1, const void *ptr2) {
