@@ -1768,7 +1768,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
-		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
                 /* if_index = addr2ifindx(entry->local_address); */
 

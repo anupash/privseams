@@ -333,17 +333,17 @@ void register_to_dht ()
 		n = list_entry(item);
 		struct in6_addr tmp_hit;
 		char *tmp_hit_str, *tmp_addr_str;
-		if (ipv6_addr_is_hit(SA2IP(&n->addr))) continue;
+		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) continue;
 		if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
 		{
 			HIP_ERROR("No HIT found\n");
 			return;
 		} 
 	
-		if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
+		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
 		{
 			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-			tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
+			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&n->addr), NULL);
 	
 			/* send the fqdn->hit mapping */
 			if (hip_opendht_fqdn_sent == 0) 

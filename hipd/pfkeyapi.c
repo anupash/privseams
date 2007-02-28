@@ -39,10 +39,10 @@ void get_sock_addr_from_in6(struct sockaddr* s_addr, struct in6_addr *addr)
 
 	if(IN6_IS_ADDR_V4MAPPED(addr)) {	
 		s_addr->sa_family = AF_INET;
-		memcpy(SA2IP(s_addr), &addr->s6_addr32[3], SAIPLEN(s_addr));
+		memcpy(hip_cast_sa_addr(s_addr), &addr->s6_addr32[3], hip_sa_addr_len(s_addr));
 	} else {
 		s_addr->sa_family = AF_INET6;
-		memcpy(SA2IP(s_addr), addr, SAIPLEN(s_addr));
+		memcpy(hip_cast_sa_addr(s_addr), addr, hip_sa_addr_len(s_addr));
  	}
 }
 

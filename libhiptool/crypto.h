@@ -70,13 +70,6 @@ void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK NULL
 #endif
 
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
-
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 

@@ -1595,4 +1595,55 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   return rsa_key_rr_len;
 }
 
+void *hip_cast_sa_addr(void *sockaddr) {
+  struct sockaddr *sa = (struct sockaddr *) sockaddr;
+  void *ret;
+  
+  switch(sa->sa_family) {
+  case AF_INET:
+    ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
+    break;
+  case AF_INET6:
+    ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
+    break;
+  default:
+    ret = NULL;
+  }
+  return ret;
+}
+
+int hip_sockaddr_len(void *sockaddr) {
+  struct sockaddr *sa = (struct sockaddr *) sockaddr;
+  int len;
+  
+  switch(sa->sa_family) {
+  case AF_INET:
+    len = sizeof(struct sockaddr_in);
+    break;
+  case AF_INET6:
+    len = sizeof(struct sockaddr_in6);
+    break;
+  default:
+    len = 0;
+  }
+  return len;
+}
+
+int hip_sa_addr_len(void *sockaddr) {
+  struct sockaddr *sa = (struct sockaddr *) sockaddr;
+  int len;
+  
+  switch(sa->sa_family) {
+  case AF_INET:
+    len = 4;
+    break;
+  case AF_INET6:
+    len = 16;
+    break;
+  default:
+    len = 0;
+  }
+  return len;
+}
+
 #endif /* ! __KERNEL__ */

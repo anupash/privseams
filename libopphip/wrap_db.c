@@ -140,10 +140,10 @@ void hip_socketdb_dump()
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
 		entry = list_entry(item);
-		hip_in6_ntop(SA2IP(&entry->orig_local_id), src_ip);
-		hip_in6_ntop(SA2IP(&entry->orig_peer_id), dst_ip);
-		hip_in6_ntop(SA2IP(&entry->translated_local_id), src_hit);
-		hip_in6_ntop(SA2IP(&entry->translated_peer_id), dst_hit);
+		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_local_id), src_ip);
+		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_peer_id), dst_ip);
+		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_local_id), src_hit);
+		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_peer_id), dst_hit);
 
 		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
 		          " domain=%d type=%d protocol=%d"
