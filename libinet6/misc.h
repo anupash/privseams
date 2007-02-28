@@ -83,5 +83,9 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
 
 int addr2ifindx(struct in6_addr *local_address);
+void get_random_bytes(void *buf, int n);
+
+int hip_build_digest(const int type, const void *in, int in_len, void *out);
+int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 
 #endif /* HIP_MISC_H */

@@ -77,8 +77,6 @@ void keygen_callback(int a, int b, void* arg);
         sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
 #define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
-int hip_build_digest(const int type, const void *in, int in_len, void *out);
-
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 
@@ -92,17 +90,11 @@ int hip_encode_dh_publickey(DH *dh, u8 *out, int outlen);
 DH *hip_generate_dh_key(int group_id);
 void hip_free_dh(DH *target);
 u16 hip_get_dh_size(u8 hip_dh_group_type);
-void get_random_bytes(void *buf, int n);
 
 int dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 	       struct in6_addr *hit);
 int rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
 	       struct in6_addr *hit);
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
-int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname);
-int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname);
 DSA *create_dsa_key(int bits);
 RSA *create_rsa_key(int bits);
 int save_dsa_private_key(const char *filenamebase, DSA *dsa);
