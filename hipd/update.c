@@ -927,8 +927,8 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 		 return , "Building of SEQ failed\n");
 
 	/* TODO: NEED TO ADD ACK */
-	/*HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
-	  "Building of ACK failed\n");*/
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(addr->seq_update_id)), -1,
+	  "Building of ACK failed\n");
 
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
