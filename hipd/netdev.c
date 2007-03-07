@@ -143,6 +143,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
+        unsigned char tmp_secret[40];
+        int err_rand = 0;
 
 	if (!filter_address(addr, ifindex)) {
 		HIP_DEBUG("filtering this address\n");
@@ -167,7 +169,17 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	} else
 	        memcpy(&n->addr, addr, SALEN(addr));
 
+        /*
+          Add secret to address. Used with openDHT removable puts.
+        */        
+        memset(tmp_secret,0,sizeof(tmp_secret));
+        err_rand = RAND_bytes(tmp_secret,40);
+        memcpy(&n->secret, &tmp_secret,sizeof(tmp_secret));
 
+        /*
+          Clear the timestamp, initially 0 so everything will be sent
+        */
+        memset(&n->timestamp, '0', sizeof(time_t));
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);

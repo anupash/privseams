@@ -703,7 +703,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 
 
 /**
- * hip_for_each_hi - List every hit in database.
+ * hip_for_each_hi - List every hit in database. 
  * @param func Mapper function
  * @param opaque Opaque data for the mapper function.
  *

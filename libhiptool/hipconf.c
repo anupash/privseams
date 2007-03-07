@@ -50,7 +50,7 @@ const char *hipconf_usage =
 "set opp on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPENDHT
-"dht gw <IPv4|hostname> <port> <ttl>\n"
+"dht gw <IPv4|hostname>\n"
 "dht get <fqdn/hit>\n"
 #endif 
 ;
@@ -856,7 +856,7 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 
 	HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
         
-	if (optc != 3) {
+	if (optc != 1) { /* was 3 but removed support for port and ttl change */
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
 		goto out_err;
@@ -890,7 +890,10 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		goto out_err;
 	}
 
+        /* 
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        */
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 1, 2);
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out_err;

@@ -47,6 +47,8 @@ struct netdev_address {
 	struct list_head next;
 	struct sockaddr_storage addr;
 	int if_index;
+        unsigned char secret[40];
+        time_t timestamp;
 };
 
 struct idxmap

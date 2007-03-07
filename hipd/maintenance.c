@@ -324,25 +324,43 @@ void register_to_dht ()
 
     if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
         return;
+    /*
     HIP_INFO("Using hostname: %s\n", hostname);
-  
+    */
     list_for_each_entry_safe(n, t, &addresses, next) 
     {
         struct in6_addr tmp_hit;
         char *tmp_hit_str, *tmp_addr_str;
-        if (ipv6_addr_is_hit(SA2IP(&n->addr)))
-	    continue;
-        if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-        {
-            HIP_ERROR("No HIT found\n");
-            return;
-        } 
+        double time_diff = 0;
 
-        if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
+        if (ipv6_addr_is_hit(SA2IP(&n->addr)))
+	    continue; 
+
+        /* if timestamp is near the current time the publish should be done */   
+        time_diff = difftime(n->timestamp, time(0));
+        if (time_diff < 10)
+        /* old one that chose the first IPv4*/
+        /*
+          if (IN6_IS_ADDR_V4MAPPED(SA2IP(&n->addr)))
+        */
         {    
+
+          if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
+          {
+               HIP_ERROR("No HIT found\n");
+               return;
+           }
+
            tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
            tmp_addr_str = hip_convert_hit_to_str(SA2IP(&n->addr), NULL);
-
+           
+           /* 
+              HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40); 
+           */
+           /*
+            printf("TESTLINE: addr=%s timestamp = %s (local time)\n", 
+                   tmp_addr_str, ctime(&n->timestamp)); 
+           */
            /* send the fqdn->hit mapping */
            if (hip_opendht_fqdn_sent == 0) 
            {
@@ -361,27 +379,37 @@ void register_to_dht ()
                         HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
                     else
                         hip_opendht_fqdn_sent = 1; 
-                } 
+                }
             }
             /* send the hit->ip mapping */
             if (hip_opendht_hit_sent == 0) 
             {
-               HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
-                         tmp_hit_str, tmp_addr_str);
-               if (hip_opendht_sock_hit < 1)
-                   hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
+                          tmp_hit_str, tmp_addr_str);
+                if (hip_opendht_sock_hit < 1)
+                    hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
                 opendht_error = 0;
                 opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
                                                     &opendht_serving_gateway);
-               if (opendht_error > -1)
-               {
+                if (opendht_error > -1)
+                {
                     opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
                                     (unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
                     if (opendht_error < 0)
-                        HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+                    {
+                        n->timestamp = time(0) + 30; /* slows down the retry rate */
+                        HIP_DEBUG("Error sending HIT->IP mapping to the openDHT.\n");
+                    }
                     else
+                    {
+                        n->timestamp = time(0) + 240; /* TODO unified TTL not hard coded */
                         hip_opendht_hit_sent = 1; 
-               } 
+                    }
+                }
+                else
+                { /* connect error */
+                    n->timestamp = time(0) +30; /* slows down the retry rate */   
+                } 
             }
         }     
     } 

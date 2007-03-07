@@ -194,9 +194,9 @@ void dump_pai (struct gaih_addrtuple *at)
     if (a->family == AF_INET6) {
       struct in6_addr *s = (struct in6_addr *)a->addr;
       int i = 0;
-      HIP_DEBUG("AF_INET6\tin6_addr=0x\n");
+      HIP_DEBUG("AF_INET6\tin6_addr=0x");
       for (i = 0; i < 16; i++)
-	HIP_DEBUG("%02x\n", (unsigned char) (s->in6_u.u6_addr8[i]));
+	HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
       HIP_DEBUG("\n");
     } else if (a->family == AF_INET) {
       struct in_addr *s = (struct in_addr *)a->addr;
@@ -509,6 +509,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	(**pat)->family = AF_INET6;					
 	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
 	*pat = &((**pat)->next);
+        /* dump_pai(*pat); */
 	return 1;
       }
     } 
