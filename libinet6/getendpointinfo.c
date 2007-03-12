@@ -82,6 +82,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto.h"
 #include "libinet6/util.h"
 #include "icomm.h"
+#include "hipd.h"
+#include "debug.h"
+#include "hadb.h"
+#include "user.h"
 
 //#include <ifaddrs.h>
 
@@ -1920,8 +1924,12 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   int filenamebase_len, ret;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
+  struct hip_common *msg;
+  struct in6_addr *hiphit;
+  struct hip_tlv_common *det;
+  hip_hit_t *allhit;
   List list;
-
+  
   _HIP_DEBUG("\n");
 
   /* assign default hints */
@@ -1934,10 +1942,13 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   /* find key files from /etc/hip */
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
+
+  hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct endpointinfo));
   for(i=0; i<length(&list); i++) {
-    _HIP_DEBUG("%s\n",getitem(&list,i));
-    filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-      strlen(getitem(&list,i)) + 1;
+	
+	_HIP_DEBUG("%s\n",getitem(&list,i));
+	filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+      	strlen(getitem(&list,i)) + 1;
     
     filenamebase = malloc(filenamebase_len);
     if (!filenamebase) {
@@ -1995,7 +2006,8 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		    const char *opt[], int optc)
 {
   	int arg_len, err = 0, i, len;
-	FILE *hip_config = NULL;  
+	FILE *hip_config = NULL; 
+	
 	List list;
 	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
 		*comment;
@@ -2078,7 +2090,7 @@ int hip_conf_handle_hi_get(struct hip_common *msg, int action,
  	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
-	err = get_local_hits(NULL, &at);
+/*	err = get_local_hits(NULL, &at);*/
 	if (err)
 		goto out_err;
 

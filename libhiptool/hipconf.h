@@ -140,6 +140,7 @@ int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int opt
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
+int get_all_hits(struct hip_common *msg,char *argv);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_do_hipconf(int argc, char *argv[], int send_only);

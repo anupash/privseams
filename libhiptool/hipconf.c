@@ -1014,7 +1014,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	long int action, type;
 	struct hip_common *msg = NULL;
 	char *text;
-
+	
+	
 	/* we don't want log messages via syslog */
 	hip_set_logtype(LOGTYPE_STDERR);
 	
@@ -1041,8 +1042,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	/* allocated space for return value and call hipd */
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_msg_init(msg);
-
+	get_all_hits(msg,text);
+	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
         err = (*action_handler[type])(msg, action, (const char **) &argv[3],
@@ -1056,7 +1057,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	/* send msg to hipd */
 	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
 		 "sending msg failed\n");
-
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
@@ -1066,6 +1066,19 @@ out_err:
 	return err;
 }
 
+
+
+int get_all_hits(struct hip_common *msg,char *argv)
+{	
+	struct gaih_addrtuple *tmp;
+	struct endpoint_hip *endpoint;
+	struct endpoint_hip *endpoint_hdr;
+
+	/*hip_build_endpoint_hdr(endpoint,&endpoint->id.hit,SO_HIP_GET_HITS,endpoint->algo,0);*/
+	hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0);
+	
+	
+}
 /**
  * Handles the hipconf commands where the type is @c run. Execute new
  * application and set environment variable "LD_PRELOAD" to as type

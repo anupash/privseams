@@ -129,12 +129,12 @@
 #define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 
-#define HIP_PARAM_ENCAPS_MSG			32787
-#define HIP_PARAM_PORTPAIR				32788
-#define HIP_PARAM_SRC_ADDR				32789
-#define HIP_PARAM_DST_ADDR				32790
+#define HIP_PARAM_ENCAPS_MSG		32787
+#define HIP_PARAM_PORTPAIR		32788
+#define HIP_PARAM_SRC_ADDR		32789
+#define HIP_PARAM_DST_ADDR		32790
 
-#define HIP_PARAM_AGENT_REJECT			32791
+#define HIP_PARAM_AGENT_REJECT	        32791
 
 
 /* End of HIPL private parameters. */
@@ -209,6 +209,7 @@
 #define HIP_HI_RSA                    5
 #define HIP_SIG_RSA                   5
 #define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
+
 /* Kludge: currently set to DSA until bug id 175 is resolved! Should be RSA */
 #define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
@@ -342,6 +343,7 @@ struct hip_lhi
 {
 	uint16_t           anonymous; /* Is this an anonymous HI */
 	struct in6_addr    hit;
+	uint16_t           algo; /* HIP_HI_RSA or HIP_HI_DSA */
 } __attribute__ ((packed));
 
 
@@ -395,6 +397,7 @@ struct endpoint_hip {
 	se_family_t         family; /* PF_HIP */
 	se_length_t         length; /* length of the whole endpoint in octets */
 	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
+	uint8_t             algo;
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;

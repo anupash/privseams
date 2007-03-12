@@ -40,10 +40,12 @@ void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
                             uint8_t, unsigned int);
 void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,
                         const char *, const unsigned char *, unsigned int);
+
 int hip_build_netlink_dummy_header(struct hip_common *);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
 
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg);
 /**
  * @addtogroup hip_param_func
  * @{
