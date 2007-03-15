@@ -347,6 +347,8 @@ int hip_conf_handle_hi(struct hip_common *msg,
   err = hip_serialize_host_id_action(msg, action, anon, use_default,
 				     opt[OPT_HI_FMT], opt[OPT_HI_FILE]);
 
+  HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	   "sending msg failed\n");
  out_err:
 
   return err;
@@ -405,6 +407,10 @@ int hip_conf_handle_map(struct hip_common *msg, int action,
 	}
 	
 out_err:
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+
 	return err;
 }
 
@@ -429,18 +435,18 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
  	if (optc != 1) {
  		HIP_ERROR("Missing arguments\n");
  		err = -EINVAL;
- 		goto out;
+ 		goto out_err;
  	}
  	 	
  	ret = inet_pton(AF_INET6, opt[0], &hit);
  	if (ret < 0 && errno == EAFNOSUPPORT) {
  		HIP_PERROR("inet_pton: not a valid address family\n");
  		err = -EAFNOSUPPORT;
- 		goto out;
+ 		goto out_err;
  	} else if (ret == 0) {
  		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
  		err = -EINVAL;
- 		goto out;
+ 		goto out_err;
  	}
  	
  	HIP_HEXDUMP("HIT to delete: ", &hit,
@@ -450,16 +456,20 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
  				       sizeof(struct in6_addr));
  	if (err) {
  		HIP_ERROR("build param hit failed: %s\n", strerror(err));
- 		goto out;
+ 		goto out_err;
  	}
  	
  	err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
  	if (err) {
  		HIP_ERROR("build hdr failed: %s\n", strerror(err));
- 		goto out;
+ 		goto out_err;
  	}
  	
-out:
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+
+out_err:
 	return err;
 }
 
@@ -484,7 +494,7 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 	if (optc != 1) {
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	if (!strcmp("all",opt[0])) {
@@ -494,11 +504,11 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
 			err = -EAFNOSUPPORT;
-			goto out;
+			goto out_err;
 		} else if (ret == 0) {
 			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 			err = -EINVAL;
-			goto out;
+			goto out_err;
 		}
 	}
 
@@ -506,16 +516,18 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 				       sizeof(struct in6_addr));
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
 	err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
- out:
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+ out_err:
 	return err;
 }
 
@@ -534,23 +546,25 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 int hip_conf_handle_bos(struct hip_common *msg, int action,
 		   const char *opt[], int optc) 
 {
-	int err;
+	int err = 0;
 
 	/* Check that there are no extra args */
 	if (optc != 0) {
 		HIP_ERROR("Extra arguments\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	/* Build the message header */
 	err = hip_build_user_hdr(msg, SO_HIP_BOS, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
- out:
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+ out_err:
 	return err;
 }
 
@@ -607,6 +621,8 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 
 	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
 
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
  out_err:
 	return err;
 
@@ -632,7 +648,7 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 	if (optc != 1) {
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	switch (action) {
@@ -659,7 +675,7 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 
 	if (err) {
 		HIP_ERROR("Action (%d) not supported yet\n", action);
-		goto out;
+		goto out_err;
 	}
 
 	all = !strcmp("all", opt[0]);
@@ -669,11 +685,11 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 		if (ret < 0 && errno == EAFNOSUPPORT) {
 			HIP_PERROR("inet_pton: not a valid address family\n");
 			err = -EAFNOSUPPORT;
-			goto out;
+			goto out_err;
 		} else if (ret == 0) {
 			HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 			err = -EINVAL;
-			goto out;
+			goto out_err;
 		}
 	}
 
@@ -681,13 +697,13 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 				       sizeof(struct in6_addr));
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
 	err = hip_build_user_hdr(msg, msg_type, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
 	if (all) {
@@ -697,7 +713,9 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 			 HIP_R1_PRECREATE_INTERVAL);
 	}
 
- out:
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+ out_err:
 	return err;
 }
 
@@ -725,7 +743,7 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
 	if (optc != 1) {
 		HIP_ERROR("Incorrect number of arguments\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	if (!strcmp("on",opt[0])) {
@@ -735,24 +753,26 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
 	} else {
 		HIP_ERROR("Invalid argument\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
 				       sizeof(unsigned int));
 	if (err) {
 		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
 	/* Build the message header */
 	err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
- out:
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+ out_err:
 	return err;
 }
 
@@ -767,7 +787,7 @@ int hip_conf_handle_blind(struct hip_common *msg, int action,
 	if (optc != 1) {
 		HIP_ERROR("Missing arguments\n");
 		err = -EINVAL;
-		goto out;
+		goto out_err;
 	}
 
 	if (!strcmp("on",opt[0])) {
@@ -777,16 +797,18 @@ int hip_conf_handle_blind(struct hip_common *msg, int action,
 	} else {
 	        HIP_PERROR("not a valid blind mode\n");
 	        err = -EAFNOSUPPORT;
-		goto out;
+		goto out_err;
 	}
 
 	err = hip_build_user_hdr(msg, status, 0);
 	if (err) {
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
-		goto out;
+		goto out_err;
 	}
 
- out:
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+ out_err:
 	return err;
 
 }
@@ -830,6 +852,10 @@ int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[]
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
 		 "build hdr failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
+
 out_err:
 	return err;
 	
@@ -902,6 +928,8 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		goto out_err;
 	}
        
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
  out_err:
 	return err;
 }
@@ -997,6 +1025,8 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 		HIP_ERROR("Unknown service %s.\n", opt[0]);
 	}
 
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "sending msg failed\n");
  out_err:
 	return err;
 	
@@ -1055,8 +1085,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		goto out_err;
 	
 	/* send msg to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
-		 "sending msg failed\n");
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
@@ -1140,7 +1168,7 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		}
 	}
 
-out_err:
+ out_err:
 	return (err);
 }
 
