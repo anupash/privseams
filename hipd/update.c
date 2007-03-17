@@ -267,17 +267,21 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 		 * FIXME: This line needs to be either inside the next loop or 
 		 * deprecataing to update peer addr item code*/
 		
+		// NOTE: We don't need to delete the policies because they are associated to HIT's
+		// If we delete them, the soft handover cannot properly work! -Diego
 
-		hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+		//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-		hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+		//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 		
 		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
 		
 		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 
-		hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+		// Why do we delete the SA associated to the local address? This is definitely wrong!
+		// If you delete this, how would you expect the IPSec could work?
+		/*hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+		  (int)entry->peer_udp_port, 0);*/
 
 		if(ipv6_addr_cmp(&entry->preferred_address, 
  				 &list_item->address) == 0){
@@ -286,6 +290,10 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 			HIP_DEBUG_HIT("Preferred Address deprecated",
 				      &list_item->address);
 		}
+		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
+		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
+		// then the handover to fail.
+		list_del(&list_item->list);
 		
 	}
 
@@ -1958,6 +1966,11 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	hip_delete_sa(entry->default_spi_out, daddr, AF_INET6,0,
 			      (int)entry->peer_udp_port);
 
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+
+	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+			      (int)entry->peer_udp_port, 0);
+
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       new_pref_addr, daddr,
 				       IPPROTO_ESP, 1, 0), -1,
@@ -1973,10 +1986,10 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
-	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	/*hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
 	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+			      (int)entry->peer_udp_port, 0);*/
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
