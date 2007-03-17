@@ -550,7 +550,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			if (i == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
-				/* send 0-address REA is this was deletion of the
+				/* send 0-address REA if this was deletion of the
 				   last address */
 				HIP_DEBUG("sending 0-addr REA\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
@@ -585,7 +585,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].lifetime = 0;
  i++;
 				}
-				HIP_DEBUG("REA to be sent contains %i addr(s)\n", i);
+				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR);
