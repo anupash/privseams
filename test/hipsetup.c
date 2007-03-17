@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 
-			err = hip_send_daemon_info(msg);
+			err = hip_send_daemon_info_wrapper(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 			
-			err = hip_send_daemon_info(msg);
+			err = hip_send_recv_daemon_info(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;

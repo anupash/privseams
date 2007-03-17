@@ -31,6 +31,8 @@
 #define HIP_STATE_FILTERING_R2		11
 #define HIP_STATE_FILTERED_I1	    12
 #define HIP_STATE_FILTERED_R2		13
+#define HIP_STATE_FILTERING_I2	    14
+#define HIP_STATE_FILTERED_I2	    15
 
 #define HIP_UPDATE_STATE_REKEYING    1      /** @todo REMOVE */
 #define HIP_UPDATE_STATE_DEPRECATING 2
@@ -342,6 +344,8 @@ struct hip_hadb_state
 	/* For e.g. GUI agent */
 	hip_input_filter_func_set_t *hadb_input_filter_func;
 	hip_output_filter_func_set_t *hadb_output_filter_func;
+        /* true when agent is prompting user and fallback is disabled */
+	int hip_opp_fallback_disable; 
 };
 
 /** @addtogroup hadb_func

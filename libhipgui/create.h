@@ -21,6 +21,7 @@
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int ngdlg_create_content(void);
+int msgdlg_create_content(void);
 
 
 /*! @} addtogroup libhipgui */

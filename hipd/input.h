@@ -36,6 +36,8 @@
 #include "state.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
+#include "oppipdb.h"
+
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -120,7 +122,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
 int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
-			       struct in6_addr *, hip_portpair_t *);
+			       struct in6_addr *, hip_portpair_t *, int);
 int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				   struct in6_addr *, hip_portpair_t *);
 			  

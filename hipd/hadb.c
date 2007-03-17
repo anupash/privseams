@@ -307,6 +307,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
 	
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
+	if (entry) hip_hadb_dump_spis_out(entry);
 	HIP_IFEL(entry, 0, "Ignoring new mapping, old one exists\n");
 	
 	entry = hip_hadb_create_state(GFP_KERNEL);
@@ -365,7 +366,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
-	
+
 out_err:
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
@@ -447,7 +448,7 @@ int hip_add_peer_map(const struct hip_common *input)
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
  	if (err) {
- 		HIP_ERROR("Failed to insert peer map work order (%d)\n", err);
+ 		HIP_ERROR("Failed to insert peer map (%d)\n", err);
 		goto out_err;
 	}
 
@@ -2398,7 +2399,7 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
 	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I1 ||
+	    entry->state == HIP_STATE_FILTERING_I2 ||
 	    entry->state == HIP_STATE_FILTERING_R2)
 	{
 		(*counter)++;

@@ -1009,7 +1009,7 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 					   (char **) &opt[0], optc);
 }
 
-int hip_do_hipconf(int argc, char *argv[]) {
+int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	int err = 0, type_arg;
 	long int action, type;
 	struct hip_common *msg = NULL;
@@ -1054,10 +1054,10 @@ int hip_do_hipconf(int argc, char *argv[]) {
 		goto out_err;
 	
 	/* send msg to hipd */
-	HIP_IFEL(hip_send_daemon_info(msg), -1,
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
 		 "sending msg failed\n");
 
-	HIP_INFO("hipconf command successfull\n");
+	HIP_INFO("hipconf command successful\n");
 
 out_err:
 	if (msg)

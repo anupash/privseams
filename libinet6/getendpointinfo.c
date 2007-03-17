@@ -408,7 +408,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
 
     hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    hip_send_daemon_info(msg_mapping);
+    hip_send_daemon_info_wrapper(msg_mapping, 0);
   }
   free(msg_mapping);
 
@@ -1995,9 +1995,10 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		    const char *opt[], int optc)
 {
   	int arg_len, err = 0, i, len;
-	char c[128], *hip_arg, ch, str[128], *fname, *args[64];
 	FILE *hip_config = NULL;  
 	List list;
+	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
+		*comment;
 
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
@@ -2009,10 +2010,22 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
 		 "Error: can't open config file %s.\n", fname);
-        
-	while(err == 0 && fgets(c, sizeof(c), hip_config) != NULL) {
-		if ((c[0] =='#') || (c[0] =='\n'))
+
+	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
+
+		/* Remove whitespace */
+		c = line;
+		while (*c == ' ' || *c == '\t')
+			c++;
+
+		/* Line is a comment or empty */
+		if (c[0] =='#' || c[0] =='\n' || c[0] == '\0')
 			continue;
+
+		/* Terminate before (the first) trailing comment */
+		comment = strchr(c, '#');
+		if (comment)
+			*comment = '\0';
 
 		/* prefix the contents of the line with" hipconf"  */
 		memset(str, '\0', sizeof(str));
@@ -2031,7 +2044,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 			/* the list is backwards ordered */
 			args[len - i - 1] = getitem(&list, i);
 		}
-		err = hip_do_hipconf(len, args);
+		err = hip_do_hipconf(len, args, 1);
 		destroy(&list);
 	}
 

@@ -70,7 +70,7 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
 #define HIP_HIT_TYPE_MASK_100   0x20010070
-#define HIP_HIT_TYPE_MASK_CLEAR 0x0f000000
+#define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
 #define HIP_HIT_PREFIX_LEN      28     /* bits */
@@ -129,6 +129,14 @@
 #define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 
+#define HIP_PARAM_ENCAPS_MSG			32787
+#define HIP_PARAM_PORTPAIR				32788
+#define HIP_PARAM_SRC_ADDR				32789
+#define HIP_PARAM_DST_ADDR				32790
+
+#define HIP_PARAM_AGENT_REJECT			32791
+
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC            61505
@@ -139,9 +147,9 @@
 #define HIP_PARAM_ECHO_RESPONSE   63425
 #define HIP_PARAM_FROM_NAT        63998
 #define HIP_PARAM_VIA_RVS_NAT     64002
-#define HIP_PARAM_FROM            65300
-#define HIP_PARAM_RVS_HMAC        65320
-#define HIP_PARAM_VIA_RVS         65500
+#define HIP_PARAM_FROM            65498
+#define HIP_PARAM_RVS_HMAC        65500
+#define HIP_PARAM_VIA_RVS         65502
 /** Defines the maximum parameter type value.
  * @note exclusive
  */

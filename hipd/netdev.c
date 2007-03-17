@@ -16,48 +16,92 @@ static int count_if_addresses(int ifindex)
 	return i;
 }
 
-/* Returns 1 if the given address @addr is allowed to be one of the
-   addresses of this host, 0 otherwise */
+
+#define FA_IGNORE 0
+#define FA_ADD 1
+/*
+ * Returns FA_ADD if the given address @addr is allowed to be one of the
+ * addresses of this host, FA_IGNORE otherwise
+ */
 int filter_address(struct sockaddr *addr, int ifindex)
 {
 	HIP_DEBUG("ifindex=%d, address family=%d\n",
 		  ifindex, addr->sa_family);
 	HIP_HEXDUMP("testing address=", SA2IP(addr), SAIPLEN(addr));
 
-	if (addr->sa_family == AF_INET6) {
-		struct in6_addr *a = SA2IP(addr);
-		HIP_DEBUG_INADDR("IPv6 addr", a);
-		if (IN6_IS_ADDR_UNSPECIFIED(a) ||
-		    IN6_IS_ADDR_LOOPBACK(a) ||
-		    IN6_IS_ADDR_MULTICAST(a) ||
-		    IN6_IS_ADDR_LINKLOCAL(a) ||
+	/* used as a buffer for inet_ntop */
+#define sLEN 40
+	char s[sLEN];
+
+	switch (addr->sa_family) {
+		case AF_INET6:
+			inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s, sLEN);
+			HIP_DEBUG("IPv6 addr: %s", s);
+
+			struct in6_addr *a_in6 = SA2IP(addr);
+
+			if (IN6_IS_ADDR_UNSPECIFIED(a_in6)) {
+				HIP_DEBUG("Ignore: UNSPECIFIED");
+				return FA_IGNORE;
+			} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
+				HIP_DEBUG("Ignore: LOOPBACK");
+				return FA_IGNORE;
+			} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
+				HIP_DEBUG("Ignore: MULTICAST");
+				return FA_IGNORE;
+			} else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
+				HIP_DEBUG("Ignore: LINKLOCAL");
+				return FA_IGNORE;
 #if 0 /* For Juha-Matti's experiments  */
-		    IN6_IS_ADDR_SITELOCAL(a) ||
+			} else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
+				HIP_DEBUG("Ignore: SITELOCAL");
+				return FA_IGNORE;
 #endif
-		    IN6_IS_ADDR_V4MAPPED(a) ||
-		    IN6_IS_ADDR_V4COMPAT(a) ||
-		    ipv6_addr_is_hit(a)) {
-			return 0;
-		}
-		return 1;
-	}
+			} else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
+				HIP_DEBUG("Ignore: V4MAPPED");
+				return FA_IGNORE;
+			} else if (IN6_IS_ADDR_V4COMPAT(a_in6)) {
+				HIP_DEBUG("Ignore: V4COMPAT");
+				return FA_IGNORE;
+			} else if (ipv6_addr_is_hit(a_in6)) {
+				HIP_DEBUG("Ignore: hit");
+				return FA_IGNORE;
+			} else
+				return FA_ADD;
+			break;
+			/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
 
-	/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
+		case AF_INET:
+			/* AG FIXME more IPv4 address checking
+			 * DO we need any more checks here ? -- Abi
+			 */
+			inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s, sLEN);
+			HIP_DEBUG("IPv4 addr: %s", s);
 
-	/* AG FIXME more IPv4 address checking */
-	/* DO we need any more checks here ? -- Abi*/
-	if (addr->sa_family == AF_INET)
-	{
-		in_addr_t a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		if (a == INADDR_ANY ||
-		    a == INADDR_BROADCAST ||
-			IN_MULTICAST(a)||
-			IS_LSI32(a))
-				return 0;
-		return 1;
+			in_addr_t a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+
+			if (a_in == INADDR_ANY) {
+				HIP_DEBUG("Ignore: INADDR_ANY");
+				return FA_IGNORE;
+			} else if (a_in == INADDR_BROADCAST) {
+				HIP_DEBUG("Ignore: INADDR_BROADCAST");
+				return FA_IGNORE;
+			} else if (IN_MULTICAST(a_in)) {
+				HIP_DEBUG("Ignore: MULTICAST");
+				return FA_IGNORE;
+			} else if (IS_LSI32(a_in)) {
+				HIP_DEBUG("Ignore: LSI32");
+				return FA_IGNORE;
+			} else if (IS_IPV4_LOOPBACK(a_in)) {
+				HIP_DEBUG("Ignore: IPV4_LOOPBACK");
+				return FA_IGNORE;
+			} else 
+				return FA_ADD;
+			break;
+
+		default:
+			return FA_IGNORE;
 	}
-	/* add more filtering tests here */
-	return 0;
 }
 
 int exists_address_in_list(struct sockaddr *addr, int ifindex)
@@ -398,7 +442,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("entry->hit_our", &entry->hit_our);
         HIP_DEBUG_HIT("entry->hit-peer", &entry->hit_peer);
 
-	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry, 0), -1,
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
  out_err:
 	return err;

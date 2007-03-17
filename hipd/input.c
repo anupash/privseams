@@ -440,12 +440,14 @@ int hip_produce_keying_material(struct hip_common *msg,
  * @param daddr a pointer to the destination address where to the packet was
  *              sent to (own address).
  * @param info  a pointer to the source and destination ports.
+ * @param filter Whether to filter trough agent or not.
  * @return      zero on success, or negative error value on error.
  */
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
-	                       hip_portpair_t *msg_info)
+	                       hip_portpair_t *msg_info,
+                               int filter)
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
@@ -470,6 +472,39 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 
 	/** @todo Check packet csum.*/
+
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	if (!entry && opportunistic_mode &&
+	    (type == HIP_I1 || type == HIP_R1)) {
+		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr,
+						       dst_addr,
+						       msg_info);
+		/* If agent is prompting user, let's make sure that
+		   the death counter in maintenance does not expire */
+		if (hip_agent_is_alive())
+		    entry->hip_opp_fallback_disable = filter;
+	} else {
+		/* Ugly bug fix for "conntest-client hostname tcp 12345"
+		   where hostname maps to HIT and IP in hosts files.
+		   Why the heck the receive function points here to
+		   receive_opp_r1 even though we have a regular entry? */
+		if (entry)
+			entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
+	}
+#endif
+	
+#ifdef CONFIG_HIP_AGENT
+	/** Filter packet trough agent here. */
+	if ((type == HIP_I1 || type == HIP_R1) && filter)
+	{
+		HIP_DEBUG("Filtering packet trough agent now (packet is %s).\n",
+		          type == HIP_I1 ? "I1" : "R1");
+		err = hip_agent_filter(msg, src_addr, dst_addr, msg_info);
+		/* If packet filtering OK, return and wait for agent reply. */
+		if (err == 0) goto out_err;
+	}
+#endif
 
 #ifdef CONFIG_HIP_BLIND
 	HIP_DEBUG("Blind block\n");
@@ -505,33 +540,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	if (!(ntohs(msg->control) & HIP_CONTROL_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
-#else
-	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 #endif
 
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	if (!entry && opportunistic_mode && (type == HIP_I1 || type == HIP_R1))
-		entry = hip_oppdb_get_hadb_entry_i1_r1(msg, src_addr, dst_addr,
-						       msg_info);
-#endif
-
-/*	if (entry)
-	{
-		err = entry->hadb_input_filter_func->hip_input_filter(msg);
-	} else {
-	        err = ((hip_input_filter_func_set_t *)
-		       hip_get_input_filter_default_func_set())->hip_input_filter(msg);
-	}
-	
-/*	if (err == -ENOENT) {
-		HIP_DEBUG("No agent running, continuing\n");
-		err = 0;
-	} else if (err == 0) {
-		HIP_DEBUG("Agent accepted packet\n");
-	} else if (err) {
-		HIP_ERROR("Agent reject packet\n");
-	}*/
-	
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
@@ -613,7 +623,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	if (err)
 		goto out_err;
 	
- out_err:
+out_err:
 	
 	return err;
 }
@@ -674,7 +684,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 	}
 #endif
 
-	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info), -1,
+	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
 		 "receiving of control packet failed\n");
  out_err:
 	return err;
@@ -1029,15 +1039,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
+
 	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
 	   No retransmission here, the packet is sent directly because this
 	   is the last packet of the base exchange. */
 	
 	/* R1 packet source port becomes the I2 packet destination port. */
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, 
-			      r1_info->src_port, i2, entry, 0),
-		 -ECOMM, "Sending I2 packet failed.\n");
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 0);
+	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
 	if (i2)
@@ -1270,14 +1279,15 @@ int hip_handle_r1(struct hip_common *r1,
 
 	entry->peer_controls = ntohs(r1->control);
 
- 	HIP_IFEL(entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info), -1, 
-		 "Creation of I2 failed\n");
+ 	err = entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info);
+	HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
-	if (entry->state == HIP_STATE_I1_SENT) {
+	if (entry->state == HIP_STATE_I1_SENT)
+	{
 		entry->state = HIP_STATE_I2_SENT;
 	}
 
- out_err:
+out_err:
 	if (ctx->dh_shared_key)
 		HIP_FREE(ctx->dh_shared_key);
 	if (ctx)
@@ -1374,7 +1384,9 @@ int hip_receive_r1(struct hip_common *r1,
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
+		break;
 	case HIP_STATE_ESTABLISHED:
+		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:

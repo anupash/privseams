@@ -8,7 +8,9 @@ GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
 GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
-include_HEADERS = agent_tools.h gui_interface.h connhipd.h agent.h hit_db.h
+include_HEADERS = agent.h connhipd.h hit_db.h lang_finnish.h str_var.h x.h
+include_HEADERS += agent_tools.h  gui_interface.h  lang_english.h  language.h
+
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)
 
 if HIP_AGENT

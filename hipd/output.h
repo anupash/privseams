@@ -42,7 +42,7 @@ int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
 		struct in6_addr *, const in_port_t, struct in6_addr *,
 		hip_portpair_t *, const void *, const int, uint16_t *);
 
-int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *, int);
+int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 
 #ifdef CONFIG_HIP_HI3

@@ -237,7 +237,6 @@ int control_thread_init(void)
    int err = 0;
 	int n;
 	int len;
-	
 	struct sockaddr_un sock_addr;
 	struct hip_common *msg = NULL;
 	socklen_t alen;
@@ -259,8 +258,10 @@ int control_thread_init(void)
 	
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sun_family = AF_LOCAL;
-	strcpy(sock_addr.sun_path, tmpnam(NULL));
-	err = bind(hip_firewall_sock, (struct sockaddr *)&sock_addr, sizeof(sock_addr));
+	if ((hip_tmpname(sock_addr.sun_path)))
+		return -1;
+	err = bind(hip_firewall_sock, (struct sockaddr *) &sock_addr,
+		   sizeof(sock_addr));
 	if (err != 0) {
 	     err = -1;
 	     HIP_ERROR("Bind failed.\n");

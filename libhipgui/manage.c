@@ -42,15 +42,21 @@ void gui_add_rgroup(HIT_Group *group)
 	/* Variables. */
 	GtkWidget *w;
 	GtkTreeIter iter;
+	GtkTreePath *path;
 
 	w = widget(ID_RLISTMODEL);
 	gtk_tree_store_append(GTK_TREE_STORE(w), &iter, NULL);
 	gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, group->name, -1);
-
+	path = gtk_tree_model_get_path(w, &iter);
+	
 	gtk_combo_box_insert_text(widget(ID_TWR_RGROUP), 0, group);
 	gtk_combo_box_insert_text(widget(ID_NH_RGROUP), 0, group);
-
+	if (tw_get_mode() == TWMODE_REMOTE_EDIT) gtk_combo_box_set_active(widget(ID_TWR_RGROUP), 0);
+	gtk_combo_box_set_active(widget(ID_NH_RGROUP), 0);
+	
 	gui_add_remote_hit(lang_get("hits-group-emptyitem"), group->name);
+	w = widget(ID_RLISTVIEW);
+	gtk_tree_view_expand_to_path(w, path);
 }
 /* END OF FUNCTION */
 
@@ -67,6 +73,7 @@ void gui_add_remote_hit(char *hit, char *group)
 	/* Variables. */
 	GtkWidget *w;
 	GtkTreeIter iter, gtop;
+	GtkTreePath *path;
 	GtkTreeModel *model;
 	int err;
 	char *str;
@@ -98,6 +105,8 @@ void gui_add_remote_hit(char *hit, char *group)
 			
 			gtk_tree_store_append(GTK_TREE_STORE(w), &iter, &gtop);
 			gtk_tree_store_set(GTK_TREE_STORE(w), &iter, 0, hit, -1);
+			path = gtk_tree_model_get_path(widget(ID_RLISTMODEL), &iter);
+			gtk_tree_view_expand_to_path(widget(ID_RLISTVIEW), path);
 			err = 0;
 			break;
 		}
@@ -264,16 +273,25 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
+	/* Use thread support, when not adding new HIT manually trough GUI. */
 	if (inout != 2) gdk_threads_enter();
 	gtk_window_get_size(dialog, &w, &h);
 	gtk_window_move(dialog, (gdk_screen_width() - w) / 2, (gdk_screen_height() - h) / 2);
 	gtk_window_set_keep_above(dialog, TRUE);
 	gtk_widget_show(dialog);
 	
+	/* Select ungrouped as default group. */
+	i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
+	gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
+
+	/* Close expander as default. */
+	gtk_expander_set_expanded(widget(ID_NH_EXPANDER), FALSE);
+	
 	/* If manual input wanted. */
 	if (inout == 2)
 	{
-		gtk_widget_set_sensitive(widget(ID_NH_HIT), TRUE);
+		gtk_editable_set_editable(widget(ID_NH_HIT), TRUE);
+//		gtk_widget_set_sensitive(widget(ID_NH_HIT), TRUE);
 		gtk_entry_set_text(widget(ID_NH_HIT), "2001:0070:0000:0000:0000:0000:0000:0000");
 		gtk_editable_select_region(widget(ID_NH_HIT), 0, -1);
 		gtk_entry_set_text(widget(ID_NH_NAME), "");
@@ -282,7 +300,8 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	}
 	else
 	{
-		gtk_widget_set_sensitive(widget(ID_NH_HIT), FALSE);
+		gtk_editable_set_editable(widget(ID_NH_HIT), FALSE);
+//		gtk_widget_set_sensitive(widget(ID_NH_HIT), FALSE);
 		print_hit_to_buffer(phit, &hit->hit);
 		gtk_entry_set_text(widget(ID_NH_HIT), phit);
 		gtk_entry_set_text(widget(ID_NH_NAME), hit->name);
@@ -313,10 +332,10 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 		hit->g = group;
 		ps = gtk_entry_get_text(widget(ID_NH_NAME));
 		NAMECPY(hit->name, ps);
-		ps = gtk_entry_get_text(widget(ID_NH_URL));
-		URLCPY(hit->url, ps);
-		ps = gtk_entry_get_text(widget(ID_NH_PORT));
-		URLCPY(hit->port, ps);
+//		ps = gtk_entry_get_text(widget(ID_NH_URL));
+		URLCPY(hit->url, "none");
+//		ps = gtk_entry_get_text(widget(ID_NH_PORT));
+		URLCPY(hit->port, "0");
 		/* If HIT added manually. */
 		if (inout == 2)
 		{
@@ -342,8 +361,8 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	} while (1);
 
 	HIP_DEBUG("New hit with parameters: %s, %s, %s.\n", hit->name, hit->g->name,
-	          hit->g->type == HIT_DB_TYPE_ACCEPT ? lang_get("group-type-accept")
-	                                             : lang_get("group-type-deny"));
+	          hit->g->accept == HIT_ACCEPT ? lang_get("group-type-accept")
+	                                       : lang_get("group-type-deny"));
 
 out_err:
 	gtk_widget_hide(dialog);
@@ -414,13 +433,13 @@ void gui_add_hiu(HIT_Remote *hit)
 
 	@return Name of new remote group.
 */
-void create_remote_group(char *name)
+int create_remote_group(char *name)
 {
 	/* Variables. */
 	GtkWidget *dialog = (GtkWidget *)widget(ID_NGDLG);
 	HIT_Group *g;
 	HIT_Local *l;
-	int err = -1, type, lw;
+	int err = -1, accept, lw;
 	char *psl, *ps, psn[256];
 	pthread_t pt;
 
@@ -433,7 +452,7 @@ void create_remote_group(char *name)
 		gtk_window_set_keep_above(dialog, TRUE);
 		gtk_dialog_run(dialog);
 		gtk_widget_destroy(dialog);
-		return;
+		return (err);
 	}
 	
 	gtk_widget_show(dialog);
@@ -446,8 +465,8 @@ void create_remote_group(char *name)
 	if (err == GTK_RESPONSE_OK)
 	{
 		ps = gtk_combo_box_get_active_text(widget(ID_NG_TYPE1));
-		if (strcmp(lang_get("group-type-accept"), ps) == 0) type = HIT_DB_TYPE_ACCEPT;
-		else type = HIT_DB_TYPE_DENY;
+		if (strcmp(lang_get("group-type-accept"), ps) == 0) accept = HIT_ACCEPT;
+		else accept = HIT_DENY;
 		ps = gtk_combo_box_get_active_text(widget(ID_NG_TYPE2));
 		if (strcmp(lang_get("group-type2-lightweight"), ps) == 0) lw = 1;
 		else lw = 0;
@@ -463,6 +482,7 @@ void create_remote_group(char *name)
 		if (l == NULL)
 		{
 			HIP_DEBUG("Failed to find local HIT named: %s\n", psl);
+			err = -1;
 		}
 		else if (strlen(psn) > 0)
 		{
@@ -470,16 +490,20 @@ void create_remote_group(char *name)
 			memset(g, 0, sizeof(HIT_Group));
 			NAMECPY(g->name, psn);
 			g->l = l;
-			g->type = type;
+			g->accept = accept;
 			g->lightweight = lw;
 
 			pthread_create(&pt, NULL, create_remote_group_thread, g);
+			pthread_join(pt, NULL);
+			err = 0;
 		}
+		else err = -1;
 	}
+	else err = -1;
 
 out_err:
 	gtk_widget_hide(dialog);
-	return;
+	return (err);
 }
 /* END OF FUNCTION */
 
@@ -491,7 +515,7 @@ void *create_remote_group_thread(void *data)
 	/* Variables. */
 	HIT_Group *g = (HIT_Group *)data;
 
-	hit_db_add_rgroup(g->name, g->l, g->type, g->lightweight);
+	hit_db_add_rgroup(g->name, g->l, g->accept, g->lightweight);
 
 	return (NULL);
 }

@@ -18,6 +18,8 @@
 #include <sys/socket.h>
 
 #include "hipconf.h"
+#include "oppipdb.h"
+
 
 extern char *i3_config;
 
