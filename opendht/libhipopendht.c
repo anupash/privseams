@@ -31,7 +31,7 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        perror("Socket");
+        HIP_PERROR("Socket");
 
     return(sockfd);      
 }
@@ -78,7 +78,7 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
     struct sockaddr_in *sa;
     if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
     {
-        perror("Connect");
+        HIP_PERROR("Connect");
         ret = -1;
     }
     else
