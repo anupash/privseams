@@ -166,4 +166,6 @@ void hip_set_param_type(void *, hip_tlv_type_t);
 int hip_write_hmac(int, void *, void *, int, void *);
 void hip_zero_msg_checksum(struct hip_common *);
 
+
+
 #endif /* HIP_BUILDER */

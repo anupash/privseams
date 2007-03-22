@@ -100,7 +100,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	} else {
 		HIP_DEBUG("%d bytes received\n", n); 
-		HIP_DUMP_MSG(msg);
+		
 	}
 
 	if (hip_get_msg_err(msg)) {

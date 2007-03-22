@@ -301,10 +301,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 	
 #endif
 	case SO_HIP_GET_HITS:
-		HIP_DEBUG("ALLL HITTTS IN user C\n");
 		hip_msg_init(msg);
+	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
-		HIP_DUMP_MSG(msg);
+		
 		break;
 	
 	default:

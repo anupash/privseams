@@ -1221,6 +1221,7 @@ int hip_build_param_contents(struct hip_common *msg,
 				       contents);
 }
 
+
 /**
  * Appends a complete parameter into a HIP message.
  * 
@@ -2876,10 +2877,13 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 	int err = 0;
 
 	endpoint.family = PF_HIP;	
-	endpoint.length = 0; 	
+	endpoint.length = sizeof(struct endpoint_hip); 	
 	endpoint.flags = HIP_ENDPOINT_FLAG_HIT;	
-	endpoint.algo = entry->lhi.algo;	
+	/*endpoint.algo= entry->lhi.algo;*/
+	endpoint.algo=hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
+	
+	HIP_DEBUG("The endpoing stucture algo is %s\n", endpoint.algo == HIP_HI_DSA ? "dsa" : "rsa");
 	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
 
   out_err:
