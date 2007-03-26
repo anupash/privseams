@@ -2090,7 +2090,7 @@ int hip_conf_handle_hi_get(struct hip_common *msg, int action,
  	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
 	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
-/*	err = get_local_hits(NULL, &at);*/
+	err = get_local_hits(NULL, &at);
 	if (err)
 		goto out_err;
 

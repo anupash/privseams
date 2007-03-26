@@ -85,8 +85,8 @@
 #define ACTION_RUN 9
 #define ACTION_LOAD 10
 #define ACTION_DHT 11
-
 #define ACTION_MAX 12 /* exclusive */
+#define ACTION_HA  13
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -107,7 +107,7 @@
 #define TYPE_GET        15
 #define TYPE_BLIND      16
 #define TYPE_MAX    	17 /* exclusive */
-
+#define TYPE_HA         18 
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -144,5 +144,6 @@ int get_all_hits(struct hip_common *msg,char *argv);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
+int hip_conf_handle_ha(struct hip_common *msg,int action,const char *opt[],int optc);
 
 #endif /* HIPCONF */

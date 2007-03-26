@@ -398,7 +398,6 @@ struct endpoint_hip {
 	se_length_t         length; /* length of the whole endpoint in octets */
 	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
 	uint8_t             algo;
-	int type;
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;

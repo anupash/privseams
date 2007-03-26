@@ -78,6 +78,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
+	hip_conf_handle_ha,
 	NULL, /* run */
 };
 
@@ -113,6 +114,7 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
         else if (!strcmp("dht", text))
                 ret = ACTION_DHT;
+	
 	return ret;
 }
 
@@ -156,6 +158,11 @@ int hip_conf_check_action_argc(int action) {
         case ACTION_DHT:
                 count=2;
                 break;
+
+	case ACTION_HA:
+                count=2;
+                break;
+
 	}
 
 	return count;
@@ -188,6 +195,8 @@ int hip_conf_get_type(char *text) {
 		ret = TYPE_SERVICE;	
 	else if (!strcmp("normal", text))
 		ret = TYPE_RUN;
+	else if (!strcmp("ha", text))
+		ret = TYPE_HA;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
@@ -228,6 +237,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_RUN:
 	case ACTION_LOAD:
         case ACTION_DHT:
+	case ACTION_HA:
                 type_arg = 2;
                 break;
         }
@@ -653,6 +663,10 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 		msg_type = SO_HIP_CONF_PUZZLE_GET;
 		err = -1; /* Not supported yet */
 		break;
+	/*case ACTION_HA:
+		msg_type = SO_HIP_CONF_GET_HA;
+		err = -1;
+		break;*/
 	default:
 		err = -1;
 	}
@@ -1068,48 +1082,74 @@ out_err:
 
 int get_all_hits(struct hip_common *msg,char *argv)
 {	
-	struct endpoint_hip *current_param=NULL;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_eid_endpoint *ep;
+	uint8_t algo;
+	int hitval,err=0;
 	
-	int c,err=0;
-	
-	if ((strcmp(argv,"all")==0) || (strcmp(argv,"default")==0))
-	{
+	HIP_IFEL(!(((strcmp(argv,"all")==0) || (strcmp(argv,"default")==0))), -1, "Bad args\n");
 
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+	hip_send_recv_daemon_info(msg);
+	HIP_DUMP_MSG(msg);
 		
-	while((current_param = (struct endpoint_hip *) hip_get_next_param(msg,current_param))
-	      != NULL) {
-		
-		c=hip_get_host_id_algo(&current_param->algo);
-		c=hip_get_param_contents_direct(c);
-		
-	if ((strcmp(argv, "all")==0) && (c ==HIP_HI_RSA)){
+	while(current_param = hip_get_next_param(msg, current_param) != NULL) {
+		ep = (struct hip_eid_endpoint *) current_param;
+		//HIP_DEBUG("Algo: %d\n",ntohs(*(&current_param.algo)));
+		//c=hip_get_host_id_algo(&current_param.endpoint.algo);
+		//c=hip_get_param_contents_direct(&c);
+		//HIP_DEBUG("Algo: %d\n",c);
+		//HIP_DEBUG("Algo: %d\n",ntohs(*(&c)));
+		//HIP_DEBUG("Algo: %d\n", current_param.algo);
+		algo = ep->endpoint.algo;
+		HIP_DEBUG("algo %s\n", (algo == HIP_HI_DSA ? "dsa" : "rsa"));
+		if ((strcmp(argv, "all")==0) && (algo ==HIP_HI_RSA)){
 		    
-		HIP_DEBUG("Algo is %s\n",c== HIP_HI_DSA ? "dsa" : "rsa");
-		hip_print_hit("hi is",hip_get_param_contents_direct(&current_param->id.hit));
-	}
+			HIP_DEBUG("Algo is %s\n", algo == HIP_HI_DSA ? "dsa" : "rsa");
+			hip_print_hit("hi is", &ep->endpoint.id.hit);
+		}
 
-	else if ((strcmp(argv, "default")==0) && (c==HIP_HI_DSA)) {
+		else if ((strcmp(argv, "default")==0) && (algo ==HIP_HI_DSA)) {
 	
-		HIP_DEBUG("Algo is %s\n",c == HIP_HI_DSA ? "dsa" : "rsa");
-		hip_print_hit("hi is",hip_get_param_contents_direct(&current_param->id.hit));
-	
+			HIP_DEBUG("Algo is %s\n",algo == HIP_HI_DSA ? "dsa" : "rsa");
+			hip_print_hit("hi is", &ep->endpoint.id.hit);	
 		}
 			
 	}
 
-	}
-	else {
-	 
-		HIP_DEBUG("Invalid argument\n");
-	}
 	memset(msg, 0, HIP_MAX_PACKET);	
 
    out_err:
 	return err;
 	
 }
+
+
+int hip_conf_handle_ha(struct hip_common *msg,int action,const char *opt[],int optc)
+{	
+	struct endpoint_hip *get_ha=NULL;
+	void *c;
+	int err=0;
+	
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+		hip_send_recv_daemon_info(msg);
+		
+	while((get_ha = (struct endpoint_hip *) hip_get_next_param(msg,get_ha))
+	      != NULL) {
+		
+		HIP_DEBUG("Algo is %s\n",c== HIP_HI_DSA ? "dsa" : "rsa");
+		hip_print_hit("hi is",hip_get_param_contents_direct(&get_ha->id.hit));
+			
+	}
+
+	
+	memset(msg, 0, HIP_MAX_PACKET);	
+
+   out_err:
+	return err;
+	
+}
+
 /**
  * Handles the hipconf commands where the type is @c run. Execute new
  * application and set environment variable "LD_PRELOAD" to as type
