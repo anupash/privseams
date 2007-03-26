@@ -1084,36 +1084,26 @@ int get_all_hits(struct hip_common *msg,char *argv)
 {	
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_eid_endpoint *ep;
+	struct endpoint_hip *endp=NULL;
 	uint8_t algo;
-	int hitval,err=0;
-	
-	HIP_IFEL(!(((strcmp(argv,"all")==0) || (strcmp(argv,"default")==0))), -1, "Bad args\n");
+	void *c;
+	int err=0;
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
 	hip_send_recv_daemon_info(msg);
 	HIP_DUMP_MSG(msg);
 		
-	while(current_param = hip_get_next_param(msg, current_param) != NULL) {
-		ep = (struct hip_eid_endpoint *) current_param;
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		
 		//HIP_DEBUG("Algo: %d\n",ntohs(*(&current_param.algo)));
 		//c=hip_get_host_id_algo(&current_param.endpoint.algo);
 		//c=hip_get_param_contents_direct(&c);
 		//HIP_DEBUG("Algo: %d\n",c);
 		//HIP_DEBUG("Algo: %d\n",ntohs(*(&c)));
 		//HIP_DEBUG("Algo: %d\n", current_param.algo);
-		algo = ep->endpoint.algo;
-		HIP_DEBUG("algo %s\n", (algo == HIP_HI_DSA ? "dsa" : "rsa"));
-		if ((strcmp(argv, "all")==0) && (algo ==HIP_HI_RSA)){
-		    
-			HIP_DEBUG("Algo is %s\n", algo == HIP_HI_DSA ? "dsa" : "rsa");
-			hip_print_hit("hi is", &ep->endpoint.id.hit);
-		}
-
-		else if ((strcmp(argv, "default")==0) && (algo ==HIP_HI_DSA)) {
-	
-			HIP_DEBUG("Algo is %s\n",algo == HIP_HI_DSA ? "dsa" : "rsa");
-			hip_print_hit("hi is", &ep->endpoint.id.hit);	
-		}
+		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+		HIP_DEBUG(" value in algo just algo %d\n",endp->algo);
+		
 			
 	}
 
