@@ -74,7 +74,7 @@
 /* Socket option for hipconf to change the used gateway with openDHT */
 #define SO_HIP_DHT_GW                           141
 #define SO_HIP_GET_HITS                         142
-#define HIP_HA_HITS				143
+#define HIP_HOST_ID				143
 /** @} */
 
 #endif /* _HIP_ICOMM */

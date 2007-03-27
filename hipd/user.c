@@ -308,7 +308,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 
 	
-	case HIP_HA_HITS:
+	case HIP_HOST_ID:
 		HIP_DEBUG("Get all ha");
 		/*hip_msg_init(msg);*/
 	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/

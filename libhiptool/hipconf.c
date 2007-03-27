@@ -78,7 +78,6 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
-	hip_conf_handle_ha,
 	NULL, /* run */
 };
 
@@ -1056,7 +1055,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	/* allocated space for return value and call hipd */
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	get_all_hits(msg,argv[3]);
+	hip_get_all_hits(msg,argv[3]);
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
@@ -1080,7 +1079,7 @@ out_err:
 	return err;
 }
 
-int get_all_hits(struct hip_common *msg,char *argv)
+int hip_get_all_hits(struct hip_common *msg,char *argv)
 {	
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip *endp=NULL;
@@ -1095,21 +1094,17 @@ int get_all_hits(struct hip_common *msg,char *argv)
 	
 		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
 
-	if ((strcmp(argv, "all")==0) && (endp->algo ==HIP_HI_RSA)){
-		
-		HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
-		
-	}
+	if (strcmp(argv, "all")==0){
+		HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+		HIP_DEBUG_HIT("hi is ", &endp->id.hit);
 
-	else if ((strcmp(argv, "default")==0) && (endp->algo==HIP_HI_DSA)) {
-	
-		HIP_DEBUG_HIT("hi is DSA", &endp->id.hit);
+	}else if ((strcmp(argv, "default")==0) && (endp->algo==HIP_HI_RSA)) {
+		HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
 		}
 			
 	}
 
-	}
-	else {
+	}else {
 	 
 		HIP_DEBUG("Invalid argument\n");
 	}
@@ -1121,29 +1116,16 @@ int get_all_hits(struct hip_common *msg,char *argv)
 }
 
 
-int hip_conf_handle_ha(struct hip_common *msg,int action,const char *opt[],int optc)
+int hip_get_all_host_id(struct hip_common *msg,int action,const char *opt[],int optc)
 {	
-	struct endpoint_hip *get_ha=NULL;
-	void *c;
+	
+	/*struct hip_tlv_common *current_param = NULL;
 	int err=0;
-	
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
-		
-	while((get_ha = (struct endpoint_hip *) hip_get_next_param(msg,get_ha))
-	      != NULL) {
-		
-		HIP_DEBUG("Algo is %s\n",c== HIP_HI_DSA ? "dsa" : "rsa");
-		hip_print_hit("hi is",hip_get_param_contents_direct(&get_ha->id.hit));
-			
-	}
 
+	HIP_IFEL(hip_build_user_hdr(msg, HIP_HOST_ID,0),-1, "Failed to fetch host id");
 	
-	memset(msg, 0, HIP_MAX_PACKET);	
-
    out_err:
-	return err;
-	
+	return err;*/
 }
 
 /**
