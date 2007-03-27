@@ -23,7 +23,6 @@
 #include "hipconf.h"
 #include "oppipdb.h"
 
-
 extern char *i3_config;
 
 int hipd_init(int flush_ipsec);

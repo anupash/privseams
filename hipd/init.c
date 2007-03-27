@@ -52,14 +52,14 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
-	pid = fork();
+	//pid = fork();
 	
-	if (pid == 0)
-	{
-		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
-		exit(0);
-	}
-	wait(NULL);
+	//if (pid == 0)
+	//{
+	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+	//exit(0);
+	//}
+	//wait(NULL);
 }
 
 /**
@@ -71,6 +71,8 @@ int hipd_init(int flush_ipsec)
 	char str[64];
 	struct sockaddr_un daemon_addr;
 	extern struct addrinfo opendht_serving_gateway;
+
+	hip_init_hostid_db(NULL);
 
 	hip_probe_kernel_modules();
 
@@ -189,6 +191,10 @@ int hipd_init(int flush_ipsec)
 		err = 1;
 		goto out_err;
 	}
+
+#ifndef CONFIG_HIP_PFKEY
+	hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
+#endif
 
 #if 0
 	{
@@ -431,18 +437,13 @@ void hip_close(int signal)
 	terminate++;
 	
 	/* Close SAs with all peers */
-	if (terminate == 1)
-	{
+	if (terminate == 1) {
 		hip_send_close(NULL);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
-	}
-	else if (terminate == 2)
-	{
+	} else if (terminate == 2) {
 		HIP_DEBUG("Send still once this signal to force daemon exit...\n");
-	}
-	else if (terminate > 2)
-	{
+	} else if (terminate > 2) {
 		HIP_DEBUG("Terminating daemon.\n");
 		hip_exit(signal);
 		exit(signal);
