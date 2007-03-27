@@ -24,7 +24,12 @@ libhipgui_a_DATA = logo.png run.png swtool.png newgroup.png newhit.png hipstart.
 
 hipstart_LDFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
 hipstart_CFLAGS = -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
-hipstart_LDADD = ../libhiptool/.libs/libhiptool.a
+hipstart_LDADD = ../libinet6/.libs/libinet6.a
+if HIP_CORPORATE
+  hipstart_LDADD += -lhiptool
+else
+  hipstart_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
 
 #libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
 libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"

@@ -1368,7 +1368,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
+	//HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1772,7 +1772,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
-		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
                 /* if_index = addr2ifindx(entry->local_address); */
 

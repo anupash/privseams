@@ -129,6 +129,29 @@ if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(corporate,
+             AC_HELP_STRING([--enable-corporate],
+                            [HIP corporate extensions (default is NO)]),
+             [ac_cv_use_corporate=$enableval], [ac_cv_use_corporate=no])
+AC_CACHE_CHECK([whether to use corporate extensions],
+               [ac_cv_use_corporate], [ac_cv_use_corporate=no])
+if test x"$ac_cv_use_corporate" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
+
+AC_ARG_ENABLE(pfkey,
+             AC_HELP_STRING([--enable-pfkey],
+                            [HIP pfkey extensions (default is NO)]),
+             [ac_cv_use_pfkey=$enableval], [ac_cv_use_pfkey=no])
+AC_CACHE_CHECK([whether to use pfkey extensions],
+               [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
+if test x"$ac_cv_use_pfkey" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PFKEY, AC_PREREQ(2.53))
+        AM_PROG_LEX
+fi
+AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
+
 AC_ARG_ENABLE(cert,
              AC_HELP_STRING([--enable-cert],
                             [Samu's cert extensions (default is NO)]),
@@ -211,6 +234,7 @@ AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
 AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
 AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
+AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
 AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
 AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
 AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
@@ -231,7 +255,7 @@ AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_PREFIX_DEFAULT("/usr")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
@@ -247,5 +271,6 @@ AC_CONFIG_FILES([ Makefile
                   test/Makefile
                   firewall/Makefile
                   libhipgui/Makefile
-                  agent/Makefile])
+                  agent/Makefile
+		  libipsec/Makefile])
 AC_OUTPUT

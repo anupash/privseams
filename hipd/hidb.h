@@ -14,6 +14,7 @@
 #  include "blind.h"
 #endif
 
+#if 0
 #define HIP_INIT_DB(name,id) \
         struct hip_db_struct name = { LIST_HEAD_INIT(name.db_head), \
         RW_LOCK_UNLOCKED, id, 0}
@@ -33,30 +34,29 @@
 #define HIP_WRITE_UNLOCK_DB(db) do { \
 	write_unlock_irqrestore(&(db)->db_lock,lf); \
         } while(0)
+#else
+#define HIP_INIT_DB(name,id)
+#define HIP_READ_LOCK_DB(db)
+#define HIP_WRITE_LOCK_DB(db)
+#define HIP_READ_UNLOCK_DB(db)
+#define HIP_WRITE_UNLOCK_DB(db)
+#endif
 
-/* should implement with another data structure. 2.6.x will provide
- * ready code, so for now, the linked-list is fine.
- */
-struct hip_db_struct {
-	struct list_head  db_head;
-	rwlock_t          db_lock;
-	char *            db_name;
-	int               db_cnt;
-};
+typedef  HIP_HASHTABLE hip_db_struct_t;
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
 
 struct hip_entry_list {
-	struct list_head list;
+	hip_list_t list;
 	struct in6_addr peer_hit;
 	/* These two _MUST_ be left untouched. Feel free to add more
 	 * to the end */
 };
 
 struct hip_hadb_multi {
-	struct list_head m_head;
+	hip_list_t m_head;
 	void *           m_arg;
 	int              m_type;
 };
@@ -69,12 +69,12 @@ struct hip_hadb_multi {
 #define HIP_HADB_ACCESS_ARGS        (HIP_ARG_HIT | HIP_ARG_SPI)
 
 /* Use this to point your target while accessing a database */
-#define HIP_DB_LOCAL_HID   (&hip_local_hostid_db)
+#define HIP_DB_LOCAL_HID   (hip_local_hostid_db)
 
 /* ... and not this! */
-extern struct hip_db_struct hip_local_hostid_db;
+extern hip_db_struct_t *hip_local_hostid_db;
 
-struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(struct hip_db_struct *db,
+struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
 							       const struct in6_addr *hit,
 							       int algo, int anon);
 int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon);
@@ -82,9 +82,9 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo);
 struct hip_host_id *hip_get_any_localhost_dsa_public_key(void);
 struct hip_host_id *hip_get_any_localhost_rsa_public_key(void);
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hi);
-struct hip_host_id *hip_get_host_id(struct hip_db_struct *db, 
+struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo);
-int hip_add_host_id(struct hip_db_struct *db,
+int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
@@ -104,5 +104,7 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);
+unsigned long hip_hidb_hash(const void *ptr);
+int hip_hidb_match(const void *ptr1, const void *ptr2);
 
 #endif /* _HIP_DB */
