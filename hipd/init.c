@@ -33,14 +33,14 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
-	pid = fork();
+	//pid = fork();
 	
-	if (pid == 0)
-	{
-		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
-		exit(0);
-	}
-	wait(NULL);
+	//if (pid == 0)
+	//{
+	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+	//exit(0);
+	//}
+	//wait(NULL);
 }
 
 /**

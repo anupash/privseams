@@ -909,6 +909,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  /* let the setup routine give us a SPI. */
+	  HIP_DEBUG("******** Blind is ON\n");
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
 			      &spi_in, transform_esp_suite, 
@@ -921,6 +922,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 
 	if (!hip_blind_get_status()) {
+	  HIP_DEBUG("******** Blind is OFF\n");
+	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
+	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	  /* let the setup routine give us a SPI. */
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
@@ -2232,7 +2236,7 @@ int hip_handle_r2(struct hip_common *r2,
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
-		err = hip_add_sa(r2_daddr, r2_saddr,
+	  err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,

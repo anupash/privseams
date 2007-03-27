@@ -1746,9 +1746,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("setting bex addr as preferred address\n");
 			ipv6_addr_copy(&entry->preferred_address, addr);
 			new_addr->seq_update_id = 0;
-		}
-		else
-		{
+		} else {
+			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 		}
@@ -1756,12 +1755,12 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
-	if(is_preferred_addr)
-	{
-		ipv6_addr_copy(&entry->preferred_address,&new_addr->address);
+	if(is_preferred_addr){
+		HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
-	if (new)
-	{
+
+	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
 	}
