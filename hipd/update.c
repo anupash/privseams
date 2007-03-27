@@ -302,7 +302,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
 		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
 		// then the handover to fail.
-		list_del(&list_item->list);
+		list_del(list_item, entry->spis_out);
 		
 	}
 
