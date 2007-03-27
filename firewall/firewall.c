@@ -1,5 +1,5 @@
 /*
- * This code is GPL.
+ * This code is GNU/GPL.
  *
  * Firewall requires: 
  * modprobe ip6_queue
