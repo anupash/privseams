@@ -1,4 +1,14 @@
-#include "beet.h"
+#include "xfrmapi.h"
+
+#ifndef CONFIG_HIP_PFKEY
+
+/* For receiving netlink IPsec events (acquire, expire, etc);
+   thread unfriendly! */
+struct rtnl_handle *hip_xfrmapi_nl_ipsec;
+
+void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
+	hip_xfrmapi_nl_ipsec = nl_ipsec;
+}
 
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
@@ -136,11 +146,11 @@ int hip_xfrm_policy_flush(struct rtnl_handle *rth) {
 }
 
 int hip_flush_all_policy() {
-	return hip_xfrm_policy_flush(&hip_nl_ipsec);
+	return hip_xfrm_policy_flush(hip_xfrmapi_nl_ipsec);
 }
 
 int hip_flush_all_sa() {
-	return hip_xfrm_sa_flush(&hip_nl_ipsec);
+	return hip_xfrm_sa_flush(hip_xfrmapi_nl_ipsec);
 }
 
 /**
@@ -225,8 +235,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	} req;
 
 	HIP_DEBUG("hip_xfrm_state_modify() invoked.\n");
-	HIP_DEBUG("hip_nat_status %d, sport %d, dport %d\n",
-		  hip_nat_status,  sport, dport);
+	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
 	HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
 	
@@ -259,7 +268,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
 			   0, 0, 0,0, AF_INET6), -1);
-	if(req.xsinfo.family == AF_INET && (hip_nat_status || sport || dport))
+	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
@@ -360,7 +369,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	
         /** @todo Fill in information for UDP-NAT SAs. */
-	if(req.xsid.family == AF_INET && (hip_nat_status || sport || dport))
+	if(req.xsid.family == AF_INET && (sport || dport))
 	{
 		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -381,14 +390,15 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
-		   int sport, int dport) {
-
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
+		   int family, int sport, int dport) {
+	// Ignore the dst_addr, because xfrm accepts only one address.
+	// dst_addr is used only in pfkeyapi.c
 	HIP_DEBUG("spi=0x%x\n", spi);
 	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
 
-	hip_xfrm_state_delete(&hip_nl_ipsec, peer_addr, spi, family, sport,
-			      dport);
+	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
+			      sport, dport);
 }
 
 uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
@@ -419,7 +429,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 	HIP_ASSERT(spi);
 
-	HIP_DEBUG("%s SA with spi 0x%x\n", (update ? "updating" : "adding new"), spi);
+	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_DEBUG_HIT("dst_hit", dst_hit);
@@ -429,19 +439,19 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
-	HIP_IFEL((enckey < 0 || authkey_len < 0), -1,
+	HIP_IFEL((enckey < 0 || authkey_len < 0), 1,
 		 "Bad enc or auth key len\n");
 
 	/* XX CHECK: is there some kind of range for the SPIs ? */
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 
-	HIP_IFE(hip_xfrm_state_modify(&hip_nl_ipsec, cmd,
+	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      sport, dport), -1);
+				      sport, dport), 1);
 				      
  out_err:
 	return err;
@@ -458,12 +468,12 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 	/* XX FIXME: remove the proto argument */
 
-	HIP_IFE(hip_xfrm_policy_modify(&hip_nl_ipsec, cmd,
+	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       dst_hit, src_hit,
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, prefix,
 				       AF_INET6), -1);
-	HIP_IFE(hip_xfrm_policy_modify(&hip_nl_ipsec, cmd,
+	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       src_hit, dst_hit,
 				       dst_addr, src_addr,
 				       XFRM_POLICY_OUT, proto, prefix,
@@ -477,10 +487,10 @@ void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 {
 	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
-	hip_xfrm_policy_delete(&hip_nl_ipsec, dst_hit, src_hit, XFRM_POLICY_IN,
-			       proto, prefix, AF_INET6);
-	hip_xfrm_policy_delete(&hip_nl_ipsec, src_hit, dst_hit, XFRM_POLICY_OUT,
-			       proto, prefix, AF_INET6);
+	hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
+			       XFRM_POLICY_IN, proto, prefix, AF_INET6);
+	hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, src_hit, dst_hit,
+			       XFRM_POLICY_OUT, proto, prefix, AF_INET6);
 }
 
 void hip_delete_default_prefix_sp_pair() {
@@ -514,3 +524,5 @@ int hip_setup_default_sp_prefix_pair() {
  out_err:
 	return err;
 }
+
+#endif /* ! CONFIG_HIP_PFKEY */

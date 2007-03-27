@@ -7,6 +7,8 @@
 #ifndef _HIP_STATE
 #define _HIP_STATE
 
+#include "hashtable.h"
+
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
@@ -140,7 +142,8 @@ struct hip_context
 
 struct hip_peer_addr_list_item
 {
-	struct list_head list;
+//	hip_list_t list;
+	unsigned long    hash_key;
 
 	struct in6_addr  address;
 	int              address_state; /* current state of the
@@ -157,7 +160,7 @@ struct hip_peer_addr_list_item
 
 /* for HIT-SPI hashtable only */
 struct hip_hit_spi {
-	struct list_head list;
+//	hip_list_t list;
 	spinlock_t       lock;
 	atomic_t         refcnt;
 	hip_hit_t        hit_our;
@@ -167,7 +170,7 @@ struct hip_hit_spi {
 
 struct hip_spi_in_item
 {
-	struct list_head list;
+//	hip_list_t list;
 	uint32_t         spi;
 	uint32_t         new_spi; /* SPI is changed to this when rekeying */
         /* ifindex if the netdev to which this is related to */
@@ -194,13 +197,13 @@ struct hip_spi_in_item
 
 struct hip_spi_out_item
 {
-	struct list_head list;
+//	hip_list_t list;
 	uint32_t         spi;
 	uint32_t         new_spi;   /* spi is changed to this when rekeying */
 	uint32_t         seq_update_id; /* USELESS, IF SEQ ID WILL BE RELATED TO ADDRESS ITEMS,
 					 * NOT OUTBOUND SPIS *//* the Update ID in SEQ parameter these SPI are related to */
 
-	struct list_head peer_addr_list; /* Peer's IPv6 addresses */
+	HIP_HASHTABLE *peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
 
@@ -209,8 +212,7 @@ struct hip_spi_out_item
 struct hip_host_id_entry {
 	/* this needs to be first (list_for_each_entry, list 
 	   head being of different type) */
-	struct list_head next; 
-
+	//hip_list_t next; 
 	struct hip_lhi lhi;
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
@@ -227,9 +229,15 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
-	struct list_head     next_hit;
-	spinlock_t           lock;
-	atomic_t             refcnt;
+	hip_hit_t            hit_our;
+	/** Peer's HIT. */
+	hip_hit_t            hit_peer;
+	/** @c hit_our XOR @c hit_peer. */
+	//unsigned long        hashkey;
+
+//	hip_list_t    next_hit;
+//	spinlock_t           lock;
+//	atomic_t             refcnt;
 	hip_hastate_t        hastate;
 	int                  state;
 	/** This guarantees that retransmissions work properly also in
@@ -240,15 +248,10 @@ struct hip_hadb_state
 	uint16_t             peer_controls;
 	int                  is_loopback;
 	/** The HIT we use with this host. */
-	hip_hit_t            hit_our;
-	/** Peer's HIT. */
-	hip_hit_t            hit_peer;
-	/** @c hit_our XOR @c hit_peer. */
-	hip_hit_t            hash_key;
 	/** SPIs for inbound SAs, hip_spi_in_item. */
-	struct list_head     spis_in;
+	HIP_HASHTABLE     *spis_in;
 	/** SPIs for outbound SAs, hip_spi_out_item */
-	struct list_head     spis_out;
+	HIP_HASHTABLE     *spis_out;
 	uint32_t             default_spi_out;
 	/** Preferred peer address to use when sending data to peer. */
 	struct in6_addr      preferred_address;
