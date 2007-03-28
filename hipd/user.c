@@ -300,6 +300,22 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	
 #endif
+	case SO_HIP_GET_HITS:
+		hip_msg_init(msg);
+	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/
+		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+		
+		break;
+
+	
+	case HIP_HOST_ID:
+		HIP_DEBUG("Get all ha");
+		/*hip_msg_init(msg);*/
+	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/
+	
+		
+		break;
+	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -313,15 +329,18 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
+	
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;
 		} else {
 			HIP_DEBUG("Response sent ok\n");
+		
 		}
 	} else {
 		HIP_DEBUG("No response sent\n");
 	}
 
+    
 	return err;
 }
