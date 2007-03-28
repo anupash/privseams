@@ -12,13 +12,19 @@ VERSION="$MAJOR.$MINOR"
 RELEASE=1
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
+NAMEGPL=libhiptool
 DEBIAN=i386/DEBIAN
+DEBIANGPL=i386/DEBIAN-hiptool
+CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
 HIPL=$PWD
 PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
+
+PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
+PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-i386.deb"
 
 # copy the tarball from the HIPL directory
 copy_tarball ()
@@ -37,6 +43,33 @@ copy_tarball ()
     done
     
     set +e
+}
+
+# copy GPL files when building corporate packages
+copy_files_gpl()
+{
+	echo "** Copying Debian control files to '$PKGDIRGPL/DEBIAN'"
+	
+	set -e
+	mkdir -p "$PKGDIRGPL/DEBIAN"
+	for f in control changelog copyright postinst prerm;do
+	cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
+	done
+	
+	echo "** Copying binary files to '$PKGDIRGPL'"
+	mkdir -p "$PKGDIRGPL/usr"
+	cd "$PKGDIRGPL"
+	
+	# create directory structure
+	mkdir -p usr/lib
+	cd "$HIPL"
+	
+	for suffix in a so so.0 so.0.0.0;do
+	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
+	done
+	cp -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
+	
+	set +e
 }
 
 # copy files
@@ -72,12 +105,16 @@ copy_files ()
     cp test/hipsetup $PKGDIR/usr/sbin/
     for suffix in a so so.0 so.0.0.0;do
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
-	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+	if [ ! $CORPORATE ];then
+		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+	fi
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
 	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
     cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
-    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+	if [ ! $CORPORATE ];then
+	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+	fi
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
@@ -131,7 +168,7 @@ parse_args() {
     OPTIND=1
     while [ $# -ge  $OPTIND ]
       do
-      getopts abhs N "$@"
+      getopts abchs N "$@"
       
       case $N in
 	    a) TYPE=binary
@@ -141,9 +178,15 @@ parse_args() {
             b) TYPE=binary    
                GIVEN=${GIVEN}+1 ;;
 
+            s) TYPE=source ;;
+
+            # XX FIXME!!!
+	    c) TYPE=binary
+	       GIVEN=${GIVEN}+1
+	       CORPORATE=1 ;;
+
             h) help; exit 0 ;;
 
-            s) TYPE=source ;;
             *) help
                die "bad args" ;;
         esac
@@ -175,6 +218,22 @@ if [ $TYPE = "binary" ];then
 # First compile all programs
     echo "** Compiling user space software"
     echo "**"
+
+	if [ $CORPORATE = 1 ];then
+		echo "** Must do make install for libhiptool to be able to make hipl"
+		echo "** (note: only when compiling libhiptool as dynamically linked)"
+	    echo "** Running make in $HIPL/libhiptool"
+		cd "$HIPL/libhiptool"
+		if ! make;then
+			echo "** Error while running make in $HIPL/libhiptool, exiting"
+			exit 1
+		fi
+		if ! sudo make install;then
+			echo "** Error while running make install in $HIPL/libhiptool, exiting"
+			exit 1
+		fi
+	fi
+
     cd "$HIPL"
 
     echo "** Running make in $HIPL"
@@ -185,10 +244,17 @@ if [ $TYPE = "binary" ];then
     echo "** Compilation was successful"
     echo "**"
 
-    cd "$PKGROOT"
+	cd "$PKGROOT"
     if [ -d "$PKGDIR" ];then
 	if ! rm -rf "$PKGDIR";then
 	    echo "** Error: unable to remove directory '$PKGDIR', exiting"
+	    exit 1
+	fi
+    fi
+	cd "$PKGROOT"
+    if [ -d "$PKGDIRGPL" ];then
+	if ! rm -rf "$PKGDIRGPL";then
+	    echo "** Error: unable to remove directory '$PKGDIRGPL', exiting"
 	    exit 1
 	fi
     fi
@@ -198,13 +264,36 @@ if [ $TYPE = "binary" ];then
 	exit 1
     fi
 
+    if ! mkdir "$PKGDIRGPL";then
+	echo "** Error: unable to create directory '$PKGDIRGPL', exiting"
+	exit 1
+    fi
+
+	cd "$PKGROOT"
     if ! copy_files;then
 	echo "** Error: unable to copy files, exiting"
 	exit 1
     fi
 
-    cd "$PKGROOT"
-    echo "** Creating the Debian package '$PKGNAME'"
+	cd "$PKGROOT"
+	if [ $CORPORATE = 1 ];then
+		if ! copy_files_gpl;then
+		echo "** Error: unable to copy GPL files, exiting"
+		exit 1
+		fi
+	fi
+
+	cd "$PKGROOT"
+	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+	echo "** Successfully finished building the binary GPL Debian package"
+	else
+	echo "** Error!"
+	echo "** Error: Unable to build the binary GPL Debian package!"
+	echo "** Error!"
+	fi
+
+	cd "$PKGROOT"
+	echo "** Creating the Debian package '$PKGNAME'"
     if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
 	echo "** Successfully finished building the binary Debian package"
 	echo "** The debian packages is located in $PKGROOT/$PKGNAME"

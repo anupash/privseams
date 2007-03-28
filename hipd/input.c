@@ -1368,7 +1368,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 	/* Since the entry is in the hit-list and since the previous function
 	   increments by one, we must have at least 2 references. */
-	HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
+	//HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
 	/* I hope wmb() takes care of the locking needs */
 	//wmb();
@@ -1772,7 +1772,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
-		memcpy(SA2IP(addr), &entry->local_address, SAIPLEN(addr));
+		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
                 /* if_index = addr2ifindx(entry->local_address); */
 
@@ -2575,7 +2575,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			if(rva->client_udp_port == 0 &&
 			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
 				HIP_IFE(hip_rvs_reply_with_notify(
-						i1, i1_saddr, rva, i1_info),
+						i1, i1_saddr, rva, i1_info,
+						HIP_PARAM_VIA_RVS_NAT),
 					-ECOMM);
 			}
 			/* Case 2. */
@@ -2586,7 +2587,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 						i1_info),
 					-ECOMM);
 				HIP_IFE(hip_rvs_reply_with_notify(
-						i1, i1_saddr, rva, i1_info),
+						i1, i1_saddr, rva, i1_info,
+						HIP_PARAM_FROM_NAT),
 					-ECOMM);
 			}
 			/* Case 3. */
@@ -2780,7 +2782,7 @@ int hip_handle_notify(const struct hip_common *notify,
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_notification *notification = NULL;
 	struct in6_addr responder_ip, responder_hit;
-	hip_tlv_type_t param_type = 0;
+	hip_tlv_type_t param_type = 0, response;
 	hip_tlv_len_t param_len = 0;
 	uint16_t msgtype = 0;
 	in_port_t port = 0;
@@ -2863,7 +2865,9 @@ int hip_handle_notify(const struct hip_common *notify,
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "I2_ACKNOWLEDGEMENT.\n");
 				break;
-			case HIP_NTF_RVS_NAT:
+			case HIP_PARAM_VIA_RVS_NAT:
+			case HIP_PARAM_FROM_NAT:
+				response = ((msgtype == HIP_PARAM_VIA_RVS_NAT) ? HIP_I1 : HIP_NOTIFY);
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "RVS_NAT.\n");
 				
@@ -2890,7 +2894,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				memset(&i1, 0, sizeof(i1));
 
 				entry->hadb_misc_func->
-					hip_build_network_hdr(&i1, HIP_I1,
+					hip_build_network_hdr(&i1,
+							      response,
 							      entry->local_controls,
 							      &entry->hit_our,
 							      &entry->hit_peer);
@@ -2898,7 +2903,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				/* Calculate the HIP header length */
 				hip_calc_hdr_len(&i1);
 				
-				sleep(3);
+				//sleep(3);
 
 				/* This I1 packet must be send only once, which
 				   is why we use NULL entry for sending. */

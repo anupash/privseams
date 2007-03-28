@@ -23,9 +23,9 @@
 typedef enum { HIP_SERVICE_ACTIVE=0, HIP_SERVICE_INACTIVE=2 } hip_servicestate_t;
 
 struct hip_reg_service {
-	struct list_head   list;
-	int	 	   service_type;
+  //hip_list_t   list;
 	char 		   name[20];
+	int	 	   service_type;
 	hip_servicestate_t state;
 
 	/** @todo Authorization data */

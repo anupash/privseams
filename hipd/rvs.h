@@ -40,7 +40,7 @@ typedef struct hip_rendezvous_association
 	/** A linked list head.
 	    @todo Version 1.0 author can(?) explain what is the function
 	    of this.*/
-	struct list_head      list_hit;
+	hip_list_t      list_hit;
 	/** Reference count of this rendezvous association. */
 	atomic_t              refcnt;
 	/** Spinlock. */
@@ -78,7 +78,7 @@ int hip_rvs_relay_i1(const struct hip_common*, const struct in6_addr*,
 		     const hip_portpair_t*);
 int hip_rvs_reply_with_notify(const struct hip_common *,
 			      struct in6_addr *, hip_rva_t *,
-			      const hip_portpair_t *);
+			      const hip_portpair_t *, uint16_t);
 hip_rva_t *hip_rvs_ha2rva(hip_ha_t *, hip_xmit_func_t);
 hip_rva_t *hip_rvs_allocate(int);
 hip_rva_t *hip_rvs_get(struct in6_addr*);

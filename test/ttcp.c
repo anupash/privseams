@@ -78,6 +78,7 @@ static char RCSid[] = "ttcp.c $Revision: 1.1 $";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "misc.h"
 
 struct sockaddr_storage frominet;
 struct addrinfo hints, *res, *res0;
@@ -117,13 +118,6 @@ extern int errno;
 extern int optind;
 extern char *optarg;
 
-
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
 char Usage[] =
 "Usage: ttcp -t [-options] host [ < in ]\n"
@@ -417,8 +411,8 @@ main(int argc, char **argv)
 			if (!(res->ai_family == AF_INET ||
 			      res->ai_family == AF_INET6))
 				err("wildcard");
-			memcpy(SA2IP(res->ai_addr), &any,
-			       SAIPLEN(res->ai_addr));
+			memcpy(hip_cast_sa_addr(hip_cast_sa_addr), &any,
+			       hip_sa_addr_len(res->ai_addr));
 		}
 
 		if (bind(fd, res->ai_addr, res->ai_addrlen) < 0)
