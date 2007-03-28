@@ -14,6 +14,7 @@
 #  include "sys/un.h"
 #  include "protodefs.h"
 #  include "stdlib.h"
+#  include "list.h"
 #endif
 
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
@@ -43,15 +44,14 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 	return (hit_begin == HIP_HIT_PREFIX);
 }
 
-struct hip_opp_blocking_request_entry {
-  struct list_head     	next_entry;
+struct hip_opp_blocking_request_entry
+{
+  hip_hit_t             our_real_hit;
+  hip_hit_t             peer_real_hit;
   spinlock_t           	lock;
   atomic_t             	refcnt;
 
   time_t                creation_time;
-  struct in6_addr      	hash_key;       /* hit_our XOR hit_peer */
-  hip_hit_t             our_real_hit;
-  hip_hit_t             peer_real_hit;
   struct in6_addr       peer_ip;
   struct in6_addr       our_ip;
   struct sockaddr_un    caller;
@@ -126,13 +126,6 @@ static inline void set_hit_prefix(struct in6_addr *hit)
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
          && IS_LSI32(((__const uint32_t *) (a))[3]))        
-
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))

@@ -2027,7 +2027,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 		/* Remove whitespace */
 		c = line;
-		while (c == ' ' || c == '\t')
+		while (*c == ' ' || *c == '\t')
 			c++;
 
 		/* Line is a comment or empty */
@@ -2101,7 +2101,7 @@ int hip_conf_handle_hi_get(struct hip_common *msg, int action,
 		tmp = tmp->next;
 	}
 
-	HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+	_HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
  	 	
 out_err:
 	if (at)

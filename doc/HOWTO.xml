@@ -170,31 +170,71 @@
             [*] Prompt for development and/or incomplete code/drivers
     </para></listitem>
     <listitem><para>
-            Processor type and features
-    </para></listitem>
-    <listitem><para>
-            Device Drivers ---&gt; Networking support ---&gt; Networking options
+            Networking support ---&gt; Networking options
     </para></listitem>
     <listitem><para>
             [*] TCP/IP networking
     </para></listitem>
     <listitem><para>
+            &lt;M&gt; Packet socket
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPsec user configuration interface
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; PF_KEY sockets
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP tunneling
+    </para></listitem>
+    <listitem><para>
             [*] The IPv6 protocol (EXPERIMENTAL)
+    </para></listitem>
+    <listitem><para>
             [*] IPv4: IPsec BEET mode (2.6.19 and above)
+    </para></listitem>
+    <listitem><para>
             [*] IPv6: IPsec BEET mode (2.6.19 and above)
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP: ESP transform (kernel versions below 2.6.19)
+    </para></listitem>
+    <listitem><para>
+            [*] The IPv6 Protocol
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: ESP transformation (kernel versions below 2.6.19)
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            Cryptographic options
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Null algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; SHA1 digest algorithm
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; DES and Triple DES EDE cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms (i586)
+    </para></listitem>
+    <listitem><para>
+            Device Drivers ---&gt; Network device support
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Dummy network device support
     </para></listitem>
     </itemizedlist>
     <para>
-      IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
-      dependencies after you have selected HIP. We recommend that you
-      compile HIP as a kernel module, and the IPv6 support as built-in.
-    </para>
-    <para>
       The hipd tries to probe the necessary kernel modules automatically,
-      However, should this fail, you should make sure that you have
-      configured your /etc/modules accordingly. Insert "xfrm6_tunnel", 
-      "xfrm4_tunnel", "xfrm_user", "dummy", "esp6", "esp4", "ipv6", 
-      "aes", "crypto_null", and "des" to your /etc/modules.
     </para>
   </chapter>
   <chapter>

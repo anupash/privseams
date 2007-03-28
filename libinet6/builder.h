@@ -165,6 +165,10 @@ void hip_set_param_spi_value(struct hip_esp_info *, uint32_t);
 void hip_set_param_type(void *, hip_tlv_type_t);
 int hip_write_hmac(int, void *, void *, int, void *);
 void hip_zero_msg_checksum(struct hip_common *);
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
+int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
 
 
 

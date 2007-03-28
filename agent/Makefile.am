@@ -22,7 +22,14 @@ hipagent_SOURCES = agent_gtk.c agent_tools.c connhipd.c hit_db.c gui_interface.c
 # Somewhy @GTK_LIBS@ must be includec here, not enough that its in libhipgui
 # Makefile.am... Fix someday?
 #hipagent_LDADD += ../libhiptool/.libs/libhiptool.a @GTK_LIBS@
-hipagent_LDADD = ../libhipgui/libhipgui.a ../libinet6/.libs/libinet6.a ../libhiptool/.libs/libhiptool.a
+
+hipagent_LDADD = ../libhipgui/libhipgui.a ../libinet6/.libs/libinet6.a
+if HIP_CORPORATE
+  hipagent_LDADD += -lhiptool
+else
+  hipagent_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
 if HIP_OPENDHT
   hipagent_LDADD += ../opendht/.libs/libhipopendht.a
 endif
