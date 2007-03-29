@@ -311,6 +311,8 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		  (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
 		  ?
 		  1 : 0;
+
+	/*  lhi.algo = eid_endpoint.algo;*/
 	  
 	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
 					 host_identity, 
@@ -744,6 +746,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	{
 		tmp = list_entry(curr);
 		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
+		/*HIP_DEBUG_HIT("ALL HITS", &tmp->lhi.hit);*/
 
 		err = func(tmp, opaque);
 		if (err) break;

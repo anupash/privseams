@@ -1221,6 +1221,7 @@ int hip_build_param_contents(struct hip_common *msg,
 				       contents);
 }
 
+
 /**
  * Appends a complete parameter into a HIP message.
  * 
@@ -1255,7 +1256,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 	}
 
 	err = hip_build_param_contents(msg, contents,
-				       hip_get_param_type(tlv_common),
+		       hip_get_param_type(tlv_common),
 				       hip_get_param_contents_len(tlv_common));
 	if (err) {
 		HIP_ERROR("could not build contents (%d)\n", err);
@@ -2782,6 +2783,7 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 		hip_get_param_total_len(&endpoint_hdr->id.host_id) -
 		sizeof(struct hip_host_id);
 	endpoint_hdr->flags = endpoint_flags;
+	endpoint_hdr->algo = host_id_algo;
 	_HIP_DEBUG("%d %d %d\n",
 		  sizeof(struct endpoint_hip),
 		  hip_get_param_total_len(&endpoint_hdr->id.host_id),
@@ -2865,6 +2867,25 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
 	_HIP_DEBUG("err=%d\n", err);
+	return err;
+}
+
+
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg)
+{
+	struct endpoint_hip endpoint;
+	int err = 0;
+
+	endpoint.family = PF_HIP;	
+	endpoint.length = sizeof(struct endpoint_hip); 	
+	endpoint.flags = HIP_ENDPOINT_FLAG_HIT;	
+	endpoint.algo= entry->lhi.algo;
+	endpoint.algo=hip_get_host_id_algo(entry->host_id);
+	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
+		
+	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
+
+  out_err:
 	return err;
 }
 
