@@ -1251,11 +1251,10 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 {
 	int err;
 	int charnum = 0;  
-	int socket = 0;
 	char *error = NULL;
 	
 	// XX TODO: see hip_get_pktinfo_addr
-	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
+	charnum = dl_function_ptr.recvmsg_dlsym(s, msg, flags);
 	
 	_HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n",
 		  charnum);
