@@ -41,7 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
-"get hi default\n"
+"get hi default|all\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
         "set blind on|off\n"
@@ -113,6 +113,7 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
         else if (!strcmp("dht", text))
                 ret = ACTION_DHT;
+	
 	return ret;
 }
 
@@ -156,6 +157,11 @@ int hip_conf_check_action_argc(int action) {
         case ACTION_DHT:
                 count=2;
                 break;
+
+	case ACTION_HA:
+                count=2;
+                break;
+
 	}
 
 	return count;
@@ -188,6 +194,8 @@ int hip_conf_get_type(char *text) {
 		ret = TYPE_SERVICE;	
 	else if (!strcmp("normal", text))
 		ret = TYPE_RUN;
+	else if (!strcmp("ha", text))
+		ret = TYPE_HA;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
@@ -228,6 +236,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_RUN:
 	case ACTION_LOAD:
         case ACTION_DHT:
+	case ACTION_HA:
                 type_arg = 2;
                 break;
         }
@@ -653,6 +662,10 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
 		msg_type = SO_HIP_CONF_PUZZLE_GET;
 		err = -1; /* Not supported yet */
 		break;
+	/*case ACTION_HA:
+		msg_type = SO_HIP_CONF_GET_HA;
+		err = -1;
+		break;*/
 	default:
 		err = -1;
 	}
@@ -1014,11 +1027,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	long int action, type;
 	struct hip_common *msg = NULL;
 	char *text;
-
-	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
 	
-	/* parse args */
+       	/* parse args */
 
 	HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
 		 argv[0], hipconf_usage);
@@ -1041,8 +1051,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	/* allocated space for return value and call hipd */
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_msg_init(msg);
-
+	hip_get_all_hits(msg,argv[3]);
+	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
         err = (*action_handler[type])(msg, action, (const char **) &argv[3],
@@ -1056,7 +1066,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	/* send msg to hipd */
 	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
 		 "sending msg failed\n");
-
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
@@ -1064,6 +1073,55 @@ out_err:
 		free(msg);
 	
 	return err;
+}
+
+int hip_get_all_hits(struct hip_common *msg,char *argv)
+{	
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip *endp=NULL;
+	int err=0;
+	
+	if ((strcmp(argv,"all")==0) || (strcmp(argv,"default")==0)){
+
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+		hip_send_recv_daemon_info(msg);
+		
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+	
+		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+
+	if (strcmp(argv, "all")==0){
+		HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+		HIP_DEBUG_HIT("hi is ", &endp->id.hit);
+
+	}else if ((strcmp(argv, "default")==0) && (endp->algo==HIP_HI_RSA)) {
+		HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
+		}
+			
+	}
+
+	}else {
+	 
+		HIP_DEBUG("Invalid argument\n");
+	}
+	memset(msg, 0, HIP_MAX_PACKET);	
+
+   out_err:
+	return err;
+	
+}
+
+
+int hip_get_all_host_id(struct hip_common *msg,int action,const char *opt[],int optc)
+{	
+	
+	/*struct hip_tlv_common *current_param = NULL;
+	int err=0;
+
+	HIP_IFEL(hip_build_user_hdr(msg, HIP_HOST_ID,0),-1, "Failed to fetch host id");
+	
+   out_err:
+	return err;*/
 }
 
 /**

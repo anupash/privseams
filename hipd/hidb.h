@@ -107,4 +107,6 @@ int hip_hidb_hit_is_our(const hip_hit_t *src);
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
 
+int hip_for_all_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), void *opaque);
+
 #endif /* _HIP_DB */

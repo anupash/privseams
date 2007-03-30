@@ -306,8 +306,8 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		if (fork() > 0) return(0);
 		hip_set_logtype(LOGTYPE_SYSLOG);
+		if (fork() > 0) return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());

@@ -521,7 +521,8 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 int hip_rvs_reply_with_notify(const struct hip_common *i1,
 			      struct in6_addr *i1_saddr,
 			      hip_rva_t *rva,
-			      const hip_portpair_t *i1_info)
+			      const hip_portpair_t *i1_info,
+			      uint16_t param_type)
 {
 	int err = 0; 
 	struct hip_common *notify = NULL;
@@ -550,7 +551,7 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 	memcpy(data, &(rva->client_udp_port), sizeof(rva->client_udp_port));
 	data -= sizeof((i1->hitr)) + sizeof(responder_ip);
 	
-	hip_build_param_notification(notify, HIP_NTF_RVS_NAT, data, data_len); 
+	hip_build_param_notification(notify, param_type, data, data_len); 
 	
 	HIP_IFEL(hip_send_udp(NULL, i1_saddr, HIP_NAT_UDP_PORT,
 			      i1_info->src_port, notify,
