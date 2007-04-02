@@ -25,9 +25,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0;
+	int err = 0, msg_type, n = 0, len = 0,state=0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
+	
 	int send_response = (src && src->sun_family == AF_FILE);
 
 	HIP_DEBUG("handling user msg: family=%d sender=%s\n",
@@ -301,19 +302,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 	
 #endif
 	case SO_HIP_GET_HITS:
+		
 		hip_msg_init(msg);
-	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		
 		break;
 
 	
-	case HIP_HOST_ID:
-		HIP_DEBUG("Get all ha");
-		/*hip_msg_init(msg);*/
-	/*	hip_build_user_hdr(msg, SO_HIP_GET_HITS,0);*/
-	
-		
+	case SO_HIP_HOST_ID:
+				
+		HIP_DEBUG("Get all ha\n");
+		err =hip_for_each_ha(hip_host_id_hits,msg);
 		break;
 	
 	default:
