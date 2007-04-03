@@ -1135,11 +1135,10 @@ int hip_get_all_host_id(struct hip_common *msg,char *argv)
 	hip_send_recv_daemon_info(msg);
 	
 	while((current_param = (hip_ha_t *) hip_get_next_param(msg, current_param)) != NULL) {
-	
-		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
-		HIP_DEBUG_HIT("peer hit is\n",&current_param->hit_peer);
-		HIP_DEBUG_HIT("our hit is\n",&current_param->hit_our);
-		
+		HIP_DEBUG("--- Host association is in %s state ---\n",
+			  hip_state_str(current_param->state));
+		HIP_DEBUG_HIT("local hit",&current_param->hit_our);
+		HIP_DEBUG_HIT("peer  hit",&current_param->hit_peer);
 	}
 	
    out_err:
