@@ -1028,11 +1028,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	struct hip_common *msg = NULL;
 	char *text;
 	
-	
-	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
-	
-	/* parse args */
+       	/* parse args */
 
 	HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
 		 argv[0], hipconf_usage);

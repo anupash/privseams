@@ -173,7 +173,6 @@
 #define HIP_NTF_BLOCKED_BY_POLICY                   42
 #define HIP_NTF_SERVER_BUSY_PLEASE_RETRY            44
 #define HIP_NTF_I2_ACKNOWLEDGEMENT                  46
-#define HIP_NTF_RVS_NAT                             47
 /* @} */
 
 #define HIP_HIP_RESERVED                0
