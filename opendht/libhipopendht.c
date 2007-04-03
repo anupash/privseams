@@ -31,7 +31,7 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("Socket");
+        HIP_PERROR("OpenDHT socket:");
 
     return(sockfd);      
 }
@@ -55,15 +55,15 @@ int resolve_dht_gateway_info(char * gateway_name,
     hints.ai_flags = AI_NODHT;
     error = 0;
 
-    error = getaddrinfo(gateway_name, "5851", &hints, &res);
+    // error = getaddrinfo(gateway_name, "5851", &hints, &res);
+    error = getaddrinfo(gateway_name, NULL, &hints, &res);
     if (error != 0)
-        HIP_DEBUG("Resolving failed\n");
+        HIP_DEBUG("OpenDHT gateway resolving failed\n");
     else
     {
         memcpy(gateway, res, sizeof(struct addrinfo));
         struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
-        HIP_DEBUG("OpenDHT gateway port=%d IPv4/%s\n", 
-                  ntohs(sa->sin_port), inet_ntoa(sa->sin_addr));
+        HIP_DEBUG("OpenDHT gateway IPv4/%s\n", inet_ntoa(sa->sin_addr));
     }
     return(error);
 }
@@ -79,13 +79,13 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
     struct sockaddr_in *sa;
     if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
     {
-        HIP_PERROR("Connect");
+        HIP_PERROR("OpenDHT connect:");
         ret = -1;
     }
     else
     {
       sa = (struct sockaddr_in *)gateway->ai_addr;
-      HIP_DEBUG("Connected to gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+      HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
     }
     return(ret);
 } 
