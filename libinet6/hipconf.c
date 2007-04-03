@@ -41,7 +41,8 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
-"get hi default\n"
+"get hi default|all\n"
+"get ha all\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
         "set blind on|off\n"
