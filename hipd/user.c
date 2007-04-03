@@ -305,13 +305,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
-		
 		break;
 
 	
 	case SO_HIP_HOST_ID:
-				
-		HIP_DEBUG("Get all ha\n");
 		err =hip_for_each_ha(hip_host_id_hits,msg);
 		break;
 	

@@ -2893,8 +2893,7 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg)
 {
 	
-	struct endpoint_hip endpoint;
-	int err = 0,state=0;
+	int err = 0;
     	hip_ha_t hid;
 	
 	hid.state = entry->state;

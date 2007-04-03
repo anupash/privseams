@@ -144,6 +144,6 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_get_all_host_id(struct hip_common *msg,char *argv);
+int hip_conf_handle_ha(struct hip_common *msg,char *argv);
 
 #endif /* HIPCONF */

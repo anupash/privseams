@@ -79,7 +79,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
-	hip_get_all_host_id,
+	hip_conf_handle_ha,
 	NULL, /* run */
 };
 
@@ -1123,7 +1123,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 }
 
 
-int hip_get_all_host_id(struct hip_common *msg,char *argv)
+int hip_conf_handle_ha(struct hip_common *msg,char *argv)
 {	
 	
 	hip_ha_t *current_param = NULL;
