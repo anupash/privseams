@@ -351,6 +351,15 @@ struct hip_hadb_state
 	int hip_opp_fallback_disable; 
 };
 
+/** A data structure defining host association information that is sent
+    to the userspace */
+struct hip_hadb_user_info_state
+{
+	hip_hit_t            hit_our;
+	hip_hit_t            hit_peer;
+	int                  state;
+};
+
 /** @addtogroup hadb_func
  * @{
  */

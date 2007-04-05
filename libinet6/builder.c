@@ -2889,28 +2889,6 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 	return err;
 }
 
-
-int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg)
-{
-	
-	struct endpoint_hip endpoint;
-	int err = 0,state=0;
-    	hip_ha_t hid;
-	
-	hid.state = entry->state;
-    	hid.hit_our = entry->hit_our;
-	hid.hit_peer = entry->hit_peer;
-		
-	hip_build_param(msg,&hid);
- 	
- 	
-    out_err:
-	return err;
-
-}
-
-
-
 int hip_build_param_eid_iface(struct hip_common *msg,
 			      hip_eid_iface_type_t if_index)
 {
