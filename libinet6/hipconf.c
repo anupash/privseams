@@ -41,8 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
-"get hi default|all\n"
-"get ha all\n"
+"get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
         "set blind on|off\n"
@@ -55,6 +54,8 @@ const char *hipconf_usage =
 "dht get <fqdn/hit>\n"
 #endif 
 ;
+char *strarg[];
+
 
 /** Function pointer array containing pointers to handler functions.
  *  @note Keep the elements in the same order as the @c TYPE values are defined
@@ -79,7 +80,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
-	hip_conf_handle_ha,
+	hip_get_all_host_id,
 	NULL, /* run */
 };
 
@@ -1024,12 +1025,16 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 }
 
 int hip_do_hipconf(int argc, char *argv[], int send_only) {
-	int err = 0, type_arg;
-	long int action, type;
+	int err = 0, type_arg,i;
+	long int action, type,hiparg;
 	struct hip_common *msg = NULL;
 	char *text;
 	
-       	/* parse args */
+
+	/* we don't want log messages via syslog */
+	hip_set_logtype(LOGTYPE_STDERR);
+	
+	/* parse args */
 
 	HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
 		 argv[0], hipconf_usage);
@@ -1046,15 +1051,16 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Could not parse type\n");
 
 	type = hip_conf_get_type(argv[type_arg]);
-	
-	/*if (type==18){
-		hip_get_all_host_id(msg,argv);
-	}*/
-
+	hiparg=argc;
+	for (i=0;i<argc;i++)
+	{
+		strarg[i]=argv[i];
+		
+	}
 	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 		 "Invalid type argument '%s'\n", argv[type_arg]);
 	
-
+	
 	/* allocated space for return value and call hipd */
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
@@ -1091,6 +1097,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	hip_ha_t *hit;
 	int err=0,state=0;
 	
+		
 	if (strcmp(argv[2],"hi")==0)
 
 	if ((strcmp(argv[3],"all")==0) || (strcmp(argv[3],"default")==0) && (strcmp(argv[2],"hi")==0)){
@@ -1115,36 +1122,57 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	 
 		HIP_DEBUG("Invalid argument\n");
 	}
-	/*memset(msg, 0, HIP_MAX_PACKET);	*/
-
+	
    out_err:
 	return err;
 	
 }
 
 
-int hip_conf_handle_ha(struct hip_common *msg,char *argv)
+int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], int optc)
 {	
 	
 	hip_ha_t *current_param = NULL;
-	struct endpoint_hip *endp=NULL;
-	int err=0,state;
+	int err=0,state,ret;
+	struct in6_addr arg1;
+	struct in6_addr hit1;
 
-	HIP_DEBUG("hip get all host id called\n");
+	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_build_user_hdr(msg, SO_HIP_HOST_ID,0);
 	hip_send_recv_daemon_info(msg);
 	
 	while((current_param = (hip_ha_t *) hip_get_next_param(msg, current_param)) != NULL) {
-		HIP_DEBUG("--- Host association is in %s state ---\n",
-			  hip_state_str(current_param->state));
-		HIP_DEBUG_HIT("local hit",&current_param->hit_our);
-		HIP_DEBUG_HIT("peer  hit",&current_param->hit_peer);
+	
+	if (((opt[0] !='\0') && (opt[1] !=  '\0')) && (strcmp(strarg[3],"all") !=0))
+	{	
+		ret = inet_pton(AF_INET6,opt[0], &arg1);
+		HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), err = -1, "not a valid address family\n");
+        	
+		ret = inet_pton(AF_INET6,opt[1], &hit1);
+		HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), err = -1, "not a valid address family\n");
+        	
+	if ((ipv6_addr_cmp(&arg1,&current_param->hit_our)==0) ||  (ipv6_addr_cmp(&hit1,&current_param->hit_our)==0))
+	{
+		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
+		HIP_DEBUG_HIT("hit is\n",&current_param->hit_our);
+	}
+
+	}
+		
+	if (strcmp(strarg[3],"all")==0) {
+		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
+		HIP_DEBUG_HIT("peer hit is\n",&current_param->hit_peer);
+		HIP_DEBUG_HIT("our hit is\n",&current_param->hit_our);
+	
+	} 
+	
 	}
 	
    out_err:
 	return err;
 }
+
 
 /**
  * Handles the hipconf commands where the type is @c run. Execute new

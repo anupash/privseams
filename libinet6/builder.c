@@ -2895,11 +2895,11 @@ int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg)
 	
 	int err = 0;
     	hip_ha_t hid;
-	
+
 	hid.state = entry->state;
     	hid.hit_our = entry->hit_our;
 	hid.hit_peer = entry->hit_peer;
-		
+			
 	hip_build_param(msg,&hid);
  	
  	
