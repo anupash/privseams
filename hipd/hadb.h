@@ -277,5 +277,6 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit);
 
+int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 
 #endif /* HIP_HADB_H */
