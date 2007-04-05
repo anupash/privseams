@@ -1134,8 +1134,7 @@ int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], in
 	
 	hip_ha_t *current_param = NULL;
 	int err=0,state,ret;
-	struct in6_addr arg1;
-	struct in6_addr hit1;
+	struct in6_addr arg1,hit1;
 
 	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
