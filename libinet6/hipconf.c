@@ -54,8 +54,6 @@ const char *hipconf_usage =
 "dht get <fqdn/hit>\n"
 #endif 
 ;
-char *strarg[];
-
 
 /** Function pointer array containing pointers to handler functions.
  *  @note Keep the elements in the same order as the @c TYPE values are defined
@@ -1051,12 +1049,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Could not parse type\n");
 
 	type = hip_conf_get_type(argv[type_arg]);
-	hiparg=argc;
-	for (i=0;i<argc;i++)
-	{
-		strarg[i]=argv[i];
-		
-	}
+	
 	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 		 "Invalid type argument '%s'\n", argv[type_arg]);
 	
@@ -1135,7 +1128,6 @@ int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], in
 	hip_ha_t *current_param = NULL;
 	int err=0,state,ret;
 	struct in6_addr arg1,hit1;
-
 	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_build_user_hdr(msg, SO_HIP_HOST_ID,0);
@@ -1143,7 +1135,7 @@ int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], in
 	
 	while((current_param = (hip_ha_t *) hip_get_next_param(msg, current_param)) != NULL) {
 	
-	if (((opt[0] !='\0') && (opt[1] !=  '\0')) && (strcmp(strarg[3],"all") !=0))
+	if (((opt[0] !='\0') && (opt[1] !=  '\0')) && (strcmp("all",opt[0]) !=0))
 	{	
 		ret = inet_pton(AF_INET6,opt[0], &arg1);
 		HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), err = -1, "not a valid address family\n");
@@ -1159,7 +1151,7 @@ int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], in
 
 	}
 		
-	if (strcmp(strarg[3],"all")==0) {
+	if (!strcmp("all",opt[0])) {
 		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
 		HIP_DEBUG_HIT("peer hit is\n",&current_param->hit_peer);
 		HIP_DEBUG_HIT("our hit is\n",&current_param->hit_our);
