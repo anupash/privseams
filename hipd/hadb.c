@@ -2653,6 +2653,27 @@ int hip_count_open_connections(void)
 	return n;
 }
 
+int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
+{
+	
+	int err = 0;
+    	struct hip_hadb_user_info_state hid;
+
+	memset(&hid, 0, sizeof(hid));
+	hid.state = entry->state;
+    	hid.hit_our = entry->hit_our;
+	hid.hit_peer = entry->hit_peer;
+			
+	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
+				       sizeof(hid));
+	if (err)
+		HIP_ERROR("Building ha info failed\n");
+  	
+    out_err:
+	return err;
+
+}
+
 #ifdef CONFIG_HIP_RVS
 
 /**

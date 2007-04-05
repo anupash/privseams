@@ -306,10 +306,11 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
-
 	
-	case SO_HIP_HOST_ID:
-		err =hip_for_each_ha(hip_host_id_hits,msg);
+	case SO_HIP_GET_HA_INFO:
+		hip_msg_init(msg);
+		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
+		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	
 	default:

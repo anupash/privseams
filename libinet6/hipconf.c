@@ -78,7 +78,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
-	hip_get_all_host_id,
+	hip_conf_handle_ha,
 	NULL, /* run */
 };
 
@@ -1098,21 +1098,19 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
 		hip_send_recv_daemon_info(msg);
 		
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-	
-		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-	if (strcmp(argv[3], "all")==0){
-		HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-		HIP_DEBUG_HIT("hi is ", &endp->id.hit);
-
-	}else if ((strcmp(argv[3], "default")==0) && (endp->algo==HIP_HI_RSA)) {
-		HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
-		}
+		while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 			
-	}
-
-	}else {
-	 
+			endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+			if (strcmp(argv[3], "all")==0){
+				HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+				HIP_DEBUG_HIT("hi is ", &endp->id.hit);
+				
+			} else if ((strcmp(argv[3], "default")==0) && (endp->algo==HIP_HI_RSA)) {
+				HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
+			}
+			
+		}
+	} else {
 		HIP_DEBUG("Invalid argument\n");
 	}
 	
@@ -1122,42 +1120,50 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 }
 
 
-int hip_get_all_host_id(struct hip_common *msg, int action,const char *opt[], int optc)
-{	
+int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc)
+{
 	
-	hip_ha_t *current_param = NULL;
-	int err=0,state,ret;
-	struct in6_addr arg1,hit1;
-	
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_build_user_hdr(msg, SO_HIP_HOST_ID,0);
-	hip_send_recv_daemon_info(msg);
-	
-	while((current_param = (hip_ha_t *) hip_get_next_param(msg, current_param)) != NULL) {
-	
-	if (((opt[0] !='\0') && (opt[1] !=  '\0')) && (strcmp("all",opt[0]) !=0))
-	{	
-		ret = inet_pton(AF_INET6,opt[0], &arg1);
-		HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), err = -1, "not a valid address family\n");
-        	
-		ret = inet_pton(AF_INET6,opt[1], &hit1);
-		HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), err = -1, "not a valid address family\n");
-        	
-	if ((ipv6_addr_cmp(&arg1,&current_param->hit_our)==0) ||  (ipv6_addr_cmp(&hit1,&current_param->hit_our)==0))
-	{
-		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
-		HIP_DEBUG_HIT("hit is\n",&current_param->hit_our);
-	}
+	struct hip_tlv_common *current_param = NULL;
+	int err = 0, state, ret;
+	struct in6_addr arg1, hit1;
 
-	}
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+		 "Building of daemon header failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+	
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		struct hip_hadb_user_info_state *ha =
+			hip_get_param_contents_direct(current_param);
+
+		if (!strcmp("all", opt[0])) {
+			HIP_DEBUG("HA is %s\n", hip_state_str(ha->state));
+			HIP_DEBUG_HIT("local hit is", &ha->hit_our);
+			HIP_DEBUG_HIT("peer  hit is", &ha->hit_peer);
+			
+		} 
+
+		if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
+		    (strcmp("all",opt[0]) !=0))
+		{	
+			ret = inet_pton(AF_INET6,opt[0], &arg1);
+			HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+			
+			ret = inet_pton(AF_INET6,opt[1], &hit1);
+			HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+			
+			if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
+			{
+				HIP_DEBUG("HA is in %s state\n", hip_state_str(ha->state));
+				HIP_DEBUG_HIT("hit is", &ha->hit_our);
+			}
+			
+		}
 		
-	if (!strcmp("all",opt[0])) {
-		HIP_DEBUG("HA is %s\n",hip_state_str(current_param->state));
-		HIP_DEBUG_HIT("peer hit is\n",&current_param->hit_peer);
-		HIP_DEBUG_HIT("our hit is\n",&current_param->hit_our);
-	
-	} 
-	
+		HIP_DEBUG("\n");
 	}
 	
    out_err:
