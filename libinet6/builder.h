@@ -40,9 +40,14 @@ void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
                             uint8_t, unsigned int);
 void hip_build_endpoint(struct endpoint_hip *, const struct endpoint_hip *,
                         const char *, const unsigned char *, unsigned int);
+
 int hip_build_netlink_dummy_header(struct hip_common *);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
+
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg);
+
+int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
 
 /**
  * @addtogroup hip_param_func
@@ -163,5 +168,11 @@ void hip_set_param_spi_value(struct hip_esp_info *, uint32_t);
 void hip_set_param_type(void *, hip_tlv_type_t);
 int hip_write_hmac(int, void *, void *, int, void *);
 void hip_zero_msg_checksum(struct hip_common *);
+int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
+int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
+			se_hip_flags_t endpoint_flags, const char *hostname);
+
+
 
 #endif /* HIP_BUILDER */

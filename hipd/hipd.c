@@ -34,7 +34,7 @@ int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
 /* For receiving netlink IPsec events (acquire, expire, etc) */
-struct rtnl_handle hip_nl_ipsec = { 0 };
+struct rtnl_handle hip_nl_ipsec  = { 0 };
 
 /* For getting/setting routes and adding HITs (it was not possible to use
    nf_ipsec for this purpose). */
@@ -66,7 +66,7 @@ int opendht_serving_gateway_flag;
    iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
    variable and most of the functions referencing them unnecessary -miika */
 int address_count;
-struct list_head addresses;
+HIP_HASHTABLE *addresses;
 
 time_t load_time;
 
@@ -306,8 +306,8 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		if (fork() > 0) return(0);
 		hip_set_logtype(LOGTYPE_SYSLOG);
+		if (fork() > 0) return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());

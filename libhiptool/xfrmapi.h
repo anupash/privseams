@@ -23,28 +23,25 @@
 #include "hadb.h"
 #include "user.h"
 #include "misc.h"
-#include "xfrm.h"
 #include "state.h"
 
 #define HIP_BEETDB_SIZE  53
 #define RTA_BUF_SIZE     2048
-#define XFRM_MODE_BEET   2
+// NOTE: kernel versions which have BEET natively included, this value is 4
+// See include/linux/xfrm.h of the kernel source code
+#define XFRM_MODE_BEET   hip_xfrm_get_beet()
 #define XFRM_TMPLS_BUF_SIZE 1024
 #define XFRM_ALGO_KEY_BUF_SIZE 512
-#define PREFIXLEN_SPECIFIED 1
 
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #ifndef NETLINK_XFRM
 #  define NETLINK_XFRM            6       /* ipsec */
 #endif
 
-
-extern int  hip_nat_status;
-struct rtnl_handle;
-
+#if 0
 /* BEET database entry struct and access functions to retrieve them. */
 struct hip_xfrm_state {
-	struct list_head     next;
+	hip_list_t     next;
 	spinlock_t           lock;
 	atomic_t             refcnt;
         uint32_t             spi;                 /* SPI out */
@@ -61,6 +58,7 @@ struct hip_xfrm_state {
 };
 
 typedef struct hip_xfrm_state hip_xfrm_t;
+#endif
 
 void hip_beetdb_hold_entry(void *entry);
 void hip_beetdb_put_entry(void *entry);
@@ -71,6 +69,7 @@ void hip_beetdb_put_entry(void *entry);
  * daemon to the kernel XFRM management). The functions are used to
  * manage the replica of HADB within the kernel.
  */
+void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec);
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
@@ -111,8 +110,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    int already_acquired, int direction, int update,
 			int sport, int dport);
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, int family,
-		   int sport, int dport);
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr, 
+		   int family, int sport, int dport);
 
 #endif /* HIP_BEET_H */
 

@@ -80,7 +80,6 @@
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
 
-
 extern struct rtnl_handle hip_nl_route;
 extern struct rtnl_handle hip_nl_ipsec;
 extern time_t load_time;

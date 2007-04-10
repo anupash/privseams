@@ -30,6 +30,10 @@
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
+	/* we don't want log messages via syslog */
+	hip_set_logtype(LOGTYPE_STDERR);
+	hip_set_logfmt(LOGFMT_SHORT);
+	
 	return hip_do_hipconf(argc, argv, 0);
 }
 

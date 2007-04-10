@@ -24,6 +24,8 @@ void hip_load_configuration()
 	size_t items = 0;
 	int len = strlen(HIPD_CONFIG_FILE_EX);
 
+	/* Create config file if does not exist */
+
 	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
 		errno = 0;
 		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
@@ -33,76 +35,96 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
-	pid = fork();
-	
-	if (pid == 0)
-	{
-		hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
-		exit(0);
-	}
-	wait(NULL);
+	/* Load the configuration. The configuration is loaded as a sequence
+	   of hipd system calls. Assumably the user socket buffer is large
+	   enough to buffer all of the hipconf commands.. */
+
+	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
 }
+
+void hip_set_os_dep_variables()
+{
+	struct utsname un;
+	int rel[4] = {0};
+
+	uname(&un);
+
+	HIP_DEBUG("sysname=%s nodename=%s release=%s version=%s machine=%s\n",
+		  un.sysname, un.nodename, un.release, un.version, un.machine);
+
+	sscanf(un.release, "%d.%d.%d.%d", &rel[0], &rel[1], &rel[2], &rel[3]);
+
+	/* XFRM_BEET was set to four in 2.6.19 and above. Kernels below that
+	   have it as two. */
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19)
+		hip_xfrm_set_beet(2);
+}
+
 
 /**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec)
 {
-        int err = 0, fd, pid = 0;
-        char str[64];
-        struct sockaddr_un daemon_addr;
-        extern struct addrinfo opendht_serving_gateway;
+	int err = 0, fd, pid = 0;
+	char str[64];
+	struct sockaddr_un daemon_addr;
+	extern struct addrinfo opendht_serving_gateway;
 
-        hip_probe_kernel_modules();
+	hip_init_hostid_db(NULL);
 
-        /* Kill hip daemon, if it already exists. */
-        for (pid = 0; pid >= 0; )
-        {
-                /* Open daemon lock file and read pid from it. */
-                fd = open(HIP_DAEMON_LOCK_FILE, O_RDONLY, 0644);
- 
-                /* If pid not read yet. */
-                if (fd > 0 && pid == 0)
-                {
-                        memset(str, 0, sizeof(str));
-                        read(fd, str, sizeof(str) - 1);
-                        close(fd);
-                        pid = atoi(str);
-                        /* Check if pid number is not valid. */
-                        if (pid < 1) break;
-                        HIP_INFO("Daemon is already running with pid %d?"
-                                 " Trying to stop old one...\n", pid);
-                        /* Signal old daemon to stop. */
-                        kill(pid, SIGINT);
-                        /* Wait a second for daemon to stop. */
-                        HIP_INFO("Waiting old daemon to stop...\n");
-                        sleep(2);
-                }
-                /*
-                 * If pid already read, just check whether daemon has really stopped.
-                 * If not, then kill it brutally.
-                 */
-                else if (fd > 0)
-                {
-                        HIP_INFO("Daemon did not stop, just kill it.\n");
-                        close(fd);
-                        kill(pid, SIGKILL);
-                        break;
-                }
-                else break;
-        }
- 
-        /* Write pid to file. */
-        unlink(HIP_DAEMON_LOCK_FILE);
-        fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-        if (fd > 0)
-        {
-                /* Dont lock now, make this feature available later. */
-                //if (lockf(i, F_TLOCK, 0) < 0) exit (1);
-                /* Only first instance continues. */
-                sprintf(str, "%d\n", getpid());
-                write(fd, str, strlen(str)); /* record pid to lockfile */
-        }
+	hip_set_os_dep_variables();
+
+	hip_probe_kernel_modules();
+
+	/* Kill hip daemon, if it already exists. */
+	for (pid = 0; pid >= 0; )
+	{
+		/* Open daemon lock file and read pid from it. */
+		fd = open(HIP_DAEMON_LOCK_FILE, O_RDONLY, 0644);
+		
+		/* If pid not read yet. */
+		if (fd > 0 && pid == 0)
+		{
+			memset(str, 0, sizeof(str));
+			read(fd, str, sizeof(str) - 1);
+			close(fd);
+			pid = atoi(str);
+			/* Check if pid number is not valid. */
+			if (pid < 1) break;
+			HIP_INFO("Daemon is already running with pid %d?"
+			         " Trying to stop old one...\n", pid);
+			/* Signal old daemon to stop. */
+			kill(pid, SIGINT);
+			/* Wait a second for daemon to stop. */
+			HIP_INFO("Waiting old daemon to stop...\n");
+			sleep(2);
+		}
+		/*
+		 * If pid already read, just check whether daemon has really stopped.
+		 * If not, then kill it brutally.
+		 */
+		else if (fd > 0)
+		{
+			HIP_INFO("Daemon did not stop, just kill it.\n");
+			close(fd);
+			kill(pid, SIGKILL);
+			break;
+		}
+		else break;
+	}
+
+	/* Write pid to file. */
+	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		/* Dont lock now, make this feature available later. */
+		//if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -169,6 +191,10 @@ int hipd_init(int flush_ipsec)
 		err = 1;
 		goto out_err;
 	}
+
+#ifndef CONFIG_HIP_PFKEY
+	hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
+#endif
 
 #if 0
 	{
@@ -411,18 +437,13 @@ void hip_close(int signal)
 	terminate++;
 	
 	/* Close SAs with all peers */
-	if (terminate == 1)
-	{
+	if (terminate == 1) {
 		hip_send_close(NULL);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
-	}
-	else if (terminate == 2)
-	{
+	} else if (terminate == 2) {
 		HIP_DEBUG("Send still once this signal to force daemon exit...\n");
-	}
-	else if (terminate > 2)
-	{
+	} else if (terminate > 2) {
 		HIP_DEBUG("Terminating daemon.\n");
 		hip_exit(signal);
 		exit(signal);

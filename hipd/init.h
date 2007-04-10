@@ -16,10 +16,10 @@
 #include <sys/types.h>
 #include <sys/stat.h> 
 #include <sys/socket.h>
+#include <sys/utsname.h>
 
 #include "hipconf.h"
 #include "oppipdb.h"
-
 
 extern char *i3_config;
 

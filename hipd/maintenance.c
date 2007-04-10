@@ -413,7 +413,6 @@ void register_to_dht ()
             }
         }     
     } 
-
 #endif
 }
 

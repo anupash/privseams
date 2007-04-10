@@ -176,17 +176,17 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 		return 0;
 	
 	if (sa) {
-		if (sa->sa_family == AF_INET6 && ipv6_addr_is_hit(SA2IP(sa)))
+		if (sa->sa_family == AF_INET6 && ipv6_addr_is_hit(hip_cast_sa_addr(sa)))
 			return 0;
 		if (!(sa->sa_family == AF_INET || sa->sa_family == AF_INET6))
 			return 0;
 		if (sa->sa_family == AF_INET) {
-			struct in_addr *oip = SA2IP(sa);
+			struct in_addr *oip = hip_cast_sa_addr(sa);
 			if (oip->s_addr == htonl(INADDR_LOOPBACK) || oip->s_addr == htonl(INADDR_ANY))
 				return 0;
 		}
 		if (sa->sa_family == AF_INET6 &&
-		    IN6_IS_ADDR_LOOPBACK(SA2IP(sa)))
+		    IN6_IS_ADDR_LOOPBACK(hip_cast_sa_addr(sa)))
 			return 0;
 
 	}
@@ -378,12 +378,12 @@ int hip_set_translation(hip_opp_socket_t *entry,
 	}
 	
 	if (is_peer) {
-		memcpy(&entry->translated_peer_id, hit, SALEN(hit));
-		entry->translated_peer_id_len = SALEN(hit);
+		memcpy(&entry->translated_peer_id, hit, hip_sockaddr_len(hit));
+		entry->translated_peer_id_len = hip_sockaddr_len(hit);
 		entry->peer_id_is_translated = 1;
 	} else {
-		memcpy(&entry->translated_local_id, hit, SALEN(hit));
-		entry->translated_local_id_len = SALEN(hit);
+		memcpy(&entry->translated_local_id, hit, hip_sockaddr_len(hit));
+		entry->translated_local_id_len = hip_sockaddr_len(hit);
 		entry->local_id_is_translated = 1;
 	}
 	
@@ -408,7 +408,7 @@ int hip_autobind_port(hip_opp_socket_t *entry, struct sockaddr_in6 *hit) {
 
 	err = dl_function_ptr.bind_dlsym(entry->translated_socket,
 					 (struct sockaddr *) &entry->translated_local_id,
-					 SALEN(&entry->translated_local_id));
+					 hip_sockaddr_len(&entry->translated_local_id));
 	if (err) {
 		HIP_PERROR("autobind");
 		goto out_err;
@@ -460,11 +460,11 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	if (orig_id->sa_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) orig_id)->sin_addr,
 				 &mapped_addr.sin6_addr);
-		HIP_DEBUG_INADDR("ipv4 addr", SA2IP(orig_id));
+		HIP_DEBUG_INADDR("ipv4 addr", hip_cast_sa_addr(orig_id));
 		port = ((struct sockaddr_in *)orig_id)->sin_port;
 	} else if (orig_id->sa_family == AF_INET6) {
 		memcpy(&mapped_addr, orig_id, orig_id_len);
-		HIP_DEBUG_IN6ADDR("ipv6 addr\n", SA2IP(orig_id));
+		HIP_DEBUG_IN6ADDR("ipv6 addr\n", hip_cast_sa_addr(orig_id));
 		port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
 	} else {
 		HIP_ASSERT("Not an IPv4/IPv6 socket: wrapping_is_applicable failed?\n");
@@ -528,11 +528,11 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  entry->pid, entry->orig_socket, entry->translated_socket);
 	if (!is_peer) {
-		HIP_DEBUG_HIT("orig_local_id", SA2IP(&entry->orig_local_id));
-		HIP_DEBUG_HIT("trans_local_id", SA2IP(&entry->translated_local_id));
+		HIP_DEBUG_HIT("orig_local_id", hip_cast_sa_addr(&entry->orig_local_id));
+		HIP_DEBUG_HIT("trans_local_id", hip_cast_sa_addr(&entry->translated_local_id));
 	} else {
-		HIP_DEBUG_HIT("orig_dst_id", SA2IP(&entry->orig_peer_id));
-		HIP_DEBUG_HIT("trans_dst_id", SA2IP(&entry->translated_peer_id));
+		HIP_DEBUG_HIT("orig_dst_id", hip_cast_sa_addr(&entry->orig_peer_id));
+		HIP_DEBUG_HIT("trans_dst_id", hip_cast_sa_addr(&entry->translated_peer_id));
 	}
 	
 	return err;
@@ -689,9 +689,9 @@ int hip_translate_socket(const int *orig_socket,
 
 	if (orig_id) {
 		if (orig_id->sa_family == AF_INET)
-			_HIP_DEBUG_INADDR("orig_id", SA2IP(orig_id));
+			_HIP_DEBUG_INADDR("orig_id", hip_cast_sa_addr(orig_id));
 		else if (orig_id->sa_family == AF_INET6)
-			_HIP_DEBUG_IN6ADDR("orig_id", SA2IP(orig_id));
+			_HIP_DEBUG_IN6ADDR("orig_id", hip_cast_sa_addr(orig_id));
 		else
 			_HIP_DEBUG("orig_id family %d\n", orig_id->sa_family);
 	}
@@ -735,10 +735,10 @@ int hip_translate_socket(const int *orig_socket,
 	
 	_HIP_DEBUG("translation: pid %p, orig socket %p, translated sock %p\n",
 		  pid, orig_socket, *translated_socket);
-	_HIP_DEBUG_HIT("orig_local_id", SA2IP(&entry->orig_local_id));
-	_HIP_DEBUG_HIT("orig_dst_id", SA2IP(&entry->orig_peer_id));
-	_HIP_DEBUG_HIT("trans_local_id", SA2IP(&entry->translated_local_id));
-	_HIP_DEBUG_HIT("trans_dst_id", SA2IP(&entry->translated_peer_id));
+	_HIP_DEBUG_HIT("orig_local_id", hip_cast_sa_addr(&entry->orig_local_id));
+	_HIP_DEBUG_HIT("orig_dst_id", hip_cast_sa_addr(&entry->orig_peer_id));
+	_HIP_DEBUG_HIT("trans_local_id", hip_cast_sa_addr(&entry->translated_local_id));
+	_HIP_DEBUG_HIT("trans_dst_id", hip_cast_sa_addr(&entry->translated_peer_id));
 	_HIP_DEBUG("orig_id %p, translated_id %p\n", orig_id, *translated_id);
 	_HIP_DEBUG("orig fd %d, translated fd %d\n", entry->orig_socket,
 		  entry->translated_socket);
@@ -1251,11 +1251,10 @@ ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 {
 	int err;
 	int charnum = 0;  
-	int socket = 0;
 	char *error = NULL;
 	
 	// XX TODO: see hip_get_pktinfo_addr
-	charnum = dl_function_ptr.recvmsg_dlsym(socket, msg, flags);
+	charnum = dl_function_ptr.recvmsg_dlsym(s, msg, flags);
 	
 	_HIP_DEBUG("Called recvmsg_dlsym with number of returned chars=%d\n",
 		  charnum);
