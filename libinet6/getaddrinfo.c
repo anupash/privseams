@@ -377,6 +377,7 @@ gethosts(const char *name, int _family,
   int no_data = 0;							
   int rc = 0;
   struct hostent *h = NULL;
+  struct gaih_addrtuple *aux = NULL;
 
   do {								
     tmpbuflen *= 2;						
@@ -397,20 +398,25 @@ gethosts(const char *name, int _family,
 	no_data = herrno == NO_DATA;				
     }								
   else if (h != NULL)						
-    {			      					
+    {
+      // freeing the already allocated structure
+      free(**pat);
+      **pat = NULL;
       for (i = 0; h->h_addr_list[i]; i++)			
-	{							
-	  if (**pat == NULL) { 					
-	    **pat = malloc (sizeof(struct gaih_addrtuple));	
-	    (**pat)->scopeid = 0;				
-	  }							
-	  (**pat)->next = NULL;					
-	  (**pat)->family = _family;				
-	  memcpy ((**pat)->addr, h->h_addr_list[i],		
+	{
+	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+	    HIP_ERROR("Memory allocation error\n");
+	    exit(EXIT_FAILURE);
+	  }
+	  //Placing the node at the beginning of the list
+	  aux->next = (**pat);
+	  (**pat) = aux;
+	  aux->scopeid = 0;    					
+	  aux->family = _family;				
+	  memcpy (aux->addr, h->h_addr_list[i],		
 		 (_family == AF_INET6)
 		  ? sizeof(struct in6_addr)
-		  : sizeof(struct in_addr));	           
-	  *pat = &((**pat)->next);					
+		  : sizeof(struct in_addr));					
 	}								
     }								
   return no_data;
@@ -427,6 +433,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   char line[500];							
   List list;
   int found_hits = 0;
+  struct gaih_addrtuple *aux = NULL;
 
 #ifdef CONFIG_HIP_OPENDHT
  
@@ -525,11 +532,12 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 									
   /*! \todo check return values */
   _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
-  fp = fopen(_PATH_HIP_HOSTS, "r");					
-									
+  fp = fopen(_PATH_HIP_HOSTS, "r");		
+								
   while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
     int c;								
-    int ret;                                                            
+    int ret;
+                                                            
     lineno++;								
     if(strlen(line)<=1) continue;                                       
     initlist(&list);                                                    
@@ -548,31 +556,23 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
       for(i=0;i<length(&list);i++) {                                    
 	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
 	struct gaih_addrtuple *prev_pat = NULL;	
-	HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
+	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
+	printf("getitem(&list,i): %s \n", getitem(&list,i));
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
 	HIP_DEBUG("hit: %x\n", hit);              
-        if (ret < 1) continue;                                          
-        if (**pat == NULL) {						
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(EXIT_FAILURE);
-	  }
+        if (ret < 1) continue;         
+ 
+	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+	  HIP_ERROR("Memory allocation error\n");
+	  exit(EXIT_FAILURE);
+	}
 
-          (**pat)->scopeid = 0;						
-        }								
-        (**pat)->next = NULL;						
-        (**pat)->family = AF_INET6;
-	
-        memcpy((**pat)->addr, &hit, sizeof(struct in6_addr));
-
-	HIP_DEBUG("Family: %d, Scopeid: %u, Next: %p, (**pat)->addr: %s (2)\n", 
-		  (**pat)->family, (**pat)->scopeid, (**pat)->next, (**pat)->addr);
-
-	HIP_DEBUG("hit: %x\n", hit);
-	HIP_DEBUG("(**pat)->addr: %x (1)\n", *((**pat)->addr));
-	HIP_DEBUG("(**pat)->addr: %s (2)\n", (**pat)->addr);
-		
-        *pat = &((**pat)->next);
+	//Placing the node at the beginning of the list
+	aux->next = (**pat);
+	(**pat) = aux;
+	aux->scopeid = 0;				
+	aux->family = AF_INET6;
+	memcpy(aux->addr, &hit, sizeof(struct in6_addr));
 
 #if 0 /* Disabled as this is not support by the daemon yet -miika*/
 	/* AG: add LSI as well */					
@@ -1007,25 +1007,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	   with some filtering. */
       }
 #endif
-
-      if (hip_transparent_mode) {
-	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-	HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
-	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-	HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
-	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
-	} else {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
-	}
-      } else /* not hip_transparent_mode */ {
-	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
-	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-	} else {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
-	}
-      }
+ 
       /* If we are looking for both IPv4 and IPv6 address we don't
 	 want the lookup functions to automatically promote IPv4
 	 addresses to IPv6 addresses.  Currently this is decided
@@ -1045,6 +1027,28 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
   	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 	no_data = gethosts (name, AF_INET, &pat);
+
+      if (hip_transparent_mode) {
+	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
+       
+	HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
+	HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
+	
+	if (req->ai_flags & AI_HIP) {
+	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
+	} else {
+	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: get IPv6 addresses too\n");
+	}
+      } else /* not hip_transparent_mode */ {
+	if (req->ai_flags & AI_HIP) {
+	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: get only HIT addresses\n");
+	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
+	} else {
+	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: no HITs\n");
+	}
+      }
+
       _HIP_DEBUG("Dumping the structure\n");
       //dump_pai(*at);
       
@@ -1083,16 +1087,19 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if ((*at)->family == AF_UNSPEC)
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
     
+      HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
       /* HIP: Finally remove IP addresses from the list to be
 	 returned depending on the AI_HIP flag */
       if (req->ai_flags & AI_HIP) {
-	struct gaih_addrtuple *a = *at, *p = NULL;
-	HIP_DEBUG("HIP: AI_HIP set: remove IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+	struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
+	HIP_DEBUG("HIP: AI_HIP set: remove IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);
+
 	while (a != NULL) {
 	  struct gaih_addrtuple *nxt = a->next;
 	  
 	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
 		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
+	  
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
@@ -1104,19 +1111,23 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	      a->family == AF_INET && 
 	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr)))
 	    goto leave;
-	  
-	  if ( p != NULL ) 
-	    p->next = nxt;
+
+	  if (p != NULL){
+	    while (aux->next != a)
+	      aux = aux->next;
+	    aux->next = a->next;
+	  }
 	  HIP_DEBUG("freeing a\n");
 	  free(a);
 	  a = nxt;
-	  HIP_DEBUG("pointer a: %p\npointer p(shouldn't be NULL): %p\n", a, p);
+	  HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
 	  continue;
 	  
 	leave:
-	  p = a;
+	  if (p == NULL)
+	    p = aux = a;
 	  a = a->next;
-	  HIP_DEBUG("pointer a: %p\npointer p(shouldn't be NULL): %p\n", a, p);	
+	  HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);	
 	}
 	if (p == NULL){  /* no HITs or LSIs were found */
 	  HIP_DEBUG(" return (GAIH_OKIFUNSPEC | -EAI_NONAME);\n");
@@ -1125,6 +1136,71 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	
 	*at = p;
       }
+
+
+      /* HIP: If AF_UNSPEC flag is set, order the link list so HITs are first and then IPs. */
+      if (req->ai_flags == AF_UNSPEC) {
+	struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
+	HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+	while ((a != NULL) && (a->family == AF_INET6)) {
+	  struct gaih_addrtuple *nxt = a->next;
+	  
+	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
+		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
+	  
+	  /* do not move the  HIT if request is not IPv4 */
+	  if (req->ai_family != AF_INET && 
+	      a->family == AF_INET6 && 
+	      ipv6_addr_is_hit((struct in6_addr *)a->addr)){
+	    a = aux = nxt;
+	    continue;
+	  }
+	  
+	  /* do not move the LSI if request is IPv4 */
+	  /* Not supported yet
+	  if (req->ai_family == AF_INET && 
+	      a->family == AF_INET && 
+	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))){
+	    a = aux = nxt;
+	    continue;
+	  }
+	  */
+
+	  /* putting the non-HIT IPv6 to the linked list *p */
+	  if (p == NULL){
+	    p = plast = a;
+	    a->next = NULL;
+	  }else{
+	    plast->next = a;
+	    plast = plast->next;
+	    a->next = NULL;
+	  }
+	  if (aux == *at)
+	    *at = aux = nxt;
+	  else{ 
+	    aux = *at;
+	    while (aux->next != a)
+	      aux = aux->next;
+	    aux->next = nxt;
+	  }
+
+	  a = aux = nxt;
+	  HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
+	 
+	}
+	if ((at == NULL) || (!ipv6_addr_is_hit((struct in6_addr *)(*at)->addr)) || 
+	    (IS_LSI32(ntohl(((struct in_addr *)(*at)->addr)->s_addr)))) {  /* no HITs or LSIs were found */
+	  HIP_DEBUG(" return (GAIH_OKIFUNSPEC | -EAI_NONAME);\n");
+	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+	}
+	/* inserting linked list *p between HITs and IPv4s */
+	aux = *at;
+	while (aux->next != a)
+	  aux = aux->next;
+	aux->next = p;
+	plast->next = a;
+      }
+
 
       _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
       //dump_pai(*at);
