@@ -379,6 +379,10 @@ gethosts(const char *name, int _family,
   struct hostent *h = NULL;
   struct gaih_addrtuple *aux = NULL;
 
+  // freeing the already allocated structure
+  free(**pat);
+  **pat = NULL;
+
   do {								
     tmpbuflen *= 2;						
     tmpbuf = __alloca (tmpbuflen);				
@@ -399,9 +403,6 @@ gethosts(const char *name, int _family,
     }								
   else if (h != NULL)						
     {
-      // freeing the already allocated structure
-      free(**pat);
-      **pat = NULL;
       for (i = 0; h->h_addr_list[i]; i++)			
 	{
 	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
@@ -505,7 +506,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	if (**pat == NULL) {						
 	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
-	    exit(EXIT_FAILURE);
+	    exit(-EAI_MEMORY);
 	  }	  
 	  (**pat)->scopeid = 0;				
 	}
@@ -515,7 +516,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	
 	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	  HIP_ERROR("Memory allocation error\n");
-	  exit(EXIT_FAILURE);
+	  exit(-EAI_MEMORY);
 	}	  
 
 	(**pat)->scopeid = 0;				
@@ -564,7 +565,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
  
 	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	  HIP_ERROR("Memory allocation error\n");
-	  exit(EXIT_FAILURE);
+	  exit(-EAI_MEMORY);
 	}
 
 	//Placing the node at the beginning of the list
@@ -579,7 +580,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         if (**pat == NULL) {
 	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
-	    exit(EXIT_FAILURE);
+	    exit(-EAI_MEMORY);
 	  }
 
 	  (**pat)->scopeid = 0;				
@@ -839,6 +840,7 @@ gaih_inet_result(struct gaih_addrtuple *at, struct gaih_servtuple *st,
     }
     return 0;
  }
+
 
 int 
 gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *service,
@@ -1188,19 +1190,25 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
 	 
 	}
-	if ((at == NULL) || (!ipv6_addr_is_hit((struct in6_addr *)(*at)->addr)) || 
-	    (IS_LSI32(ntohl(((struct in_addr *)(*at)->addr)->s_addr)))) {  /* no HITs or LSIs were found */
+
+	/* inserting linked list *p between HITs and IPv4s */
+	if (p != NULL){
+	  aux = *at;
+	  if(aux == a){
+	    *at = p;
+	    plast->next = a;
+	  }else{
+	    while (aux->next != a)
+	      aux = aux->next;
+	    aux->next = p;
+	    plast->next = a;
+	  }
+	}
+	if (*at == NULL) {  /* no addresses to connect were found */
 	  HIP_DEBUG(" return (GAIH_OKIFUNSPEC | -EAI_NONAME);\n");
 	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 	}
-	/* inserting linked list *p between HITs and IPv4s */
-	aux = *at;
-	while (aux->next != a)
-	  aux = aux->next;
-	aux->next = p;
-	plast->next = a;
       }
-
 
       _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
       //dump_pai(*at);
