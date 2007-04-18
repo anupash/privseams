@@ -5,9 +5,18 @@
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
+int hip_xfrmapi_beet = 4; /* 2.6.19 and above */
 
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
 	hip_xfrmapi_nl_ipsec = nl_ipsec;
+}
+
+void hip_xfrm_set_beet(int beet) {
+	hip_xfrmapi_beet = beet;
+}
+
+int hip_xfrm_get_beet(void) {
+	return hip_xfrmapi_beet;
 }
 
 /**

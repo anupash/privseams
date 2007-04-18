@@ -41,7 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
-"get hi default|all\n"
+"get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
         "set blind on|off\n"
@@ -78,6 +78,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_gw,
         hip_conf_handle_get,
 	hip_conf_handle_blind,
+	hip_conf_handle_ha,
 	NULL, /* run */
 };
 
@@ -157,7 +158,6 @@ int hip_conf_check_action_argc(int action) {
         case ACTION_DHT:
                 count=2;
                 break;
-
 	case ACTION_HA:
                 count=2;
                 break;
@@ -236,7 +236,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_RUN:
 	case ACTION_LOAD:
         case ACTION_DHT:
-	case ACTION_HA:
+	
                 type_arg = 2;
                 break;
         }
@@ -859,14 +859,14 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
 
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-	int err;
+	int err,out_err;
 	int status = 0;
 	int ret;
 	struct in_addr ip_gw;
         struct in6_addr ip_gw_mapped;
         struct addrinfo new_gateway;
         struct hip_opendht_gw_info *gw_info;
-
+	
 	HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
         
 	if (optc != 3) {
@@ -1023,12 +1023,16 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 }
 
 int hip_do_hipconf(int argc, char *argv[], int send_only) {
-	int err = 0, type_arg;
-	long int action, type;
+	int err = 0, type_arg,i;
+	long int action, type,hiparg;
 	struct hip_common *msg = NULL;
 	char *text;
 	
-       	/* parse args */
+
+	/* we don't want log messages via syslog */
+	hip_set_logtype(LOGTYPE_STDERR);
+	
+	/* parse args */
 
 	HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
 		 argv[0], hipconf_usage);
@@ -1045,18 +1049,22 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Could not parse type\n");
 
 	type = hip_conf_get_type(argv[type_arg]);
+	
 	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 		 "Invalid type argument '%s'\n", argv[type_arg]);
-
+	
+	
 	/* allocated space for return value and call hipd */
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_get_all_hits(msg,argv[3]);
+	hip_get_all_hits(msg,argv);
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
         err = (*action_handler[type])(msg, action, (const char **) &argv[3],
                                               argc - 3);
+	
+
 	HIP_IFEL(err, -1, "failed to handle msg\n");
 
 	/* hipconf new hi does not involve any messages to hipd */
@@ -1075,54 +1083,93 @@ out_err:
 	return err;
 }
 
-int hip_get_all_hits(struct hip_common *msg,char *argv)
+int hip_get_all_hits(struct hip_common *msg,char *argv[])
 {	
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip *endp=NULL;
-	int err=0;
+	hip_ha_t *hit;
+	int err=0,state=0;
 	
-	if ((strcmp(argv,"all")==0) || (strcmp(argv,"default")==0)){
+		
+	if (strcmp(argv[2],"hi")==0)
+
+	if ((strcmp(argv[3],"all")==0) || (strcmp(argv[3],"default")==0) && (strcmp(argv[2],"hi")==0)){
 
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
 		hip_send_recv_daemon_info(msg);
 		
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-	
-		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-
-	if (strcmp(argv, "all")==0){
-		HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-		HIP_DEBUG_HIT("hi is ", &endp->id.hit);
-
-	}else if ((strcmp(argv, "default")==0) && (endp->algo==HIP_HI_RSA)) {
-		HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
-		}
+		while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 			
-	}
-
-	}else {
-	 
+			endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+			if (strcmp(argv[3], "all")==0){
+				HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+				HIP_DEBUG_HIT("hi is ", &endp->id.hit);
+				
+			} else if ((strcmp(argv[3], "default")==0) && (endp->algo==HIP_HI_RSA)) {
+				HIP_DEBUG_HIT("hi is RSA", &endp->id.hit);
+			}
+			
+		}
+	} else {
 		HIP_DEBUG("Invalid argument\n");
 	}
-	memset(msg, 0, HIP_MAX_PACKET);	
-
+	
    out_err:
 	return err;
 	
 }
 
 
-int hip_get_all_host_id(struct hip_common *msg,int action,const char *opt[],int optc)
-{	
+int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc)
+{
 	
-	/*struct hip_tlv_common *current_param = NULL;
-	int err=0;
+	struct hip_tlv_common *current_param = NULL;
+	int err = 0, state, ret;
+	struct in6_addr arg1, hit1;
 
-	HIP_IFEL(hip_build_user_hdr(msg, HIP_HOST_ID,0),-1, "Failed to fetch host id");
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+		 "Building of daemon header failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+	
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		struct hip_hadb_user_info_state *ha =
+			hip_get_param_contents_direct(current_param);
+
+		if (!strcmp("all", opt[0])) {
+			HIP_DEBUG("HA is %s\n", hip_state_str(ha->state));
+			HIP_DEBUG_HIT("local hit is", &ha->hit_our);
+			HIP_DEBUG_HIT("peer  hit is", &ha->hit_peer);
+			
+		} 
+
+		if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
+		    (strcmp("all",opt[0]) !=0))
+		{	
+			ret = inet_pton(AF_INET6,opt[0], &arg1);
+			HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+			
+			ret = inet_pton(AF_INET6,opt[1], &hit1);
+			HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+			
+			if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
+			{
+				HIP_DEBUG("HA is in %s state\n", hip_state_str(ha->state));
+				HIP_DEBUG_HIT("hit is", &ha->hit_our);
+			}
+			
+		}
+		
+		HIP_DEBUG("\n");
+	}
 	
    out_err:
-	return err;*/
+	return err;
 }
+
 
 /**
  * Handles the hipconf commands where the type is @c run. Execute new

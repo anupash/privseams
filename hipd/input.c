@@ -462,7 +462,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_DEBUG_IN6ADDR("Destination IP", dst_addr);
 	HIP_DEBUG_HIT("HIT Sender", &msg->hits);
 	HIP_DEBUG_HIT("HIT Receiver", &msg->hitr);
-	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
+	HIP_DEBUG("source port: %u, destination port: %u\n",
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 

@@ -106,8 +106,8 @@
 #define TYPE_GW         14
 #define TYPE_GET        15
 #define TYPE_BLIND      16
-#define TYPE_MAX    	17 /* exclusive */
-#define TYPE_HA         18 
+#define TYPE_HA         17 
+#define TYPE_MAX    	18 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -121,6 +121,7 @@
 # add service rvs   # the host acts as HIP rendezvous\n\
 # hip nat on        # the host is behind a NAT\n"
 
+ 
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
@@ -140,10 +141,10 @@ int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int opt
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(struct hip_common *msg,char *argv);
+int hip_get_all_hits(struct hip_common *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
+int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_get_all_host_id(struct hip_common *msg,int action,const char *opt[],int optc);
 
 #endif /* HIPCONF */
