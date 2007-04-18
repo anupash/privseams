@@ -1064,9 +1064,12 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
-
-	err = (*action_handler[type])(msg, action, (const char **) &argv[2],argc - 3);
-	
+	if (argc ==3)
+	{
+		err = (*action_handler[type])(msg, action, (const char **)&argv[2],argc - 3);
+	}else{
+		err = (*action_handler[type])(msg, action, (const char **)&argv[3],argc - 3);
+	}
 	HIP_IFEL(err, -1, "failed to handle msg\n");
 
 	/* hipconf new hi does not involve any messages to hipd */
@@ -1157,7 +1160,13 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	struct addrinfo *ai;
 	int sock,socktype=0;
 	int code;
-	
+	int family = AF_INET6;
+	int rtnl_rtdsfield_init;
+	char *rtnl_rtdsfield_tab[256] = { "0",};
+	struct idxmap *idxmap[16] = { 0 };
+	struct in6_addr *src;
+	struct in6_addr *dst;
+	struct rtnl_handle rtn;
 	
 	//HIP_IFEL(((strcmp(argv[2],"hi") != 0), -1, "No hi\n");
 
@@ -1181,7 +1190,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 
 
 	if (strcmp(argv[3], "default")==0) {
-			sock = socket(AF_INET6, SOCK_STREAM,IPPROTO_TCP);
+			sock = socket(AF_INET6, SOCK_STREAM, 0);
 			if (sock < 0) {
 				sock = 0;
 				HIP_DEBUG("socket creation failed\n");		
@@ -1189,27 +1198,24 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 				HIP_DEBUG("socket connection created sucessfully\n");
 			}
 
-			
+			addr.sin6_family = AF_INET6;
+			addr.sin6_port = htons(7777);
+			memset(&addr.sin6_addr,0xa,sizeof(struct in6_addr));
+			getsockopt(sock, IPPROTO_TCP,O_NONBLOCK, 0,sizeof(addr));			
 			on =fcntl(sock,F_GETFL,0);
 	                fcntl(sock,F_SETFL,on | O_NONBLOCK);
-	      		getsockopt(sock, IPPROTO_TCP,O_NONBLOCK, 0,sizeof(addr));
+	      		
 			set_hit_prefix((struct sockaddr_in6 *)&addr.sin6_addr.s6_addr);
-			code = connect(sock, &addr, sizeof(addr));
+
+
+			/* rtnl_rtdsfield_initialize() */
+        		rtnl_rtdsfield_init = 1;
+        		rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+
+			hip_iproute_get(&rtn, &addr.sin6_addr.s6_addr, dst, NULL, NULL,family, idxmap);
+		 	HIP_DEBUG_HIT("src",src);
+			HIP_DEBUG_HIT("src",&addr.sin6_addr.s6_addr);
 			
-			//if (err != EINPROGRESS)
-			//	return (-1);
-
-			if (code == -1)
-			{
-    				HIP_DEBUG("socket connection not established\n");
-				//	sa = (struct sockaddr_in6 *)&addr.sin6_addr;
-			      	//	HIP_DEBUG("Connected to gateway %s.\n", inet_ntoa(sa->sin6_addr));
-			} else {
-				HIP_DEBUG_HIT("default hi is",&addr.sin6_addr.s6_addr);
-
-					
-    			}
-
 		}
 	}	
    out_err:
