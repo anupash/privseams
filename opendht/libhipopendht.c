@@ -55,8 +55,8 @@ int resolve_dht_gateway_info(char * gateway_name,
     hints.ai_flags = AI_NODHT;
     error = 0;
 
-    // error = getaddrinfo(gateway_name, "5851", &hints, &res);
-    error = getaddrinfo(gateway_name, NULL, &hints, &res);
+     error = getaddrinfo(gateway_name, "5851", &hints, &res);
+    //error = getaddrinfo(gateway_name, NULL, &hints, &res);
     if (error != 0)
         HIP_DEBUG("OpenDHT gateway resolving failed\n");
     else

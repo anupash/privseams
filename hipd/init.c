@@ -149,7 +149,8 @@ int hipd_init(int flush_ipsec)
 #ifdef CONFIG_HIP_OPENDHT
         memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
 //      err = resolve_dht_gateway_info("planetlab1.diku.dk", &opendht_serving_gateway);
-        err = resolve_dht_gateway_info("192.38.109.143", &opendht_serving_gateway);
+//        err = resolve_dht_gateway_info("192.38.109.143", &opendht_serving_gateway);
+        err = resolve_dht_gateway_info("opendht.nyuld.net", &opendht_serving_gateway);
         if (err < 0)
         {
           HIP_DEBUG("Error resolving openDHT gateway!\n");

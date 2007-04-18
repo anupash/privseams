@@ -57,8 +57,9 @@ int hip_opendht_hit_sent = 0;
 int opendht_error = 0;
 char opendht_response[1024];
 struct addrinfo opendht_serving_gateway;
-int opendht_serving_gateway_flag;
-
+int opendht_serving_gateway_port;
+//int opendht_serving_gateway_flag;
+ 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -343,20 +344,16 @@ int main(int argc, char *argv[])
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
 		FD_SET(hip_firewall_sock, &read_fdset);
-		if (hip_opendht_fqdn_sent == 1)
-		{
+                if (hip_opendht_fqdn_sent == 1)
+		  {
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
-		}
-		if (hip_opendht_hit_sent == 1)
-		{
+                  }
+                if (hip_opendht_hit_sent == 1)
+                  {
 			FD_SET(hip_opendht_sock_hit, &read_fdset);
-		}
+                  }
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
-
-		/*  XX FIXME: it is possible to have several FDs in
-		    SELECT open at the same time. Currently only one is
-		    handled and the rest are discarded. */
 		
 		_HIP_DEBUG("select loop\n");
 		/* wait for socket activity */
@@ -489,6 +486,7 @@ int main(int argc, char *argv[])
 					HIP_DEBUG("Put was success (FQDN->HIT)\n");
 				
 				close(hip_opendht_sock_fqdn);
+                                hip_opendht_sock_fqdn = 0;
 				hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
 				hip_opendht_fqdn_sent = 0;
 				opendht_error = 0;
@@ -510,6 +508,7 @@ int main(int argc, char *argv[])
 				else 
 					HIP_DEBUG("Put was success (HIT->IP)\n");
 				close(hip_opendht_sock_hit);
+                                hip_opendht_sock_hit = 0;
 				hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
 				hip_opendht_hit_sent = 0;
 				opendht_error= 0;
