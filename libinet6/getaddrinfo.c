@@ -1085,8 +1085,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	     is known, though.  */
 	  return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
 	}
-      HIP_DEBUG("family, it has to be 10: %d\n", (*at)->family);
-      if ((*at)->family == AF_UNSPEC)
+      /* If there isn't any node in the list or the first node is unspecified, exit */ 
+      if (*at == NULL || (*at)->family == AF_UNSPEC)
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
     
       HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
@@ -1203,10 +1203,6 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    aux->next = p;
 	    plast->next = a;
 	  }
-	}
-	if (*at == NULL) {  /* no addresses to connect were found */
-	  HIP_DEBUG(" return (GAIH_OKIFUNSPEC | -EAI_NONAME);\n");
-	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 	}
       }
 
