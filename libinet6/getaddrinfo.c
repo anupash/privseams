@@ -558,7 +558,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
 	struct gaih_addrtuple *prev_pat = NULL;	
 	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-	HIP_DEBUG("getitem(&list,i): %s \n", getitem(&list,i));
+	printf("getitem(&list,i): %s \n", getitem(&list,i));
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
 	HIP_DEBUG("hit: %x\n", hit);              
         if (ret < 1) continue;         
@@ -1085,8 +1085,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	     is known, though.  */
 	  return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
 	}
-      HIP_DEBUG("family, it has to be 10: %d\n", (*at)->family);
-      if ((*at)->family == AF_UNSPEC)
+      /* If there isn't any node in the list or the first node is unspecified, exit */ 
+      if (*at == NULL || (*at)->family == AF_UNSPEC)
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
     
       HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
@@ -1203,10 +1203,6 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    aux->next = p;
 	    plast->next = a;
 	  }
-	}
-	if (*at == NULL) {  /* no addresses to connect were found */
-	  HIP_DEBUG(" return (GAIH_OKIFUNSPEC | -EAI_NONAME);\n");
-	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 	}
       }
 
