@@ -1144,39 +1144,18 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 {	
 	struct hip_tlv_common *current_param = NULL;
 	struct endpoint_hip *endp=NULL;
-	hip_ha_t *hit;
-	struct addrinfo *res;
-	struct sockaddr *sockaddr;
-	int err=0,state=0,fd;
-	int off = 0,len=0;
-	int on = 1;
-	char *some_addr;
-	unsigned int port;
-	struct servent *srv;
-	struct hostent* host;
-	struct endpointinfo hints, *epinfo;
-	char *hostname;
+	int err=0;
 	struct sockaddr_in6 addr;
-	struct addrinfo *ai;
-	int sock,socktype=0;
-	int code;
-	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
-	struct idxmap *idxmap[16] = { 0 };
-	struct in6_addr *src;
-	struct in6_addr *dst;
-	struct rtnl_handle rtn;
+	struct in6_addr *defhit;
+	struct hip_hadb_user_info_state *ha;
 	
-	//HIP_IFEL(((strcmp(argv[2],"hi") != 0), -1, "No hi\n");
-
-	if (strcmp(argv[2],"hi")==0)
-	{
-	HIP_IFEL(!((strcmp(argv[3],"all")==0) || (strcmp(argv[3],"default")==0) && (strcmp(argv[2],"hi")==0)), -1,
-		 "Invalid args\n");
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-	hip_send_recv_daemon_info(msg);
+	if (strcmp(argv[1],"get")==0)
+	{	
+	
+		if ((strcmp(argv[3],"all")==0) && (strcmp(argv[2],"hi")==0))
+		{
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+		hip_send_recv_daemon_info(msg);
 		
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {	
 		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
@@ -1184,37 +1163,20 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 			HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
 			HIP_DEBUG_HIT("hi is ", &endp->id.hit);
 		}
-
 		
 	}
 
+		}else if (strcmp(argv[3], "default")==0) {
 
-	if (strcmp(argv[3], "default")==0) {
-			sock = socket(AF_INET6, SOCK_STREAM, 0);
-			if (sock < 0) {
-				sock = 0;
-				HIP_DEBUG("socket creation failed\n");		
-			} else {
-				HIP_DEBUG("socket connection created sucessfully\n");
-			}
-
-			addr.sin6_family = AF_INET6;
-			addr.sin6_port = htons(7777);
-			memset(&addr.sin6_addr,0xa,sizeof(struct in6_addr));
-			getsockopt(sock, IPPROTO_TCP,O_NONBLOCK, 0,sizeof(addr));			
-			on =fcntl(sock,F_GETFL,0);
-	                fcntl(sock,F_SETFL,on | O_NONBLOCK);
-	      		
-			set_hit_prefix((struct sockaddr_in6 *)&addr.sin6_addr.s6_addr);
-
-
-			/* rtnl_rtdsfield_initialize() */
-        		rtnl_rtdsfield_init = 1;
-        		rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
-
-			hip_iproute_get(&rtn, &addr.sin6_addr.s6_addr, dst, NULL, NULL,family, idxmap);
-		 	HIP_DEBUG_HIT("src",src);
-			HIP_DEBUG_HIT("src",&addr.sin6_addr.s6_addr);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+		hip_send_recv_daemon_info(msg);
+				
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		defhit = (struct in6_addr *) hip_get_param_contents_direct(current_param);
+		set_hit_prefix(defhit);
+		HIP_DEBUG_IN6ADDR("default hi is ",defhit);
+			
+	}
 			
 		}
 	}	
@@ -1222,7 +1184,6 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	return err;
 	
 }
-
 
 
 /**
