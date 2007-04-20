@@ -102,7 +102,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			} else if (a_in == INADDR_BROADCAST) {
 				HIP_DEBUG("Ignore: INADDR_BROADCAST\n");
 				return FA_IGNORE;
-			} else if (IN_MULTICAST(a_in)) {
+			} else if (IN_MULTICAST(ntohs(a_in))) {
 				HIP_DEBUG("Ignore: MULTICAST\n");
 				return FA_IGNORE;
 			} else if (IS_LSI32(a_in)) {
