@@ -24,6 +24,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 			const struct sockaddr_un *src) {
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
+	struct in6_addr my_src,my_dst;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type, n = 0, len = 0,state=0;
 	hip_ha_t * server_entry = NULL;
@@ -312,7 +313,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
-	
+	case SO_HIP_DEFAULT_HIT:
+		hip_msg_init(msg);
+		err =  hip_select_default_hit(&my_src,&my_dst,msg);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
