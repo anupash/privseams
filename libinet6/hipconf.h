@@ -35,11 +35,11 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-
 #include "debug.h"
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
+
 #include "util.h"
 #include "libhipopendht.h"
 
@@ -77,16 +77,19 @@
 #define ACTION_ADD 1
 #define ACTION_DEL 2
 #define ACTION_NEW 3
-#define ACTION_HIP 4
-#define ACTION_SET 5
-#define ACTION_INC 6
-#define ACTION_DEC 7
-#define ACTION_GET 8
-#define ACTION_RUN 9
-#define ACTION_LOAD 10
-#define ACTION_DHT 11
-#define ACTION_MAX 12 /* exclusive */
+#define ACTION_NAT 4
+#define ACTION_HIP 5
+#define ACTION_SET 6
+#define ACTION_INC 7
+#define ACTION_DEC 8
+#define ACTION_GET 9
+#define ACTION_RUN 10
+#define ACTION_LOAD 11
+#define ACTION_DHT 12
 #define ACTION_HA  13
+#define ACTION_RST 14
+#define ACTION_BOS 15
+#define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -106,8 +109,9 @@
 #define TYPE_GW         14
 #define TYPE_GET        15
 #define TYPE_BLIND      16
-#define TYPE_MAX    	17 /* exclusive */
-#define TYPE_HA         18 
+#define TYPE_HA         17
+#define TYPE_ALL   	18
+#define TYPE_MAX    	19 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -119,8 +123,9 @@
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
-# hip nat on        # the host is behind a NAT\n"
+# nat on            # the host is behind a NAT\n"
 
+ 
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
@@ -140,10 +145,10 @@ int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int opt
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(struct hip_common *msg,char *argv);
+int hip_get_all_hits(struct hip_common *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
+int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_get_all_host_id(struct hip_common *msg,int action,const char *opt[],int optc);
 
 #endif /* HIPCONF */

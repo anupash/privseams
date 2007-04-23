@@ -135,7 +135,7 @@
 #define HIP_PARAM_DST_ADDR		32790
 
 #define HIP_PARAM_AGENT_REJECT	        32791
-
+#define HIP_PARAM_HA_INFO               32792
 
 /* End of HIPL private parameters. */
 

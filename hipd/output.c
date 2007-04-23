@@ -24,7 +24,7 @@
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
-	struct hip_common i1;
+        struct hip_common *i1 = 0;
 	struct in6_addr daddr;
 	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
@@ -55,28 +55,30 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	/* We don't need to use hip_msg_alloc(), since the I1
 	   packet is just the size of struct hip_common. */ 
-	memset(&i1, 0, sizeof(i1)); 
+
+	/* ..except that when calculating the msg size, we need to have more than just hip_common */
+	i1 = hip_msg_alloc();
 			
 	if (!hip_blind_get_status()) {
 		entry->hadb_misc_func->
-			hip_build_network_hdr(&i1, HIP_I1,
+			hip_build_network_hdr(i1, HIP_I1,
 					      mask, &entry->hit_our, dst_hit);
 	}
 	/* Calculate the HIP header length */
-	hip_calc_hdr_len(&i1);
+	hip_calc_hdr_len(i1);
 	
-	HIP_HEXDUMP("HIT source", &i1.hits, sizeof(struct in6_addr));
-	HIP_HEXDUMP("HIT dest", &i1.hitr, sizeof(struct in6_addr));
+	HIP_HEXDUMP("HIT source", &i1->hits, sizeof(struct in6_addr));
+	HIP_HEXDUMP("HIT dest", &i1->hitr, sizeof(struct in6_addr));
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
-	if(hit_is_opportunistic_hashed_hit(&i1.hitr))
-		ipv6_addr_copy(&i1.hitr, &in6addr_any);
+	if(hit_is_opportunistic_hashed_hit(&i1->hitr))
+		ipv6_addr_copy(&i1->hitr, &in6addr_any);
 	
-	_HIP_HEXDUMP("dest hit on wire", &i1.hitr, sizeof(struct in6_addr));
+	_HIP_HEXDUMP("dest hit on wire", &i1->hitr, sizeof(struct in6_addr));
 	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
@@ -93,7 +95,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
 				     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
-				     &i1, entry, 1);
+				     i1, entry, 1);
 	}
 
 	HIP_DEBUG("err after sending: %d.\n", err);
@@ -105,8 +107,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	}
 	else if (err == 1)
 		err = 0;
-	
+
+
 out_err:
+	if (i1)
+	  HIP_FREE(i1);
+
 	if (i1_blind)
 	  HIP_FREE(i1_blind);
 	return err;

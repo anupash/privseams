@@ -43,6 +43,8 @@ void hip_load_configuration()
 	size_t items = 0;
 	int len = strlen(HIPD_CONFIG_FILE_EX);
 
+	/* Create config file if does not exist */
+
 	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
 		errno = 0;
 		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
@@ -52,15 +54,31 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
-	//pid = fork();
-	
-	//if (pid == 0)
-	//{
+	/* Load the configuration. The configuration is loaded as a sequence
+	   of hipd system calls. Assumably the user socket buffer is large
+	   enough to buffer all of the hipconf commands.. */
+
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
-	//exit(0);
-	//}
-	//wait(NULL);
 }
+
+void hip_set_os_dep_variables()
+{
+	struct utsname un;
+	int rel[4] = {0};
+
+	uname(&un);
+
+	HIP_DEBUG("sysname=%s nodename=%s release=%s version=%s machine=%s\n",
+		  un.sysname, un.nodename, un.release, un.version, un.machine);
+
+	sscanf(un.release, "%d.%d.%d.%d", &rel[0], &rel[1], &rel[2], &rel[3]);
+
+	/* XFRM_BEET was set to four in 2.6.19 and above. Kernels below that
+	   have it as two. */
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19)
+		hip_xfrm_set_beet(2);
+}
+
 
 /**
  * Main initialization function for HIP daemon.
@@ -73,6 +91,8 @@ int hipd_init(int flush_ipsec)
 	extern struct addrinfo opendht_serving_gateway;
 
 	hip_init_hostid_db(NULL);
+
+	hip_set_os_dep_variables();
 
 	hip_probe_kernel_modules();
 

@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <sys/utsname.h>
 
 #include "hipconf.h"
 #include "oppipdb.h"
