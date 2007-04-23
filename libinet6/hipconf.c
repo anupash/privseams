@@ -949,7 +949,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit(-1);
     }
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) 
     {
         HIP_DEBUG("Connect error!\n");

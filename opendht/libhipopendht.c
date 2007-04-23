@@ -15,6 +15,7 @@
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 #include "debug.h"
+#include "fcntl.h"
 /*
 #include "time.h"
 
@@ -71,23 +72,52 @@ int resolve_dht_gateway_info(char * gateway_name,
 /**
  *  connect_dht_gateway - Connects to given gateway
  *  @param sockfd
+ *  @param addrinfo Address to connect to 
+ *  @param blocking 1 for blocking connect 0 for nonblocking
  *
+ *  @return Returns 0 on success -1 otherwise, if nonblocking can return also EINPRGORESS
  */
-int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
+int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
-    int ret = 0;
+    int flags = 0;
     struct sockaddr_in *sa;
-    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
-    {
-        HIP_PERROR("OpenDHT connect:");
-        ret = -1;
-    }
+
+    if (blocking == 1)
+      {
+        if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
+          {
+            HIP_PERROR("OpenDHT connect:");
+            return(-1);
+          }
+        else
+          {
+            sa = (struct sockaddr_in *)gateway->ai_addr;
+            HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+            return(0);
+          }
+      }
     else
-    {
-      sa = (struct sockaddr_in *)gateway->ai_addr;
-      HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-    }
-    return(ret);
+      {
+            flags = fcntl(sockfd, F_GETFL, 0);
+            fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
+            if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
+              {
+                if (errno == EINPROGRESS)
+                  return(EINPROGRESS);
+                else 
+                  {
+                    HIP_PERROR("OpenDHT connect:");
+                    return(-1);
+                  }
+              }
+            else
+              {
+                /* connect ok */
+                return(0);
+              }
+
+      }
+
 } 
 
 /** 

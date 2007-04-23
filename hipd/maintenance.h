@@ -6,6 +6,7 @@
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
+#include "fcntl.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 

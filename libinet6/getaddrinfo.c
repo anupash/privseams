@@ -461,7 +461,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = connect_dht_gateway(s, &serving_gateway);
+  error = connect_dht_gateway(s, &serving_gateway, 1);
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
@@ -476,7 +476,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
   {
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0)
     {
       HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");

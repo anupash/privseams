@@ -326,6 +326,9 @@ void register_to_dht ()
   
   if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
     return;
+  if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT 
+      || hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
+    return;
   
   list_for_each_safe(item, tmp, addresses, i)
     {
@@ -359,34 +362,52 @@ void register_to_dht ()
                        tmp_addr_str, ctime(&n->timestamp));
            */
           /* send the fqdn->hit mapping */
-          if (hip_opendht_fqdn_sent == 0) 
+          if (hip_opendht_fqdn_sent == STATE_OPENDHT_IDLE) 
             {
               HIP_DEBUG("Sending mapping FQDN (%s) -> HIT (%s) to the openDHT\n", 
                         hostname, tmp_hit_str);
               if (hip_opendht_sock_fqdn < 1)
                 hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
               opendht_error = 0;
-              opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, &opendht_serving_gateway);
-              if (opendht_error > -1) 
+              opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
+                                                  &opendht_serving_gateway, 0);
+              if (opendht_error > -1 && opendht_error != EINPROGRESS) 
                 { 
                   opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
                                               (unsigned char *)tmp_hit_str, 
                                               (unsigned char *)tmp_addr_str);
                   if (opendht_error < 0)
                     HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-                  else hip_opendht_fqdn_sent = 1; 
+                  else hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_ANSWER; 
                 } 
+              if (opendht_error == EINPROGRESS)
+                {
+                  hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_CONNECT; /* connect not ready */
+                  HIP_DEBUG("OpenDHT connect unfinished (fqdn publish)\n");
+                  goto out_err;
+                }
             }
+          else if (hip_opendht_fqdn_sent == STATE_OPENDHT_START_SEND)
+            { /* connect finished send the data */
+              opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
+                                          (unsigned char *)tmp_hit_str, 
+                                          (unsigned char *)tmp_addr_str);
+              if (opendht_error < 0)
+                HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+              else hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_ANSWER; 
+            }
+
           /* send the hit->ip mapping */
-          if (hip_opendht_hit_sent == 0) 
+          if (hip_opendht_hit_sent == STATE_OPENDHT_IDLE) 
             {
               HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
                         tmp_hit_str, tmp_addr_str);
               if (hip_opendht_sock_hit < 1)
                 hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
               opendht_error = 0;
-              opendht_error = connect_dht_gateway(hip_opendht_sock_hit, &opendht_serving_gateway);
-              if (opendht_error > -1)
+              opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
+                                                  &opendht_serving_gateway, 0);
+              if (opendht_error > -1 && opendht_error != EINPROGRESS)
                 {
                   opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
                                               (unsigned char *)tmp_addr_str, 
@@ -399,16 +420,40 @@ void register_to_dht ()
                   else
                     {
                       n->timestamp = time(0) + 240; /* TODO unified TTL not hard coded */
-                      hip_opendht_hit_sent = 1;
+                      hip_opendht_hit_sent = STATE_OPENDHT_WAITING_ANSWER;
                     }
+                }
+              else if (opendht_error == EINPROGRESS)
+                {
+                  hip_opendht_hit_sent = STATE_OPENDHT_WAITING_CONNECT;
+                  HIP_DEBUG("OpenDHT connect unfinished (hit publish)\n");
+                  goto out_err;
                 }
               else
                 { /* connect error */
                   n->timestamp = time(0) +30; /* slows down the retry rate */
                 }
             }
+          else if (hip_opendht_hit_sent == STATE_OPENDHT_START_SEND)
+            { /* connect finished send the data */
+              opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
+                                          (unsigned char *)tmp_addr_str, 
+                                          (unsigned char *)tmp_addr_str);
+              if (opendht_error < 0)
+                {
+                  n->timestamp = time(0) + 30; /* slows down the retry rate */
+                  HIP_DEBUG("Error sending HIT->IP mapping to the openDHT.\n");
+                }
+              else
+                {
+                  n->timestamp = time(0) + 240; /* TODO unified TTL not hard coded */
+                  hip_opendht_hit_sent = STATE_OPENDHT_WAITING_ANSWER;
+                }
+            }
         }
     }
+ out_err:
+  return;
 #endif
 }
 

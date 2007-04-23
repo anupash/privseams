@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     /*!!!! put fqdn->hit !!!!*/
     s = init_dht_gateway_socket(s);
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) exit(0);
     ret = 0;
     ret = opendht_put(s, (unsigned char *)val_host,
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     /*!!!! put hit->ip !!!!*/ 
   
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) exit(0);
     ret = 0;
     ret = opendht_put(s, (unsigned char *)val_hit,
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     /*!!!! get fqdn !!!!*/
   
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response, '\0', sizeof(dht_response));
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     /*!!!! get hit !!!!*/
    
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     /* Finally let's try to get a key that doesn't exist */
     
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
