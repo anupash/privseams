@@ -1039,7 +1039,7 @@
     <para>The NAT traversal can be experimented in a similar way as depicted
           in earlier sections. The only difference is that you have to
           tell the initiator manually that it is behind a NAT using "hipconf
-          hip nat on". After this, you can initiate the base exchange
+          nat on". After this, you can initiate the base exchange
           according to the previous instructions. The manual configuration is
           currently required because support for automatic NAT detection (STUN)
           has not been implemented yet.
@@ -1051,7 +1051,7 @@
     </para>
     <itemizedlist>
     <listitem><para>
-      &nbsp;tools/hipconf hip nat on
+      &nbsp;tools/hipconf nat on
     </para>    </listitem>
     <listitem><para>
       &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
