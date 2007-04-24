@@ -326,10 +326,11 @@ void register_to_dht ()
   
   if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
     return;
+  /*
   if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT 
       || hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
     return;
-  
+  */
   list_for_each_safe(item, tmp, addresses, i)
     {
       n = list_entry(item);
@@ -384,7 +385,6 @@ void register_to_dht ()
                 {
                   hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_CONNECT; /* connect not ready */
                   HIP_DEBUG("OpenDHT connect unfinished (fqdn publish)\n");
-                  goto out_err;
                 }
             }
           else if (hip_opendht_fqdn_sent == STATE_OPENDHT_START_SEND)

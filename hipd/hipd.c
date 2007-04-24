@@ -342,6 +342,7 @@ int main(int argc, char *argv[])
 		/* prepare file descriptor sets */
 #ifdef CONFIG_HIP_OPENDHT
                 FD_ZERO(&write_fdset);
+                /*
 		FD_SET(hip_nl_route.fd, &write_fdset);
 		FD_SET(hip_raw_sock_v6, &write_fdset);
 		FD_SET(hip_raw_sock_v4, &write_fdset);
@@ -350,6 +351,7 @@ int main(int argc, char *argv[])
 		FD_SET(hip_nl_ipsec.fd, &write_fdset);
 		FD_SET(hip_agent_sock, &write_fdset);
 		FD_SET(hip_firewall_sock, &write_fdset);
+                */
                 if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
                   FD_SET(hip_opendht_sock_fqdn, &write_fdset);
                 if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
