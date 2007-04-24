@@ -38,7 +38,7 @@
  *	fix loads of more warnings
  *	use snprintf with a few fixed-sized buffers, fix format strings 
  *
- * Modified Oct 2001 by Jaakko Kyrö <jkyro@cs.helsinki.fi>
+ * Modified Oct 2001 by Jaakko Kyrï¿½<jkyro@cs.helsinki.fi>
  *      Added -I option to specify network interface
  *
  * Modified Oct 2002 by Pekka Savola <pekkas@netcore.fi>
@@ -111,7 +111,7 @@ char fmt = 'K';			/* output format: k = kilobits, K = kilobytes,
 				 *  m = megabits, M = megabytes, 
 				 *  g = gigabits, G = gigabytes */
 int touchdata = 0;		/* access data after reading */
-static long wait = 0;		/* usecs to wait between each write */
+static long wait_delay = 0;		/* usecs to wait between each write */
 int af =  AF_UNSPEC;		/* Address family to be determined */
 
 extern int errno;
@@ -227,7 +227,7 @@ main(int argc, char **argv)
 			verbose = 1;
 			break;
 		case 'w':
-			wait = strtol(optarg, (char **)NULL, 10);
+			wait_delay = strtol(optarg, (char **)NULL, 10);
 			break;
 		case 'A':
 			bufalign = atoi(optarg);
@@ -865,8 +865,8 @@ again:
 		cnt = write(fd, buf, count);
 		numCalls++;
 	}
-	if (wait)
-		delay(wait);
+	if (wait_delay)
+		delay(wait_delay);
 	return(cnt);
 }
 

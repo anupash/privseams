@@ -29,7 +29,7 @@ void hip_sig_chld(int signum)
 	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
 	{
 		/* Maybe do something.. */
-		HIP_DEBUG("Child quit with pid %d\n", pid);
+		_HIP_DEBUG("Child quit with pid %d\n", pid);
 	}
 }
 
@@ -117,7 +117,7 @@ int hipd_init(int flush_ipsec)
 			kill(pid, SIGINT);
 			/* Wait a second for daemon to stop. */
 			HIP_INFO("Waiting old daemon to stop...\n");
-			sleep(2);
+			//sleep(2);
 		}
 		/*
 		 * If pid already read, just check whether daemon has really stopped.
@@ -584,7 +584,7 @@ int init_random_seed()
  */
 void hip_probe_kernel_modules()
 {
-	int count, err;
+	int count, err, status;
 	char cmd[40];
 	/* update also this if you add more modules */
 	int mod_total;
@@ -612,6 +612,7 @@ void hip_probe_kernel_modules()
 			stderr = freopen("/dev/null", "w", stderr);
 			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
 		}
+		else waitpid(err, &status, 0);
 	}
 	HIP_DEBUG("Probing completed\n");
 }

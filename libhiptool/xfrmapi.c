@@ -345,13 +345,15 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
  * @return 0 if successful
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
-			  struct in6_addr *peer_addr, __u32 spi,
-			  int preferred_family,
-			  int sport, int dport) {
-	struct {
-		struct nlmsghdr 	n;
-		struct xfrm_usersa_id	xsid;
-	        char   			buf[RTA_BUF_SIZE];
+                          struct in6_addr *peer_addr, __u32 spi,
+                          int preferred_family,
+                          int sport, int dport)
+{
+	struct
+	{
+		struct nlmsghdr n;
+		struct xfrm_usersa_id xsid;
+		char buf[RTA_BUF_SIZE];
 	} req;
 	struct xfrm_encap_tmpl encap;
 	char *idp = NULL;
@@ -364,23 +366,25 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	req.n.nlmsg_type = XFRM_MSG_DELSA;
 	//req.xsid.family = preferred_family;
 
-	if(IN6_IS_ADDR_V4MAPPED(peer_addr))
-        {
+	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
+	{
 		HIP_DEBUG("IPV4 SA deletion\n");
-                req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
-                req.xsid.family = AF_INET;
-        } else {
+				req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
+				req.xsid.family = AF_INET;
+	}
+	else
+	{
 		HIP_DEBUG("IPV6 SA deletion\n");
 		memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
-                req.xsid.family = preferred_family;
-        }
+				req.xsid.family = preferred_family;
+	}
 
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	
         /** @todo Fill in information for UDP-NAT SAs. */
-	if(req.xsid.family == AF_INET && (sport || dport))
+	if (req.xsid.family == AF_INET && (sport || dport))
 	{
-		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
+		HIP_DEBUG("FILLING UP Port info while deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
@@ -389,29 +393,31 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 
 
 	req.xsid.spi = htonl(spi);
-	if (spi)
-		req.xsid.proto = IPPROTO_ESP;
+	if (spi) req.xsid.proto = IPPROTO_ESP;
 
-	HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
+	HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
+	HIP_HEXDUMP("peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1, "netlink_talk() failed!\n");
 
- out_err:
-
+out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int family, int sport, int dport) {
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr,
+                   struct in6_addr *dst_addr,
+                   int family, int sport, int dport)
+{
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
 	HIP_DEBUG("spi=0x%x\n", spi);
 	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
 
 	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
-			      sport, dport);
+	                      sport, dport);
 }
 
-uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
-
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
+{
 	uint32_t spi;
 	get_random_bytes(&spi, sizeof(uint32_t));
 	return spi; /* XX FIXME: REWRITE USING XFRM */

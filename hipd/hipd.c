@@ -361,11 +361,10 @@ int main(int argc, char *argv[])
 		_HIP_DEBUG("select loop\n");
 		/* wait for socket activity */
 		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
-				       NULL, NULL, &timeout)) < 0)
+						NULL, NULL, &timeout)) < 0)
 		{
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
-                        goto to_maintenance;
-
+			goto to_maintenance;
 		}
 		else if (err == 0)
 		{
