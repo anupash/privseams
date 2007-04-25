@@ -35,11 +35,11 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+
 #include "debug.h"
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
 #include "util.h"
 #include "libhipopendht.h"
 
@@ -77,19 +77,16 @@
 #define ACTION_ADD 1
 #define ACTION_DEL 2
 #define ACTION_NEW 3
-#define ACTION_NAT 4
-#define ACTION_HIP 5
-#define ACTION_SET 6
-#define ACTION_INC 7
-#define ACTION_DEC 8
-#define ACTION_GET 9
-#define ACTION_RUN 10
-#define ACTION_LOAD 11
-#define ACTION_DHT 12
+#define ACTION_HIP 4
+#define ACTION_SET 5
+#define ACTION_INC 6
+#define ACTION_DEC 7
+#define ACTION_GET 8
+#define ACTION_RUN 9
+#define ACTION_LOAD 10
+#define ACTION_DHT 11
+#define ACTION_MAX 12 /* exclusive */
 #define ACTION_HA  13
-#define ACTION_RST 14
-#define ACTION_BOS 15
-#define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -109,9 +106,8 @@
 #define TYPE_GW         14
 #define TYPE_GET        15
 #define TYPE_BLIND      16
-#define TYPE_HA         17
-#define TYPE_ALL   	18
-#define TYPE_MAX    	19 /* exclusive */
+#define TYPE_HA         17 
+#define TYPE_MAX    	18 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -123,7 +119,14 @@
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
-# nat on            # the host is behind a NAT\n"
+# hip nat on        # the host is behind a NAT\n"
+
+#define HIPD_HOSTS_FILE     "/etc/hip/hosts"
+#define HIPD_HOSTS_FILE_EX \
+"# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
+# The aliases are optional.  Examples:\n\
+#2001:7e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
+#2001:77:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
  
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);

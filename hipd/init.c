@@ -22,7 +22,11 @@ void hip_load_configuration()
 	pid_t pid;
 	FILE *fp = NULL;
 	size_t items = 0;
-	int len = strlen(HIPD_CONFIG_FILE_EX);
+	int len_con = strlen(HIPD_CONFIG_FILE_EX), 
+	  len_hos = strlen(HIPD_HOSTS_FILE_EX);
+
+	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and 
+	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
 
 	/* Create config file if does not exist */
 
@@ -30,7 +34,18 @@ void hip_load_configuration()
 		errno = 0;
 		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
 		HIP_ASSERT(fp);
-		items = fwrite(HIPD_CONFIG_FILE_EX, len, 1, fp);
+		items = fwrite(HIPD_CONFIG_FILE_EX, len_con, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	/* Create /etc/hip/hosts file if does not exist */
+
+	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_HOSTS_FILE_EX, len_hos, 1, fp);
 		HIP_ASSERT(items > 0);
 		fclose(fp);
 	}
