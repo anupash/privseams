@@ -8,7 +8,7 @@
 /******************************************************************************/
 /* INCLUDES */
 #include "connhipd.h"
-
+#include "builder.h"
 
 /******************************************************************************/
 /* VARIABLES */
@@ -142,7 +142,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
-				lhit = hip_get_param_contents_direct(param);
+				lhit = (struct in6_addr *)hip_get_param_contents_direct(param);
 				HIP_HEXDUMP("Adding local HIT:", lhit, 16);
 				print_hit_to_buffer(chit, lhit);
 				hit_db_add_local(chit, lhit);
@@ -164,7 +164,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)/* &&
 			    hip_get_param_type(param2) == HIP_PARAM_HIT)*/
 			{
-				rhit = hip_get_param_contents_direct(param);
+				rhit = (struct in6_addr *)hip_get_param_contents_direct(param);
 				//lhit = hip_get_param_contents_direct(param2);
 				r = hit_db_find(NULL, rhit);
 				if (r)
@@ -186,7 +186,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		HIP_DEBUG("Message from daemon, %d bytes.\n", hip_get_msg_total_len(msg));
 
 		/* Get original message, which is encapsulated inside received one. */
-		emsg = hip_get_param_contents(msg, HIP_PARAM_ENCAPS_MSG);
+		emsg = (struct hip_common *)hip_get_param_contents(msg, HIP_PARAM_ENCAPS_MSG);
 		HIP_IFEL(!emsg, -1, "Could not get msg parameter!\n");
 
 		HIP_HEXDUMP("msg->hits: ", &emsg->hits, 16);
@@ -240,7 +240,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			HIP_DEBUG("Message accepted, sending back to daemon, %d bytes.\n",
                       hip_get_msg_total_len(msg));
-			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+			n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -250,7 +250,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_DEBUG("Message rejected.\n");
 			n = 1;
 			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
-			n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+			n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
 			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
 			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
@@ -272,7 +272,7 @@ out_err:
 /**
 	This thread keeps the HIP daemon connection alive.
 */
-int connhipd_thread(void *data)
+void *connhipd_thread(void *data)
 {
 	/* Variables. */
 	int err = 0, n, len, ret, max_fd;
@@ -300,7 +300,7 @@ int connhipd_thread(void *data)
 			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
 			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
-			n = connhipd_sendto_hipd(msg, sizeof(struct hip_common));
+			n = connhipd_sendto_hipd((char *)msg, sizeof(struct hip_common));
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
 		}
@@ -353,7 +353,7 @@ int connhipd_thread(void *data)
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, HIP_AGENT_QUIT, 0);
-	n = connhipd_sendto_hipd(msg, hip_get_msg_total_len(msg));
+	n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 
 	if (hip_agent_sock) close(hip_agent_sock);
@@ -364,7 +364,9 @@ out_err:
 
 	HIP_DEBUG("Connection thread exit.\n");
 
-	return (err);
+	/* This function cannot have a returning value */
+	/*return (err);*/
+
 }
 /* END OF FUNCTION */
 
