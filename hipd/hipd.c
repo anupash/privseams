@@ -385,8 +385,7 @@ int main(int argc, char *argv[])
 #endif
 		{
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
-                        goto to_maintenance;
-
+			goto to_maintenance;
 		}
 		else if (err == 0)
 		{

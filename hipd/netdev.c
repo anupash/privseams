@@ -226,7 +226,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 		int deleted = 0;
 		n = list_entry(item);
 
-			/* remove from list if if_index matches */
+		/* remove from list if if_index matches */
 		if (!addr)
 		{
 			if (n->if_index == ifindex)
@@ -237,7 +237,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 		}
 		else
 		{
-		/* remove from list if address matches */
+			/* remove from list if address matches */
+			HIP_HEXDUMP("a1:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
+			HIP_HEXDUMP("a2:", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
 			if ((n->addr.ss_family == addr->sa_family) &&
 				((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
 				hip_sa_addr_len(addr))==0)) ||
