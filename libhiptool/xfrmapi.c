@@ -5,7 +5,8 @@
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
-int hip_xfrmapi_beet = 4; /* 2.6.19 and above */
+
+int hip_xfrmapi_beet;
 
 char **e_algo_names; 
 char **a_algo_names;
