@@ -110,7 +110,7 @@ int hipd_init(int flush_ipsec)
 	hip_set_os_dep_variables();
 
 	hip_probe_kernel_modules();
-
+      
 	/* Kill hip daemon, if it already exists. */
 	for (pid = 0; pid >= 0; )
 	{
@@ -164,7 +164,7 @@ int hipd_init(int flush_ipsec)
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
-
+ 
 	HIP_IFEL(hip_ipdb_clear(), -1,
 	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
 
@@ -183,13 +183,8 @@ int hipd_init(int flush_ipsec)
 #endif	
 #ifdef CONFIG_HIP_OPENDHT
         memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
-//      err = resolve_dht_gateway_info("planetlab1.diku.dk", &opendht_serving_gateway);
-//        err = resolve_dht_gateway_info("192.38.109.143", &opendht_serving_gateway);
-        err = resolve_dht_gateway_info("opendht.nyuld.net", &opendht_serving_gateway);
-        if (err < 0)
-        {
-          HIP_DEBUG("Error resolving openDHT gateway!\n");
-        }
+        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
+        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
         err = 0;
 #endif
 #ifdef CONFIG_HIP_ESCROW

@@ -445,6 +445,16 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   struct addrinfo serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
+  /*
+  struct hip_common *msg;
+  struct hip_opendht_gw_info *gw_info;
+  struct in_addr tmp_v4;
+  char tmp_ip_str[21];
+  int tmp_ttl, tmp_port;
+  int *pret;
+  int err;
+  */
+
   if (flags & AI_NODHT)
     goto skip_dht;
 
@@ -454,6 +464,28 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   ret_hit = -1;  
   ret_addr = -1;
 
+  /* ask about the serving gateway from the daemon */
+  
+  //  HIP_DEBUG("Asking serving gateway info from daemon...\n");
+  /*
+  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
+           "Building daemon header failed\n"); 
+  HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+  HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
+           "No gw struct found\n");
+  memset(&tmp_ip_str,'\0',20);
+  tmp_ttl = gw_info->ttl;
+  tmp_port = htons(gw_info->port);
+  IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+  pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+  HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+            tmp_ip_str, tmp_port, tmp_ttl);
+
+ out_err:
+  HIP_DEBUG("OUT ERROROROROROR\n");      
+  */
+
   s = init_dht_gateway_socket(s);
   if (s < 0) 
   {
@@ -461,7 +493,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = resolve_dht_gateway_info ("planetlab1.diku.dk", &serving_gateway);
+  error = resolve_dht_gateway_info ("opendht.nyuld.net", &serving_gateway);
   if (error < 0)
   {
     HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
@@ -476,7 +508,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     close(s);
     goto skip_dht;
   }
-  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr);
+  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
   ret_hit = opendht_read_response(s, dht_response_hit);
   if (ret_hit == 0)
     HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
@@ -490,7 +522,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
       HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
       goto skip_dht;
     }
-    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr);
+    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr, 5851);
     ret_addr = opendht_read_response(s, dht_response_addr);
     if (ret_addr == 0)
       HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);

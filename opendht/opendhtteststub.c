@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     if (error < 0) exit(0);
     ret = 0;
     ret = opendht_put(s, (unsigned char *)val_host,
-                        (unsigned char *)val_hit, (unsigned char *)host_addr);   
+                        (unsigned char *)val_hit, (unsigned char *)host_addr,5851,120);   
     ret = opendht_read_response(s, dht_response); 
     if (ret == -1) exit(1);
     printf("Put packet (fqdn->hit) sent and ...\n");
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     if (error < 0) exit(0);
     ret = 0;
     ret = opendht_put(s, (unsigned char *)val_hit,
-                        (unsigned char *)val_ip, (unsigned char *)host_addr);
+                        (unsigned char *)val_ip, (unsigned char *)host_addr,5851,120);
     ret = opendht_read_response(s, dht_response); 
     if (ret == -1) exit(1);
     printf("Put packet (hit->ip) sent and ...\n");
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr);
+    ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr, 5851);
     ret = opendht_read_response(s, dht_response); 
     // if (ret == -1) exit (1);
     printf("Get packet (fqdn) sent and ...\n");
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
-    ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr); 
+    ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851); 
     ret = opendht_read_response(s, dht_response2); 
     if (ret == -1) exit (1);
     printf("Get packet (hit) sent and ...\n");
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     if (error < 0) exit(0);
     ret = 0;
     memset(dht_response2, '\0', sizeof(dht_response2));
-    ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr); 
+    ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, 5851); 
     ret = opendht_read_response(s, dht_response2); 
     // if (ret == -1) exit (1);
     printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");

@@ -52,7 +52,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	switch (addr->sa_family) {
 		case AF_INET6:
 			inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s, sLEN);
-			HIP_DEBUG("IPv6 addr: %s", s);
+			HIP_DEBUG("IPv6 addr: %s\n", s);
 
 			struct in6_addr *a_in6 = hip_cast_sa_addr(addr);
 

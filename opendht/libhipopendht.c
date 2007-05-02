@@ -133,13 +133,16 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 int opendht_put(int sockfd, 
                 unsigned char * key,
                 unsigned char * value, 
-                unsigned char * host)
+                unsigned char * host,
+                int opendht_port,
+                int opendht_ttl)
 {
     int key_len = 0;
-    int dht_port = 5851;
     char put_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
+    //    int opendht_ttl = 120;
+    //int opendht_port = 5851;
 
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
@@ -170,13 +173,14 @@ int opendht_put(int sockfd,
                          key_len,
                          (unsigned char *)value,
 	                 strlen((char *)value),
-                         dht_port,
+                         opendht_port,
                          (unsigned char *)host,
-                         put_packet) != 0)
+                         put_packet, opendht_ttl) != 0)
     {
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
+    //    HIP_DEBUG("ACTUAL SEND STARTS HERE\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }
@@ -193,10 +197,10 @@ int opendht_put(int sockfd,
  */
 int opendht_get(int sockfd, 
                 unsigned char * key, 
-                unsigned char * host)
+                unsigned char * host,
+                int port)
 {
     int key_len = 0;
-    int dht_port = 5851;
     char get_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
@@ -228,7 +232,7 @@ int opendht_get(int sockfd,
     memset(get_packet, '\0', sizeof(get_packet));
     if (build_packet_get((unsigned char *)tmp_key,
                          key_len,
-                         dht_port,
+                         port,
                          (unsigned char *)host,
                          get_packet) !=0)
     {

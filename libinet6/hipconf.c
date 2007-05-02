@@ -936,7 +936,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
 #ifdef CONFIG_HIP_OPENDHT
     int s, error;
     char dht_response[1024];
-    char opendht[] = "planetlab1.diku.dk";
+    char opendht[] = "opendht.nyuld.net";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
     struct addrinfo serving_gateway;
     memset(&serving_gateway, '0', sizeof(struct addrinfo));
@@ -963,7 +963,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     }
 
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr);
+    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr, 5851);
     ret = opendht_read_response(s, dht_response); 
     close(s);
     if (ret == -1) 

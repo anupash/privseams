@@ -57,8 +57,8 @@ int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 int opendht_error = 0;
 char opendht_response[1024];
 struct addrinfo opendht_serving_gateway;
-int opendht_serving_gateway_port;
-//int opendht_serving_gateway_flag;
+int opendht_serving_gateway_port = OPENDHT_PORT;
+int opendht_serving_gateway_ttl = OPENDHT_TTL;
  
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -342,16 +342,6 @@ int main(int argc, char *argv[])
 		/* prepare file descriptor sets */
 #ifdef CONFIG_HIP_OPENDHT
                 FD_ZERO(&write_fdset);
-                /*
-		FD_SET(hip_nl_route.fd, &write_fdset);
-		FD_SET(hip_raw_sock_v6, &write_fdset);
-		FD_SET(hip_raw_sock_v4, &write_fdset);
-		FD_SET(hip_nat_sock_udp, &write_fdset);
-		FD_SET(hip_user_sock, &write_fdset);
-		FD_SET(hip_nl_ipsec.fd, &write_fdset);
-		FD_SET(hip_agent_sock, &write_fdset);
-		FD_SET(hip_firewall_sock, &write_fdset);
-                */
                 if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
                   FD_SET(hip_opendht_sock_fqdn, &write_fdset);
                 if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
@@ -494,21 +484,20 @@ int main(int argc, char *argv[])
 			else err = hip_handle_user_msg(hipd_msg, &app_src);
 		}
 
+#ifdef CONFIG_HIP_OPENDHT
                 if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                      FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
                 {
-#ifdef CONFIG_HIP_OPENDHT
                   /* Error with the connect */
                   HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-#endif
                 }
                 else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
                 {
-#ifdef CONFIG_HIP_OPENDHT               
-                  hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND;
-#endif 
+                  hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND; 
                 }
-                else if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset))
+#endif
+                
+                if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset))
 		{
 #ifdef CONFIG_HIP_OPENDHT
                   /* Receive answer from openDHT FQDN->HIT mapping */
@@ -530,21 +519,18 @@ int main(int argc, char *argv[])
                     }
 #endif
 		} 
-
+#ifdef CONFIG_HIP_OPENDHT
                 if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
                      FD_ISSET(hip_opendht_sock_hit, &write_fdset))
                 {
-#ifdef CONFIG_HIP_OPENDHT
                   /* Error with the connect */
                   HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-#endif
                 }
                 else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset))
                 {
-#ifdef CONFIG_HIP_OPENDHT               
                   hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
-#endif 
                 }
+#endif
 		if (FD_ISSET(hip_opendht_sock_hit, &read_fdset))
 		{
 #ifdef CONFIG_HIP_OPENDHT

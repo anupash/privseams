@@ -1,8 +1,7 @@
 /* All XML RPC packet creation functions */
 
-#define TTL "120"
-
-int build_packet_put(unsigned char *, int, unsigned char *, int, int, unsigned char*, char *);
+int build_packet_put(unsigned char *, int, unsigned char *, 
+                     int, int, unsigned char*, char *, int);
 
 int build_packet_get(unsigned char *, int, int, unsigned char*, char *);
 
