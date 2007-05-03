@@ -140,12 +140,17 @@ struct hip_context
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
 };
 
+/*
+ * Fixed start of this struct must match to struct hip_locator_info_addr_item
+ * for the part of address item. It is used in hip_update_locator_match().
+ */
 struct hip_peer_addr_list_item
 {
 //	hip_list_t list;
+	uint32_t padding;
 	unsigned long    hash_key;
-
 	struct in6_addr  address;
+	
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	int              is_preferred;  /* 1 if this address was set as

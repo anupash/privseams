@@ -379,9 +379,12 @@ gethosts(const char *name, int _family,
   struct hostent *h = NULL;
   struct gaih_addrtuple *aux = NULL;
 
-  // freeing the already allocated structure
-  free(**pat);
-  **pat = NULL;
+  /* freeing the already allocated structure if it si empty
+     Warning: Not good practice, may cause problems */
+  if(**pat != NULL && (**pat)->next == NULL && (**pat)->family == 0){
+    free(**pat);
+    **pat = NULL;
+  }
 
   do {								
     tmpbuflen *= 2;						
@@ -407,7 +410,7 @@ gethosts(const char *name, int _family,
 	{
 	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
-	    exit(EXIT_FAILURE);
+	    exit(-EAI_MEMORY);
 	  }
 	  //Placing the node at the beginning of the list
 	  aux->next = (**pat);
@@ -550,7 +553,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     }									
     if ((strlen(name) == strlen(fqdn_str)) &&		         	
       strcmp(name, fqdn_str) == 0) {				        
-      HIP_DEBUG("** match on line %d **\n", lineno);			
+      _HIP_DEBUG("** match on line %d **\n", lineno);			
       found_hits = 1;                                                   
                                                                         
       /* add every HIT to linked list */				
@@ -558,9 +561,8 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
 	struct gaih_addrtuple *prev_pat = NULL;	
 	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-	printf("getitem(&list,i): %s \n", getitem(&list,i));
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
-	HIP_DEBUG("hit: %x\n", hit);              
+	_HIP_DEBUG("hit: %x\n", hit);              
         if (ret < 1) continue;         
  
 	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
@@ -1144,13 +1146,13 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (req->ai_flags == AF_UNSPEC) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
 	HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
-	while ((a != NULL) && (a->family == AF_INET6)) {
+	while (a != NULL) {
 	  struct gaih_addrtuple *nxt = a->next;
 	  
 	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
 		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
 	  
-	  /* do not move the  HIT if request is not IPv4 */
+	  /* do not move HITs if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
 	      ipv6_addr_is_hit((struct in6_addr *)a->addr)){
@@ -1158,17 +1160,17 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    continue;
 	  }
 	  
+#if 0 /* Not supported yet */
 	  /* do not move the LSI if request is IPv4 */
-	  /* Not supported yet
 	  if (req->ai_family == AF_INET && 
 	      a->family == AF_INET && 
 	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))){
 	    a = aux = nxt;
 	    continue;
 	  }
-	  */
+#endif
 
-	  /* putting the non-HIT IPv6 to the linked list *p */
+	  /* putting the IPs to the linked list *p */
 	  if (p == NULL){
 	    p = plast = a;
 	    a->next = NULL;
@@ -1191,17 +1193,15 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 
 	}
 
-	/* inserting linked list *p between HITs and IPv4s */
+	/* Appending linked list *p (IPs) after HITs */
 	if (p != NULL){
 	  aux = *at;
-	  if(aux == a){
+	  if(aux == NULL)
 	    *at = p;
-	    plast->next = a;
-	  }else{
-	    while (aux->next != a)
+	  else{
+	    while (aux->next != NULL)
 	      aux = aux->next;
 	    aux->next = p;
-	    plast->next = a;
 	  }
 	}
       }
