@@ -60,17 +60,17 @@ void extractsubstrings(char *string, List *list) {
   char *sub_string;
   char *separator;
   /* Note: fails if the string includes BOTH spaces and tabs */
-  HIP_DEBUG("extractsubstrings\n");
+  _HIP_DEBUG("extractsubstrings\n");
   separator = (strrchr(string, ' ') ? " " : "\t");
   sub_string = strtok(string, separator);
-  HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+  _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
   if(sub_string)
     insert(list, sub_string);
   else 
     return;
   sub_string = NULL;
   while ((sub_string=strtok(NULL, separator)) != NULL) {
-    HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+    _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
     insert(list, sub_string);
     sub_string = NULL;
   }
