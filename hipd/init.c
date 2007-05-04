@@ -15,6 +15,25 @@
 
 extern struct hip_common *hipd_msg;
 
+
+/******************************************************************************/
+/** Catch SIGCHLD. */
+void hip_sig_chld(int signum) 
+{ 
+	union wait status;
+	int pid, i;
+	
+	signal(signum, hip_sig_chld);
+
+	/* Get child process status, so it wont be left as zombie for long time. */
+	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
+	{
+		/* Maybe do something.. */
+		_HIP_DEBUG("Child quit with pid %d\n", pid);
+	}
+}
+
+
 void hip_load_configuration()
 {
 	const char *cfile = "default";
@@ -69,10 +88,19 @@ void hip_set_os_dep_variables()
 
 	sscanf(un.release, "%d.%d.%d.%d", &rel[0], &rel[1], &rel[2], &rel[3]);
 
-	/* XFRM_BEET was set to four in 2.6.19 and above. Kernels below that
-	   have it as two. */
-	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19)
+	/*
+	  2.6.19 and above introduced some changes to kernel API names:
+	  - XFRM_BEET changed from 2 to 4
+	  - crypto algo names changed
+	*/
+
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
 		hip_xfrm_set_beet(2);
+		hip_xfrm_set_algo_names(0);
+	} else {
+		hip_xfrm_set_beet(4);
+		hip_xfrm_set_algo_names(1);
+	}
 }
 
 
@@ -113,7 +141,7 @@ int hipd_init(int flush_ipsec)
 			kill(pid, SIGINT);
 			/* Wait a second for daemon to stop. */
 			HIP_INFO("Waiting old daemon to stop...\n");
-			sleep(2);
+			//sleep(2);
 		}
 		/*
 		 * If pid already read, just check whether daemon has really stopped.
@@ -144,6 +172,7 @@ int hipd_init(int flush_ipsec)
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
+	signal(SIGCHLD, hip_sig_chld);
 
 	HIP_IFEL(hip_ipdb_clear(), -1,
 	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
@@ -579,10 +608,10 @@ int init_random_seed()
  */
 void hip_probe_kernel_modules()
 {
-	int count;
+	int count, err, status;
 	char cmd[40];
-        /* update also this if you add more modules */
-	const int mod_total = 13;
+	/* update also this if you add more modules */
+	int mod_total;
 	char *mod_name[] =
 	{
 		"xfrm6_tunnel", "xfrm4_tunnel",
@@ -591,12 +620,23 @@ void hip_probe_kernel_modules()
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"
 	};
 
-	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
+	mod_total = sizeof(mod_name) / sizeof(char *);
+
+	HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);	
+
 	for (count = 0; count < mod_total; count++)
 	{
 		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
-		system(cmd);
+		err = fork();
+		if (err < 0) HIP_ERROR("Failed to fork() for modprobe!\n");
+		else if (err == 0)
+		{
+			/* Redirect stderr, so few non fatal errors wont show up. */
+			stderr = freopen("/dev/null", "w", stderr);
+			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
+		}
+		else waitpid(err, &status, 0);
 	}
 	HIP_DEBUG("Probing completed\n");
 }

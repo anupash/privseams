@@ -52,7 +52,7 @@ extern "C" {
 int connhipd_init(void);
 int connhipd_sendto_hipd(char *, size_t);
 int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
-int connhipd_thread(void *);
+void *connhipd_thread(void *);
 void connhipd_quit(void);
 
 
