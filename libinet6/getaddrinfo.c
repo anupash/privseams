@@ -627,9 +627,13 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
     }
     
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+
+#if 0 /* LSIs not supported yet */
       if (at_ip->family == AF_INET && 
 	  IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
 	continue;
+#endif
+
       if (at_ip->family == AF_INET6 &&
 	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 	continue;
