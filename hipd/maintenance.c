@@ -354,7 +354,7 @@ void register_to_dht ()
           /* send the hit->ip mapping */
           pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
           if (pub_addr_ret == 1)
-            opendht_n->timestamp = time(0) + 240;
+            opendht_n->timestamp = time(0) + 120; /* in seconds */
           else if (pub_addr_ret == -1)
             opendht_n->timestamp = time(0) + 30;
         }
