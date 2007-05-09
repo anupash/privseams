@@ -15,6 +15,7 @@
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 #include "debug.h"
+#include "fcntl.h"
 /*
 #include "time.h"
 
@@ -31,7 +32,7 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("Socket");
+        HIP_PERROR("OpenDHT socket:");
 
     return(sockfd);      
 }
@@ -43,7 +44,8 @@ int init_dht_gateway_socket(int sockfd)
  *
  * @return Returns 0 on success otherwise -1
  */
-int resolve_dht_gateway_info(char * gateway_name, struct addrinfo * gateway)
+int resolve_dht_gateway_info(char * gateway_name, 
+                             struct addrinfo * gateway)
 {
     struct addrinfo hints, *res;
     int error;
@@ -54,15 +56,15 @@ int resolve_dht_gateway_info(char * gateway_name, struct addrinfo * gateway)
     hints.ai_flags = AI_NODHT;
     error = 0;
 
-    error = getaddrinfo(gateway_name, "5851", &hints, &res);
+     error = getaddrinfo(gateway_name, "5851", &hints, &res);
+    //error = getaddrinfo(gateway_name, NULL, &hints, &res);
     if (error != 0)
-        HIP_DEBUG("Resolving failed\n");
+        HIP_DEBUG("OpenDHT gateway resolving failed\n");
     else
     {
         memcpy(gateway, res, sizeof(struct addrinfo));
         struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
-        HIP_DEBUG("OpenDHT gateway port=%d IPv4/%s\n", 
-                  ntohs(sa->sin_port), inet_ntoa(sa->sin_addr));
+        HIP_DEBUG("OpenDHT gateway IPv4/%s\n", inet_ntoa(sa->sin_addr));
     }
     return(error);
 }
@@ -70,27 +72,56 @@ int resolve_dht_gateway_info(char * gateway_name, struct addrinfo * gateway)
 /**
  *  connect_dht_gateway - Connects to given gateway
  *  @param sockfd
+ *  @param addrinfo Address to connect to 
+ *  @param blocking 1 for blocking connect 0 for nonblocking
  *
+ *  @return Returns 0 on success -1 otherwise, if nonblocking can return also EINPRGORESS
  */
-int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
+int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
-    int ret = 0;
+    int flags = 0;
     struct sockaddr_in *sa;
-    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
-    {
-        HIP_PERROR("Connect");
-        ret = -1;
-    }
+
+    if (blocking == 1)
+      {
+        if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
+          {
+            HIP_PERROR("OpenDHT connect:");
+            return(-1);
+          }
+        else
+          {
+            sa = (struct sockaddr_in *)gateway->ai_addr;
+            HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+            return(0);
+          }
+      }
     else
-    {
-      sa = (struct sockaddr_in *)gateway->ai_addr;
-      HIP_DEBUG("Connected to gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-    }
-    return(ret);
-}
+      {
+            flags = fcntl(sockfd, F_GETFL, 0);
+            fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
+            if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
+              {
+                if (errno == EINPROGRESS)
+                  return(EINPROGRESS);
+                else 
+                  {
+                    HIP_PERROR("OpenDHT connect:");
+                    return(-1);
+                  }
+              }
+            else
+              {
+                /* connect ok */
+                return(0);
+              }
+
+      }
+
+} 
 
 /** 
- * opendht_put_b - Builds XML RPC packet and sends it through given socket and reads the response
+ * opendht_put - Builds XML RPC packet and sends it through given socket and reads the response
  * @param sockfd Socket to be used with the send
  * @param key Key for the openDHT
  * @param value Value to be stored to the openDHT
@@ -102,13 +133,16 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway)
 int opendht_put(int sockfd, 
                 unsigned char * key,
                 unsigned char * value, 
-                unsigned char * host)
+                unsigned char * host,
+                int opendht_port,
+                int opendht_ttl)
 {
     int key_len = 0;
-    int dht_port = 5851;
     char put_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
+    //    int opendht_ttl = 120;
+    //int opendht_port = 5851;
 
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
@@ -139,19 +173,20 @@ int opendht_put(int sockfd,
                          key_len,
                          (unsigned char *)value,
 	                 strlen((char *)value),
-                         dht_port,
+                         opendht_port,
                          (unsigned char *)host,
-                         put_packet) != 0)
+                         put_packet, opendht_ttl) != 0)
     {
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
+    //    HIP_DEBUG("ACTUAL SEND STARTS HERE\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }
 
 /** 
- * opendht_get_b - Builds XML RPC packet and sends it through given socket and reads the response
+ * opendht_get - Builds XML RPC packet and sends it through given socket and reads the response
  * @param sockfd Socket to be used with the send
  * @param key Key for the openDHT
  * @param value Value to be stored to the openDHT
@@ -162,10 +197,10 @@ int opendht_put(int sockfd,
  */
 int opendht_get(int sockfd, 
                 unsigned char * key, 
-                unsigned char * host)
+                unsigned char * host,
+                int port)
 {
     int key_len = 0;
-    int dht_port = 5851;
     char get_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
@@ -197,7 +232,7 @@ int opendht_get(int sockfd,
     memset(get_packet, '\0', sizeof(get_packet));
     if (build_packet_get((unsigned char *)tmp_key,
                          key_len,
-                         dht_port,
+                         port,
                          (unsigned char *)host,
                          get_packet) !=0)
     {
