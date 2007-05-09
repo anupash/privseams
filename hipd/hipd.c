@@ -102,6 +102,7 @@ int hip_sock_recv_agent(void)
 	socklen_t alen;
 	hip_hdr_type_t msg_type;
 	err = 0;
+	hip_opp_block_t *entry;
 	
 	HIP_DEBUG("Receiving a message from agent socket "\
 				"(file descriptor: %d).\n", hip_agent_sock);
@@ -164,9 +165,12 @@ int hip_sock_recv_agent(void)
 		}
 		else if (emsg && src_addr && dst_addr && msg_info)
 		{
+		#ifdef CONFIG_HIP_OPPORTUNISTIC
+
 			HIP_DEBUG("Received rejected R1 packet from agent.\n");
 			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
+		#endif
 		}
 	}
 	

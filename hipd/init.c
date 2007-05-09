@@ -88,10 +88,19 @@ void hip_set_os_dep_variables()
 
 	sscanf(un.release, "%d.%d.%d.%d", &rel[0], &rel[1], &rel[2], &rel[3]);
 
-	/* XFRM_BEET was set to four in 2.6.19 and above. Kernels below that
-	   have it as two. */
-	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19)
+	/*
+	  2.6.19 and above introduced some changes to kernel API names:
+	  - XFRM_BEET changed from 2 to 4
+	  - crypto algo names changed
+	*/
+
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
 		hip_xfrm_set_beet(2);
+		hip_xfrm_set_algo_names(0);
+	} else {
+		hip_xfrm_set_beet(4);
+		hip_xfrm_set_algo_names(1);
+	}
 }
 
 

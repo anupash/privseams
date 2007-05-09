@@ -5,7 +5,28 @@
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
-int hip_xfrmapi_beet = 4; /* 2.6.19 and above */
+
+int hip_xfrmapi_beet;
+
+char **e_algo_names; 
+char **a_algo_names;
+
+/* Mappings from HIP to XFRM algo names < 2.6.19 */
+char *e_algo_names_old[] =
+  {"reserved", "aes", "des3_ede", "des3_ede",
+   "blowfish", "cipher_null", "cipher_null"};
+char *a_algo_names_old[] =
+  {"reserved", "sha1", "sha1", "md5",
+   "sha1", "sha1", "md5"};
+
+/* Mappings from HIP to XFRM algo names >= 2.6.19 */
+char *e_algo_names_new[] =
+  {"reserved", "cbc(aes)", "cbc(des3_ede)", "cbc(des3_ede)",
+   "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
+char *a_algo_names_new[] =
+  {"reserved", "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
+   "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
+
 
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
 	hip_xfrmapi_nl_ipsec = nl_ipsec;
@@ -17,6 +38,11 @@ void hip_xfrm_set_beet(int beet) {
 
 int hip_xfrm_get_beet(void) {
 	return hip_xfrmapi_beet;
+}
+
+void hip_xfrm_set_algo_names(int new_algo_names) {
+	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
+	a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
 }
 
 /**
@@ -290,14 +316,6 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			struct xfrm_algo algo;
 			char buf[XFRM_ALGO_KEY_BUF_SIZE];
 		} alg;
-		/* Mappings from HIP to XFRM algo names */
-		char *e_algo_names[] =
-			{"reserved", "aes", "des3_ede", "des3_ede",
-			 "blowfish", "cipher_null", "cipher_null"};
-		char *a_algo_names[] =
-			{"reserved", "sha1", "sha1", "md5",
-			 //  "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
-			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
