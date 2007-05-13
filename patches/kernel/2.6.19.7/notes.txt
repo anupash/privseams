@@ -44,10 +44,6 @@ For more information, check these links:
 * https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=305
 * http://article.gmane.org/gmane.linux.network/62149
 
-Also applied ipsec loopback patch from here:
-
-http://www.mail-archive.com/netdev@vger.kernel.org/msg36083.html
-
 Untested Features
 -----------------
 
@@ -63,8 +59,10 @@ Untested Features
 Bugs
 ----
 
-Sending ESP may not always work with some network/host configurations:
+* Sending ESP may not always work with some network/host configurations.
+  Did not test yet whether the bug applies to this kernel version. See
+  https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=175
+* Also applied ipsec loopback patch from here but it still oopses the 
+  kernel in __xfrm6_bundle_create after calling xfrm_dst_lookup:
+  http://www.mail-archive.com/netdev@vger.kernel.org/msg36083.html
 
-https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=175
-
-Did not test yet whether the bug applies to this kernel version.
