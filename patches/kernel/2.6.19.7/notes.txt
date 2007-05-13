@@ -33,9 +33,10 @@ Test matrix:
 inner ipv4 | untested   | untested
 inner ipv6 | works      | untested
 
-I tested this BEET patch against 2.6.17.14 BEET patch using hipd. Tested 
-successfully with HITs (inner) and IPv4 (outer) addresses with ping6 and 
-iperf. Works both with and without UDP encapsulation.
+I tested this BEET patch against 2.6.17.14 BEET patch using
+hipd. Tested successfully with HITs (inner) and IPv4 (outer) addresses
+with ping6, iperf and pingtest in a single LAN. Works both with and
+without UDP encapsulation.
 
 Joakim Koskela solved a problem with multiple simultaneous IPsec 
 connections on 2.6.18.0. The same bug fix was included in this patch. 
@@ -66,3 +67,4 @@ Bugs
   kernel in __xfrm6_bundle_create after calling xfrm_dst_lookup:
   http://www.mail-archive.com/netdev@vger.kernel.org/msg36083.html
 
+-Miika
