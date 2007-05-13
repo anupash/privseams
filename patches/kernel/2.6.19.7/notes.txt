@@ -44,6 +44,10 @@ For more information, check these links:
 * https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=305
 * http://article.gmane.org/gmane.linux.network/62149
 
+The patch ipsec-loopback-2.6.19.7.patch fixes loopback IPsec 
+connections. You should apply it after BEET. It is based on this patch:
+
+http://www.mail-archive.com/netdev@vger.kernel.org/msg36083.html
 
 Untested Features
 -----------------
