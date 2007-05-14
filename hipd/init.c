@@ -606,11 +606,11 @@ void hip_probe_kernel_modules()
 {
 	int count, err, status;
 	char cmd[40];
-	/* update also this if you add more modules */
 	int mod_total;
 	char *mod_name[] =
 	{
 		"xfrm6_tunnel", "xfrm4_tunnel",
+		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
 		"ipv6", "aes", "crypto_null", "des",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"

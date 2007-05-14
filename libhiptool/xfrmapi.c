@@ -302,7 +302,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   0, 0, 0,0, AF_INET6), -1);
+			   0, 128, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
