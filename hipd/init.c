@@ -106,7 +106,7 @@ void hip_set_os_dep_variables()
 	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 18) {
 		hip_xfrm_set_default_sa_prefix_len(0);
 	} else {
-		hip_xfrm_set_default_sa_prefix_len(128);
+		hip_xfrm_set_default_sa_prefix_len(0); // 128 
 	}
 }
 
