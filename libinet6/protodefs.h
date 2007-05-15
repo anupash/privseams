@@ -364,15 +364,21 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
+/*
+ * Fixed start of this struct must match to struct hip_peer_addr_list_item
+ * for the part of address item. It is used in hip_update_locator_match().
+ ** @todo Maybe fix this in some better way?
+ */
 struct hip_locator_info_addr_item {
 	uint8_t traffic_type;
 	uint8_t locator_type;
 	uint8_t locator_length;
 	uint8_t reserved;
 	uint32_t lifetime;
+	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
-	struct in6_addr address;
+	
 	int state; /*State of our addresses,
 		     possible states are:
 		     WAITING_ECHO_REQUEST, ACTIVE

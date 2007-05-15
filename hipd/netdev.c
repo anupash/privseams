@@ -52,7 +52,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	switch (addr->sa_family) {
 		case AF_INET6:
 			inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s, sLEN);
-			HIP_DEBUG("IPv6 addr: %s", s);
+			HIP_DEBUG("IPv6 addr: %s\n", s);
 
 			struct in6_addr *a_in6 = hip_cast_sa_addr(addr);
 
@@ -163,6 +163,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
+        unsigned char tmp_secret[40];
+        int err_rand = 0;
 
 	if (!filter_address(addr, ifindex))
 	{
@@ -191,7 +193,19 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	}
 	else memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 
-	n->if_index = ifindex;
+        /*
+          Add secret to address. Used with openDHT removable puts.
+        */        
+        memset(tmp_secret,0,sizeof(tmp_secret));
+        err_rand = RAND_bytes(tmp_secret,40);
+        memcpy(&n->secret, &tmp_secret,sizeof(tmp_secret));
+
+        /*
+          Clear the timestamp, initially 0 so everything will be sent
+        */
+        memset(&n->timestamp, '0', sizeof(time_t));
+
+        n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
 	list_add(n, addresses);
 	address_count++;
@@ -212,7 +226,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 		int deleted = 0;
 		n = list_entry(item);
 
-			/* remove from list if if_index matches */
+		/* remove from list if if_index matches */
 		if (!addr)
 		{
 			if (n->if_index == ifindex)
@@ -223,7 +237,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 		}
 		else
 		{
-		/* remove from list if address matches */
+			/* remove from list if address matches */
+			HIP_HEXDUMP("a1:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
+			HIP_HEXDUMP("a2:", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
 			if ((n->addr.ss_family == addr->sa_family) &&
 				((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
 				hip_sa_addr_len(addr))==0)) ||

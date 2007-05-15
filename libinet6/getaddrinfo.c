@@ -194,9 +194,9 @@ void dump_pai (struct gaih_addrtuple *at)
     if (a->family == AF_INET6) {
       struct in6_addr *s = (struct in6_addr *)a->addr;
       int i = 0;
-      HIP_DEBUG("AF_INET6\tin6_addr=0x\n");
+      HIP_DEBUG("AF_INET6\tin6_addr=0x");
       for (i = 0; i < 16; i++)
-	HIP_DEBUG("%02x\n", (unsigned char) (s->in6_u.u6_addr8[i]));
+	HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
       HIP_DEBUG("\n");
     } else if (a->family == AF_INET) {
       struct in_addr *s = (struct in_addr *)a->addr;
@@ -379,9 +379,12 @@ gethosts(const char *name, int _family,
   struct hostent *h = NULL;
   struct gaih_addrtuple *aux = NULL;
 
-  // freeing the already allocated structure
-  free(**pat);
-  **pat = NULL;
+  /* freeing the already allocated structure if it si empty
+     Warning: Not good practice, may cause problems */
+  if(**pat != NULL && (**pat)->next == NULL && (**pat)->family == 0){
+    free(**pat);
+    **pat = NULL;
+  }
 
   do {								
     tmpbuflen *= 2;						
@@ -407,7 +410,7 @@ gethosts(const char *name, int _family,
 	{
 	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
-	    exit(EXIT_FAILURE);
+	    exit(-EAI_MEMORY);
 	  }
 	  //Placing the node at the beginning of the list
 	  aux->next = (**pat);
@@ -445,6 +448,16 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   struct addrinfo serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
+  /*
+  struct hip_common *msg;
+  struct hip_opendht_gw_info *gw_info;
+  struct in_addr tmp_v4;
+  char tmp_ip_str[21];
+  int tmp_ttl, tmp_port;
+  int *pret;
+  int err;
+  */
+
   if (flags & AI_NODHT)
     goto skip_dht;
 
@@ -454,6 +467,28 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   ret_hit = -1;  
   ret_addr = -1;
 
+  /* ask about the serving gateway from the daemon */
+  
+  //  HIP_DEBUG("Asking serving gateway info from daemon...\n");
+  /*
+  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
+           "Building daemon header failed\n"); 
+  HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+  HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
+           "No gw struct found\n");
+  memset(&tmp_ip_str,'\0',20);
+  tmp_ttl = gw_info->ttl;
+  tmp_port = htons(gw_info->port);
+  IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+  pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+  HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+            tmp_ip_str, tmp_port, tmp_ttl);
+
+ out_err:
+  HIP_DEBUG("OUT ERROROROROROR\n");      
+  */
+
   s = init_dht_gateway_socket(s);
   if (s < 0) 
   {
@@ -461,7 +496,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = resolve_dht_gateway_info ("planetlab1.diku.dk", &serving_gateway);
+  error = resolve_dht_gateway_info ("opendht.nyuld.net", &serving_gateway);
   if (error < 0)
   {
     HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
@@ -469,14 +504,14 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = connect_dht_gateway(s, &serving_gateway);
+  error = connect_dht_gateway(s, &serving_gateway, 1);
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
     close(s);
     goto skip_dht;
   }
-  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr);
+  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
   ret_hit = opendht_read_response(s, dht_response_hit);
   if (ret_hit == 0)
     HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
@@ -484,13 +519,13 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
   {
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0)
     {
       HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
       goto skip_dht;
     }
-    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr);
+    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr, 5851);
     ret_addr = opendht_read_response(s, dht_response_addr);
     if (ret_addr == 0)
       HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
@@ -524,6 +559,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	(**pat)->family = AF_INET6;					
 	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
 	*pat = &((**pat)->next);
+        /* dump_pai(*pat); */
 	return 1;
       }
     } 
@@ -550,7 +586,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     }									
     if ((strlen(name) == strlen(fqdn_str)) &&		         	
       strcmp(name, fqdn_str) == 0) {				        
-      HIP_DEBUG("** match on line %d **\n", lineno);			
+      _HIP_DEBUG("** match on line %d **\n", lineno);			
       found_hits = 1;                                                   
                                                                         
       /* add every HIT to linked list */				
@@ -559,7 +595,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	struct gaih_addrtuple *prev_pat = NULL;	
 	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
-	HIP_DEBUG("hit: %x\n", hit);              
+	_HIP_DEBUG("hit: %x\n", hit);              
         if (ret < 1) continue;         
  
 	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
@@ -624,9 +660,13 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
     }
     
     for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+
+#if 0 /* LSIs not supported yet */
       if (at_ip->family == AF_INET && 
 	  IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
 	continue;
+#endif
+
       if (at_ip->family == AF_INET6 &&
 	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 	continue;
@@ -1143,13 +1183,13 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (req->ai_flags == AF_UNSPEC) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
 	HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
-	while ((a != NULL) && (a->family == AF_INET6)) {
+	while (a != NULL) {
 	  struct gaih_addrtuple *nxt = a->next;
 	  
 	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
 		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
 	  
-	  /* do not move the  HIT if request is not IPv4 */
+	  /* do not move HITs if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
 	      ipv6_addr_is_hit((struct in6_addr *)a->addr)){
@@ -1157,17 +1197,17 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    continue;
 	  }
 	  
+#if 0 /* Not supported yet */
 	  /* do not move the LSI if request is IPv4 */
-	  /* Not supported yet
 	  if (req->ai_family == AF_INET && 
 	      a->family == AF_INET && 
 	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))){
 	    a = aux = nxt;
 	    continue;
 	  }
-	  */
+#endif
 
-	  /* putting the non-HIT IPv6 to the linked list *p */
+	  /* putting the IPs to the linked list *p */
 	  if (p == NULL){
 	    p = plast = a;
 	    a->next = NULL;
@@ -1190,17 +1230,15 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	 
 	}
 
-	/* inserting linked list *p between HITs and IPv4s */
+	/* Appending linked list *p (IPs) after HITs */
 	if (p != NULL){
 	  aux = *at;
-	  if(aux == a){
+	  if(aux == NULL)
 	    *at = p;
-	    plast->next = a;
-	  }else{
-	    while (aux->next != a)
+	  else{
+	    while (aux->next != NULL)
 	      aux = aux->next;
 	    aux->next = p;
-	    plast->next = a;
 	  }
 	}
       }

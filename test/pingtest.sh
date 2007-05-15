@@ -17,7 +17,7 @@ echo ""
 echo "dst IP: $DST_IP"
 echo ""
 
-hipconf hip rst all
+hipconf rst all
 sleep 3
 
 for DST_HIT in $DST_HITS

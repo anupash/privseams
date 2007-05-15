@@ -176,12 +176,13 @@ int hip_handle_user_msg(struct hip_common *msg,
                      "no gw struct found\n");
             memset(&tmp_ip_str,'\0',20);
             tmp_ttl = gw_info->ttl;
-            tmp_port = gw_info->port;
+            tmp_port = htons(gw_info->port);
+           
 
             IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
             pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
-            HIP_DEBUG("Got address %s port %d ttl %d from hipconf\n", 
-                      tmp_ip_str, htons(tmp_port), tmp_ttl);
+            HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
+                      tmp_ip_str, tmp_port, tmp_ttl);
             ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
             if (ret == 0)
             {
@@ -196,6 +197,33 @@ int hip_handle_user_msg(struct hip_common *msg,
           }
           break;
 #endif 
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_SERVING_GW:
+          {
+            /*
+            struct in_addr ip_gw;
+            struct in6_addr ip_gw_mapped;
+            int rett = 0, errr = 0;
+            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway.ai_addr;
+            rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+            IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+            errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
+                                                   opendht_serving_gateway_port,
+                                                   opendht_serving_gateway_ttl);
+            if (errr)
+              {
+                HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+                goto out_err;
+              }
+            errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+            if (errr)
+              {
+                HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+              }
+            */
+          }
+          break;
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message (add).\n");

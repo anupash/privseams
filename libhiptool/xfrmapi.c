@@ -5,7 +5,29 @@
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
-int hip_xfrmapi_beet = 4; /* 2.6.19 and above */
+
+int hip_xfrmapi_beet;
+int hip_xfrmapi_sa_default_prefix;
+
+char **e_algo_names; 
+char **a_algo_names;
+
+/* Mappings from HIP to XFRM algo names < 2.6.19 */
+char *e_algo_names_old[] =
+  {"reserved", "aes", "des3_ede", "des3_ede",
+   "blowfish", "cipher_null", "cipher_null"};
+char *a_algo_names_old[] =
+  {"reserved", "sha1", "sha1", "md5",
+   "sha1", "sha1", "md5"};
+
+/* Mappings from HIP to XFRM algo names >= 2.6.19 */
+char *e_algo_names_new[] =
+  {"reserved", "cbc(aes)", "cbc(des3_ede)", "cbc(des3_ede)",
+   "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
+char *a_algo_names_new[] =
+  {"reserved", "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
+   "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
+
 
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
 	hip_xfrmapi_nl_ipsec = nl_ipsec;
@@ -15,8 +37,17 @@ void hip_xfrm_set_beet(int beet) {
 	hip_xfrmapi_beet = beet;
 }
 
+void hip_xfrm_set_default_sa_prefix_len(int len) {
+	hip_xfrmapi_sa_default_prefix = len;
+}
+
 int hip_xfrm_get_beet(void) {
 	return hip_xfrmapi_beet;
+}
+
+void hip_xfrm_set_algo_names(int new_algo_names) {
+	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
+	a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
 }
 
 /**
@@ -276,7 +307,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   0, 0, 0,0, AF_INET6), -1);
+			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -290,14 +321,6 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			struct xfrm_algo algo;
 			char buf[XFRM_ALGO_KEY_BUF_SIZE];
 		} alg;
-		/* Mappings from HIP to XFRM algo names */
-		char *e_algo_names[] =
-			{"reserved", "aes", "des3_ede", "des3_ede",
-			 "blowfish", "cipher_null", "cipher_null"};
-		char *a_algo_names[] =
-			{"reserved", "sha1", "sha1", "md5",
-			 //  "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
-			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
@@ -345,13 +368,15 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
  * @return 0 if successful
  */
 int hip_xfrm_state_delete(struct rtnl_handle *rth,
-			  struct in6_addr *peer_addr, __u32 spi,
-			  int preferred_family,
-			  int sport, int dport) {
-	struct {
-		struct nlmsghdr 	n;
-		struct xfrm_usersa_id	xsid;
-	        char   			buf[RTA_BUF_SIZE];
+                          struct in6_addr *peer_addr, __u32 spi,
+                          int preferred_family,
+                          int sport, int dport)
+{
+	struct
+	{
+		struct nlmsghdr n;
+		struct xfrm_usersa_id xsid;
+		char buf[RTA_BUF_SIZE];
 	} req;
 	struct xfrm_encap_tmpl encap;
 	char *idp = NULL;
@@ -364,23 +389,25 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	req.n.nlmsg_type = XFRM_MSG_DELSA;
 	//req.xsid.family = preferred_family;
 
-	if(IN6_IS_ADDR_V4MAPPED(peer_addr))
-        {
+	if (IN6_IS_ADDR_V4MAPPED(peer_addr))
+	{
 		HIP_DEBUG("IPV4 SA deletion\n");
-                req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
-                req.xsid.family = AF_INET;
-        } else {
+				req.xsid.daddr.a4 = peer_addr->s6_addr32[3];
+				req.xsid.family = AF_INET;
+	}
+	else
+	{
 		HIP_DEBUG("IPV6 SA deletion\n");
 		memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
-                req.xsid.family = preferred_family;
-        }
+				req.xsid.family = preferred_family;
+	}
 
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	
         /** @todo Fill in information for UDP-NAT SAs. */
-	if(req.xsid.family == AF_INET && (sport || dport))
+	if (req.xsid.family == AF_INET && (sport || dport))
 	{
-		HIP_DEBUG("FILLING UP Port infowhile deleting\n");
+		HIP_DEBUG("FILLING UP Port info while deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
@@ -389,29 +416,31 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 
 
 	req.xsid.spi = htonl(spi);
-	if (spi)
-		req.xsid.proto = IPPROTO_ESP;
+	if (spi) req.xsid.proto = IPPROTO_ESP;
 
-	HIP_IFE((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1);
+	HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
+	HIP_HEXDUMP("peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
+	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1, "netlink_talk() failed!\n");
 
- out_err:
-
+out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
-		   int family, int sport, int dport) {
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr,
+                   struct in6_addr *dst_addr,
+                   int family, int sport, int dport)
+{
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
 	HIP_DEBUG("spi=0x%x\n", spi);
 	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
 
 	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
-			      sport, dport);
+	                      sport, dport);
 }
 
-uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
-
+uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
+{
 	uint32_t spi;
 	get_random_bytes(&spi, sizeof(uint32_t));
 	return spi; /* XX FIXME: REWRITE USING XFRM */

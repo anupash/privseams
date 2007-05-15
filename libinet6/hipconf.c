@@ -50,7 +50,7 @@ const char *hipconf_usage =
 "set opp on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPENDHT
-"dht gw <IPv4|hostname> <port> <ttl>\n"
+"dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 #endif
 "debug all|medium|none\n"
@@ -923,6 +923,7 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
 {
     int ret = 0;
     printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+    /* useless function remove */
     return(ret);
 }
 
@@ -955,10 +956,10 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 #endif /* CONFIG_HIP_OPENDHT */
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
-        /*
-        HIP_DEBUG("addr %s ", inet_ntoa(sa->sin_addr));       
-        HIP_DEBUG("port %s ttl %s\n", opt[1], opt[2]);      
-        */  
+        
+        HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
+                  inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
+          
         ret = 0;
 	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
         IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -972,7 +973,11 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		goto out_err;
 	}
 
+         
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        /*
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 1, 2);
+        */
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out_err;
@@ -994,7 +999,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
 #ifdef CONFIG_HIP_OPENDHT
     int s, error;
     char dht_response[1024];
-    char opendht[] = "planetlab1.diku.dk";
+    char opendht[] = "opendht.nyuld.net";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
     struct addrinfo serving_gateway;
     memset(&serving_gateway, '0', sizeof(struct addrinfo));
@@ -1013,7 +1018,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit(-1);
     }
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, &serving_gateway, 1);
     if (error < 0) 
     {
         HIP_DEBUG("Connect error!\n");
@@ -1021,7 +1026,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     }
 
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr);
+    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr, 5851);
     ret = opendht_read_response(s, dht_response); 
     close(s);
     if (ret == -1) 
