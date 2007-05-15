@@ -76,8 +76,11 @@
 #define SO_HIP_GET_HITS                         142
 #define SO_HIP_GET_HA_INFO			143
 #define SO_HIP_DEFAULT_HIT			144
+#define SO_HIP_SET_DEBUG_ALL			145
+#define SO_HIP_SET_DEBUG_MEDIUM			146
+#define SO_HIP_SET_DEBUG_NONE			147
 /* Socket option for hipconf to ask about the used gateway with OpenDHT*/
-#define SO_HIP_DHT_SERVING_GW                   145
+#define SO_HIP_DHT_SERVING_GW                   148
 /** @} */
 
 #endif /* _HIP_ICOMM */

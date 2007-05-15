@@ -371,6 +371,24 @@
       network as we are or not.
       </para>
     <para>
+      The log messages displayed by the hip daemon can be changed dynamically: 
+    </para>
+    <para>
+            tools/hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
+    </para>
+    <para>
+            tools/hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	    HIP_INFO messages&gt;
+    </para>
+    <para>
+            tools/hipconf debug all # &lt;shows all messages, including 
+	    HIP_DEBUG&gt;
+    </para>
+    <para>
+      These options can be also set in "/etc/hip/hipd_config" to configure 
+      hipd and other libraries at startup.
+    </para>
+    <para>
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.

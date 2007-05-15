@@ -2083,16 +2083,17 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
 		struct in6_addr *saddr = &loc_addr_item->address;
-		if(memcmp(&entry->local_address, saddr,
-			  sizeof(struct in6_addr)) == 0)
+/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
+		HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
+		if (memcmp(&entry->local_address, saddr, sizeof(struct in6_addr)) == 0)
 		{
-			if (IN6_IS_ADDR_V4MAPPED(saddr)  != 
-			    IN6_IS_ADDR_V4MAPPED(daddr))
+			if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
 			{
 				/* Select the first match */
 				loc_addr_item->reserved = ntohl(1 << 31);
 				preferred_address_found = 1;
-				HIP_DEBUG("Preferred Address id the old preferred address\n");
+				HIP_DEBUG("Preferred Address is the old preferred address\n");
 				HIP_DEBUG_IN6ADDR("addr: ", saddr);
 				break;
 			}
@@ -2105,10 +2106,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	/* Select the first match */
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
-		struct in6_addr *saddr =
-			&loc_addr_item->address;
-		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
-		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
+		struct in6_addr *saddr = &loc_addr_item->address;
+/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));*/
 		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
 		{
 			loc_addr_item->reserved = ntohl(1 << 31);
