@@ -18,6 +18,7 @@
  *          "make all"
  */
 #include "hipconftool.h"
+#include "ife.h"
 
 
 /**
@@ -30,11 +31,23 @@
  */
 #ifndef HIP_UNITTEST_MODE /* Unit testing code does not compile with main */
 int main(int argc, char *argv[]) {
+
+	int err = 0;
+	const char *cfile = "default";
+
 	/* we don't want log messages via syslog */
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
+	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	  "Error: Cannot set the debugging parameter.\n");
+
 	
-	return hip_do_hipconf(argc, argv, 0);
+	HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
+	  "Error: Cannot configure hip.\n");
+
+ out_err:
+	return err;
+
 }
 
 #endif /* HIP_UNITTEST_MODE */
