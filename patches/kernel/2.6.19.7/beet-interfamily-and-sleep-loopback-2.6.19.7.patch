@@ -1,6 +1,6 @@
 diff -urN linux-2.6.19.7/include/net/route.h linux-2.6.19.7-beet/include/net/route.h
 --- linux-2.6.19.7/include/net/route.h	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/include/net/route.h	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/include/net/route.h	2007-05-15 23:19:24.000000000 +0300
 @@ -146,7 +146,8 @@
  
  static inline int ip_route_connect(struct rtable **rp, __be32 dst,
@@ -22,7 +22,7 @@ diff -urN linux-2.6.19.7/include/net/route.h linux-2.6.19.7-beet/include/net/rou
  static inline int ip_route_newports(struct rtable **rp, u8 protocol,
 diff -urN linux-2.6.19.7/include/net/xfrm.h linux-2.6.19.7-beet/include/net/xfrm.h
 --- linux-2.6.19.7/include/net/xfrm.h	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/include/net/xfrm.h	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/include/net/xfrm.h	2007-05-15 23:19:24.000000000 +0300
 @@ -237,7 +237,7 @@
  extern int xfrm_policy_unregister_afinfo(struct xfrm_policy_afinfo *afinfo);
  extern void km_policy_notify(struct xfrm_policy *xp, int dir, struct km_event *c);
@@ -84,7 +84,7 @@ diff -urN linux-2.6.19.7/include/net/xfrm.h linux-2.6.19.7-beet/include/net/xfrm
  #endif	/* _NET_XFRM_H */
 diff -urN linux-2.6.19.7/net/dccp/ipv4.c linux-2.6.19.7-beet/net/dccp/ipv4.c
 --- linux-2.6.19.7/net/dccp/ipv4.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/dccp/ipv4.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/dccp/ipv4.c	2007-05-15 23:19:24.000000000 +0300
 @@ -72,7 +72,7 @@
  	tmp = ip_route_connect(&rt, nexthop, inet->saddr,
  			       RT_CONN_FLAGS(sk), sk->sk_bound_dev_if,
@@ -96,7 +96,7 @@ diff -urN linux-2.6.19.7/net/dccp/ipv4.c linux-2.6.19.7-beet/net/dccp/ipv4.c
  
 diff -urN linux-2.6.19.7/net/dccp/ipv6.c linux-2.6.19.7-beet/net/dccp/ipv6.c
 --- linux-2.6.19.7/net/dccp/ipv6.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/dccp/ipv6.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/dccp/ipv6.c	2007-05-15 23:19:24.000000000 +0300
 @@ -218,7 +218,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -108,7 +108,7 @@ diff -urN linux-2.6.19.7/net/dccp/ipv6.c linux-2.6.19.7-beet/net/dccp/ipv6.c
  
 diff -urN linux-2.6.19.7/net/ipv4/af_inet.c linux-2.6.19.7-beet/net/ipv4/af_inet.c
 --- linux-2.6.19.7/net/ipv4/af_inet.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/af_inet.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/af_inet.c	2007-05-15 23:19:24.000000000 +0300
 @@ -1006,7 +1006,7 @@
  			       RT_CONN_FLAGS(sk),
  			       sk->sk_bound_dev_if,
@@ -120,7 +120,7 @@ diff -urN linux-2.6.19.7/net/ipv4/af_inet.c linux-2.6.19.7-beet/net/ipv4/af_inet
  
 diff -urN linux-2.6.19.7/net/ipv4/datagram.c linux-2.6.19.7-beet/net/ipv4/datagram.c
 --- linux-2.6.19.7/net/ipv4/datagram.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/datagram.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/datagram.c	2007-05-15 23:19:24.000000000 +0300
 @@ -49,7 +49,7 @@
  	err = ip_route_connect(&rt, usin->sin_addr.s_addr, saddr,
  			       RT_CONN_FLAGS(sk), oif,
@@ -132,7 +132,7 @@ diff -urN linux-2.6.19.7/net/ipv4/datagram.c linux-2.6.19.7-beet/net/ipv4/datagr
  	if ((rt->rt_flags & RTCF_BROADCAST) && !sock_flag(sk, SOCK_BROADCAST)) {
 diff -urN linux-2.6.19.7/net/ipv4/ipip.c linux-2.6.19.7-beet/net/ipv4/ipip.c
 --- linux-2.6.19.7/net/ipv4/ipip.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/ipip.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/ipip.c	2007-05-15 23:19:24.000000000 +0300
 @@ -870,7 +870,7 @@
  
  	printk(banner);
@@ -162,7 +162,7 @@ diff -urN linux-2.6.19.7/net/ipv4/ipip.c linux-2.6.19.7-beet/net/ipv4/ipip.c
  	rtnl_lock();
 diff -urN linux-2.6.19.7/net/ipv4/raw.c linux-2.6.19.7-beet/net/ipv4/raw.c
 --- linux-2.6.19.7/net/ipv4/raw.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/raw.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/raw.c	2007-05-15 23:19:24.000000000 +0300
 @@ -489,7 +489,7 @@
  		}
  
@@ -174,7 +174,7 @@ diff -urN linux-2.6.19.7/net/ipv4/raw.c linux-2.6.19.7-beet/net/ipv4/raw.c
  		goto done;
 diff -urN linux-2.6.19.7/net/ipv4/route.c linux-2.6.19.7-beet/net/ipv4/route.c
 --- linux-2.6.19.7/net/ipv4/route.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/route.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/route.c	2007-05-15 23:19:24.000000000 +0300
 @@ -108,6 +108,7 @@
  #ifdef CONFIG_SYSCTL
  #include <linux/sysctl.h>
@@ -185,7 +185,7 @@ diff -urN linux-2.6.19.7/net/ipv4/route.c linux-2.6.19.7-beet/net/ipv4/route.c
      ((u32)(oldflp->fl4_tos & (IPTOS_RT_MASK | RTO_ONLINK)))
 diff -urN linux-2.6.19.7/net/ipv4/tcp_ipv4.c linux-2.6.19.7-beet/net/ipv4/tcp_ipv4.c
 --- linux-2.6.19.7/net/ipv4/tcp_ipv4.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/tcp_ipv4.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/tcp_ipv4.c	2007-05-15 23:19:24.000000000 +0300
 @@ -179,7 +179,7 @@
  	tmp = ip_route_connect(&rt, nexthop, inet->saddr,
  			       RT_CONN_FLAGS(sk), sk->sk_bound_dev_if,
@@ -197,7 +197,7 @@ diff -urN linux-2.6.19.7/net/ipv4/tcp_ipv4.c linux-2.6.19.7-beet/net/ipv4/tcp_ip
  
 diff -urN linux-2.6.19.7/net/ipv4/tunnel4.c linux-2.6.19.7-beet/net/ipv4/tunnel4.c
 --- linux-2.6.19.7/net/ipv4/tunnel4.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/tunnel4.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/tunnel4.c	2007-05-15 23:19:24.000000000 +0300
 @@ -14,9 +14,10 @@
  #include <net/xfrm.h>
  
@@ -304,7 +304,7 @@ diff -urN linux-2.6.19.7/net/ipv4/tunnel4.c linux-2.6.19.7-beet/net/ipv4/tunnel4
  }
 diff -urN linux-2.6.19.7/net/ipv4/udp.c linux-2.6.19.7-beet/net/ipv4/udp.c
 --- linux-2.6.19.7/net/ipv4/udp.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/udp.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/udp.c	2007-05-15 23:19:24.000000000 +0300
 @@ -630,7 +630,7 @@
  					       { .sport = inet->sport,
  						 .dport = dport } } };
@@ -316,7 +316,7 @@ diff -urN linux-2.6.19.7/net/ipv4/udp.c linux-2.6.19.7-beet/net/ipv4/udp.c
  
 diff -urN linux-2.6.19.7/net/ipv4/xfrm4_input.c linux-2.6.19.7-beet/net/ipv4/xfrm4_input.c
 --- linux-2.6.19.7/net/ipv4/xfrm4_input.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/xfrm4_input.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/xfrm4_input.c	2007-05-15 23:19:24.000000000 +0300
 @@ -106,7 +106,7 @@
  		if (x->mode->input(x, skb))
  			goto drop;
@@ -341,7 +341,7 @@ diff -urN linux-2.6.19.7/net/ipv4/xfrm4_input.c linux-2.6.19.7-beet/net/ipv4/xfr
  	} else {
 diff -urN linux-2.6.19.7/net/ipv4/xfrm4_mode_beet.c linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_beet.c
 --- linux-2.6.19.7/net/ipv4/xfrm4_mode_beet.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_beet.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_beet.c	2007-05-15 23:19:24.000000000 +0300
 @@ -14,54 +14,63 @@
  #include <linux/skbuff.h>
  #include <linux/stringify.h>
@@ -549,7 +549,7 @@ diff -urN linux-2.6.19.7/net/ipv4/xfrm4_mode_beet.c linux-2.6.19.7-beet/net/ipv4
  	return err;
 diff -urN linux-2.6.19.7/net/ipv4/xfrm4_mode_tunnel.c linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_tunnel.c
 --- linux-2.6.19.7/net/ipv4/xfrm4_mode_tunnel.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_tunnel.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/xfrm4_mode_tunnel.c	2007-05-15 23:19:24.000000000 +0300
 @@ -66,6 +66,8 @@
  	top_iph->daddr = x->id.daddr.a4;
  	top_iph->protocol = IPPROTO_IPIP;
@@ -561,7 +561,7 @@ diff -urN linux-2.6.19.7/net/ipv4/xfrm4_mode_tunnel.c linux-2.6.19.7-beet/net/ip
  }
 diff -urN linux-2.6.19.7/net/ipv4/xfrm4_policy.c linux-2.6.19.7-beet/net/ipv4/xfrm4_policy.c
 --- linux-2.6.19.7/net/ipv4/xfrm4_policy.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/xfrm4_policy.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/xfrm4_policy.c	2007-05-15 23:19:24.000000000 +0300
 @@ -15,6 +15,7 @@
  
  static struct dst_ops xfrm4_dst_ops;
@@ -668,7 +668,7 @@ diff -urN linux-2.6.19.7/net/ipv4/xfrm4_policy.c linux-2.6.19.7-beet/net/ipv4/xf
  error:
 diff -urN linux-2.6.19.7/net/ipv4/xfrm4_tunnel.c linux-2.6.19.7-beet/net/ipv4/xfrm4_tunnel.c
 --- linux-2.6.19.7/net/ipv4/xfrm4_tunnel.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv4/xfrm4_tunnel.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv4/xfrm4_tunnel.c	2007-05-15 23:19:24.000000000 +0300
 @@ -13,7 +13,7 @@
  static int ipip_output(struct xfrm_state *x, struct sk_buff *skb)
  {
@@ -739,7 +739,7 @@ diff -urN linux-2.6.19.7/net/ipv4/xfrm4_tunnel.c linux-2.6.19.7-beet/net/ipv4/xf
  }
 diff -urN linux-2.6.19.7/net/ipv6/datagram.c linux-2.6.19.7-beet/net/ipv6/datagram.c
 --- linux-2.6.19.7/net/ipv6/datagram.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/datagram.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/datagram.c	2007-05-15 23:19:24.000000000 +0300
 @@ -178,7 +178,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -751,7 +751,7 @@ diff -urN linux-2.6.19.7/net/ipv6/datagram.c linux-2.6.19.7-beet/net/ipv6/datagr
  	/* source address lookup done in ip6_dst_lookup */
 diff -urN linux-2.6.19.7/net/ipv6/icmp.c linux-2.6.19.7-beet/net/ipv6/icmp.c
 --- linux-2.6.19.7/net/ipv6/icmp.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/icmp.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/icmp.c	2007-05-15 23:19:24.000000000 +0300
 @@ -64,6 +64,7 @@
  #include <net/ip6_route.h>
  #include <net/addrconf.h>
@@ -762,7 +762,7 @@ diff -urN linux-2.6.19.7/net/ipv6/icmp.c linux-2.6.19.7-beet/net/ipv6/icmp.c
  #include <asm/system.h>
 diff -urN linux-2.6.19.7/net/ipv6/ip6_tunnel.c linux-2.6.19.7-beet/net/ipv6/ip6_tunnel.c
 --- linux-2.6.19.7/net/ipv6/ip6_tunnel.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/ip6_tunnel.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/ip6_tunnel.c	2007-05-15 23:19:24.000000000 +0300
 @@ -1127,7 +1127,7 @@
  {
  	int  err;
@@ -792,7 +792,7 @@ diff -urN linux-2.6.19.7/net/ipv6/ip6_tunnel.c linux-2.6.19.7-beet/net/ipv6/ip6_
  	rtnl_lock();
 diff -urN linux-2.6.19.7/net/ipv6/raw.c linux-2.6.19.7-beet/net/ipv6/raw.c
 --- linux-2.6.19.7/net/ipv6/raw.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/raw.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/raw.c	2007-05-15 23:19:24.000000000 +0300
 @@ -816,7 +816,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -804,7 +804,7 @@ diff -urN linux-2.6.19.7/net/ipv6/raw.c linux-2.6.19.7-beet/net/ipv6/raw.c
  	if (hlimit < 0) {
 diff -urN linux-2.6.19.7/net/ipv6/tcp_ipv6.c linux-2.6.19.7-beet/net/ipv6/tcp_ipv6.c
 --- linux-2.6.19.7/net/ipv6/tcp_ipv6.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/tcp_ipv6.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/tcp_ipv6.c	2007-05-15 23:19:24.000000000 +0300
 @@ -259,7 +259,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -816,7 +816,7 @@ diff -urN linux-2.6.19.7/net/ipv6/tcp_ipv6.c linux-2.6.19.7-beet/net/ipv6/tcp_ip
  	if (saddr == NULL) {
 diff -urN linux-2.6.19.7/net/ipv6/tunnel6.c linux-2.6.19.7-beet/net/ipv6/tunnel6.c
 --- linux-2.6.19.7/net/ipv6/tunnel6.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/tunnel6.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/tunnel6.c	2007-05-15 23:19:24.000000000 +0300
 @@ -30,9 +30,10 @@
  #include <net/xfrm.h>
  
@@ -919,7 +919,7 @@ diff -urN linux-2.6.19.7/net/ipv6/tunnel6.c linux-2.6.19.7-beet/net/ipv6/tunnel6
  }
 diff -urN linux-2.6.19.7/net/ipv6/udp.c linux-2.6.19.7-beet/net/ipv6/udp.c
 --- linux-2.6.19.7/net/ipv6/udp.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/udp.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/udp.c	2007-05-15 23:19:24.000000000 +0300
 @@ -722,7 +722,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -931,7 +931,7 @@ diff -urN linux-2.6.19.7/net/ipv6/udp.c linux-2.6.19.7-beet/net/ipv6/udp.c
  	if (hlimit < 0) {
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_input.c linux-2.6.19.7-beet/net/ipv6/xfrm6_input.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_input.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_input.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_input.c	2007-05-15 23:19:24.000000000 +0300
 @@ -103,10 +103,8 @@
  	nf_reset(skb);
  
@@ -947,7 +947,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_input.c linux-2.6.19.7-beet/net/ipv6/xfr
  	} else {
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_mode_beet.c linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_beet.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_mode_beet.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_beet.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_beet.c	2007-05-15 23:19:24.000000000 +0300
 @@ -16,6 +16,7 @@
  #include <net/dsfield.h>
  #include <net/dst.h>
@@ -1163,7 +1163,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_mode_beet.c linux-2.6.19.7-beet/net/ipv6
  	return err;
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_mode_tunnel.c linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_tunnel.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_mode_tunnel.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_tunnel.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_mode_tunnel.c	2007-05-15 23:19:24.000000000 +0300
 @@ -65,6 +65,8 @@
  	top_iph->hop_limit = dst_metric(dst->child, RTAX_HOPLIMIT);
  	ipv6_addr_copy(&top_iph->saddr, (struct in6_addr *)&x->props.saddr);
@@ -1175,7 +1175,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_mode_tunnel.c linux-2.6.19.7-beet/net/ip
  
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_policy.c linux-2.6.19.7-beet/net/ipv6/xfrm6_policy.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_policy.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_policy.c	2007-05-14 22:36:19.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_policy.c	2007-05-15 23:19:24.000000000 +0300
 @@ -89,7 +89,7 @@
  static inline struct in6_addr*
  __xfrm6_bundle_addr_remote(struct xfrm_state *x, struct in6_addr *addr)
@@ -1294,7 +1294,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_policy.c linux-2.6.19.7-beet/net/ipv6/xf
  		} else
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_state.c linux-2.6.19.7-beet/net/ipv6/xfrm6_state.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_state.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_state.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_state.c	2007-05-15 23:19:24.000000000 +0300
 @@ -98,6 +98,18 @@
  			src[i] = NULL;
  		}
@@ -1316,7 +1316,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_state.c linux-2.6.19.7-beet/net/ipv6/xfr
  
 diff -urN linux-2.6.19.7/net/ipv6/xfrm6_tunnel.c linux-2.6.19.7-beet/net/ipv6/xfrm6_tunnel.c
 --- linux-2.6.19.7/net/ipv6/xfrm6_tunnel.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/ipv6/xfrm6_tunnel.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/ipv6/xfrm6_tunnel.c	2007-05-15 23:19:24.000000000 +0300
 @@ -5,12 +5,12 @@
   * it under the terms of the GNU General Public License as published by
   * the Free Software Foundation; either version 2 of the License, or
@@ -1510,7 +1510,7 @@ diff -urN linux-2.6.19.7/net/ipv6/xfrm6_tunnel.c linux-2.6.19.7-beet/net/ipv6/xf
  
 diff -urN linux-2.6.19.7/net/xfrm/xfrm_policy.c linux-2.6.19.7-beet/net/xfrm/xfrm_policy.c
 --- linux-2.6.19.7/net/xfrm/xfrm_policy.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/xfrm/xfrm_policy.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/xfrm/xfrm_policy.c	2007-05-15 23:19:24.000000000 +0300
 @@ -1168,9 +1168,10 @@
  		xfrm_address_t *local  = saddr;
  		struct xfrm_tmpl *tmpl = &policy->xfrm_vec[i];
@@ -1550,8 +1550,23 @@ diff -urN linux-2.6.19.7/net/xfrm/xfrm_policy.c linux-2.6.19.7-beet/net/xfrm/xfr
  		(x->props.reqid == tmpl->reqid || !tmpl->reqid) &&
 diff -urN linux-2.6.19.7/net/xfrm/xfrm_state.c linux-2.6.19.7-beet/net/xfrm/xfrm_state.c
 --- linux-2.6.19.7/net/xfrm/xfrm_state.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/xfrm/xfrm_state.c	2007-05-14 19:44:06.000000000 +0300
-@@ -562,8 +562,9 @@
++++ linux-2.6.19.7-beet/net/xfrm/xfrm_state.c	2007-05-15 23:25:24.000000000 +0300
+@@ -557,13 +557,24 @@
+ 				    (best->km.dying == x->km.dying &&
+ 				     best->curlft.add_time < x->curlft.add_time))
+ 					best = x;
++				else if (pol->selector.family == x->sel.family &&
++					 (pol->selector.family == AF_INET6 &&
++					  !ipv6_addr_cmp((struct in6_addr *)&pol->selector.daddr,
++							 (struct in6_addr *)&x->sel.daddr) &&
++					  !ipv6_addr_cmp((struct in6_addr *)&pol->selector.saddr,
++							 (struct in6_addr *)&x->sel.saddr)) ||
++					 (pol->selector.family == AF_INET &&
++					  pol->selector.daddr.a4 == x->sel.daddr.a4 &&
++					  pol->selector.saddr.a4 == x->sel.saddr.a4))
++					best = x; /*  XX FIXME? */
+ 			} else if (x->km.state == XFRM_STATE_ACQ) {
+ 				acquire_in_progress = 1;
  			} else if (x->km.state == XFRM_STATE_ERROR ||
  				   x->km.state == XFRM_STATE_EXPIRED) {
   				if (xfrm_selector_match(&x->sel, fl, family) &&
@@ -1564,7 +1579,7 @@ diff -urN linux-2.6.19.7/net/xfrm/xfrm_state.c linux-2.6.19.7-beet/net/xfrm/xfrm
  	}
 diff -urN linux-2.6.19.7/net/xfrm/xfrm_user.c linux-2.6.19.7-beet/net/xfrm/xfrm_user.c
 --- linux-2.6.19.7/net/xfrm/xfrm_user.c	2007-03-03 07:14:54.000000000 +0200
-+++ linux-2.6.19.7-beet/net/xfrm/xfrm_user.c	2007-05-14 19:44:06.000000000 +0300
++++ linux-2.6.19.7-beet/net/xfrm/xfrm_user.c	2007-05-15 23:19:24.000000000 +0300
 @@ -875,6 +875,8 @@
  		t->aalgos = ut->aalgos;
  		t->ealgos = ut->ealgos;
