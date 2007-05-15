@@ -503,8 +503,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     close(s);
     goto skip_dht;
   }
-  error = 0;
+  error = 0; 
   error = connect_dht_gateway(s, &serving_gateway, 1);
+
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
@@ -1072,9 +1073,9 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (hip_transparent_mode) {
 	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
        
-	HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+	_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
 	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-	HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
+	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
 	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
@@ -1246,7 +1247,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
       //dump_pai(*at);
     } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
-  HIP_DEBUG(" return 0;\n");
+  _HIP_DEBUG(" return 0;\n");
   return 0;
 }
 

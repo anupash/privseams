@@ -142,8 +142,11 @@ int read_packet_content(char * in_buffer, char * out_value)
     xmlChar *xml_data;
     memset(tmp_buffer, '\0', sizeof(tmp_buffer));
     memset(out_value, '\0', sizeof(out_value));
+    struct opendht_answers answers;
+    answers.count = 0;
+    answers.addrs[0] = '\0';
 
-    /*
+    /*    
     HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
     */
     /*!!!! is there a http header !!!!*/
@@ -231,7 +234,7 @@ int read_packet_content(char * in_buffer, char * out_value)
         if (strcmp((char *)xml_node_value->name, "int")==0)
         {
             sscanf((const char *)xml_data, "%d", &ret);
-            xmlFree(xml_data);
+            // xmlFree(xml_data);
            // xmlFreeDoc(xml_doc);
             if (ret == 0) /* put success */
                 goto out_err;
@@ -276,29 +279,36 @@ int read_packet_content(char * in_buffer, char * out_value)
             ret = 0;
             goto out_err;
          }   
-              
-         if (!strcmp((char *)xml_node->children->children->name, "base64"))
-         {         
-             xml_node_value = xml_node->children->children; /* should be base64 */
-             xml_data = xmlNodeGetContent(xml_node_value);
-             evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
-                                      strlen((char *)xml_data));
-             out_value[evpret] = '\0';
-             xmlFree(xml_data);
-             ret = 0;
-             goto out_err;
+          
+         //xml_node = xml_node->children;
+
+         for (xml_node = xml_node->children; xml_node; xml_node = xml_node->next) {
+           if (!strcmp((char *)xml_node->children->name, "base64"))
+             {         
+               xml_node_value = xml_node->children->children;
+               xml_data = xmlNodeGetContent(xml_node_value);
+               evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
+                                        strlen((char *)xml_data));
+               out_value[evpret] = '\0';
+               memcpy(answers.addrs, out_value, strlen(out_value));
+               HIP_DEBUG("Returned address: %s\n",out_value);
+               answers.count = 1;
+               ret = 0;
+             } 
+           else 
+             {
+               HIP_DEBUG("Parser error: couldn't parse response value.\n");
+               ret = -1;
+               goto out_err;
+             }
          }
-         HIP_DEBUG("Parser error: couldn't parse response value.\n");
-         ret = -1;
-         goto out_err;
     }
-    /* should be impossible to get here */
-    HIP_DEBUG("Parser error: unknown error.\n");
-    ret = -1; 
 
  out_err:
     if (xml_doc != NULL) 
         xmlFreeDoc(xml_doc);
+    if (xml_data != NULL)    
+      xmlFree(xml_data);
     return(ret);
 }
 
