@@ -101,6 +101,13 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(4);
 		hip_xfrm_set_algo_names(1);
 	}
+
+	/* Could not make the 128 bit prefix work in 2.6.17.14 -miika */
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 18) {
+		hip_xfrm_set_default_sa_prefix_len(0);
+	} else {
+		hip_xfrm_set_default_sa_prefix_len(128);
+	}
 }
 
 
@@ -606,11 +613,11 @@ void hip_probe_kernel_modules()
 {
 	int count, err, status;
 	char cmd[40];
-	/* update also this if you add more modules */
 	int mod_total;
 	char *mod_name[] =
 	{
 		"xfrm6_tunnel", "xfrm4_tunnel",
+		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
 		"ipv6", "aes", "crypto_null", "des",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"
