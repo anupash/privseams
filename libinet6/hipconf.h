@@ -89,6 +89,7 @@
 #define ACTION_HA  13
 #define ACTION_RST 14
 #define ACTION_BOS 15
+#define ACTION_DEBUG 16
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -110,7 +111,7 @@
 #define TYPE_GET        15
 #define TYPE_BLIND      16
 #define TYPE_HA         17
-#define TYPE_ALL   	18
+#define TYPE_DEBUG      18
 #define TYPE_MAX    	19 /* exclusive */
 
 /* for handle_hi() only */
@@ -123,7 +124,8 @@
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
-# hip nat on        # the host is behind a NAT\n"
+# nat on            # the host is behind a NAT\n\
+# debug none        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HIPD_HOSTS_FILE_EX \
@@ -137,6 +139,7 @@ int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);

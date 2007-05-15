@@ -558,7 +558,6 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
 	struct gaih_addrtuple *prev_pat = NULL;	
 	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-	printf("getitem(&list,i): %s \n", getitem(&list,i));
         ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
 	HIP_DEBUG("hit: %x\n", hit);              
         if (ret < 1) continue;         

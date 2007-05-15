@@ -52,7 +52,8 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPENDHT
 "dht gw <IPv4|hostname> <port> <ttl>\n"
 "dht get <fqdn/hit>\n"
-#endif 
+#endif
+"debug all|medium|none\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -79,6 +80,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
+	hip_conf_handle_debug,
 	NULL, /* run */
 };
 
@@ -118,7 +120,9 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
         else if (!strcmp("dht", text))
                 ret = ACTION_DHT;
-	
+	else if (!strcmp("debug", text))
+                ret = ACTION_DEBUG;
+
 	return ret;
 }
 
@@ -169,6 +173,11 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA:
                 count=2;
                 break;
+	case ACTION_DEBUG:
+	        count = 1;
+                break;
+	default:
+	        break;
 
 	}
 
@@ -208,8 +217,9 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_NAT;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
-	else if (!strcmp("all", text))
-		ret = TYPE_ALL;
+	else if (!strcmp("debug", text))
+		ret = TYPE_DEBUG;
+
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -258,6 +268,14 @@ int hip_conf_get_type_arg(int action) {
 	
                 type_arg = 2;
                 break;
+
+	case ACTION_DEBUG:
+	
+                type_arg = 1;
+                break;
+
+	default:
+	        break;
         }
 
         return type_arg;
@@ -542,6 +560,51 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 }
 
 
+
+/**
+ * Handles the hipconf commands where the type is @c debug.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_debug(struct hip_common *msg, int action,
+		   const char *opt[], int optc) 
+{
+	int err = 0;
+	int status = 0;
+	struct in6_addr hit;
+
+	if(optc != 0)
+	        HIP_IFEL(1, -EINVAL, "Wrong amount of arguments. Usage:\nhipconf debug all|medium|none\n");
+
+	if (!strcmp("all", opt[0])) {
+	  HIP_INFO("Displaying all debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_ALL;
+	} else if (!strcmp("medium", opt[0])) {
+	  HIP_INFO("Displaying ERROR and INFO debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_MEDIUM;
+	} else if (!strcmp("none", opt[0])) {
+	  HIP_INFO("Displaying no debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_NONE;
+	} else
+	  HIP_IFEL(1, -EINVAL, "Unknown argument\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+
+ out_err:
+	return err;
+}
+
+
+
 /**
  * Handles the hipconf commands where the type is @c bos.
  *
@@ -601,7 +664,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 		memset(&hit,0,sizeof(struct in6_addr));
                 status = SO_HIP_SET_NAT_OFF;
 	} else {
-		HIP_IFEL(0, -1, "bad args\n");
+		HIP_IFEL(1, -1, "bad args\n");
 	}
 #if 0 /* Not used currently */
 	else {
