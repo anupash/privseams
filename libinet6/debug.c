@@ -123,7 +123,7 @@ int hip_set_logdebug(int new_logdebug) {
 int hip_set_auto_logdebug(const char *cfile){
   	int arg_len, err = 0, i, len;
 	FILE *hip_config = NULL; 
-	
+
 	List list;
 	char *c, line[128], *hip_arg, *fname, *args[64],
 		*comment;

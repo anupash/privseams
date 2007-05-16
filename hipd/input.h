@@ -107,7 +107,7 @@ static inline const char *hip_msg_type_str(int type)
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	HIP_DEBUG("hip_controls_sane() invoked.\n");
+	_HIP_DEBUG("hip_controls_sane() invoked.\n");
 	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 				| HIP_CONTROL_RVS_CAPABLE //XX:FIXME
