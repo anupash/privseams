@@ -307,7 +307,8 @@ int read_packet_content(char * in_buffer, char * out_value)
  out_err:
     if (xml_doc != NULL) 
         xmlFreeDoc(xml_doc);
-    if (xml_data != NULL)    
+    //    if (xml_data != NULL)    
+    if (answers.count > 0)
       xmlFree(xml_data);
     return(ret);
 }

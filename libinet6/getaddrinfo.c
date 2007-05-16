@@ -64,6 +64,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 
 #include <ctype.h>
+#include <signal.h>
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
@@ -426,6 +427,12 @@ gethosts(const char *name, int _family,
   return no_data;
  }
 
+static void 
+connect_alarm(int signo)
+{
+  return; /* for interrupting the connect in gethosts_hit */
+}
+
 int 
 gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
  {									
@@ -447,7 +454,12 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   struct in6_addr tmp_hit, tmp_addr;
   struct addrinfo serving_gateway;
   char ownaddr[] = "127.0.0.1";
-
+  /*
+  struct sigaction act, oact;
+  act.sa_handler = connect_alarm;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
+  */
   /*
   struct hip_common *msg;
   struct hip_opendht_gw_info *gw_info;
@@ -503,13 +515,33 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     close(s);
     goto skip_dht;
   }
-  error = 0; 
+  error = 0;
   error = connect_dht_gateway(s, &serving_gateway, 1);
-
+  /* 
+  if (sigaction(SIGALRM, &act, &oact) <0 ) 
+    {
+      HIP_DEBUG("Signal error before OpenDHT connect, connecting without alarm\n");
+      error = connect_dht_gateway(s, &serving_gateway, 1);
+    }
+  else 
+    {
+      HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+      if (alarm(4) != 0)
+        HIP_DEBUG("Alarm was already set, connecting without\n");
+      error = connect_dht_gateway(s, &serving_gateway, 1);
+      alarm(0);
+      if (sigaction(SIGALRM, &oact, &act) <0 ) 
+        HIP_DEBUG("Signal error after OpenDHT connect\n");
+    }
+  */
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
     close(s);
+    /*
+    if (errno == EINTR)
+      HIP_DEBUG("Connect to OpenDHT timedout\n");
+    */
     goto skip_dht;
   }
   ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
