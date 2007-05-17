@@ -9,12 +9,12 @@ EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += libhipgui/logo.png libhipgui/run.png libhipgui/swtool.png libhipgui/newgroup.png libhipgui/hipstart.conf
+EXTRA_DIST += libhipgui/logo.png libhipgui/newhit.png libhipgui/run.png libhipgui/swtool.png libhipgui/newgroup.png libhipgui/hipstart.conf
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip opendht tools hipd test firewall libhipgui agent
+SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent
 
 showip:
 	cd showip && sh create.sh
@@ -26,6 +26,15 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
+
+armel-deb:
+	test/packaging/create-deb.sh -a
+
+source-deb:
+	test/packaging/create-deb.sh -s
+
+corporate-deb:
+	test/packaging/create-deb.sh -c
 
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`

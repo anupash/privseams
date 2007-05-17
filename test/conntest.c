@@ -173,6 +173,7 @@ int hip_connect_func(struct addrinfo *res, const char* filename)
 		HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
 		HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
 
+
 		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
 			       sizeof(addr_str))) {
 			if (!inet_ntop(AF_INET, (char *) &sin->sin_addr,
@@ -181,8 +182,12 @@ int hip_connect_func(struct addrinfo *res, const char* filename)
 				goto out_err;
 			}
 		}
-		
-		printf("Trying to connect to %s\n", addr_str);
+
+		if (ai->ai_family == AF_INET6)
+		  HIP_DEBUG_IN6ADDR("Trying to connect to IPv6", hip_cast_sa_addr(sin6));
+		else
+		  HIP_DEBUG_INADDR("Trying to connect to IPv4", hip_cast_sa_addr(sin6));
+
 		gettimeofday(&stats_before, NULL);
 		e = connect(sock, ai->ai_addr, ai->ai_addrlen);
 		printf("After call conntest.c: connect to %s\n", addr_str);
@@ -209,8 +214,8 @@ int hip_connect_func(struct addrinfo *res, const char* filename)
 			break; /* Connect succeeded and data can be sent/received. */
 		}
 		//break; /* Connect succeeded and data can be sent/received. */
-	}
 	
+	}
 	if (sock == 0) {
 		printf("failed to connect\n");
 		goto out_err;
@@ -269,13 +274,15 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 		datalen++;
 	}
 	
+	HIP_HEXDUMP("addr: ", res, sizeof(*res));
+	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
 	HIP_INFO("!!!! conntest.c Connecting...\n");
 	sock = hip_connect_func(res, NULL);
 	if (!sock)
 		goto out_err;
-	HIP_INFO("!!!! conntest.c got sock\n");
+	HIP_INFO("!!!! conntest.c got sock %d\n", sock);
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;

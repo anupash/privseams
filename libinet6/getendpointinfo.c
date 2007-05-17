@@ -82,6 +82,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "crypto.h"
 #include "libinet6/util.h"
 #include "icomm.h"
+#include "hipd.h"
+#include "debug.h"
+#include "hadb.h"
+#include "user.h"
 
 //#include <ifaddrs.h>
 
@@ -408,7 +412,7 @@ int setpeereid(struct sockaddr_eid *peer_eid,
     }
 
     hip_build_user_hdr(msg_mapping, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-    hip_send_daemon_info(msg_mapping);
+    hip_send_daemon_info_wrapper(msg_mapping, 0);
   }
   free(msg_mapping);
 
@@ -1612,7 +1616,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   _HIP_HEXDUMP("host identity in endpoint: ", &endpoint_hip->id.host_id,
 	      hip_get_param_total_len(&endpoint_hip->id.host_id));
 
-
   _HIP_HEXDUMP("hip endpoint: ", endpoint_hip, endpoint_hip->length);
 
   if(algo == HIP_HI_RSA) {
@@ -1679,6 +1682,7 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
       memcpy((*res)->ei_canonname, hostname, len);
     }
   }
+
  out_err:
 
   if (rsa)
@@ -1918,10 +1922,14 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   struct hip_lhi hit;
   char *filenamebase = NULL;
   int filenamebase_len, ret;
-  List list;
   struct endpointinfo modified_hints;
   struct endpointinfo *new; 
-
+  struct hip_common *msg;
+  struct in6_addr *hiphit;
+  struct hip_tlv_common *det;
+  hip_hit_t *allhit;
+  List list;
+  
   _HIP_DEBUG("\n");
 
   /* assign default hints */
@@ -1934,10 +1942,13 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   /* find key files from /etc/hip */
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
+
+  hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct endpointinfo));
   for(i=0; i<length(&list); i++) {
-    _HIP_DEBUG("%s\n",getitem(&list,i));
-    filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-      strlen(getitem(&list,i)) + 1;
+	
+	_HIP_DEBUG("%s\n",getitem(&list,i));
+	filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
+      	strlen(getitem(&list,i)) + 1;
     
     filenamebase = malloc(filenamebase_len);
     if (!filenamebase) {
@@ -1967,8 +1978,9 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
     (*adr)->next = NULL;			
     (*adr)->family = AF_INET6;	
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
-    //adr = &((*adr)->next);
+    adr = &((*adr)->next); // for opp mode -miika
   }
+
  err_out:
   if(filenamebase_len)
     free(filenamebase);
@@ -1977,4 +1989,122 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   
   return err;
   
+}
+
+/**
+ * Handles the hipconf commands where the type is @c load. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_load(struct hip_common *msg, int action,
+		    const char *opt[], int optc)
+{
+  	int arg_len, err = 0, i, len;
+	FILE *hip_config = NULL; 
+	
+	List list;
+	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
+		*comment;
+
+	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	if (!strcmp(opt[0], "default"))
+		fname = HIPD_CONFIG_FILE;
+	else
+		fname = (char *) opt[0];
+
+
+	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
+		 "Error: can't open config file %s.\n", fname);
+
+	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
+
+		/* Remove whitespace */
+		c = line;
+		while (*c == ' ' || *c == '\t')
+			c++;
+
+		/* Line is a comment or empty */
+		if (c[0] =='#' || c[0] =='\n' || c[0] == '\0')
+			continue;
+
+		/* Terminate before (the first) trailing comment */
+		comment = strchr(c, '#');
+		if (comment)
+			*comment = '\0';
+
+		/* prefix the contents of the line with" hipconf"  */
+		memset(str, '\0', sizeof(str));
+		strcpy(str, "hipconf");
+		str[strlen(str)] = ' ';
+		hip_arg = strcat(str, c);
+		/* replace \n with \0  */
+		hip_arg[strlen(hip_arg) - 1] = '\0';
+
+		/* split the line into an array of strings and feed it
+		   recursively to hipconf */
+		initlist(&list);
+		extractsubstrings(hip_arg, &list);
+		len = length(&list);
+		for(i = 0; i < len; i++) {
+			/* the list is backwards ordered */
+			args[len - i - 1] = getitem(&list, i);
+		}
+		err = hip_do_hipconf(len, args, 1);
+		destroy(&list);
+	}
+
+ out_err:
+	if (hip_config)
+		fclose(hip_config);
+
+	return err;
+
+}
+
+/**
+ * Handles the hipconf commands where the type is @c del. This function is in this file due to some interlibrary dependencies -miika
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ *
+ */
+int hip_conf_handle_hi_get(struct hip_common *msg, int action,
+		      const char *opt[], int optc) 
+{
+	struct gaih_addrtuple *at = NULL;
+	struct gaih_addrtuple *tmp;
+	int err = 0;
+ 	
+ 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
+
+	/* XX FIXME: THIS IS KLUDGE; RESORTING TO DEBUG OUTPUT */
+	/*err = get_local_hits(NULL, &at);*/
+	if (err)
+		goto out_err;
+
+	tmp = at;
+	while (tmp) {
+		/* XX FIXME: THE LIST CONTAINS ONLY A SINGLE HIT */
+		_HIP_DEBUG_HIT("HIT", &tmp->addr);
+		tmp = tmp->next;
+	}
+
+	_HIP_DEBUG("*** Do not use the last HIT (see bugzilla 175 ***\n");
+ 	 	
+out_err:
+	if (at)
+		HIP_FREE(at);
+	return err;
 }

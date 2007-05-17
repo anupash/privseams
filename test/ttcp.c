@@ -38,7 +38,7 @@
  *	fix loads of more warnings
  *	use snprintf with a few fixed-sized buffers, fix format strings 
  *
- * Modified Oct 2001 by Jaakko Kyrö <jkyro@cs.helsinki.fi>
+ * Modified Oct 2001 by Jaakko Kyrï¿½<jkyro@cs.helsinki.fi>
  *      Added -I option to specify network interface
  *
  * Modified Oct 2002 by Pekka Savola <pekkas@netcore.fi>
@@ -78,6 +78,7 @@ static char RCSid[] = "ttcp.c $Revision: 1.1 $";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "misc.h"
 
 struct sockaddr_storage frominet;
 struct addrinfo hints, *res, *res0;
@@ -110,20 +111,13 @@ char fmt = 'K';			/* output format: k = kilobits, K = kilobytes,
 				 *  m = megabits, M = megabytes, 
 				 *  g = gigabits, G = gigabytes */
 int touchdata = 0;		/* access data after reading */
-static long wait = 0;		/* usecs to wait between each write */
+static long wait_delay = 0;		/* usecs to wait between each write */
 int af =  AF_UNSPEC;		/* Address family to be determined */
 
 extern int errno;
 extern int optind;
 extern char *optarg;
 
-
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 
 char Usage[] =
 "Usage: ttcp -t [-options] host [ < in ]\n"
@@ -233,7 +227,7 @@ main(int argc, char **argv)
 			verbose = 1;
 			break;
 		case 'w':
-			wait = strtol(optarg, (char **)NULL, 10);
+			wait_delay = strtol(optarg, (char **)NULL, 10);
 			break;
 		case 'A':
 			bufalign = atoi(optarg);
@@ -417,8 +411,8 @@ main(int argc, char **argv)
 			if (!(res->ai_family == AF_INET ||
 			      res->ai_family == AF_INET6))
 				err("wildcard");
-			memcpy(SA2IP(res->ai_addr), &any,
-			       SAIPLEN(res->ai_addr));
+			memcpy(hip_cast_sa_addr(hip_cast_sa_addr), &any,
+			       hip_sa_addr_len(res->ai_addr));
 		}
 
 		if (bind(fd, res->ai_addr, res->ai_addrlen) < 0)
@@ -871,8 +865,8 @@ again:
 		cnt = write(fd, buf, count);
 		numCalls++;
 	}
-	if (wait)
-		delay(wait);
+	if (wait_delay)
+		delay(wait_delay);
 	return(cnt);
 }
 

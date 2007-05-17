@@ -20,7 +20,6 @@
 #include "oppdb.h"
 #include "user.h"
 #include "debug.h"
-#include "beet.h"
 #include "hadb.h"
 #include "keymat.h"
 #include "crypto.h"
@@ -31,11 +30,13 @@
 #include "output.h"
 #include "pk.h"
 #include "netdev.h"
-#include "beet.h"
 #include "util.h"
 #include "state.h"
+#include "oppdb.h"
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
+#include "oppipdb.h"
+
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -70,9 +71,6 @@ struct pseudo_header
 
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-u16 checksum_packet(char *data, struct sockaddr *src, struct sockaddr *dst);
-int hip_verify_network_header(struct hip_common *hip_common,
-			      struct sockaddr *src, struct sockaddr *dst, int len);
 #endif
 
 /**
@@ -81,6 +79,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
  *
  * @return HIP message type as a string.
  */
+
 static inline const char *hip_msg_type_str(int type) 
 {
         const char *str = "UNKNOWN";
@@ -108,7 +107,7 @@ static inline const char *hip_msg_type_str(int type)
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	HIP_DEBUG("hip_controls_sane() invoked.\n");
+	_HIP_DEBUG("hip_controls_sane() invoked.\n");
 	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 				| HIP_CONTROL_RVS_CAPABLE //XX:FIXME
@@ -122,7 +121,7 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
 int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
 int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
-			       struct in6_addr *, hip_portpair_t *);
+			       struct in6_addr *, hip_portpair_t *, int);
 int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				   struct in6_addr *, hip_portpair_t *);
 			  
@@ -170,5 +169,5 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
- 
+
 #endif /* HIP_INPUT_H */

@@ -201,14 +201,10 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	/* Check that group is not NULL and set group. */
 	if (group == NULL)
 	{
-		if (group_db_n < 1)
-		{
-			HIP_DEBUG("Group database emty, adding default group.\n");
-			hit_db_add_rgroup("default", local_db, HIT_DB_TYPE_ACCEPT, 0);
-		}
 		group = group_db;
 	}
 	r->g = group;
+	r->g->remotec++;
 
 	/* Add remote group item to database. */
 	if (remote_db == NULL) remote_db = r;
@@ -218,8 +214,11 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_n++;
 
 	/* Then call GUI to show new HIT. */
-	HIP_DEBUG("Calling GUI to show new HIT...\n");
-	gui_add_remote_hit(name, group->name);
+	if (group->name[0] != ' ')
+	{
+		HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+		gui_add_remote_hit(r->name, group->name);
+	}
 
 	HIP_DEBUG("%d items in database.\n", remote_db_n);
 
@@ -256,6 +255,7 @@ int hit_db_del(char *n)
 	if (strncmp(remote_db->name, name, MAX_NAME_LEN) == 0)
 	{
 		r1 = remote_db;
+		r1->g->remotec--;
 		remote_db = (HIT_Remote *)remote_db->next;
 		free(r1);
 		remote_db_n--;
@@ -283,6 +283,7 @@ int hit_db_del(char *n)
 		if (r2 != NULL)
 		{
 			r1->next = r2->next;
+			r2->g->remotec--;
 			if (remote_db_last == r2) remote_db_last = r1;
 			free(r2);
 		}
@@ -409,7 +410,8 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
-	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->type, g->lightweight);
+	if (g->name[0] == ' ' || !g->l) return (0);
+	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->accept, g->lightweight);
 	
 	return (0);
 }
@@ -446,9 +448,10 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
 	FILE *f = (FILE *)p;
 	char hit[128];
 	
+	if (r->g->name[0] == ' ') return (0);
 	print_hit_to_buffer(hit, &r->hit);
 	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
-	        r->url, r->port, r->g->name);
+	        "x", r->port, r->g->name);
 
 	return (0);
 }
@@ -508,7 +511,7 @@ int hit_db_load_from_file(char *file)
 		if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
 		else if (buf[0] == 'l') hit_db_parse_local(&buf[2]);
 		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
-	
+
 	loop_end:
 		/* Clear buffer. */
 		memset(buf, '\0', sizeof(buf)); i = 0;
@@ -535,16 +538,13 @@ int hit_db_parse_hit(char *buf)
 	HIT_Remote item;
 	struct in6_addr slhit, srhit;
 	int err = 0, n;
-	char type[128], lhit[128], group[320];
+	char lhit[128], group[320];
 
 	/* Parse values from current line. */
 	n = sscanf(buf, "%s \"%64[^\"]\" \"%1024[^\"]\" \"%1024[^\"]\" \"%64[^\"]\"",
 	           lhit, item.name, item.url, item.port, group);
 
 	HIP_IFEL(n != 5, -1, "Broken line in database file: %s\n", buf);
-		
-	HIP_DEBUG("Scanned HIT line with values: %s %s %s %s %s\n",
-	          lhit, item.name, item.url, item.port, group);
 
 	read_hit_from_buffer(&item.hit, lhit);
 	item.g = hit_db_find_rgroup(group);
@@ -572,21 +572,19 @@ int hit_db_parse_rgroup(char *buf)
 	HIT_Group *g;
 	int err = 0, n;
 	char name[MAX_NAME_LEN + 1], hit[128];
-	int type, lightweight;
+	int accept, lightweight;
 	
 	/* Parse values from current line. */
 	n = sscanf(buf, "\"%64[^\"]\" \"%64[^\"]\" %d %d",
-	           name, hit, &type, &lightweight);
+	           name, hit, &accept, &lightweight);
 	HIP_IFEL(n != 4, -1, "Broken line in database file: %s\n", buf);
-	HIP_DEBUG("Scanned remote group line with values: %s %s %d %d\n",
-	          name, hit, type, lightweight);
 	l = hit_db_find_local(hit, NULL);
 	HIP_IFEL(!l, -1, "Failed to find local HIT for remote group!\n");
-	g = hit_db_add_rgroup(name, l, type, lightweight);
-	if (g && strncmp("default", name, MAX_NAME_LEN) == 0)
+	g = hit_db_add_rgroup(name, l, accept, lightweight);
+	if (g && strncmp(lang_get("default-group-name"), name, MAX_NAME_LEN) == 0)
 	{
 		g->l = l;
-		g->type = type;
+		g->accept = accept;
 		g->lightweight = lightweight;
 	}
 
@@ -614,7 +612,6 @@ int hit_db_parse_local(char *buf)
 	/* Parse values from current line. */
 	n = sscanf(buf, "\"%64[^\"]\" %s", name, hit);
 	HIP_IFEL(n != 2, -1, "Broken line in database file: %s\n", buf);
-	HIP_DEBUG("Scanned local HIT line with values: %s %s\n", name, hit);
 	read_hit_from_buffer(&lhit, hit);
 	hit_db_add_local(name, &lhit);
 	
@@ -633,7 +630,7 @@ out_err:
 	        to old one. Returns NULL on errors.
 */
 HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
-                             int type, int lightweight)
+                             int accept, int lightweight)
 {
 	/* Variables. */
 	HIT_Group *g, *err = NULL;
@@ -654,8 +651,9 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	memset(g, 0, sizeof(HIT_Group));
 	NAMECPY(g->name, name);
 	g->l = lhit;
-	g->type = type;
+	g->accept = accept;
 	g->lightweight = lightweight;
+	g->remotec = 0;
 
 	/* Add remote group item to database. */
 	if (group_db == NULL) group_db = g;
@@ -664,10 +662,12 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	group_db_last = g;
 	group_db_n++;
 
-	HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
-
 	/* Tell GUI to show new group item. */
-	gui_add_rgroup(g);
+	if (g->name[0] != ' ')
+	{
+		HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
+		gui_add_rgroup(g);
+	}
 	err = g;
 
 out_err:
@@ -685,10 +685,35 @@ out_err:
 int hit_db_del_rgroup(char *name)
 {
 	/* Variables. */
-	int err = -1;
+	HIT_Group *g, *g2;
+	int err = 0;
 
-	/*! \todo Implement! */
-	HIP_DEBUG("Group delete not implemented yet!!!\n");
+	/* Find group from database first. */
+	g = hit_db_find_rgroup(name);
+	HIP_IFEL(!g, -1, "Tried to delete unexisting group \"%s\" from database", name);
+	
+	/* If group is first group.. */
+	if (g == group_db)
+	{
+		group_db = (HIT_Group *)g->next;
+		if (g == group_db_last) group_db_last = NULL;
+	}
+	else
+	{
+		/* Find previous group from database. */
+		g2 = group_db;
+		while (g2->next != (void *)g && g2) g2 = (HIT_Group *)g2->next;
+		HIP_IFEL(!g2, -1, "Could not find previous group for group \"%s\"!\n", name);
+		g2->next = g->next;
+		if (g == group_db_last) group_db_last = g2;
+	}
+	
+	gui_delete_rgroup(name);
+	free(g);
+	group_db_n--;
+
+	/* If this was last group, (re-)create default group. */
+	if (group_db_n < 1) hit_db_add_rgroup(lang_get("default-group-name"), local_db, HIT_ACCEPT, 0);
 	
 out_err:
 	return (err);
@@ -792,10 +817,10 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	local_db_last = h;
 	local_db_n++;
 
-	if (group_db_n < 1)
+//	if (group_db_n < 2)
 	{
 		HIP_DEBUG("Group database emty, adding default group.\n");
-		hit_db_add_rgroup("default", h, HIT_DB_TYPE_ACCEPT, 0);
+		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_ACCEPT, 0);
 	}
 
 	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
@@ -889,6 +914,24 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 	HIP_DEBUG("Enumerated %d local HITs.\n", n);
 	
 	return (n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return number of local HITs in database. */
+int hit_db_count_locals(void)
+{
+	return (local_db_n);
+}
+/* END OF FUNCTION */
+
+
+/******************************************************************************/
+/** Return default local HIT. */
+HIT_Local *hit_db_default_local(void)
+{
+	return (local_db);
 }
 /* END OF FUNCTION */
 

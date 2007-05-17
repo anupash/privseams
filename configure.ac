@@ -62,9 +62,9 @@ AC_FUNC_SETPGRP
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
-AC_FUNC_STRNLEN
 AC_FUNC_UTIME_NULL
 AC_FUNC_VPRINTF
+#AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
 glibc_version=2.3
@@ -94,14 +94,14 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
-                            [HIP user agent (default is NO)]),
-             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
+                            [HIP user agent (default is YES)]),
+             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=no])
+               [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
-        AC_CHECK_LIB(gtk-x11-2.0, gtk_main_quit,, AC_MSG_ERROR(libgtk not found))
+        AC_CHECK_LIB(gtk-x11-2.0, gtk_init,, AC_MSG_ERROR(libgtk not found))
 #        hipl_opt_build="$hipl_opt_build libhipgui agent"
 # autogen.sh fails on a system without gtk:
 #		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
@@ -127,6 +127,39 @@ AC_CACHE_CHECK([whether to use cookie extensions],
                [ac_cv_use_cookie], [ac_cv_use_cookie=no])
 if test x"$ac_cv_use_cookie" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_COOKIE, AC_PREREQ(2.53))
+fi
+
+AC_ARG_ENABLE(corporate,
+             AC_HELP_STRING([--enable-corporate],
+                            [HIP corporate extensions (default is NO)]),
+             [ac_cv_use_corporate=$enableval], [ac_cv_use_corporate=no])
+AC_CACHE_CHECK([whether to use corporate extensions],
+               [ac_cv_use_corporate], [ac_cv_use_corporate=no])
+if test x"$ac_cv_use_corporate" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_CORPORATE, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_CORPORATE, test x"$ac_cv_use_corporate" = x"yes")
+
+AC_ARG_ENABLE(pfkey,
+             AC_HELP_STRING([--enable-pfkey],
+                            [HIP pfkey extensions (default is NO)]),
+             [ac_cv_use_pfkey=$enableval], [ac_cv_use_pfkey=no])
+AC_CACHE_CHECK([whether to use pfkey extensions],
+               [ac_cv_use_pfkey], [ac_cv_use_pfkey=no])
+if test x"$ac_cv_use_pfkey" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PFKEY, AC_PREREQ(2.53))
+        AM_PROG_LEX
+fi
+AM_CONDITIONAL(HIP_PFKEY, test x"$ac_cv_use_pfkey" = x"yes")
+
+AC_ARG_ENABLE(cert,
+             AC_HELP_STRING([--enable-cert],
+                            [Samu's cert extensions (default is NO)]),
+             [ac_cv_use_cert=$enableval], [ac_cv_use_cert=no])
+AC_CACHE_CHECK([whether to use cert extensions],
+               [ac_cv_use_cert], [ac_cv_use_cert=no])
+if test x"$ac_cv_use_cert" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_CERT, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(rvs,
@@ -162,15 +195,26 @@ AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
-                            [OpenDHT support (default is NO)]),
-             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=no])
+                            [OpenDHT support (default is YES)]),
+             [ac_cv_use_opendht=$enableval], [ac_cv_use_opendht=yes])
 AC_CACHE_CHECK([whether to use opendht],
-               [ac_cv_use_opendht], [ac_cv_use_opendht=no])
+               [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        AC_CHECK_PROG(RPCGEN, rpcgen,,)
+        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
+        #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
+
+AC_ARG_ENABLE(blind,
+             AC_HELP_STRING([--enable-blind],
+                            [HIP BLIND extensions (default is NO)]),
+             [ac_cv_use_blind=$enableval], [ac_cv_use_blind=no])
+AC_CACHE_CHECK([whether to use BLIND],
+               [ac_cv_use_blind], [ac_cv_use_blind=no])
+if test x"$ac_cv_use_blind" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
+fi
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],
@@ -190,6 +234,7 @@ AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
 AC_SUBST(HIPL_HIPD, "$HIPL/hipd")
 AC_SUBST(HIPL_FIREWALL, "$HIPL/firewall")
+AC_SUBST(HIPL_LIBIPSEC, "$HIPL/libipsec")
 AC_SUBST(HIPL_LIBINET6, "$HIPL/libinet6")
 AC_SUBST(HIPL_LIBINET6_LIB, "$HIPL_LIBINET6/.libs")
 AC_SUBST(HIPL_LIBINET6_LIB_STATIC, "$HIPL_LIBINET6_LIB/libinet6.a")
@@ -206,9 +251,12 @@ AC_SUBST(HIPL_LIBHIPTOOL_LIB_DYNAMIC, "$HIPL_LIBHIPTOOL_LIB/libhiptool.so")
 AC_SUBST(HIPL_AGENT, "$HIPL/agent")
 AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
+AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
+AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
+AC_PREFIX_DEFAULT("/usr")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC")
+AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile
@@ -223,5 +271,6 @@ AC_CONFIG_FILES([ Makefile
                   test/Makefile
                   firewall/Makefile
                   libhipgui/Makefile
-                  agent/Makefile])
+                  agent/Makefile
+		  libipsec/Makefile])
 AC_OUTPUT

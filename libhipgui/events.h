@@ -48,6 +48,9 @@ enum BUTTON_IDS
 	IDB_TW_APPLY,
 	IDB_TW_CANCEL,
 	IDB_TW_DELETE,
+	IDB_TWL_APPLY,
+	IDB_TWL_CANCEL,
+	IDB_TWL_DELETE,
 	
 	IDB_SYSTRAY,
 
@@ -57,6 +60,12 @@ enum BUTTON_IDS
 	
 	IDM_RLIST_DELETE,
 	
+	IDM_RUNAPP,
+	IDM_NEWGROUP,
+	IDM_NEWHIT,
+	
+	IDB_NH_EXPANDER,
+
 	BUTTON_IDS_N
 };
 
@@ -76,6 +85,7 @@ gboolean list_double_click(GtkTreeSelection *, GtkTreePath *,
 void button_event(GtkWidget *, gpointer);
 void toolbar_event(GtkWidget *, gpointer);
 void systray_event(void *, guint, guint, gpointer);
+void notebook_event(GtkNotebook *, GtkNotebookPage *, guint, gpointer);
 
 
 /*! @} addtogroup libhipgui */

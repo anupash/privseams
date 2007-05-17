@@ -10,7 +10,6 @@ TODO
 
 - xx
 
-
 AUTOCONF AND AUTOMAKE
 =====================
 
@@ -206,31 +205,6 @@ Some points in the branch quality assurance:
 - UPDATE packet exchange should work
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
-
-UPGRADING THE KERNEL
-====================
-
-# note: there is a perl script called "hashline" diff which is more
-# convinient to use in upgrading the kernel (to check for added/deleted
-# files)
-
-% <get the patch to ~/down>
-% cd hipl--fix--2.6/linux
-% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
-% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
-% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_LOG`
-% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-  (/error finding file id \(2: No such file or directory\)/)' \
-    </tmp/TLA_LOG|cut -d' ' -f3`
-% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
-% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
-    >/tmp/TLA_DIR_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
-
-Check HUNK messages from PATCH_LOG manually.
 
 DEBUGGING
 =========
@@ -454,6 +428,12 @@ http://newbiedoc.sourceforge.net/system/kernel-pkg.html
 Redhat notes
 ------------
 
+The instructions below did not work anymore. Instead, I followed these
+instructions:
+
+http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
+see: test/packaging/kernel-2.6.17.14.spec 
+
 To create the package from vanilla sources (preferred method) for
 Fedora, follow the instructions of this document:
 
@@ -465,7 +445,7 @@ In short:
 * cd linux-2.6.xx
 * apply hip patches
 * cp /boot/config-something .config
-* make rpm
+* make rpm # or bin-rpm??
 
 To install, do this:
 * rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
@@ -511,3 +491,28 @@ This is what I did:
 
    * copied the patches to /usr/src/redhat/SOURCES
    * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
+
+UPGRADING THE KERNEL - DEPRACATED
+=================================
+
+# note: there is a perl script called "hashline" diff which is more
+# convinient to use in upgrading the kernel (to check for added/deleted
+# files)
+
+% <get the patch to ~/down>
+% cd hipl--fix--2.6/linux
+% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
+% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
+% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_LOG`
+% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+  (/error finding file id \(2: No such file or directory\)/)' \
+    </tmp/TLA_LOG|cut -d' ' -f3`
+% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
+% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
+    >/tmp/TLA_DIR_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
+
+Check HUNK messages from PATCH_LOG manually.

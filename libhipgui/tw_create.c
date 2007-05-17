@@ -22,50 +22,57 @@
 int tw_create_content(void)
 {
 	/* Variables. */
-	GtkWidget *window = (GtkWidget *)widget(ID_TOOLWND);
 	GtkWidget *w, *hb, *vb;
 	int err = 0;
 
-	gtk_container_set_border_width(window, 1);
+	gtk_container_set_border_width(widget(ID_TOOLWND), 1);
+	gtk_container_set_border_width(widget(ID_LTOOLWND), 1);
 
-	/* Create contents for different modes. */
-	HIP_IFEL(tw_create_remote(), -1, "Failed to create remote info toolwindow.\n");
-	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
-	HIP_IFEL(tw_create_rgroup(), -1, "Failed to create remote group info toolwindow.\n");
-
+	/* Create remote -tab content. */
 	vb = gtk_vbox_new(FALSE, 5);
-	gtk_container_add(window, vb);
+	gtk_box_pack_start(widget(ID_TOOLWND), vb, FALSE, FALSE, 1);
 	gtk_widget_show(vb);
 	widget_set(ID_TW_CONTAINER, vb);
 
+	HIP_IFEL(tw_create_remote(), -1, "Failed to create remote info toolwindow.\n");
+	HIP_IFEL(tw_create_rgroup(), -1, "Failed to create remote group info toolwindow.\n");
+
 	hb = gtk_hbox_new(FALSE, 5);
-	gtk_box_pack_end(vb, hb, FALSE, FALSE, 1);
+	gtk_box_pack_start(widget(ID_TOOLWND), hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_button_new_with_label("Apply");
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_show(w);
-	widget_set(ID_TW_APPLY, w);
-	
-	w = gtk_button_new_with_label("Cancel");
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
-	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_CANCEL);
-	gtk_widget_set_sensitive(w, FALSE);
-	gtk_widget_show(w);
-	widget_set(ID_TW_CANCEL, w);
-
-	w = gtk_button_new_with_label("Delete");
-	gtk_box_pack_start(hb, w, FALSE, FALSE, 1);
+	w = gtk_button_new_with_label(lang_get("tw-button-delete"));
+	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_DELETE);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TW_DELETE, w);
 	
-	/* Set default mode and hide the toolwindow. */
- 	tw_set_mode(TWMODE_REMOTE);
-	gtk_widget_hide(window);
+	w = gtk_button_new_with_label(lang_get("tw-button-cancel"));
+	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_CANCEL);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TW_CANCEL, w);
+
+	w = gtk_button_new_with_label(lang_get("tw-button-apply"));
+	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
+	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
+	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);
+	gtk_widget_set_sensitive(w, FALSE);
+	gtk_widget_show(w);
+	widget_set(ID_TW_APPLY, w);
+	
+	/* Create local -tab content. */
+	vb = gtk_vbox_new(FALSE, 5);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(widget(ID_LTOOLWND))->vbox), vb, TRUE, TRUE, 3);
+	gtk_widget_show(vb);
+	widget_set(ID_TWL_CONTAINER, vb);
+	
+	HIP_IFEL(tw_create_local(), -1, "Failed to create local info toolwindow.\n");
+
+	gtk_widget_show(widget(ID_TOOLWND));
+//	gtk_widget_grab_default(widget(ID_TW_APPLY));
 
 out_err:
 	return (err);
@@ -86,7 +93,7 @@ int tw_create_remote(void)
 	/* Create menu for right click popup. */
 	w = gtk_menu_new();
 	
-	label = gtk_menu_item_new_with_label("Delete");
+	label = gtk_menu_item_new_with_label(lang_get("tw-button-delete"));
 	gtk_menu_shell_append(w, label);
 	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RLIST_DELETE);
 	gtk_widget_show(label);
@@ -95,7 +102,7 @@ int tw_create_remote(void)
 
 	/* Create remote HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(frame, "Remote HIT information:");
+	gtk_frame_set_label(frame, lang_get("tw-hit-info"));
 	gtk_frame_set_label_align(frame, 0.0, 0.0);
 	gtk_frame_set_shadow_type(frame, GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
@@ -113,17 +120,18 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Name:");
+	w = gtk_label_new(lang_get("tw-hit-name"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "NewHIT");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_NAME, w);
 
-	w = gtk_label_new("Group:");
+	w = gtk_label_new(lang_get("tw-hit-group"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
@@ -139,7 +147,7 @@ int tw_create_remote(void)
 	gtk_widget_show(w);
 
 	/* Advanced information. */
-	exp = gtk_expander_new("Advanced");
+	exp = gtk_expander_new(lang_get("tw-hit-advanced"));
 	gtk_box_pack_start(vb, exp, FALSE, TRUE, 2);
 	gtk_widget_show(exp);
 	
@@ -151,7 +159,7 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Remote HIT:");
+	w = gtk_label_new(lang_get("tw-hit-hit"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
@@ -161,13 +169,14 @@ int tw_create_remote(void)
 	gtk_widget_show(w);
 	widget_set(ID_TWR_REMOTE, w);
 
-	w = gtk_label_new("Port:");
+	w = gtk_label_new(lang_get("tw-hit-port"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "0");
 	gtk_box_pack_start(hb, w, FALSE, TRUE, 5);
 	gtk_widget_set_size_request(w, 90, -1);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_PORT, w);
@@ -176,18 +185,19 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("URL:");
+	w = gtk_label_new(lang_get("tw-hit-url"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 //	gtk_widget_show(w);
 	w = gtk_entry_new();
 	gtk_entry_set_text(w, "<notset>");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_URL_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 //	gtk_widget_show(w);
 	widget_set(ID_TWR_URL, w);
 
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(frame, "Group info:");
+	gtk_frame_set_label(frame, lang_get("tw-hit-groupinfo"));
 	gtk_frame_set_label_align(frame, 0.0, 0.0);
 	gtk_frame_set_shadow_type(frame, GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
@@ -202,7 +212,7 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Local HIT:");
+	w = gtk_label_new(lang_get("tw-hit-local"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
@@ -216,24 +226,24 @@ int tw_create_remote(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Type:");
+	w = gtk_label_new(lang_get("tw-hitgroup-type"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "accept");
-	gtk_combo_box_append_text(w, "deny");
+	gtk_combo_box_append_text(w, lang_get("group-type-accept"));
+	gtk_combo_box_append_text(w, lang_get("group-type-deny"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);
 	gtk_widget_show(w);
 	widget_set(ID_TWR_TYPE1, w);
 
-	w = gtk_label_new("Lightweight:");
+	w = gtk_label_new(lang_get("tw-hitgroup-lightweight"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "normal");
-	gtk_combo_box_append_text(w, "lightweight");
+	gtk_combo_box_append_text(w, lang_get("group-type2-normal"));
+	gtk_combo_box_append_text(w, lang_get("group-type2-lightweight"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);
@@ -258,12 +268,13 @@ int tw_create_local(void)
 	
 	/* Create local HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(GTK_FRAME(frame), "Local HIT information:");
+	gtk_frame_set_label(GTK_FRAME(frame), lang_get("lh-info"));
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
 	gtk_widget_show(frame);
 	widget_set(ID_TWLOCAL, frame);
+	gtk_box_pack_start(widget(ID_TWL_CONTAINER), widget(ID_TWLOCAL), FALSE, FALSE, 1);
 	g_object_ref(frame);
 
 	/* This box is for adding everything inside previous frame. */
@@ -276,13 +287,14 @@ int tw_create_local(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Name:");
+	w = gtk_label_new(lang_get("lh-name"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "LocalHIT");
+	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWL_NAME, w);
 
@@ -290,7 +302,7 @@ int tw_create_local(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("HIT:");
+	w = gtk_label_new(lang_get("lh-hit"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
@@ -318,7 +330,7 @@ int tw_create_rgroup(void)
 	
 	/* Create remote group HIT info. */
 	frame = gtk_frame_new(NULL);
-	gtk_frame_set_label(GTK_FRAME(frame), "Remote group information:");
+	gtk_frame_set_label(GTK_FRAME(frame), lang_get("tw-group-info"));
 	gtk_frame_set_label_align(GTK_FRAME(frame), 0.0, 0.0);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_ETCHED_OUT);
 	gtk_container_set_border_width(frame, 5);
@@ -336,13 +348,14 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Name:");
+	w = gtk_label_new(lang_get("tw-group-name"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_entry_new();
-	gtk_entry_set_text(w, "NewGroup");
+	gtk_entry_set_text(w, "");
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 5);
 	gtk_entry_set_max_length(w, MAX_NAME_LEN);
+	gtk_entry_set_activates_default(w, TRUE);
 	gtk_widget_show(w);
 	widget_set(ID_TWG_NAME, w);
 
@@ -352,7 +365,7 @@ int tw_create_rgroup(void)
 	gtk_widget_show(w);
 
 	/* Advanced information. */
-	exp = gtk_expander_new("Advanced");
+	exp = gtk_expander_new(lang_get("tw-group-advanced"));
 	gtk_box_pack_start(vb, exp, FALSE, TRUE, 2);
 	gtk_widget_show(exp);
 	
@@ -364,7 +377,7 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 
-	w = gtk_label_new("Local HIT:");
+	w = gtk_label_new(lang_get("tw-group-local"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
@@ -377,23 +390,23 @@ int tw_create_rgroup(void)
 	gtk_box_pack_start(vb2, hb, FALSE, FALSE, 1);
 	gtk_widget_show(hb);
 	
-	w = gtk_label_new("Type:");
+	w = gtk_label_new(lang_get("tw-hitgroup-type"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "accept");
-	gtk_combo_box_append_text(w, "deny");
+	gtk_combo_box_append_text(w, lang_get("group-type-accept"));
+	gtk_combo_box_append_text(w, lang_get("group-type-deny"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_show(w);
 	widget_set(ID_TWG_TYPE1, w);
 
-	w = gtk_label_new("Lightweight:");
+	w = gtk_label_new(lang_get("tw-hitgroup-lightweight"));
 	gtk_box_pack_start(hb, w, FALSE, FALSE, 5);
 	gtk_widget_show(w);
 	w = gtk_combo_box_new_text();
-	gtk_combo_box_append_text(w, "normal");
-	gtk_combo_box_append_text(w, "lightweight");
+	gtk_combo_box_append_text(w, lang_get("group-type2-normal"));
+	gtk_combo_box_append_text(w, lang_get("group-type2-lightweight"));
 	gtk_combo_box_set_active(w, 0);
 	gtk_box_pack_start(hb, w, TRUE, TRUE, 1);
 	gtk_widget_set_sensitive(w, FALSE);

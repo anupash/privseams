@@ -42,7 +42,8 @@ libinet6_la_SOURCES += ifaddrs.c ifnames.c cmsg_nxthdr.c rcmd.c rexec.c
 libinet6_la_SOURCES += sa_len.c tempname.c
 
 # HIP additions
-libinet6_la_SOURCES += getendpointinfo.c util.c
+libinet6_la_SOURCES += getendpointinfo.c util.c debug.c builder.c misc.c
+libinet6_la_SOURCES += hipconf.c message.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
@@ -60,13 +61,15 @@ CFLAGS += -DHIP_TRANSPARENT_API
 # HIP library added
 LDADD  = #../libhiptool/.libs/libhiptool.a
 
-include_HEADERS = libc-compat.h util.h
+include_HEADERS = libc-compat.h util.h debug.h builder.h misc.h hipconf.h
+include_HEADERS += message.h icomm.h ife.h kerncompat.h protodefs.h state.h
+include_HEADERS += utils.h hashtable.h list.h
 
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
-  LDADD += ../opendht/.libs/libdhttracker.a ../opendht/.libs/libdhtresolver.a
+  LDADD += ../opendht/.libs/libhipopendht.a
 endif
 
 if HIP_HI3

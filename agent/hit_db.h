@@ -28,10 +28,12 @@
 
 /******************************************************************************/
 /* DEFINES */
-#define HIT_DB_TYPE_NONE				0
+/*#define HIT_DB_TYPE_NONE				0
 #define HIT_DB_TYPE_ACCEPT				1
 #define HIT_DB_TYPE_DENY				2
-#define HIT_DB_TYPE_ALL					0xffffffff
+#define HIT_DB_TYPE_ALL					0xffffffff*/
+#define HIT_ACCEPT				1
+#define HIT_DENY				2
 
 /**
 	Maximum length for name-strings. Notice that this and the max URL length
@@ -55,14 +57,14 @@
 #define NAMECPY(dst, src) \
 { \
 	strncpy(dst, src, MAX_NAME_LEN); \
-	dst[MAX_NAME_LEN] = '\0'; \
+	dst[MAX_NAME_LEN - 1] = '\0'; \
 }
 
 /** This macro is for copying url string, see NAMECPY for more info. */
 #define URLCPY(dst, src) \
 { \
 	strncpy(dst, src, MAX_URL_LEN); \
-	dst[MAX_URL_LEN] = '\0'; \
+	dst[MAX_URL_LEN - 1] = '\0'; \
 }
 
 
@@ -87,10 +89,12 @@ typedef struct
 	char name[MAX_NAME_LEN + 1];
 	/** Stores pointer to local HIT with which this group is associated. */
 	HIT_Local *l;
-	/** What is the type of the group. */
-	int type;
+	/** Style of this group, 1 for accept, 0 for deny. */
+	int accept;
 	/** Is group lightweight or not. */
 	int lightweight;
+	/** Number of remote HITs in this group. */
+	int remotec;
 	/* Next group item. */
 	void *next;
 } HIT_Group;
@@ -164,6 +168,9 @@ HIT_Local *hit_db_add_local(char *, struct in6_addr *);
 int hit_db_del_local(char *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
 int hit_db_enum_locals(int (*)(HIT_Local *, void *), void *);
+
+int hit_db_count_locals(void);
+HIT_Local *hit_db_default_local(void);
 
 
 /******************************************************************************/

@@ -49,6 +49,9 @@
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
+      libxml2 and development headers for OpenDHT support
+      </para></listitem>
+      <listitem><para>
       GNU make
       </para></listitem>
       <listitem><para>
@@ -167,31 +170,71 @@
             [*] Prompt for development and/or incomplete code/drivers
     </para></listitem>
     <listitem><para>
-            Processor type and features
-    </para></listitem>
-    <listitem><para>
-            Device Drivers ---&gt; Networking support ---&gt; Networking options
+            Networking support ---&gt; Networking options
     </para></listitem>
     <listitem><para>
             [*] TCP/IP networking
     </para></listitem>
     <listitem><para>
+            &lt;M&gt; Packet socket
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPsec user configuration interface
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; PF_KEY sockets
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP tunneling
+    </para></listitem>
+    <listitem><para>
             [*] The IPv6 protocol (EXPERIMENTAL)
+    </para></listitem>
+    <listitem><para>
             [*] IPv4: IPsec BEET mode (2.6.19 and above)
+    </para></listitem>
+    <listitem><para>
             [*] IPv6: IPsec BEET mode (2.6.19 and above)
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP: ESP transform (kernel versions below 2.6.19)
+    </para></listitem>
+    <listitem><para>
+            [*] The IPv6 Protocol
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: ESP transformation (kernel versions below 2.6.19)
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            Cryptographic options
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Null algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; SHA1 digest algorithm
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; DES and Triple DES EDE cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms (i586)
+    </para></listitem>
+    <listitem><para>
+            Device Drivers ---&gt; Network device support
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Dummy network device support
     </para></listitem>
     </itemizedlist>
     <para>
-      IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
-      dependencies after you have selected HIP. We recommend that you
-      compile HIP as a kernel module, and the IPv6 support as built-in.
-    </para>
-    <para>
       The hipd tries to probe the necessary kernel modules automatically,
-      However, should this fail, you should make sure that you have
-      configured your /etc/modules accordingly. Insert "xfrm6_tunnel", 
-      "xfrm4_tunnel", "xfrm_user", "dummy", "esp6", "esp4", "ipv6", 
-      "aes", "crypto_null", and "des" to your /etc/modules.
     </para>
   </chapter>
   <chapter>
@@ -317,6 +360,7 @@
             tools/hipconf add map PEER_HIT PEER_IP
     </para>
     <para>
+      You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
       It is also possible to use DNS or OpenDHT (<xref linkend="opendht" />)
       for the mappings.
     </para>
@@ -326,6 +370,24 @@
       this is that it is hard to know if the peer belongs to the same local
       network as we are or not.
       </para>
+    <para>
+      The log messages displayed by the hip daemon can be changed dynamically: 
+    </para>
+    <para>
+            tools/hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
+    </para>
+    <para>
+            tools/hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	    HIP_INFO messages&gt;
+    </para>
+    <para>
+            tools/hipconf debug all # &lt;shows all messages, including 
+	    HIP_DEBUG&gt;
+    </para>
+    <para>
+      These options can be also set in "/etc/hip/hipd_config" to configure 
+      hipd and other libraries at startup.
+    </para>
     <para>
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
@@ -581,7 +643,7 @@
     a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
     </para>
     <para>
-     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so</emphasis>
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
     </para>
     <para>
       2. Override the resolver library dynamically:
@@ -592,7 +654,7 @@
       <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
 
     <para>
-     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so</emphasis>
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
     </para>
 
     <para>
@@ -604,7 +666,7 @@
     4. You can also use HITs directly in the application. Insert the HIT of
        the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
        the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
-       do e.g. "ping6 PEER_HIT".
+       do e.g. "ping6 PEER_HIT". You can set this also to /etc/hip/hipd_config.
     </para>
 
     </section>
@@ -995,7 +1057,7 @@
     <para>The NAT traversal can be experimented in a similar way as depicted
           in earlier sections. The only difference is that you have to
           tell the initiator manually that it is behind a NAT using "hipconf
-          hip nat on". After this, you can initiate the base exchange
+          nat on". After this, you can initiate the base exchange
           according to the previous instructions. The manual configuration is
           currently required because support for automatic NAT detection (STUN)
           has not been implemented yet.
@@ -1007,7 +1069,7 @@
     </para>
     <itemizedlist>
     <listitem><para>
-      &nbsp;tools/hipconf hip nat on
+      &nbsp;tools/hipconf nat on
     </para>    </listitem>
     <listitem><para>
       &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
@@ -1052,9 +1114,9 @@
 		Package: xbase-clients - miscellaneous X clients
 </para></listitem>
 <listitem><para>
-		GTK 2.x and development files for it (Package called libgtk2.0-dev).
-           If you want to use 'system tray' icon, you need atleast 2.10.0 version
-		   of GTK.
+		   GTK 2.x and development files for it (Package called libgtk2.0-dev).
+		   If you want to use 'system  tray' icon, you need atleast 2.10.0 version
+		   of GTK. See info about manual GTK 2.10 installation below.
 </para></listitem>
 <listitem><para>
 
@@ -1062,6 +1124,24 @@
 </para></listitem>
 	</itemizedlist>
 
+	 <para>
+		   In order to install GTK 2.10 manually into
+		   debian/ubuntu, you should do following:
+		   Download gtk from gtk.org.
+		   Also some other libraries are needed, but they can be found using
+		   "aptitude search" and then installed using "aptitude install"
+		   (Atleast cairo, pango, atk, glib and development versions of those are needed).
+		   If you dont like to overide default gtk library,
+		   install gtk using "./configure --prefix=/opt".
+		   If you do it in that way, you need to set some envars:
+		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
+		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
+		   Example like this:
+		   "export PATH=/opt/bin:$PATH", 
+		   "export LD_LIBRARY_PATH=/opt/lib:$LID_LIBRARY_PATH"
+		   "export PKG_CONFIG_PATH=/opt/lib/pkgconfig:$PKG_CONFIG_PATH"
+	  </para>
+	  
 	  <para>
 		  In order to the agent start properly with right window and system tray icon,
 		  you must first do 'make install' to install the data files in right directory.
@@ -1105,13 +1185,15 @@
     <title>OpenDHT Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           Compile hipl--main--2.6 with ./configure --enable-opendht
-    </para></listitem>
-    <listitem><para>
            With OpenDHT support, the hip daemon pushes the hostname,
            RSA public HIT and public IP address to the OpenDHT. The resolver
            can then look up this information automatically without DNS or manual
            /etc/(hip)/hosts configuration.
+    </para></listitem>
+    <listitem><para>
+           Once you start hipd, it will send its hostname, HIT and IP address
+           to OpenDHT. You can query this information with
+           "hipconf dht get &lt;hostname|HIT&gt;".
     </para></listitem>
     <listitem><para>
            To test, just run normally conntest-server 

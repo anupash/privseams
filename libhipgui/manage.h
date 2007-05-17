@@ -40,6 +40,7 @@ void gui_add_rgroup(HIT_Group *);
 
 void gui_add_remote_hit(char *, char *);
 void gui_delete_remote_hit(char *);
+void gui_delete_rgroup(char *);
 
 void gui_add_process(int, char *, int, int);
 
@@ -59,10 +60,10 @@ int tooldlg_add_lhits(HIT_Remote *, void *);
 int askdlg_add_rgroups(HIT_Group *, void *);
 int askdlg_add_lhits(HIT_Remote *, void *);
 
-char *create_remote_group(void);
+int create_remote_group(char *);
 void *create_remote_group_thread(void *);
 
-int all_add_local(HIT_Remote *hit, void *p);
+int all_add_local(HIT_Local *, void *);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 

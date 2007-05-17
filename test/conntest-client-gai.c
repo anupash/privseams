@@ -32,6 +32,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include "debug.h"
+#include "ife.h"
 
 #include "conntest.h"
 
@@ -41,11 +42,15 @@
 
 int main(int argc,char *argv[]) {
 	
-	int socktype;
+	int socktype, err = 0;
 	char *type_name, *peer_port_name, *peer_name;
+	const char *cfile = "default";
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
+	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	  "Error: Cannot set the debugging parameter.\n");
+
 
 	if (argc != 4) {
 		fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);
@@ -64,7 +69,13 @@ int main(int argc,char *argv[]) {
 		fprintf(stderr, "error: proto != tcp|udp\n");
 		exit(1);
 	}
-	
-	main_client_gai(socktype, peer_name, peer_port_name, AI_HIP);
+
+	HIP_IFEL(main_client_gai(socktype, peer_name, peer_port_name, 
+		 AI_HIP), -2,"Error: Cannot set the client.\n");
+
+ out_err:
+	return err;
+
 
 }
+

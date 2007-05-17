@@ -22,15 +22,19 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, 
 			const struct sockaddr_un *src) {
-	hip_hit_t *hit;
-	hip_hit_t *src_hit, *dst_hit;
+	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
+	struct in6_addr my_src,my_dst;
 	hip_ha_t *entry = NULL;
-	int err = 0;
-	int msg_type;
-	int n = 0;
+	int err = 0, msg_type, n = 0, len = 0,state=0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
+	
+	int send_response = (src && src->sun_family == AF_FILE);
+
+	HIP_DEBUG("handling user msg: family=%d sender=%s\n",
+		  src->sun_family, &src->sun_path);
+
 	err = hip_check_userspace_msg(msg);
 	if (err) {
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -49,13 +53,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_add_peer_map(msg);
 		if(err){
 		  HIP_ERROR("add peer mapping failed.\n");
-		  goto out_err;
-		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
 		  goto out_err;
 		}
 		break;
@@ -81,8 +78,28 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1,
-			 "Error when setting daemon NAT status to \"on\"\n");
+			 "Error when setting daemon NAT status to \"off\"\n");
 		break;
+
+	case SO_HIP_SET_DEBUG_ALL:
+		/* Displays all debugging messages. */
+		HIP_DEBUG("Handling DEBUG ALL user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
+			 "Error when setting daemon DEBUG status to ALL\n");
+		break;
+	case SO_HIP_SET_DEBUG_MEDIUM:
+		/* Removes debugging messages. */
+		HIP_DEBUG("Handling DEBUG MEDIUM user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_MEDIUM), -1,
+			 "Error when setting daemon DEBUG status to MED\n");
+		break;
+	case SO_HIP_SET_DEBUG_NONE:
+		/* Removes debugging messages. */
+		HIP_DEBUG("Handling DEBUG NONE user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_NONE), -1,
+			 "Error when setting daemon DEBUG status to NONE\n");
+		break;
+
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
@@ -105,13 +122,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-	  { 
-	    err = hip_opp_get_peer_hit(msg, src);
-	    if(err){
-	      HIP_ERROR("get pseudo hit failed.\n");
-	      goto out_err;
-	    }
-	  }
+		send_response = 0;
+		err = hip_opp_get_peer_hit(msg, src);
+		if(err){
+			HIP_ERROR("get pseudo hit failed.\n");
+			goto out_err;
+		}
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
 	  break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
 	  {
@@ -120,14 +138,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  HIP_ERROR("query ip hit mapping failed.\n");
 		  goto out_err;
 		}
-		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
-		HIP_DEBUG("mapping result sent\n");
 	  }
 	  break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
@@ -138,15 +148,81 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  goto out_err;
 		}
 		
-		n = hip_sendto(msg, src);
-		if(n < 0){
-		  HIP_ERROR("hip_sendto() failed.\n");
-		  err = -1;
-		  goto out_err;
-		}
 		HIP_DEBUG("opportunistic mode value is sent\n");
 	  }
 	  break;
+#endif
+#ifdef CONFIG_HIP_BLIND
+	case SO_HIP_SET_BLIND_ON:
+		HIP_DEBUG("Blind on!!\n");
+		HIP_IFEL(hip_set_blind_on(), -1, "hip_set_blind_on failed\n");
+		break;
+	case SO_HIP_SET_BLIND_OFF:
+		HIP_DEBUG("Blind off!!\n");
+		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
+		break;
+#endif
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_GW:
+          {
+            char tmp_ip_str[20];
+            int tmp_ttl, tmp_port;
+            int *pret;
+            int ret;
+            struct in_addr tmp_v4;
+            struct hip_opendht_gw_info *gw_info;
+
+            HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
+                     "no gw struct found\n");
+            memset(&tmp_ip_str,'\0',20);
+            tmp_ttl = gw_info->ttl;
+            tmp_port = htons(gw_info->port);
+           
+
+            IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+            pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
+            HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
+                      tmp_ip_str, tmp_port, tmp_ttl);
+            ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+            if (ret == 0)
+            {
+              HIP_DEBUG("Serving gateway changed\n");
+              hip_opendht_fqdn_sent = 0;
+              hip_opendht_hit_sent = 0;
+            }
+            else
+            {
+              HIP_DEBUG("Error in changing the serving gateway!");
+            }
+          }
+          break;
+#endif 
+#ifdef CONFIG_HIP_OPENDHT
+        case SO_HIP_DHT_SERVING_GW:
+          {
+            /*
+            struct in_addr ip_gw;
+            struct in6_addr ip_gw_mapped;
+            int rett = 0, errr = 0;
+            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway.ai_addr;
+            rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+            IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+            errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
+                                                   opendht_serving_gateway_port,
+                                                   opendht_serving_gateway_ttl);
+            if (errr)
+              {
+                HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+                goto out_err;
+              }
+            errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+            if (errr)
+              {
+                HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+              }
+            */
+          }
+          break;
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
@@ -189,7 +265,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                         HIP_DEBUG("Removed kea base entries.\n");	
 		}
 		/** @todo Not filtering I1, when handling escrow user message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
 		
@@ -252,7 +328,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 		/* Send a I1 packet to rvs. */
 		/** @todo Not filtering I1, when handling rvs message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry, 1),
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
 	
@@ -274,11 +350,46 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	
 #endif
+	case SO_HIP_GET_HITS:
+		
+		hip_msg_init(msg);
+		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+		break;
+	
+	case SO_HIP_GET_HA_INFO:
+		hip_msg_init(msg);
+		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
+		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
+		break;
+	case SO_HIP_DEFAULT_HIT:
+		hip_msg_init(msg);
+		err =  hip_select_default_hit(&my_src,&my_dst,msg);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
 
  out_err:
+
+	if (send_response) {
+		if (err)
+			hip_set_msg_err(msg, 1);
+		/* send a response (assuming that it is written to the msg */
+		len = hip_get_msg_total_len(msg);
+		n = hip_sendto(msg, src);
+	
+		if(n != len) {
+			HIP_ERROR("hip_sendto() failed.\n");
+			err = -1;
+		} else {
+			HIP_DEBUG("Response sent ok\n");
+		
+		}
+	} else {
+		HIP_DEBUG("No response sent\n");
+	}
+
+    
 	return err;
 }

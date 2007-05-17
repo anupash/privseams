@@ -211,7 +211,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	memset(&update_packet, 0, sizeof(update_packet)); 
 
 	entry->hadb_misc_func->
-		hip_build_network_hdr(&update_packet, HIP_UPDATE,
+		hip_build_network_hdr(&update_packet, HIP_NOTIFY,
 				      0, &entry->hit_our,
 				      &entry->hit_peer);
 	

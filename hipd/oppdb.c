@@ -11,11 +11,27 @@
 
 #include "oppdb.h"
 
-HIP_HASHTABLE oppdb;
-static struct list_head oppdb_list[HIP_OPPDB_SIZE]= { 0 };
+HIP_HASHTABLE *oppdb;
+//static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
 extern unsigned int opportunistic_mode;
 
-int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
+unsigned long hip_oppdb_hash_hit(const void *ptr)
+{
+	hip_opp_block_t *entry = (hip_opp_block_t *)ptr;
+	uint8_t hash[HIP_AH_SHA_LEN];
+
+	hip_build_digest(HIP_DIGEST_SHA1, &entry->our_real_hit, sizeof(hip_hit_t) * 2, hash);
+
+	return *((unsigned long *)hash);
+}
+
+int hip_oppdb_match_hit(const void *ptr1, const void *ptr2)
+{
+	return (hip_hash_hit(ptr1) != hip_hash_hit(ptr2));
+}
+
+int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
+{
 	hip_ha_t *hadb_entry;
 	int err = 0;
 
@@ -31,52 +47,29 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry) {
 	return err;
 }
 
-int hip_handle_opp_fallback(hip_opp_block_t *entry,
-			    void *current_time) {
-	int err = 0;
-	time_t *now = (time_t*) current_time;	
-
-	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaque)
+{
+	int i = 0, fail = 0;
+	hip_opp_block_t *this;
+	hip_list_t *item, *tmp;
 	
-	if(*now - HIP_OPP_WAIT > entry->creation_time) {
-		HIP_DEBUG("Timeout for opp entry, falling back to\n");
-		err = hip_opp_unblock_app(&entry->caller, NULL);
-		HIP_DEBUG("Unblock returned %d\n", err);
-		err = hip_oppdb_entry_clean_up(entry);
+	if (!func) return -EINVAL;
+	
+	HIP_LOCK_HT(&opp_db);
+	list_for_each_safe(item, tmp, oppdb, i)
+	{
+		this = list_entry(item);
+		_HIP_DEBUG("List_for_each_entry_safe\n");
+		hip_hold_ha(this);
+		fail = func(this, opaque);
+		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
+		if (fail) break;
 	}
-	
- out_err:
-	return err;
+	HIP_UNLOCK_HT(&opp_db);
+	return fail;
 }
 
-int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
-                    void *opaque) {
-       int i = 0, fail = 0;
-       hip_opp_block_t *this, *tmp;
-       
-       if (!func)
-               return -EINVAL;
-
-       HIP_LOCK_HT(&opp_db);
-       for(i = 0; i < HIP_OPPDB_SIZE; i++) {
-               _HIP_DEBUG("The %d list is empty? %d\n", i,
-                          list_empty(&oppdb_list[i]));
-               list_for_each_entry_safe(this, tmp, &oppdb_list[i],next_entry)
-               {
-                       _HIP_DEBUG("List_for_each_entry_safe\n");
-                       hip_hold_ha(this);
-                       fail = func(this, opaque);
-                       //hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
-                       if (fail)
-                               break;
-               }
-               if (fail)
-                       break;
-       }
-       HIP_UNLOCK_HT(&opp_db);
-       return fail;
-}
-
+#if 0
 inline void hip_oppdb_hold_entry(void *entry)
 {
   	HIP_DB_HOLD_ENTRY(entry, struct hip_opp_blocking_request_entry);
@@ -92,6 +85,7 @@ inline void *hip_oppdb_get_key(void *entry)
 {
 	return &(((hip_opp_block_t *)entry)->hash_key);
 }
+#endif
 
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
@@ -100,28 +94,30 @@ void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 	HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 	
 	HIP_LOCK_OPP(entry);
-	hip_ht_delete(&oppdb, entry);
+	hip_ht_delete(oppdb, entry);
 	HIP_UNLOCK_OPP(entry);
 	//HIP_FREE(entry);
 }
 
-int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused) {
+int hip_oppdb_uninit_wrap(hip_opp_block_t *entry, void *unused)
+{
 	hip_oppdb_del_entry_by_entry(entry);
 	return 0;
 }
 
-void hip_oppdb_uninit() {
+void hip_oppdb_uninit()
+{
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
 
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
 {
-	hip_hit_t key;
-	hip_xor_hits(&key, hit_peer, hit_our);
+	hip_opp_block_t entry;
+	ipv6_addr_copy(&entry.peer_real_hit, hit_peer);
+	ipv6_addr_copy(&entry.our_real_hit, hit_our);
 	HIP_HEXDUMP("hit_peer is: ", hit_peer, sizeof(hip_hit_t));
 	HIP_HEXDUMP("hit_our is: ", hit_our, sizeof(hip_hit_t));
-	HIP_HEXDUMP("the computed key is: ", &key, sizeof(hip_hit_t));
-	return (hip_opp_block_t *)hip_ht_find(&oppdb, (void *)&key);
+	return (hip_opp_block_t *)hip_ht_find(oppdb, (void *)&entry);
 }
 
 hip_opp_block_t *hip_create_opp_block_entry() 
@@ -136,7 +132,7 @@ hip_opp_block_t *hip_create_opp_block_entry()
   
 	memset(entry, 0, sizeof(*entry));
   
-	INIT_LIST_HEAD(&entry->next_entry);
+//	INIT_LIST_HEAD(&entry->next_entry);
   
 	HIP_LOCK_OPP_INIT(entry);
 	atomic_set(&entry->refcnt,0);
@@ -159,12 +155,12 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 	
 	new_item = hip_create_opp_block_entry();
 	if (!new_item) {
-		HIP_ERROR("new_item malloc failed\n");                   
-		err = -ENOMEM;                                               
+		HIP_ERROR("new_item malloc failed\n");
+		err = -ENOMEM;
 		return err;
-	}                                    
+	}
 
-	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
+//	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
 
 	ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
@@ -174,7 +170,7 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 		ipv6_addr_copy(&new_item->our_ip, ip_our);
 	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_un));
 	
-	err = hip_ht_add(&oppdb, new_item);
+	err = hip_ht_add(oppdb, new_item);
 	hip_oppdb_dump();
 	
 	return err;
@@ -194,6 +190,7 @@ int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
 
 void hip_init_opp_db()
 {
+#if 0
 	memset(&oppdb,0,sizeof(oppdb));
 	
 	oppdb.head =      oppdb_list;
@@ -209,41 +206,38 @@ void hip_init_opp_db()
 	oppdb.name[12] = 0;
 	
 	hip_ht_init(&oppdb);
+#endif
+	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
 void hip_oppdb_dump()
 {
 	int i;
 	//  char peer_real_hit[INET6_ADDRSTRLEN] = "\0";
-	hip_opp_block_t *item = NULL;
-	hip_opp_block_t *tmp = NULL;
+	hip_opp_block_t *this;
+	hip_list_t *item, *tmp;
 	
 	HIP_DEBUG("start oppdb dump\n");
 	HIP_LOCK_HT(&oppdb);
-	
-	for(i = 0; i < HIP_OPPDB_SIZE; i++) {
-		if (list_empty(&oppdb_list[i]))
-			continue;
 
-		HIP_DEBUG("HT[%d]\n", i);
-		list_for_each_entry_safe(item, tmp,
-					 &(oppdb_list[i]),
-					 next_entry) {
-			
-			//hip_in6_ntop(&item->peer_real_hit, peer_real_hit);
-			HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n",
-				  item->hash_key, item->lock, item->refcnt);
-			HIP_DEBUG_HIT("item->peer_real_hit",
-				      &item->peer_real_hit);
-			HIP_HEXDUMP("caller", &item->caller,
-				    sizeof(struct sockaddr_un));
-		}
+	list_for_each_safe(item, tmp, oppdb, i)
+	{
+		this = list_entry(item);
+
+		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
+//		HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
+		HIP_DEBUG_HIT("this->peer_real_hit",
+					&this->peer_real_hit);
+		HIP_HEXDUMP("caller", &this->caller,
+				sizeof(struct sockaddr_un));
 	}
+
 	HIP_UNLOCK_HT(&oppdb);
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
+int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit,
+			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
@@ -252,22 +246,32 @@ int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit) {
 		 "build user header failed\n");
 	if (hit) {
 		HIP_IFEL(hip_build_param_contents(message, hit,
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
+		                                  HIP_PARAM_HIT,
+		                                  sizeof(struct in6_addr)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
 	}
+	
+	if (reject) {
+		n = 1;
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+		HIP_IFEL(hip_build_param_contents(message, &n,
+		                                  HIP_PARAM_AGENT_REJECT,
+		                                  sizeof(n)), -1,
+		         "build param HIP_PARAM_HIT  failed\n");
+		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
+	}
+
 	n = hip_sendto(message, app_id);
 	if(n < 0){
-	  HIP_ERROR("hip_sendto() failed.\n");
-	  err = -1;
-	  goto out_err;
+		HIP_ERROR("hip_sendto() failed.\n");
+		err = -1;
+		goto out_err;
 	}
  out_err:
 	if (message)
 		HIP_FREE(message);
 	return err;
 }
-
 
 hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 				   struct in6_addr *resp_addr)
@@ -284,7 +288,6 @@ hip_ha_t *hip_oppdb_get_hadb_entry(hip_hit_t *init_hit,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit));
 	
 	entry_tmp = hip_hadb_find_byhits(init_hit, &phit);
-	HIP_ASSERT(entry_tmp);
 
  out_err:
 	return entry_tmp;
@@ -344,15 +347,12 @@ int hip_receive_opp_r1(struct hip_common *msg,
 						 dst_addr, src_addr), -1,
 		 "Failed to insert peer map\n");
 	
-	// we should get entry by both real hits
-	//	  entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(entry);
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
+		 "Did not find opp entry\n");
 
-	// Bing, we need entry->our_pub and our_priv, so init_us
 	HIP_IFEL(hip_init_us(entry, &msg->hitr), -1,
 		 "hip_init_us failed\n");
-	// old HA has state 2, new HA has state 1, so copy it
+	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
 
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
@@ -364,13 +364,14 @@ int hip_receive_opp_r1(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr);
-	//HIP_ASSERT(entry);
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
-	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits), -1,
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
 	// we should still get entry after delete old phit HA
-        entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
 
 	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
@@ -389,6 +390,48 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
+
+/**
+ * Receive opportunistic R1 when entry is in established mode already.
+ * This is because we need to send right HIT to client app and not
+ * empty packet. If this is not done, client app will fallback to normal
+ * tcp connection without HIP after one connection to host has already
+ * been made earlier.
+ */
+int hip_receive_opp_r1_in_established(struct hip_common *msg,
+		       struct in6_addr *src_addr,
+		       struct in6_addr *dst_addr,
+		       hip_ha_t *opp_entry,
+		       hip_portpair_t *msg_info)
+{
+	hip_opp_block_t *block_entry = NULL;
+	hip_hit_t phit;
+	int err = 0;
+
+	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
+	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
+	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
+	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
+
+	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
+					       HIP_HIT_TYPE_HASH100), -1,
+		 "pseudo hit conversion failed\n");
+	
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
+		 "Failed to find opp entry by hit\n");
+
+	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
+		 "unblock failed\n");
+ 
+out_err:
+	if (block_entry) {
+		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
+		hip_oppdb_entry_clean_up(block_entry);
+	}
+	return err;
+}
+
+
 /**
  * No description.
  */
@@ -406,11 +449,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
 		goto out_err;
 	}
 
@@ -428,6 +466,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 	
+	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
+	{
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
+		         "Building of user header failed\n");
+		goto out_err;
+	}
+	
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
 		 -1, "Opp HIT conversion failed\n");
@@ -435,8 +481,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	HIP_DEBUG_HIT("phit", &phit);
 	
 	err = hip_hadb_add_peer_info(&phit, &dst_ip);
-	ha = hip_hadb_find_byhits(&hit_our, &phit);
-	HIP_ASSERT(ha);
+	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
+		 "Did not find entry\n")
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
@@ -461,20 +507,64 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
-		n = hip_sendto(msg, src);
-		if(n < 0){
-			HIP_ERROR("hip_sendto() failed.\n");
-			err = -1;
-		}
-		goto out_err;
 	}
 	
  send_i1:
- 	/** @todo Not filtering I1 trough agent, if in opportunistic mode! */
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha, 1), -1,
+	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
 	
  out_err:
+	return err;
+}
+
+int hip_handle_opp_fallback(hip_opp_block_t *entry,
+			    void *current_time) {
+	int err = 0, disable_fallback = 0;
+	time_t *now = (time_t*) current_time;	
+
+	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+
+#if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
+	/* If agent is prompting user, let's make sure that
+	   the death counter in maintenance does not expire */
+	if (hip_agent_is_alive()) {
+		hip_ha_t *ha = NULL;
+		ha = hip_oppdb_get_hadb_entry(&entry->our_real_hit,
+					      &entry->peer_ip);
+		if (ha)
+			disable_fallback = ha->hip_opp_fallback_disable;
+	}
+#endif
+	
+	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
+		hip_ipdb_add(&entry->peer_ip);
+		HIP_DEBUG("Timeout for opp entry, falling back to\n");
+		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+		HIP_DEBUG("Unblock returned %d\n", err);
+		err = hip_oppdb_entry_clean_up(entry);
+	}
+	
+ out_err:
+	return err;
+}
+
+
+
+int hip_handle_opp_reject(hip_opp_block_t *entry, void *data)
+{
+	int err = 0;
+	struct in6_addr *resp_ip = data;
+	
+	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
+
+	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
+	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
+	HIP_DEBUG("Rejecting blocked opp entry\n");
+	err = hip_opp_unblock_app(&entry->caller, NULL, 1);
+	HIP_DEBUG("Unblock returned %d\n", err);
+	err = hip_oppdb_entry_clean_up(entry);
+	
+out_err:
 	return err;
 }
 

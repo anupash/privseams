@@ -22,11 +22,11 @@ extern hip_xmit_func_set_t default_xmit_func_set;
  * @return zero on success or non-zero on error. The list handling is interrupted if the give function returns an error.
  */
 int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
-					  struct hip_locator_info_addr_item *i,
-					  void *opaq),
-			      hip_ha_t *entry,
-			      struct hip_locator *locator,
-			      void *opaque)
+                                               struct hip_locator_info_addr_item *i,
+                                               void *opaq),
+                                   hip_ha_t *entry,
+                                   struct hip_locator *locator,
+                                   void *opaque)
 {
 	int i = 0, err = 0, n_addrs;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
@@ -42,9 +42,10 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 	HIP_IFE(!func, -1);
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
-	for (i = 0; i < n_addrs; i++, locator_address_item++)
+	for (i = 0; i < n_addrs; i++, locator_address_item++) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
+	}
 	
  out_err:
 
@@ -52,18 +53,22 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 }
 
 int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
-					      struct hip_peer_addr_list_item *list_item,
-					      struct hip_spi_out_item *spi_out,
-					      void *opaq),
-				  hip_ha_t *entry,
-				  struct hip_spi_out_item *spi_out,
-				  void *opaq) {
-	struct hip_peer_addr_list_item *addr, *tmp;
+                                  struct hip_peer_addr_list_item *list_item,
+                                  struct hip_spi_out_item *spi_out,
+                                  void *opaq),
+                                  hip_ha_t *entry,
+                                  struct hip_spi_out_item *spi_out,
+                                  void *opaq)
+{
+	hip_list_t *item, *tmp;
+	struct hip_peer_addr_list_item *addr;
 	int i = 0, err = 0;
 
 	HIP_IFE(!func, -EINVAL);
 
-	list_for_each_entry_safe(addr, tmp, &spi_out->peer_addr_list, list) {
+	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
+	{
+		addr = list_entry(item);
 	    HIP_IFE(func(entry, addr, spi_out, opaq), -1);
 	}
 
@@ -72,17 +77,21 @@ int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
 }
 
 int hip_update_for_each_local_addr(int (*func)(hip_ha_t *entry,
-					      struct hip_spi_in_item *spi_in,
-					      void *opaq),
-				  hip_ha_t *entry,
-				  void *opaq) {
-	struct hip_spi_in_item *item, *tmp;
+                                   struct hip_spi_in_item *spi_in,
+                                   void *opaq),
+                                   hip_ha_t *entry,
+                                   void *opaq)
+{
+	hip_list_t *item, *tmp;
+	struct hip_spi_in_item *e;
 	int i = 0, err = 0;
 
 	HIP_IFE(!func, -EINVAL);
 
-	list_for_each_entry_safe(item, tmp, &entry->spis_in, list) {
-	    HIP_IFE(func(entry, item, opaq), -1);
+	list_for_each_safe(item, tmp, entry->spis_in, i)
+	{
+		e = list_entry(item);
+		HIP_IFE(func(entry, e, opaq), -1);
 	}
 
  out_err:
@@ -201,7 +210,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	uint32_t spi = *((uint32_t *) _spi);
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
-	HIP_DEBUG(" addr %d: is_pref=%s reserved=0x%x lifetime=0x%x\n", i+1,
+	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
@@ -256,35 +265,46 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	struct hip_locator *locator = (void *) _locator;
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("\n\n\nlocators\n\n");
 
-	if (!hip_update_locator_contains_item(locator, list_item)) {
+	if (!hip_update_locator_contains_item(locator, list_item))
+	{
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-	       	
+		
 		/* If this is not the preferred address then the next line will fail
 		 * FIXME: This line needs to be either inside the next loop or 
 		 * deprecataing to update peer addr item code*/
 		
+		// NOTE: We don't need to delete the policies because they are associated to HIT's
+		// If we delete them, the soft handover cannot properly work! -Diego
 
-		hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+		//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-		hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+		//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 		
-		hip_delete_sa(entry->default_spi_out, &list_item->address, AF_INET6, 0,  (int)entry->peer_udp_port);	
+		hip_delete_sa(entry->default_spi_out, &list_item->address,
+		              &entry->local_address, AF_INET6, 0,
+		              (int)entry->peer_udp_port);	
 		
 		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 
-		hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+		// Why do we delete the SA associated to the local address? This is definitely wrong!
+		// If you delete this, how would you expect the IPSec could work?
+		/*hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+		  (int)entry->peer_udp_port, 0);*/
 
-		if(ipv6_addr_cmp(&entry->preferred_address, 
- 				 &list_item->address) == 0){
+		if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
+		{
 			// TODO: Handle this: Choose a random address from
 			// amongst the active addresses? -Bagri
 			HIP_DEBUG_HIT("Preferred Address deprecated",
 				      &list_item->address);
 		}
+		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
+		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
+		// then the handover to fail.
+		list_del(list_item, entry->spis_out);
 		
 	}
 
@@ -653,8 +673,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_out, &entry->preferred_address, AF_INET6, 0, entry->peer_udp_port);
-	hip_delete_sa(prev_spi_in, &entry->local_address, AF_INET6, entry->peer_udp_port,0);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, &entry->local_address, AF_INET6, 0, entry->peer_udp_port);
+	hip_delete_sa(prev_spi_in, &entry->local_address, &entry->preferred_address, AF_INET6, entry->peer_udp_port,0);
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -724,7 +744,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_out != new_spi_out) {
 		HIP_DEBUG("REMOVING OLD OUTBOUND IPsec SA, SPI=0x%x\n", prev_spi_out);
 		/* SA is bounded to IP addresses! */
-		//hip_delete_sa(prev_spi_out, hits, AF_INET6);
+		//hip_delete_sa(prev_spi_out, hits, hitr, AF_INET6);
 		HIP_DEBUG("TODO: set new spi to 0\n");
 		_HIP_DEBUG("delete_sa out retval=%d\n", err);
 		err = 0;
@@ -734,14 +754,14 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	if (prev_spi_in != new_spi_in) {
 		HIP_DEBUG("REMOVING OLD INBOUND IPsec SA, SPI=0x%x\n", prev_spi_in);
 		/* SA is bounded to IP addresses! */
-		/////hip_delete_sa(prev_spi_in, hitr, AF_INET6);
+		/////hip_delete_sa(prev_spi_in, hitr, hits, AF_INET6);
 		/* remove old HIT-SPI mapping and add a new mapping */
 
 		/* actually should change hip_hadb_delete_inbound_spi
 		 * somehow, but we do this or else delete_inbound_spi
 		 * would delete both old and new SPIs */
-		hip_hadb_remove_hs(prev_spi_in);
-		err = hip_hadb_insert_state_spi_list(&entry->hit_peer, 
+		//hip_hadb_remove_hs(prev_spi_in);
+		/*err = hip_hadb_insert_state_spi_list(&entry->hit_peer, 
 						     &entry->hit_our,
 						     new_spi_in);
 		if (err == -EEXIST) {
@@ -750,7 +770,7 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 		} else if (err) {
 			HIP_ERROR("Could not add a HIT-SPI mapping for SPI 0x%x (err=%d)\n",
 				  new_spi_in, err);
-		}
+		}*/
 	} else
 		_HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
@@ -908,13 +928,27 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	addr->seq_update_id = entry->update_id_out;
 
 
-
 	_HIP_DEBUG("outgoing UPDATE ID for LOCATOR addr check=%u\n",
 			   addr->seq_update_id);
-		/* todo: handle overflow if (!update_id_out) */
+
+	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
+	
+	/* ESP_INFO */
+	HIP_IFEL(hip_build_param_esp_info(update_packet,
+					  entry->current_keymat_index,
+					  esp_info_old_spi,
+					  esp_info_new_spi),
+		 -1, "Building of ESP_INFO param failed\n");
+	/* todo: handle overflow if (!update_id_out) */
+	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
 				       addr->seq_update_id), -1,
 		 return , "Building of SEQ failed\n");
+
+	/* TODO: NEED TO ADD ACK */
+	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(addr->seq_update_id)), -1,
+	  "Building of ACK failed\n");
+
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
 						 &entry->hip_hmac_out),
@@ -923,6 +957,8 @@ int hip_build_verification_pkt(hip_ha_t *entry,
 	HIP_IFEBL2(entry->sign(entry->our_priv, update_packet),
 		   -EINVAL, return , "Could not sign UPDATE\n");
 	get_random_bytes(addr->echo_data, sizeof(addr->echo_data));
+
+	/* Add ECHO_REQUEST */
 	HIP_HEXDUMP("ECHO_REQUEST in LOCATOR addr check",
 			     addr->echo_data, sizeof(addr->echo_data));
 	HIP_IFEBL2(hip_build_param_echo(update_packet, addr->echo_data,
@@ -1569,7 +1605,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	int err = 0;
 	uint32_t spi_in;
 	struct hip_spi_in_item *item, *tmp;
-	HIP_DEBUG("Checking spi setting %x\n",spi_in); 
+	HIP_DEBUG("Checking spi setting 0x%x\n",spi_in); 
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
@@ -1585,14 +1621,14 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, &addr->address, AF_INET6,0,
-			      (int)entry->peer_udp_port);
+	hip_delete_sa(entry->default_spi_out, &addr->address, &entry->local_address, 
+		      AF_INET6, 0, (int)entry->peer_udp_port);
 #endif
 
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+	hip_delete_sa(spi_in, &addr->address, &entry->local_address, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 #endif
 
@@ -1630,25 +1666,34 @@ out_err:
 
 int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
 
-	int err = 0;
-	struct hip_spi_out_item *out_item, *out_tmp;
+	int err = 0, i;
+	hip_list_t *item, *tmp;
+	struct hip_spi_out_item *out_item;
 
 	HIP_DEBUG("\n");
 
-	list_for_each_entry_safe(out_item, out_tmp, &entry->spis_out, list) {
+	list_for_each_safe(item, tmp, entry->spis_out, i)
+	{
+		int ii;
+		hip_list_t *a_item, *a_tmp;
+		struct hip_peer_addr_list_item *addr;
+		out_item = list_entry(item);
 
-		struct hip_peer_addr_list_item *addr, *addr_tmp;
-
-		list_for_each_entry_safe(addr, addr_tmp, &out_item->peer_addr_list, list) {
+		list_for_each_safe(a_item, a_tmp, out_item->peer_addr_list, ii)
+		{
+			addr = list_entry(a_item);
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
-			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0) {
-				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data)) {
+			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0)
+			{
+				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data))
+				{
 					HIP_ERROR("echo data len mismatch\n");
 					continue;
 				}
 				if (memcmp(addr->echo_data,
-					  (void *)echo_resp+sizeof(struct hip_tlv_common),
-				   	  sizeof(addr->echo_data)) != 0) {
+				           (void *)echo_resp+sizeof(struct hip_tlv_common),
+				           sizeof(addr->echo_data)) != 0)
+				{
 					HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 					continue;
 				}	
@@ -1659,12 +1704,13 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
 					       "Error while changing SAs for mobility\n");	
 				do_gettimeofday(&addr->modified_time);
-				if (addr->is_preferred) {
+				if (addr->is_preferred)
+				{
 					/* maybe we should do this default address selection
 					   after handling the LOCATOR .. */
 					hip_hadb_set_default_out_addr(entry, out_item, &addr->address);
-				} else
-					HIP_DEBUG("address was not set as preferred address\n");
+				}
+				else HIP_DEBUG("address was not set as preferred address\n");
 			}
 		}
 	}
@@ -1765,7 +1811,7 @@ int hip_receive_update(struct hip_common *msg,
 		//process ack
 		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
 	if (seq)
-		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,""); 
+		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,"");
 	
         /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -1938,8 +1984,13 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, daddr, AF_INET6,0,
+	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
+
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+
+	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+			      (int)entry->peer_udp_port, 0);
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       new_pref_addr, daddr,
@@ -1956,10 +2007,10 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    0, entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
-	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	/*hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
 	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+			      (int)entry->peer_udp_port, 0);*/
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
@@ -2012,12 +2063,13 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
  		HIP_DEBUG("Same address set as before, return\n");
  		return GOTO_OUT;
 	} else
- 		HIP_DEBUG("Address set has changed, continue\n");
+	
+	HIP_DEBUG("Address set has changed, continue\n");
 
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
 	   as peer's preferred address (intrafamily handover). */
-        HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
+	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
 
 	HIP_IFEL(!addr_list, 0, "No address list\n");
 
@@ -2028,32 +2080,37 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	loc_addr_item = addr_list;
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
-	for(i = 0; i < addr_count; i++, loc_addr_item++) {
+	for(i = 0; i < addr_count; i++, loc_addr_item++)
+	{
 		struct in6_addr *saddr = &loc_addr_item->address;
-		if(memcmp(&entry->local_address, saddr,
-			  sizeof(struct in6_addr)) == 0) {
-			if (IN6_IS_ADDR_V4MAPPED(saddr)  != 
-			    IN6_IS_ADDR_V4MAPPED(daddr)) {
+/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
+		HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
+		if (memcmp(&entry->local_address, saddr, sizeof(struct in6_addr)) == 0)
+		{
+			if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
+			{
 				/* Select the first match */
 				loc_addr_item->reserved = ntohl(1 << 31);
 				preferred_address_found = 1;
-				HIP_DEBUG("Preferred Address id the old preferred address\n");
+				HIP_DEBUG("Preferred Address is the old preferred address\n");
 				HIP_DEBUG_IN6ADDR("addr: ", saddr);
 				break;
 			}
 		}	
 	}
 
-	if(preferred_address_found)
-		goto skip_pref_update;
+	if (preferred_address_found) goto skip_pref_update;
 
 	loc_addr_item = addr_list;
 	/* Select the first match */
-	for(i = 0; i < addr_count; i++, loc_addr_item++) {
-		struct in6_addr *saddr =
-			&loc_addr_item->address;
-		if (IN6_IS_ADDR_V4MAPPED(saddr) == 
-		    IN6_IS_ADDR_V4MAPPED(daddr)) {
+	for(i = 0; i < addr_count; i++, loc_addr_item++)
+	{
+		struct in6_addr *saddr = &loc_addr_item->address;
+/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));*/
+		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
+		{
 			loc_addr_item->reserved = ntohl(1 << 31);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
 			HIP_IFEL(hip_update_preferred_address(entry,saddr,
@@ -2126,9 +2183,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 		_HIP_DEBUG("base draft UPDATE\n");
 
 	if (add_locator)
-		_HIP_DEBUG("mm UPDATE, %d addresses in LOCATOR\n", addr_count);
+		HIP_DEBUG("mm UPDATE, %d addresses in LOCATOR\n", addr_count);
 	else
-		_HIP_DEBUG("Plain UPDATE\n");
+		HIP_DEBUG("Plain UPDATE\n");
 
 	/* Start building UPDATE packet */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
@@ -2230,15 +2287,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	else if(err)
 		goto out_err;
 
-	if (add_locator) {
-		/* LOCATOR is the first parameter of the UPDATE */
-		err = hip_build_param_locator(update_packet, addr_list,
-					      addr_count);
-
-		HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
-	} else
-		HIP_DEBUG("not adding LOCATOR\n");
-
+	/* Send UPDATE(ESP_INFO, LOCATOR, SEQ) */
 	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
 		  esp_info_old_spi, esp_info_new_spi);
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
@@ -2246,8 +2295,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 					  esp_info_old_spi,
 					  esp_info_new_spi),
 			 -1, "Building of ESP_INFO param failed\n");
-
  	
+	if (add_locator) {
+		err = hip_build_param_locator(update_packet, addr_list,
+					      addr_count);
+
+		HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
+	} else
+		HIP_DEBUG("not adding LOCATOR\n");
+
 	hip_update_set_new_spi_in(entry, esp_info_old_spi,
 				  esp_info_new_spi, 0);
 	entry->update_id_out++;
@@ -2362,7 +2418,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-        /* AB: rk.lenghth = 100 rk is NULL next line opulates rk with all valid
+        /* AB: rk.length = 100 rk is NULL next line opulates rk with all valid
 	ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");

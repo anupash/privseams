@@ -9,12 +9,11 @@
 
 #include "escrow.h"
 
-HIP_HASHTABLE kea_table;
+HIP_HASHTABLE *kea_table;
+HIP_HASHTABLE *kea_endpoints;
 
-HIP_HASHTABLE kea_endpoints;
-
-static struct list_head keadb[HIP_KEA_SIZE];
-static struct list_head kea_endpointdb[HIP_KEA_EP_SIZE];
+// static hip_list_t keadb[HIP_KEA_SIZE];
+// static hip_list_t kea_endpointdb[HIP_KEA_EP_SIZE];
 
 static void *hip_keadb_get_key(void *entry)
 {
@@ -25,7 +24,8 @@ static void *hip_keadb_get_key(void *entry)
  * Initializes the database 
  */
 void hip_init_keadb(void)
-{ 
+{
+#if 0
 	memset(&kea_table, 0, sizeof(kea_table));
 
 	kea_table.head = keadb;
@@ -41,6 +41,8 @@ void hip_init_keadb(void)
 	kea_table.name[15] = 0;
 
 	hip_ht_init(&kea_table);
+#endif
+	kea_table = hip_ht_init(hip_hash_hit, hip_match_hit);
 }
 
 
@@ -71,7 +73,7 @@ void hip_keadb_put_entry(void *entry)
 void hip_uninit_keadb(void)
 {
 	HIP_DEBUG("Unitializing KEA TABLE\n");
-	hip_ht_uninit(&kea_table);
+	hip_ht_uninit(kea_table);
 }
 
 // hit_our is not really needed now
@@ -112,7 +114,7 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
         hip_keadb_put_entry(kea);
 	
         if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -149,7 +151,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
         if (entry->state == HIP_STATE_UNASSOCIATED) {
                 /* TODO: can this situation ever happen? */
                 HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry, 0), 
+                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -257,13 +259,13 @@ int hip_keadb_add_entry(HIP_KEA *kea)
 		 "Cannot insert KEA entry with NULL hit\n");
 		 
 	// Do we allow duplicates?	 
-	temp = hip_ht_find(&kea_table, &kea->hit); // Adds reference
+	temp = hip_ht_find(kea_table, &kea->hit); // Adds reference
 	
 	if (temp) {
 		hip_keadb_put_entry(temp); // remove reference
 		HIP_ERROR("Failed to add kea hash table entry\n");
 	} else {
-		hip_ht_add(&kea_table, kea);
+		hip_ht_add(kea_table, kea);
 		kea->keastate |= HIP_KEASTATE_VALID;
 	}
 	
@@ -282,7 +284,7 @@ void hip_keadb_remove_entry(HIP_KEA *kea)
 		return;
 	}
 	
-	hip_ht_delete(&kea_table, kea); // refcnt decremented
+	hip_ht_delete(kea_table, kea); // refcnt decremented
 	HIP_UNLOCK_HA(kea); 
 }
 
@@ -294,7 +296,7 @@ void hip_keadb_delete_entry(HIP_KEA *kea)
 
 HIP_KEA *hip_kea_find(struct in6_addr *hit)
 {
-	return hip_ht_find(&kea_table, hit);
+	return hip_ht_find(kea_table, hit);
 }
 
 void hip_kea_set_state_registering(HIP_KEA *kea)
@@ -339,6 +341,7 @@ static void *hip_kea_endpoints_get_key(void *entry)
 
 void hip_init_kea_endpoints(void)
 {
+#if 0
 	memset(&kea_endpoints, 0, sizeof(kea_endpoints));
 
 	kea_endpoints.head = kea_endpointdb;
@@ -354,20 +357,22 @@ void hip_init_kea_endpoints(void)
 	kea_endpoints.name[15] = 0;
 
 	hip_ht_init(&kea_endpoints);
+#endif
+	kea_endpoints = hip_ht_init(hip_kea_ep_hash, hip_kea_ep_match);
 }
 
 
 void hip_uninit_kea_endpoints(void)
 {
 	HIP_DEBUG("Unitializing KEA ENDPOINTS TABLE\n");
-	hip_ht_uninit(&kea_endpoints);
+	hip_ht_uninit(kea_endpoints);
 }
 
-int hip_kea_ep_hash(const void * key, int range)
+unsigned long hip_kea_ep_hash(const void * key)
 {
 	HIP_KEA_EP_ID * id = (HIP_KEA_EP_ID *) key; 
 	// TODO: Is the key random enough?
-	return (id->value[2] ^ id->value[3] ^ id->value[4]) % range;
+	return (id->value[2] ^ id->value[3] ^ id->value[4]) % ULONG_MAX;
 }
 
 
@@ -439,13 +444,13 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
-	temp = hip_ht_find(&kea_endpoints, &kea_ep->ep_id); // Adds reference
+	temp = hip_ht_find(kea_endpoints, &kea_ep->ep_id); // Adds reference
 	
 	if (temp) {
 		hip_kea_put_ep(temp); // remove reference
 		HIP_ERROR("Failed to add kea endpoint hash table entry\n");
 	} else {
-		hip_ht_add(&kea_endpoints, kea_ep);
+		hip_ht_add(kea_endpoints, kea_ep);
 		// set state if needed
 	}
 	
@@ -475,7 +480,7 @@ void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 	//	return;
 	//}
 	
-	hip_ht_delete(&kea_endpoints, kea_ep); // refcnt decremented
+	hip_ht_delete(kea_endpoints, kea_ep); // refcnt decremented
 	HIP_UNLOCK_HA(kea_ep); 	
 }
 
@@ -497,7 +502,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 
 	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);
 		
-	return hip_ht_find(&kea_endpoints, key);
+	return hip_ht_find(kea_endpoints, key);
 }
 
 
@@ -782,38 +787,37 @@ out_err:
 
 int hip_cancel_escrow_service(void)
 {
-        // - notify all registered clients with REG_RESPONSE
-        // - free all kea and kea_ep data
-        int err = 0;
-        HIP_KEA *kea = NULL;
-        HIP_KEA *tmp = NULL;
-        hip_ha_t *entry = NULL;
-        struct in6_addr saddr = { 0 }, daddr = { 0 };
-        uint8_t services[1] = { HIP_ESCROW_SERVICE };
-        int i = 0;
-        
-        // Send update to all registered clients
-        for (i = 0; i < HIP_KEA_SIZE; i++) {
-                
-                list_for_each_entry_safe(kea, tmp, &keadb[i], list_hit) {
-                        hip_keadb_hold_entry(kea);
-                        //HIP_DEBUG_HIT("Sending cancel to client\n", kea->hit);
-                        HIP_DEBUG("Sending cancel to client\n");
-                        HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(&kea->hit)), 
-                                -1, "Could not find client entry\n");
-                        HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
-                                "Failed to get peer address");
-                        memcpy(&saddr, &entry->local_address, sizeof(saddr));
-                        HIP_IFEL(hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr),
-                                -1, "Error creating reg_response\n");
-                        hip_keadb_put_entry(kea);
-                        HIP_IFEL(hip_cancel_escrow_registration(&entry->hit_peer), 
-                                -1, "Error cancelling registration\n");
-                }
-        }
-        hip_uninit_kea_endpoints();
-        hip_uninit_keadb();
-        
-out_err:       
-        return err;
+	// - notify all registered clients with REG_RESPONSE
+	// - free all kea and kea_ep data
+	int err = 0;
+	HIP_KEA *kea = NULL;
+	hip_ha_t *entry = NULL;
+	struct in6_addr saddr = { 0 }, daddr = { 0 };
+	uint8_t services[1] = { HIP_ESCROW_SERVICE };
+	int i = 0;
+	hip_list_t *item, *tmp;
+
+	list_for_each_safe(item, tmp, kea_table, i)
+	{
+		kea = list_entry(item);
+		hip_keadb_hold_entry(kea);
+		//HIP_DEBUG_HIT("Sending cancel to client\n", kea->hit);
+		HIP_DEBUG("Sending cancel to client\n");
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(&kea->hit)), 
+				-1, "Could not find client entry\n");
+		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
+				"Failed to get peer address");
+		memcpy(&saddr, &entry->local_address, sizeof(saddr));
+		HIP_IFEL(hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr),
+				-1, "Error creating reg_response\n");
+		hip_keadb_put_entry(kea);
+		HIP_IFEL(hip_cancel_escrow_registration(&entry->hit_peer), 
+				-1, "Error cancelling registration\n");
+	}
+	
+	hip_uninit_kea_endpoints();
+	hip_uninit_keadb();
+
+out_err:
+	return err;
 }

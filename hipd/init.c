@@ -15,19 +15,174 @@
 
 extern struct hip_common *hipd_msg;
 
+
+/******************************************************************************/
+/** Catch SIGCHLD. */
+void hip_sig_chld(int signum) 
+{ 
+	union wait status;
+	int pid, i;
+	
+	signal(signum, hip_sig_chld);
+
+	/* Get child process status, so it wont be left as zombie for long time. */
+	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
+	{
+		/* Maybe do something.. */
+		_HIP_DEBUG("Child quit with pid %d\n", pid);
+	}
+}
+
+
+void hip_load_configuration()
+{
+	const char *cfile = "default";
+	struct stat status;
+	pid_t pid;
+	FILE *fp = NULL;
+	size_t items = 0;
+	int len_con = strlen(HIPD_CONFIG_FILE_EX), 
+	  len_hos = strlen(HIPD_HOSTS_FILE_EX);
+
+	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and 
+	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
+
+	/* Create config file if does not exist */
+
+	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_CONFIG_FILE_EX, len_con, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	/* Create /etc/hip/hosts file if does not exist */
+
+	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_HOSTS_FILE_EX, len_hos, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+
+	/* Load the configuration. The configuration is loaded as a sequence
+	   of hipd system calls. Assumably the user socket buffer is large
+	   enough to buffer all of the hipconf commands.. */
+
+	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+}
+
+void hip_set_os_dep_variables()
+{
+	struct utsname un;
+	int rel[4] = {0};
+
+	uname(&un);
+
+	HIP_DEBUG("sysname=%s nodename=%s release=%s version=%s machine=%s\n",
+		  un.sysname, un.nodename, un.release, un.version, un.machine);
+
+	sscanf(un.release, "%d.%d.%d.%d", &rel[0], &rel[1], &rel[2], &rel[3]);
+
+	/*
+	  2.6.19 and above introduced some changes to kernel API names:
+	  - XFRM_BEET changed from 2 to 4
+	  - crypto algo names changed
+	*/
+
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
+		hip_xfrm_set_beet(2);
+		hip_xfrm_set_algo_names(0);
+	} else {
+		hip_xfrm_set_beet(4);
+		hip_xfrm_set_algo_names(1);
+	}
+
+	/* Could not make the 128 bit prefix work in 2.6.17.14 -miika */
+	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 18) {
+		hip_xfrm_set_default_sa_prefix_len(0);
+	} else {
+		hip_xfrm_set_default_sa_prefix_len(0); // 128 
+	}
+}
+
+
 /**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec)
 {
-	int err = 0;
+	int err = 0, fd, pid = 0;
+	char str[64];
 	struct sockaddr_un daemon_addr;
+	extern struct addrinfo opendht_serving_gateway;
+
+	hip_init_hostid_db(NULL);
+
+	hip_set_os_dep_variables();
 
 	hip_probe_kernel_modules();
+      
+	/* Kill hip daemon, if it already exists. */
+	for (pid = 0; pid >= 0; )
+	{
+		/* Open daemon lock file and read pid from it. */
+		fd = open(HIP_DAEMON_LOCK_FILE, O_RDONLY, 0644);
+		
+		/* If pid not read yet. */
+		if (fd > 0 && pid == 0)
+		{
+			memset(str, 0, sizeof(str));
+			read(fd, str, sizeof(str) - 1);
+			close(fd);
+			pid = atoi(str);
+			/* Check if pid number is not valid. */
+			if (pid < 1) break;
+			HIP_INFO("Daemon is already running with pid %d?"
+			         " Trying to stop old one...\n", pid);
+			/* Signal old daemon to stop. */
+			kill(pid, SIGINT);
+			/* Wait a second for daemon to stop. */
+			HIP_INFO("Waiting old daemon to stop...\n");
+			//sleep(2);
+		}
+		/*
+		 * If pid already read, just check whether daemon has really stopped.
+		 * If not, then kill it brutally.
+		 */
+		else if (fd > 0)
+		{
+			HIP_INFO("Daemon did not stop, just kill it.\n");
+			close(fd);
+			kill(pid, SIGKILL);
+			break;
+		}
+		else break;
+	}
+
+	/* Write pid to file. */
+	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		/* Dont lock now, make this feature available later. */
+		//if (lockf(i, F_TLOCK, 0) < 0) exit (1);
+		/* Only first instance continues. */
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
+	signal(SIGCHLD, hip_sig_chld);
+ 
+	HIP_IFEL(hip_ipdb_clear(), -1,
+	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -42,6 +197,12 @@ int hipd_init(int flush_ipsec)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
+#ifdef CONFIG_HIP_OPENDHT
+        memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
+        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
+        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+        err = 0;
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
@@ -51,7 +212,7 @@ int hipd_init(int flush_ipsec)
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_init_opp_db();
+	hip_init_opp_db();
 #endif
 
 	/* Resolve our current addresses, afterwards the events from kernel
@@ -61,20 +222,26 @@ int hipd_init(int flush_ipsec)
 	hip_netdev_init_addresses(&hip_nl_ipsec);
 
 	if (rtnl_open_byproto(&hip_nl_route,
-			      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
-				| RTMGRP_IPV4_IFADDR | IPPROTO_IP,
-			      NETLINK_ROUTE) < 0) {
+	                      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
+	                      | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
+	                      NETLINK_ROUTE) < 0)
+	{
 		err = 1;
 		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
 		goto out_err;
 	}
 
 	/* Open the netlink socket for address and IF events */
-	if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0) {
+	if (rtnl_open_byproto(&hip_nl_ipsec, XFRMGRP_ACQUIRE, NETLINK_XFRM) < 0)
+	{
 		HIP_ERROR("Netlink address and IF events socket error: %s\n", strerror(errno));
 		err = 1;
 		goto out_err;
 	}
+
+#ifndef CONFIG_HIP_PFKEY
+	hip_xfrm_set_nl_ipsec(&hip_nl_ipsec);
+#endif
 
 #if 0
 	{
@@ -95,7 +262,8 @@ int hipd_init(int flush_ipsec)
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
 	HIP_DEBUG("hip_nat_sock_udp = %d\n", hip_nat_sock_udp);
 
-	if (flush_ipsec) {
+	if (flush_ipsec)
+	{
 		hip_flush_all_sa();
 		hip_flush_all_policy();
 	}
@@ -111,23 +279,22 @@ int hipd_init(int flush_ipsec)
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_user_sock < 0), 1,
-		 "Could not create socket for user communication.\n");
+	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sun_family = AF_UNIX;
 	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
 	unlink(HIP_DAEMONADDR_PATH);
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
-		      /*sizeof(daemon_addr)*/
-		      strlen(daemon_addr.sun_path) +
-		      sizeof(daemon_addr.sun_family)),
-		 1, "Bind on daemon addr failed.");
+	         /*sizeof(daemon_addr)*/
+	         strlen(daemon_addr.sun_path) +
+	         sizeof(daemon_addr.sun_family)),
+	         1, "Bind on daemon addr failed.");
 	HIP_IFEL(chmod(daemon_addr.sun_path, S_IRWXO),
-		1, "Changing permissions of daemon addr failed.")
+	         1, "Changing permissions of daemon addr failed.")
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_agent_sock < 0), 1,
-		 "Could not create socket for agent communication.\n");
+	HIP_IFEL(hip_agent_sock < 0, 1,
+	         "Could not create socket for agent communication.\n");
 	unlink(HIP_AGENTADDR_PATH);
 	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
 	hip_agent_addr.sun_family = AF_LOCAL;
@@ -137,9 +304,9 @@ int hipd_init(int flush_ipsec)
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
 //	TODO: initialize firewall socket
-    hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_firewall_sock < 0), 1,
-		 "Could not create socket for firewall communication.\n");
+	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	HIP_IFEL(hip_firewall_sock < 0, 1,
+	         "Could not create socket for firewall communication.\n");
 	unlink(HIP_FIREWALLADDR_PATH);
 	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
 	hip_firewall_addr.sun_family = AF_LOCAL;
@@ -147,9 +314,10 @@ int hipd_init(int flush_ipsec)
 	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)&hip_firewall_addr,
 	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
-	
+
 	register_to_dht();
-	
+	hip_load_configuration();
+
 out_err:
 	return err;
 }
@@ -172,12 +340,14 @@ int hip_init_host_ids()
 		
 	/* Create default keys if necessary. */
 
-	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT) {
+	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT)
+	{
 		hip_msg_init(user_msg);
 		err = hip_serialize_host_id_action(user_msg,
 						   ACTION_NEW, 0, 1,
 						   NULL, NULL);
-		if (err) {
+		if (err)
+		{
 			err = 1;
 			HIP_ERROR("Failed to create keys to %s\n",
 				  DEFAULT_CONFIG_DIR);
@@ -187,15 +357,16 @@ int hip_init_host_ids()
 	
         /* Retrieve the keys to hipd */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1,
-					   NULL, NULL);
-	if (err) {
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);
+	if (err)
+	{
 		HIP_ERROR("Could not load default keys\n");
 		goto out_err;
 	}
 	
 	err = hip_handle_add_local_hi(user_msg);
-	if (err) {
+	if (err)
+	{
 		HIP_ERROR("Adding of keys failed\n");
 		goto out_err;
 	}
@@ -215,20 +386,16 @@ int hip_init_raw_sock_v6(int *hip_raw_sock_v6)
 {
 	int on = 1, off = 0, err = 0;
 
-	HIP_IFEL(((*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW,
-					 IPPROTO_HIP)) <= 0), 1,
-		 "Raw socket creation failed. Not root?\n");
+	*hip_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_HIP);
+	HIP_IFEL(*hip_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off,
-		   sizeof(on)), -1, "setsockopt recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6,
-			    IPV6_2292PKTINFO, &on,
-		   sizeof(on)), -1, "setsockopt pktinfo failed\n");
-
-	HIP_IFEL(setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on,
-			    sizeof(on)), -1,
-		 "setsockopt v6 reuseaddr failed\n");
+	err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+	err = setsockopt(*hip_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+	err = setsockopt(*hip_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
  out_err:
 	return err;
@@ -242,21 +409,18 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 	int on = 1, err = 0;
 	int off = 0;
 
-	HIP_IFEL(((*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW,
-	         IPPROTO_HIP)) <= 0), 1,
-	         "Raw socket v4 creation failed. Not root?\n");
-	/* see bug id 212 why RECV_ERR is off */
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off,
-	         sizeof(on)), -1, "setsockopt v4 recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on,
-	         sizeof(on)), -1,
-	         "setsockopt v4 failed to set broadcast \n");
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on,
-	         sizeof(on)), -1, "setsockopt v4 pktinfo failed\n");
+	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_HIP);
+	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
-	HIP_IFEL(setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on,
-	         sizeof(on)), -1,
-	         "setsockopt v4 reuseaddr failed\n");
+	/* see bug id 212 why RECV_ERR is off */
+	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
+	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
+	err = setsockopt(*hip_raw_sock_v4, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
+	err = setsockopt(*hip_raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
 
  out_err:
 	return err;
@@ -267,47 +431,46 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
-	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
 	int on = 1, err = 0;
 	int off = 0;
 	int encap_on = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
-        struct sockaddr_in myaddr;
+	struct sockaddr_in myaddr;
+
+	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
 
 	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
-        {
-                HIP_ERROR("Can not open socket for UDP\n");
-                return -1;
-        }
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on,
-		   sizeof(on)), -1, "setsockopt udp pktinfo failed\n");
+	{
+		HIP_ERROR("Can not open socket for UDP\n");
+		return -1;
+	}
+	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp pktinfo failed\n");
 	/* see bug id 212 why RECV_ERR is off */
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off,
-                   sizeof(on)), -1, "setsockopt udp recverr failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on,
-                   sizeof(encap_on)), -1, "setsockopt udp encap failed\n");
-	HIP_IFEL(setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on,
-			    sizeof(encap_on)), -1,
-		 "setsockopt udp reuseaddr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
+	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(encap_on));
+	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 
-        myaddr.sin_family=AF_INET;
+	myaddr.sin_family=AF_INET;
 	/** @todo Change this inaddr_any -- Abi */
-        myaddr.sin_addr.s_addr = INADDR_ANY;
-        myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
+	myaddr.sin_addr.s_addr = INADDR_ANY;
+	myaddr.sin_port=htons(HIP_NAT_UDP_PORT);
 
-        if( bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr))< 0 )
-        {
-                HIP_ERROR("Unable to bind udp socket to port\n");
-                err = -1;
+	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
+	if (err < 0)
+	{
+		HIP_ERROR("Unable to bind udp socket to port\n");
+		err = -1;
 		goto out_err;
-        }
+	}
 
-	HIP_DEBUG_INADDR("UDP socket created and binded to addr",
-			 &myaddr.sin_addr.s_addr);
-        return 0;
+	HIP_DEBUG_INADDR("UDP socket created and binded to addr", &myaddr.sin_addr.s_addr);
+	return 0;
 
- out_err:
+out_err:
 	return err;
-
 }
 
 /**
@@ -321,18 +484,13 @@ void hip_close(int signal)
 	terminate++;
 	
 	/* Close SAs with all peers */
-	if (terminate == 1)
-	{
+	if (terminate == 1) {
 		hip_send_close(NULL);
 		hipd_set_state(HIPD_STATE_CLOSING);
 		HIP_DEBUG("Starting to close HIP daemon...\n");
-	}
-	else if (terminate == 2)
-	{
+	} else if (terminate == 2) {
 		HIP_DEBUG("Send still once this signal to force daemon exit...\n");
-	}
-	else if (terminate > 2)
-	{
+	} else if (terminate > 2) {
 		HIP_DEBUG("Terminating daemon.\n");
 		hip_exit(signal);
 		exit(signal);
@@ -400,11 +558,11 @@ void hip_exit(int signal)
 	hip_uninit_host_id_dbs();
 
 	msg = hip_msg_alloc();
-	if (msg) {
+	if (msg)
+	{
 	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-	} else {
-	  HIP_ERROR("Failed to allocate memory for message\n");
 	}
+	else HIP_ERROR("Failed to allocate memory for message\n");
 
 	if (msg && hip_agent_sock)
 	{
@@ -417,6 +575,8 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
+	unlink(HIP_DAEMON_LOCK_FILE);
+
 	return;
 }
 
@@ -427,10 +587,21 @@ int init_random_seed()
 {
 	struct timeval tv;
 	struct timezone tz;
+	struct {
+		struct timeval tv;
+		pid_t pid;
+		long int rand;
+	} rand_data;
 	int err = 0;
 
 	err = gettimeofday(&tv, &tz);
 	srandom(tv.tv_usec);
+
+	memcpy(&rand_data.tv, &tv, sizeof(tv));
+	rand_data.pid = getpid();
+	rand_data.rand = random();
+
+	RAND_seed(&rand_data, sizeof(rand_data));
 
 	return err;
 }
@@ -440,21 +611,35 @@ int init_random_seed()
  */
 void hip_probe_kernel_modules()
 {
-	int count;
+	int count, err, status;
 	char cmd[40];
-        /* update also this if you add more modules */
-	const int mod_total = 12;
-	char *mod_name[] = {"xfrm6_tunnel", "xfrm4_tunnel",
-			    "xfrm_user", "dummy", "esp6", "esp4",
-			    "ipv6", "aes", "crypto_null", "des",
-			    "xfrm4_mode_beet", "xfrm6_mode_beet"};
+	int mod_total;
+	char *mod_name[] =
+	{
+		"xfrm6_tunnel", "xfrm4_tunnel",
+		"ip6_tunnel", "ipip", "ip4_tunnel",
+		"xfrm_user", "dummy", "esp6", "esp4",
+		"ipv6", "aes", "crypto_null", "des",
+		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"
+	};
 
-	HIP_DEBUG("Probing for modules. When the modules are built-in, the errors can be ignored\n");
-	for (count = 0; count < mod_total; count++) {
-		snprintf(cmd, sizeof(cmd), "%s %s", "modprobe",
-			 mod_name[count]);
+	mod_total = sizeof(mod_name) / sizeof(char *);
+
+	HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);	
+
+	for (count = 0; count < mod_total; count++)
+	{
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", mod_name[count]);
 		HIP_DEBUG("%s\n", cmd);
-		system(cmd);
+		err = fork();
+		if (err < 0) HIP_ERROR("Failed to fork() for modprobe!\n");
+		else if (err == 0)
+		{
+			/* Redirect stderr, so few non fatal errors wont show up. */
+			stderr = freopen("/dev/null", "w", stderr);
+			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
+		}
+		else waitpid(err, &status, 0);
 	}
 	HIP_DEBUG("Probing completed\n");
 }
