@@ -102,12 +102,8 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_algo_names(1);
 	}
 
-	/* Could not make the 128 bit prefix work in 2.6.17.14 -miika */
-	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 18) {
-		hip_xfrm_set_default_sa_prefix_len(0);
-	} else {
-		hip_xfrm_set_default_sa_prefix_len(0); // 128 
-	}
+	/* This requires new kernel versions (the 2.6.18 patch) - jk */
+        hip_xfrm_set_default_sa_prefix_len(128);
 }
 
 
