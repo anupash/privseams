@@ -172,6 +172,17 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(buggyipsec,
+             AC_HELP_STRING([--enable-buggyipsec],
+                            [Support for IPsec in older kernels (default is NO)]),
+             [ac_cv_use_buggyipsec=$enableval], [ac_cv_use_buggyipsec=no])
+AC_CACHE_CHECK([whether to use buggyipsec],
+               [ac_cv_use_buggyipsec], [ac_cv_use_buggyipsec=no])
+if test x"$ac_cv_use_buggyipsec" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_BUGGYIPSEC, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_BUGGYIPSEC, test x"$ac_cv_use_buggyipsec" = x"yes")
+
 AC_ARG_ENABLE(escrow,
              AC_HELP_STRING([--enable-escrow],
                             [HIP IPsec escrow (default is NO)]),
