@@ -1989,7 +1989,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
-	hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
+	/* @todo: check that this works with the pfkey api */
+	hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
