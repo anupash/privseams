@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 
+#include "xfrmapi.h"
 #include "hipconf.h"
 #include "oppipdb.h"
 

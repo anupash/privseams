@@ -920,7 +920,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
-
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("******** Blind is OFF\n");
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
@@ -936,6 +935,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
@@ -950,7 +950,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
 	}
-	
+
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
@@ -1390,7 +1390,9 @@ int hip_receive_r1(struct hip_common *r1,
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
+	#ifdef CONFIG_HIP_OPPORTUNISTIC
 		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
+	#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
