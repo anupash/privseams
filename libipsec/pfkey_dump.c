@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -731,3 +733,5 @@ str_lifetime_byte(x, str)
 #endif
 	printf("\t%s: %.*f(%sbytes)", str, w, y, unit);
 }
+
+#endif /* CONFIG_HIP_PFKEY */ 
