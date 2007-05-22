@@ -41,7 +41,7 @@
 #ifdef HAVE_NETINET6_IPSEC
 #  include <netinet6/ipsec.h>
 #else
-#  include <netinet/ipsec.h>
+#  include <netinet/ipsec-headers.h>
 #endif
 
 #include <arpa/inet.h>

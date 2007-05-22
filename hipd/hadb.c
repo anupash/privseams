@@ -2480,6 +2480,8 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	int counter = 0;
 
+	/* @todo: check that the deletion below actually works (hits and addresses are
+	   used inconsistenly) */
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{ 
 		spi_item = list_entry(item);
