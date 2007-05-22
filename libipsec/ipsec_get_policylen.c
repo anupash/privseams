@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -54,3 +56,5 @@ ipsec_get_policylen(policy)
 {
 	return policy ? PFKEY_EXTLEN(policy) : -1;
 }
+
+#endif /* CONFIG_HIP_PFKEY  */
