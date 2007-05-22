@@ -30,8 +30,6 @@
  */
 
 %{
-#ifdef CONFIG_HIP_PFKEY
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -193,5 +191,3 @@ __policy__strbuffer__free__()
 
 	return;
 }
-
-#endif /* CONFIG_HIP_PFKEY */ 
