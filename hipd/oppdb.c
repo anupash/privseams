@@ -521,7 +521,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
 	int err = 0, disable_fallback = 0;
 	time_t *now = (time_t*) current_time;	
-
+	struct in6_addr *addr;
 	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
 #if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
@@ -537,7 +537,8 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 #endif
 	
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
-		hip_ipdb_add(&entry->peer_ip);
+		addr = (struct in6_addr *) &entry->peer_ip;
+		hip_ipdb_add(&addr);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);

@@ -53,7 +53,7 @@
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        10
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
-#define HIP_OPP_WAIT              2 /* seconds */
+#define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
 #define HIP_OPP_FALLBACK_INIT \
            (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
