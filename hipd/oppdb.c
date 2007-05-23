@@ -471,6 +471,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
+		err = -1; /* Force immediately to send message to app */
 		goto out_err;
 	}
 	
