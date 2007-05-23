@@ -40,11 +40,11 @@ int hip_ipdb_check(struct in6_addr *addr)
 {
 	int i;
 	
-	HIP_HEXDUMP("Checking ip from ip database: ",
-	            addr, sizeof(*addr));
+	HIP_DEBUG_IN6ADDR("Checking ip from ip database", addr);
 
 	for (i = 0; i < HIP_OPP_IP_DB_SIZE; i++)
 	{
+		HIP_DEBUG_IN6ADDR("Comparing to", &oppipdb[i]);
 		if (memcmp(&oppipdb[i], addr, sizeof(*addr)) == 0)
 		{
 			HIP_HEXDUMP("IP found from ip database, remote host not HIP capable: ",

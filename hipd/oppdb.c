@@ -471,7 +471,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
-		err = -1; /* Force immediately to send message to app */
+		err = -11; /* Force immediately to send message to app */
 		goto out_err;
 	}
 	
@@ -539,7 +539,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 	
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		addr = (struct in6_addr *) &entry->peer_ip;
-		hip_ipdb_add(&addr);
+		hip_ipdb_add(addr);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);
