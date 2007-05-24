@@ -122,12 +122,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		send_response = 0;
 		err = hip_opp_get_peer_hit(msg, src);
 		if(err){
 			HIP_ERROR("get pseudo hit failed.\n");
+			send_response = 1;
+			if (err == -11) /* immediate fallback, do not pass */
+			 	err = 0;
 			goto out_err;
-		}
+		} else {
+			send_response = 0;
+                }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
 	  break;
