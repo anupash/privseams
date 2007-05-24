@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -814,3 +816,5 @@ ipsec_hexdump(buf, len)
 
 	return;
 }
+
+#endif /* CONFIG_HIP_PFKEY */ 

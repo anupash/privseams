@@ -311,80 +311,200 @@ out_err:
  */
 void register_to_dht ()
 {
+#ifdef CONFIG_HIP_OPENDHT  
+  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+  hip_list_t *item, *tmp;
+  int i;
+  struct netdev_address *opendht_n;
+  int pub_addr_ret = 0;
+
+  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+    return;
+
+  list_for_each_safe(item, tmp, addresses, i)
+    {
+      opendht_n = list_entry(item);
+      struct in6_addr tmp_hit;
+      char *tmp_hit_str, *tmp_addr_str;
+      double time_diff = 0;
+ 
+      if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
+      
+      time_diff = difftime(opendht_n->timestamp, time(0));
+      if (time_diff < 10)
+        {
+          if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
+            {
+              HIP_ERROR("No HIT found\n");
+              return;
+            } 
+          
+          tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+          tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
+         
+           /*
+             HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
+           
+             HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
+                       tmp_addr_str, ctime(&opendht_n->timestamp));
+           */
+          /* send the fqdn->hit mapping */
+          publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
+           
+          /* send the hit->ip mapping */
+          pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+          if (pub_addr_ret == 1)
+            opendht_n->timestamp = time(0) + 120; /* in seconds */
+          else if (pub_addr_ret == -1)
+            opendht_n->timestamp = time(0) + 30;
+        }
+    }
+ out_err:
+  return;
+#endif
+}
+
+/**
+ * publish_hit
+ *
+ * @param *hostname
+ * @param *hit_str
+ *
+ * @return void
+ */
+void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
+{
 #ifdef CONFIG_HIP_OPENDHT
-	extern int hip_opendht_sock_fqdn;
-	extern int hip_opendht_sock_hit;
-	extern int hip_opendht_fqdn_sent;
-	extern int hip_opendht_hit_sent;
-	extern int opendht_error;
-	extern char opendht_response[];
-	extern struct addrinfo opendht_serving_gateway;
-	struct netdev_address *n;
-	char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
-	hip_list_t *item, *tmp;
-	int i;
+  extern int hip_opendht_sock_fqdn;  
+  extern int hip_opendht_fqdn_sent;
+  extern int opendht_error;
+  extern struct addrinfo opendht_serving_gateway; 
+  extern int opendht_serving_gateway_port;
+  extern int opendht_serving_gateway_ttl;
 
-	if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
-		return;
-	HIP_INFO("Using hostname: %s\n", hostname);
-	
-	list_for_each_safe(item, tmp, addresses, i)
-	{
-		n = list_entry(item);
-		struct in6_addr tmp_hit;
-		char *tmp_hit_str, *tmp_addr_str;
-		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) continue;
-		if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-		{
-			HIP_ERROR("No HIT found\n");
-			return;
-		} 
-	
-		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
-		{
-			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&n->addr), NULL);
-	
-			/* send the fqdn->hit mapping */
-			if (hip_opendht_fqdn_sent == 0) 
-			{
-				HIP_DEBUG("Sending mapping FQDN (%s) -> HIT (%s) to the openDHT\n", 
-							hostname, tmp_hit_str);
-				if (hip_opendht_sock_fqdn < 1)
-					hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
-				opendht_error = 0;
-				opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn,
-													&opendht_serving_gateway);
-				if (opendht_error > -1) 
-				{ 
-					opendht_error = opendht_put(hip_opendht_sock_fqdn, (unsigned char *)hostname,
-									(unsigned char *)tmp_hit_str, (unsigned char *)tmp_addr_str);
-					if (opendht_error < 0)
-						HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-					else hip_opendht_fqdn_sent = 1; 
-				} 
-			}
-			/* send the hit->ip mapping */
-			if (hip_opendht_hit_sent == 0) 
-			{
-				HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
-							tmp_hit_str, tmp_addr_str);
-				if (hip_opendht_sock_hit < 1)
-					hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
-				opendht_error = 0;
-				opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
-													&opendht_serving_gateway);
-				if (opendht_error > -1)
-				{
-					opendht_error = opendht_put(hip_opendht_sock_hit, (unsigned char *)tmp_hit_str,
-									(unsigned char *)tmp_addr_str, (unsigned char *)tmp_addr_str);
-					if (opendht_error < 0) HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
-					else hip_opendht_hit_sent = 1; 
-				}
-			}
-		}
-	}
+  if (hip_opendht_fqdn_sent == STATE_OPENDHT_IDLE) 
+    {
+      HIP_DEBUG("Sending mapping FQDN (%s) -> HIT (%s) to the openDHT\n", 
+                hostname, tmp_hit_str);
+      if (hip_opendht_sock_fqdn < 1)
+        hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+      opendht_error = 0;
+      opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
+                                          &opendht_serving_gateway, 0);
+      if (opendht_error > -1 && opendht_error != EINPROGRESS) 
+        { 
+          opendht_error = opendht_put(hip_opendht_sock_fqdn,
+                                      (unsigned char *)hostname,
+                                      (unsigned char *)tmp_hit_str, 
+                                      (unsigned char *)tmp_addr_str,
+                                      opendht_serving_gateway_port,
+                                      opendht_serving_gateway_ttl);
+          if (opendht_error < 0)
+            HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+          else hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_ANSWER; 
+        } 
+      if (opendht_error == EINPROGRESS)
+        {
+          hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_CONNECT; /* connect not ready */
+          HIP_DEBUG("OpenDHT connect unfinished (fqdn publish)\n");
+        }
+    }
+  else if (hip_opendht_fqdn_sent == STATE_OPENDHT_START_SEND)
+    { /* connect finished send the data */
+      opendht_error = opendht_put(hip_opendht_sock_fqdn, 
+                                  (unsigned char *)hostname,
+                                  (unsigned char *)tmp_hit_str, 
+                                  (unsigned char *)tmp_addr_str,
+                                  opendht_serving_gateway_port,
+                                  opendht_serving_gateway_ttl);
+      if (opendht_error < 0)
+        HIP_DEBUG("Error sending FQDN->HIT mapping to the openDHT.\n");
+      else hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_ANSWER; 
+    }
+ out_err:
+  return;
+#endif
+}
 
+/**
+ * publish address
+ * 
+ * @param *hit_str
+ * @param *addr_str
+ * @param *netdev_address
+ *
+ * @return int 0 connect unfinished, -1 error, 1 success
+ */
+int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
+{
+#ifdef CONFIG_HIP_OPENDHT
+  extern int hip_opendht_sock_hit;
+  extern int hip_opendht_hit_sent;
+  extern int opendht_error;
+  extern struct addrinfo opendht_serving_gateway;
+  extern int opendht_serving_gateway_port;
+  extern int opendht_serving_gateway_ttl;
+
+  if (hip_opendht_hit_sent == STATE_OPENDHT_IDLE) 
+    {
+      HIP_DEBUG("Sending mapping HIT (%s) -> IP (%s) to the openDHT\n",
+                tmp_hit_str, tmp_addr_str);
+      if (hip_opendht_sock_hit < 1)
+        hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+      opendht_error = 0;
+      opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
+                                          &opendht_serving_gateway, 0);
+      if (opendht_error > -1 && opendht_error != EINPROGRESS)
+        {
+          opendht_error = opendht_put(hip_opendht_sock_hit, 
+                                      (unsigned char *)tmp_hit_str,
+                                      (unsigned char *)tmp_addr_str, 
+                                      (unsigned char *)tmp_addr_str,
+                                      opendht_serving_gateway_port,
+                                      opendht_serving_gateway_ttl);
+          if (opendht_error < 0)
+            {
+              HIP_DEBUG("Error sending HIT->IP mapping to the openDHT.\n");
+              return -1;
+            }
+          else 
+            {
+              hip_opendht_hit_sent = STATE_OPENDHT_WAITING_ANSWER;
+              return 1;
+            }
+        }
+      else if (opendht_error == EINPROGRESS)
+        {
+          hip_opendht_hit_sent = STATE_OPENDHT_WAITING_CONNECT;
+          HIP_DEBUG("OpenDHT connect unfinished (hit publish)\n");
+          goto out_err;
+        }
+      else
+        { /* connect error */
+          return -1;
+        }
+    }
+  else if (hip_opendht_hit_sent == STATE_OPENDHT_START_SEND)
+    { /* connect finished send the data */
+      opendht_error = opendht_put(hip_opendht_sock_hit, 
+                                  (unsigned char *)tmp_hit_str,
+                                  (unsigned char *)tmp_addr_str, 
+                                  (unsigned char *)tmp_addr_str,
+                                  opendht_serving_gateway_port,
+                                  opendht_serving_gateway_ttl);
+      if (opendht_error < 0)
+        {
+          HIP_DEBUG("Error sending HIT->IP mapping to the openDHT.\n");
+          return -1;
+        }
+      else
+        {
+          hip_opendht_hit_sent = STATE_OPENDHT_WAITING_ANSWER;
+          return 1;
+        }
+    }
+ out_err:
+  return 0;
 #endif
 }
 

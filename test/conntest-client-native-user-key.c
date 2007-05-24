@@ -33,6 +33,7 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 #include "debug.h"
+#include "ife.h"
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *epinfo, *res = NULL;
@@ -53,9 +54,13 @@ int main(int argc,char *argv[]) {
   se_family_t endpoint_family;
   char *user_key_base = "/etc/hip/hip_host_dsa_key";
   struct endpoint *endpoint;
+  const char *cfile = "default";
 
   hip_set_logtype(LOGTYPE_STDERR);
   hip_set_logfmt(LOGFMT_SHORT);
+  HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	   "Error: Cannot set the debugging parameter.\n");
+
  
   if (argc != 4) {
     HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
@@ -195,5 +200,6 @@ out:
 
   HIP_INFO("Result of data transfer: %s.\n", (err ? "FAIL" : "OK"));
 
+out_err:
   return err;
 }

@@ -101,8 +101,10 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 	int c;
 	list_for_each(item, db, c) {
 		id_entry = list_entry(item);
+                /*
 		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
+                */
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO ||
 		     (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
@@ -727,7 +729,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 
 
 /**
- * hip_for_each_hi - List every hit in database.
+ * hip_for_each_hi - List every hit in database. 
  * @param func Mapper function
  * @param opaque Opaque data for the mapper function.
  *

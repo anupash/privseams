@@ -26,12 +26,18 @@ int build_packet_put(unsigned char * key,
                      int value_len, 
                      int port,
                      unsigned char * host_ip,
-		     char * out_buffer) 
+		     char * out_buffer,
+                     int ttl) 
 {
     char *key64 = NULL;
     char *value64 = NULL;
     key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
     value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
+    
+    char ttl_str[10];
+    memset(ttl_str, '\0', sizeof(char[10]));
+    sprintf(&ttl_str, "%d", ttl);
+    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     /* Create a XML document */
     xmlDocPtr xml_doc = NULL;
@@ -47,7 +53,7 @@ int build_packet_put(unsigned char * key,
     xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
     xml_new_param(xml_node, "base64", (char *)key64);
     xml_new_param(xml_node, "base64", (char *)value64);
-    xml_new_param(xml_node, "int", TTL);  
+    xml_new_param(xml_node, "int", &ttl_str);  
     xml_new_param(xml_node, "string", BAD_CAST "HIPL");
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
@@ -311,7 +317,7 @@ xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value)
  * @param buf Pointer to contents to be encoded
  * @param len How long is the first parameter in bytes
  *
- * @return Returns a pointer to encoded content
+ * @return Returns a pointer to encoded content or -1 on error
  */
 unsigned char * base64_encode(unsigned char * buf, unsigned int len)
 {
@@ -320,8 +326,12 @@ unsigned char * base64_encode(unsigned char * buf, unsigned int len)
 
     b64_len = (((len + 2) / 3) * 4) + 1;
     ret = (unsigned char *)malloc(b64_len);
+    if (ret == NULL) goto out_err;
     EVP_EncodeBlock(ret, buf, len);
     return ret;
+ out_err:
+    if (ret) free(ret);
+    return(-1);
 }
 
 /** 
@@ -329,15 +339,19 @@ unsigned char * base64_encode(unsigned char * buf, unsigned int len)
  * @param buf Pointer to contents to be decoded
  * @param len How long is the first parameter in bytes
  *
- * @return Returns a pointer to decoded content
+ * @return Returns a pointer to decoded content or -1 on error
  */
 unsigned char * base64_decode(unsigned char * bbuf, unsigned int *len)
 {
-    unsigned char * ret;
+    unsigned char * ret = NULL;
     unsigned int bin_len;
   
     bin_len = (((strlen((char *)bbuf) + 3) / 4) * 3);
     ret = (unsigned char *)malloc(bin_len);
+    if (ret == NULL) goto out_err;   
     *len = EVP_DecodeBlock(ret, bbuf, strlen((char *)bbuf));
     return ret;
+ out_err:
+    if(ret) free(ret);
+    return(-1);
 }

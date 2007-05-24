@@ -80,7 +80,7 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 131 "policy_parse.y"
+#line 133 "policy_parse.y"
 {
 	u_int num;
 	u_int32_t num32;
@@ -89,7 +89,7 @@ typedef union YYSTYPE
 		char *buf;
 	} val;
 }
-/* Line 1489 of yacc.c.  */
+/* Line 1529 of yacc.c.  */
 #line 94 "policy_parse.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
