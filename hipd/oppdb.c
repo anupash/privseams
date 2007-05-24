@@ -449,6 +449,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
+		err = -11; /* Force immediately to send message to app */
+		
 		goto out_err;
 	}
 
@@ -468,10 +470,11 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	
 	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
 	{
-		hip_msg_init(msg);
+		//hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
+		
 		goto out_err;
 	}
 	
@@ -521,9 +524,9 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
 	int err = 0, disable_fallback = 0;
-	time_t *now = (time_t*) current_time;	
+	time_t *now = (time_t*) current_time;
 	struct in6_addr *addr;
-	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+	//HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
 #if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
 	/* If agent is prompting user, let's make sure that
@@ -544,6 +547,8 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);
 		err = hip_oppdb_entry_clean_up(entry);
+		memset(&now,0,sizeof(now));
+		
 	}
 	
  out_err:

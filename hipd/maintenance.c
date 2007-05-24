@@ -22,7 +22,7 @@ float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 int hip_firewall_status = 0;
-
+int fall, retr;
 /**
  * Handle packet retransmissions.
  */
@@ -424,12 +424,14 @@ int periodic_maintenance()
 	}
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+	
 	if (opp_fallback_counter < 0) {
 		HIP_IFEL(hip_scan_opp_fallback(), -1,
 			 "retransmission scan failed\n");
 		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 	} else {
 		opp_fallback_counter--;
+		
 	}
 #endif
 
