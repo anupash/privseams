@@ -2066,6 +2066,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	
 	HIP_DEBUG("Address set has changed, continue\n");
 
+	/*
+	 * Update dns records
+	 */
+	nsupdate();
+
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
 	   as peer's preferred address (intrafamily handover). */

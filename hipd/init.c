@@ -310,7 +310,7 @@ int hipd_init(int flush_ipsec)
 
 	register_to_dht();
 	hip_load_configuration();
-
+	nsupdate();
 out_err:
 	return err;
 }

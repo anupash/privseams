@@ -620,8 +620,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			i = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
-			/* handle HIP readdressing */
+			/* Update dns records */
+			nsupdate();
 
+			/* handle HIP readdressing */
 			if (i == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
