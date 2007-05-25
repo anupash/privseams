@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -416,3 +418,5 @@ set_address(buf, len, sa, withports)
 
 	return buf;
 }
+
+#endif /* CONFIG_HIP_PFKEY  */

@@ -116,6 +116,8 @@
 /* Copy the first part of user declarations.  */
 #line 63 "policy_parse.y"
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -203,7 +205,7 @@ extern char *__libipsectext;	/*XXX*/
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 131 "policy_parse.y"
+#line 133 "policy_parse.y"
 {
 	u_int num;
 	u_int32_t num32;
@@ -212,8 +214,8 @@ typedef union YYSTYPE
 		char *buf;
 	} val;
 }
-/* Line 187 of yacc.c.  */
-#line 217 "policy_parse.c"
+/* Line 193 of yacc.c.  */
+#line 219 "policy_parse.c"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
@@ -226,7 +228,7 @@ typedef union YYSTYPE
 
 
 /* Line 216 of yacc.c.  */
-#line 230 "policy_parse.c"
+#line 232 "policy_parse.c"
 
 #ifdef short
 # undef short
@@ -525,10 +527,10 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   153,   153,   152,   168,   167,   204,   203,   226,   225,
-     237,   236,   259,   258,   280,   292,   294,   306,   307,   308,
-     309,   310,   311,   312,   316,   323,   327,   331,   335,   342,
-     342,   353,   353,   364,   370
+       0,   155,   155,   154,   170,   169,   206,   205,   228,   227,
+     239,   238,   261,   260,   282,   294,   296,   308,   309,   310,
+     311,   312,   313,   314,   318,   325,   329,   333,   337,   344,
+     344,   355,   355,   366,   372
 };
 #endif
 
@@ -1460,7 +1462,7 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 153 "policy_parse.y"
+#line 155 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (2)].num);
 			p_type = (yyvsp[(2) - (2)].num);
@@ -1477,7 +1479,7 @@ yyreduce:
     break;
 
   case 4:
-#line 168 "policy_parse.y"
+#line 170 "policy_parse.y"
     {
 			char *offset_buf;
 
@@ -1515,7 +1517,7 @@ yyreduce:
     break;
 
   case 6:
-#line 204 "policy_parse.y"
+#line 206 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (5)].num);
 			p_type = (yyvsp[(5) - (5)].num);
@@ -1539,7 +1541,7 @@ yyreduce:
     break;
 
   case 8:
-#line 226 "policy_parse.y"
+#line 228 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (4)].num);
 			p_type = (yyvsp[(4) - (4)].num);
@@ -1552,7 +1554,7 @@ yyreduce:
     break;
 
   case 10:
-#line 237 "policy_parse.y"
+#line 239 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (6)].num);
 			p_type = (yyvsp[(6) - (6)].num);
@@ -1576,7 +1578,7 @@ yyreduce:
     break;
 
   case 12:
-#line 259 "policy_parse.y"
+#line 261 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (6)].num);
 			p_type = (yyvsp[(6) - (6)].num);
@@ -1600,7 +1602,7 @@ yyreduce:
     break;
 
   case 14:
-#line 281 "policy_parse.y"
+#line 283 "policy_parse.y"
     {
 			p_dir = (yyvsp[(1) - (1)].num);
 			p_type = 0;	/* ignored it by kernel */
@@ -1613,7 +1615,7 @@ yyreduce:
     break;
 
   case 16:
-#line 294 "policy_parse.y"
+#line 296 "policy_parse.y"
     {
 			if (rule_check() < 0)
 				return -1;
@@ -1626,7 +1628,7 @@ yyreduce:
     break;
 
   case 23:
-#line 312 "policy_parse.y"
+#line 314 "policy_parse.y"
     {
 			__ipsec_errcode = EIPSEC_FEW_ARGUMENTS;
 			return -1;
@@ -1634,7 +1636,7 @@ yyreduce:
     break;
 
   case 24:
-#line 316 "policy_parse.y"
+#line 318 "policy_parse.y"
     {
 			__ipsec_errcode = EIPSEC_FEW_ARGUMENTS;
 			return -1;
@@ -1642,17 +1644,17 @@ yyreduce:
     break;
 
   case 25:
-#line 323 "policy_parse.y"
+#line 325 "policy_parse.y"
     { p_protocol = (yyvsp[(1) - (1)].num); }
     break;
 
   case 26:
-#line 327 "policy_parse.y"
+#line 329 "policy_parse.y"
     { p_mode = (yyvsp[(1) - (1)].num); }
     break;
 
   case 27:
-#line 331 "policy_parse.y"
+#line 333 "policy_parse.y"
     {
 			p_level = (yyvsp[(1) - (1)].num);
 			p_reqid = 0;
@@ -1660,7 +1662,7 @@ yyreduce:
     break;
 
   case 28:
-#line 335 "policy_parse.y"
+#line 337 "policy_parse.y"
     {
 			p_level = IPSEC_LEVEL_UNIQUE;
 			p_reqid = atol((yyvsp[(1) - (1)].val).buf);	/* atol() is good. */
@@ -1668,7 +1670,7 @@ yyreduce:
     break;
 
   case 29:
-#line 342 "policy_parse.y"
+#line 344 "policy_parse.y"
     {
 			p_src = parse_sockaddr(&(yyvsp[(1) - (1)].val), NULL);
 			if (p_src == NULL)
@@ -1677,7 +1679,7 @@ yyreduce:
     break;
 
   case 30:
-#line 348 "policy_parse.y"
+#line 350 "policy_parse.y"
     {
 			p_dst = parse_sockaddr(&(yyvsp[(4) - (4)].val), NULL);
 			if (p_dst == NULL)
@@ -1686,7 +1688,7 @@ yyreduce:
     break;
 
   case 31:
-#line 353 "policy_parse.y"
+#line 355 "policy_parse.y"
     {
 			p_src = parse_sockaddr(&(yyvsp[(1) - (2)].val), &(yyvsp[(2) - (2)].val));
 			if (p_src == NULL)
@@ -1695,7 +1697,7 @@ yyreduce:
     break;
 
   case 32:
-#line 359 "policy_parse.y"
+#line 361 "policy_parse.y"
     {
 			p_dst = parse_sockaddr(&(yyvsp[(5) - (6)].val), &(yyvsp[(6) - (6)].val));
 			if (p_dst == NULL)
@@ -1704,7 +1706,7 @@ yyreduce:
     break;
 
   case 33:
-#line 364 "policy_parse.y"
+#line 366 "policy_parse.y"
     {
 			if (p_dir != IPSEC_DIR_OUTBOUND) {
 				__ipsec_errcode = EIPSEC_INVAL_DIR;
@@ -1714,7 +1716,7 @@ yyreduce:
     break;
 
   case 34:
-#line 370 "policy_parse.y"
+#line 372 "policy_parse.y"
     {
 			if (p_dir != IPSEC_DIR_INBOUND) {
 				__ipsec_errcode = EIPSEC_INVAL_DIR;
@@ -1725,7 +1727,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 1729 "policy_parse.c"
+#line 1731 "policy_parse.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -1939,7 +1941,7 @@ yyreturn:
 }
 
 
-#line 381 "policy_parse.y"
+#line 383 "policy_parse.y"
 
 
 void
@@ -2213,4 +2215,6 @@ ipsec_set_policy(msg, msglen)
 	__ipsec_errcode = EIPSEC_NO_ERROR;
 	return policy;
 }
+
+#endif /* CONFIG_HIP_PFKEY */ 
 
