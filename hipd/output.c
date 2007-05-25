@@ -136,9 +136,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
+	struct hip_locator_info_addr_item *addr_list;
  	int err = 0,dh_size,written, mask = 0;
  	u8 *dh_data = NULL;
 	int * service_list = NULL;
+	int addr_count=0;
 	int service_count = 0;
 	int *list;
 	int count = 0;
@@ -229,6 +231,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                         hip_get_service_max_lifetime(), service_list, service_count), 
                         -1, "Building of reg_info failed\n");	
 	}
+
+
+	/************LOCATOR PARAMETER **********************/
+	
+	HIP_IFEL(hip_build_param_locator(msg,addr_list,addr_count), -1,
+		 "Building LOCATOR field failed\n");
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 

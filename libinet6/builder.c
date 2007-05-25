@@ -2340,7 +2340,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  			if (ntohs(*tfm) == table[j]) {
  				_HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
  					  table[j], i);
- 				return table[j];
+ 				return table[j];  
  			}
  		}
  	}
