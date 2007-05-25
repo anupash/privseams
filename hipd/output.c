@@ -235,9 +235,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/************LOCATOR PARAMETER **********************/
 	
-	HIP_IFEL(hip_build_param_locator(msg,addr_list,addr_count), -1,
-		 "Building LOCATOR field failed\n");
-
+	HIP_IFEL(hip_build_param_locator_list(msg,addr_list,addr_count), -1,
+		 "Building LOCATOR failed\n");
+	HIP_DUMP_MSG(msg);
+	HIP_DEBUG_HIT("The hits are \s",&addr_list);
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
