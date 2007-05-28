@@ -164,9 +164,11 @@ int hip_handle_close_ack(struct hip_common *, hip_ha_t *);
 /* @} */
 
 int hip_produce_keying_material(struct hip_common *, struct hip_context *,
-				uint64_t, uint64_t );
+				uint64_t, uint64_t, 
+				struct hip_dh_public_value **);
 int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *,
+		  struct hip_dh_public_value *);
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
 
