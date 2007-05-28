@@ -2422,7 +2422,6 @@ int hip_build_param_locator_list(struct hip_common *msg,
 	//if (addrs_len > 0)
 	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
 	//	       addresses, addrs_len);
-
  out_err:
 	if (locator_info)
 		free(locator_info);

@@ -136,7 +136,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
-	struct hip_locator_info_addr_item *addr_list;
+	struct *addr_list;
+	struct netdev_address *n;
  	int err = 0,dh_size,written, mask = 0;
  	u8 *dh_data = NULL;
 	int * service_list = NULL;
@@ -149,8 +150,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
 		HIP_HIP_3DES_SHA1,
-		HIP_HIP_NULL_SHA1
-	};
+		HIP_HIP_NULL_SHA1	};
  	hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
@@ -234,7 +234,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 
 	/************LOCATOR PARAMETER **********************/
-	
+	//n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
 	HIP_IFEL(hip_build_param_locator_list(msg,addr_list,addr_count), -1,
 		 "Building LOCATOR failed\n");
 	HIP_DUMP_MSG(msg);

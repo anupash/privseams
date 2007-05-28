@@ -32,11 +32,19 @@ int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
+
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *src_privkey,
+				 struct hip_host_id *host_id_priv,
+				 const struct hip_host_id *host_id_pub,
+				 int cookie_k);
+
+
+/*struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
+				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
+				 struct hip_host_id *src_privkey,struct hip_build_param_locator_list *addr_list,
 				 const struct hip_host_id *src_pubkey,
-				 int cookie);
+				 int cookie);*/
 int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
 		struct in6_addr *, const in_port_t, struct in6_addr *,
 		hip_portpair_t *, const void *, const int, uint16_t *);
