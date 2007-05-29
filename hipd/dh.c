@@ -73,11 +73,23 @@ int hip_calculate_shared_secret(uint8_t *public_value, uint8_t group_id,
                                 signed int len, u8* buffer, int bufsize)
 {
 	int err;
+	DH *tmp;
+
+        /*
+	 * First check that we have the key available.
+	 * Then encode it into the buffer
+	 */
 
 	if (dh_table[group_id] == NULL) {
-		HIP_ERROR("Unsupported DH group: %d\n",group_id);
-		return -1;
-        }
+		tmp = hip_generate_dh_key(group_id);
+		_HIP_DEBUG("Generating key\n");
+		dh_table[group_id] = tmp;
+
+		if (dh_table[group_id] == NULL) {
+		        HIP_ERROR("Unsupported DH group: %d\n", group_id);
+			return -1;
+		}
+	}
 
 	err = hip_gen_dh_shared_key(dh_table[group_id], public_value,
 				    len, buffer, bufsize);

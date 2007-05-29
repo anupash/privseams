@@ -313,7 +313,10 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
 		 _HIP_DEBUG("dhpv1->group_id= %d   dhpv2->group_id= %d\n",
 			    dhpv1->group_id, dhpv2->group_id);
 		 _HIP_DEBUG("dhpv1->pub_len= %d   dhpv2->pub_len= %d\n", 
+			    dhpv1->pub_len, dhpv2->pub_len);
+		 _HIP_DEBUG("ntohs(dhpv1->pub_len)= %d   ntohs(dhpv2->pub_len)= %d\n",
 			    ntohs(dhpv1->pub_len), ntohs(dhpv2->pub_len));
+
 
 
 		 /* Selection of a DH key depending on select_dh_key */
