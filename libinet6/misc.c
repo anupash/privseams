@@ -176,6 +176,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  */
 unsigned long hip_hash_spi(const void *ptr)
 {
+	u32 spi = * (u32 *) key;
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
 	return (hash % ULONG_MAX);
 }

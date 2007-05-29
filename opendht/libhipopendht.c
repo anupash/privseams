@@ -44,7 +44,7 @@ int init_dht_gateway_socket(int sockfd)
  *
  * @return Returns 0 on success otherwise -1
  */
-int resolve_dht_gateway_info(char * gateway_name, 
+int resolve_dht_gateway_info(const char * gateway_name, 
                              struct addrinfo * gateway)
 {
     struct addrinfo hints, *res;

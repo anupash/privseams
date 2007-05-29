@@ -81,7 +81,7 @@ static void *hip_hadb_get_key_hit(void *entry)
 
 static void *hip_hadb_get_key_spi_list(void *entry)
 {
-	return (void *)(((struct hip_hit_spi *)entry)->spi);
+	return (void *)(&((struct hip_hit_spi *)entry)->spi);
 }
 
 static int hit_match(hip_ha_t *entry, void *our) {
@@ -532,7 +532,7 @@ int hip_hadb_del_peer_map(hip_hit_t *hit)
  *                  otherwise < 0.
  */
 int hip_hadb_insert_state_spi_list(hip_hit_t *hit_peer, hip_hit_t *hit_our, 
-				   uint32_t spi)
+				   u32 spi)
 {
 	int err = 0;
 	HIP_INSERT_STATE_SPI_LIST(&hadb_spi_list, hip_hadb_put_entry,

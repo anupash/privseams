@@ -147,7 +147,7 @@ int hip_handle_user_msg(struct hip_common *msg,
           {
             char tmp_ip_str[20];
             int tmp_ttl, tmp_port;
-            int *pret;
+            const char *pret;
             int ret;
             struct in_addr tmp_v4;
             struct hip_opendht_gw_info *gw_info;

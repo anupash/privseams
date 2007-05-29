@@ -105,7 +105,7 @@ void hip_hadb_put_entry(void *entry);
 	/* assume already locked entry */                                    \
 	ipv6_addr_copy(&hit_p, hit_peer);                                    \
 	ipv6_addr_copy(&hit_o, hit_our);                                     \
-	tmp = hip_ht_find(hashtable, (void *)spi);                           \
+	tmp = hip_ht_find(hashtable, (void *) &spi);                         \
 	if (tmp) {                                                           \
 		put_hs(tmp);                                                 \
 		HIP_ERROR("BUG, SPI already inserted\n");                    \
@@ -133,7 +133,7 @@ void hip_hadb_put_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-	return (uint32_t) key_1 == (uint32_t) key_2;
+	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
 
 void hip_init_hadb(void);

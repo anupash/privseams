@@ -119,8 +119,8 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
 	/* FIXME: This full scan is stupid, but we have no hashtables
 	   anyway... tkoponen */
-	return (int) hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
-							   our, HIP_ANY_ALGO, -1);
+	return (hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db, our,
+						     HIP_ANY_ALGO, -1) != NULL);
 	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
