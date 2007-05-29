@@ -58,6 +58,7 @@
 #else
 #include "policy_parse.h"
 #endif
+
 #define yylval __libipseclval	/* XXX */
 
 int yylex __P((void));

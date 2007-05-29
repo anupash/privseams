@@ -30,27 +30,18 @@ Test matrix:
 
            | outer ipv4 | outer ipv6
 -----------+------------+-----------
-inner ipv4 | untested   | untested
-inner ipv6 | works      | untested
+inner ipv4 | works      | works   
+inner ipv6 | works      | works   
 
-I tested this BEET patch against 2.6.17.14 BEET patch using
-hipd. Tested successfully with HITs (inner) and IPv4 (outer) addresses
-with ping6, iperf and pingtest in a single LAN. Works both with and
-without UDP encapsulation.
-
-Joakim Koskela solved a problem with multiple simultaneous IPsec 
-connections on 2.6.18.0. The same bug fix was included in this patch. 
-For more information, check these links:
-
-* https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=305
-* http://article.gmane.org/gmane.linux.network/62149
+Joakim Koskela fixed ESP sending that was not working for some pair of 
+HTIs (bug id 175). Joakim Koskela solved also a problem with multiple 
+simultaneous IPsec  connections on 2.6.18.0 in the latest hipd version 
+(bug id 305).
 
 Untested Features
 -----------------
 
 * Did not test TUNNEL mode at all.
-* Did not test yet with IPv6 address because IPv6 routing failed on 
-  2.6.19.7: https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=327
 * Testing with LSIs is TBD.
 * The sleep patch is based on this patch rather than our previous 
   version:
@@ -60,9 +51,6 @@ Untested Features
 Bugs
 ----
 
-* Sending ESP may not always work with some network/host configurations.
-  Did not test yet whether the bug applies to this kernel version. See
-  https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=175
 * Also applied ipsec loopback patch from here but it still oopses the 
   kernel in __xfrm6_bundle_create after calling xfrm_dst_lookup:
   http://www.mail-archive.com/netdev@vger.kernel.org/msg36083.html

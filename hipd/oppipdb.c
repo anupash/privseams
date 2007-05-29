@@ -40,9 +40,6 @@ int hip_ipdb_check(struct in6_addr *addr)
 {
 	int i;
 	
-	HIP_HEXDUMP("Checking ip from ip database: ",
-	            addr, sizeof(*addr));
-
 	for (i = 0; i < HIP_OPP_IP_DB_SIZE; i++)
 	{
 		if (memcmp(&oppipdb[i], addr, sizeof(*addr)) == 0)
@@ -71,6 +68,9 @@ void hip_ipdb_add(struct in6_addr *addr)
 	            addr, sizeof(*addr));
 	oppipdb_oldest++;
 	if (oppipdb_oldest >= HIP_OPP_IP_DB_SIZE) oppipdb_oldest = 0;
+
+	
+
 }
 
 

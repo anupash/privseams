@@ -274,6 +274,8 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 		datalen++;
 	}
 	
+	HIP_HEXDUMP("addr: ", res, sizeof(*res));
+	
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
 	HIP_INFO("!!!! conntest.c Connecting...\n");

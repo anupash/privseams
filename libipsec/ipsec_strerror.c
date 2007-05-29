@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -96,3 +98,5 @@ void __ipsec_set_strerror(const char *str)
 
 	return;
 }
+
+#endif /* CONFIG_HIP_PFKEY */
