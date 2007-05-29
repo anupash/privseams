@@ -137,8 +137,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		
 		if (mapped && addr->sa_family == AF_INET) {
 			struct in6_addr *in6 =
-				(struct in6_addr * ) SA2IP(&n->addr);
-			struct in_addr *in = (struct in_addr *) SA2IP(addr);
+				(struct in6_addr * ) hip_cast_sa_addr(&n->addr);
+			struct in_addr *in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
 			family_match = 1;
 		} else if (!mapped && addr->sa_family == AF_INET6) {
