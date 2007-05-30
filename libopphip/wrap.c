@@ -101,6 +101,10 @@ void hip_uninitialize_db()
 
 void hip_initialize_db_when_not_exist()
 {
+
+        const char *cfile = "default";
+	int err = 0;
+	
 	if (hip_db_exist)
 		return;
 
@@ -108,6 +112,8 @@ void hip_initialize_db_when_not_exist()
 	
 	hip_set_logtype(LOGTYPE_SYSLOG);
 	hip_set_logfmt(LOGFMT_LONG);
+	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	  "Error: Cannot set the debugging parameter.\n");
 
 	hip_init_dlsym_functions();
 	hip_init_socket_db();
@@ -115,6 +121,10 @@ void hip_initialize_db_when_not_exist()
 	// XX FIXME: SHOULD HAVE ALSO SIGNAL HANDLERS?
 	atexit(hip_uninitialize_db);
 	hip_db_exist = 1;
+
+     out_err:
+	return err;
+
 }
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)

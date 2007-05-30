@@ -69,7 +69,7 @@
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
-#define HIP_HIT_TYPE_MASK_100   0x20010070
+#define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
@@ -488,15 +488,20 @@ struct hip_solution {
 	uint64_t          J;
 } __attribute__ ((packed));
 
-struct hip_diffie_hellman {
-	hip_tlv_type_t    type;
-	hip_tlv_len_t     length;
-
+struct hip_dh_public_value {
 	uint8_t           group_id;  
 	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
 } __attribute__ ((packed));
+
+struct hip_diffie_hellman {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+
+        struct hip_dh_public_value  pub_val;
+} __attribute__ ((packed));
+
 
 typedef uint16_t hip_transform_suite_t;
 

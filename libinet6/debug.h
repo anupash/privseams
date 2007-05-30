@@ -102,11 +102,14 @@
 #define _HIP_DEBUG_LSI(str, lsi) do {} while(0)
 #define _HIP_DEBUG_INADDR(str, in) do {} while(0)
 
-enum logtype { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
-enum logfmt { LOGFMT_SHORT, LOGFMT_LONG };
+enum logtype_t { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
+enum logfmt_t { LOGFMT_SHORT, LOGFMT_LONG };
+enum logdebug_t { LOGDEBUG_ALL, LOGDEBUG_MEDIUM, LOGDEBUG_NONE };
 
 void hip_set_logtype(int logtype);
 void hip_set_logfmt(int logfmt);
+int hip_set_logdebug(int new_logdebug);
+int hip_set_auto_logdebug(const char *cfile);
 
 /* Don't use the functions below directly; use the corresponding macros
    instead */

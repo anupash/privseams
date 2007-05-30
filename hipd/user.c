@@ -78,8 +78,28 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1,
-			 "Error when setting daemon NAT status to \"on\"\n");
+			 "Error when setting daemon NAT status to \"off\"\n");
 		break;
+
+	case SO_HIP_SET_DEBUG_ALL:
+		/* Displays all debugging messages. */
+		HIP_DEBUG("Handling DEBUG ALL user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
+			 "Error when setting daemon DEBUG status to ALL\n");
+		break;
+	case SO_HIP_SET_DEBUG_MEDIUM:
+		/* Removes debugging messages. */
+		HIP_DEBUG("Handling DEBUG MEDIUM user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_MEDIUM), -1,
+			 "Error when setting daemon DEBUG status to MED\n");
+		break;
+	case SO_HIP_SET_DEBUG_NONE:
+		/* Removes debugging messages. */
+		HIP_DEBUG("Handling DEBUG NONE user message.\n");
+		HIP_IFEL(hip_set_logdebug(LOGDEBUG_NONE), -1,
+			 "Error when setting daemon DEBUG status to NONE\n");
+		break;
+
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
@@ -102,12 +122,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		send_response = 0;
 		err = hip_opp_get_peer_hit(msg, src);
 		if(err){
 			HIP_ERROR("get pseudo hit failed.\n");
+			send_response = 1;
+			if (err == -11) /* immediate fallback, do not pass */
+			 	err = 0;
 			goto out_err;
-		}
+		} else {
+			send_response = 0;
+                }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
 	  break;

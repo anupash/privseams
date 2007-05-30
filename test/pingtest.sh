@@ -2,7 +2,7 @@
 
 PATH="$PATH:$PWD../tools:$PWD:$PWD/tools"
 IFACE=dummy0
-PREFIX="inet6 2001:7"
+PREFIX="inet6 2001:1"
 SRC_HITS=`ip addr show $IFACE|grep "$PREFIX"|cut -d" " -f6|cut -d"/" -f1|tr '\n' ' '`
 DST_IP=$1; shift
 DST_HITS=$@
@@ -17,7 +17,7 @@ echo ""
 echo "dst IP: $DST_IP"
 echo ""
 
-hipconf hip rst all
+hipconf rst all
 sleep 3
 
 for DST_HIT in $DST_HITS
