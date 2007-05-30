@@ -2333,7 +2333,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Send UPDATE */
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
-
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
 	
 	HIP_DEBUG("Sending initial UPDATE packet.\n");
