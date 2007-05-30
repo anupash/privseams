@@ -8,6 +8,8 @@
  * - Tobias Heer <heer@tobibox.de>
  */
 
+#include <openssl/rsa.h>
+#include <openssl/dsa.h>
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #  include "protodefs.h"

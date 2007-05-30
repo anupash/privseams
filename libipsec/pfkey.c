@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -2402,3 +2404,5 @@ pfkey_set_natt_frag(buf, lim, type, l_natt_frag)
 	return(buf + len);
 }
 #endif
+
+#endif /* CONFIG_HIP_PFKEY */ 
