@@ -1,61 +1,48 @@
-diff -urN  a/net/xfrm/xfrm_state.c b/net/xfrm/xfrm_state.c
---- a/net/xfrm/xfrm_state.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/xfrm/xfrm_state.c 2007-05-18 12:23:52.000000000 +0300
-@@ -366,7 +366,7 @@
- 			      selector.
- 			 */
- 			if (x->km.state == XFRM_STATE_VALID) {
--				if (!xfrm_selector_match(&x->sel, fl, family) ||
-+				if (!xfrm_selector_match(&x->sel, fl, x->sel.family) ||
- 				    !xfrm_sec_ctx_match(pol->security, x->security))
- 					continue;
- 				if (!best ||
-@@ -378,7 +378,7 @@
- 				acquire_in_progress = 1;
- 			} else if (x->km.state == XFRM_STATE_ERROR ||
- 				   x->km.state == XFRM_STATE_EXPIRED) {
-- 				if (xfrm_selector_match(&x->sel, fl, family) &&
-+ 				if (xfrm_selector_match(&x->sel, fl, x->sel.family) &&
- 				    xfrm_sec_ctx_match(pol->security, x->security))
- 					error = -ESRCH;
- 			}
-diff -urN  a/net/xfrm/xfrm_user.c b/net/xfrm/xfrm_user.c
---- a/net/xfrm/xfrm_user.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/xfrm/xfrm_user.c 2007-05-18 12:23:52.000000000 +0300
-@@ -173,8 +173,9 @@
+diff -urN  a/net/ipv4/xfrm4_input.c b/net/ipv4/xfrm4_input.c
+--- a/net/ipv4/xfrm4_input.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/xfrm4_input.c 2007-05-25 12:21:11.000000000 +0300
+@@ -13,6 +13,7 @@
+ #include <linux/string.h>
+ #include <linux/netfilter.h>
+ #include <linux/netfilter_ipv4.h>
++#include <net/inet_ecn.h>
+ #include <net/ip.h>
+ #include <net/xfrm.h>
  
- 	err = -EINVAL;
- 	switch (p->mode) {
--	case 0:
--	case 1:
-+	case XFRM_MODE_TRANSPORT:
-+	case XFRM_MODE_TUNNEL:
-+	case XFRM_MODE_BEET:
- 		break;
+@@ -23,6 +24,15 @@
  
- 	default:
-@@ -763,6 +764,7 @@
- 		t->aalgos = ut->aalgos;
- 		t->ealgos = ut->ealgos;
- 		t->calgos = ut->calgos;
-+		t->outer_family = ut->family;
- 	}
- }
+ EXPORT_SYMBOL(xfrm4_rcv);
  
-diff -urN  a/net/xfrm/xfrm_policy.c b/net/xfrm/xfrm_policy.c
---- a/net/xfrm/xfrm_policy.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/xfrm/xfrm_policy.c 2007-05-18 12:23:52.000000000 +0300
-@@ -782,6 +782,7 @@
- 		if (tmpl->mode) {
- 			remote = &tmpl->id.daddr;
- 			local = &tmpl->saddr;
-+			family = tmpl->outer_family;
++static inline void ipip_ecn_decapsulate(struct sk_buff *skb)
++{
++	struct iphdr *outer_iph = skb->nh.iph;
++	struct iphdr *inner_iph = skb->h.ipiph;
++
++	if (INET_ECN_is_ce(outer_iph->tos))
++		IP_ECN_set_ce(inner_iph);
++}
++
+ static int xfrm4_parse_spi(struct sk_buff *skb, u8 nexthdr, u32 *spi, u32 *seq)
+ {
+ 	switch (nexthdr) {
+@@ -103,11 +113,11 @@
+ 
+ 		xfrm_vec[xfrm_nr++] = x;
+ 
+-		if (x->mode->input(x, skb))
++                if (x->mode->input(x, skb))
+ 			goto drop;
+-
++		
+ 		if (x->props.mode) {
+-			decaps = 1;
++		        decaps = 1;
+ 			break;
  		}
  
- 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
 diff -urN  a/net/ipv4/xfrm4_output.c b/net/ipv4/xfrm4_output.c
---- a/net/ipv4/xfrm4_output.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/ipv4/xfrm4_output.c 2007-05-18 12:23:52.000000000 +0300
+--- a/net/ipv4/xfrm4_output.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/xfrm4_output.c 2007-05-25 12:21:11.000000000 +0300
 @@ -14,10 +14,12 @@
  #include <linux/skbuff.h>
  #include <linux/spinlock.h>
@@ -96,8 +83,8 @@ diff -urN  a/net/ipv4/xfrm4_output.c b/net/ipv4/xfrm4_output.c
  
  	IPCB(skb)->flags |= IPSKB_XFRM_TRANSFORMED;
 diff -urN  a/net/ipv4/xfrm4_tunnel.c b/net/ipv4/xfrm4_tunnel.c
---- a/net/ipv4/xfrm4_tunnel.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/ipv4/xfrm4_tunnel.c 2007-05-18 12:23:52.000000000 +0300
+--- a/net/ipv4/xfrm4_tunnel.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/xfrm4_tunnel.c 2007-05-25 12:21:11.000000000 +0300
 @@ -28,13 +28,20 @@
  
  static int ipip_init_state(struct xfrm_state *x)
@@ -124,8 +111,8 @@ diff -urN  a/net/ipv4/xfrm4_tunnel.c b/net/ipv4/xfrm4_tunnel.c
  	return 0;
  }
 diff -urN  a/net/ipv4/route.c b/net/ipv4/route.c
---- a/net/ipv4/route.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/ipv4/route.c 2007-05-18 12:23:52.000000000 +0300
+--- a/net/ipv4/route.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/route.c 2007-05-25 12:21:11.000000000 +0300
 @@ -108,6 +108,7 @@
  #ifdef CONFIG_SYSCTL
  #include <linux/sysctl.h>
@@ -143,59 +130,9 @@ diff -urN  a/net/ipv4/route.c b/net/ipv4/route.c
  }
  
  static int rt_fill_info(struct sk_buff *skb, u32 pid, u32 seq, int event,
-diff -urN  a/net/ipv4/xfrm4_input.c b/net/ipv4/xfrm4_input.c
---- a/net/ipv4/xfrm4_input.c 2007-05-18 12:23:52.000000000 +0300
-+++ b/net/ipv4/xfrm4_input.c 2007-05-18 12:23:52.000000000 +0300
-@@ -13,6 +13,7 @@
- #include <linux/string.h>
- #include <linux/netfilter.h>
- #include <linux/netfilter_ipv4.h>
-+#include <net/inet_ecn.h>
- #include <net/ip.h>
- #include <net/xfrm.h>
- 
-@@ -23,6 +24,15 @@
- 
- EXPORT_SYMBOL(xfrm4_rcv);
- 
-+static inline void ipip_ecn_decapsulate(struct sk_buff *skb)
-+{
-+	struct iphdr *outer_iph = skb->nh.iph;
-+	struct iphdr *inner_iph = skb->h.ipiph;
-+
-+	if (INET_ECN_is_ce(outer_iph->tos))
-+		IP_ECN_set_ce(inner_iph);
-+}
-+
- static int xfrm4_parse_spi(struct sk_buff *skb, u8 nexthdr, u32 *spi, u32 *seq)
- {
- 	switch (nexthdr) {
-@@ -103,11 +113,19 @@
- 
- 		xfrm_vec[xfrm_nr++] = x;
- 
--		if (x->mode->input(x, skb))
-+		/* jk: more testing */
-+		if (x->props.mode == XFRM_MODE_BEET) {
-+		  struct xfrm_mode *newmode = xfrm_get_mode(x->props.mode, AF_INET);
-+		  BUG_ON(!newmode);
-+		  if (newmode->input(x, skb))
- 			goto drop;
--
-+		} else {
-+		  if (x->mode->input(x, skb))
-+			goto drop;
-+		}
-+		
- 		if (x->props.mode) {
--			decaps = 1;
-+		        decaps = 1;
- 			break;
- 		}
- 
 diff -urN  a/net/ipv4/ah4.c b/net/ipv4/ah4.c
---- a/net/ipv4/ah4.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv4/ah4.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv4/ah4.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/ah4.c 2007-05-25 12:21:11.000000000 +0300
 @@ -253,8 +253,10 @@
  		goto error;
  	
@@ -209,8 +146,8 @@ diff -urN  a/net/ipv4/ah4.c b/net/ipv4/ah4.c
  
  	return 0;
 diff -urN  a/net/ipv4/xfrm4_policy.c b/net/ipv4/xfrm4_policy.c
---- a/net/ipv4/xfrm4_policy.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv4/xfrm4_policy.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv4/xfrm4_policy.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/xfrm4_policy.c 2007-05-25 12:21:11.000000000 +0300
 @@ -16,6 +16,8 @@
  static struct dst_ops xfrm4_dst_ops;
  static struct xfrm_policy_afinfo xfrm4_policy_afinfo;
@@ -320,8 +257,8 @@ diff -urN  a/net/ipv4/xfrm4_policy.c b/net/ipv4/xfrm4_policy.c
  
  error:
 diff -urN  a/net/ipv4/xfrm4_mode_tunnel.c b/net/ipv4/xfrm4_mode_tunnel.c
---- a/net/ipv4/xfrm4_mode_tunnel.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv4/xfrm4_mode_tunnel.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv4/xfrm4_mode_tunnel.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/xfrm4_mode_tunnel.c 2007-05-25 12:21:11.000000000 +0300
 @@ -33,7 +33,7 @@
   * On exit, skb->h will be set to the start of the payload to be processed
   * by x->type->output and skb->nh will be set to the top IP header.
@@ -545,8 +482,8 @@ diff -urN  a/net/ipv4/xfrm4_mode_tunnel.c b/net/ipv4/xfrm4_mode_tunnel.c
  	BUG_ON(err);
  }
 diff -urN  a/net/ipv4/esp4.c b/net/ipv4/esp4.c
---- a/net/ipv4/esp4.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv4/esp4.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv4/esp4.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/esp4.c 2007-05-25 12:21:11.000000000 +0300
 @@ -237,7 +237,8 @@
  		 *    as per draft-ietf-ipsec-udp-encaps-06,
  		 *    section 3.1.2
@@ -603,8 +540,8 @@ diff -urN  a/net/ipv4/esp4.c b/net/ipv4/esp4.c
  		struct xfrm_encap_tmpl *encap = x->encap;
  
 diff -urN  a/net/ipv4/ipcomp.c b/net/ipv4/ipcomp.c
---- a/net/ipv4/ipcomp.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv4/ipcomp.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv4/ipcomp.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv4/ipcomp.c 2007-05-25 12:21:11.000000000 +0300
 @@ -176,7 +176,7 @@
  	return 0;
  
@@ -644,9 +581,81 @@ diff -urN  a/net/ipv4/ipcomp.c b/net/ipv4/ipcomp.c
  		err = ipcomp_tunnel_attach(x);
  		if (err)
  			goto error_tunnel;
+diff -urN  a/net/ipv6/xfrm6_input.c b/net/ipv6/xfrm6_input.c
+--- a/net/ipv6/xfrm6_input.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/xfrm6_input.c 2007-05-25 12:21:11.000000000 +0300
+@@ -13,9 +13,21 @@
+ #include <linux/string.h>
+ #include <linux/netfilter.h>
+ #include <linux/netfilter_ipv6.h>
++#include <net/dsfield.h>
++#include <net/inet_ecn.h>
++#include <net/ip.h>
+ #include <net/ipv6.h>
+ #include <net/xfrm.h>
+ 
++static inline void ipip6_ecn_decapsulate(struct sk_buff *skb)
++{
++	struct ipv6hdr *outer_iph = skb->nh.ipv6h;
++	struct ipv6hdr *inner_iph = skb->h.ipv6h;
++
++	if (INET_ECN_is_ce(ipv6_get_dsfield(outer_iph)))
++		IP6_ECN_set_ce(inner_iph);
++}
++
+ int xfrm6_rcv_spi(struct sk_buff *skb, u32 spi)
+ {
+ 	int err;
+@@ -33,7 +45,6 @@
+ 	seq = 0;
+ 	if (!spi && (err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) != 0)
+ 		goto drop;
+-	
+ 	do {
+ 		struct ipv6hdr *iph = skb->nh.ipv6h;
+ 
+@@ -44,6 +55,7 @@
+ 		if (x == NULL)
+ 			goto drop;
+ 		spin_lock(&x->lock);
++
+ 		if (unlikely(x->km.state != XFRM_STATE_VALID))
+ 			goto drop_unlock;
+ 
+@@ -69,16 +81,17 @@
+ 
+ 		xfrm_vec[xfrm_nr++] = x;
+ 
+-		if (x->mode->input(x, skb))
++                if (x->mode->input(x, skb))
+ 			goto drop;
+-
+-		if (x->props.mode) { /* XXX */
+-			decaps = 1;
+-			break;
++		
++		if (x->props.mode) {
++		  decaps = 1;
++		  break;
+ 		}
+ 
+ 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
+ 			goto drop;
++
+ 	} while (!err);
+ 
+ 	/* Allocate new secpath or COW existing one. */
+@@ -110,6 +123,7 @@
+ 		netif_rx(skb);
+ 		return -1;
+ 	} else {
++
+ #ifdef CONFIG_NETFILTER
+ 		skb->nh.ipv6h->payload_len = htons(skb->len);
+ 		__skb_push(skb, skb->data - skb->nh.raw);
 diff -urN  a/net/ipv6/ah6.c b/net/ipv6/ah6.c
---- a/net/ipv6/ah6.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/ah6.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/ah6.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/ah6.c 2007-05-25 12:21:11.000000000 +0300
 @@ -387,8 +387,10 @@
  		goto error;
  	
@@ -660,8 +669,8 @@ diff -urN  a/net/ipv6/ah6.c b/net/ipv6/ah6.c
  
  	return 0;
 diff -urN  a/net/ipv6/xfrm6_policy.c b/net/ipv6/xfrm6_policy.c
---- a/net/ipv6/xfrm6_policy.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/xfrm6_policy.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/xfrm6_policy.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/xfrm6_policy.c 2007-05-25 12:21:11.000000000 +0300
 @@ -22,6 +22,8 @@
  static struct dst_ops xfrm6_dst_ops;
  static struct xfrm_policy_afinfo xfrm6_policy_afinfo;
@@ -764,8 +773,8 @@ diff -urN  a/net/ipv6/xfrm6_policy.c b/net/ipv6/xfrm6_policy.c
  
  error:
 diff -urN  a/net/ipv6/xfrm6_output.c b/net/ipv6/xfrm6_output.c
---- a/net/ipv6/xfrm6_output.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/xfrm6_output.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/xfrm6_output.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/xfrm6_output.c 2007-05-25 12:21:11.000000000 +0300
 @@ -14,8 +14,11 @@
  #include <linux/spinlock.h>
  #include <linux/icmpv6.h>
@@ -797,8 +806,8 @@ diff -urN  a/net/ipv6/xfrm6_output.c b/net/ipv6/xfrm6_output.c
  			goto error;
  
 diff -urN  a/net/ipv6/udp.c b/net/ipv6/udp.c
---- a/net/ipv6/udp.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/udp.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/udp.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/udp.c 2007-05-25 12:21:11.000000000 +0300
 @@ -788,7 +788,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl->fl6_dst, final_p);
@@ -809,8 +818,8 @@ diff -urN  a/net/ipv6/udp.c b/net/ipv6/udp.c
  
  	if (hlimit < 0) {
 diff -urN  a/net/ipv6/tcp_ipv6.c b/net/ipv6/tcp_ipv6.c
---- a/net/ipv6/tcp_ipv6.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/tcp_ipv6.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/tcp_ipv6.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/tcp_ipv6.c 2007-05-25 12:21:11.000000000 +0300
 @@ -257,7 +257,7 @@
  	if (final_p)
  		ipv6_addr_copy(&fl.fl6_dst, final_p);
@@ -821,8 +830,8 @@ diff -urN  a/net/ipv6/tcp_ipv6.c b/net/ipv6/tcp_ipv6.c
  
  	if (saddr == NULL) {
 diff -urN  a/net/ipv6/af_inet6.c b/net/ipv6/af_inet6.c
---- a/net/ipv6/af_inet6.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/af_inet6.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/af_inet6.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/af_inet6.c 2007-05-25 12:21:11.000000000 +0300
 @@ -939,4 +939,8 @@
  }
  module_exit(inet6_exit);
@@ -833,8 +842,8 @@ diff -urN  a/net/ipv6/af_inet6.c b/net/ipv6/af_inet6.c
 +
  MODULE_ALIAS_NETPROTO(PF_INET6);
 diff -urN  a/net/ipv6/xfrm6_mode_tunnel.c b/net/ipv6/xfrm6_mode_tunnel.c
---- a/net/ipv6/xfrm6_mode_tunnel.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/xfrm6_mode_tunnel.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/xfrm6_mode_tunnel.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/xfrm6_mode_tunnel.c 2007-05-25 12:21:11.000000000 +0300
 @@ -15,6 +15,7 @@
  #include <net/inet_ecn.h>
  #include <net/ipv6.h>
@@ -1085,8 +1094,8 @@ diff -urN  a/net/ipv6/xfrm6_mode_tunnel.c b/net/ipv6/xfrm6_mode_tunnel.c
  	BUG_ON(err);
  }
 diff -urN  a/net/ipv6/ipcomp6.c b/net/ipv6/ipcomp6.c
---- a/net/ipv6/ipcomp6.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/ipcomp6.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/ipcomp6.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/ipcomp6.c 2007-05-25 12:21:11.000000000 +0300
 @@ -416,8 +416,10 @@
  		goto out;
  
@@ -1109,8 +1118,8 @@ diff -urN  a/net/ipv6/ipcomp6.c b/net/ipv6/ipcomp6.c
  		if (err)
  			goto error_tunnel;
 diff -urN  a/net/ipv6/esp6.c b/net/ipv6/esp6.c
---- a/net/ipv6/esp6.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/esp6.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/esp6.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/esp6.c 2007-05-25 12:21:11.000000000 +0300
 @@ -344,8 +344,10 @@
  	if (crypto_cipher_setkey(esp->conf.tfm, esp->conf.key, esp->conf.key_len))
  		goto error;
@@ -1123,89 +1132,9 @@ diff -urN  a/net/ipv6/esp6.c b/net/ipv6/esp6.c
  	x->data = esp;
  	return 0;
  
-diff -urN  a/net/ipv6/xfrm6_input.c b/net/ipv6/xfrm6_input.c
---- a/net/ipv6/xfrm6_input.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/xfrm6_input.c 2007-05-18 12:23:53.000000000 +0300
-@@ -13,9 +13,21 @@
- #include <linux/string.h>
- #include <linux/netfilter.h>
- #include <linux/netfilter_ipv6.h>
-+#include <net/dsfield.h>
-+#include <net/inet_ecn.h>
-+#include <net/ip.h>
- #include <net/ipv6.h>
- #include <net/xfrm.h>
- 
-+static inline void ipip6_ecn_decapsulate(struct sk_buff *skb)
-+{
-+	struct ipv6hdr *outer_iph = skb->nh.ipv6h;
-+	struct ipv6hdr *inner_iph = skb->h.ipv6h;
-+
-+	if (INET_ECN_is_ce(ipv6_get_dsfield(outer_iph)))
-+		IP6_ECN_set_ce(inner_iph);
-+}
-+
- int xfrm6_rcv_spi(struct sk_buff *skb, u32 spi)
- {
- 	int err;
-@@ -33,7 +45,6 @@
- 	seq = 0;
- 	if (!spi && (err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) != 0)
- 		goto drop;
--	
- 	do {
- 		struct ipv6hdr *iph = skb->nh.ipv6h;
- 
-@@ -44,6 +55,7 @@
- 		if (x == NULL)
- 			goto drop;
- 		spin_lock(&x->lock);
-+
- 		if (unlikely(x->km.state != XFRM_STATE_VALID))
- 			goto drop_unlock;
- 
-@@ -69,16 +81,25 @@
- 
- 		xfrm_vec[xfrm_nr++] = x;
- 
--		if (x->mode->input(x, skb))
-+		/* jk: cheap & dirty way of assuring the packets go to the right handler */
-+		if (x->props.mode == XFRM_MODE_BEET) {
-+		  struct xfrm_mode *newmode = xfrm_get_mode(x->props.mode, AF_INET6);
-+		  BUG_ON(!newmode);
-+		  if (newmode->input(x, skb))
- 			goto drop;
--
--		if (x->props.mode) { /* XXX */
--			decaps = 1;
--			break;
-+		} else {
-+		  if (x->mode->input(x, skb))
-+			goto drop;
-+		}
-+		
-+		if (x->props.mode) { // beet or tunnel
-+		  decaps = 1;
-+		  break;
- 		}
- 
- 		if ((err = xfrm_parse_spi(skb, nexthdr, &spi, &seq)) < 0)
- 			goto drop;
-+
- 	} while (!err);
- 
- 	/* Allocate new secpath or COW existing one. */
-@@ -110,6 +131,7 @@
- 		netif_rx(skb);
- 		return -1;
- 	} else {
-+
- #ifdef CONFIG_NETFILTER
- 		skb->nh.ipv6h->payload_len = htons(skb->len);
- 		__skb_push(skb, skb->data - skb->nh.raw);
 diff -urN  a/net/ipv6/icmp.c b/net/ipv6/icmp.c
---- a/net/ipv6/icmp.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/ipv6/icmp.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/ipv6/icmp.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/ipv6/icmp.c 2007-05-25 12:21:11.000000000 +0300
 @@ -64,6 +64,7 @@
  #include <net/ip6_route.h>
  #include <net/addrconf.h>
@@ -1224,8 +1153,8 @@ diff -urN  a/net/ipv6/icmp.c b/net/ipv6/icmp.c
  
  	if (ipv6_addr_is_multicast(&fl.fl6_dst))
 diff -urN  a/net/key/af_key.c b/net/key/af_key.c
---- a/net/key/af_key.c 2007-05-18 12:23:53.000000000 +0300
-+++ b/net/key/af_key.c 2007-05-18 12:23:53.000000000 +0300
+--- a/net/key/af_key.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/key/af_key.c 2007-05-25 12:21:11.000000000 +0300
 @@ -1166,7 +1166,8 @@
  		/* Nobody uses this, but we try. */
  		x->sel.family = pfkey_sadb_addr2xfrm_addr(addr, &x->sel.saddr);
@@ -1276,9 +1205,64 @@ diff -urN  a/net/key/af_key.c b/net/key/af_key.c
  	}
  	/* No way to set this via kame pfkey */
  	t->aalgos = t->ealgos = t->calgos = ~0;
+diff -urN  a/net/xfrm/xfrm_user.c b/net/xfrm/xfrm_user.c
+--- a/net/xfrm/xfrm_user.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/xfrm/xfrm_user.c 2007-05-25 12:21:11.000000000 +0300
+@@ -173,8 +173,9 @@
+ 
+ 	err = -EINVAL;
+ 	switch (p->mode) {
+-	case 0:
+-	case 1:
++	case XFRM_MODE_TRANSPORT:
++	case XFRM_MODE_TUNNEL:
++	case XFRM_MODE_BEET:
+ 		break;
+ 
+ 	default:
+@@ -763,6 +764,7 @@
+ 		t->aalgos = ut->aalgos;
+ 		t->ealgos = ut->ealgos;
+ 		t->calgos = ut->calgos;
++		t->outer_family = ut->family;
+ 	}
+ }
+ 
+diff -urN  a/net/xfrm/xfrm_policy.c b/net/xfrm/xfrm_policy.c
+--- a/net/xfrm/xfrm_policy.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/xfrm/xfrm_policy.c 2007-05-25 12:21:11.000000000 +0300
+@@ -782,6 +782,7 @@
+ 		if (tmpl->mode) {
+ 			remote = &tmpl->id.daddr;
+ 			local = &tmpl->saddr;
++			family = tmpl->outer_family;
+ 		}
+ 
+ 		x = xfrm_state_find(remote, local, fl, tmpl, policy, &error, family);
+diff -urN  a/net/xfrm/xfrm_state.c b/net/xfrm/xfrm_state.c
+--- a/net/xfrm/xfrm_state.c 2007-05-25 12:21:11.000000000 +0300
++++ b/net/xfrm/xfrm_state.c 2007-05-25 12:21:11.000000000 +0300
+@@ -366,7 +366,7 @@
+ 			      selector.
+ 			 */
+ 			if (x->km.state == XFRM_STATE_VALID) {
+-				if (!xfrm_selector_match(&x->sel, fl, family) ||
++				if (!xfrm_selector_match(&x->sel, fl, x->sel.family) ||
+ 				    !xfrm_sec_ctx_match(pol->security, x->security))
+ 					continue;
+ 				if (!best ||
+@@ -378,7 +378,7 @@
+ 				acquire_in_progress = 1;
+ 			} else if (x->km.state == XFRM_STATE_ERROR ||
+ 				   x->km.state == XFRM_STATE_EXPIRED) {
+- 				if (xfrm_selector_match(&x->sel, fl, family) &&
++ 				if (xfrm_selector_match(&x->sel, fl, x->sel.family) &&
+ 				    xfrm_sec_ctx_match(pol->security, x->security))
+ 					error = -ESRCH;
+ 			}
 diff -urN  a/include/net/xfrm.h b/include/net/xfrm.h
---- a/include/net/xfrm.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/net/xfrm.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/net/xfrm.h 2007-05-25 12:21:11.000000000 +0300
++++ b/include/net/xfrm.h 2007-05-25 12:21:11.000000000 +0300
 @@ -226,7 +226,7 @@
  extern int xfrm_policy_unregister_afinfo(struct xfrm_policy_afinfo *afinfo);
  extern void km_policy_notify(struct xfrm_policy *xp, int dir, struct km_event *c);
@@ -1300,8 +1284,8 @@ diff -urN  a/include/net/xfrm.h b/include/net/xfrm.h
  
  /* Mode: transport/tunnel */
 diff -urN  a/include/linux/xfrm.h b/include/linux/xfrm.h
---- a/include/linux/xfrm.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/linux/xfrm.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/linux/xfrm.h 2007-05-25 12:21:11.000000000 +0300
++++ b/include/linux/xfrm.h 2007-05-25 12:21:11.000000000 +0300
 @@ -43,6 +43,12 @@
  #define XFRM_SC_ALG_RESERVED 0
  #define XFRM_SC_ALG_SELINUX 1
@@ -1333,8 +1317,8 @@ diff -urN  a/include/linux/xfrm.h b/include/linux/xfrm.h
  /* Netlink configuration messages.  */
  enum {
 diff -urN  a/include/linux/ipsec.h b/include/linux/ipsec.h
---- a/include/linux/ipsec.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/linux/ipsec.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/linux/ipsec.h 2007-05-25 12:21:12.000000000 +0300
++++ b/include/linux/ipsec.h 2007-05-25 12:21:12.000000000 +0300
 @@ -12,7 +12,8 @@
  enum {
  	IPSEC_MODE_ANY		= 0,	/* We do not support this for SA */
@@ -1346,8 +1330,8 @@ diff -urN  a/include/linux/ipsec.h b/include/linux/ipsec.h
  
  enum {
 diff -urN  a/include/linux/net.h b/include/linux/net.h
---- a/include/linux/net.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/linux/net.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/linux/net.h 2007-05-25 12:21:12.000000000 +0300
++++ b/include/linux/net.h 2007-05-25 12:21:12.000000000 +0300
 @@ -24,7 +24,7 @@
  struct poll_table_struct;
  struct inode;
@@ -1358,8 +1342,8 @@ diff -urN  a/include/linux/net.h b/include/linux/net.h
  #define SYS_SOCKET	1		/* sys_socket(2)		*/
  #define SYS_BIND	2		/* sys_bind(2)			*/
 diff -urN  a/include/linux/in.h b/include/linux/in.h
---- a/include/linux/in.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/linux/in.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/linux/in.h 2007-05-25 12:21:12.000000000 +0300
++++ b/include/linux/in.h 2007-05-25 12:21:12.000000000 +0300
 @@ -40,6 +40,7 @@
  
    IPPROTO_ESP = 50,            /* Encapsulation Security Payload protocol */
@@ -1369,8 +1353,8 @@ diff -urN  a/include/linux/in.h b/include/linux/in.h
  
    IPPROTO_COMP   = 108,                /* Compression Header protocol */
 diff -urN  a/include/linux/ip.h b/include/linux/ip.h
---- a/include/linux/ip.h 2007-05-18 12:23:53.000000000 +0300
-+++ b/include/linux/ip.h 2007-05-18 12:23:53.000000000 +0300
+--- a/include/linux/ip.h 2007-05-25 12:21:12.000000000 +0300
++++ b/include/linux/ip.h 2007-05-25 12:21:12.000000000 +0300
 @@ -79,6 +79,8 @@
  #define	IPOPT_TS_TSANDADDR	1		/* timestamps and addresses */
  #define	IPOPT_TS_PRESPEC	3		/* specified modules only */
