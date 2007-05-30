@@ -51,6 +51,13 @@ int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
+int hip_update_add_peer_addr_list(hip_ha_t *entry,
+		       struct hip_locator_info_addr_item *locator_address_item,
+		       void *_spi);
+
+int hip_for_each_locator_addr_list(hip_ha_t *entry, struct hip_locator *locator,void *opaque);
+
+
 
 #ifdef CONFIG_HIP_HI3
 static void no_matching_trigger(void *, void *, void *);
