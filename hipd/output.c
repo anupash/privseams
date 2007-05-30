@@ -139,6 +139,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	struct hip_locator_info_addr_item *addr_list=NULL;
 	struct hip_locator *locator=NULL;
 	hip_ha_t *entry;
+	
 	uint32_t spi = 0;
  	int err = 0,dh_size,written, mask = 0;
  	u8 *dh_data = NULL;
@@ -236,10 +237,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 
 	/************LOCATOR PARAMETER **********************/
-	//HIP_IFEL(hip_update_add_peer_addr_list(entry,addr_list, &spi),-1,"adding peer fail");
-	//hip_add_locator(entry,addr_list,0, 0,0);
-	
+	//HIP_IFEL(hip_build_param_locator_list(msg,addr_list,0), -1,"Building LOCATOR failed\n");
 	hip_for_each_locator_addr_list(entry,locator,1);
+	//hip_for_each_locator_addr_list(entry,locator,1);
 	
 	//HIP_DEBUG_HIT("The hits are \s",&addr_list);
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
@@ -300,28 +300,33 @@ int hip_for_each_locator_addr_list(hip_ha_t *entry,
                                    void *opaque)
 {
 	int i = 0, err = 0, n_addrs;
-	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct hip_common *msg;
-	struct hip_locator_info_addr_item *addr_list=NULL;
-	/*n_addrs = hip_get_locator_addr_item_count(locator);
-	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
-	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
-		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
-			  ntohs(locator->length));
-	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
-		  n_addrs, hip_get_param_total_len(locator));*/
+	struct hip_locator_info_addr_item *locators=NULL;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	int l, is_add, ii;
+			
+	locators = (struct hip_locator_info_addr_item *)
+	malloc(i * sizeof(struct hip_locator_info_addr_item));
 
-	//HIP_IFE(!func, -1);
+			if (locators)
+			{
+				
+				list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					hip_print_hit("the hits are\n",&locators[i].address);
+					//locators[i].lifetime = 0;
+					i++;
+				}
+				HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+				
+			}
 	
-	//HIP_DUMP_MSG(msg);
-	locator_address_item = hip_get_locator_first_addr_item(locator);
-	HIP_IFEL(hip_build_param_locator_list(msg,addr_list,1), -1,
+	HIP_IFEL(hip_build_param_locator_list(msg,locator,0), -1,
 		 "Building LOCATOR failed\n");
-	//for (i = 0; i < n_addrs; i++, locator_address_item++) {
-	//	HIP_IFEL(func(entry, locator_address_item, opaque), -1,
-	//		 "Locator handler function returned error\n");
-//	}
-	
  out_err:
 
 	return err;
