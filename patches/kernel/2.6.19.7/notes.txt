@@ -30,13 +30,8 @@ Test matrix:
 
            | outer ipv4 | outer ipv6
 -----------+------------+-----------
-inner ipv4 | untested   | untested
-inner ipv6 | works      | untested
-
-I tested this BEET patch against 2.6.17.14 BEET patch using
-hipd. Tested successfully with HITs (inner) and IPv4 (outer) addresses
-with ping6, iperf and pingtest in a single LAN. Works both with and
-without UDP encapsulation.
+inner ipv4 | works      | works   
+inner ipv6 | works      | works   
 
 Joakim Koskela fixed ESP sending that was not working for some pair of 
 HTIs (bug id 175). Joakim Koskela solved also a problem with multiple 
@@ -47,8 +42,6 @@ Untested Features
 -----------------
 
 * Did not test TUNNEL mode at all.
-* Did not test yet with IPv6 address because IPv6 routing failed on 
-  2.6.19.7: https://infrahip.hiit.fi/bugzilla/show_bug.cgi?id=327
 * Testing with LSIs is TBD.
 * The sleep patch is based on this patch rather than our previous 
   version:

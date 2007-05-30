@@ -61,6 +61,8 @@
  */
 
 %{
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -651,3 +653,5 @@ ipsec_set_policy(msg, msglen)
 	__ipsec_errcode = EIPSEC_NO_ERROR;
 	return policy;
 }
+
+#endif /* CONFIG_HIP_PFKEY */ 

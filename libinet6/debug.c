@@ -68,18 +68,18 @@ const char *debug_prefix[] = { "die", "error", "info", "debug"};
  * here and it should not be used.
  */
 #ifdef CONFIG_HIP_DEBUG
-static int logtype = LOGTYPE_STDERR;
+static enum logtype_t logtype = LOGTYPE_STDERR;
 #else
-static int logtype = LOGTYPE_SYSLOG;
+static enum logtype_t logtype = LOGTYPE_SYSLOG;
 #endif /* CONFIG_HIP_DEBUG */
 
 #ifdef HIP_LOGFMT_LONG
-static int logfmt  = LOGFMT_LONG;
+static enum logfmt_t logfmt = LOGFMT_LONG;
 #else
-static int logfmt  = LOGFMT_SHORT;
+static enum logfmt_t logfmt = LOGFMT_SHORT;
 #endif /* HIP_LONGFMT */
 
-static int logdebug  = LOGDEBUG_ALL;
+static enum logdebug_t logdebug = LOGDEBUG_ALL;
 
 /**
  * hip_set_logtype - set logging to to stderr or syslog
