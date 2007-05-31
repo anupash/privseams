@@ -613,10 +613,12 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				return 0;
 			}
 
-			if (is_add)
+			if (is_add) {
 				add_address_to_list(addr, ifa->ifa_index);
-			else
+			} else {
 				delete_address_from_list(addr, ifa->ifa_index);
+				// hip_for_each_ha();
+			}
 
 			i = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);

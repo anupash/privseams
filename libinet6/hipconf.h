@@ -131,8 +131,8 @@
 #define HIPD_HOSTS_FILE_EX \
 "# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
 # The aliases are optional.  Examples:\n\
-#2001:7e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
-#2001:77:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
+#2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
+#2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
  
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
