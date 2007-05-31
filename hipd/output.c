@@ -260,16 +260,15 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/************LOCATOR PARAMETER **********************/
 
 	if (locators)
+	{				
+		list_for_each_safe(item, tmp, addresses, ii)
 			{
-				
-				list_for_each_safe(item, tmp, addresses, ii)
-			{
-					n = list_entry(item);
+				n = list_entry(item);
 				memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
 					       hip_sa_addr_len(&n->addr));
 				hip_print_hit("LOCATOR is\n",&locators[i].address);
 					i++;
-				}
+			}
 				_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
 				
 	}
