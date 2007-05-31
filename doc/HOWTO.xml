@@ -179,7 +179,7 @@
             &lt;M&gt; Packet socket
     </para></listitem>
     <listitem><para>
-            &lt;M&gt; IPsec user configuration interface
+            [*] IPsec user configuration interface
     </para></listitem>
     <listitem><para>
             &lt;M&gt; PF_KEY sockets
@@ -191,19 +191,19 @@
             [*] The IPv6 protocol (EXPERIMENTAL)
     </para></listitem>
     <listitem><para>
-            [*] IPv4: IPsec BEET mode (2.6.19 and above)
+            [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
-            [*] IPv6: IPsec BEET mode (2.6.19 and above)
+            [*] IPv6: IPsec BEET mode
     </para></listitem>
     <listitem><para>
-            &lt;M&gt; IP: ESP transform (kernel versions below 2.6.19)
+            &lt;M&gt; IP: ESP transform
     </para></listitem>
     <listitem><para>
             [*] The IPv6 Protocol
     </para></listitem>
     <listitem><para>
-            &lt;M&gt; IPv6: ESP transformation (kernel versions below 2.6.19)
+            &lt;M&gt; IPv6: ESP transformation
     </para></listitem>
     <listitem><para>
             &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
@@ -231,6 +231,12 @@
     </para></listitem>
     <listitem><para>
             &lt;M&gt; Dummy network device support
+    </para></listitem>
+    <listitem><para>
+            Security options ---&gt;
+    </para></listitem>
+    <listitem><para>
+            [ ] Enable different security models
     </para></listitem>
     </itemizedlist>
     <para>
