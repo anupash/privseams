@@ -1752,7 +1752,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 
 			// @todo: check! If not acctually a problem (during Handover). Andrey.
-			if( err==-3 ) err = 0;
+			if( err==-ECOMM ) err = 0;
 		}
 	}
 
