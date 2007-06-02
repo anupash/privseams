@@ -445,9 +445,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
 	
-	hip_msg_init(msg);
-
 	if(!opportunistic_mode) {
+		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
 		err = -11; /* Force immediately to send message to app */
@@ -468,6 +467,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 	
+	hip_msg_init(msg);
+
 	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
 	{
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
