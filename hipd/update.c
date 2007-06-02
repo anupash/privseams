@@ -253,6 +253,19 @@ int hip_update_locator_match(hip_ha_t *unused,
 }
 
 /**
+ * Compare locator and addr list item for equality
+ *
+ * @return non-zero when address are equal, otherwise zero
+ */
+int hip_update_locator_item_match(hip_ha_t *unused,
+			     struct hip_locator_info_addr_item *item1,
+			     void *_item2) {
+	struct hip_peer_addr_list_item *item2 = _item2;
+	return !ipv6_addr_cmp(&item1->address, &item2->address);
+}
+
+
+/**
  * Check if locator list contains a given locator
  *
  * @return zero if the locator was found, otherwise non-zero
@@ -260,7 +273,7 @@ int hip_update_locator_match(hip_ha_t *unused,
 int hip_update_locator_contains_item(struct hip_locator *locator,
 				  struct hip_peer_addr_list_item *item)
 {
-	return hip_for_each_locator_addr_item(hip_update_locator_match,
+	return hip_for_each_locator_addr_item(hip_update_locator_item_match,
 					      NULL, locator, item);
 }
 
