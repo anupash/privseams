@@ -678,6 +678,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	if (src6->sin6_family != dst6->sin6_family) {
+	  /* @todo: Check if this may cause any trouble.
+	     It happens every time we send update packet that contains few locators in msg, one is 
+	     the IPv4 address of the source, another is IPv6 address of the source. But even if one of 
+	     them is ok to send raw IPvX to IPvX raw packet, another one cause the trouble, and all 
+	     updates are dropped.  by Andrey "laser".
+
+	   */
 		err = -1;
 		HIP_ERROR("Source and destination address families differ\n");
 		goto out_err;

@@ -33,9 +33,17 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
+	/*
+	
+	// @todo: Here we have wrong checking, because function  
+	// hip_get_locator_addr_item_count(locator) has already
+	// divided the length on sizeof(struct hip_locator_info_addr_item)
+	// hence we already have number of elements. Andrey
+
 	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
 		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
 			  ntohs(locator->length));
+	*/
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
 		  n_addrs, hip_get_param_total_len(locator));
 
