@@ -188,9 +188,6 @@
             &lt;M&gt; IP tunneling
     </para></listitem>
     <listitem><para>
-            [*] The IPv6 protocol (EXPERIMENTAL)
-    </para></listitem>
-    <listitem><para>
             [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
