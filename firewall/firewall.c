@@ -22,10 +22,12 @@ int use_ipv4 = 0;
 void print_usage()
 {
         printf("HIP Firewall\n");
-        printf("Usage: firewall -p <protocol> -f <file_name> <timeout>\n");
+        printf("Usage: firewall -p <protocol> -f <file_name> <timeout> [-d|-v]\n");
         printf("      - protocol is either \"ipv4\" or \"ipv6\"\n");
         printf("      - file_name is a path to a file containing firewall filtering rules\n");
-        printf("      - timeout is connection timeout value in seconds\n\n");
+        printf("      - timeout is connection timeout value in seconds\n");
+        printf("      - d = debugging output\n");
+        printf("      - v = verbose output\n\n");
 }
 
 //currently done at all times, rule_management 
@@ -478,10 +480,19 @@ int main(int argc, char **argv)
         extern int optind, optopt;
         int errflg = 0;
 
-        while ((ch = getopt(argc, argv, ":p:f:")) != -1) {
+	hip_set_logdebug(LOGDEBUG_NONE);
+
+        while ((ch = getopt(argc, argv, ":p:f:vd")) != -1) {
              switch(ch) {
+	     case 'v':
+		     hip_set_logdebug(LOGDEBUG_MEDIUM);
+	     break;
+	     case 'd':
+		     hip_set_logdebug(LOGDEBUG_ALL);
+	     break;
              case 'p':
-                protocol = optarg;
+		 protocol = optarg;
+	     break;
              case 'f':
                  rule_file = optarg;
                  break;

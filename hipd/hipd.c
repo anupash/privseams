@@ -87,7 +87,8 @@ void usage() {
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
         int n = 0;
-        HIP_DEBUG("hip_sendto() invoked.\n");
+	HIP_DEBUG("sending user msg: family=%d sender=%s\n",
+		  dst->sun_family, &dst->sun_path);
         n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
                    0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
         return n;

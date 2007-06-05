@@ -3,7 +3,7 @@
  *
  * Authors: Janne Lundberg <jlu@tcs.hut.fi>
  *          Miika Komu <miika@iki.fi>
- *          Mika Kousa <mkousa@cc.hut.fi>
+ *          Mika Kousa <mkousa@iki.fi>
  *          Kristian Slavov <kslavov@hiit.fi>
  *
  */

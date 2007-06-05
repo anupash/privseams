@@ -575,7 +575,15 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	/* see print_route() in ip/iproute.c */
 
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
-	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	
+	/* tb[RTA_SRC] is nonzero for IPV6 addresses but RTA_DATA(tb[RTA_SRC]) contains all 
+ 	   16 bytes of src address zeros. but for IPV4 addresses that tb[RTA_SRC] is zero so
+	   it chooses RTA_PREFSRC. In iproute2 this RTA_DATA(tb[RTA_SRC]) corresponds to 'from'
+	   field that actually is null there. So, better we opt for RTA_PREFSRC. 
+	*/
+	//entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	
+	entry = RTA_PREFSRC;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
 
 	if(r->rtm_family == AF_INET) {
