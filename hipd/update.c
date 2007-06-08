@@ -312,8 +312,13 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 		// Why do we delete the SA associated to the local address? This is definitely wrong!
 		// If you delete this, how would you expect the IPSec could work?
-		/*hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-		  (int)entry->peer_udp_port, 0);*/
+
+		// Answer: We deleting old SA because in received locators list we don't have this
+		// item. May be it was deleted in initiator of the update? -Andrey.
+		// Without this line the hardhandover doesn't work.
+
+		hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
+		  (int)entry->peer_udp_port, 0);
 
 		if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
 		{
