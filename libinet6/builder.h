@@ -4,7 +4,7 @@
 /*
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Tobias Heer <heer@tobibox.de>
  */
 
@@ -26,6 +26,9 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
+
+enum select_dh_key_t { STRONGER_KEY, WEAKER_KEY };
+
 /* Removed in 2.6.11 - why ? */
 extern const struct in6_addr in6addr_any;
 
@@ -58,8 +61,9 @@ int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
 int hip_build_param_ack(struct hip_common *, uint32_t);
 int hip_build_param_contents(struct hip_common *, const void *, hip_tlv_type_t,
                              hip_tlv_type_t);
-int hip_build_param_diffie_hellman_contents(struct hip_common *, uint8_t,
-                                            void *, hip_tlv_len_t);
+int hip_build_param_diffie_hellman_contents(struct hip_common *,
+				      uint8_t, void *, hip_tlv_len_t,
+				      uint8_t, void *, hip_tlv_len_t);
 int hip_build_param_echo(struct hip_common *, void *, int, int, int);
 int hip_build_param_eid_endpoint(struct hip_common *,
                                  const struct endpoint_hip *);
@@ -136,6 +140,8 @@ void *hip_find_free_param(const struct hip_common *);
 void *hip_get_diffie_hellman_param_public_value_contents(const void *);
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(
         const struct hip_diffie_hellman *);
+struct hip_dh_public_value *hip_dh_select_key(
+	const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(struct hip_locator *);
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(

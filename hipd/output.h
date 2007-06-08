@@ -27,6 +27,8 @@ extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern int hip_nat_status;
 
+enum number_dh_keys_t { ONE, TWO };
+
 int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,

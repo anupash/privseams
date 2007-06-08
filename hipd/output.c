@@ -10,6 +10,8 @@
  */
 #include "output.h"
 
+enum number_dh_keys_t number_dh_keys = TWO;
+
 /**
  * Sends an I1 packet to the peer.
  * 
@@ -136,13 +138,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
+ 	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
+ 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 	struct hip_locator_info_addr_item *addr_list=NULL;
 	struct hip_locator *locator=NULL;
 	hip_ha_t *entry;
-	
-	uint32_t spi = 0;
- 	int err = 0,dh_size,written, mask = 0;
- 	u8 *dh_data = NULL;
+       	uint32_t spi = 0;
 	int * service_list = NULL;
 	int addr_count=0;
 	int service_count = 0;
@@ -170,14 +171,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
- 	/* Allocate memory for writing Diffie-Hellman shared secret */
-	HIP_IFEL((dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID)) == 0, 
-		 -1, "Could not get dh size\n");
-	HIP_IFEL(!(dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC)), 
-		 -1, "Failed to alloc memory for dh_data\n");
-	memset(dh_data, 0, dh_size);
+ 	/* Allocate memory for writing the first Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size1\n");
+	HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data1\n");
+	memset(dh_data1, 0, dh_size1);
 
-	_HIP_DEBUG("dh_size=%d\n", dh_size);
+	_HIP_DEBUG("dh_size=%d\n", dh_size1);
+
+ 	/* Allocate memory for writing the second Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size2\n");
+	HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data2\n");
+	memset(dh_data2, 0, dh_size2);
+
+	_HIP_DEBUG("dh_size=%d\n", dh_size2);
+
 	//	HIP_IFEL(!(host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO)),
 	//	 -1, "Could not acquire localhost public key\n");
 	//HIP_HEXDUMP("Our pub host id\n", host_id_pub,
@@ -202,14 +213,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Cookies were burned. Bummer!\n");
 
  	/********** Diffie-Hellman **********/
-	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
-					  HIP_DEFAULT_DH_GROUP_ID)) < 0,
-		 -1, "Could not extract DH public key\n");
-	
-	HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
-							 HIP_DEFAULT_DH_GROUP_ID,
-							 dh_data, written), -1,
-		 "Building of DH failed.\n");
+	HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+					  HIP_FIRST_DH_GROUP_ID)) < 0,
+		 -1, "Could not extract the first DH public key\n");
+
+	if (number_dh_keys == TWO){
+	         HIP_IFEL((written2 = hip_insert_dh(dh_data2, dh_size2,
+		       HIP_SECOND_DH_GROUP_ID)) < 0,
+		       -1, "Could not extract the second DH public key\n");
+
+	         HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+		       HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
+		       HIP_SECOND_DH_GROUP_ID, dh_data2, written2), -1,
+		       "Building of DH failed.\n");
+	}else
+	         HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+		       HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
+		       HIP_MAX_DH_GROUP_ID, dh_data2, 0), -1,
+		       "Building of DH failed.\n");
 
  	/********** HIP transform. **********/
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
@@ -303,8 +324,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
         // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
 	//HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
@@ -315,8 +338,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	HIP_FREE(host_id_pub);
  	if (msg)
  		HIP_FREE(msg);
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
   	return NULL;
 }
@@ -737,6 +762,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	if (src6->sin6_family != dst6->sin6_family) {
+	  /* @todo: Check if this may cause any trouble.
+	     It happens every time we send update packet that contains few locators in msg, one is 
+	     the IPv4 address of the source, another is IPv6 address of the source. But even if one of 
+	     them is ok to send raw IPvX to IPvX raw packet, another one cause the trouble, and all 
+	     updates are dropped.  by Andrey "laser".
+
+	   */
 		err = -1;
 		HIP_ERROR("Source and destination address families differ\n");
 		goto out_err;
