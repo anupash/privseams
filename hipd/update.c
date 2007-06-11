@@ -288,7 +288,8 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	HIP_DEBUG("\n\n\nlocators\n\n");
 
-	if (!hip_update_locator_contains_item(locator, list_item))
+	// @todo: Temp. solution to make soft handovers work. -Andrey.
+	if (!list_item->is_preferred) // hip_update_locator_contains_item(locator, list_item))
 	{
 		HIP_DEBUG_HIT("deprecating address", &list_item->address);
 		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
@@ -2105,6 +2106,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 */
 
 	loc_addr_item = addr_list;
+#if 0
+	// Switching off this part of code let the softhandover turn to new addresses 
+	// when we have the new one.
+
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
@@ -2126,6 +2131,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			}
 		}	
 	}
+#endif
 
 	if (preferred_address_found) goto skip_pref_update;
 
