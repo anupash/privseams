@@ -288,52 +288,53 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	HIP_DEBUG("\n\n\nlocators\n\n");
 
-	// @todo: Temp. solution to make soft handovers work. -Andrey.
-	if (!list_item->is_preferred) // hip_update_locator_contains_item(locator, list_item))
+	// @todo: try to delete all unnecessary connections. Temprorary solution, to make handovers work.
+	if (list_item->is_preferred) //hip_update_locator_contains_item(locator, list_item))
 	{
-		HIP_DEBUG_HIT("deprecating address", &list_item->address);
-		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-		
-		/* If this is not the preferred address then the next line will fail
-		 * FIXME: This line needs to be either inside the next loop or 
-		 * deprecataing to update peer addr item code*/
-		
-		// NOTE: We don't need to delete the policies because they are associated to HIT's
-		// If we delete them, the soft handover cannot properly work! -Diego
-
-		//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
-
-		//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
-		
-		hip_delete_sa(entry->default_spi_out, &list_item->address,
-		              &entry->local_address, AF_INET6, 0,
-		              (int)entry->peer_udp_port);	
-		
-		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
-
-		// Why do we delete the SA associated to the local address? This is definitely wrong!
-		// If you delete this, how would you expect the IPSec could work?
-
-		// Answer: We deleting old SA because in received locators list we don't have this
-		// item. May be it was deleted in initiator of the update? -Andrey.
-		// Without this line the hardhandover doesn't work.
-
-		hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
-		  (int)entry->peer_udp_port, 0);
-
-		if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
-		{
-			// TODO: Handle this: Choose a random address from
-			// amongst the active addresses? -Bagri
-			HIP_DEBUG_HIT("Preferred Address deprecated",
-				      &list_item->address);
-		}
-		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
-		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
-		// then the handover to fail.
-		list_del(list_item, entry->spis_out);
-		
+		goto out_err;
 	}
+
+	HIP_DEBUG_HIT("deprecating address", &list_item->address);
+	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+	
+	/* If this is not the preferred address then the next line will fail
+	 * FIXME: This line needs to be either inside the next loop or 
+	 * deprecataing to update peer addr item code*/
+	
+	// NOTE: We don't need to delete the policies because they are associated to HIT's
+	// If we delete them, the soft handover cannot properly work! -Diego
+	
+	//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+	
+	//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	
+	hip_delete_sa(entry->default_spi_out, &list_item->address,
+		      &entry->local_address, AF_INET6, 0,
+		      (int)entry->peer_udp_port);	
+	
+	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	
+	// Why do we delete the SA associated to the local address? This is definitely wrong!
+	// If you delete this, how would you expect the IPSec could work?
+	
+	// Answer: We deleting old SA because in received locators list we don't have this
+	// item. May be it was deleted in initiator of the update? -Andrey.
+	// Without this line the hardhandover doesn't work.
+	
+	hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
+		      (int)entry->peer_udp_port, 0);
+	
+	if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
+	{
+		// TODO: Handle this: Choose a random address from
+		// amongst the active addresses? -Bagri
+		HIP_DEBUG_HIT("Preferred Address deprecated",
+			      &list_item->address);
+	}
+	// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
+	// This is because if the same address is reused, the SA/SP won't be updated correctly, making
+	// then the handover to fail.
+	list_del(list_item, entry->spis_out);
 
  out_err:
 	return err;
