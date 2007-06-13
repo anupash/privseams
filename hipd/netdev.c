@@ -550,6 +550,7 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
 
 }
 
+#ifdef CONFIG_HIP_OPENDHT
 int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char opendht[] = "opendht.nyuld.net";
 	char dht_response[1024];
@@ -595,7 +596,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	}
 
 }
-
+#endif /* CONFIG_HIP_OPENDHT */
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	int err = 0, if_index = 0;
