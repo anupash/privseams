@@ -2969,6 +2969,7 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 	endpoint.length = sizeof(struct endpoint_hip); 	
 	endpoint.flags = HIP_ENDPOINT_FLAG_HIT;	
 	endpoint.algo= entry->lhi.algo;
+	endpoint.anonymous= entry->lhi.anonymous;
 	endpoint.algo=hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
 		
