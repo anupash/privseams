@@ -140,7 +140,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped && addr->sa_family == AF_INET) {
+		if (mapped) //|| addr->sa_family == AF_INET) 
+		{
 			struct in6_addr *in6 = (struct in6_addr * ) hip_cast_sa_addr(&n->addr);
 			struct in_addr *in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
@@ -149,6 +150,9 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
+		}
+		else { // addr->sa_family == AF_INET
+			// Hope never happen...If happens we need to add Mapping
 		}
 		
 		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
@@ -196,7 +200,8 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	}
-	else memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	else
+		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 
         /*
           Add secret to address. Used with openDHT removable puts.

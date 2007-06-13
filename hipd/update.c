@@ -214,7 +214,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
 	int is_preferred = ntohl(locator_address_item->reserved) == (1 << 31);
-	int err = 0, i;
+	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
@@ -222,6 +222,16 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
+
+	// Check that addresses match, we doesn't support IPv4 <-> IPv6 update communnications
+	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&locator_address));
+	local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&entry->local_address));
+
+	if( locator_is_ipv4 != local_is_ipv4 ) {
+	  // One of the addresses is IPv4 another is IPv6
+	  goto out_err;
+	}
+
 	/* Check that the address is a legal unicast or anycast
 	   address */
 	if (!hip_update_test_locator_addr(locator_address)) {
