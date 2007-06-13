@@ -224,8 +224,8 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		  lifetime);
 
 	// Check that addresses match, we doesn't support IPv4 <-> IPv6 update communnications
-	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&locator_address));
-	local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&entry->local_address));
+	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&locator_address);
+	local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->local_address);
 
 	if( locator_is_ipv4 != local_is_ipv4 ) {
 	  // One of the addresses is IPv4 another is IPv6
