@@ -1229,7 +1229,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
 		if (strcmp(argv[3], "all") == 0){
 			
-			HIP_DEBUG("hi is %s\t",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+			HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
 			HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
 			HIP_DEBUG_HIT("\n",&endp->id.hit);
 			
