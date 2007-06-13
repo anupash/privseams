@@ -1719,6 +1719,14 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   If the status of the address is DEPRECATED, the status is
 	   changed to UNVERIFIED.  If the address is not already bound,
 	   the address is added, and its status is set to UNVERIFIED. */
+	
+
+	/* We switch off the part that make no answer with echo response message 
+	   to the initiator. The reason is that we need the whole update schema work
+	   for the program to run corrctly. This purely optimization part can be changed
+	   latter. - Andrey.
+	*/
+#if 0
 	if (!new)
 	{
 		switch (new_addr->address_state)
@@ -1738,6 +1746,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	}
 	else
 	{
+#endif
 		if (is_bex_address)
 		{
 			/* workaround for special case */
@@ -1754,7 +1763,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			// @todo: check! If not acctually a problem (during Handover). Andrey.
 			if( err==-ECOMM ) err = 0;
 		}
-	}
+		//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;

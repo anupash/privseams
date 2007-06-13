@@ -1,7 +1,7 @@
 /*
  * Licence: GNU/GPL
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Tobias Heer <tobi@tobibox.de>
  * - Abhijit Bagri <abagri@gmail.com>
  *
@@ -253,6 +253,19 @@ int hip_update_locator_match(hip_ha_t *unused,
 }
 
 /**
+ * Compare locator and addr list item for equality
+ *
+ * @return non-zero when address are equal, otherwise zero
+ */
+int hip_update_locator_item_match(hip_ha_t *unused,
+			     struct hip_locator_info_addr_item *item1,
+			     void *_item2) {
+	struct hip_peer_addr_list_item *item2 = _item2;
+	return !ipv6_addr_cmp(&item1->address, &item2->address);
+}
+
+
+/**
  * Check if locator list contains a given locator
  *
  * @return zero if the locator was found, otherwise non-zero
@@ -260,7 +273,7 @@ int hip_update_locator_match(hip_ha_t *unused,
 int hip_update_locator_contains_item(struct hip_locator *locator,
 				  struct hip_peer_addr_list_item *item)
 {
-	return hip_for_each_locator_addr_item(hip_update_locator_match,
+	return hip_for_each_locator_addr_item(hip_update_locator_item_match,
 					      NULL, locator, item);
 }
 
@@ -275,46 +288,53 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	HIP_DEBUG("\n\n\nlocators\n\n");
 
-	if (!hip_update_locator_contains_item(locator, list_item))
+	// @todo: try to delete all unnecessary connections. Temprorary solution, to make handovers work.
+	if (list_item->is_preferred) //hip_update_locator_contains_item(locator, list_item))
 	{
-		HIP_DEBUG_HIT("deprecating address", &list_item->address);
-		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-		
-		/* If this is not the preferred address then the next line will fail
-		 * FIXME: This line needs to be either inside the next loop or 
-		 * deprecataing to update peer addr item code*/
-		
-		// NOTE: We don't need to delete the policies because they are associated to HIT's
-		// If we delete them, the soft handover cannot properly work! -Diego
-
-		//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
-
-		//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
-		
-		hip_delete_sa(entry->default_spi_out, &list_item->address,
-		              &entry->local_address, AF_INET6, 0,
-		              (int)entry->peer_udp_port);	
-		
-		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
-
-		// Why do we delete the SA associated to the local address? This is definitely wrong!
-		// If you delete this, how would you expect the IPSec could work?
-		/*hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-		  (int)entry->peer_udp_port, 0);*/
-
-		if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
-		{
-			// TODO: Handle this: Choose a random address from
-			// amongst the active addresses? -Bagri
-			HIP_DEBUG_HIT("Preferred Address deprecated",
-				      &list_item->address);
-		}
-		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
-		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
-		// then the handover to fail.
-		list_del(list_item, entry->spis_out);
-		
+		goto out_err;
 	}
+
+	HIP_DEBUG_HIT("deprecating address", &list_item->address);
+	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+	
+	/* If this is not the preferred address then the next line will fail
+	 * FIXME: This line needs to be either inside the next loop or 
+	 * deprecataing to update peer addr item code*/
+	
+	// NOTE: We don't need to delete the policies because they are associated to HIT's
+	// If we delete them, the soft handover cannot properly work! -Diego
+	
+	//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+	
+	//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	
+	hip_delete_sa(entry->default_spi_out, &list_item->address,
+		      &entry->local_address, AF_INET6, 0,
+		      (int)entry->peer_udp_port);	
+	
+	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	
+	// Why do we delete the SA associated to the local address? This is definitely wrong!
+	// If you delete this, how would you expect the IPSec could work?
+	
+	// Answer: We deleting old SA because in received locators list we don't have this
+	// item. May be it was deleted in initiator of the update? -Andrey.
+	// Without this line the hardhandover doesn't work.
+	
+	hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
+		      (int)entry->peer_udp_port, 0);
+	
+	if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
+	{
+		// TODO: Handle this: Choose a random address from
+		// amongst the active addresses? -Bagri
+		HIP_DEBUG_HIT("Preferred Address deprecated",
+			      &list_item->address);
+	}
+	// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
+	// This is because if the same address is reused, the SA/SP won't be updated correctly, making
+	// then the handover to fail.
+	list_del(list_item, entry->spis_out);
 
  out_err:
 	return err;
@@ -2087,6 +2107,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 */
 
 	loc_addr_item = addr_list;
+#if 0
+	// Switching off this part of code let the softhandover turn to new addresses 
+	// when we have the new one.
+
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
@@ -2108,6 +2132,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			}
 		}	
 	}
+#endif
 
 	if (preferred_address_found) goto skip_pref_update;
 
