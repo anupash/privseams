@@ -101,10 +101,10 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 	int c;
 	list_for_each(item, db, c) {
 		id_entry = list_entry(item);
-                /*
+                
 		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
-                */
+                
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO ||
 		     (hip_get_host_id_algo(id_entry->host_id) == algo)) &&
@@ -274,7 +274,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	hip_lsi_t lsi_tmp;
 	//struct in6_addr dsa_hit, rsa_hit;
 	
-	HIP_DEBUG("\n");
+	HIP_DEBUG("/* --------- */ \n");
 	HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
 	HIP_DEBUG_IN6ADDR("input->hitr = ", &input->hitr);
 	if ((err = hip_get_msg_err(input)) != 0) {

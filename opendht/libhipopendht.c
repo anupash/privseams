@@ -16,6 +16,8 @@
 #include "libhipopendhtxml.h"
 #include "debug.h"
 #include "fcntl.h"
+
+
 /*
 #include "time.h"
 
@@ -33,6 +35,7 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
+   else HIP_DEBUG("\n OpenDHT communication socket created successfully \n");
 
     return(sockfd);      
 }
@@ -64,7 +67,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     {
         memcpy(gateway, res, sizeof(struct addrinfo));
         struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
-        HIP_DEBUG("OpenDHT gateway IPv4/%s\n", inet_ntoa(sa->sin_addr));
+        HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
     }
     return(error);
 }
@@ -171,7 +174,7 @@ int opendht_put(int sockfd,
     memset(put_packet, '\0', sizeof(put_packet));
     if (build_packet_put((unsigned char *)tmp_key,
                          key_len,
-                         (unsigned char *)value,
+                        (unsigned char *)value,
 	                 strlen((char *)value),
                          opendht_port,
                          (unsigned char *)host,
@@ -180,7 +183,8 @@ int opendht_put(int sockfd,
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
-    //    HIP_DEBUG("ACTUAL SEND STARTS HERE\n");
+    HIP_DEBUG("HOST ADDRESS in OpenDHT put : %s\n", host); 
+    HIP_DEBUG("\nACTUAL SEND STARTS HERE\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }
@@ -244,7 +248,7 @@ int opendht_get(int sockfd,
     return(0);
 }
 /** 
- * opendht_read_respoonse_b - Reads from the given socket and parses the XML RPC response
+ * opendht_read_respoonse - Reads from the given socket and parses the XML RPC response
  * @param sockfd Socket to be used with the send
  * @param answer Buffer where the response value will be saved
  *

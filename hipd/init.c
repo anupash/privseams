@@ -12,8 +12,15 @@
  */
 
 #include "init.h"
+#include <linux/capability.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include "debug.h"
+#include <pwd.h>
 
 extern struct hip_common *hipd_msg;
+typedef struct __user_cap_header_struct capheader_t;
+typedef struct __user_cap_data_struct capdata_t;
 
 
 /******************************************************************************/
@@ -318,9 +325,59 @@ int hipd_init(int flush_ipsec)
 	register_to_dht();
 	hip_load_configuration();
 
+// @flukebox -- BUG 172 -- try to lowerise the capabilities of the deamon 
+ 
+	capheader_t header;
+	capdata_t data;	
+	header.pid=0;
+	header.version = _LINUX_CAPABILITY_VERSION;
+	data.effective = data.permitted = data.inheritable = 0;
+
+	if (prctl(PR_SET_KEEPCAPS, 1) < 0)  {
+    		perror ("prctl");
+    		exit(1);
+  	}
+	
+	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+	struct passwd *nobody_pswd=getpwnam(USER_NOBODY);
+	if(nobody_pswd==NULL){
+		HIP_ERROR("Error while retrieving USER 'nobody' uid\n"); 	
+	}
+
+	uid_t ruid,euid;
+	ruid=nobody_pswd->pw_uid; 
+	euid=nobody_pswd->pw_uid; 
+	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+  	if (setreuid(ruid,euid)!=0){
+		if(errno==EAGAIN) HIP_ERROR("Error no is EAGAIN\n");
+		else if (errno==EPERM) HIP_ERROR("Error no is EPERM\n");
+	}
+	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+	if (capget(&header, &data)!= 0) HIP_ERROR("error while retrieving capabilities through 'capget()'");
+	HIP_DEBUG("CAPABILITY value is  effective=%d, permitted = %d, inheritable=%d\n",data.effective,data.permitted,data.inheritable);
+	HIP_DEBUG ("We are going to clear all capabilities except the ones we need:\n");
+
+	data.effective = data.permitted = data.inheritable = 0;
+  	/* for CAP_NET_RAW capability */
+	data.effective |= (1 <<CAP_NET_RAW );
+  	data.permitted |= (1 <<CAP_NET_RAW );
+  	/* for CAP_NET_ADMIN capability */
+	data.effective |= (1 <<CAP_NET_ADMIN );
+  	data.permitted |= (1 <<CAP_NET_ADMIN );
+
+	if (capset(&header, &data)!= 0) HIP_ERROR("error while setting new capabilities through 'capset()'");
+	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
+	HIP_DEBUG("CAPABILITY value is  effective=%d, permitted = %d, inheritable=%d\n",data.effective,data.permitted,data.inheritable);
+
+ 
 out_err:
 	return err;
 }
+
+
+
+
 
 /**
  * Init host IDs.
@@ -508,8 +565,7 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	//hip_delete_default_prefix_sp_pair();
-
+	hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 

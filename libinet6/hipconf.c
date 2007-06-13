@@ -465,6 +465,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
+
 int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
