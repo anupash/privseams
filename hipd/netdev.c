@@ -880,7 +880,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				   the last address */
 				HIP_DEBUG("sending 0-addr REA\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR);
+						    SEND_UPDATE_LOCATOR, is_add, addr);
 			}
 			else if (i == 0)
 			{
@@ -907,6 +907,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 					locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
 					locators[i].locator_length = sizeof(struct in6_addr) / 4;
+
 					/* For testing preferred address */
 					//locators[i].reserved =
 					//	i == 0 ? htonl(1 << 31) : 0;
@@ -916,7 +917,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR);
+						    SEND_UPDATE_LOCATOR, is_add, addr);
 				free(locators);
 				break;
 			}

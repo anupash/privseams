@@ -17,6 +17,7 @@
    of this file! */
 struct hip_common *hipd_msg = NULL;
 
+int is_active_handover = 1; /* which handover to use active or lazy? */
 int hip_blind_status = 0; /* Blind status */
 
 /* For receiving of HIP control messages */

@@ -2078,9 +2078,10 @@ out_err:
 int hip_update_src_address_list(struct hip_hadb_state *entry, 
 				struct hip_locator_info_addr_item *addr_list, 
 				struct in6_addr *daddr,
-				int addr_count,	int esp_info_old_spi){
+				int addr_count,	int esp_info_old_spi,
+				int is_add, struct sockaddr* addr){
 	   	
-	int err = 0, i, preferred_address_found = 0;
+	int err = 0, i, preferred_address_found = 0, choose_random = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 
@@ -2117,32 +2118,41 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 */
 
 	loc_addr_item = addr_list;
-#if 0
-	// Switching off this part of code let the softhandover turn to new addresses 
-	// when we have the new one.
+
+	HIP_IFEL( addr->sa_family == AF_INET, -1, "all addresses in update should be mapped");
+
+	struct in6_addr* comp_addr = hip_cast_sa_addr(addr);
+
+	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr))==0 ) {
+	  choose_random = 1;
+	}
+
+	if( is_add && is_active_handover ) { /* comp_addr = hip_cast_sa_addr(addr); */}
+	else { comp_addr = &entry->local_address; }
 
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
-	for(i = 0; i < addr_count; i++, loc_addr_item++)
-	{
-		struct in6_addr *saddr = &loc_addr_item->address;
-/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
-		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
-		HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
-		if (memcmp(&entry->local_address, saddr, sizeof(struct in6_addr)) == 0)
+	if( !choose_random ) 
+	  for(i = 0; i < addr_count; i++, loc_addr_item++)
+	    {
+	      struct in6_addr *saddr = &loc_addr_item->address;
+	      /*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+				HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
+				HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
+	      if (memcmp(comp_addr, saddr, sizeof(struct in6_addr)) == 0)
 		{
-			if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
-			{
-				/* Select the first match */
-				loc_addr_item->reserved = ntohl(1 << 31);
-				preferred_address_found = 1;
-				HIP_DEBUG("Preferred Address is the old preferred address\n");
-				HIP_DEBUG_IN6ADDR("addr: ", saddr);
-				break;
-			}
+		  if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
+		    {
+		      /* Select the first match */
+		      loc_addr_item->reserved = ntohl(1 << 31);
+		      preferred_address_found = 1;
+		      HIP_DEBUG("Preferred Address is the old preferred address\n");
+		      HIP_DEBUG_IN6ADDR("addr: ", saddr);
+		      break;
+		    }
 		}	
-	}
-#endif
+	    }
+	
 
 	if (preferred_address_found) goto skip_pref_update;
 
@@ -2206,7 +2216,8 @@ out_err:
  */
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
-		    int addr_count, int ifindex, int flags)
+		    int addr_count, int ifindex, int flags, 
+		    int is_add, struct sockaddr* addr)
 {
 	int err = 0, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
 	uint32_t update_id_out = 0;
@@ -2325,7 +2336,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
 	err = hip_update_src_address_list(entry, addr_list, &daddr,
-					  addr_count, esp_info_old_spi);
+					  addr_count, esp_info_old_spi, is_add, addr);
 	if(err == GOTO_OUT)
 		goto out;
 	else if(err)
@@ -2443,7 +2454,7 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  * @param flags flags passed to @hip_send_update
  */
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
-			 int addr_count, int ifindex, int flags)
+			 int addr_count, int ifindex, int flags, int is_add, struct sockaddr *addr)
 {
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
@@ -2468,7 +2479,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
 			hip_send_update(rk.array[i], addr_list, addr_count,
-					ifindex, flags);
+					ifindex, flags, is_add, addr);
 			hip_hadb_put_entry(rk.array[i]);
 			//hip_put_ha(rk.array[i]);
 		}
