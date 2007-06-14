@@ -2081,7 +2081,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				int addr_count,	int esp_info_old_spi,
 				int is_add, struct sockaddr* addr){
 	   	
-	int err = 0, i, preferred_address_found = 0, choose_random = 0;
+	int err = 0, i, preferred_address_found = 0, choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 
@@ -2123,11 +2123,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	struct in6_addr* comp_addr = hip_cast_sa_addr(addr);
 
+	/* if we have deleted the old address and it was preferred than 
+	   we chould make new preferred address. Now, we chose it as random address in list 
+	*/
 	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr))==0 ) {
 	  choose_random = 1;
 	}
 
-	if( is_add && is_active_handover ) { /* comp_addr = hip_cast_sa_addr(addr); */}
+	if( is_add && is_active_handover ) { change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */}
 	else { comp_addr = &entry->local_address; }
 
 	/* XX FIXME: change daddr to an alternative peer address
@@ -2146,7 +2149,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		      /* Select the first match */
 		      loc_addr_item->reserved = ntohl(1 << 31);
 		      preferred_address_found = 1;
-		      HIP_DEBUG("Preferred Address is the old preferred address\n");
+		      if( change_preferred_address ) {
+			HIP_IFEL(hip_update_preferred_address(entry,saddr,
+							      daddr, 
+							      &spi_in->spi),-1, 
+				 "Setting New Preferred Address Failed\n");		      
+		      }
+		      else {
+			HIP_DEBUG("Preferred Address is the old preferred address\n");
+		      }
 		      HIP_DEBUG_IN6ADDR("addr: ", saddr);
 		      break;
 		    }
