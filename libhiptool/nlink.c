@@ -1,5 +1,5 @@
 #include "nlink.h"
-#include "hexdump.h"
+
 /*
  * Note that most of the functions are modified versions of
  * libnetlink functions.
@@ -1131,7 +1131,6 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
 
         status = sendmsg(rtnl->fd, &msg, 0);
 	HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
-	hex_dump(&msg,sizeof(msg));
         if (status < 0) {
                 HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
@@ -1202,7 +1201,6 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         if (answer) {
                                 memcpy(answer, h, h->nlmsg_len);
 				HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
-				hex_dump(h,h->nlmsg_len);
                                 return 0;
                         }
 
