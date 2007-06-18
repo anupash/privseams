@@ -128,7 +128,7 @@
 # debug none        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
-#define HOSTS_FILE  "/etc/hosts"
+#define HOSTS_FILE "/etc/hosts"
 #define HIPD_HOSTS_FILE_EX \
 "# This file stores the HITs of the hosts, in a similar fashion to /etc/hosts.\n\
 # The aliases are optional.  Examples:\n\
