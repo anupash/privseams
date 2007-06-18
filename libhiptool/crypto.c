@@ -5,7 +5,7 @@
  * of original HIPL kernel functions and Boeing HIPD crypto functions.
  *
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Miika Komu <miika@iki.fi>
  * - Teemu Koponen <tkoponen@iki.fi>
  * - Abhinav Pathak <abpathak@iitk.ac.in>  

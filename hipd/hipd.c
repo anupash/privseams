@@ -17,6 +17,7 @@
    of this file! */
 struct hip_common *hipd_msg = NULL;
 
+int is_active_handover = 1; /* which handover to use active or lazy? */
 int hip_blind_status = 0; /* Blind status */
 
 /* For receiving of HIP control messages */
@@ -66,6 +67,7 @@ int opendht_serving_gateway_ttl = OPENDHT_TTL;
    Feel free to experiment by porting the required functionality from
    iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
    variable and most of the functions referencing them unnecessary -miika */
+
 int address_count;
 HIP_HASHTABLE *addresses;
 
@@ -87,7 +89,8 @@ void usage() {
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
         int n = 0;
-        HIP_DEBUG("hip_sendto() invoked.\n");
+	HIP_DEBUG("sending user msg: family=%d sender=%s\n",
+		  dst->sun_family, &dst->sun_path);
         n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
                    0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
         return n;

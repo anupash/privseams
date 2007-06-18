@@ -53,7 +53,17 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	}
 
 	HIP_DEBUG("Received a netlink message\n");
-
+	/* @flukebox */
+/*
+	printf("/* @flukebox -- some useful printinfo in hip_netlink_receive \n");
+	char *temp;
+	temp=buf;
+	while(*temp !=EOF){
+		printf("%d/", *temp);
+		temp=temp+1;
+	}
+	printf("\n");
+*/
         memset(&nladdr, 0, sizeof(nladdr));
         nladdr.nl_family = AF_NETLINK;
         nladdr.nl_pid = 0;
@@ -276,7 +286,9 @@ int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 
         memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
-
+	/* @flukebox */
+	printf("/* @flukebox -- some useful printinfo in hip_netlink_send_buf \n");
+	printf("Sent Msg : %s \n", &buf); 
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
@@ -573,11 +585,18 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	int err = 0, entry;
 
 	/* see print_route() in ip/iproute.c */
-
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
-	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	HIP_DEBUG("sizeof(struct nlmsghdr) =%d\n",sizeof(struct nlmsghdr));
+	HIP_DEBUG("sizeof(struct rtmsg) =%d\n",sizeof(struct rtmsg));
+	HIP_DEBUG("sizeof  n->nlmsg_len =%d\n",  n->nlmsg_len );
+	HIP_HEXDUMP("nlmsghdr : ", n,sizeof(struct nlmsghdr));
+	HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
+	HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
+	HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC],sizeof(struct rtattr));
+	//entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
+	entry=7;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
-
 	if(r->rtm_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(addr.in, src_addr);
 	} else
@@ -1111,7 +1130,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 n->nlmsg_flags |= NLM_F_ACK;
 
         status = sendmsg(rtnl->fd, &msg, 0);
-
+	HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
         if (status < 0) {
                 HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
@@ -1181,6 +1200,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         }
                         if (answer) {
                                 memcpy(answer, h, h->nlmsg_len);
+				HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
                                 return 0;
                         }
 

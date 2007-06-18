@@ -465,6 +465,7 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
+
 int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
@@ -1228,8 +1229,12 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {	
 		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
 		if (strcmp(argv[3], "all") == 0){
-			HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-			HIP_DEBUG_HIT("hi is ", &endp->id.hit);
+			
+			HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+			HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+			HIP_DEBUG_HIT("\n",&endp->id.hit);
+			
+			
 		}
 		
 	}
