@@ -1403,8 +1403,8 @@ static struct gaih gaih[] =
  * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
  * database is returned
  */
-int
-getaddrinfo (const char *name, const char *service,
+
+int getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
 {
   int i = 0, j = 0, last_i = 0;
