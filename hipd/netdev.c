@@ -1,16 +1,14 @@
-
 /**
  * This code is heavily based on Boeing HIPD hip_netlink.c
  *
  */
 
 #include "netdev.h"
-#include "libhipopendht.h"
+#include "opendht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
 #include "libinet6/hipconf.h"
-
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -478,17 +476,19 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
   ret=inet_pton(AF_INET6, nodename, &dst_hit);
   if(ret < 1) HIP_ERROR("given nodename is not a HIT");
  
+
  /* Open /etc/hip/hosts file in read mode 
- *  HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
- * */
+ *  *  HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
+ *   * */
 
  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
-  
+
   if (!hip_hosts) {
-    err = -1;
+    err = -1; 
     HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
     goto out_err;
   }
+
 
   /* find entry corresponding to given 'nodename' HIT */ 
   while(getwithoutnewline(line, 500, hip_hosts)!= NULL){
@@ -518,17 +518,19 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
    err = -1;
    goto out_err;
 
+
  /* HOSTS_FILE='/etc/hsots' */
  find_address:
    hosts = fopen(HOSTS_FILE, "r");
    lineno=0; 
    memset(&line,0,sizeof(line));
-  
+
    if (!hosts) {
      err = -1;
      HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
      goto out_err;
    }
+
   
   while(getwithoutnewline(line,500,hosts) != NULL ) {
     lineno++;
