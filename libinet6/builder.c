@@ -298,7 +298,7 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
  */
 struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *dhf)
 {
-        struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL;
+        struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
 
 	if ( ntohs(dhf->pub_val.pub_len) == 
 	     hip_get_diffie_hellman_param_public_value_len(dhf) ){
@@ -306,10 +306,16 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
 		 return (struct hip_dh_public_value *)&dhf->pub_val.group_id;
 	} else {
 
-	         HIP_DEBUG("Multiple DHF public values received\n");
 		 dhpv1 = (struct hip_dh_public_value *)&dhf->pub_val.group_id;
 		 dhpv2 = (struct hip_dh_public_value *)
 		   (dhf->pub_val.public_value + ntohs(dhf->pub_val.pub_len));
+
+		 HIP_IFEL (hip_get_diffie_hellman_param_public_value_len(dhf) !=
+			   ntohs(dhpv1->pub_len) + sizeof(uint8_t) + sizeof(uint16_t) 
+			   + ntohs(dhpv2->pub_len), dhpv1, "Malformed DHF parameter\n");
+
+		 HIP_DEBUG("Multiple DHF public values received\n");
+
 		 _HIP_DEBUG("dhpv1->group_id= %d   dhpv2->group_id= %d\n",
 			    dhpv1->group_id, dhpv2->group_id);
 		 _HIP_DEBUG("dhpv1->pub_len= %d   dhpv2->pub_len= %d\n", 
@@ -328,6 +334,8 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
 		 else
 		        return dhpv2;
 	}
+ out_err:
+	return err;
 }
 
 

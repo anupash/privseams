@@ -52,6 +52,9 @@
 #define DSA_KEY_DEFAULT_BITS    (128 * 8)
 #define RSA_KEY_DEFAULT_BITS    1024
 
+//#define DSA_KEY_DEFAULT_BITS    512
+//#define RSA_KEY_DEFAULT_BITS    512
+
 #define DEFAULT_CONFIG_DIR        "/etc/hip"
 #define DEFAULT_CONFIG_DIR_MODE   0755
 #define DEFAULT_HOST_DSA_KEY_FILE_BASE "hip_host_dsa_key"
