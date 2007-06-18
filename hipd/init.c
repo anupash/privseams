@@ -332,15 +332,15 @@ out_err:
 }
 
 
-int hip_set_lowcapability(){
-
+int hip_set_lowcapability( ) {
 //-- BUG 172 -- try to lowerise the capabilities of the deamon 
  	
+	int err=0;
+#ifdef CONFIG_HIP_PRIVSEP
 	uid_t ruid,euid;
 	capheader_t header;
 	capdata_t data;	
 	header.pid=0;
-	int err=1;
 	header.version = _LINUX_CAPABILITY_VERSION;
 	struct passwd *nobody_pswd=getpwnam(USER_NOBODY);
 
@@ -408,6 +408,7 @@ int hip_set_lowcapability(){
 
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
 	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:
 	return err;
