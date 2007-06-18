@@ -183,8 +183,8 @@ int opendht_put(int sockfd,
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
     }
-    HIP_DEBUG("HOST ADDRESS in OpenDHT put : %s\n", host); 
-    HIP_DEBUG("\nACTUAL SEND STARTS HERE\n");
+    HIP_DEBUG("Host address in OpenDHT put : %s\n", host); 
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     return(0);
 }
