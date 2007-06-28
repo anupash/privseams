@@ -156,6 +156,10 @@ int gui_main(void)
 	/* Close all groups as default. */
 	gtk_tree_view_collapse_all(widget(ID_RLISTVIEW));
 
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	gtk_widget_hide(widget(ID_MAINWND));
+#endif
+	
 	gtk_main();
 
 	gui_quit();
