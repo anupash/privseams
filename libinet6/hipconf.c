@@ -1219,18 +1219,25 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
 
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
 {	
-	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip *endp=NULL;
 	int err=0;
-	struct sockaddr_in6 addr;
-	struct in6_addr *defhit;
-	struct hip_hadb_user_info_state *ha;
+
+		
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	
-	
-	
-		HIP_DEBUG("hello world\n");	
-	
-	
+	if (strcmp("active",opt[0]) ==0)
+	{
+		HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+                	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to active successfully\n");
+	}else{
+		
+	  	HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+              	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to lazy successfully\n");
+	}
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+
    out_err:
 	return err;
 	

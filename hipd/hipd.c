@@ -70,7 +70,6 @@ int opendht_serving_gateway_ttl = OPENDHT_TTL;
 
 int address_count;
 HIP_HASHTABLE *addresses;
-
 time_t load_time;
 
 #ifdef CONFIG_HIP_HI3
