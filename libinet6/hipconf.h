@@ -90,6 +90,7 @@
 #define ACTION_RST 14
 #define ACTION_BOS 15
 #define ACTION_DEBUG 16
+#define ACTION_HANDOFF 17
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -111,8 +112,9 @@
 #define TYPE_GET        15
 #define TYPE_BLIND      16
 #define TYPE_HA         17
-#define TYPE_DEBUG      18
-#define TYPE_MAX    	19 /* exclusive */
+#define TYPE_MODE       18
+#define TYPE_DEBUG      19
+#define TYPE_MAX    	22 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -160,6 +162,8 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
+
 
 #endif /* HIPCONF */

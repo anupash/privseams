@@ -41,6 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
+"handoff mode lazy|active\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
@@ -80,6 +81,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
+	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	NULL, /* run */
 };
@@ -122,6 +124,8 @@ int hip_conf_get_action(char *text) {
                 ret = ACTION_DHT;
 	else if (!strcmp("debug", text))
                 ret = ACTION_DEBUG;
+	else if (!strcmp("handoff", text))
+                ret = ACTION_HANDOFF;
 
 	return ret;
 }
@@ -173,9 +177,13 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA:
                 count=2;
                 break;
+	case ACTION_HANDOFF:
+	        count = 2;
+                break;
 	case ACTION_DEBUG:
 	        count = 1;
                 break;
+	
 	default:
 	        break;
 
@@ -219,6 +227,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
 
 
 
@@ -265,6 +275,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_DHT:
 	case ACTION_RST:
 	case ACTION_BOS:
+	case ACTION_HANDOFF:
 	
                 type_arg = 2;
                 break;
@@ -273,7 +284,7 @@ int hip_conf_get_type_arg(int action) {
 	
                 type_arg = 1;
                 break;
-
+	
 	default:
 	        break;
         }
@@ -465,7 +476,6 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-
 int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
@@ -1207,6 +1217,24 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
         return err;
 }
 
+int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
+{	
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip *endp=NULL;
+	int err=0;
+	struct sockaddr_in6 addr;
+	struct in6_addr *defhit;
+	struct hip_hadb_user_info_state *ha;
+	
+	
+	
+		HIP_DEBUG("hello world\n");	
+	
+	
+   out_err:
+	return err;
+	
+}
 
 
 int hip_get_all_hits(struct hip_common *msg,char *argv[])
