@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=HIPL gconf
+Comment=Configuration GUI for HIPL daemon
+Exec=/usr/sbin/hipagent -b
+Terminal=false
+Type=Application
+Categories=
+OnlyShowIn=GNOME

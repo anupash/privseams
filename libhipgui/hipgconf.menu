@@ -1,0 +1,6 @@
+?package(hipgconf):\
+    needs="x11"\
+    section="Apps/Net"\
+    title="hipgconf"\
+    longtitle="HIPL configuration GUI"\
+    command="/usr/sbin/hipagent -b"

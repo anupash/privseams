@@ -1,0 +1,9 @@
+Source: hipl-gconf
+Version: 1.0
+Section: devel
+Priority: optional
+Maintainer: InfraHIP <infrahip@hiit.fi>
+Depends: hipl (>= 1.0)
+Package: hipl-gconf
+Architecture: i386
+Description: This package contains HIPL configuration GUI.
