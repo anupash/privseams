@@ -1308,6 +1308,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
  * EXEC_LOADLIB_HIP\n
  * EXEC_LOADLIB_NONE\n
  *
+ * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
@@ -1325,20 +1326,28 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	if (do_fork)
 		err = fork();
 
-	if (err < 0) {
+	if (err < 0)
+	{
 		HIP_ERROR("Failed to exec new application.\n");
-	} else if (err > 0) {
+	}
+	else if (err > 0)
+	{
 		err = 0;
-	} else if(err == 0) {
+	}
+	else if(err == 0)
+	{
 		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
-		if (type == EXEC_LOADLIB_HIP) {
+		if (type == EXEC_LOADLIB_HIP)
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
 #else
 			libs = "libinet6.so:libhiptool.so";
 #endif
-		} else {
+		}
+		else
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 #else
@@ -1349,7 +1358,8 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 
 		HIP_DEBUG("LD_PRELOADing\n");
 		err = execvp(argv[0], argv);
-		if (err != 0) {
+		if (err != 0)
+		{
 			HIP_DEBUG("Executing new application failed!\n");
 			exit(1);
 		}

@@ -27,7 +27,8 @@ enum WIDGET_IDS
 	ID_EXECDLG,
 	ID_NGDLG,
 	ID_MSGDLG,
-
+	ID_ABOUTDLG,
+ 
 	/* Main window IDs. */
 	ID_RLISTMODEL,
 	ID_RLISTVIEW,

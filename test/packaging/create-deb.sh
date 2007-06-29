@@ -281,30 +281,32 @@ if [ $TYPE = "binary" ];then
 		echo "** Error: unable to copy GPL files, exiting"
 		exit 1
 		fi
+	
+		cd "$PKGROOT"
+		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+		echo "** Successfully finished building the binary GPL Debian package"
+		else
+		echo "** Error!"
+		echo "** Error: Unable to build the binary GPL Debian package!"
+		echo "** Error!"
+		exit 1
+		fi
 	fi
 
-	cd "$PKGROOT"
-	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-	echo "** Successfully finished building the binary GPL Debian package"
-	else
-	echo "** Error!"
-	echo "** Error: Unable to build the binary GPL Debian package!"
-	echo "** Error!"
-	fi
 
 	cd "$PKGROOT"
 	echo "** Creating the Debian package '$PKGNAME'"
-    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGNAME"
-    else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
-    fi
-    rm -rf ${PKGDIR}
-else
+	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+		echo "** Successfully finished building the binary Debian package"
+		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+		echo "** The package can now be installed with dpkg -i $PKGNAME"
+	else
+		echo "** Error: unable to build package, exiting"
+		error_cleanup
+		exit 1
+	fi
+	rm -rf ${PKGDIR}
+	else
 # $TYPE == "source
 # Debian SOURCE package
 

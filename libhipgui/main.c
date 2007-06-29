@@ -40,8 +40,7 @@ int gui_init(void)
 	widget_init();
 
 	/* Set default icon. */
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
-	gtk_window_set_default_icon_from_file(str, NULL);
+	gtk_window_set_default_icon_from_file(HIP_GUI_DATADIR "/logo.png", NULL);
 
 	/* Initialize tooltips. */
 	tooltips = gtk_tooltips_new();
@@ -52,7 +51,7 @@ int gui_init(void)
 	/* Create main GUI window. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_MAINWND, w);
-	gtk_widget_show(w);
+//	gtk_widget_show(w);
 	gtk_window_set_title(w, lang_get("title-main"));
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
@@ -71,6 +70,7 @@ int gui_init(void)
 	                                lang_get("lhdlg-button-apply"), GTK_RESPONSE_YES,
 	                                lang_get("lhdlg-button-cancel"), GTK_RESPONSE_NO, NULL);
 	gtk_widget_hide(w);
+	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	widget_set(ID_LTOOLWND, w);
 
 	/* Create new hit -dialog. */
@@ -78,23 +78,27 @@ int gui_init(void)
 	                                lang_get("nhdlg-button-accept"), GTK_RESPONSE_YES,
 	                                lang_get("nhdlg-button-drop"), GTK_RESPONSE_NO, NULL);
 	widget_set(ID_NHDLG, w);
+	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	gtk_widget_hide(w);
 
 	/* Create execute-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-runapp"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_EXECDLG, w);
+	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	gtk_widget_hide(w);
 
 	/* Create create-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
+	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	gtk_widget_hide(w);
 
 	/* Create own custom message-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-msgdlg"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_MSGDLG, w);
+	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	gtk_widget_hide(w);
-	
+
 	/* Create window content for all windows. */
 	HIP_IFEL(msgdlg_create_content(), -1, "Failed to create message-dialog contents.\n");
 	HIP_IFEL(tw_create_content(), -1, "Failed to create tool-dialog contents.\n");
@@ -102,8 +106,6 @@ int gui_init(void)
 	HIP_IFEL(execdlg_create_content(), -1, "Failed to create run-dialog contents.\n");
 	HIP_IFEL(ngdlg_create_content(), -1, "Failed to create create-dialog contents.\n");
 	HIP_IFEL(main_create_content(), -1, "Failed to create main-window contents.\n");
-
-	HIP_IFEL(exec_init(), -1, "Execute \"environment\" initialization failed.\n");
 
 	gui_set_info("HIP GUI started.");
 	cmd_help("");
@@ -158,6 +160,8 @@ int gui_main(void)
 
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 	gtk_widget_hide(widget(ID_MAINWND));
+#else
+	gtk_widget_show(widget(ID_MAINWND));
 #endif
 	
 	gtk_main();
@@ -175,7 +179,6 @@ void gui_quit(void)
 {
 	if (term_get_mode() == TERM_MODE_SERVER) term_server_quit();
 	else if (term_get_mode() == TERM_MODE_CLIENT) term_client_quit();
-	exec_quit();
 	widget_quit();
 }
 /* END OF FUNCTION */

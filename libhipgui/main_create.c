@@ -56,9 +56,8 @@ int main_create_content(void)
 	{
 		GtkStatusIcon *status_icon;
 			
-		sprintf(str, "%s/%s", HIP_GUI_DATADIR, "logo.png");
 //		status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
-		status_icon = gtk_status_icon_new_from_file(str);
+		status_icon = gtk_status_icon_new_from_file(HIP_GUI_DATADIR "/logo.png");
 		gtk_status_icon_set_visible(status_icon, TRUE);
 		err = gtk_status_icon_is_embedded(status_icon);
 		HIP_DEBUG("Status icon %s.\n", (err ? "is visible" : "could not be shown"));
@@ -70,17 +69,30 @@ int main_create_content(void)
 		w = gtk_menu_new();
 		
 		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
-		gtk_menu_shell_append(w, label);
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-hide"));
-		gtk_menu_shell_append(w, label);
-		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
+		label = gtk_menu_item_new_with_label(lang_get("systray-exec"));
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
+		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXEC);
+		gtk_widget_show(label);
+
+		label = gtk_separator_menu_item_new();
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		gtk_widget_show(label);
 		
+		label = gtk_menu_item_new_with_label(lang_get("systray-about"));
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
+		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_ABOUT);
+		gtk_widget_show(label);
+
+		label = gtk_separator_menu_item_new();
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
+		gtk_widget_show(label);
+
 		label = gtk_menu_item_new_with_label(lang_get("systray-exit"));
-		gtk_menu_shell_append(w, label);
+		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXIT);
 		gtk_widget_show(label);
 		
@@ -181,20 +193,17 @@ int main_create_content(void)
 	gtk_toggle_button_set_active(w, TRUE);
 
 	gtk_toolbar_append_space(toolbar);*/
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newgroup.png");
-	iconw = gtk_image_new_from_file(str);
+	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newgroup.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newgroup"),
 	                            lang_get("tb-newgroup-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "newhit.png");
-	iconw = gtk_image_new_from_file(str);
+	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newhit.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newhit"), lang_get("tb-newhit-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
 	gtk_toolbar_append_space(toolbar);
-	sprintf(str, "%s/%s", HIP_GUI_DATADIR, "run.png");
-	iconw = gtk_image_new_from_file(str);
+	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/exec.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-runapp"), lang_get("tb-runapp-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
@@ -374,7 +383,7 @@ int main_create_content(void)
 	
 	/***************************************
 	/* Process list. */
-	scroll = gtk_scrolled_window_new(NULL, NULL);
+/*	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 	                               GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	model = gtk_tree_store_new(4, G_TYPE_INT, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
