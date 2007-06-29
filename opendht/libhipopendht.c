@@ -50,26 +50,28 @@ int init_dht_gateway_socket(int sockfd)
 int resolve_dht_gateway_info(char * gateway_name, 
                              struct addrinfo * gateway)
 {
-    struct addrinfo hints, *res;
-    int error;
-    
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_NODHT;
-    error = 0;
-
-     error = getaddrinfo(gateway_name, "5851", &hints, &res);
-    //error = getaddrinfo(gateway_name, NULL, &hints, &res);
-    if (error != 0)
-        HIP_DEBUG("OpenDHT gateway resolving failed\n");
-    else
-    {
-        memcpy(gateway, res, sizeof(struct addrinfo));
-        struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
-        HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
-    }
-    return(error);
+	struct addrinfo hints, *res;
+	int error;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_NODHT;
+	error = 0;
+	
+	error = getaddrinfo(gateway_name, "5851", &hints, &res);
+	//error = getaddrinfo(gateway_name, NULL, &hints, &res);
+	if (error != 0)
+		HIP_DEBUG("OpenDHT gateway resolving failed\n");
+	else
+	{
+		memcpy(gateway, res, sizeof(struct addrinfo));
+		struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
+		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
+	}
+	
+	if (res) freeaddrinfo(res);
+	return error;
 }
 
 /**

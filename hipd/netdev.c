@@ -1060,27 +1060,27 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
-int hip_select_source_address(struct in6_addr *src,
-			      struct in6_addr *dst)
+int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+//	int rtnl_rtdsfield_init;
+//	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 		
 	/* rtnl_rtdsfield_initialize() */
-        rtnl_rtdsfield_init = 1;
-
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+//	rtnl_rtdsfield_init = 1;
+	
+//	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
 	HIP_DEBUG_IN6ADDR("dst", dst);
 	HIP_DEBUG_IN6ADDR("src", src);
 
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,family, idxmap), -1,"Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 
 	HIP_DEBUG_IN6ADDR("src", src);
- out_err:
 
+out_err:
+//	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab
 	return err;
 }
 

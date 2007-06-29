@@ -915,36 +915,37 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 
 void rtnl_tab_initialize(char *file, char **tab, int size)
 {
-        char buf[512];
-        FILE *fp;
+	char buf[512];
+	FILE *fp;
 
-        fp = fopen(file, "r");
-        if (!fp)
-                return;
-        while (fgets(buf, sizeof(buf), fp)) {
-                char *p = buf;
-                int id;
-                char namebuf[512];
+	fp = fopen(file, "r");
+	if (!fp) return;
 
-                while (*p == ' ' || *p == '\t')
-                        p++;
-                if (*p == '#' || *p == '\n' || *p == 0)
-                        continue;
-                if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s #", &id, namebuf) != 2) {
-                        HIP_ERROR("Database %s is corrupted at %s\n",
-                                file, p);
-                        return;
-                }
+	while (fgets(buf, sizeof(buf), fp))
+	{
+		char *p = buf;
+		int id;
+		char namebuf[512];
 
-                if (id<0 || id>size)
-                        continue;
+		while (*p == ' ' || *p == '\t') p++;
+		
+		if (*p == '#' || *p == '\n' || *p == 0) continue;
 
-                tab[id] = strdup(namebuf);
-        }
-        fclose(fp);
+		if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s #", &id, namebuf) != 2)
+		{
+				HIP_ERROR("Database %s is corrupted at %s\n", file, p);
+				return;
+		}
+
+		if (id < 0 || id > size) continue;
+
+		tab[id] = strdup(namebuf);
+	}
+	
+	fclose(fp);
 }
 
 int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)

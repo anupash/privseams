@@ -29,20 +29,20 @@ PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-i386.deb"
 # copy the tarball from the HIPL directory
 copy_tarball ()
 {
-    set -e
-    
-    echo "** Copying the tarball"
- #cd ${PKGDIR}
-    cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
-    
-    echo "** Copying Debian control files to '${SRCDIR}/debian'"
-    mkdir -p "${SRCDIR}/debian"
-    cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-    for f in changelog copyright;do
+	set -e
+	
+	echo "** Copying the tarball"
+	#cd ${PKGDIR}
+	cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+	
+	echo "** Copying Debian control files to '${SRCDIR}/debian'"
+	mkdir -p "${SRCDIR}/debian"
+	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
+	for f in changelog copyright;do
 	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
-    done
-    
-    set +e
+	done
+	
+	set +e
 }
 
 # copy GPL files when building corporate packages
