@@ -94,7 +94,7 @@ copy_files ()
     cp hipd/hipd $PKGDIR/usr/sbin/
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    cp agent/hipagent $PKGDIR/usr/sbin/
+#    cp agent/hipagent $PKGDIR/usr/sbin/
 
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
@@ -118,7 +118,7 @@ copy_files ()
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+#    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
 
     echo "** Copying init.d script to $PKGDIR"

@@ -3,7 +3,7 @@ Version: 1.0
 Section: devel
 Priority: optional
 Maintainer: InfraHIP <infrahip@hiit.fi>
-Depends: hipl (>= 1.0)
+Depends: hipl (>= 1.0), libgtk2.0-0 (>= 2.10)
 Package: hipl-gconf
 Architecture: i386
 Description: This package contains HIPL configuration GUI.

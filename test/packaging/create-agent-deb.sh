@@ -22,29 +22,30 @@ copy_binpkg_files()
 	set -e
 
 	mkdir -p "$PKGDIR/DEBIAN"
-	for f in control changelog copyright postinst; do
+	for f in control changelog copyright postinst postrm; do
 		cp $PKGROOT/$DEBIAN/$f "$PKGDIR/DEBIAN"
 	done
 	
 	mkdir -p "$PKGDIR/usr"
-	mkdir -p "$PKGDIR/usr/bin"
+	mkdir -p "$PKGDIR/usr/sbin"
 	mkdir -p "$PKGDIR/usr/lib"
 	mkdir -p "$PKGDIR/usr/share"
 	mkdir -p "$PKGDIR/usr/share/hipl"
 	mkdir -p "$PKGDIR/usr/share/hipl/libhipgui"
 	mkdir -p "$PKGDIR/usr/share/menu"
+	mkdir -p "$PKGDIR/usr/share/pixmaps"
+	mkdir -p "$PKGDIR/usr/share/applications"
 	mkdir -p "$PKGDIR/etc"
 	mkdir -p "$PKGDIR/etc/xdg"
 	mkdir -p "$PKGDIR/etc/xdg/autostart"
 	
-	for suffix in a la so so.0 so.0.0.0; do
-		cp -d $ROOT/libhipgui/.libs/libstrvar.$suffix $PKGDIR/usr/lib/
-	done
+#	for suffix in a la so so.0 so.0.0.0; do
+#		cp -d $ROOT/libhipgui/.libs/libstrvar.$suffix $PKGDIR/usr/lib/
+#	done
 
-	cp -d $ROOT/agent/hipagent $PKGDIR/usr/bin/
+	cp -d $ROOT/agent/hipagent $PKGDIR/usr/sbin/
 
 	cp -d $ROOT/libhipgui/exec.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/logo.png $PKGDIR/usr/share/hipl/libhipgui/
 	cp -d $ROOT/libhipgui/newgroup.png $PKGDIR/usr/share/hipl/libhipgui/
 	cp -d $ROOT/libhipgui/newhit.png $PKGDIR/usr/share/hipl/libhipgui/
 	cp -d $ROOT/libhipgui/run.png $PKGDIR/usr/share/hipl/libhipgui/
@@ -54,8 +55,10 @@ copy_binpkg_files()
 	cp -d $ROOT/libhipgui/stock_keyring_48.png $PKGDIR/usr/share/hipl/libhipgui/
 	cp -d $ROOT/libhipgui/swtool.png $PKGDIR/usr/share/hipl/libhipgui/
 
-	cp -d $ROOT/libhipgui/hipgconf.desktop $PKGDIR/etc/xdg/autostart
+	cp -d $ROOT/libhipgui/hipgconf.desktop $PKGDIR/etc/xdg/autostart/hipgconf.desktop
+	cp -d $ROOT/libhipgui/hipgconf.app.desktop $PKGDIR/usr/share/applications/hipgconf.desktop
 	cp -d $ROOT/libhipgui/hipgconf.menu $PKGDIR/usr/share/menu/hipgconf
+	cp -d $ROOT/libhipgui/logo32.png $PKGDIR/usr/share/pixmaps/hipgconf.png
 
 	set +e
 }
