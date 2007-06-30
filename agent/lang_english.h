@@ -31,7 +31,7 @@ char *lang_english[] =
 	"title-msgdlg",				"Question",
 
 	/* System tray menu. */
-	"systray-show",				"Preferences",
+	"systray-show",				"Configuration",
 	"systray-exec",				"Execute",
 	"systray-exit",				"Exit",
 	"systray-about",			"About",

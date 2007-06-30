@@ -68,12 +68,16 @@ int main_create_content(void)
 		/* Create menu for status icon. */
 		w = gtk_menu_new();
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-show"));
+		label = gtk_image_menu_item_new_with_label(lang_get("systray-show"));
+		iconw = gtk_image_new_from_stock(GTK_STOCK_PREFERENCES, GTK_ICON_SIZE_MENU);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_SHOW);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-exec"));
+		label = gtk_image_menu_item_new_with_label(lang_get("systray-exec"));
+		iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXEC);
 		gtk_widget_show(label);
@@ -82,7 +86,9 @@ int main_create_content(void)
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		gtk_widget_show(label);
 		
-		label = gtk_menu_item_new_with_label(lang_get("systray-about"));
+		label = gtk_image_menu_item_new_with_label(lang_get("systray-about"));
+		iconw = gtk_image_new_from_stock(GTK_STOCK_ABOUT, GTK_ICON_SIZE_MENU);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_ABOUT);
 		gtk_widget_show(label);
@@ -91,7 +97,9 @@ int main_create_content(void)
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		gtk_widget_show(label);
 
-		label = gtk_menu_item_new_with_label(lang_get("systray-exit"));
+		label = gtk_image_menu_item_new_with_label(lang_get("systray-exit"));
+		iconw = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
+		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 		gtk_menu_shell_append(GTK_MENU_SHELL(w), label);
 		g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_EXIT);
 		gtk_widget_show(label);
@@ -124,7 +132,9 @@ int main_create_content(void)
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
-	label = gtk_menu_item_new_with_label(lang_get("menu-file-exit"));
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-file-exit"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
 	g_signal_connect(label, "activate", G_CALLBACK(main_destroy), (gpointer)"exit");
 	gtk_widget_show(label);
@@ -137,7 +147,9 @@ int main_create_content(void)
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
-	label = gtk_menu_item_new_with_label(lang_get("menu-edit-locals"));
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-locals"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_PROPERTIES, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
 //	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_TRAY_HIDE);
 	gtk_widget_show(label);
@@ -156,19 +168,25 @@ int main_create_content(void)
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
-	label = gtk_menu_item_new_with_label(lang_get("menu-tools-runapp"));
-	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
-	gtk_widget_show(label);
-
-	label = gtk_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
 	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
 	gtk_widget_show(label);
 
-	label = gtk_menu_item_new_with_label(lang_get("menu-tools-addhit"));
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-addhit"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
 	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
+	gtk_widget_show(label);
+	
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-runapp"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
 	gtk_widget_show(label);
 
 	gtk_menu_item_set_submenu(w, w2);
@@ -193,17 +211,18 @@ int main_create_content(void)
 	gtk_toggle_button_set_active(w, TRUE);
 
 	gtk_toolbar_append_space(toolbar);*/
-	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newgroup.png");
+	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_SMALL_TOOLBAR);
+//	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newgroup.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newgroup"),
 	                            lang_get("tb-newgroup-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWGROUP);
-	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newhit.png");
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_SMALL_TOOLBAR);
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newhit"), lang_get("tb-newhit-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_NEWHIT);
 	gtk_toolbar_append_space(toolbar);
-	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/exec.png");
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_SMALL_TOOLBAR);
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-runapp"), lang_get("tb-runapp-tooltip"),
 	                            "Private", iconw,
 	                            GTK_SIGNAL_FUNC(toolbar_event), ID_TOOLBAR_RUN);
