@@ -41,6 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
+"handoff mode lazy|active\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
@@ -80,6 +81,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
+	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	NULL, /* run */
 };
@@ -122,6 +124,8 @@ int hip_conf_get_action(char *text) {
                 ret = ACTION_DHT;
 	else if (!strcmp("debug", text))
                 ret = ACTION_DEBUG;
+	else if (!strcmp("handoff", text))
+                ret = ACTION_HANDOFF;
 
 	return ret;
 }
@@ -173,9 +177,13 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA:
                 count=2;
                 break;
+	case ACTION_HANDOFF:
+	        count = 2;
+                break;
 	case ACTION_DEBUG:
 	        count = 1;
                 break;
+	
 	default:
 	        break;
 
@@ -219,6 +227,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
 
 
 
@@ -265,6 +275,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_DHT:
 	case ACTION_RST:
 	case ACTION_BOS:
+	case ACTION_HANDOFF:
 	
                 type_arg = 2;
                 break;
@@ -273,7 +284,7 @@ int hip_conf_get_type_arg(int action) {
 	
                 type_arg = 1;
                 break;
-
+	
 	default:
 	        break;
         }
@@ -465,7 +476,6 @@ out_err:
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-
 int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 		  const char *opt[], int optc) 
 {
@@ -1207,6 +1217,31 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
         return err;
 }
 
+int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
+{	
+	int err=0;
+
+		
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	
+	if (strcmp("active",opt[0]) ==0)
+	{
+		HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+                	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to active successfully\n");
+	}else{
+		
+	  	HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+              	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to lazy successfully\n");
+	}
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+
+   out_err:
+	return err;
+	
+}
 
 
 int hip_get_all_hits(struct hip_common *msg,char *argv[])
@@ -1273,6 +1308,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
  * EXEC_LOADLIB_HIP\n
  * EXEC_LOADLIB_NONE\n
  *
+ * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
@@ -1290,20 +1326,28 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	if (do_fork)
 		err = fork();
 
-	if (err < 0) {
+	if (err < 0)
+	{
 		HIP_ERROR("Failed to exec new application.\n");
-	} else if (err > 0) {
+	}
+	else if (err > 0)
+	{
 		err = 0;
-	} else if(err == 0) {
+	}
+	else if(err == 0)
+	{
 		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
-		if (type == EXEC_LOADLIB_HIP) {
+		if (type == EXEC_LOADLIB_HIP)
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
 #else
 			libs = "libinet6.so:libhiptool.so";
 #endif
-		} else {
+		}
+		else
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 #else
@@ -1314,7 +1358,8 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 
 		HIP_DEBUG("LD_PRELOADing\n");
 		err = execvp(argv[0], argv);
-		if (err != 0) {
+		if (err != 0)
+		{
 			HIP_DEBUG("Executing new application failed!\n");
 			exit(1);
 		}

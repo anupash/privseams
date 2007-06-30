@@ -26,15 +26,16 @@ char *lang_english[] =
 	"title-main",				"HIP configuration",
 	"title-newhit",				"New HIT",
 	"title-newgroup",			"Create new group",
-	"title-runapp",				"Run application",
+	"title-runapp",				"Execute application",
 	"title-locals",				"Local HIT",
 	"title-msgdlg",				"Question",
 
 	/* System tray menu. */
-	"systray-hide",				"Hide",
-	"systray-show",				"Show",
+	"systray-show",				"Configuration",
+	"systray-exec",				"Execute",
 	"systray-exit",				"Exit",
-	
+	"systray-about",			"About",
+
 	/* Main window menu. */
 	"menu-file",				"File",
 	"menu-file-exit",			"Exit",
@@ -43,16 +44,16 @@ char *lang_english[] =
 	"menu-edit-locals",			"Local HITs",
 	
 	"menu-tools",				"Tools",
-	"menu-tools-runapp",		"Run",
-	"menu-tools-newgroup",		"Create new group\n"
-								"Groups help in ordering and managing HIT's.",
+	"menu-tools-runapp",		"Execute",
+	"menu-tools-newgroup",		"Create new group",
 	"menu-tools-addhit",		"Add new HIT",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"New group",
-	"tb-newgroup-tooltip",		"Create new group",
-	"tb-runapp",				"Run",
-	"tb-runapp-tooltip",		"Run new application using HIP libraries",
+	"tb-newgroup-tooltip",		"Create new group\n"
+								"Groups help in ordering and managing HIT's.",
+	"tb-runapp",				"Execute",
+	"tb-runapp-tooltip",		"Execute new application using HIP libraries",
 	"tb-newhit",				"New HIT",
 	"tb-newhit-tooltip",		"Add new HIT",
 	
@@ -136,6 +137,7 @@ char *lang_english[] =
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
+	"newhit-error-nolocals",	"Can't add new remote HIT,\nno local HITs defined.\nCheck HIP daemon.",
 	"hits-group-emptyitem",		" <empty> ",
 	"ask-delete-hit",			"Are you sure you want to delete selected HIT?",
 	"ask-delete-group",			"Are you sure you want to delete selected group?",

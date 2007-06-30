@@ -78,7 +78,7 @@ void sig_catch_term(int signum)
 int main(int argn, char *argv[])
 {
 	/* Variables. */
-	int err = 0, fd;
+	int err = 0, fd, as_daemon = 0;
 
 	/* Write pid to file. */
 /*	unlink(HIP_AGENT_LOCK_FILE);
@@ -105,7 +105,7 @@ int main(int argn, char *argv[])
 	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
 
 	/* Check command line options. */
-	term_set_mode(TERM_MODE_NONE);
+/*	term_set_mode(TERM_MODE_NONE);
 	err = -1;
 	if (argn == 2)
 	{
@@ -132,7 +132,25 @@ int main(int argn, char *argv[])
 	}
 	if (argn == 1) err = 0;
 
-	HIP_IFEL(err, -1, "Invalid command line parameters.\n");
+	HIP_IFEL(err, -1, "Invalid command line parameters.\n");*/
+	if (argn == 2)
+	{
+		if (argv[1][1] == 'b') as_daemon = 1;
+	}
+
+	if (as_daemon)
+	{
+		int i = fork();
+		HIP_IFEL(i < 0, -1, "fork() failed!\n");
+		if (i > 0) exit(0); /* parent exits */
+		setsid();
+		for (i = getdtablesize(); i >= 0; --i) close(i);
+		i = open("/dev/null", O_RDWR); /* open stdin */
+		dup(i); /* stdout */
+		dup(i); /* stderr */
+		umask(027);
+		chdir("/tmp");
+	}
 
 	/* Read config. */
 	err = config_read(str_var_get("config-file"));

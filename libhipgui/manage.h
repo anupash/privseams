@@ -67,6 +67,8 @@ int all_add_local(HIT_Local *, void *);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 
+void about(void);
+
 
 /*! @} addtogroup libhipgui */
 
