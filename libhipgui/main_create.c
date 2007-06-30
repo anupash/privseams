@@ -24,6 +24,19 @@ gboolean e(void)
 	return FALSE;
 }
 
+
+void cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+{
+	GtkTreePath *path = gtk_tree_model_get_path(tree_model, iter);
+	int depth = gtk_tree_path_get_depth(path);
+	char *stock_id = GTK_STOCK_ABOUT;
+
+	if (depth == 1) stock_id = GTK_STOCK_DIRECTORY;
+	else stock_id = GTK_STOCK_ORIENTATION_PORTRAIT;
+	g_object_set(cell, "stock-id", stock_id);
+}
+
+
 /******************************************************************************/
 /**
 	Create contents of the gui in here.
@@ -285,7 +298,7 @@ int main_create_content(void)
 	label = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Cert");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
-	gtk_widget_show(label);        
+	gtk_widget_show(label);
 #endif
 
 	/***************************************
@@ -323,10 +336,27 @@ int main_create_content(void)
 	g_signal_connect(list, "drag_data_received", G_CALLBACK(rh_drag_data_received), (gpointer)0);
 	gtk_tree_view_set_column_drag_function(list, e, NULL, NULL);
 
-	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+/*	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes(NULL, cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));*/
+
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+	column = gtk_tree_view_column_new();
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	
+	cell = gtk_cell_renderer_pixbuf_new();
+//	g_object_set(cell, "stock-id", GTK_STOCK_EXECUTE);
+/*	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	g_object_set(cell, "pixbuf-expander-closed", iconw);
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	g_object_set(cell, "pixbuf-expander-open", iconw);*/
+	gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), FALSE);
+	gtk_tree_view_column_set_cell_data_func(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), cell_data_func, NULL, e);
+	
+	cell = gtk_cell_renderer_text_new();
+	gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), TRUE);
+	gtk_tree_view_column_set_attributes(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), "text", 0, NULL);
 	
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);

@@ -100,7 +100,7 @@ int execdlg_create_content(void)
 	hbox = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 3);
 	gtk_widget_show(hbox);
-	w = gtk_label_new("Command to execute:");
+	w = gtk_label_new("Command:");
 	gtk_widget_show(w);
 	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 1);
 	w = gtk_entry_new();
