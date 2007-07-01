@@ -1243,8 +1243,9 @@
 			</para></listitem>
 		</itemizedlist>
 	</para>
-<example><title>Here is a complete english version of a possible language file:</title>
+<example><title>Here is a complete english version of a example language file:</title>
 <programlisting>
+
 # Example language file for HIP configuration GUI.
 # Language: English
 
@@ -1294,8 +1295,10 @@ nhdlg-button-accept=Accept
 nhdlg-button-drop=Drop
 nhdlg-err-invalid=Invalid HIT name given!
 nhdlg-err-exists=HIT with given name already exists!
-nhdlg-err-reserved=Given HIT name is reserved!\nChoose another one.
-nhdlg-err-invchar=HIT name contains invalid characters!\nRename.
+nhdlg-err-reserved=Given HIT name is reserved!
+nhdlg-err-reserved+Choose another one.
+nhdlg-err-invchar=HIT name contains invalid characters!
+nhdlg-err-invchar+Rename.
 nhdlg-err-hit=HIT is invalid!
 nhdlg-newinfo=New HIT information
 nhdlg-newhit=New HIT:
@@ -1320,8 +1323,10 @@ ngdlg-button-create=Create
 ngdlg-button-cancel=Cancel
 ngdlg-err-invalid=Invalid group name!
 ngdlg-err-exists=Group already exists!
-ngdlg-err-reserved=Given group name is reserved!\nChoose another one.
-ngdlg-err-invchar=Group name contains invalid characters!\nRename.
+ngdlg-err-reserved=Given group name is reserved!
+ngdlg-err-reserved+Choose another one.
+ngdlg-err-invchar=Group name contains invalid characters!
+ngdlg-err-invchar+Rename.
 	
 # Tool window (HIT handling).
 tw-button-apply=Apply
@@ -1365,8 +1370,12 @@ gui-info-001=HIP service unavailable.
 gui-info-002=HIP GUI started.
 
 # Other strings.
-newgroup-error-nolocals=Can't create new group,\nno local HITs defined.\nCheck HIP daemon.
-newhit-error-nolocals=Can't add new remote HIT,\nno local HITs defined.\nCheck HIP daemon.
+newgroup-error-nolocals=Can't create new group,
+newgroup-error-nolocals+no local HITs defined.
+newgroup-error-nolocals+Check HIP daemon.
+newhit-error-nolocals=Can't add new remote HIT,
+newhit-error-nolocals+no local HITs defined.
+newhit-error-nolocals+Check HIP daemon.
 # NOTE! Empty group must have spaces in both sides of the item name!
 hits-group-emptyitem= &lt;empty&gt; 
 ask-delete-hit=Are you sure you want to delete selected HIT?
