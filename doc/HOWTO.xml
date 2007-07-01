@@ -691,7 +691,7 @@
     </para>
 
     <para>
-    3. Use HIP agent GUI to run the application. You can execute applications
+    3. Use HIP configuration GUI to run the application. You can execute applications
        with GUI and edit their library-path as you like. Also you should be
        able to see list of processes you have executed from GUI.
     </para>
@@ -1127,68 +1127,104 @@
 	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
 
   </chapter>
-  <chapter>
-    <title>HIP User Agent and GUI</title>
-      <para>Manage HITs with graphical user interface.</para>
-      <para>When new HIT is received, it and local HIT is filtered
-            trough agent, which asks user for accepting the HIT pair.
-            Then HIT is saved into database and accept/reject is
-            returned to daemon. User can also manage HITs trough graphical
-            user interface. The interface is under development,
+
+<chapter><title>HIP configuration GUI</title>
+	<formalpara><title>About</title><para></para></formalpara>
+		<para>Manage HITs with graphical user interface.</para>
+		<para>
+			When new HIT is received, it and local HIT is filtered
+			trough configuration GUI, which asks user for accepting the HIT pair.
+			Then HIT is saved into database and accept/reject is
+			returned to daemon. User can also manage HITs trough graphical
+			user interface. The interface is under development,
 			and is quite in alpha state yet.
 		</para>
-      <para>
-		To compile agent and GUI atleast following packages are needed (asuming you have debian):</para>
-    <itemizedlist>
-<listitem><para>
-		gcc and g++ compilers, both should be at least version 4.0.
-</para></listitem>
-<listitem><para>
-		Package: xbase-clients - miscellaneous X clients
-</para></listitem>
-<listitem><para>
-		   GTK 2.x and development files for it (Package called libgtk2.0-dev).
-		   If you want to use 'system  tray' icon, you need atleast 2.10.0 version
-		   of GTK. See info about manual GTK 2.10 installation below.
-</para></listitem>
-<listitem><para>
+	
+	<screenshot>
+		<screeninfo>HIP configuration GUI main window</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI main window</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
+		
+	<formalpara><title>Usage</title><para></para></formalpara>
+		<para>
+			Configuration GUI uses '$HOMEDIR/.hipagent/' -directory to store
+			per user configuration files. There should be atleast 'database'
+			file which contains information about configured local and remote hits
+			and remote groups. Optionally user can create file called 'config'.
+			This file can contain different options to change GUI behaviour.
+			Following paragraphs tell more.
+		</para>
+		
+		<itemizedlist>
+			<listitem><para>
+				'lang=...' can be used to select one of compiled-in languages. These are
+				currently 'en' and 'fi'. 'en' means english and is default.
+				'fi' means finnish. If you want to change GUI language to finnish,
+				type line 'lang=fi' into your config-file in .hipagent-dir.
+			</para></listitem>
+	
+			<listitem><para>
+			'lang-file=...' can be used to define external language file, which
+			can override some or all compiled-in language strings.
+			This language file should contain lines which are somewhat like this:
+			'value-name=value'. Example line 'title-main=HIPL Graphical Config' would
+			change GUI main window title to 'HIPL Graphical Config'.
+			</para></listitem>
+		</itemizedlist>
+		<para>
+			The configuration GUI executable is called "hipagent". You should run it using
+			normal user (non-root) priviledges.
+		</para>
 
-		Automake 1.9
-</para></listitem>
-	</itemizedlist>
+	<screenshot>
+		<screeninfo>HIP configuration GUI tray icon</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI tray icon</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
 
-	 <para>
-		   In order to install GTK 2.10 manually into
-		   debian/ubuntu, you should do following:
-		   Download gtk from gtk.org.
-		   Also some other libraries are needed, but they can be found using
-		   "aptitude search" and then installed using "aptitude install"
-		   (Atleast cairo, pango, atk, glib and development versions of those are needed).
-		   If you dont like to overide default gtk library,
-		   install gtk using "./configure --prefix=/opt".
-		   If you do it in that way, you need to set some envars:
-		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
-		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
-		   Example like this:
-		   "export PATH=/opt/bin:$PATH", 
-		   "export LD_LIBRARY_PATH=/opt/lib:$LID_LIBRARY_PATH"
-		   "export PKG_CONFIG_PATH=/opt/lib/pkgconfig:$PKG_CONFIG_PATH"
-	  </para>
-	  
-	  <para>
-		  In order to the agent start properly with right window and system tray icon,
-		  you must first do 'make install' to install the data files in right directory.
-		  System tray icon will not be shown at all, if you don't do this.
-	  </para>
-      <para>
-		HIT database is saved and loaded on agent startup as default from
-		'$HOMEDIR/.hipagentdb'-file.
-      </para>
-      <para>The agent executable is called "hipagent". You should run it using
-            normal user (non-root) priviledges.
-      </para>
-  </chapter>
-  <chapter>
+	<formalpara><title>Compilation</title><para></para></formalpara>
+		<para>To compile HIP configuration GUI atleast following packages are needed (asuming you have debian):</para>
+		<itemizedlist>
+			<listitem><para>
+				gcc and g++ compilers, both should be at least version 4.0.
+			</para></listitem>
+			<listitem><para>
+				Package: xbase-clients - miscellaneous X clients
+			</para></listitem>
+			<listitem><para>
+				GTK 2.x and development files for it (Package called libgtk2.0-dev).
+			</para></listitem>
+			<listitem><para>
+				Automake 1.9
+			</para></listitem>
+		</itemizedlist>
+		<note><title>Notes</title>
+			<para>
+				If you want to use 'system  tray' icon, you need atleast 2.10.0 version of GTK.
+			</para>
+			<para>
+				In order to the configuration GUI start properly with right window and system tray icon,
+				you must first do 'make install' to install the data files in right directory.
+				System tray icon will not be shown at all, if you don't do this.
+			</para>
+		</note>
+
+</chapter>
+  
+<chapter>
     <title>HIP socket handler kernel module</title>
     <para>The HIP socket handler is a component of the HIPL HIP
 	  implementation. It is used to intercept HIP socket

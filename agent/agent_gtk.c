@@ -155,7 +155,7 @@ int main(int argn, char *argv[])
 	/* Read config. */
 	err = config_read(str_var_get("config-file"));
 	if (err) HIP_ERROR("Could not read config file.\n");
-	lang_init(str_var_get("lang"));
+	lang_init(str_var_get("lang"), str_var_get("lang-file"));
 
 	/* Set some random seed. */
 	srand(time(NULL));

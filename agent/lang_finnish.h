@@ -39,14 +39,15 @@ char *lang_finnish[] =
 	/* Main window menu. */
 	"menu-file",				"Tiedosto",
 	"menu-file-exit",			"Lopeta",
+	"menu-file-runapp",			"Käynnistä",
 	
 	"menu-edit",				"Muokkaa",
 	"menu-edit-locals",			"Paikalliset HIT:t",
+	"menu-edit-newgroup",		"Luo uusi ryhmä",
+	"menu-edit-addhit",			"Lisää uusi HIT",
 	
-	"menu-tools",				"Työkalut",
-	"menu-tools-runapp",		"Käynnistä",
-	"menu-tools-newgroup",		"Luo uusi ryhmä",
-	"menu-tools-addhit",		"Lisää uusi HIT",
+	"menu-help",				"Apua",
+	"menu-help-about",			"Tietoja",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"Uusi ryhmä",
@@ -59,7 +60,9 @@ char *lang_finnish[] =
 	
 	/* Tabs. */
 	"tabs-hits",				"HIT:t",
-	
+	"tabs-options",				"Asetukset",
+	"tabs-connections",			"Yhteydet",
+
 	/* New HIT dialog. */
 	"nhdlg-button-accept",		"Lisää tietokantaan",
 	"nhdlg-button-drop",		"Älä lisää",

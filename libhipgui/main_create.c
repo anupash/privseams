@@ -25,15 +25,30 @@ gboolean e(void)
 }
 
 
-void cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *tree_model, GtkTreeIter *iter, gpointer data)
+/******************************************************************************/
+/**
+ * Tell HIT list cell renderer which icon to show where.
+ */
+void cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
-	GtkTreePath *path = gtk_tree_model_get_path(tree_model, iter);
+	GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(model), iter);
 	int depth = gtk_tree_path_get_depth(path);
 	char *stock_id = GTK_STOCK_ABOUT;
+	char *value;
+	HIT_Group *g;
 
-	if (depth == 1) stock_id = GTK_STOCK_DIRECTORY;
+	gtk_tree_model_get(GTK_TREE_MODEL(model), iter, 0, &value, -1);
+	if (depth == 1)
+	{
+		g = hit_db_find_rgroup(value);
+		if (!g);
+		else if (g->remotec > 0) stock_id = GTK_STOCK_OPEN;
+		else stock_id = GTK_STOCK_DIRECTORY;
+	}
+	else if (strcmp(value, lang_get("hits-group-emptyitem")) == 0) stock_id = GTK_STOCK_STOP;
 	else stock_id = GTK_STOCK_ORIENTATION_PORTRAIT;
-	g_object_set(cell, "stock-id", stock_id);
+	g_object_set(cell, "stock-id", stock_id, NULL);
+	g_free(value);
 }
 
 
@@ -145,6 +160,17 @@ int main_create_content(void)
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-file-runapp"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
+	gtk_widget_show(label);
+
+	label = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
+	gtk_widget_show(label);
+
 	label = gtk_image_menu_item_new_with_label(lang_get("menu-file-exit"));
 	iconw = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
@@ -159,7 +185,25 @@ int main_create_content(void)
 	w = gtk_menu_item_new_with_label(lang_get("menu-edit"));
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
-	
+
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-newgroup"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_NEW, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
+	gtk_widget_show(label);
+
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-addhit"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
+	gtk_widget_show(label);
+
+	label = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
+	gtk_widget_show(label);
+
 	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-locals"));
 	iconw = gtk_image_new_from_stock(GTK_STOCK_PROPERTIES, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
@@ -177,30 +221,17 @@ int main_create_content(void)
 
 	
 	/* Tools-menu. */
-	w = gtk_menu_item_new_with_label(lang_get("menu-tools"));
+	w = gtk_menu_item_new_with_label(lang_get("menu-help"));
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_MENU);
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-help-about"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ABOUT, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_ABOUT);
 	gtk_widget_show(label);
 
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-addhit"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
-	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
-	gtk_widget_show(label);
-	
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-runapp"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
-	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
-	gtk_widget_show(label);
 
 	gtk_menu_item_set_submenu(w, w2);
 	gtk_menu_bar_append(menu_bar, w);
@@ -208,7 +239,9 @@ int main_create_content(void)
 	/* Create toolbar. */
 	toolbar = gtk_toolbar_new();
 	gtk_box_pack_start(pane, toolbar, FALSE, FALSE, 0);
-	gtk_widget_show(toolbar);
+	/** note: Toolbar was not so usefull, so hidden for now. */
+	gtk_widget_hide(toolbar);
+//	gtk_widget_show(toolbar);
 	widget_set(ID_TOOLBAR, toolbar);
 	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_ICONS);
 
@@ -224,7 +257,7 @@ int main_create_content(void)
 	gtk_toggle_button_set_active(w, TRUE);
 
 	gtk_toolbar_append_space(toolbar);*/
-	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_SMALL_TOOLBAR);
+	iconw = gtk_image_new_from_stock(GTK_STOCK_NEW, GTK_ICON_SIZE_SMALL_TOOLBAR);
 //	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newgroup.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newgroup"),
 	                            lang_get("tb-newgroup-tooltip"),
@@ -259,11 +292,6 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), remote_pane, label);
 	gtk_widget_show(remote_pane);
 
-	hiubox = gtk_vbox_new(FALSE, 1);
-	label2 = gtk_label_new("HITs in use");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
-	//gtk_widget_show(hiubox);
-
 /*	label = gtk_label_new("Net");
 	label2 = gtk_label_new("Net");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
@@ -280,9 +308,14 @@ int main_create_content(void)
 	gtk_widget_show(label);*/
 
 	cframe = gtk_frame_new("Configure HIP options");
-	label2 = gtk_label_new("Options");
+	label2 = gtk_label_new(lang_get("tabs-options"));
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
-	//gtk_widget_show(cframe);
+	gtk_widget_show(cframe);
+
+	hiubox = gtk_vbox_new(FALSE, 1);
+	label2 = gtk_label_new(lang_get("tabs-connections"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
+	gtk_widget_show(hiubox);
 
 	pbox = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Processes");

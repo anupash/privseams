@@ -276,6 +276,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 
 	case IDM_TRAY_ABOUT:
+	case IDM_ABOUT:
 		about();
 		break;
 

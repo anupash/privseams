@@ -39,14 +39,15 @@ char *lang_english[] =
 	/* Main window menu. */
 	"menu-file",				"File",
 	"menu-file-exit",			"Exit",
+	"menu-file-runapp",			"Execute",
 	
 	"menu-edit",				"Edit",
 	"menu-edit-locals",			"Local HITs",
+	"menu-edit-newgroup",		"Create new group",
+	"menu-edit-addhit",			"Add new HIT",
 	
-	"menu-tools",				"Tools",
-	"menu-tools-runapp",		"Execute",
-	"menu-tools-newgroup",		"Create new group",
-	"menu-tools-addhit",		"Add new HIT",
+	"menu-help",				"Help",
+	"menu-help-about",			"About",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"New group",
@@ -59,7 +60,9 @@ char *lang_english[] =
 	
 	/* Tabs. */
 	"tabs-hits",				"HITs",
-	
+	"tabs-options",				"Options",
+	"tabs-connections",			"Connections",
+
 	/* New HIT dialog. */
 	"nhdlg-button-accept",		"Accept",
 	"nhdlg-button-drop",		"Drop",
