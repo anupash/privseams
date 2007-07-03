@@ -313,8 +313,8 @@ int main(int argc, char *argv[])
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)
 	{
-		printf("foreground\n");
 		hip_set_logtype(LOGTYPE_STDERR);
+		HIP_DEBUG("foreground\n");
 	}
 	else
 	{
