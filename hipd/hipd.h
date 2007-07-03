@@ -97,6 +97,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_un hip_firewall_addr;
 
+extern int is_active_handover;
 
 int hip_agent_is_alive();
 

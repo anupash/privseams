@@ -646,7 +646,7 @@ void hip_exit(int signal)
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
 
-        hip_uninit_hadb();
+	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
 
 	msg = hip_msg_alloc();

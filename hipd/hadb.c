@@ -2269,6 +2269,7 @@ void hip_uninit_hadb()
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
+//	hip_ht_uninit(hadb_hit);
 #if 0
 	HIP_DEBUG("DELETING HA HT\n");
 	list_for_each_entry_safe(ha, tmp, hadb_byhit[i], next_hit)
@@ -2280,6 +2281,7 @@ void hip_uninit_hadb()
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 #endif
+	
 }
 
 void hip_delete_all_sp()

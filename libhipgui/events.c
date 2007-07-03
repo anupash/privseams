@@ -21,7 +21,11 @@
 */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	gtk_widget_hide(w);
+#else
 	return (FALSE);
+#endif
 }
 /* END OF FUNCTION */
 
@@ -32,7 +36,7 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 	@return TRUE if don't close or FALSE if close.
 */
-gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_widget_hide(w);
 	return (TRUE);
@@ -46,15 +50,6 @@ void main_destroy(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
 	gtk_main_quit();
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** On tool window destroy. */
-void tw_destroy(GtkWidget *widget, gpointer data)
-{
-	gtk_widget_hide(widget);
 }
 /* END OF FUNCTION */
 
@@ -262,8 +257,8 @@ void button_event(GtkWidget *warg, gpointer data)
 	case IDB_TWL_CANCEL:
 		twl_cancel();
 		break;
-		
-	case IDB_SYSTRAY:
+
+/*	case IDB_SYSTRAY:
 		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
 		if (i == TRUE)
 		{
@@ -273,16 +268,17 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			gtk_widget_show(widget(ID_MAINWND));
 		}
-		break;
+		break;*/
 		
 	case IDM_TRAY_SHOW:
 		gtk_widget_show(widget(ID_MAINWND));
 		break;
-	
-	case IDM_TRAY_HIDE:
-		gtk_widget_hide(widget(ID_MAINWND));
 		break;
-	
+
+	case IDM_TRAY_ABOUT:
+		about();
+		break;
+
 	case IDM_TRAY_EXIT:
 		gui_terminate();
 		break;
@@ -291,6 +287,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		HIP_DEBUG("Delete\n");
 		break;
 	
+	case IDM_TRAY_EXEC:
 	case IDM_RUNAPP:
 		exec_application();
 		break;

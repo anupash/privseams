@@ -31,9 +31,10 @@ char *lang_finnish[] =
 	"title-msgdlg",				"Kysymys",
 
 	/* System tray menu. */
-	"systray-hide",				"Piilota",
-	"systray-show",				"Näytä",
+	"systray-show",				"Asetukset",
+	"systray-exec",				"Suorita",
 	"systray-exit",				"Lopeta",
+	"systray-about",			"Tietoja",
 	
 	/* Main window menu. */
 	"menu-file",				"Tiedosto",
@@ -135,7 +136,8 @@ char *lang_finnish[] =
 	"gui-info-002",				"Käyttöliittymä käynnistetty.",
 
 	/* Other strings. */
-	"newgroup-error-nolocals",	"Ei voi luoda uutta ryhmää,\npaikallisia HIT:jä ei ole määritelty!\nTarkista HIP daemon.",
+	"newgroup-error-nolocals",	"Ei voida luoda uutta ryhmää,\npaikallisia HIT:jä ei ole määritelty!\nTarkista HIP daemon.",
+	"newhit-error-nolocals",	"Ei voida lisätä uutta etäkoneen HIT:ä,\npaikallisia HIT:jä ei ole määritelty!\nTarkista HIP daemon.",
 	"hits-group-emptyitem",		" <tyhjä ryhmä> ",
 	"ask-delete-hit",			"Oletko varma että haluat poistaa valitun HIT:n?",
 	"ask-delete-group",			"Oletko varma että haluat poistaa valitun ryhmän?",
