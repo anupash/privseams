@@ -256,7 +256,7 @@ out_err:
 
 int main(int argc, char *argv[])
 {
-	int ch;
+	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
 #ifdef CONFIG_HIP_HI3
 	char *i3_config = NULL;
@@ -279,12 +279,15 @@ int main(int argc, char *argv[])
 	int flush_ipsec = 1;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "b")) != -1)
+	while ((ch = getopt(argc, argv, "bk")) != -1)
 	{		
 		switch (ch)
 		{
 		case 'b':
 			foreground = 0;
+			break;
+		case 'k':
+			killold = 1;
 			break;
 #ifdef CONFIG_HIP_HI3
 		case '3':
@@ -326,7 +329,7 @@ int main(int argc, char *argv[])
 	time(&load_time);
 	
 	/* Default initialization function. */
-	HIP_IFEL(hipd_init(flush_ipsec), 1, "hipd_init() failed!\n");
+	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	highest_descriptor = maxof(10, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,

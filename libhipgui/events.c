@@ -323,17 +323,14 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	switch (id)
 	{
 	case ID_TOOLBAR_RUN:
-		HIP_DEBUG("Toolbar: Run application.\n");
 		exec_application();
 		break;
 
 	case ID_TOOLBAR_NEWHIT:
-		HIP_DEBUG("Toolbar: Popup for new HIT.\n");
 		gui_ask_new_hit(NULL, 2);
 		break;
 
 	case ID_TOOLBAR_NEWGROUP:
-		HIP_DEBUG("Toolbar: Create remote group.\n");
 		create_remote_group("");
 		break;
 	}
@@ -355,7 +352,6 @@ void systray_event(void *warg, guint bid, guint atime, gpointer data)
 void notebook_event(GtkNotebook *notebook, GtkNotebookPage *page,
                     guint page_num, gpointer data)
 {
-	HIP_DEBUG("Selected notebook page %d.\n", page_num);
 }
 /* END OF FUNCTION */
 

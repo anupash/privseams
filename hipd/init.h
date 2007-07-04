@@ -28,7 +28,7 @@
 #define USER_NOBODY "nobody"
 extern char *i3_config;
 
-int hipd_init(int flush_ipsec);
+int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6);
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp);
