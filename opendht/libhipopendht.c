@@ -70,8 +70,10 @@ int resolve_dht_gateway_info(char * gateway_name,
 		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
 	}
 
+#if 0
 	if (res)
 		free(res);
+#endif
 
 	return error;
 }
