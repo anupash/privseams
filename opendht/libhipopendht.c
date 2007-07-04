@@ -61,7 +61,6 @@ int resolve_dht_gateway_info(char * gateway_name,
 	error = 0;
 	
 	error = getaddrinfo(gateway_name, "5851", &hints, &res);
-	//error = getaddrinfo(gateway_name, NULL, &hints, &res);
 	if (error != 0)
 		HIP_DEBUG("OpenDHT gateway resolving failed\n");
 	else
@@ -70,9 +69,10 @@ int resolve_dht_gateway_info(char * gateway_name,
 		sa = (struct sockaddr_in *) gateway->ai_addr;
 		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
 	}
-	
+
 	if (res)
-		freeaddrinfo(res);
+		free(res);
+
 	return error;
 }
 

@@ -669,6 +669,11 @@ void hip_exit(int signal)
 	
 	unlink(HIP_DAEMON_LOCK_FILE);
 
+#ifdef CONFIG_HIP_OPENDHT
+	if (opendht_serving_gateway.ai_next)
+		freeaddrinfo(opendht_serving_gateway.ai_next);
+#endif
+
 	return;
 }
 
