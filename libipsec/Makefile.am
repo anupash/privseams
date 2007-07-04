@@ -18,7 +18,7 @@ AM_LFLAGS = -P__libipsec -olex.yy.c
 libipsec_la_SOURCES =
 
 if HIP_PFKEY
-libipsec_la_SOURCES = \
+libipsec_la_SOURCES += \
   ipsec_dump_policy.c \
   ipsec_get_policylen.c \
   ipsec_strerror.c \

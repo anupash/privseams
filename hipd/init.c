@@ -12,8 +12,15 @@
  */
 
 #include "init.h"
+#include <linux/capability.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include "debug.h"
+#include <pwd.h>
 
 extern struct hip_common *hipd_msg;
+typedef struct __user_cap_header_struct capheader_t;
+typedef struct __user_cap_data_struct capdata_t;
 
 
 /******************************************************************************/
@@ -317,9 +324,95 @@ int hipd_init(int flush_ipsec)
 
 	register_to_dht();
 	hip_load_configuration();
+	
+	if(hip_set_lowcapability()==1) HIP_DEBUG("Successful in lowering the capability");
 
 out_err:
 	return err;
+}
+
+
+int hip_set_lowcapability( ) {
+//-- BUG 172 -- try to lowerise the capabilities of the deamon 
+ 	
+	int err=0;
+#ifdef CONFIG_HIP_PRIVSEP
+	uid_t ruid,euid;
+	capheader_t header;
+	capdata_t data;	
+	header.pid=0;
+	header.version = _LINUX_CAPABILITY_VERSION;
+	struct passwd *nobody_pswd=getpwnam(USER_NOBODY);
+
+	data.effective = data.permitted = data.inheritable = 0;
+
+	if (prctl(PR_SET_KEEPCAPS, 1) < 0)  {
+    		perror ("prctl");
+    		err=-1;
+		goto out_err;
+  	}
+	
+	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+	if(nobody_pswd==NULL){
+		err=-1;
+		HIP_ERROR("Error while retrieving USER 'nobody' uid\n"); 
+		goto out_err;	
+	}
+
+	if (capget(&header, &data)!= 0){
+		err=-1;
+		HIP_ERROR("error while retrieving capabilities through 'capget()'");
+		goto out_err;
+
+	}
+
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+
+	ruid=nobody_pswd->pw_uid; 
+	euid=nobody_pswd->pw_uid; 
+	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+  	
+	if (setreuid(ruid,euid)!=0){
+		if(errno==EAGAIN) HIP_ERROR("Error no is EAGAIN\n");
+		else if (errno==EPERM) HIP_ERROR("Error no is EPERM\n");
+		err=-1;
+		goto out_err;
+
+	}
+	
+	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+	if (capget(&header, &data)!= 0){
+		err=-1;
+		HIP_ERROR("error while retrieving capabilities through 'capget()'");
+		goto out_err;
+
+	}
+
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+	HIP_DEBUG ("We are going to clear all capabilities except the ones we need:\n");
+	data.effective = data.permitted = data.inheritable = 0;
+  	// for CAP_NET_RAW capability 
+	data.effective |= (1 <<CAP_NET_RAW );
+  	data.permitted |= (1 <<CAP_NET_RAW );
+  	// for CAP_NET_ADMIN capability 
+	data.effective |= (1 <<CAP_NET_ADMIN );
+  	data.permitted |= (1 <<CAP_NET_ADMIN );
+
+	if (capset(&header, &data)!= 0){
+		err=-1;
+		HIP_ERROR("error while setting new capabilities through 'capset()'");
+		goto out_err;
+
+	}
+
+	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
+
+out_err:
+	return err;
+	
 }
 
 /**
@@ -508,8 +601,7 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	//hip_delete_default_prefix_sp_pair();
-
+	hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
@@ -554,7 +646,7 @@ void hip_exit(int signal)
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
 
-        hip_uninit_hadb();
+	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
 
 	msg = hip_msg_alloc();
@@ -576,6 +668,11 @@ void hip_exit(int signal)
 		free(msg);
 	
 	unlink(HIP_DAEMON_LOCK_FILE);
+
+#ifdef CONFIG_HIP_OPENDHT
+	if (opendht_serving_gateway.ai_next)
+		freeaddrinfo(opendht_serving_gateway.ai_next);
+#endif
 
 	return;
 }
@@ -643,3 +740,4 @@ void hip_probe_kernel_modules()
 	}
 	HIP_DEBUG("Probing completed\n");
 }
+

@@ -409,6 +409,7 @@ gethosts(const char *name, int _family,
     {
       for (i = 0; h->h_addr_list[i]; i++)			
 	{
+	  HIP_DEBUG("found an matching IP in /etc/hosts\n");
 	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
 	    exit(-EAI_MEMORY);
@@ -620,7 +621,9 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     if ((strlen(name) == strlen(fqdn_str)) &&		         	
       strcmp(name, fqdn_str) == 0) {				        
       _HIP_DEBUG("** match on line %d **\n", lineno);			
-      found_hits = 1;                                                   
+      found_hits = 1; 
+
+      HIP_DEBUG("found an matching HIP in /etc/hip/hosts\n");
                                                                         
       /* add every HIT to linked list */				
       for(i=0;i<length(&list);i++) {                                    
@@ -1064,7 +1067,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       struct gaih_addrtuple **pat = at;
       struct gaih_addrtuple *at_dns = *at;
       int no_data = 0;
-      int no_inet6_data;
+      int no_inet6_data = 0;
       int old_res_options = _res.options;
       int found_hits = 0;
       
@@ -1433,8 +1436,8 @@ static struct gaih gaih[] =
  * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
  * database is returned
  */
-int
-getaddrinfo (const char *name, const char *service,
+
+int getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
 {
   int i = 0, j = 0, last_i = 0;
@@ -1443,6 +1446,7 @@ getaddrinfo (const char *name, const char *service,
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
 
+  HIP_DEBUG("getaddrinfo() invoked!\n");
   _HIP_DEBUG("flags=%d\n", hints->ai_flags);
   HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)

@@ -369,6 +369,19 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_msg_init(msg);
 		err =  hip_select_default_hit(&my_src,&my_dst,msg);
 		break;
+	case SO_HIP_HANDOFF_ACTIVE:
+		//hip_msg_init(msg);
+		is_active_handover=1;
+		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);
+		
+		break;
+
+	case SO_HIP_HANDOFF_LAZY:
+		//hip_msg_init(msg);
+		is_active_handover=0;
+		//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
+		break;
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

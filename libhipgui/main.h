@@ -21,6 +21,11 @@
 #include "rhit_dnd.h"
 
 
+/******************************************************************************/
+/* DEFINES */
+#define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
+
+
 /*!
 	\addtogroup libhipgui
 	@{

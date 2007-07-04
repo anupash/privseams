@@ -20,7 +20,7 @@ noinst_LIBRARIES = libhipgui.a
 
 hipstart_SOURCES = hipstart.c widgets.c
 libhipgui_a_SOURCES = main.c events.c manage.c widgets.c exec.c tools.c terminal.c tw_create.c tw_manage.c main_create.c nh_create.c create.c nh_manage.c terminal_server.c terminal_client.c rhit_dnd.c
-libhipgui_a_DATA = logo.png run.png swtool.png newgroup.png newhit.png hipstart.conf
+libhipgui_a_DATA = logo.png run.png swtool.png newgroup.png newhit.png hipstart.conf exec.png stock_id_24.png stock_id_48.png stock_keyring_24.png stock_keyring_48.png
 
 hipstart_LDFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
 hipstart_CFLAGS = -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"

@@ -4,7 +4,7 @@
  * Licence: GNU/GPL
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  */
 
 #include "debug.h"
