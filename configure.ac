@@ -94,10 +94,10 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 AC_ARG_ENABLE(agent,
              AC_HELP_STRING([--enable-agent],
-                            [HIP user agent (default is NO)]),
-             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=no])
+                            [HIP user agent (default is YES)]),
+             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=yes])
 AC_CACHE_CHECK([whether to use agent],
-               [ac_cv_use_agent], [ac_cv_use_agent=no])
+               [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 # XX TODO: test on Debian and RH. Also, how to determine the version?
@@ -275,7 +275,7 @@ AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
-AC_PREFIX_DEFAULT("/usr")
+AC_PREFIX_DEFAULT("/usr/local")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")

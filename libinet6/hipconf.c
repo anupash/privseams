@@ -1114,8 +1114,10 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 	char *text;
 	
 
+	/* This was printing debug messages in STDOUT even with hipd/hipd -b
+	   -- Alberto. */
 	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
+	/* hip_set_logtype(LOGTYPE_STDERR); */
 	
 	/* parse args */
 
