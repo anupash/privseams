@@ -236,7 +236,7 @@
     </para></listitem>
     </itemizedlist>
     <para>
-      The hipd tries to probe the necessary kernel modules automatically,
+      The hipd probes the necessary kernel modules automatically,
     </para>
   </chapter>
   <chapter>
@@ -403,6 +403,10 @@
       There is also a program called "hipsetup" in "hipl/test" directory for
       quick testing of the base exchange. Run it without arguments to see
       how it is used.
+    </para>
+    <para>
+      It should be noticed that starting a new hipd process automatically
+      kills the previous one.
     </para>
   </chapter>
   <chapter id="itest">

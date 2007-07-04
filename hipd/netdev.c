@@ -436,11 +436,6 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
 
-		/* @flukebox -- adding some print info */
-		printf("/* flukebox @netdev.c:hip_netdev_init_addresses */ \n");
-		printf("/* ifa_name = %s \n", g_iface->ifa_name);
-		/* @flukebox */
-
 		add_address_to_list(g_iface->ifa_addr, if_index);
 	}
 
@@ -763,31 +758,6 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	{
 		int ifindex, addr_exists;
 		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
-/*
-/* @flukebox */
-//----------------------------------------------------------------------------------------------//
-//	struct ifinfomsg
-//	{
-//		unsigned char   ifi_family;
-//	        unsigned char   __ifi_pad;
-//		unsigned short  ifi_type;              	 /* ARPHRD_* */
-//		int             ifi_index;             	 /* Link index   */
-//		unsigned        ifi_flags;            	 /* IFF_* flags  */
-//		unsigned        ifi_change;            	 /* IFF_* change mask */
-//		};
-
-		/* flukebox -- adding some additional print info */
-		
-		//printf("/* flukebox @netdev.c:hip_netdev_event */ \n");
-		//printf("/* ifi_family = %hd  \n", ifinfo-> ifi_family);
-		//printf("/*  __ifi_pad = %hu \n", ifinfo -> __ifi_pad);
-		//printf("/* ifi_type = %hu \n", ifinfo -> ifi_type);
-		//printf("/* ifi_index = %i \n",ifinfo -> ifi_index);
-		//printf("/* ifi_flags= %hd \n", ifinfo -> ifi_flags);
-		//printf("/* ifi_change= %hd \n ",ifinfo -> ifi_change);
-				
-//----------------------------------------------------------------------------------------------//
-
 		ifindex = ifinfo->ifi_index;
 
 

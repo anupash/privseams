@@ -50,7 +50,8 @@ int init_dht_gateway_socket(int sockfd)
 int resolve_dht_gateway_info(char * gateway_name, 
                              struct addrinfo * gateway)
 {
-	struct addrinfo hints, *res;
+	struct addrinfo hints, *res = NULL;
+	struct sockaddr_in *sa;
 	int error;
 	
 	memset(&hints, 0, sizeof(hints));
@@ -60,17 +61,18 @@ int resolve_dht_gateway_info(char * gateway_name,
 	error = 0;
 	
 	error = getaddrinfo(gateway_name, "5851", &hints, &res);
-	//error = getaddrinfo(gateway_name, NULL, &hints, &res);
 	if (error != 0)
 		HIP_DEBUG("OpenDHT gateway resolving failed\n");
 	else
 	{
 		memcpy(gateway, res, sizeof(struct addrinfo));
-		struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
+		sa = (struct sockaddr_in *) gateway->ai_addr;
 		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
 	}
-	
-	if (res) freeaddrinfo(res);
+
+	if (res)
+		free(res);
+
 	return error;
 }
 

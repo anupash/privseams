@@ -53,17 +53,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	}
 
 	HIP_DEBUG("Received a netlink message\n");
-	/* @flukebox */
-/*
-	printf("/* @flukebox -- some useful printinfo in hip_netlink_receive \n");
-	char *temp;
-	temp=buf;
-	while(*temp !=EOF){
-		printf("%d/", *temp);
-		temp=temp+1;
-	}
-	printf("\n");
-*/
         memset(&nladdr, 0, sizeof(nladdr));
         nladdr.nl_family = AF_NETLINK;
         nladdr.nl_pid = 0;
@@ -286,9 +275,6 @@ int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 
         memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
-	/* @flukebox */
-	printf("/* @flukebox -- some useful printinfo in hip_netlink_send_buf \n");
-	printf("Sent Msg : %s \n", &buf); 
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 

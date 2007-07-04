@@ -325,7 +325,7 @@ void register_to_dht ()
 	{
 		opendht_n = list_entry(item);
 		struct in6_addr tmp_hit;
-		char *tmp_hit_str, *tmp_addr_str;
+		char *tmp_hit_str = NULL, *tmp_addr_str = NULL;
 		double time_diff = 0;
 	
 		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
