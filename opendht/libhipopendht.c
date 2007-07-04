@@ -65,8 +65,8 @@ int resolve_dht_gateway_info(char * gateway_name,
 		HIP_DEBUG("OpenDHT gateway resolving failed\n");
 	else
 	{
-		memcpy(gateway, res, sizeof(struct addrinfo));
 		struct sockaddr_in *sa = (struct sockaddr_in *) gateway->ai_addr;
+		memcpy(gateway, res, sizeof(struct addrinfo));
 		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
 	}
 	
