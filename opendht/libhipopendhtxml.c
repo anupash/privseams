@@ -234,8 +234,7 @@ int read_packet_content(char * in_buffer, char * out_value)
         if (strcmp((char *)xml_node_value->name, "int")==0)
         {
             sscanf((const char *)xml_data, "%d", &ret);
-            // xmlFree(xml_data);
-           // xmlFreeDoc(xml_doc);
+            xmlFree(xml_data);
             if (ret == 0) /* put success */
                 goto out_err;
             if (ret == 1);
