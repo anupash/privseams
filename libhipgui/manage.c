@@ -635,11 +635,81 @@ void about(void)
 	gtk_show_about_dialog
 	(
 		GTK_WINDOW(widget(ID_MAINWND)),
-		"name", "InfraHIP configuration GUI",
+		"name", "InfraHIP graphical manager",
 		"version", "1.0",
 		"website", "http://infrahip.net",
 		NULL
 	);
 }
 
+
+/******************************************************************************/
+/** Show about dialog. */
+void opt_handle_action(GtkWidget *w, int type)
+{
+	int err = 0, argc = 0;
+	char *argv[4] = { NULL }, *info = NULL, *arg = NULL;
+
+	argv[0] = "hipagent";
+	
+	switch (type)
+	{
+	case IDB_OPT_NAT:
+		err = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
+		argc = 3;
+		argv[1] = "nat";
+		if (err == TRUE)
+			argv[2] = "on";
+		else
+			argv[2] = "off";
+		arg = argv[2];
+		info = "NAT extensions";
+		break;
+	
+	case IDB_DBG_RSTALL:
+		argc = 3;
+		argv[1] = "rst";
+		argv[2] = "all";
+		info = "reset all SAs";
+		break;
+		
+	default:
+		return;
+	}
+
+	err = hip_do_hipconf(argc, argv, 0);
+
+out_err:
+	if (info)
+	{
+		if (arg)
+		{
+			if (err) gui_set_info("Failed to set %s %s!", info, arg);
+			else gui_set_info("Succesfully set %s %s", info, arg);
+		}
+		else
+		{
+			if (err) gui_set_info("Failed to %s!", info);
+			else gui_set_info("Succesfully %s", info);
+		}
+	}
+
+	return;
+}
+
+/**
+ * Update GUI NAT status in options tab.
+ * @note Call from outside of gtk_main().
+ *
+ * @param status 1 if nat extension on, 0 if not.
+ */
+void hip_gui_update_nat_safe(int status)
+{
+	GtkWidget *w = widget(ID_OPT_NAT);
+	if (status) status = TRUE;
+	else status = FALSE;
+	gdk_threads_enter();
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), status);
+	gdk_threads_leave();
+}
 
