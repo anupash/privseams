@@ -24,6 +24,34 @@ gboolean e(void)
 	return FALSE;
 }
 
+
+/******************************************************************************/
+/**
+ * Tell HIT list cell renderer which icon to show where.
+ */
+void cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+{
+	GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(model), iter);
+	int depth = gtk_tree_path_get_depth(path);
+	char *stock_id = GTK_STOCK_ABOUT;
+	char *value;
+	HIT_Group *g;
+
+	gtk_tree_model_get(GTK_TREE_MODEL(model), iter, 0, &value, -1);
+	if (depth == 1)
+	{
+		g = hit_db_find_rgroup(value);
+		if (!g);
+		else if (g->remotec > 0) stock_id = GTK_STOCK_OPEN;
+		else stock_id = GTK_STOCK_DIRECTORY;
+	}
+	else if (strcmp(value, lang_get("hits-group-emptyitem")) == 0) stock_id = GTK_STOCK_STOP;
+	else stock_id = GTK_STOCK_ORIENTATION_PORTRAIT;
+	g_object_set(cell, "stock-id", stock_id, NULL);
+	g_free(value);
+}
+
+
 /******************************************************************************/
 /**
 	Create contents of the gui in here.
@@ -32,10 +60,9 @@ gboolean e(void)
 */
 int main_create_content(void)
 {
-	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
 	GtkWidget *pane, *pbox, *notebook, *w, *w2, *w3;
-	GtkWidget *button, *scroll, *chat, *div, *hiubox;
+	GtkWidget *button, *scroll, *chat, *div, *hiubox, *optbox;
 	GtkWidget *label, *label2, *cframe, *menu_bar;
 	GtkTreeStore *model;
 	GtkWidget *list;
@@ -132,6 +159,17 @@ int main_create_content(void)
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-file-runapp"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
+	gtk_widget_show(label);
+
+	label = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
+	gtk_widget_show(label);
+
 	label = gtk_image_menu_item_new_with_label(lang_get("menu-file-exit"));
 	iconw = gtk_image_new_from_stock(GTK_STOCK_CLOSE, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
@@ -146,7 +184,25 @@ int main_create_content(void)
 	w = gtk_menu_item_new_with_label(lang_get("menu-edit"));
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
-	
+
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-newgroup"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_NEW, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
+	gtk_widget_show(label);
+
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-addhit"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
+	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
+	gtk_menu_shell_append(w2, label);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
+	gtk_widget_show(label);
+
+	label = gtk_separator_menu_item_new();
+	gtk_menu_shell_append(GTK_MENU_SHELL(w2), label);
+	gtk_widget_show(label);
+
 	label = gtk_image_menu_item_new_with_label(lang_get("menu-edit-locals"));
 	iconw = gtk_image_new_from_stock(GTK_STOCK_PROPERTIES, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
@@ -164,30 +220,17 @@ int main_create_content(void)
 
 	
 	/* Tools-menu. */
-	w = gtk_menu_item_new_with_label(lang_get("menu-tools"));
+	w = gtk_menu_item_new_with_label(lang_get("menu-help"));
 	gtk_widget_show(w);
 	w2 = gtk_menu_new();
 	
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-newgroup"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_MENU);
+	label = gtk_image_menu_item_new_with_label(lang_get("menu-help-about"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_ABOUT, GTK_ICON_SIZE_MENU);
 	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
 	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWGROUP);
+	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_ABOUT);
 	gtk_widget_show(label);
 
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-addhit"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_ADD, GTK_ICON_SIZE_MENU);
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
-	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_NEWHIT);
-	gtk_widget_show(label);
-	
-	label = gtk_image_menu_item_new_with_label(lang_get("menu-tools-runapp"));
-	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(label), iconw);
-	gtk_menu_shell_append(w2, label);
-	g_signal_connect(label, "activate", G_CALLBACK(button_event), (gpointer)IDM_RUNAPP);
-	gtk_widget_show(label);
 
 	gtk_menu_item_set_submenu(w, w2);
 	gtk_menu_bar_append(menu_bar, w);
@@ -195,7 +238,9 @@ int main_create_content(void)
 	/* Create toolbar. */
 	toolbar = gtk_toolbar_new();
 	gtk_box_pack_start(pane, toolbar, FALSE, FALSE, 0);
-	gtk_widget_show(toolbar);
+	/** note: Toolbar was not so usefull, so hidden for now. */
+	gtk_widget_hide(toolbar);
+//	gtk_widget_show(toolbar);
 	widget_set(ID_TOOLBAR, toolbar);
 	gtk_toolbar_set_style(toolbar, GTK_TOOLBAR_ICONS);
 
@@ -211,7 +256,7 @@ int main_create_content(void)
 	gtk_toggle_button_set_active(w, TRUE);
 
 	gtk_toolbar_append_space(toolbar);*/
-	iconw = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_SMALL_TOOLBAR);
+	iconw = gtk_image_new_from_stock(GTK_STOCK_NEW, GTK_ICON_SIZE_SMALL_TOOLBAR);
 //	iconw = gtk_image_new_from_file(HIP_GUI_DATADIR "/newgroup.png");
 	w = gtk_toolbar_append_item(toolbar, lang_get("tb-newgroup"),
 	                            lang_get("tb-newgroup-tooltip"),
@@ -246,11 +291,6 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), remote_pane, label);
 	gtk_widget_show(remote_pane);
 
-	hiubox = gtk_vbox_new(FALSE, 1);
-	label2 = gtk_label_new("HITs in use");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
-	//gtk_widget_show(hiubox);
-
 /*	label = gtk_label_new("Net");
 	label2 = gtk_label_new("Net");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
@@ -266,10 +306,15 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
 	gtk_widget_show(label);*/
 
-	cframe = gtk_frame_new("Configure HIP options");
-	label2 = gtk_label_new("Options");
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
-	//gtk_widget_show(cframe);
+	optbox = gtk_vbox_new(FALSE, 1);
+	label2 = gtk_label_new(lang_get("tabs-options"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), optbox, label2);
+	gtk_widget_show(optbox);
+
+	hiubox = gtk_vbox_new(FALSE, 1);
+	label2 = gtk_label_new(lang_get("tabs-connections"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
+	gtk_widget_hide(hiubox);
 
 	pbox = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Processes");
@@ -285,7 +330,7 @@ int main_create_content(void)
 	label = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Cert");
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
-	gtk_widget_show(label);        
+	gtk_widget_show(label);
 #endif
 
 	/***************************************
@@ -323,10 +368,27 @@ int main_create_content(void)
 	g_signal_connect(list, "drag_data_received", G_CALLBACK(rh_drag_data_received), (gpointer)0);
 	gtk_tree_view_set_column_drag_function(list, e, NULL, NULL);
 
-	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+/*	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
 	cell = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes(NULL, cell, "text", 0, NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));*/
+
+	gtk_tree_view_set_model(GTK_TREE_VIEW(list), GTK_TREE_MODEL(model));
+	column = gtk_tree_view_column_new();
 	gtk_tree_view_append_column(GTK_TREE_VIEW(list), GTK_TREE_VIEW_COLUMN(column));
+	
+	cell = gtk_cell_renderer_pixbuf_new();
+//	g_object_set(cell, "stock-id", GTK_STOCK_EXECUTE);
+/*	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	g_object_set(cell, "pixbuf-expander-closed", iconw);
+	iconw = gtk_image_new_from_stock(GTK_STOCK_EXECUTE, GTK_ICON_SIZE_MENU);
+	g_object_set(cell, "pixbuf-expander-open", iconw);*/
+	gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), FALSE);
+	gtk_tree_view_column_set_cell_data_func(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), cell_data_func, NULL, e);
+	
+	cell = gtk_cell_renderer_text_new();
+	gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), TRUE);
+	gtk_tree_view_column_set_attributes(GTK_TREE_VIEW_COLUMN(column), GTK_CELL_RENDERER(cell), "text", 0, NULL);
 	
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), list);
 	gtk_widget_set_size_request(scroll, 200, 0);
@@ -378,27 +440,34 @@ int main_create_content(void)
 	
 	/***************************************
 	/* Options. */
-	//gtk_vbutton_box_set_layout_default(GTK_BUTTONBOX_START);
+	cframe = gtk_frame_new(lang_get("opt-title"));
+	gtk_box_pack_start(GTK_BOX(optbox), cframe, TRUE, TRUE, 1);
+	gtk_widget_show(GTK_WIDGET(cframe));
+
 	w = gtk_vbox_new(FALSE, 1);
-	gtk_container_add(cframe, w);
-	gtk_widget_show(w);
-	button = gtk_check_button_new_with_label("Enable opportunistic mode");
-	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	button = gtk_check_button_new_with_label("Enable HIP NAT Extensions");
-	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	gtk_widget_set_sensitive(button, FALSE);
+	gtk_container_add(GTK_CONTAINER(cframe), w);
+	gtk_widget_show(GTK_WIDGET(w));
+	button = gtk_check_button_new_with_label(lang_get("opt-nat"));
+	widget_set(ID_OPT_NAT, button);
+	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_OPT_NAT);
+	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(button));
 	
-	w2 = gtk_hbox_new(FALSE, 1);
-	gtk_box_pack_end(w, w2, FALSE, FALSE, 1);
-	gtk_widget_show(w2);
-	button = gtk_button_new_with_label("Apply");
-	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	button = gtk_button_new_with_label("Discard");
-	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
+	cframe = gtk_frame_new(lang_get("dbg-title"));
+	gtk_box_pack_start(GTK_BOX(optbox), cframe, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(cframe));
+	
+	w = gtk_vbox_new(FALSE, 1);
+	gtk_container_add(GTK_CONTAINER(cframe), w);
+	gtk_widget_show(GTK_WIDGET(w));
+	button = gtk_button_new_with_label(lang_get("dbg-rstall"));
+	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_DBG_RSTALL);
+	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(button));
+
+	w = gtk_label_new(lang_get("opt-info"));
+	gtk_box_pack_end(GTK_BOX(optbox), w, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(w));
 	
 	/***************************************
 	/* Process list. */

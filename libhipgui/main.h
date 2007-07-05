@@ -39,6 +39,7 @@ int gui_init(void);
 int gui_main(void);
 void gui_quit(void);
 void gui_set_info(const char *, ...);
+void gui_set_info_safe(const char *, ...);
 void gui_terminate(void);
 
 /* file: main_create.c */

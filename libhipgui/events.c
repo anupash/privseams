@@ -15,16 +15,17 @@
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the application?
-
-	@return TRUE if don't close or FALSE if close.
-*/
+ * When closing the main application window.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 	gtk_widget_hide(w);
+	return TRUE;
 #else
-	return (FALSE);
+	return FALSE;
 #endif
 }
 /* END OF FUNCTION */
@@ -32,10 +33,11 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the tool window?
-
-	@return TRUE if don't close or FALSE if close.
-*/
+ * Default window close event. This occurs when user presses that cross
+ * usually placed in right top corner of windows.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
 gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_widget_hide(w);
@@ -45,7 +47,7 @@ gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 
 /******************************************************************************/
-/** On window destroy. */
+/** When main window is destroyed. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
@@ -276,6 +278,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 
 	case IDM_TRAY_ABOUT:
+	case IDM_ABOUT:
 		about();
 		break;
 
@@ -302,6 +305,11 @@ void button_event(GtkWidget *warg, gpointer data)
 		
 	case IDB_NH_EXPANDER:
 		break;
+	
+	case IDB_OPT_NAT:
+	case IDB_DBG_RSTALL:
+		opt_handle_action(warg, id);
+		break;
 	}
 }
 /* END OF FUNCTION */
@@ -322,17 +330,14 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	switch (id)
 	{
 	case ID_TOOLBAR_RUN:
-		HIP_DEBUG("Toolbar: Run application.\n");
 		exec_application();
 		break;
 
 	case ID_TOOLBAR_NEWHIT:
-		HIP_DEBUG("Toolbar: Popup for new HIT.\n");
 		gui_ask_new_hit(NULL, 2);
 		break;
 
 	case ID_TOOLBAR_NEWGROUP:
-		HIP_DEBUG("Toolbar: Create remote group.\n");
 		create_remote_group("");
 		break;
 	}
@@ -354,7 +359,6 @@ void systray_event(void *warg, guint bid, guint atime, gpointer data)
 void notebook_event(GtkNotebook *notebook, GtkNotebookPage *page,
                     guint page_num, gpointer data)
 {
-	HIP_DEBUG("Selected notebook page %d.\n", page_num);
 }
 /* END OF FUNCTION */
 

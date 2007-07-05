@@ -52,6 +52,10 @@
 #define HIP_SET_ESCROW_ACTIVE                   85
 /** Daemon tells firewall that escrow is inactive with this message. */
 #define HIP_SET_ESCROW_INACTIVE                 86
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_ON					87
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_OFF					88
 
 /**
  * Daemon should send this message to other processes, when quiting.
