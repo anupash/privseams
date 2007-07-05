@@ -204,11 +204,11 @@ int hip_handle_user_msg(struct hip_common *msg,
 #ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_SERVING_GW:
           {
-            /*
+            
             struct in_addr ip_gw;
             struct in6_addr ip_gw_mapped;
             int rett = 0, errr = 0;
-            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway.ai_addr;
+            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
             rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
             IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
             errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
@@ -224,7 +224,7 @@ int hip_handle_user_msg(struct hip_common *msg,
               {
                 HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
               }
-            */
+            
           }
           break;
 #endif
