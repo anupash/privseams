@@ -35,6 +35,9 @@ armel-deb:
 source-deb:
 	test/packaging/create-deb.sh -s
 
+agent-deb:
+	test/packaging/create-agent-deb.sh -s
+
 corporate-deb:
 	test/packaging/create-deb.sh -c
 
