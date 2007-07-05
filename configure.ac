@@ -94,7 +94,6 @@ AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
 
 # Try to automatically detect GTK if not disabled or enabled by user
-AC_SUBST(GTK_VER)
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
 if test x"$gtk_found" = x"no"; then
 	AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)

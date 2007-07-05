@@ -15,16 +15,17 @@
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the application?
-
-	@return TRUE if don't close or FALSE if close.
-*/
+ * When closing the main application window.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
 	gtk_widget_hide(w);
+	return TRUE;
 #else
-	return (FALSE);
+	return FALSE;
 #endif
 }
 /* END OF FUNCTION */
@@ -32,10 +33,11 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the tool window?
-
-	@return TRUE if don't close or FALSE if close.
-*/
+ * Default window close event. This occurs when user presses that cross
+ * usually placed in right top corner of windows.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
 gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_widget_hide(w);
@@ -45,7 +47,7 @@ gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 
 /******************************************************************************/
-/** On window destroy. */
+/** When main window is destroyed. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
@@ -302,6 +304,11 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 		
 	case IDB_NH_EXPANDER:
+		break;
+	
+	case IDB_OPT_NAT:
+	case IDB_DBG_RSTALL:
+		opt_handle_action(warg, id);
 		break;
 	}
 }

@@ -60,10 +60,9 @@ void cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell, GtkTr
 */
 int main_create_content(void)
 {
-	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_MAINWND);
 	GtkWidget *pane, *pbox, *notebook, *w, *w2, *w3;
-	GtkWidget *button, *scroll, *chat, *div, *hiubox;
+	GtkWidget *button, *scroll, *chat, *div, *hiubox, *optbox;
 	GtkWidget *label, *label2, *cframe, *menu_bar;
 	GtkTreeStore *model;
 	GtkWidget *list;
@@ -307,15 +306,15 @@ int main_create_content(void)
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), label, label2);
 	gtk_widget_show(label);*/
 
-	cframe = gtk_frame_new("Configure HIP options");
+	optbox = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new(lang_get("tabs-options"));
-	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), cframe, label2);
-	gtk_widget_show(cframe);
+	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), optbox, label2);
+	gtk_widget_show(optbox);
 
 	hiubox = gtk_vbox_new(FALSE, 1);
 	label2 = gtk_label_new(lang_get("tabs-connections"));
 	gtk_notebook_append_page(GTK_NOTEBOOK(notebook), hiubox, label2);
-	gtk_widget_show(hiubox);
+	gtk_widget_hide(hiubox);
 
 	pbox = gtk_hbox_new(TRUE, 1);
 	label2 = gtk_label_new("Processes");
@@ -441,27 +440,34 @@ int main_create_content(void)
 	
 	/***************************************
 	/* Options. */
-	//gtk_vbutton_box_set_layout_default(GTK_BUTTONBOX_START);
+	cframe = gtk_frame_new(lang_get("opt-title"));
+	gtk_box_pack_start(GTK_BOX(optbox), cframe, TRUE, TRUE, 1);
+	gtk_widget_show(GTK_WIDGET(cframe));
+
 	w = gtk_vbox_new(FALSE, 1);
-	gtk_container_add(cframe, w);
-	gtk_widget_show(w);
-	button = gtk_check_button_new_with_label("Enable opportunistic mode");
-	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	button = gtk_check_button_new_with_label("Enable HIP NAT Extensions");
-	gtk_box_pack_start(w, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	gtk_widget_set_sensitive(button, FALSE);
+	gtk_container_add(GTK_CONTAINER(cframe), w);
+	gtk_widget_show(GTK_WIDGET(w));
+	button = gtk_check_button_new_with_label(lang_get("opt-nat"));
+	widget_set(ID_OPT_NAT, button);
+	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_OPT_NAT);
+	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(button));
 	
-	w2 = gtk_hbox_new(FALSE, 1);
-	gtk_box_pack_end(w, w2, FALSE, FALSE, 1);
-	gtk_widget_show(w2);
-	button = gtk_button_new_with_label("Apply");
-	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
-	button = gtk_button_new_with_label("Discard");
-	gtk_box_pack_start(w2, button, FALSE, FALSE, 1);
-	gtk_widget_show(button);
+	cframe = gtk_frame_new(lang_get("dbg-title"));
+	gtk_box_pack_start(GTK_BOX(optbox), cframe, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(cframe));
+	
+	w = gtk_vbox_new(FALSE, 1);
+	gtk_container_add(GTK_CONTAINER(cframe), w);
+	gtk_widget_show(GTK_WIDGET(w));
+	button = gtk_button_new_with_label(lang_get("dbg-rstall"));
+	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_DBG_RSTALL);
+	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(button));
+
+	w = gtk_label_new(lang_get("opt-info"));
+	gtk_box_pack_end(GTK_BOX(optbox), w, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(w));
 	
 	/***************************************
 	/* Process list. */

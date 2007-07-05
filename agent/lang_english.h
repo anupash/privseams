@@ -23,7 +23,7 @@ char *lang_english[] =
 	/* First is variable name, second is content. */
 	
 	/* Different window titles. */
-	"title-main",				"HIP configuration",
+	"title-main",				"HIP Manager",
 	"title-newhit",				"New HIT",
 	"title-newgroup",			"Create new group",
 	"title-runapp",				"Execute application",
@@ -97,7 +97,7 @@ char *lang_english[] =
 	"ngdlg-err-reserved",		"Given group name is reserved!\nChoose another one.",
 	"ngdlg-err-invchar",		"Group name contains invalid characters!\nRename.",
 	
-	/* Tool window (HIT handling). */
+	/* Remote HIT/group handling. */
 	"tw-button-apply",			"Apply",
 	"tw-button-cancel",			"Cancel",
 	"tw-button-delete",			"Delete",
@@ -118,6 +118,13 @@ char *lang_english[] =
 	
 	"tw-hitgroup-type",			"Type:",
 	"tw-hitgroup-lightweight",	"Encryption:",
+
+	/* Options tab. */
+	"opt-title",				"HIP options:",
+	"opt-nat",					"Enable NAT extensions",
+	"opt-info",					"NOTE: Changes are applied instantaneously",
+	"dbg-title",				"Debug options:",
+	"dbg-rstall",				"Reset all SAs (hipconf rst all)",
 	
 	/* Local HIT handling. */
 	"lhdlg-button-apply",		"Apply",

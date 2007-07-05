@@ -1,11 +1,11 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=HIPL Gconf
+Name=HIP Manager
 Exec=/usr/sbin/hipagent -b
 Icon=hipgconf.png
-Info=HIPL Gconf
+Info=HIP Manager
 Categories=Application;Network;
-Comment=Configuration GUI for HIPL daemon
+Comment=Graphical manager for HIPL daemon
 Terminal=false
 Type=Application
 StartupNotify=true

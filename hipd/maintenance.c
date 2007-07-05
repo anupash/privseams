@@ -260,7 +260,6 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info)
 {
-	/* Variables. */
 	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
@@ -303,6 +302,43 @@ int hip_agent_filter(struct hip_common *msg,
 	
 out_err:
 	return (err);
+}
+
+
+/**
+ * Send new status of given state to agent.
+ */
+int hip_agent_update_status(int msg_type, void *data, size_t size)
+{
+	struct hip_common *user_msg = NULL;
+	int err = 0;
+	int n;
+	
+	if (!hip_agent_is_alive())
+	{
+		return (-ENOENT);
+	}
+
+	/* Create packet for agent. */	
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+	HIP_IFE(hip_build_user_hdr(user_msg, msg_type, 0), -1);
+	if (size > 0 && data != NULL)
+	{
+		HIP_IFE(hip_build_param_contents(user_msg, data, HIP_PARAM_ENCAPS_MSG,
+		                                 size), -1);
+	}
+
+	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
+	           0, (struct sockaddr *)&hip_agent_addr, sizeof(hip_agent_addr));
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+
+out_err:
+	return err;
 }
 
 
