@@ -312,55 +312,59 @@ out_err:
 void register_to_dht ()
 {
 #ifdef CONFIG_HIP_OPENDHT  
-  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  hip_list_t *item, *tmp;
-  int i;
-  struct netdev_address *opendht_n;
-  int pub_addr_ret = 0;
+	char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	hip_list_t *item = NULL, *tmp = NULL;
+	int i;
+	struct netdev_address *opendht_n;
+	int pub_addr_ret = 0;
+	
+	if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+		return;
+	
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		opendht_n = list_entry(item);
+		struct in6_addr tmp_hit;
+		char *tmp_hit_str = NULL, *tmp_addr_str = NULL;
+		double time_diff = 0;
+	
+		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
+	
+		time_diff = difftime(opendht_n->timestamp, time(0));
+		if (time_diff < 10)
+		{
+			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
+			{
+				HIP_ERROR("No HIT found\n");
+				return;
+			}
+	
+			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
+			
+			/*
+				HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
+			
+				HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
+						tmp_addr_str, ctime(&opendht_n->timestamp));
+			*/
+			/* send the fqdn->hit mapping */
+			publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
+			
+			/* send the hit->ip mapping */
+			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+			if (pub_addr_ret == 1)
+				opendht_n->timestamp = time(0) + 120; /* in seconds */
+			else if (pub_addr_ret == -1)
+				opendht_n->timestamp = time(0) + 30;
+		}
+	
+		if (tmp_hit_str) free(tmp_hit_str);
+		if (tmp_addr_str) free(tmp_addr_str);
+	}
 
-  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
-    return;
-
-  list_for_each_safe(item, tmp, addresses, i)
-    {
-      opendht_n = list_entry(item);
-      struct in6_addr tmp_hit;
-      char *tmp_hit_str, *tmp_addr_str;
-      double time_diff = 0;
- 
-      if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
-      
-      time_diff = difftime(opendht_n->timestamp, time(0));
-      if (time_diff < 10)
-        {
-          if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-            {
-              HIP_ERROR("No HIT found\n");
-              return;
-            } 
-          
-          tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-          tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
-         
-           /*
-             HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
-           
-             HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
-                       tmp_addr_str, ctime(&opendht_n->timestamp));
-           */
-          /* send the fqdn->hit mapping */
-          publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
-           
-          /* send the hit->ip mapping */
-          pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
-          if (pub_addr_ret == 1)
-            opendht_n->timestamp = time(0) + 120; /* in seconds */
-          else if (pub_addr_ret == -1)
-            opendht_n->timestamp = time(0) + 30;
-        }
-    }
- out_err:
-  return;
+out_err:
+	return;
 #endif
 }
 
@@ -378,7 +382,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_fqdn;  
   extern int hip_opendht_fqdn_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway; 
+  extern struct addrinfo * opendht_serving_gateway; 
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -390,7 +394,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS) 
         { 
           opendht_error = opendht_put(hip_opendht_sock_fqdn,
@@ -441,7 +445,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_hit;
   extern int hip_opendht_hit_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway;
+  extern struct addrinfo * opendht_serving_gateway;
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -453,7 +457,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS)
         {
           opendht_error = opendht_put(hip_opendht_sock_hit, 

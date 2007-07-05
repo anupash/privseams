@@ -273,6 +273,18 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
+	if (hit_db_count_locals() < 1)
+	{
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+		                                lang_get("newhit-error-nolocals"));
+		gtk_widget_show(dialog);
+		gtk_window_set_keep_above(dialog, TRUE);
+		gtk_dialog_run(dialog);
+		gtk_widget_destroy(dialog);
+		return err;
+	}
+
 	/* Use thread support, when not adding new HIT manually trough GUI. */
 	if (inout != 2) gdk_threads_enter();
 	gtk_window_get_size(dialog, &w, &h);
@@ -591,7 +603,6 @@ void all_update_local(char *old_name, char *new_name)
 	}
 	g_list_free(gl);
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
@@ -615,9 +626,20 @@ void all_update_rgroups(char *old_name, char *new_name)
 	model = gtk_combo_box_get_model(widget(ID_NH_RGROUP));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 }
-/* END OF FUNCTION */
 
 
-/* END OF SOURCE FILE */
 /******************************************************************************/
+/** Show about dialog. */
+void about(void)
+{
+	gtk_show_about_dialog
+	(
+		GTK_WINDOW(widget(ID_MAINWND)),
+		"name", "InfraHIP configuration GUI",
+		"version", "1.0",
+		"website", "http://infrahip.net",
+		NULL
+	);
+}
+
 

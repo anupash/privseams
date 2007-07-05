@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
+#include "libinet6/hipconf.h"
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -65,7 +66,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 				HIP_DEBUG("Ignore: UNSPECIFIED\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
-				HIP_DEBUG("Ignore: LOOPBACK\n");
+				HIP_DEBUG("Ignore: IPV6_LOOPBACK\n");
 				return FA_IGNORE;
 			} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
 				HIP_DEBUG("Ignore: MULTICAST\n");
@@ -97,7 +98,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			 * DO we need any more checks here ? -- Abi
 			 */
 			inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s, sLEN);
-			HIP_DEBUG("IPv4 addr: %s", s);
+			HIP_DEBUG("IPv4 addr: %s \n", s);
 
 			in_addr_t a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
 
@@ -121,6 +122,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			break;
 
 		default:
+			
 			return FA_IGNORE;
 	}
 }
@@ -140,7 +142,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped && addr->sa_family == AF_INET) {
+		if (mapped) //|| addr->sa_family == AF_INET) 
+		{
 			struct in6_addr *in6 = (struct in6_addr * ) hip_cast_sa_addr(&n->addr);
 			struct in_addr *in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
@@ -149,6 +152,9 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
+		}
+		else { // addr->sa_family == AF_INET
+			// Hope never happen...If happens we need to add Mapping
 		}
 		
 		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
@@ -196,7 +202,8 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	}
-	else memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	else
+		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
 
         /*
           Add secret to address. Used with openDHT removable puts.
@@ -428,6 +435,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
+
 		add_address_to_list(g_iface->ifa_addr, if_index);
 	}
 
@@ -438,8 +446,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 }
 
 
-
-/* a copy from getendpointinfo.c  of get_peer_endpointinfo(,,,,) function with some 
+/*flukebox--a copy from getendpointinfo.c  of get_peer_endpointinfo(,,,,) function with some 
  * modified changes to make things work for me :-)
  * Now the function below will first look for the 'nodename' that is actually a presentation form
  * of HIT of peer in "/etc/hip/hosts" file and if it found a entry corresponding to that HIT then 
@@ -464,14 +471,19 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
   ret=inet_pton(AF_INET6, nodename, &dst_hit);
   if(ret < 1) HIP_ERROR("given nodename is not a HIT");
  
- /* Open /etc/hip/hosts file in read mode */
- hip_hosts = fopen("/etc/hip/hosts", "r");
-  
+
+ /* Open /etc/hip/hosts file in read mode 
+ *  *  HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
+ *   * */
+
+ hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
+
   if (!hip_hosts) {
-    err = -1;
-    HIP_ERROR("Failed to open '/etc/hip/hosts'\n");
+    err = -1; 
+    HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
     goto out_err;
   }
+
 
   /* find entry corresponding to given 'nodename' HIT */ 
   while(getwithoutnewline(line, 500, hip_hosts)!= NULL){
@@ -501,16 +513,19 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
    err = -1;
    goto out_err;
 
+
+ /* HOSTS_FILE='/etc/hsots' */
  find_address:
-   hosts = fopen("/etc/hosts", "r");
+   hosts = fopen(HOSTS_FILE, "r");
    lineno=0; 
    memset(&line,0,sizeof(line));
-  
+
    if (!hosts) {
      err = -1;
-     HIP_ERROR("Failed to open '/etc/hosts' \n");
+     HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
      goto out_err;
    }
+
   
   while(getwithoutnewline(line,500,hosts) != NULL ) {
     lineno++;
@@ -549,6 +564,8 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
    	return err;
 
 }
+
+#ifdef CONFIG_HIP_OPENDHT
 
 int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char opendht[] = "opendht.nyuld.net";
@@ -595,7 +612,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	}
 
 }
-
+#endif /* CONFIG_HIP_OPENDHT */
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	int err = 0, if_index = 0;
@@ -612,6 +629,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
 	src_hit = (struct in6_addr *) &acq->sel.saddr;
 	dst_hit = (struct in6_addr *) &acq->sel.daddr;
+	//entry = hip_hadb_try_to_find_by_peer_hit(src_hit, dst_hit);
 
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
@@ -627,6 +645,8 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		   We can fallback to e.g. DHT search if the mapping is not
 		   found from local files.*/
 
+		HIP_DEBUG("\n I am here just before getendpointinfo() \n");
+		
 		//err = getendpointinfo(); /* TBD */
 
 		struct in6_addr res;
@@ -653,7 +673,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 #ifdef CONFIG_HIP_OPENDHT
 			ret=opendht_get_endpointinfo((const char *)dst,&res);
 			dst_addr=res;
-#endif 
+#endif
 		}
 
 		if (ret==1){
@@ -683,12 +703,14 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	/* XX FIX: the family should be fetched from acq */
 	if (IN6_IS_ADDR_V4MAPPED(&entry->preferred_address))
 	{
-		IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr), 
+		IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr), // Jai: we receive nonsense here
 				 &entry->local_address);
 		addr->sa_family = AF_INET;
 	}
 	else
 	{
+		/* @flukebox -- to be noticed */
+		// -- something creepy here --- //
 		ipv6_addr_copy(&entry->local_address,
 			       ((struct in6_addr*)&acq->id.daddr));
 		addr->sa_family = AF_INET6;
@@ -698,8 +720,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 	HIP_DEBUG_IN6ADDR("local addr", &entry->local_address);
 
+        // Jai: no interface for nonsence
 	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1,
 		 "if_index NOT determined\n");
+       ///hip_select_source_address() -> failed, but iproute2: ip route get HIT succeeds!!
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
@@ -733,9 +757,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	     msg = NLMSG_NEXT(msg, len))
 	{
 		int ifindex, addr_exists;
-
 		ifinfo = (struct ifinfomsg*)NLMSG_DATA(msg);
 		ifindex = ifinfo->ifi_index;
+
+
 		HIP_DEBUG("handling msg type %d ifindex=%d\n",
 			  msg->nlmsg_type, ifindex);
 		switch(msg->nlmsg_type)
@@ -827,7 +852,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				   the last address */
 				HIP_DEBUG("sending 0-addr REA\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR);
+						    SEND_UPDATE_LOCATOR, is_add, addr);
 			}
 			else if (i == 0)
 			{
@@ -854,6 +879,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
 					locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
 					locators[i].locator_length = sizeof(struct in6_addr) / 4;
+
 					/* For testing preferred address */
 					//locators[i].reserved =
 					//	i == 0 ? htonl(1 << 31) : 0;
@@ -863,7 +889,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR);
+						    SEND_UPDATE_LOCATOR, is_add, addr);
 				free(locators);
 				break;
 			}
@@ -1004,25 +1030,27 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
-int hip_select_source_address(struct in6_addr *src,
-			      struct in6_addr *dst)
+int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+//	int rtnl_rtdsfield_init;
+//	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
-	
+		
 	/* rtnl_rtdsfield_initialize() */
-        rtnl_rtdsfield_init = 1;
-
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+//	rtnl_rtdsfield_init = 1;
 	
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,family, idxmap), -1,"Finding ip route failed\n");
+//	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
+	HIP_DEBUG_IN6ADDR("dst", dst);
+	HIP_DEBUG_IN6ADDR("src", src);
+
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 
 	HIP_DEBUG_IN6ADDR("src", src);
- out_err:
 
+out_err:
+//	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab
 	return err;
 }
 

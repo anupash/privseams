@@ -15,13 +15,12 @@
 
 /******************************************************************************/
 /**
-	Create "new remote group"-dialog contents.
-
-	@return 0 if success, -1 on errors.
-*/
+ * Create "new remote group"-dialog contents.
+ *
+ * @return 0 if success, -1 on errors.
+ */
 int ngdlg_create_content(void)
 {
-	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_NGDLG);
 	GtkWidget *hb, *w, *vb;
 
@@ -93,18 +92,16 @@ int ngdlg_create_content(void)
 
 	return (0);
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	Create message-dialog contents.
-
-	@return 0 if success, -1 on errors.
-*/
+ * Create message-dialog contents.
+ *
+ * @return 0 if success, -1 on errors.
+ */
 int msgdlg_create_content(void)
 {
-	/* Variables. */
 	GtkWidget *window = (GtkWidget *)widget(ID_MSGDLG);
 	GtkWidget *vb, *w;
 
@@ -125,11 +122,7 @@ int msgdlg_create_content(void)
 	gtk_widget_grab_default(w);
 	gtk_dialog_add_button(window, lang_get("msgdlg-button-cancel"), GTK_RESPONSE_CANCEL);
 
-	return (0);
+	return 0;
 }
-/* END OF FUNCTION */
 
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

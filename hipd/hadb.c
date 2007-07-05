@@ -397,10 +397,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		goto out_err;
 	}
 
-	HIP_DEBUG_HIT("Peer HIT\n", peer_hit);
-	HIP_DEBUG_HIT("Our HIT\n", &entry->hit_our);
-	HIP_DEBUG_IN6ADDR("Our IPv6\n", &entry->local_address);
-	HIP_DEBUG_IN6ADDR("Peer IPv6\n", peer_addr);
+	HIP_DEBUG_HIT("Peer HIT ", peer_hit);
+	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
@@ -2269,6 +2269,7 @@ void hip_uninit_hadb()
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
+//	hip_ht_uninit(hadb_hit);
 #if 0
 	HIP_DEBUG("DELETING HA HT\n");
 	list_for_each_entry_safe(ha, tmp, hadb_byhit[i], next_hit)
@@ -2280,6 +2281,7 @@ void hip_uninit_hadb()
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 #endif
+	
 }
 
 void hip_delete_all_sp()

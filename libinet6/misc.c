@@ -916,8 +916,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     
   }
 
-  dsa_lhi.anonymous = htons(anon);
-  rsa_lhi.anonymous = htons(anon);
+
   
   if (use_default) {
     HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);

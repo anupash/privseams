@@ -3,7 +3,6 @@
                   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
 <book>
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
-  <!-- http://www.ibiblio.org/godoy/sgml/docbook/howto/writing-docbook.html -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <title>HIPL User Manual</title>
   <chapter>
@@ -237,7 +236,7 @@
     </para></listitem>
     </itemizedlist>
     <para>
-      The hipd tries to probe the necessary kernel modules automatically,
+      The hipd probes the necessary kernel modules automatically,
     </para>
   </chapter>
   <chapter>
@@ -276,14 +275,16 @@
     </para>
   </chapter>
   <chapter id="basictest">
-    <title>Testing a HIP connection between two hosts</title>
+    <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
-      HIPL developers test HIP using two machines called crash (3ffe::1) and
-      oops (3ffe::2). They are used through this whole document as examples
-      even though you probably have your own naming and addressing
-      conventions. It is possible to use IPv4 addresses on-wire as well
-      but the applications being used need to support IPv6 currently.
-      </para>
+      You can test HIP with any networking application, but in this
+      section we will demonstrate few development-oriented test
+      applications.  Here we assume two machines called crash
+      (3ffe::1) and oops (3ffe::2) that in the same network. They are
+      used through this whole document as examples even though you
+      probably have your own naming and addressing conventions. It is
+      possible to use IPv4 addresses on-wire as well but the
+      applications being used need to support IPv6 currently.</para>
     <para>
       We expect that you have two hosts for testing HIP which will be
       referred to as "crash" and "oops". You should run these commands in
@@ -403,6 +404,39 @@
       quick testing of the base exchange. Run it without arguments to see
       how it is used.
     </para>
+    <para>
+      It should be noticed that starting a new hipd process automatically
+      kills the previous one.
+    </para>
+  </chapter>
+  <chapter id="itest">
+    <title>HIPL Internet Test Servers</title>
+    <para>
+    Below is a list of HIPL test servers if you want to test HIP over Internet:
+    </para>
+    <table frame="all"><title>Test Servers</title>
+          <tgroup cols="1">
+            <thead>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+            </thead>
+            <tbody>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:007d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>RSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:0074:f967:5cb2:cd63:15b5:1737:b083</entry><entry>193.167.187.130</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
+              <!--
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              -->
+            </tbody>
+          </tgroup>
+    </table>
+
   </chapter>
   <chapter>
     <title>Closing HIP Security Associations Manually</title>
