@@ -205,8 +205,6 @@ int hipd_init(int flush_ipsec)
         hip_rvs_init_rvadb();
 #endif	
 #ifdef CONFIG_HIP_OPENDHT
-        opendht_serving_gateway = HIP_MALLOC(sizeof(struct addrinfo), 0);
-        memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 
           HIP_DEBUG("Error resolving openDHT gateway!\n");
@@ -672,8 +670,8 @@ void hip_exit(int signal)
 	unlink(HIP_DAEMON_LOCK_FILE);
 
 #ifdef CONFIG_HIP_OPENDHT
-        if (opendht_serving_gateway) 
-          freeaddrinfo(opendht_serving_gateway);
+	if (opendht_serving_gateway)
+		freeaddrinfo(opendht_serving_gateway);
 #endif
 
 	return;
