@@ -571,10 +571,10 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char opendht[] = "opendht.nyuld.net";
 	char dht_response[1024];
 	char host_addr[] = "127.0.0.1"; 
-	struct addrinfo serving_gateway;
+	struct addrinfo *serving_gateway;
 	int err,ret;
 	/* book keeping stuff */
-	memset(&serving_gateway, '0', sizeof(serving_gateway));
+	//memset(&serving_gateway, '0', sizeof(serving_gateway));
 	
 	/* get OpenDHT server address */
 	err =  resolve_dht_gateway_info (opendht, &serving_gateway);
@@ -583,7 +583,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	/* make a connection to OpenDHT server */
 	int my_socket;
 	my_socket = init_dht_gateway_socket(my_socket);
-	err = connect_dht_gateway(my_socket, &serving_gateway, 1);
+	err = connect_dht_gateway(my_socket, serving_gateway, 1);
 	if (err <0) HIP_DEBUG("Error -> connect_dht_gateway failed\n");
 	
 	/* get the address of peer from OpenDHT server corresponding to 
