@@ -382,7 +382,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_fqdn;  
   extern int hip_opendht_fqdn_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway; 
+  extern struct addrinfo * opendht_serving_gateway; 
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -394,7 +394,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS) 
         { 
           opendht_error = opendht_put(hip_opendht_sock_fqdn,
@@ -445,7 +445,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_hit;
   extern int hip_opendht_hit_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway;
+  extern struct addrinfo * opendht_serving_gateway;
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -457,7 +457,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS)
         {
           opendht_error = opendht_put(hip_opendht_sock_hit, 
