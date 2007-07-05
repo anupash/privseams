@@ -57,7 +57,7 @@ int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 int opendht_error = 0;
 char opendht_response[1024];
-struct addrinfo opendht_serving_gateway;
+struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
  
