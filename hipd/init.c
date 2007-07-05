@@ -126,7 +126,7 @@ int hipd_init(int flush_ipsec, int killold)
 	int err = 0, fd;
 	char str[64];
 	struct sockaddr_un daemon_addr;
-	extern struct addrinfo opendht_serving_gateway;
+	extern struct addrinfo * opendht_serving_gateway;
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -186,9 +186,9 @@ int hipd_init(int flush_ipsec, int killold)
         hip_rvs_init_rvadb();
 #endif	
 #ifdef CONFIG_HIP_OPENDHT
-        memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+        if (err < 0) 
+          HIP_DEBUG("Error resolving openDHT gateway!\n");
         err = 0;
 #endif
 #ifdef CONFIG_HIP_ESCROW
@@ -651,8 +651,8 @@ void hip_exit(int signal)
 	unlink(HIP_DAEMON_LOCK_FILE);
 
 #ifdef CONFIG_HIP_OPENDHT
-	if (opendht_serving_gateway.ai_next)
-		freeaddrinfo(opendht_serving_gateway.ai_next);
+	if (opendht_serving_gateway)
+		freeaddrinfo(opendht_serving_gateway);
 #endif
 
 	return;
