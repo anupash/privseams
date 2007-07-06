@@ -6,6 +6,8 @@ AUTOMAKE_OPTIONS = foreign
 #GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
 #GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
 
+include_HEADERS = create.h  events.h  exec.h  hipstart.h  main.h  manage.h  nh.h  rhit_dnd.h  terminal.h  tools.h  tw.h  widgets.h  x.h
+
 CFLAGS = $(hipl_common_cflags)
 
 if HIP_AGENT
