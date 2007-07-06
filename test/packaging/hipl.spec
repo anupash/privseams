@@ -1,5 +1,5 @@
 Name: hipl
-Version: 1.0.1
+Version: 1.0.2
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
@@ -74,6 +74,7 @@ rm -rf %{buildroot}
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
+%{prefix}/bin/hipagent
 %{prefix}/bin/conntest-client
 %{prefix}/bin/conntest-client-gai
 %{prefix}/bin/conntest-client-native
