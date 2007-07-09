@@ -39,7 +39,7 @@ int gui_init(void)
 	widget_init();
 
 	/* Set default icon. */
-	gtk_window_set_default_icon_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipgconf.png", NULL);
+	gtk_window_set_default_icon_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipmanager.png", NULL);
 
 	/* Initialize tooltips. */
 	tooltips = gtk_tooltips_new();

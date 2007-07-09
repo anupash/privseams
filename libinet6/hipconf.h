@@ -91,6 +91,7 @@
 #define ACTION_BOS 15
 #define ACTION_DEBUG 16
 #define ACTION_HANDOFF 17
+#define ACTION_RESTART 18
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -114,6 +115,7 @@
 #define TYPE_HA         17
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
+#define TYPE_DAEMON		20
 #define TYPE_MAX    	22 /* exclusive */
 
 /* for handle_hi() only */
@@ -137,8 +139,9 @@
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
- 
-int hip_handle_exec_application(int fork, int type, char **argv, int argc);
+
+int hip_handle_exec_application(int fork, int type, int argc, char **argv);
+int hip_conf_handle_restart(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);

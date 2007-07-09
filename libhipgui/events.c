@@ -308,6 +308,7 @@ void button_event(GtkWidget *warg, gpointer data)
 	
 	case IDB_OPT_NAT:
 	case IDB_DBG_RSTALL:
+	case IDB_DBG_RESTART:
 		opt_handle_action(warg, id);
 		break;
 	}

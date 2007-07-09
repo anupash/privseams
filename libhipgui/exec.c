@@ -63,7 +63,7 @@ void exec_application(void)
 		if (opp) type = EXEC_LOADLIB_OPP;
 		else type = EXEC_LOADLIB_HIP;
 		
-		err = hip_handle_exec_application(1, type, vargs, n);
+		err = hip_handle_exec_application(1, type, n, vargs);
 		if (err != 0)
 		{
 			HIP_DEBUG("Executing new application failed!\n");

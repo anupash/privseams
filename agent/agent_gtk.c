@@ -147,34 +147,6 @@ int main(int argc, char *argv[])
 	/* Load language variables. */
 	lang_init(str_var_get("lang"), str_var_get("lang-file"));
 
-/*	term_set_mode(TERM_MODE_NONE);
-	err = -1;
-	if (argn == 2)
-	{
-		if (argv[1][0] == '-')
-		{
-			if (argv[1][1] == 's')
-			{
-				term_set_mode(TERM_MODE_SERVER);
-				err = 0;
-			}
-		}
-	}
-	if (argn == 3)
-	{
-		if (argv[1][0] == '-')
-		{
-			if (argv[1][1] == 'c')
-			{
-				term_set_mode(TERM_MODE_CLIENT);
-				term_set_server_addr(argv[2]);
-				err = 0;
-			}
-		}
-	}
-	if (argn == 1) err = 0;
-*/
-
 	if (str_var_is("daemon", "yes"))
 	{
 		int i = fork();

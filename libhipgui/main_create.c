@@ -84,7 +84,7 @@ int main_create_content(void)
 		GtkStatusIcon *status_icon;
 			
 //		status_icon = gtk_status_icon_new_from_stock(GTK_STOCK_OPEN);
-		status_icon = gtk_status_icon_new_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipgconf.png");
+		status_icon = gtk_status_icon_new_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipmanager.png");
 		gtk_status_icon_set_visible(status_icon, TRUE);
 		err = gtk_status_icon_is_embedded(status_icon);
 		HIP_DEBUG("Status icon %s.\n", (err ? "is visible" : "could not be shown"));
@@ -462,6 +462,10 @@ int main_create_content(void)
 	gtk_widget_show(GTK_WIDGET(w));
 	button = gtk_button_new_with_label(lang_get("dbg-rstall"));
 	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_DBG_RSTALL);
+	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
+	gtk_widget_show(GTK_WIDGET(button));
+	button = gtk_button_new_with_label(lang_get("dbg-restart-daemon"));
+	g_signal_connect(button, "clicked", G_CALLBACK(button_event), IDB_DBG_RESTART);
 	gtk_box_pack_start(GTK_BOX(w), button, FALSE, FALSE, 1);
 	gtk_widget_show(GTK_WIDGET(button));
 

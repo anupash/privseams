@@ -137,7 +137,8 @@ int hip_sock_recv_agent(void)
 			HIP_DEBUG("HIP agent ok.\n");
 			if (hip_agent_status == 0)
 			{
-				hip_agent_add_lhits();
+				hip_agent_status = 1;
+				hip_agent_update();
 			}
 			hip_agent_status = 1;
 		}
@@ -254,7 +255,11 @@ out_err:
 #endif // CONFIG_HIP_FIREWALL
 }*/
 
-int main(int argc, char *argv[])
+
+/**
+ * Daemon main function.
+ */
+int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
@@ -332,10 +337,10 @@ int main(int argc, char *argv[])
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	highest_descriptor = maxof(10, hip_nl_route.fd, hip_raw_sock_v6,
-				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_agent_sock, hip_raw_sock_v4,
-				   hip_nat_sock_udp, hip_firewall_sock,
-                                   hip_opendht_sock_fqdn, hip_opendht_sock_hit);
+		hip_user_sock, hip_nl_ipsec.fd,
+		hip_agent_sock, hip_raw_sock_v4,
+		hip_nat_sock_udp, hip_firewall_sock,
+		hip_opendht_sock_fqdn, hip_opendht_sock_hit);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -350,11 +355,11 @@ int main(int argc, char *argv[])
 	{
 		/* prepare file descriptor sets */
 #ifdef CONFIG_HIP_OPENDHT
-                FD_ZERO(&write_fdset);
-                if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
-                  FD_SET(hip_opendht_sock_fqdn, &write_fdset);
-                if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
-                  FD_SET(hip_opendht_sock_hit, &write_fdset);
+		FD_ZERO(&write_fdset);
+		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
+			FD_SET(hip_opendht_sock_fqdn, &write_fdset);
+		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
+			FD_SET(hip_opendht_sock_hit, &write_fdset);
 #endif
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
@@ -365,10 +370,10 @@ int main(int argc, char *argv[])
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
 		FD_SET(hip_firewall_sock, &read_fdset);
-                if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
-                  FD_SET(hip_opendht_sock_fqdn, &read_fdset);
-                if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)
-                  FD_SET(hip_opendht_sock_hit, &read_fdset);
+		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
+			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
+		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)
+			FD_SET(hip_opendht_sock_hit, &read_fdset);
 
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
@@ -494,73 +499,73 @@ int main(int argc, char *argv[])
 		}
 
 #ifdef CONFIG_HIP_OPENDHT
-                if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
-                     FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
-                {
-                  /* Error with the connect */
-                  HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-                }
-                else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
-                {
-                  hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND; 
-                }
+			if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
+					FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
+			{
+				/* Error with the connect */
+				HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+			}
+			else if (FD_ISSET(hip_opendht_sock_fqdn, &write_fdset))
+			{
+				hip_opendht_fqdn_sent = STATE_OPENDHT_START_SEND; 
+			}
 #endif
-                
-                if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset))
+
+		if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset))
 		{
 #ifdef CONFIG_HIP_OPENDHT
-                  /* Receive answer from openDHT FQDN->HIT mapping */
-                  if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) 
-                    {
-                      memset(opendht_response, '\0', sizeof(opendht_response));
-                      opendht_error = opendht_read_response(hip_opendht_sock_fqdn, 
-                                                            opendht_response); 
-                      if (opendht_error == -1)
-                        HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
-                      else 
-                        HIP_DEBUG("Put was success (FQDN->HIT)\n");
-				
-                      close(hip_opendht_sock_fqdn);
-                      hip_opendht_sock_fqdn = 0;
-                      hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
-                      hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-                      opendht_error = 0;
-                    }
+			/* Receive answer from openDHT FQDN->HIT mapping */
+			if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER) 
+			{
+				memset(opendht_response, '\0', sizeof(opendht_response));
+				opendht_error = opendht_read_response(hip_opendht_sock_fqdn, 
+													opendht_response); 
+				if (opendht_error == -1)
+				HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
+				else 
+				HIP_DEBUG("Put was success (FQDN->HIT)\n");
+		
+				close(hip_opendht_sock_fqdn);
+				hip_opendht_sock_fqdn = 0;
+				hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+				hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+				opendht_error = 0;
+			}
 #endif
 		} 
 #ifdef CONFIG_HIP_OPENDHT
-                if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
-                     FD_ISSET(hip_opendht_sock_hit, &write_fdset))
-                {
-                  /* Error with the connect */
-                  HIP_ERROR("Error OpenDHT socket is readable and writable\n");
-                }
-                else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset))
-                {
-                  hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
-                }
+		if (FD_ISSET(hip_opendht_sock_hit, &read_fdset) &&
+				FD_ISSET(hip_opendht_sock_hit, &write_fdset))
+		{
+			/* Error with the connect */
+			HIP_ERROR("Error OpenDHT socket is readable and writable\n");
+		}
+		else if (FD_ISSET(hip_opendht_sock_hit, &write_fdset))
+		{
+			hip_opendht_hit_sent = STATE_OPENDHT_START_SEND;
+		}
 #endif
 		if (FD_ISSET(hip_opendht_sock_hit, &read_fdset))
 		{
 #ifdef CONFIG_HIP_OPENDHT
-                  /* Receive answer from openDHT HIT->IP mapping */
-                  if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) 
-                    {
-                      memset(opendht_response, '\0', sizeof(opendht_response));
-                      opendht_error = opendht_read_response(hip_opendht_sock_hit, 
-                                                            opendht_response); 
-                      if (opendht_error == -1)
-                        HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
-                      else 
-                        HIP_DEBUG("Put was success (HIT->IP)\n");
-                      close(hip_opendht_sock_hit);
-                      hip_opendht_sock_hit = 0;
-                      hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
-                      hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-                      opendht_error= 0;
-                    }
+			/* Receive answer from openDHT HIT->IP mapping */
+			if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER) 
+			{
+				memset(opendht_response, '\0', sizeof(opendht_response));
+				opendht_error = opendht_read_response(hip_opendht_sock_hit, 
+													opendht_response); 
+				if (opendht_error == -1)
+				HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
+				else 
+				HIP_DEBUG("Put was success (HIT->IP)\n");
+				close(hip_opendht_sock_hit);
+				hip_opendht_sock_hit = 0;
+				hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+				hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+				opendht_error= 0;
+			}
 #endif
-		} 
+		}
 
 		if (FD_ISSET(hip_agent_sock, &read_fdset))
 		{
@@ -612,3 +617,20 @@ out_err:
 
 	return err;
 }
+
+
+int main(int argc, char *argv[])
+{
+	int err = 0;
+
+	HIP_IFE(hipd_main(argc, argv), -1);
+	if (hipd_get_flag(HIPD_FLAG_RESTART))
+	{
+		HIP_INFO(" !!!!! HIP DAEMON RESTARTING !!!!! \n");
+		hip_handle_exec_application(0, EXEC_LOADLIB_NONE, argc, argv);
+	}
+	
+out_err:
+	return err;
+}
+

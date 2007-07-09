@@ -83,6 +83,8 @@
 #define SO_HIP_DHT_SERVING_GW                   148
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
+/* Restart daemon. */
+#define SO_HIP_RESTART							151
 
 /** @} */
 

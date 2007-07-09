@@ -673,6 +673,13 @@ void opt_handle_action(GtkWidget *w, int type)
 		info = "reset all SAs";
 		break;
 		
+	case IDB_DBG_RESTART:
+		argc = 3;
+		argv[1] = "restart";
+		argv[2] = "daemon";
+		info = "restart daemon";
+		break;
+
 	default:
 		return;
 	}
