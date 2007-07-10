@@ -22,7 +22,7 @@
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 	return TRUE;
 #else
 	return FALSE;
@@ -40,7 +40,7 @@ gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
  */
 gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 	return (TRUE);
 }
 /* END OF FUNCTION */
@@ -68,7 +68,7 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 	char *str;
 	int depth, *indices;
 
-	selection = gtk_tree_view_get_selection(tree);
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
@@ -119,7 +119,7 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 
 	if (button->type == GDK_BUTTON_PRESS && button->button == 3)
 	{
-		selection = gtk_tree_view_get_selection(tree);
+		selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 
 		if (gtk_tree_selection_get_selected(selection, &model, &iter))
 		{
@@ -137,7 +137,7 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 			}
 			else if (depth == 3 && indices[0] == 1)
 			{
-/*				gtk_menu_popup(widget(ID_RLISTMENU), NULL, NULL, NULL, NULL,
+/*				gtk_menu_popup(GTK_MENU(widget(ID_RLISTMENU)), NULL, NULL, NULL, NULL,
 				               button->button, button->time);
 				return (TRUE);*/
 			}
@@ -171,7 +171,6 @@ void button_event(GtkWidget *warg, gpointer data)
 	HIT_Remote *r;
 	int id = (int)data, i, err;
 	char *ps;
-	static str[1024];
 	time_t rawtime;
 	struct tm *tinfo;
 	pthread_t pt;
@@ -179,7 +178,7 @@ void button_event(GtkWidget *warg, gpointer data)
 	switch (id)
 	{
 	case IDB_SEND:
-		ps = gtk_entry_get_text(widget(ID_TERMINPUT));
+		ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TERMINPUT)));
 		if (strlen(ps) < 1) break;
 		if (strlen(ps) > (1024 - 128)) ps[1024 - 128] = '\0';
 
@@ -187,28 +186,29 @@ void button_event(GtkWidget *warg, gpointer data)
 		else if (ps[0] == '/') term_exec_command(&ps[1]);
 		else
 		{
+			char str[1024];
 			HIP_DEBUG("nick is: %s\n", get_nick());
 			time(&rawtime);
 			tinfo = localtime(&rawtime);
 			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,
-			        tinfo->tm_min, get_nick(), ps);
+			         tinfo->tm_min, get_nick(), ps);
 			if (term_get_mode() == TERM_MODE_CLIENT)
 			{
-				pthread_create(&pt, NULL, term_client_send_string, str);
+				pthread_create(&pt, NULL, term_client_send_string, (void *)str);
 			}
 			if (term_get_mode() == TERM_MODE_SERVER)
 			{
-				pthread_create(&pt, NULL, term_server_send_string, str);
+				pthread_create(&pt, NULL, term_server_send_string, (void *)str);
 			}
 		}
-		gtk_entry_set_text(widget(ID_TERMINPUT), "");
-		gtk_widget_grab_default(widget(ID_TERMSEND));
-		gtk_entry_set_activates_default(widget(ID_TERMINPUT), TRUE);
-		gtk_widget_grab_focus(widget(ID_TERMINPUT));
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TERMINPUT)), "");
+		gtk_widget_grab_default(GTK_WIDGET(widget(ID_TERMSEND)));
+		gtk_entry_set_activates_default(GTK_ENTRY(widget(ID_TERMINPUT)), TRUE);
+		gtk_widget_grab_focus(GTK_WIDGET(widget(ID_TERMINPUT)));
 		break;
 
 	case IDB_TW_RGROUPS:
-		ps = gtk_combo_box_get_active_text(warg);
+		ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(warg));
 		g = hit_db_find_rgroup(ps);
 		if (g)
 		{
@@ -220,12 +220,12 @@ void button_event(GtkWidget *warg, gpointer data)
 			err = create_remote_group("");
 			if (!err) i = 0;
 			else i = find_from_cb(r->g->name, widget(ID_TWR_RGROUP));
-			gtk_combo_box_set_active(widget(ID_TWR_RGROUP), i);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), i);
 		}
 		break;
 
 	case IDB_NH_RGROUPS:
-		ps = gtk_combo_box_get_active_text(warg);
+		ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(warg));
 		g = hit_db_find_rgroup(ps);
 		if (g)
 		{
@@ -236,7 +236,7 @@ void button_event(GtkWidget *warg, gpointer data)
 			err = create_remote_group("");
 			if (!err) i = 0;
 			else i = find_from_cb(lang_get("default-group-name"), widget(ID_NH_RGROUP));
-			gtk_combo_box_set_active(widget(ID_NH_RGROUP), i);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_NH_RGROUP)), i);
 		}
 		break;
 
@@ -264,16 +264,16 @@ void button_event(GtkWidget *warg, gpointer data)
 		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
 		if (i == TRUE)
 		{
-			gtk_widget_hide(widget(ID_MAINWND));
+			gtk_widget_hide(GTK_WIDGET(widget(ID_MAINWND)));
 		}
 		else
 		{
-			gtk_widget_show(widget(ID_MAINWND));
+			gtk_widget_show(GTK_WIDGET(widget(ID_MAINWND)));
 		}
 		break;*/
 		
 	case IDM_TRAY_SHOW:
-		gtk_widget_show(widget(ID_MAINWND));
+		gtk_widget_show(GTK_WIDGET(widget(ID_MAINWND)));
 		break;
 		break;
 
@@ -350,7 +350,7 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 /** When systray is activated. */
 void systray_event(void *warg, guint bid, guint atime, gpointer data)
 {
-	gtk_menu_popup(widget(ID_SYSTRAYMENU), NULL, NULL, NULL, NULL, 0, atime);
+	gtk_menu_popup(GTK_MENU(widget(ID_SYSTRAYMENU)), NULL, NULL, NULL, NULL, 0, atime);
 }
 /* END OF FUNCTION */
 

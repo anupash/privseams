@@ -50,8 +50,8 @@ int gui_init(void)
 	/* Create main GUI window. */
 	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	widget_set(ID_MAINWND, w);
-//	gtk_widget_show(w);
-	gtk_window_set_title(w, lang_get("title-main"));
+//	gtk_widget_show(GTK_WIDGET(w));
+	gtk_window_set_title(GTK_WINDOW(w), lang_get("title-main"));
 
 	g_signal_connect(w, "delete_event", G_CALLBACK(main_delete_event), NULL);
 	g_signal_connect(w, "destroy", G_CALLBACK(main_destroy), NULL);
@@ -59,16 +59,16 @@ int gui_init(void)
 	/* Create toolwindow for remote HITs/groups. */
 	w = gtk_vbox_new(FALSE, 0);
 	widget_set(ID_TOOLWND, w);
-	gtk_widget_show(w);
+	gtk_widget_show(GTK_WIDGET(w));
 	
 	/* Create toolwindow for local HITs. */
 /*	w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_widget_hide(w);
-	gtk_window_set_title(w, lang_get("title-locals"));*/
+	gtk_widget_hide(GTK_WIDGET(w));
+	gtk_window_set_title(GTK_WINDOW(w), lang_get("title-locals"));*/
 	w = gtk_dialog_new_with_buttons(lang_get("title-locals"), NULL, GTK_DIALOG_MODAL,
 	                                lang_get("lhdlg-button-apply"), GTK_RESPONSE_YES,
 	                                lang_get("lhdlg-button-cancel"), GTK_RESPONSE_NO, NULL);
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
 	widget_set(ID_LTOOLWND, w);
 
@@ -78,25 +78,25 @@ int gui_init(void)
 	                                lang_get("nhdlg-button-drop"), GTK_RESPONSE_NO, NULL);
 	widget_set(ID_NHDLG, w);
 	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 
 	/* Create execute-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-runapp"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_EXECDLG, w);
 	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 
 	/* Create create-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-newgroup"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_NGDLG, w);
 	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 
 	/* Create own custom message-dialog. */
 	w = gtk_dialog_new_with_buttons(lang_get("title-msgdlg"), NULL, GTK_DIALOG_MODAL, NULL);
 	widget_set(ID_MSGDLG, w);
 	g_signal_connect(w, "delete_event", G_CALLBACK(delete_event), NULL);
-	gtk_widget_hide(w);
+	gtk_widget_hide(GTK_WIDGET(w));
 
 	/* Create window content for all windows. */
 	HIP_IFEL(msgdlg_create_content(), -1, "Failed to create message-dialog contents.\n");
@@ -129,13 +129,13 @@ int gui_main(void)
 	/* Variables. */
 	GtkWidget *w;
 	
-	gtk_combo_box_append_text(widget(ID_TWR_RGROUP), lang_get("combo-newgroup"));
-	gtk_combo_box_append_text(widget(ID_NH_RGROUP), lang_get("combo-newgroup"));
+	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), lang_get("combo-newgroup"));
+	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_NH_RGROUP)), lang_get("combo-newgroup"));
 
 	hit_db_enum_locals(all_add_local, NULL);
-	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), 0);
-	gtk_combo_box_set_active(widget(ID_TWG_LOCAL), 0);
-	gtk_combo_box_set_active(widget(ID_NG_LOCAL), 0);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_LOCAL)), 0);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_LOCAL)), 0);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_NG_LOCAL)), 0);
 	
 	/* Set default mode. */
 	tw_clear();
@@ -155,12 +155,12 @@ int gui_main(void)
 	}
 
 	/* Close all groups as default. */
-	gtk_tree_view_collapse_all(widget(ID_RLISTVIEW));
+	gtk_tree_view_collapse_all(GTK_TREE_VIEW(widget(ID_RLISTVIEW)));
 
 #if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
-	gtk_widget_hide(widget(ID_MAINWND));
+	gtk_widget_hide(GTK_WIDGET(widget(ID_MAINWND)));
 #else
-	gtk_widget_show(widget(ID_MAINWND));
+	gtk_widget_show(GTK_WIDGET(widget(ID_MAINWND)));
 #endif
 	
 	gtk_main();
@@ -190,17 +190,18 @@ void gui_set_info(const char *string, ...)
 	/* Variables. */
 	static int last = -1;
 	GtkWidget *w;
-	char *str[2048];
+	char *str = NULL;
 	va_list args;
 	
 	va_start(args, string);
 
 	/* Set to status bar. */
-	vsprintf(str, string, args);
+	vasprintf(&str, string, args);
 	w = widget(ID_STATUSBAR);
-	if (last >= 0) gtk_statusbar_pop(w, last);
-	last = gtk_statusbar_get_context_id(w, "info");
-	gtk_statusbar_push(w, last, str);
+	if (last >= 0) gtk_statusbar_pop(GTK_STATUSBAR(w), last);
+	last = gtk_statusbar_get_context_id(GTK_STATUSBAR(w), "info");
+	gtk_statusbar_push(GTK_STATUSBAR(w), last, str);
+	if (str) free(str);
 	
 	va_end(args);
 }
@@ -215,7 +216,7 @@ void gui_set_info_safe(const char *string, ...)
 	/* Variables. */
 	static int last = -1;
 	GtkWidget *w;
-	char *str[2048];
+	char *str = NULL;
 	va_list args;
 	
 	gdk_threads_enter();
@@ -224,11 +225,12 @@ void gui_set_info_safe(const char *string, ...)
 	va_start(args, string);
 
 	/* Set to status bar. */
-	vsprintf(str, string, args);
+	vasprintf(&str, string, args);
 	w = widget(ID_STATUSBAR);
-	if (last >= 0) gtk_statusbar_pop(w, last);
-	last = gtk_statusbar_get_context_id(w, "info");
-	gtk_statusbar_push(w, last, str);
+	if (last >= 0) gtk_statusbar_pop(GTK_STATUSBAR(w), last);
+	last = gtk_statusbar_get_context_id(GTK_STATUSBAR(w), "info");
+	gtk_statusbar_push(GTK_STATUSBAR(w), last, str);
+	if (str) free(str);
 
 	/* End args. */
 	va_end(args);

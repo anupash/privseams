@@ -52,7 +52,7 @@ int find_from_cb(char *name, GtkWidget *warg)
 	char *str = NULL;
 	int err = -1, i = 0;
 
-	model = gtk_combo_box_get_model(warg);
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(warg));
 	HIP_IFE(gtk_tree_model_get_iter_first(model, &iter) == FALSE, -1);
 
 	do
@@ -88,10 +88,10 @@ void delete_all_items_from_cb(GtkWidget *warg)
 	GtkTreeModel *model;
 	GtkTreeIter iter;
 
-	model = gtk_combo_box_get_model(warg);
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(warg));
 	if (gtk_tree_model_get_iter_first(model, &iter) == TRUE)
 	{
-		while (gtk_list_store_remove(model, &iter) != NULL);
+		while (gtk_list_store_remove(GTK_LIST_STORE(model), &iter) != FALSE);
 	}
 }
 /* END OF FUNCTION */
@@ -136,11 +136,12 @@ out_err:
 	if (!err)
 	{
 		GtkDialog *dialog;
-		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
-		gtk_window_set_keep_above(dialog, TRUE);
-		gtk_widget_show(dialog);
-		gtk_dialog_run(dialog);
-		gtk_widget_destroy(dialog);
+		dialog = (GtkDialog *)
+		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+		gtk_widget_show(GTK_WIDGET(dialog));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(GTK_WIDGET(dialog));
 	}
 	
 	return (err);
@@ -182,11 +183,12 @@ out_err:
 	if (!err)
 	{
 		GtkDialog *dialog;
-		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
-		gtk_window_set_keep_above(dialog, TRUE);
-		gtk_widget_show(dialog);
-		gtk_dialog_run(dialog);
-		gtk_widget_destroy(dialog);
+		dialog = (GtkDialog *)
+		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+		gtk_widget_show(GTK_WIDGET(dialog));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(GTK_WIDGET(dialog));
 	}
 	
 	return (err);
@@ -228,11 +230,12 @@ out_err:
 	if (!err)
 	{
 		GtkDialog *dialog;
-		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
-		gtk_window_set_keep_above(dialog, TRUE);
-		gtk_widget_show(dialog);
-		gtk_dialog_run(dialog);
-		gtk_widget_destroy(dialog);
+		dialog = (GtkDialog *)
+		         gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, msg);
+		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+		gtk_widget_show(GTK_WIDGET(dialog));
+		gtk_dialog_run(GTK_DIALOG(dialog));
+		gtk_widget_destroy(GTK_WIDGET(dialog));
 	}
 	
 	return (err);
@@ -299,14 +302,14 @@ int message_dialog(char *msg)
 {
 	/* Variables. */
 	GtkDialog *dialog = (GtkDialog *)widget(ID_MSGDLG);
-	GtkWidget *label = widget(ID_MSGDLG_MSG);
+	GtkWidget *label = (GtkWidget *)widget(ID_MSGDLG_MSG);
 	int err = 0;
 	
-	gtk_label_set_text(label, msg);
-	gtk_widget_show(dialog);
-	gtk_window_set_keep_above(dialog, TRUE);
-	err = gtk_dialog_run(dialog);
-	gtk_widget_hide(dialog);
+	gtk_label_set_text(GTK_LABEL(label), msg);
+	gtk_widget_show(GTK_WIDGET(dialog));
+	gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+	err = gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_hide(GTK_WIDGET(dialog));
 	if (err == GTK_RESPONSE_OK) err = 1;
 	else err = 0;
 	

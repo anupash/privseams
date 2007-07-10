@@ -87,12 +87,12 @@ void term_set_server_addr(char *);
 char *term_get_server_addr(void);
 
 /* file: terminal_server.c */
-void term_server_send_string(char *);
+void *term_server_send_string(void *);
 int term_server_init(void);
 void term_server_quit(void);
 
 /* file: terminal_server.c */
-void term_client_send_string(char *);
+void *term_client_send_string(void *);
 int term_client_init(void);
 void term_client_quit(void);
 

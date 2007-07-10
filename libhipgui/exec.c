@@ -30,14 +30,14 @@ void exec_application(void)
 	char *ps, *ps2, *vargs[32 + 1];
 
 	dialog = widget(ID_EXECDLG);
-	gtk_widget_show(dialog);
-	gtk_widget_grab_focus(widget(ID_EXEC_COMMAND));
+	gtk_widget_show(GTK_WIDGET(dialog));
+	gtk_widget_grab_focus(GTK_WIDGET(widget(ID_EXEC_COMMAND)));
 
 	err = gtk_dialog_run(GTK_DIALOG(dialog));
 	if (err == GTK_RESPONSE_OK)
 	{
 		opp = gtk_toggle_button_get_active(widget(ID_EXEC_OPP));
-		ps = gtk_entry_get_text(widget(ID_EXEC_COMMAND));
+		ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_EXEC_COMMAND)));
 		
 		HIP_IFEL(strlen(ps) < 0, -1, "No command given.\n");
 			
@@ -72,7 +72,7 @@ void exec_application(void)
 	}
 
 out_err:
-	gtk_widget_hide(dialog);
+	gtk_widget_hide(GTK_WIDGET(dialog));
 	return;
 }
 
@@ -94,33 +94,33 @@ int execdlg_create_content(void)
 	/* Create main widget for adding subwidgets to window. */
 	vbox = gtk_vbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(window)->vbox), vbox, TRUE, TRUE, 3);
-	gtk_widget_show(vbox);
+	gtk_widget_show(GTK_WIDGET(vbox));
 
 	/* Create command-input widget. */
 	hbox = gtk_hbox_new(FALSE, 3);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 3);
-	gtk_widget_show(hbox);
+	gtk_widget_show(GTK_WIDGET(hbox));
 	w = gtk_label_new("Command:");
-	gtk_widget_show(w);
+	gtk_widget_show(GTK_WIDGET(w));
 	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 1);
 	w = gtk_entry_new();
 	widget_set(ID_EXEC_COMMAND, w);
-	gtk_entry_set_text(w, "firefox");
+	gtk_entry_set_text(GTK_ENTRY(w), "firefox");
 	gtk_box_pack_start(GTK_BOX(hbox), w, FALSE, TRUE, 1);
-	gtk_widget_show(w);
+	gtk_widget_show(GTK_WIDGET(w));
 	gtk_entry_set_activates_default(GTK_ENTRY(w), TRUE);
 
 	/* Create opportunistic environment option. */
 	w = gtk_check_button_new_with_label("Use opportunistic mode");
 	gtk_box_pack_start(GTK_BOX(vbox), w, FALSE, FALSE, 1);
-	gtk_toggle_button_set_active(w, FALSE);
-	gtk_widget_show(w);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), FALSE);
+	gtk_widget_show(GTK_WIDGET(w));
 	widget_set(ID_EXEC_OPP, w);
 	
 	/* Add buttons to dialog. */
-	w = gtk_dialog_add_button(window, "Run", GTK_RESPONSE_OK);
-	gtk_widget_grab_default(w);
-	gtk_dialog_add_button(window, "Cancel", GTK_RESPONSE_CANCEL);
+	w = gtk_dialog_add_button(GTK_DIALOG(window), "Run", GTK_RESPONSE_OK);
+	gtk_widget_grab_default(GTK_WIDGET(w));
+	gtk_dialog_add_button(GTK_DIALOG(window), "Cancel", GTK_RESPONSE_CANCEL);
 
 	return (0);
 }

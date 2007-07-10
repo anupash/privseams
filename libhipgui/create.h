@@ -12,6 +12,7 @@
 /* INCLUDES */
 #include <gtk/gtk.h>
 #include "widgets.h"
+#include "language.h"
 
 /*!
 	\addtogroup libhipgui

@@ -32,10 +32,11 @@ int client_sockfd = -1;
 
 /******************************************************************************/
 /** Send message to socket. */
-void term_client_send_string(char *msg)
+void *term_client_send_string(void *msg)
 {
 	int n;
 	n = send(client_sockfd, msg, strlen(msg), 0);
+	return NULL;
 }
 /* END OF FUNCTION */
 
