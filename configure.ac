@@ -124,6 +124,17 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
 
+AC_ARG_ENABLE(lsi,
+             AC_HELP_STRING([--enable-lsi],
+                            [LSI support (default is NO)]),
+             [ac_cv_use_lsi=$enableval], [ac_cv_use_lsi=no])
+AC_CACHE_CHECK([whether to use lsi],
+               [ac_cv_use_lsi], [ac_cv_use_lsi=no])
+if test x"$ac_cv_use_lsi" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_LSI, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_LSI, test x"$ac_cv_use_lsi" = x"yes")
+
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
                             [HIP cookie extensions (default is NO)]),
