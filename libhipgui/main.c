@@ -9,7 +9,6 @@
 /* INCLUDES */
 #include "main.h"
 
-
 /******************************************************************************/
 /* FUNCTIONS */
 
@@ -187,6 +186,31 @@ void gui_quit(void)
 /******************************************************************************/
 /** Set status bar info text. */
 void gui_set_info(const char *string, ...)
+{
+	/* Variables. */
+	static int last = -1;
+	GtkWidget *w;
+	char *str[2048];
+	va_list args;
+	
+	va_start(args, string);
+
+	/* Set to status bar. */
+	vsprintf(str, string, args);
+	w = widget(ID_STATUSBAR);
+	if (last >= 0) gtk_statusbar_pop(w, last);
+	last = gtk_statusbar_get_context_id(w, "info");
+	gtk_statusbar_push(w, last, str);
+	
+	va_end(args);
+}
+/* END OF FUNCTION */
+
+
+
+/******************************************************************************/
+/** Set status bar info text. */
+void gui_set_info_safe(const char *string, ...)
 {
 	/* Variables. */
 	static int last = -1;

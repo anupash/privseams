@@ -24,7 +24,10 @@
 /******************************************************************************/
 /* DEFINES */
 #define HIP_DEBIAN_DIR_PIXMAPS "/usr/share/pixmaps/"
-
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+#else
+#define GTK_STOCK_ORIENTATION_PORTRAIT GTK_STOCK_FILE
+#endif
 
 /*!
 	\addtogroup libhipgui
@@ -39,6 +42,7 @@ int gui_init(void);
 int gui_main(void);
 void gui_quit(void);
 void gui_set_info(const char *, ...);
+void gui_set_info_safe(const char *, ...);
 void gui_terminate(void);
 
 /* file: main_create.c */

@@ -409,7 +409,7 @@ In order to build the binary package type the following:
 * fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
 
 Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
-* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
 
 After the kernel has been successfully compiled, you will find the
 debian packages in the top directory.

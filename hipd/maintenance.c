@@ -40,26 +40,31 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-	
+
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED &&
 		    entry->retrans_state == entry->state) {
 			
+			/* kludge fix: with slow ADSL line I1 packets were*/
+			if (!(entry->state == HIP_STATE_I2_SENT &&
+			    hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1))
+				goto out_err;
+
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     HIP_NAT_UDP_PORT,
-					     entry->peer_udp_port,
+						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_I1) {
-				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
+			    == HIP_I1 && entry->state == HIP_STATE_UNASSOCIATED) {
+				HIP_DEBUG("Resent I1 succcesfully\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
@@ -260,7 +265,6 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info)
 {
-	/* Variables. */
 	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
@@ -303,6 +307,43 @@ int hip_agent_filter(struct hip_common *msg,
 	
 out_err:
 	return (err);
+}
+
+
+/**
+ * Send new status of given state to agent.
+ */
+int hip_agent_update_status(int msg_type, void *data, size_t size)
+{
+	struct hip_common *user_msg = NULL;
+	int err = 0;
+	int n;
+	
+	if (!hip_agent_is_alive())
+	{
+		return (-ENOENT);
+	}
+
+	/* Create packet for agent. */	
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+	HIP_IFE(hip_build_user_hdr(user_msg, msg_type, 0), -1);
+	if (size > 0 && data != NULL)
+	{
+		HIP_IFE(hip_build_param_contents(user_msg, data, HIP_PARAM_ENCAPS_MSG,
+		                                 size), -1);
+	}
+
+	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
+	           0, (struct sockaddr *)&hip_agent_addr, sizeof(hip_agent_addr));
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+
+out_err:
+	return err;
 }
 
 

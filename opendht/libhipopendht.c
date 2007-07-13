@@ -84,6 +84,12 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
     int flags = 0;
     struct sockaddr_in *sa;
+  
+    if (gateway == NULL) 
+      {
+	HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
+	return(-1);
+      }
 
     if (blocking == 1)
       {

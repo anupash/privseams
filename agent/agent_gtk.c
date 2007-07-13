@@ -18,11 +18,11 @@ void sig_catch_int(int signum)
 	
 	signal(signum, sig_catch_int);
 	agent_exit();
-	if (force_exit < 1) HIP_DEBUG("SIGINT (CTRL-C) caught, exiting agent...\n");
-	else if (force_exit < 2) HIP_DEBUG("SIGINT (CTRL-C) caught, still once to terminate brutally.\n");
+	if (force_exit < 1) HIP_ERROR("SIGINT (CTRL-C) caught, exiting agent...\n");
+	else if (force_exit < 2) HIP_ERROR("SIGINT (CTRL-C) caught, still once to terminate brutally.\n");
 	else
 	{
-		HIP_DEBUG("SIGINT (CTRL-C) caught, terminating!\n");
+		HIP_ERROR("SIGINT (CTRL-C) caught, terminating!\n");
 		exit(1);
 	}
 
@@ -36,7 +36,7 @@ void sig_catch_int(int signum)
 void sig_catch_tstp(int signum)
 {
 	signal(signum, sig_catch_tstp);
-	HIP_DEBUG("SIGTSTP (CTRL-Z?) caught, don't do that...\n");
+	HIP_ERROR("SIGTSTP (CTRL-Z?) caught, don't do that...\n");
 }
 /* END OF FUNCTION */
 
@@ -75,36 +75,78 @@ void sig_catch_term(int signum)
 /**
 	main().
 */
-int main(int argn, char *argv[])
+int main(int argc, char *argv[])
 {
-	/* Variables. */
-	int err = 0, fd, as_daemon = 0;
+	extern char *optarg;
+	extern int optind, optopt;
+	int err = 0, fd, c;
+	char lock_file[MAX_PATH];
 
-	/* Write pid to file. */
-/*	unlink(HIP_AGENT_LOCK_FILE);
-	fd = open(HIP_AGENT_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-	if (fd > 0)
-	{
-		char str[64];
-		/* Dont lock now, make this feature available later. */
-		// if (lockf(i, F_TLOCK, 0) < 0) exit (1);
-		/* Only first instance continues. */
-//		sprintf(str, "%d\n", getpid());
-//		write(fd, str, strlen(str)); /* record pid to lockfile */
-//	}
-	
 	/* Initialize string variables. */
-	HIP_IFEL(str_var_init(), -1, "Failed to initialize strvars!\n");
-	
+	HIP_IFEL(str_var_init(), -1, "str_var_init() failed!\n");
 	/* Create config path. */
 	str_var_set("config-path", "%s/.hipagent", getenv("HOME"));
 	mkdir(str_var_get("config-path"), 0700);
+	str_var_set("pid-file", "%s/pid", str_var_get("config-path"));
+
+	/* Write pid to file. */
+	fd = open(str_var_get("pid-file"), O_RDWR | O_CREAT, 0644);
+	if (fd > 0)
+	{
+		char str[64];
+		/* Only first instance continues. */
+		if (lockf(fd, F_TLOCK, 0) < 0)
+		{
+			read(fd, str, 64);
+			HIP_ERROR("hipagent already running with pid %d\n", atoi(str));
+			exit (1);
+		}
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
+	
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */
 	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
 
-	/* Check command line options. */
+	/* Read config. */
+	err = config_read(str_var_get("config-file"));
+	if (err) HIP_ERROR("Could not read config file.\n");
+
+	/* Set some random seed. */
+	srand(time(NULL));
+
+	/* Set signalling. */
+	signal(SIGINT, sig_catch_int);
+	signal(SIGCHLD, sig_catch_chld);
+	signal(SIGTERM, sig_catch_term);
+
+	/* Parse command line options. */
+	while ((c = getopt(argc, argv, ":hl:bd")) != -1)
+	{
+		switch (c)
+		{
+		case ':':
+		case '?':
+		case 'h':
+			fprintf(stderr, "no help available currently\n");
+			goto out_err;
+		
+		case 'l':
+			str_var_set("lang-file", optarg);
+			break;
+		
+		case 'd':
+		case 'b':
+			str_var_set("daemon", "yes");
+			break;
+		}
+	}
+
+	/* Load language variables. */
+	lang_init(str_var_get("lang"), str_var_get("lang-file"));
+
 /*	term_set_mode(TERM_MODE_NONE);
 	err = -1;
 	if (argn == 2)
@@ -131,14 +173,9 @@ int main(int argn, char *argv[])
 		}
 	}
 	if (argn == 1) err = 0;
+*/
 
-	HIP_IFEL(err, -1, "Invalid command line parameters.\n");*/
-	if (argn == 2)
-	{
-		if (argv[1][1] == 'b') as_daemon = 1;
-	}
-
-	if (as_daemon)
+	if (str_var_is("daemon", "yes"))
 	{
 		int i = fork();
 		HIP_IFEL(i < 0, -1, "fork() failed!\n");
@@ -152,31 +189,18 @@ int main(int argn, char *argv[])
 		chdir("/tmp");
 	}
 
-	/* Read config. */
-	err = config_read(str_var_get("config-file"));
-	if (err) HIP_ERROR("Could not read config file.\n");
-	lang_init(str_var_get("lang"));
-
-	/* Set some random seed. */
-	srand(time(NULL));
-
-	/* Set signalling. */
-	signal(SIGINT, sig_catch_int);
-	signal(SIGCHLD, sig_catch_chld);
-	signal(SIGTERM, sig_catch_term);
-
 	/* Initialize GUI. */
-	HIP_DEBUG("##### 1. Initializing GUI...\n");
+	_HIP_DEBUG("##### 1. Initializing GUI...\n");
 	HIP_IFEL(gui_init(), -1, "Failed to initialize GUI!\n");
 
 	/* Initialize database. */
-	HIP_DEBUG("##### 2. Initializing database...\n");
+	_HIP_DEBUG("##### 2. Initializing database...\n");
 	HIP_IFEL(hit_db_init(str_var_get("db-file")), -1, "Failed to load agent database!\n");
 	//hit_db_add_rgroup(lang_get("default-group-name"), NULL, HIT_ACCEPT, 0);
 	hit_db_add_rgroup(" deny", NULL, HIT_DENY, 0);
 
 	/* Initialize connection to HIP daemon. */
-	HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
+	_HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
 #ifndef CONFIG_HIP_DEBUG
 	HIP_IFEL(connhipd_init(), -1, "Failed to open connection to HIP daemon!\n");
 #else
@@ -192,10 +216,10 @@ int main(int argn, char *argv[])
 	*/
 	if (err != 0 && 0)
 	{
-		HIP_DEBUG("Trying to execute daemon...\n");
+		_HIP_DEBUG("Trying to execute daemon...\n");
 		err = fork();
 		
-		if (err < 0) HIP_DEBUG("fork() failed!\n");
+		if (err < 0) HIP_ERROR("fork() failed!\n");
 		else if (err > 0)
 		{
 			/* Wait for daemon to start. */
@@ -216,18 +240,19 @@ int main(int argn, char *argv[])
 
 #endif
 
-	HIP_DEBUG("##### 4. Executing GUI main.\n");
+	_HIP_DEBUG("##### 4. Executing GUI main.\n");
 	gui_main();
-
 	agent_exit();
+	hit_db_quit(str_var_get("db-file"));
 
 out_err:
 	connhipd_quit();
-	hit_db_quit(str_var_get("db-file"));
 	lang_quit();
+	lockf(fd, F_ULOCK, 0);
+	unlink(str_var_get("pid-file"));
 	str_var_quit();
 
-	HIP_DEBUG("##### X. Exiting application...\n");
+	_HIP_DEBUG("##### X. Exiting application...\n");
 	return (err);
 }
 /* END OF FUNCTION */

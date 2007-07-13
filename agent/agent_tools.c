@@ -119,7 +119,7 @@ int config_read(const char *file)
 	/* Variables. */
 	FILE *f;
 	int err = -1, i, n;
-	char ch, buf[LONG_STRING], *p1, *p2;
+	char ch, buf[LONG_STRING], *p1, *p2, *p3, add;
 
 	/* Open file for reading. */
 	f = fopen(file, "r");
@@ -129,6 +129,9 @@ int config_read(const char *file)
 	memset(buf, '\0', LONG_STRING); i = 0;
 	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
 	{
+		p1 = NULL;
+		p2 = NULL;
+		
 		/* Remove whitespaces from line start. */
 		if (i == 0 && (ch == ' ' || ch == '\t'))
 		{
@@ -158,18 +161,25 @@ int config_read(const char *file)
 		if (strlen(buf) < 1) goto loop_end;
 		if (buf[0] == '#') goto loop_end;
 		
-		/* Find '=' character and split string from there. */
-		p1 = strtok(buf, "=");
+		/* Find first '=' or '+' character and split string from there. */
+		err = sscanf(buf, "%a[^+=]%c%a[^\n]", &p1, &add, &p2);
+		if (err != 3) goto loop_end;
+/*		p1 = strtok(buf, "+=");
 		if (p1 == NULL) goto loop_end;
 		p2 = strtok(NULL, "\0");
-		if (p2 == NULL) goto loop_end;
+		if (p2 == NULL) goto loop_end;*/
 		
 		/* Set values. */
-		str_var_set(p1, p2);
-		HIP_DEBUG("config string read: %s=%s\n", p1, p2);
+		p3 = strdup(str_var_get(p1));
+		if (add == '+' && strlen(p3) > 0) str_var_set(p1, "%s\n%s", p3, p2);
+		else str_var_set(p1, p2);
+		free(p3);
+		HIP_DEBUG("config string read: %s%c%s\n", p1, add, p2);
 		
 	loop_end:
-		/* Clear buffer. */
+		/* Clear buffer and free pointers. */
+		if (p1) free(p1);
+		if (p2) free(p2);
 		memset(buf, '\0', LONG_STRING); i = 0;
 	}
 
