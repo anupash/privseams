@@ -178,6 +178,7 @@ int main(int argc, char *argv[])
             
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     s = init_dht_gateway_socket(s);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
@@ -229,6 +230,7 @@ int main(int argc, char *argv[])
 
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     s = init_dht_gateway_socket(s);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
@@ -267,6 +269,7 @@ int main(int argc, char *argv[])
             
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     s = init_dht_gateway_socket(s);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
@@ -307,6 +310,7 @@ int main(int argc, char *argv[])
             
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     s = init_dht_gateway_socket(s);
                     gettimeofday(&conn_before, NULL);
                     error = connect_dht_gateway(s, serving_gateway, 1);
@@ -350,6 +354,7 @@ int main(int argc, char *argv[])
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
@@ -394,6 +399,7 @@ int main(int argc, char *argv[])
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     ra= rand() % 1000000000;
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("random key  %s\n", key_rand);
@@ -440,6 +446,7 @@ int main(int argc, char *argv[])
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     ra= (n + 1) * 1000000; /* consecutive key instead of random as the variable says */
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
@@ -486,6 +493,7 @@ int main(int argc, char *argv[])
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     ra= (n + 1 ) * 1000000; /* consecutive key instead of random as the variable says */
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
@@ -532,6 +540,7 @@ int main(int argc, char *argv[])
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
+                    HIP_DEBUG("Iteration no %d\n",n);
                     ra= (n + 1) * 1000000; /* consecutive key instead of random as the variable says */
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
@@ -558,10 +567,10 @@ int main(int argc, char *argv[])
                             conn_diff_usec = conn_after.tv_usec - conn_before.tv_usec;
                             stat_diff_sec = (stat_after.tv_sec - stat_before.tv_sec) *1000000;
                             stat_diff_usec = stat_after.tv_usec - stat_before.tv_usec;
-                            printf("%.6f;%.6f;%c\n", 
+                            printf("%.6f;%.6f;%s\n", 
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
-                                   dht_response[1]);
+                                   dht_response);
                         }
                 }
 
