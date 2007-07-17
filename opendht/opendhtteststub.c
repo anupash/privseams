@@ -22,11 +22,11 @@ int main(int argc, char *argv[])
         printf("Num = 1 get test times when value not found\n");
         printf("Num = 2 get test times when value is found\n");
         printf("Num = 3 put test times with 10 byte value (same key)\n");
-        printf("Num = 4 put test times with 10 byte value, waiting 10 sec in between puts(same key)\n");
+        printf("Num = 4 put test times with 10 byte value, waiting 5 sec in between puts(same key)\n");
         printf("Num = 5 put test times with 10 byte value (random key, short TTL)\n");
-        printf("Num = 6 put test times with 10 byte value, waiting 10 sec in between puts(random key, short TTL)\n");
+        printf("Num = 6 put test times with 10 byte value, waiting 5 sec in between puts(random key, short TTL)\n");
         printf("Num = 7 put test times with consecutive keys and 985 byte values\n");
-        printf("Num = 8 put test times with consecutive keys and 985 byte values with 10 sec sleep in between puts\n");
+        printf("Num = 8 put test times with consecutive keys and 985 byte values with 5 sec sleep in between puts\n");
         printf("Num = 9 get test times with consecutive keys (do number 8 first)\n");
         printf("Iterations, just as it says\n");
         printf("Connect errors will print 999;999\n");
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '4')
         {
-            printf("Put test times with 10 byte value, waiting 10 sec in between puts (same key)\n");
+            printf("Put test times with 10 byte value, waiting 5 sec in between puts (same key)\n");
             printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
-                            sleep(10);
+                            sleep(5);
                         }
                 }
         }
@@ -392,7 +392,7 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '6')
         {
-            printf("Put test times with 10 byte value, waiting 10 sec in between puts(random key, short TTL)\n");
+            printf("Put test times with 10 byte value, waiting 5 sec in between puts(random key, short TTL)\n");
             printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
-                            sleep(10);
+                            sleep(5);
                         }
                 }
         }
@@ -485,7 +485,7 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '8')
         {
             memset(val_onekilo,'a',sizeof(val_onekilo));
-            printf("Put test times with consecutive keys and 985 byte values with 10 sec sleep between puts\n");
+            printf("Put test times with consecutive keys and 985 byte values with 5 sec sleep between puts\n");
             printf("Printing \"connection time; get time; DHT answer\n");
             printf("(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
@@ -526,7 +526,7 @@ int main(int argc, char *argv[])
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
-                            sleep(10);
+                            sleep(5);
                         }
                 }
         }        
