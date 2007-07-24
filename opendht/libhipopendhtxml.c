@@ -33,7 +33,7 @@ int build_packet_put(unsigned char * key,
     char *value64 = NULL;
     key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
     value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
-    
+
     char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
     sprintf(&ttl_str, "%d", ttl);
@@ -64,7 +64,7 @@ int build_packet_put(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-  
+
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -116,7 +116,7 @@ int build_packet_get(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-  
+
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);  
     free(key64);
@@ -290,7 +290,7 @@ int read_packet_content(char * in_buffer, char * out_value)
                                         strlen((char *)xml_data));
                out_value[evpret] = '\0';
                memcpy(answers.addrs, out_value, strlen(out_value));
-               HIP_DEBUG("Returned address: %s\n",out_value);
+               HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
                ret = 0;
              } 

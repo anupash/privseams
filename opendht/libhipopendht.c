@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <openssl/sha.h>
 #include <errno.h>
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
@@ -84,7 +85,13 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
     int flags = 0;
     struct sockaddr_in *sa;
-
+  
+    if (gateway == NULL) 
+      {
+          HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
+          return(-1);
+      }
+    
     if (blocking == 1)
       {
         if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
@@ -144,28 +151,25 @@ int opendht_put(int sockfd,
                 int opendht_port,
                 int opendht_ttl)
 {
-    int key_len = 0;
+    int key_len = 0, i = 0;
+    unsigned char *sha_retval;
     char put_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
-    //    int opendht_ttl = 120;
-    //int opendht_port = 5851;
 
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     {
         /* inet_pton failed because of invalid IPv6 address */
-        if (strlen((char *)key) > 20)
-        {
-            strncpy(tmp_key, (char *)key, 20);
-            key_len = strlen(tmp_key);
-        }
-        else
-        {
-            strcpy(tmp_key, (char *)key);
-            key_len = strlen(tmp_key);
-        }
+        memset(tmp_key,'\0',sizeof(tmp_key));
+        sha_retval = SHA1(key, sizeof(key), tmp_key);
+        key_len = 16;
+        if (!sha_retval)
+            {
+                HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                return(-1);
+            }                
     } 
     else 
     {
@@ -208,7 +212,8 @@ int opendht_get(int sockfd,
                 unsigned char * host,
                 int port)
 {
-    int key_len = 0;
+    int key_len = 0, i = 0;
+    unsigned char *sha_retval;
     char get_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
@@ -218,16 +223,14 @@ int opendht_get(int sockfd,
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     {
         /* inet_pton failed because of invalid IPv6 address */
-        if (strlen((char *)key) > 20)
-        {
-            strncpy(tmp_key, (char *)key, 20);
-            key_len = strlen(tmp_key);
-        }
-        else
-        {
-            strcpy(tmp_key, (char *)key);
-            key_len = strlen(tmp_key);
-        }
+        memset(tmp_key,'\0',sizeof(tmp_key));
+        sha_retval = SHA1(key, sizeof(key), tmp_key);
+        key_len = 16;
+        if (!sha_retval)
+            {
+                HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                return(-1);
+            }
     }
     else 
     {
