@@ -202,6 +202,36 @@ Content-Length: 311
   </params>
 </methodResponse>
 
+----------------
+(multiple values received)
+----------------
+
+<?xml version="1.0" encoding="ISO-8859-1">
+<methodResponse>
+  <params>
+  <param>
+    <value>
+      <array>
+        <data>
+          <value>
+            <array>
+              <data>
+                <value>
+                  <base64>8LhGCeXxLFXdhauo1dm+92gI87Vy5ZABErgZJ7pbtfZ+G9ootASb8OSu142xXXvy/Aw06amd5O87wrF8gTetZQ==</base64>
+                </value>
+              </data>
+            </array>
+          </value>
+          <value>
+            <base64>AAPub+SbJ7AAAAB4c9Uau9icuBlvDvtokvlNaPzMLDW9mjT/gSAUXQFBomDTS2VurrSRkAF/AAAB</base64>
+          </value>
+        </data>
+      </array>
+    </value>
+  </param>
+  </params>
+</methodResponse>
+
 ---------------------------------
 (Error received from the openDHT)
 ---------------------------------
