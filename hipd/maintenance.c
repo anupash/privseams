@@ -40,26 +40,31 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-	
+
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED &&
 		    entry->retrans_state == entry->state) {
 			
+			/* kludge fix: with slow ADSL line I1 packets were*/
+			if (!(entry->state == HIP_STATE_I2_SENT &&
+			    hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1))
+				goto out_err;
+
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     HIP_NAT_UDP_PORT,
-					     entry->peer_udp_port,
+						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_I1) {
-				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
+			    == HIP_I1 && entry->state == HIP_STATE_UNASSOCIATED) {
+				HIP_DEBUG("Resent I1 succcesfully\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
