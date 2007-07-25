@@ -20,29 +20,30 @@
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg, 
-			const struct sockaddr_un *src) {
+int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_un *src)
+{
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	struct in6_addr my_src,my_dst;
 	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0,state=0;
+	int err = 0, msg_type, n = 0, len = 0, state=0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	
 	int send_response = (src && src->sun_family == AF_FILE);
 
-	HIP_DEBUG("handling user msg: family=%d sender=%s\n",
-		  src->sun_family, &src->sun_path);
+	HIP_DEBUG("handling user msg: family=%d sender=%s\n", src->sun_family, &src->sun_path);
 
 	err = hip_check_userspace_msg(msg);
-	if (err) {
+	if (err)
+	{
 		HIP_ERROR("HIP socket option was invalid\n");
 		goto out_err;
 	}
 
 	msg_type = hip_get_msg_type(msg);
-	switch(msg_type) {
+	switch(msg_type)
+	{
 	case SO_HIP_ADD_LOCAL_HI:
 		err = hip_handle_add_local_hi(msg);
 		break;
@@ -51,7 +52,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
-		if(err){
+		if(err)
+		{
 		  HIP_ERROR("add peer mapping failed.\n");
 		  goto out_err;
 		}
@@ -71,14 +73,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* Sets a flag for each host association that the current
 		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
-		HIP_IFEL(hip_nat_on(), -1,
-			 "Error when setting daemon NAT status to \"on\"\n");
+		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
+		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
 		break;
 	case SO_HIP_SET_NAT_OFF:
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
-		HIP_IFEL(hip_nat_off(), -1,
-			 "Error when setting daemon NAT status to \"off\"\n");
+		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
+		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
 		break;
 
 	case SO_HIP_SET_DEBUG_ALL:

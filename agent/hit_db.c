@@ -216,11 +216,11 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	/* Then call GUI to show new HIT. */
 	if (group->name[0] != ' ')
 	{
-		HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
+		_HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
 		gui_add_remote_hit(r->name, group->name);
 	}
 
-	HIP_DEBUG("%d items in database.\n", remote_db_n);
+	_HIP_DEBUG("%d items in database.\n", remote_db_n);
 
 	err = r;
 
@@ -249,7 +249,7 @@ int hit_db_del(char *n)
 	HIP_IFEL(remote_db_n < 1, -1, "Remote database is empty, should not happen!\n");
 	
 	NAMECPY(name, n);
-	HIP_DEBUG("Deleting remote HIT: %s\n", name);
+	_HIP_DEBUG("Deleting remote HIT: %s\n", name);
 
 	/* Check whether this HIT is the first. */
 	if (strncmp(remote_db->name, name, MAX_NAME_LEN) == 0)
@@ -291,7 +291,7 @@ int hit_db_del(char *n)
 	}
 
 out_err:
-	if (err) HIP_DEBUG("Deleting remote HIT failed: %s\n", name);
+	if (err) _HIP_DEBUG("Deleting remote HIT failed: %s\n", name);
 	else gui_delete_remote_hit(name);
 
 	return (err);
@@ -355,7 +355,7 @@ int hit_db_enum(int (*f)(HIT_Remote *, void *), void *p)
 		r = (HIT_Remote *)r->next;
 	}
 
-	HIP_DEBUG("Enumerated %d remote HITs.\n", n);
+	_HIP_DEBUG("Enumerated %d remote HITs.\n", n);
 	
 	return (n);
 }
@@ -379,7 +379,7 @@ int hit_db_save_to_file(char *file)
 	
 	HIT_DB_LOCK();
 	
-	HIP_DEBUG("Saving HIT database to %s.\n", file);
+	_HIP_DEBUG("Saving HIT database to %s.\n", file);
 
 	f = fopen(file, "w");
 	HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
@@ -476,7 +476,7 @@ int hit_db_load_from_file(char *file)
 	hit_db_clear();
 	HIT_DB_LOCK();
 
-	HIP_DEBUG("Loading HIT database from %s.\n", file);
+	_HIP_DEBUG("Loading HIT database from %s.\n", file);
 
 	f = fopen(file, "r");
 	HIP_IFEL(!f, 0, "Failed to open HIT database file \"%s\" for reading.\n", file);
@@ -640,8 +640,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
  
 	/* Check database for group already with same name. */
 	g = hit_db_find_rgroup(name);
-	HIP_IFEL(g != NULL, g, "Group already found from database, returning it."
-	                       " (This is not an actual error)\n");
+	HIP_IFE(g != NULL, g);
 
 	/* Allocate new remote group item. */
 	g = (HIT_Group *)malloc(sizeof(HIT_Group));
@@ -665,7 +664,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	/* Tell GUI to show new group item. */
 	if (g->name[0] != ' ')
 	{
-		HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
+		_HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
 		gui_add_rgroup(g);
 	}
 	err = g;
@@ -770,7 +769,7 @@ int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
 		g = (HIT_Group *)g->next;
 	}
 
-	HIP_DEBUG("Enumerated %d groups.\n", n);
+	_HIP_DEBUG("Enumerated %d groups.\n", n);
 	
 	return (n);
 }
@@ -795,11 +794,9 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
  
 	/* Check database for HIT already with same name. */
 	h = hit_db_find_local(name, NULL);
-	HIP_IFEL(h != NULL, h, "Local HIT already found from database, returning it."
-	                       " (This is not an actual error)\n");
+	HIP_IFE(h != NULL, h);
 	h = hit_db_find_local(NULL, hit);
-	HIP_IFEL(h != NULL, h, "Local HIT already found from database, returning it."
-	                       " (This is not an actual error)\n");
+	HIP_IFE(h != NULL, h);
 
 	/* Allocate new remote group item. */
 	h = (HIT_Local *)malloc(sizeof(HIT_Local));
@@ -819,11 +816,11 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 
 //	if (group_db_n < 2)
 	{
-		HIP_DEBUG("Group database emty, adding default group.\n");
+		_HIP_DEBUG("Group database emty, adding default group.\n");
 		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_ACCEPT, 0);
 	}
 
-	HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
+	_HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
 
 	/* Tell GUI to show local HIT. */
 	gui_add_local_hit(h);
@@ -847,7 +844,7 @@ int hit_db_del_local(char *name)
 	int err = -1;
 
 	/*! \todo Implement! */
-	HIP_DEBUG("Local HIT delete not implemented yet!!!\n");
+	_HIP_DEBUG("Local HIT delete not implemented yet!!!\n");
 	
 out_err:
 	return (err);
@@ -911,7 +908,7 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 		h = (HIT_Local *)h->next;
 	}
 
-	HIP_DEBUG("Enumerated %d local HITs.\n", n);
+	_HIP_DEBUG("Enumerated %d local HITs.\n", n);
 	
 	return (n);
 }

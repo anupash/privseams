@@ -1106,7 +1106,8 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 					   (char **) &opt[0], optc);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only) {
+int hip_do_hipconf(int argc, char *argv[], int send_only)
+{
 	int err = 0, type_arg,i;
 	long int action, type,hiparg;
 	struct hip_common *msg = NULL;
@@ -1140,31 +1141,36 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Invalid type argument '%s'\n", argv[type_arg]);
 	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	memset(msg, 0, HIP_MAX_PACKET);
 	hip_get_all_hits(msg,argv);
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
 	if (argc ==3)
-	{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[2],argc - 3);
-	}else{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[3],argc - 3);
-	}
+		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
+	else
+		err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
 	HIP_IFEL(err, -1, "failed to handle msg\n");
 
 	/* hipconf new hi does not involve any messages to hipd */
 	if (hip_get_msg_type(msg) == 0)
 		goto out_err;
 	
+	/* Tell hip daemon, that this message is from agent. */
+/*	if (from_agent)
+	{
+		err = hip_build_param_contents(msg, NULL, HIP_PARAM_AGENT_SEND_THIS, 0);
+		HIP_IFEL(err, -1, "Failed to add parameter to message!\n");
+	}*/
+
 	/* send msg to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
-		 "sending msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
 	if (msg)
 		free(msg);
-	
+
 	return err;
 }
 
@@ -1254,42 +1260,41 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	struct in6_addr *defhit;
 	struct hip_hadb_user_info_state *ha;
 	
-	if (strcmp(argv[1],"get")==0)
-	{	
+	if (strcmp(argv[1], "get") == 0)
+	{
 	
-		if ((strcmp(argv[3],"all")==0) && (strcmp(argv[2],"hi")==0))
+		if ((strcmp(argv[3],"all") == 0) && (strcmp(argv[2],"hi") == 0))
 		{
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
 		
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {	
-		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-		if (strcmp(argv[3], "all") == 0){
-			
-			HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
-			HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-			HIP_DEBUG_HIT("\n",&endp->id.hit);
-			
-			
-		}
-		
-	}
-
-		}else if (strcmp(argv[3], "default")==0) {
-
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+				if (strcmp(argv[3], "all") == 0)
+				{
+					HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+					HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+					HIP_DEBUG_HIT("\n",&endp->id.hit);
+				}
 				
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		defhit = (struct in6_addr *) hip_get_param_contents_direct(current_param);
-		set_hit_prefix(defhit);
-		HIP_DEBUG_IN6ADDR("default hi is ",defhit);
-			
-	}
-			
+			}
 		}
-	}	
-   out_err:
+		else if (strcmp(argv[3], "default") == 0)
+		{
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
+	
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+				set_hit_prefix(defhit);
+				HIP_DEBUG_IN6ADDR("default hi is ",defhit);
+			}
+		}
+	}
+
+out_err:
 	return err;
 	
 }

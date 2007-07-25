@@ -63,8 +63,9 @@ int hip_nat_on()
 	hip_nat_status = 1;
 	
 	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
-		 "Error from for_each_ha().\n");
- out_err:
+	         "Error from for_each_ha().\n");
+
+out_err:
 	return err;
 }
 

@@ -23,7 +23,7 @@ char *lang_finnish[] =
 	/* First is variable name, second is content. */
 	
 	/* Different window titles. */
-	"title-main",				"HIP säädöt",
+	"title-main",				"HIP asetukset",
 	"title-newhit",				"Uusi HIT",
 	"title-newgroup",			"Luo uusi ryhmä",
 	"title-runapp",				"Käynnistä sovellus",
@@ -39,14 +39,15 @@ char *lang_finnish[] =
 	/* Main window menu. */
 	"menu-file",				"Tiedosto",
 	"menu-file-exit",			"Lopeta",
+	"menu-file-runapp",			"Käynnistä",
 	
 	"menu-edit",				"Muokkaa",
 	"menu-edit-locals",			"Paikalliset HIT:t",
+	"menu-edit-newgroup",		"Luo uusi ryhmä",
+	"menu-edit-addhit",			"Lisää uusi HIT",
 	
-	"menu-tools",				"Työkalut",
-	"menu-tools-runapp",		"Käynnistä",
-	"menu-tools-newgroup",		"Luo uusi ryhmä",
-	"menu-tools-addhit",		"Lisää uusi HIT",
+	"menu-help",				"Apua",
+	"menu-help-about",			"Tietoja",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"Uusi ryhmä",
@@ -59,7 +60,9 @@ char *lang_finnish[] =
 	
 	/* Tabs. */
 	"tabs-hits",				"HIT:t",
-	
+	"tabs-options",				"Asetukset",
+	"tabs-connections",			"Yhteydet",
+
 	/* New HIT dialog. */
 	"nhdlg-button-accept",		"Lisää tietokantaan",
 	"nhdlg-button-drop",		"Älä lisää",
@@ -94,7 +97,7 @@ char *lang_finnish[] =
 	"ngdlg-err-reserved",		"Annettu ryhmän nimi on varattu!",
 	"ngdlg-err-invchar",		"Ryhmän nimi sisältää epäsopivia merkkejä!",
 	
-	/* Tool window (HIT handling). */
+	/* Remote HIT/group handling. */
 	"tw-button-apply",			"Hyväksy",
 	"tw-button-cancel",			"Peruuta",
 	"tw-button-delete",			"Poista",
@@ -116,6 +119,13 @@ char *lang_finnish[] =
 	"tw-hitgroup-type",			"Tyyppi:",
 	"tw-hitgroup-lightweight",	"Salaus:",
 	
+	/* Options tab. */
+	"opt-title",				"HIP asetukset:",
+	"opt-nat",					"Käytä NAT laajennusta",
+	"opt-info",					"HUOM: Muutokset tapahtuvat välittömästi",
+	"dbg-title",				"Debug asetukset:",
+	"dbg-rstall",				"Nollaa kaikki SA:t (hipconf rst all)",
+
 	/* Local HIT handling. */
 	"lhdlg-button-apply",		"Hyväksy",
 	"lhdlg-button-cancel",		"Peruuta",
