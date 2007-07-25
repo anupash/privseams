@@ -424,7 +424,7 @@ int hip_receive_opp_r1_in_established(struct hip_common *msg,
 		 "unblock failed\n");
  
 out_err:
-	if (block_entry) {
+	if (block_entry && err) {
 		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
 		hip_oppdb_entry_clean_up(block_entry);
 	}
