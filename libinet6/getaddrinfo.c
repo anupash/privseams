@@ -445,7 +445,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   char dht_response_hit[1024];
   char dht_response_addr[1024];
   struct in6_addr tmp_hit, tmp_addr;
-  struct addrinfo serving_gateway;
+  struct addrinfo * serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
   /*
@@ -504,7 +504,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = connect_dht_gateway(s, &serving_gateway, 1);
+  error = connect_dht_gateway(s, serving_gateway, 1);
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
