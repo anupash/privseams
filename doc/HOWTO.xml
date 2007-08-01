@@ -21,7 +21,7 @@
      from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
      because the bug may already have been resolved upstream. There is also a
-     Knoppix based live cd available from the HIPL download pages.
+     Ubuntu based live cd available from the HIPL download pages.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -61,6 +61,10 @@
       </para></listitem>
       <listitem><para>
       wxgtk 2.6.2 and libgtk-2.x library and development headers
+      </para></listitem>
+      <para><listitem>
+      Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
+      because atleast in Ubuntu Feisty it messes up the compilation.
       </para></listitem>
     </itemizedlist>
     <para>

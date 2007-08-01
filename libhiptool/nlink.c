@@ -123,25 +123,28 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 			hip_filter_t junk, void *arg)
 {
-        int status, err = 0;
-        unsigned seq;
-        struct nlmsghdr *h;
-        struct sockaddr_nl nladdr;
-        struct iovec iov = { (void*)n, n->nlmsg_len };
+	int status, err = 0;
+	unsigned seq;
+	struct nlmsghdr *h;
+	struct sockaddr_nl nladdr;
 	char   buf[16384];
-        struct msghdr msg = {
-                (void*)&nladdr, sizeof(nladdr),
-                &iov,   1,
-                NULL,   0,
-                0
-        };
+	struct iovec iov = {
+		.iov_base = (void*) n,
+		.iov_len = n->nlmsg_len
+	};
+	struct msghdr msg = {
+		.msg_name = &nladdr,
+		.msg_namelen = sizeof(nladdr),
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
 
-        memset(&nladdr, 0, sizeof(nladdr));
-        nladdr.nl_family = AF_NETLINK;
-        nladdr.nl_pid = peer;
-        nladdr.nl_groups = groups;
+	memset(&nladdr, 0, sizeof(nladdr));
+	nladdr.nl_family = AF_NETLINK;
+	nladdr.nl_pid = peer;
+	nladdr.nl_groups = groups;
 
-        n->nlmsg_seq = seq = ++nl->seq;
+	n->nlmsg_seq = seq = ++nl->seq;
 
 	/* Note: the TALK_ACK are here because I experienced problems
 	   with SMP machines. The application added a mapping which caused
@@ -159,28 +162,31 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 		if (answer == NULL)
 			n->nlmsg_flags |= NLM_F_ACK;
 
-        status = sendmsg(nl->fd, &msg, 0);
-        if (status < 0) {
-                HIP_PERROR("Cannot talk to rtnetlink");
-                err = -1;
+	status = sendmsg(nl->fd, &msg, 0);
+	if (status < 0)
+	{
+		HIP_PERROR("Cannot talk to rtnetlink");
+		err = -1;
 		goto out_err;
-        }
+	}
 
-        memset(buf,0,sizeof(buf));
-        iov.iov_base = buf;
+	memset(buf,0,sizeof(buf));
+	iov.iov_base = buf;
 
-        while (HIP_NETLINK_TALK_ACK) {
-                iov.iov_len = sizeof(buf);
-                status = recvmsg(nl->fd, &msg, 0);
+	while (HIP_NETLINK_TALK_ACK) {
+			iov.iov_len = sizeof(buf);
+			status = recvmsg(nl->fd, &msg, 0);
 
-                if (status < 0) {
-                        if (errno == EINTR) {
-				HIP_DEBUG("EINTR\n");
-                                continue;
+			if (status < 0)
+			{
+				if (errno == EINTR)
+				{
+					HIP_DEBUG("EINTR\n");
+					continue;
+				}
+				HIP_PERROR("OVERRUN");
+				continue;
 			}
-                        HIP_PERROR("OVERRUN");
-			continue;
-                }
 		if (status == 0) {
                         HIP_ERROR("EOF on netlink.\n");
 			err = -1;
