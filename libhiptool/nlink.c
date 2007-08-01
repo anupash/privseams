@@ -1223,11 +1223,11 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
         };
         char buf[16384];
 
-        iov.iov_base = buf;
         while (1) {
                 int status;
                 struct nlmsghdr *h;
 
+		        iov.iov_base = buf;
                 iov.iov_len = sizeof(buf);
                 status = recvmsg(rth->fd, &msg, 0);
 
