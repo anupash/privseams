@@ -27,7 +27,8 @@ enum WIDGET_IDS
 	ID_EXECDLG,
 	ID_NGDLG,
 	ID_MSGDLG,
-
+	ID_ABOUTDLG,
+ 
 	/* Main window IDs. */
 	ID_RLISTMODEL,
 	ID_RLISTVIEW,
@@ -72,6 +73,9 @@ enum WIDGET_IDS
 	ID_TW_APPLY,
 	ID_TW_CANCEL,
 	ID_TW_DELETE,
+
+	/* Options. */
+	ID_OPT_NAT,
 
 	/* New hit dialog IDs. */
 	ID_NH_HIT,

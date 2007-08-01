@@ -52,6 +52,10 @@
 #define HIP_SET_ESCROW_ACTIVE                   85
 /** Daemon tells firewall that escrow is inactive with this message. */
 #define HIP_SET_ESCROW_INACTIVE                 86
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_ON					87
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_OFF					88
 
 /**
  * Daemon should send this message to other processes, when quiting.
@@ -403,6 +407,7 @@ struct endpoint_hip {
 	se_length_t         length; /* length of the whole endpoint in octets */
 	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
 	uint8_t             algo;
+	
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;

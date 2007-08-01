@@ -273,6 +273,18 @@ int gui_ask_new_hit(HIT_Remote *hit, int inout)
 	while (in_use != 0) usleep(100 * 1000);
 	in_use = 1;
 
+	if (hit_db_count_locals() < 1)
+	{
+		dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
+		                                GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+		                                lang_get("newhit-error-nolocals"));
+		gtk_widget_show(dialog);
+		gtk_window_set_keep_above(dialog, TRUE);
+		gtk_dialog_run(dialog);
+		gtk_widget_destroy(dialog);
+		return err;
+	}
+
 	/* Use thread support, when not adding new HIT manually trough GUI. */
 	if (inout != 2) gdk_threads_enter();
 	gtk_window_get_size(dialog, &w, &h);
@@ -591,7 +603,6 @@ void all_update_local(char *old_name, char *new_name)
 	}
 	g_list_free(gl);
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
@@ -615,9 +626,90 @@ void all_update_rgroups(char *old_name, char *new_name)
 	model = gtk_combo_box_get_model(widget(ID_NH_RGROUP));
 	gtk_tree_model_foreach(model, gui_update_list_value, &ud);
 }
-/* END OF FUNCTION */
 
 
-/* END OF SOURCE FILE */
 /******************************************************************************/
+/** Show about dialog. */
+void about(void)
+{
+	gtk_show_about_dialog
+	(
+		GTK_WINDOW(widget(ID_MAINWND)),
+		"name", "InfraHIP graphical manager",
+		"version", "1.0",
+		"website", "http://infrahip.net",
+		NULL
+	);
+}
+
+
+/******************************************************************************/
+/** Show about dialog. */
+void opt_handle_action(GtkWidget *w, int type)
+{
+	int err = 0, argc = 0;
+	char *argv[4] = { NULL }, *info = NULL, *arg = NULL;
+
+	argv[0] = "hipagent";
+	
+	switch (type)
+	{
+	case IDB_OPT_NAT:
+		err = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w));
+		argc = 3;
+		argv[1] = "nat";
+		if (err == TRUE)
+			argv[2] = "on";
+		else
+			argv[2] = "off";
+		arg = argv[2];
+		info = "NAT extensions";
+		break;
+	
+	case IDB_DBG_RSTALL:
+		argc = 3;
+		argv[1] = "rst";
+		argv[2] = "all";
+		info = "reset all SAs";
+		break;
+		
+	default:
+		return;
+	}
+
+	err = hip_do_hipconf(argc, argv, 0);
+
+out_err:
+	if (info)
+	{
+		if (arg)
+		{
+			if (err) gui_set_info("Failed to set %s %s!", info, arg);
+			else gui_set_info("Succesfully set %s %s", info, arg);
+		}
+		else
+		{
+			if (err) gui_set_info("Failed to %s!", info);
+			else gui_set_info("Succesfully %s", info);
+		}
+	}
+
+	return;
+}
+
+/**
+ * Update GUI NAT status in options tab.
+ * @note Call from outside of gtk_main().
+ *
+ * @param status 1 if nat extension on, 0 if not.
+ */
+void hip_gui_update_nat_safe(int status)
+{
+	GtkWidget *w = widget(ID_OPT_NAT);
+	if (status) status = TRUE;
+	else status = FALSE;
+	gdk_threads_enter();
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), status);
+	gdk_threads_leave();
+}
 

@@ -19,6 +19,7 @@
 #include <string.h>
 #include "debug.h"
 #include "ife.h"
+#include "language.h"
 
 #ifndef __cplusplus
 #else

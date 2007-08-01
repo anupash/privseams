@@ -820,7 +820,7 @@ DSA *create_dsa_key(int bits) {
 	     ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
   }
-
+  HIP_DEBUG("*****************Creting DSA of %d bits\n\n\n", bits);
   return dsa;
 
  err_out:
@@ -857,6 +857,7 @@ RSA *create_rsa_key(int bits) {
     goto err_out;
   }
 
+  HIP_DEBUG("*****************Creting RSA of %d bits\n\n\n", bits);
   return rsa;
 
  err_out:

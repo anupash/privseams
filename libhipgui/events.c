@@ -15,24 +15,30 @@
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the application?
-
-	@return TRUE if don't close or FALSE if close.
-*/
+ * When closing the main application window.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
 gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
-	return (FALSE);
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	gtk_widget_hide(w);
+	return TRUE;
+#else
+	return FALSE;
+#endif
 }
 /* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the tool window?
-
-	@return TRUE if don't close or FALSE if close.
-*/
-gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+ * Default window close event. This occurs when user presses that cross
+ * usually placed in right top corner of windows.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
+gboolean delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 {
 	gtk_widget_hide(w);
 	return (TRUE);
@@ -41,20 +47,11 @@ gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
 
 
 /******************************************************************************/
-/** On window destroy. */
+/** When main window is destroyed. */
 void main_destroy(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
 	gtk_main_quit();
-}
-/* END OF FUNCTION */
-
-
-/******************************************************************************/
-/** On tool window destroy. */
-void tw_destroy(GtkWidget *widget, gpointer data)
-{
-	gtk_widget_hide(widget);
 }
 /* END OF FUNCTION */
 
@@ -262,8 +259,8 @@ void button_event(GtkWidget *warg, gpointer data)
 	case IDB_TWL_CANCEL:
 		twl_cancel();
 		break;
-		
-	case IDB_SYSTRAY:
+
+/*	case IDB_SYSTRAY:
 		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
 		if (i == TRUE)
 		{
@@ -273,16 +270,18 @@ void button_event(GtkWidget *warg, gpointer data)
 		{
 			gtk_widget_show(widget(ID_MAINWND));
 		}
-		break;
+		break;*/
 		
 	case IDM_TRAY_SHOW:
 		gtk_widget_show(widget(ID_MAINWND));
 		break;
-	
-	case IDM_TRAY_HIDE:
-		gtk_widget_hide(widget(ID_MAINWND));
 		break;
-	
+
+	case IDM_TRAY_ABOUT:
+	case IDM_ABOUT:
+		about();
+		break;
+
 	case IDM_TRAY_EXIT:
 		gui_terminate();
 		break;
@@ -291,6 +290,7 @@ void button_event(GtkWidget *warg, gpointer data)
 		HIP_DEBUG("Delete\n");
 		break;
 	
+	case IDM_TRAY_EXEC:
 	case IDM_RUNAPP:
 		exec_application();
 		break;
@@ -304,6 +304,11 @@ void button_event(GtkWidget *warg, gpointer data)
 		break;
 		
 	case IDB_NH_EXPANDER:
+		break;
+	
+	case IDB_OPT_NAT:
+	case IDB_DBG_RSTALL:
+		opt_handle_action(warg, id);
 		break;
 	}
 }
@@ -325,17 +330,14 @@ void toolbar_event(GtkWidget *warg, gpointer data)
 	switch (id)
 	{
 	case ID_TOOLBAR_RUN:
-		HIP_DEBUG("Toolbar: Run application.\n");
 		exec_application();
 		break;
 
 	case ID_TOOLBAR_NEWHIT:
-		HIP_DEBUG("Toolbar: Popup for new HIT.\n");
 		gui_ask_new_hit(NULL, 2);
 		break;
 
 	case ID_TOOLBAR_NEWGROUP:
-		HIP_DEBUG("Toolbar: Create remote group.\n");
 		create_remote_group("");
 		break;
 	}
@@ -357,7 +359,6 @@ void systray_event(void *warg, guint bid, guint atime, gpointer data)
 void notebook_event(GtkNotebook *notebook, GtkNotebookPage *page,
                     guint page_num, gpointer data)
 {
-	HIP_DEBUG("Selected notebook page %d.\n", page_num);
 }
 /* END OF FUNCTION */
 
