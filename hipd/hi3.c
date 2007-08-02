@@ -93,7 +93,7 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 	memset(&msg_info, 0, sizeof(msg_info));
 
 	if (hip_receive_control_packet(hip_common, hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
-				       &msg_info), 0) {
+				       &msg_info, 0)) {
 		HIP_ERROR("HIP packet processsing failed\n");
 		goto out_err;
 	}
