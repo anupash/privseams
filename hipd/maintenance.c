@@ -22,7 +22,7 @@ float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
 
 int hip_firewall_status = 0;
-
+int fall, retr;
 /**
  * Handle packet retransmissions.
  */
@@ -40,26 +40,31 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	
 	_HIP_DEBUG_HIT("hit_peer", &entry->hit_peer);
 	_HIP_DEBUG_HIT("hit_our", &entry->hit_our);
-	
+
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		if (entry->hip_msg_retrans.count > 0 &&
 		    entry->state != HIP_STATE_ESTABLISHED &&
 		    entry->retrans_state == entry->state) {
 			
+			/* kludge fix: with slow ADSL line I1 packets were*/
+			if (!(entry->state == HIP_STATE_I2_SENT &&
+			    hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1))
+				goto out_err;
+
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     HIP_NAT_UDP_PORT,
-					     entry->peer_udp_port,
+						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
 			if (!err && hip_get_msg_type(entry->hip_msg_retrans.buf)
-			    == HIP_I1) {
-				HIP_DEBUG("Sent I1 succcesfully after acception.\n");
+			    == HIP_I1 && entry->state == HIP_STATE_UNASSOCIATED) {
+				HIP_DEBUG("Resent I1 succcesfully\n");
 				entry->state = HIP_STATE_I1_SENT;
 			}
 			
@@ -260,7 +265,6 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info)
 {
-	/* Variables. */
 	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
@@ -307,60 +311,101 @@ out_err:
 
 
 /**
+ * Send new status of given state to agent.
+ */
+int hip_agent_update_status(int msg_type, void *data, size_t size)
+{
+	struct hip_common *user_msg = NULL;
+	int err = 0;
+	int n;
+	
+	if (!hip_agent_is_alive())
+	{
+		return (-ENOENT);
+	}
+
+	/* Create packet for agent. */	
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+	HIP_IFE(hip_build_user_hdr(user_msg, msg_type, 0), -1);
+	if (size > 0 && data != NULL)
+	{
+		HIP_IFE(hip_build_param_contents(user_msg, data, HIP_PARAM_ENCAPS_MSG,
+		                                 size), -1);
+	}
+
+	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
+	           0, (struct sockaddr *)&hip_agent_addr, sizeof(hip_agent_addr));
+	if (n < 0)
+	{
+		HIP_ERROR("Sendto() failed.\n");
+		err = -1;
+		goto out_err;
+	}
+
+out_err:
+	return err;
+}
+
+
+/**
  * Insert mapping for local host IP addresses to HITs to DHT.
  */
 void register_to_dht ()
 {
 #ifdef CONFIG_HIP_OPENDHT  
-  char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  hip_list_t *item, *tmp;
-  int i;
-  struct netdev_address *opendht_n;
-  int pub_addr_ret = 0;
+	char hostname [HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	hip_list_t *item = NULL, *tmp = NULL;
+	int i;
+	struct netdev_address *opendht_n;
+	int pub_addr_ret = 0;
+	
+	if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
+		return;
+	
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		opendht_n = list_entry(item);
+		struct in6_addr tmp_hit;
+		char *tmp_hit_str = NULL, *tmp_addr_str = NULL;
+		double time_diff = 0;
+	
+		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
+	
+		time_diff = difftime(opendht_n->timestamp, time(0));
+		if (time_diff < 10)
+		{
+			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
+			{
+				HIP_ERROR("No HIT found\n");
+				return;
+			}
+	
+			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
+			
+			/*
+				HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
+			
+				HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
+						tmp_addr_str, ctime(&opendht_n->timestamp));
+			*/
+			/* send the fqdn->hit mapping */
+			publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
+			
+			/* send the hit->ip mapping */
+			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+			if (pub_addr_ret == 1)
+				opendht_n->timestamp = time(0) + 120; /* in seconds */
+			else if (pub_addr_ret == -1)
+				opendht_n->timestamp = time(0) + 30;
+		}
+	
+		if (tmp_hit_str) free(tmp_hit_str);
+		if (tmp_addr_str) free(tmp_addr_str);
+	}
 
-  if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
-    return;
-
-  list_for_each_safe(item, tmp, addresses, i)
-    {
-      opendht_n = list_entry(item);
-      struct in6_addr tmp_hit;
-      char *tmp_hit_str, *tmp_addr_str;
-      double time_diff = 0;
- 
-      if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
-      
-      time_diff = difftime(opendht_n->timestamp, time(0));
-      if (time_diff < 10)
-        {
-          if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-            {
-              HIP_ERROR("No HIT found\n");
-              return;
-            } 
-          
-          tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-          tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
-         
-           /*
-             HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
-           
-             HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
-                       tmp_addr_str, ctime(&opendht_n->timestamp));
-           */
-          /* send the fqdn->hit mapping */
-          publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
-           
-          /* send the hit->ip mapping */
-          pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
-          if (pub_addr_ret == 1)
-            opendht_n->timestamp = time(0) + 120; /* in seconds */
-          else if (pub_addr_ret == -1)
-            opendht_n->timestamp = time(0) + 30;
-        }
-    }
- out_err:
-  return;
+out_err:
+	return;
 #endif
 }
 
@@ -378,7 +423,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_fqdn;  
   extern int hip_opendht_fqdn_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway; 
+  extern struct addrinfo * opendht_serving_gateway; 
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -390,7 +435,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS) 
         { 
           opendht_error = opendht_put(hip_opendht_sock_fqdn,
@@ -441,7 +486,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
   extern int hip_opendht_sock_hit;
   extern int hip_opendht_hit_sent;
   extern int opendht_error;
-  extern struct addrinfo opendht_serving_gateway;
+  extern struct addrinfo * opendht_serving_gateway;
   extern int opendht_serving_gateway_port;
   extern int opendht_serving_gateway_ttl;
 
@@ -453,7 +498,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
       opendht_error = 0;
       opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
-                                          &opendht_serving_gateway, 0);
+                                          opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS)
         {
           opendht_error = opendht_put(hip_opendht_sock_hit, 
@@ -544,12 +589,14 @@ int periodic_maintenance()
 	}
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
+	
 	if (opp_fallback_counter < 0) {
 		HIP_IFEL(hip_scan_opp_fallback(), -1,
 			 "retransmission scan failed\n");
 		opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
 	} else {
 		opp_fallback_counter--;
+		
 	}
 #endif
 

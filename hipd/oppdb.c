@@ -424,7 +424,7 @@ int hip_receive_opp_r1_in_established(struct hip_common *msg,
 		 "unblock failed\n");
  
 out_err:
-	if (block_entry) {
+	if (block_entry && err) {
 		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
 		hip_oppdb_entry_clean_up(block_entry);
 	}
@@ -449,6 +449,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 			 "Building of user header failed\n");
+		err = -11; /* Force immediately to send message to app */
 		goto out_err;
 	}
 
@@ -466,11 +467,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 	
+	hip_msg_init(msg);
+
 	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
 	{
-		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
+		err = -11; /* Force immediately to send message to app */
+		
 		goto out_err;
 	}
 	
@@ -497,7 +501,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
 		goto out_err;
 	} else {
-		hip_msg_init(msg);
 		/* Two applications connecting consequtively: let's just return
 		   the real HIT instead of sending I1 */
 		HIP_IFEL(hip_build_param_contents(msg,
@@ -520,9 +523,9 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
 	int err = 0, disable_fallback = 0;
-	time_t *now = (time_t*) current_time;	
-
-	HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
+	time_t *now = (time_t*) current_time;
+	struct in6_addr *addr;
+	//HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
 
 #if defined(CONFIG_HIP_AGENT) && defined(CONFIG_HIP_OPPORTUNISTIC)
 	/* If agent is prompting user, let's make sure that
@@ -537,11 +540,14 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 #endif
 	
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
-		hip_ipdb_add(&entry->peer_ip);
+		addr = (struct in6_addr *) &entry->peer_ip;
+		hip_ipdb_add(addr);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);
 		err = hip_oppdb_entry_clean_up(entry);
+		memset(&now,0,sizeof(now));
+		
 	}
 	
  out_err:

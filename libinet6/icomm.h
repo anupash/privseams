@@ -81,6 +81,9 @@
 #define SO_HIP_SET_DEBUG_NONE			147
 /* Socket option for hipconf to ask about the used gateway with OpenDHT*/
 #define SO_HIP_DHT_SERVING_GW                   148
+#define SO_HIP_HANDOFF_ACTIVE			149
+#define SO_HIP_HANDOFF_LAZY			150
+
 /** @} */
 
 #endif /* _HIP_ICOMM */

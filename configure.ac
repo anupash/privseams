@@ -92,19 +92,24 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
+
+# Try to automatically detect GTK if not disabled or enabled by user
+PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+if test x"$ac_cv_use_agent" = x"no"; then
+	PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.8.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
+	if test x"$ac_cv_use_agent" = x"yes"; then
+		AC_MSG_WARN(You are missing >= GTK 2.10, it is VERY recommended)
+	fi
+fi
+
 AC_ARG_ENABLE(agent,
-             AC_HELP_STRING([--enable-agent],
-                            [HIP user agent (default is YES)]),
-             [ac_cv_use_agent=$enableval], [ac_cv_use_agent=yes])
+              AC_HELP_STRING([--enable-agent],
+              [HIP user agent]),
+              [ac_cv_use_agent=$enableval],)
 AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
-# XX TODO: test on Debian and RH. Also, how to determine the version?
-        AC_CHECK_LIB(gtk-x11-2.0, gtk_init,, AC_MSG_ERROR(libgtk not found))
-#        hipl_opt_build="$hipl_opt_build libhipgui agent"
-# autogen.sh fails on a system without gtk:
-#		AM_PATH_GTK_2_0(2.8.0,,AC_MSG_ERROR(agent GUI needs GTK+ 2.8.0))
+	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
@@ -181,7 +186,18 @@ AC_CACHE_CHECK([whether to use buggyipsec],
 if test x"$ac_cv_use_buggyipsec" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_BUGGYIPSEC, AC_PREREQ(2.53))
 fi
-AM_CONDITIONAL(HIP_BUGGYIPSEC, test x"$ac_cv_use_buggyipsec" = x"yes")
+
+AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
+AC_ARG_ENABLE(privsep,
+             AC_HELP_STRING([--enable-privsep],
+                            [Privilege separation (default is NO)]),
+             [ac_cv_use_privsep=$enableval], [ac_cv_use_privsep=no])
+AC_CACHE_CHECK([whether to use privsep],
+               [ac_cv_use_privsep], [ac_cv_use_privsep=no])
+if test x"$ac_cv_use_privsep" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 
 AC_ARG_ENABLE(escrow,
              AC_HELP_STRING([--enable-escrow],
@@ -264,7 +280,7 @@ AC_SUBST(HIPL_LIBHIPGUI, "$HIPL/libhipgui")
 AC_SUBST(HIPL_OPENDHT, "$HIPL/opendht")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
-AC_PREFIX_DEFAULT("/usr")
+AC_PREFIX_DEFAULT("/usr/local")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I$HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")

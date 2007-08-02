@@ -56,6 +56,8 @@
  */
 #include "builder.h"
 
+static enum select_dh_key_t select_dh_key = STRONGER_KEY;
+
 /**
  * hip_msg_init - initialize a network/daemon message
  * @param msg the message to be initialized
@@ -275,6 +277,65 @@ void *hip_get_diffie_hellman_param_public_value_contents(const void *tlv_common)
 hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_diffie_hellman *dh)
 {
 	return hip_get_param_contents_len(dh) - sizeof(uint8_t) - sizeof(uint16_t);
+}
+
+
+/**
+ * hip_dh_select_key - Selects the stronger DH key according to Moskowitz, R.
+ * et al. "Host Identity Protocol"  draft-ietf-hip-base-07.txt, section 5.2.6:
+ *
+ *  "The sender can include at most two different Diffie-Hellman public
+ *  values in the DIFFIE_HELLMAN parameter.  This gives the possibility
+ *  e.g. for a server to provide a weaker encryption possibility for a
+ *  PDA host that is not powerful enough.  It is RECOMMENDED that the
+ *  Initiator, receiving more than one public values selects the stronger
+ *  one, if it supports it."
+ *
+ * @param dhf: pointer to the Diffie-Hellman parameter with two DH keys.
+ *
+ * @return dhf: pointer to the new Diffie-Hellman parameter, that includes 
+ *         only one DH key.
+ */
+struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *dhf)
+{
+        struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
+
+	if ( ntohs(dhf->pub_val.pub_len) == 
+	     hip_get_diffie_hellman_param_public_value_len(dhf) ){
+	         HIP_DEBUG("Single DHF public value received\n");
+		 return (struct hip_dh_public_value *)&dhf->pub_val.group_id;
+	} else {
+
+		 dhpv1 = (struct hip_dh_public_value *)&dhf->pub_val.group_id;
+		 dhpv2 = (struct hip_dh_public_value *)
+		   (dhf->pub_val.public_value + ntohs(dhf->pub_val.pub_len));
+
+		 HIP_IFEL (hip_get_diffie_hellman_param_public_value_len(dhf) !=
+			   ntohs(dhpv1->pub_len) + sizeof(uint8_t) + sizeof(uint16_t) 
+			   + ntohs(dhpv2->pub_len), dhpv1, "Malformed DHF parameter\n");
+
+		 HIP_DEBUG("Multiple DHF public values received\n");
+
+		 _HIP_DEBUG("dhpv1->group_id= %d   dhpv2->group_id= %d\n",
+			    dhpv1->group_id, dhpv2->group_id);
+		 _HIP_DEBUG("dhpv1->pub_len= %d   dhpv2->pub_len= %d\n", 
+			    dhpv1->pub_len, dhpv2->pub_len);
+		 _HIP_DEBUG("ntohs(dhpv1->pub_len)= %d   ntohs(dhpv2->pub_len)= %d\n",
+			    ntohs(dhpv1->pub_len), ntohs(dhpv2->pub_len));
+
+
+
+		 /* Selection of a DH key depending on select_dh_key */
+		 if ( (select_dh_key == STRONGER_KEY && 
+		       dhpv1->group_id >= dhpv2->group_id) ||
+		      (select_dh_key == WEAKER_KEY && 
+		       dhpv1->group_id <= dhpv2->group_id) )
+		        return dhpv1;
+		 else
+		        return dhpv2;
+	}
+ out_err:
+	return err;
 }
 
 
@@ -2162,40 +2223,76 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 }
 
 /**
- * hip_build_param_diffie_hellman_contents - build HIP DH contents
+ * hip_build_param_diffie_hellman_contents - build HIP DH contents,
+ *        with one or two public values. 
  * @param msg the message where the DH parameter will be appended
- * @param group_id the group id of the DH parameter as specified in the drafts
- * @param pubkey the public key part of the DH
- * @param pubkey_len length of public key part
+ * @param group_id1 the group id of the first DH parameter 
+ *                  as specified in the drafts
+ * @param pubkey1 the public key part of the first DH
+ * @param pubkey_len1 length of the first public key part
+ * @param group_id2 the group id of the second DH parameter,
+ *        should be HIP_MAX_DH_GROUP_ID if there is only one DH key
+ * @param pubkey2 the public key part of the second DH
+ * @param pubkey_len2 length of the second public key part
  * 
  * @return zero on success, or non-zero on error
- *
- * XX FIXME: should support multiple D-H values
  */
 int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
-				      uint8_t group_id,
-				      void *pubkey,
-				      hip_tlv_len_t pubkey_len)
+	      uint8_t group_id1, void *pubkey1, hip_tlv_len_t pubkey_len1,
+	      uint8_t group_id2, void *pubkey2, hip_tlv_len_t pubkey_len2)
 {
 	int err = 0;
 	struct hip_diffie_hellman diffie_hellman;
+	uint8_t *value = NULL, *value_tmp = NULL;
+	hip_tlv_len_t pubkey_len = pubkey_len1 + sizeof(uint8_t) + 
+	                           sizeof(uint16_t) + pubkey_len2;
 
 	HIP_ASSERT(pubkey_len >= sizeof(struct hip_tlv_common));
 
 	_HIP_ASSERT(sizeof(struct hip_diffie_hellman) == 5);
 
 	hip_set_param_type(&diffie_hellman, HIP_PARAM_DIFFIE_HELLMAN);
+
+	if(group_id2 != HIP_MAX_DH_GROUP_ID)
+	     pubkey_len = pubkey_len1 + sizeof(uint8_t) +
+	                  sizeof(uint16_t) + pubkey_len2;
+	else
+	     pubkey_len = pubkey_len1;
+
+	/* Allocating memory for the "value" packet */
+	HIP_IFEL(!(value = value_tmp = HIP_MALLOC((pubkey_len), GFP_ATOMIC)),
+	     -1, "Failed to alloc memory for value\n");
+
 	hip_calc_generic_param_len(&diffie_hellman,
 				   sizeof(struct hip_diffie_hellman),
 				   pubkey_len);
-	diffie_hellman.group_id = group_id; /* 1 byte, no htons() */
-	diffie_hellman.pub_len = htons(pubkey_len);
+	diffie_hellman.pub_val.group_id = group_id1; /* 1 byte, no htons() */
+	diffie_hellman.pub_val.pub_len = htons(pubkey_len1);
+
+	if(group_id2 != HIP_MAX_DH_GROUP_ID){
+	     /* Creating "value" by joining the first and second DH values */
+	     HIP_DEBUG("group_id2 = %d, htons(pubkey_len2)= %d\n",
+		       group_id2, htons(pubkey_len2));
+
+	     memcpy(value_tmp, pubkey1, pubkey_len1);
+	     value_tmp += pubkey_len1;
+	     *value_tmp++ = group_id2;
+	     *(uint16_t *)value_tmp = htons(pubkey_len2);
+	     value_tmp += 2;
+	     memcpy(value_tmp, pubkey2, pubkey_len2);
+	}else
+	     memcpy(value_tmp, pubkey1, pubkey_len1);
 
 	err = hip_build_generic_param(msg, &diffie_hellman,
 				      sizeof(struct hip_diffie_hellman),
-				      pubkey);
+				      value);
 
 	_HIP_HEXDUMP("Own DH pubkey: ", pubkey, pubkey_len);
+
+  out_err:
+
+ 	if (value)
+ 		HIP_FREE(value);
 
 	return err;
 }
@@ -2878,11 +2975,11 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 
 	endpoint.family = PF_HIP;	
 	endpoint.length = sizeof(struct endpoint_hip); 	
-	endpoint.flags = HIP_ENDPOINT_FLAG_HIT;	
 	endpoint.algo= entry->lhi.algo;
+	endpoint.flags=entry->lhi.anonymous;
 	endpoint.algo=hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-		
+	
 	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
 
   out_err:

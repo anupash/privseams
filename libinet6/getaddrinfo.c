@@ -445,7 +445,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   char dht_response_hit[1024];
   char dht_response_addr[1024];
   struct in6_addr tmp_hit, tmp_addr;
-  struct addrinfo serving_gateway;
+  struct addrinfo * serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
   /*
@@ -504,7 +504,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = connect_dht_gateway(s, &serving_gateway, 1);
+  error = connect_dht_gateway(s, serving_gateway, 1);
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
@@ -587,7 +587,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     if ((strlen(name) == strlen(fqdn_str)) &&		         	
       strcmp(name, fqdn_str) == 0) {				        
       _HIP_DEBUG("** match on line %d **\n", lineno);			
-      found_hits = 1;                                                   
+      found_hits = 1; 
                                                                         
       /* add every HIT to linked list */				
       for(i=0;i<length(&list);i++) {                                    
@@ -1031,7 +1031,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       struct gaih_addrtuple **pat = at;
       struct gaih_addrtuple *at_dns = *at;
       int no_data = 0;
-      int no_inet6_data;
+      int no_inet6_data = 0;
       int old_res_options = _res.options;
       int found_hits = 0;
       
@@ -1072,9 +1072,9 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       if (hip_transparent_mode) {
 	HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
        
-	HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+	_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
 	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-	HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
+	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
 	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: do not get IPv6 addresses\n");
@@ -1400,8 +1400,8 @@ static struct gaih gaih[] =
  * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
  * database is returned
  */
-int
-getaddrinfo (const char *name, const char *service,
+
+int getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
 {
   int i = 0, j = 0, last_i = 0;

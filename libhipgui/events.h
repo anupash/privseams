@@ -52,18 +52,24 @@ enum BUTTON_IDS
 	IDB_TWL_CANCEL,
 	IDB_TWL_DELETE,
 	
+	IDB_OPT_NAT,
+
+	IDB_DBG_RSTALL,
+
 	IDB_SYSTRAY,
 
 	IDM_TRAY_SHOW,
-	IDM_TRAY_HIDE,
+	IDM_TRAY_EXEC,
 	IDM_TRAY_EXIT,
+	IDM_TRAY_ABOUT,
 	
 	IDM_RLIST_DELETE,
 	
 	IDM_RUNAPP,
 	IDM_NEWGROUP,
 	IDM_NEWHIT,
-	
+	IDM_ABOUT,
+
 	IDB_NH_EXPANDER,
 
 	BUTTON_IDS_N
@@ -73,9 +79,8 @@ enum BUTTON_IDS
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 gboolean main_delete_event(GtkWidget *, GdkEvent *, gpointer);
-gboolean tw_delete_event(GtkWidget *, GdkEvent *, gpointer);
+gboolean delete_event(GtkWidget *, GdkEvent *, gpointer);
 void main_destroy(GtkWidget *, gpointer);
-void tw_destroy(GtkWidget *, gpointer);
 
 gboolean list_click(GtkTreeView *, gpointer);
 gboolean list_press(GtkTreeView *, GdkEventButton *, gpointer);

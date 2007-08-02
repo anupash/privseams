@@ -1,7 +1,7 @@
 /*
  * Licence: GNU/GPL
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Tobias Heer <tobi@tobibox.de>
  * - Abhijit Bagri <abagri@gmail.com>
  *
@@ -33,9 +33,17 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
+	/*
+	
+	// @todo: Here we have wrong checking, because function  
+	// hip_get_locator_addr_item_count(locator) has already
+	// divided the length on sizeof(struct hip_locator_info_addr_item)
+	// hence we already have number of elements. Andrey
+
 	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
 		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
 			  ntohs(locator->length));
+	*/
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
 		  n_addrs, hip_get_param_total_len(locator));
 
@@ -206,7 +214,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
 	int is_preferred = ntohl(locator_address_item->reserved) == (1 << 31);
-	int err = 0, i;
+	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
@@ -214,6 +222,16 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
+
+	// Check that addresses match, we doesn't support IPv4 <-> IPv6 update communnications
+	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(locator_address);
+	local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->local_address);
+
+	if( locator_is_ipv4 != local_is_ipv4 ) {
+	  // One of the addresses is IPv4 another is IPv6
+	  goto out_err;
+	}
+
 	/* Check that the address is a legal unicast or anycast
 	   address */
 	if (!hip_update_test_locator_addr(locator_address)) {
@@ -245,6 +263,19 @@ int hip_update_locator_match(hip_ha_t *unused,
 }
 
 /**
+ * Compare locator and addr list item for equality
+ *
+ * @return non-zero when address are equal, otherwise zero
+ */
+int hip_update_locator_item_match(hip_ha_t *unused,
+			     struct hip_locator_info_addr_item *item1,
+			     void *_item2) {
+	struct hip_peer_addr_list_item *item2 = _item2;
+	return !ipv6_addr_cmp(&item1->address, &item2->address);
+}
+
+
+/**
  * Check if locator list contains a given locator
  *
  * @return zero if the locator was found, otherwise non-zero
@@ -252,7 +283,7 @@ int hip_update_locator_match(hip_ha_t *unused,
 int hip_update_locator_contains_item(struct hip_locator *locator,
 				  struct hip_peer_addr_list_item *item)
 {
-	return hip_for_each_locator_addr_item(hip_update_locator_match,
+	return hip_for_each_locator_addr_item(hip_update_locator_item_match,
 					      NULL, locator, item);
 }
 
@@ -267,46 +298,53 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	HIP_DEBUG("\n\n\nlocators\n\n");
 
-	if (!hip_update_locator_contains_item(locator, list_item))
+	// @todo: try to delete all unnecessary connections. Temprorary solution, to make handovers work.
+	if (list_item->is_preferred) //hip_update_locator_contains_item(locator, list_item))
 	{
-		HIP_DEBUG_HIT("deprecating address", &list_item->address);
-		list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-		
-		/* If this is not the preferred address then the next line will fail
-		 * FIXME: This line needs to be either inside the next loop or 
-		 * deprecataing to update peer addr item code*/
-		
-		// NOTE: We don't need to delete the policies because they are associated to HIT's
-		// If we delete them, the soft handover cannot properly work! -Diego
-
-		//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
-
-		//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
-		
-		hip_delete_sa(entry->default_spi_out, &list_item->address,
-		              &entry->local_address, AF_INET6, 0,
-		              (int)entry->peer_udp_port);	
-		
-		spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
-
-		// Why do we delete the SA associated to the local address? This is definitely wrong!
-		// If you delete this, how would you expect the IPSec could work?
-		/*hip_delete_sa(spi_in, &entry->local_address, AF_INET6,
-		  (int)entry->peer_udp_port, 0);*/
-
-		if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
-		{
-			// TODO: Handle this: Choose a random address from
-			// amongst the active addresses? -Bagri
-			HIP_DEBUG_HIT("Preferred Address deprecated",
-				      &list_item->address);
-		}
-		// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
-		// This is because if the same address is reused, the SA/SP won't be updated correctly, making
-		// then the handover to fail.
-		list_del(list_item, entry->spis_out);
-		
+		goto out_err;
 	}
+
+	HIP_DEBUG_HIT("deprecating address", &list_item->address);
+	list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
+	
+	/* If this is not the preferred address then the next line will fail
+	 * FIXME: This line needs to be either inside the next loop or 
+	 * deprecataing to update peer addr item code*/
+	
+	// NOTE: We don't need to delete the policies because they are associated to HIT's
+	// If we delete them, the soft handover cannot properly work! -Diego
+	
+	//hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+	
+	//hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	
+	hip_delete_sa(entry->default_spi_out, &list_item->address,
+		      &entry->local_address, AF_INET6, 0,
+		      (int)entry->peer_udp_port);	
+	
+	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	
+	// Why do we delete the SA associated to the local address? This is definitely wrong!
+	// If you delete this, how would you expect the IPSec could work?
+	
+	// Answer: We deleting old SA because in received locators list we don't have this
+	// item. May be it was deleted in initiator of the update? -Andrey.
+	// Without this line the hardhandover doesn't work.
+	
+	hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
+		      (int)entry->peer_udp_port, 0);
+	
+	if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
+	{
+		// TODO: Handle this: Choose a random address from
+		// amongst the active addresses? -Bagri
+		HIP_DEBUG_HIT("Preferred Address deprecated",
+			      &list_item->address);
+	}
+	// We'd better delete the address from the database, rather than keep it in DEPRECATED state.
+	// This is because if the same address is reused, the SA/SP won't be updated correctly, making
+	// then the handover to fail.
+	list_del(list_item, entry->spis_out);
 
  out_err:
 	return err;
@@ -2040,9 +2078,10 @@ out_err:
 int hip_update_src_address_list(struct hip_hadb_state *entry, 
 				struct hip_locator_info_addr_item *addr_list, 
 				struct in6_addr *daddr,
-				int addr_count,	int esp_info_old_spi){
+				int addr_count,	int esp_info_old_spi,
+				int is_add, struct sockaddr* addr){
 	   	
-	int err = 0, i, preferred_address_found = 0;
+	int err = 0, i, preferred_address_found = 0, choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 
@@ -2079,27 +2118,52 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 */
 
 	loc_addr_item = addr_list;
+
+	HIP_IFEL( addr->sa_family == AF_INET, -1, "all addresses in update should be mapped");
+
+	struct in6_addr* comp_addr = hip_cast_sa_addr(addr);
+
+	/* if we have deleted the old address and it was preferred than 
+	   we chould make new preferred address. Now, we chose it as random address in list 
+	*/
+	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr))==0 ) {
+	  choose_random = 1;
+	}
+
+	if( is_add && is_active_handover ) { change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */}
+	else { comp_addr = &entry->local_address; }
+
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
-	for(i = 0; i < addr_count; i++, loc_addr_item++)
-	{
-		struct in6_addr *saddr = &loc_addr_item->address;
-/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
-		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
-		HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
-		if (memcmp(&entry->local_address, saddr, sizeof(struct in6_addr)) == 0)
+	if( !choose_random ) 
+	  for(i = 0; i < addr_count; i++, loc_addr_item++)
+	    {
+	      struct in6_addr *saddr = &loc_addr_item->address;
+	      /*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+				HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
+				HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
+	      if (memcmp(comp_addr, saddr, sizeof(struct in6_addr)) == 0)
 		{
-			if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
-			{
-				/* Select the first match */
-				loc_addr_item->reserved = ntohl(1 << 31);
-				preferred_address_found = 1;
-				HIP_DEBUG("Preferred Address is the old preferred address\n");
-				HIP_DEBUG_IN6ADDR("addr: ", saddr);
-				break;
-			}
+		  if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
+		    {
+		      /* Select the first match */
+		      loc_addr_item->reserved = ntohl(1 << 31);
+		      preferred_address_found = 1;
+		      if( change_preferred_address ) {
+			HIP_IFEL(hip_update_preferred_address(entry,saddr,
+							      daddr, 
+							      &spi_in->spi),-1, 
+				 "Setting New Preferred Address Failed\n");		      
+		      }
+		      else {
+			HIP_DEBUG("Preferred Address is the old preferred address\n");
+		      }
+		      HIP_DEBUG_IN6ADDR("addr: ", saddr);
+		      break;
+		    }
 		}	
-	}
+	    }
+	
 
 	if (preferred_address_found) goto skip_pref_update;
 
@@ -2163,7 +2227,8 @@ out_err:
  */
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
-		    int addr_count, int ifindex, int flags)
+		    int addr_count, int ifindex, int flags, 
+		    int is_add, struct sockaddr* addr)
 {
 	int err = 0, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
 	uint32_t update_id_out = 0;
@@ -2282,7 +2347,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
 	err = hip_update_src_address_list(entry, addr_list, &daddr,
-					  addr_count, esp_info_old_spi);
+					  addr_count, esp_info_old_spi, is_add, addr);
 	if(err == GOTO_OUT)
 		goto out;
 	else if(err)
@@ -2332,7 +2397,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	/* Send UPDATE */
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
-
 
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
 	
@@ -2401,7 +2465,7 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
  * @param flags flags passed to @hip_send_update
  */
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
-			 int addr_count, int ifindex, int flags)
+			 int addr_count, int ifindex, int flags, int is_add, struct sockaddr *addr)
 {
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
@@ -2426,7 +2490,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
 			hip_send_update(rk.array[i], addr_list, addr_count,
-					ifindex, flags);
+					ifindex, flags, is_add, addr);
 			hip_hadb_put_entry(rk.array[i]);
 			//hip_put_ha(rk.array[i]);
 		}
