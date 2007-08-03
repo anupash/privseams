@@ -10,6 +10,8 @@
  */
 #include "output.h"
 
+enum number_dh_keys_t number_dh_keys = TWO;
+
 /**
  * Sends an I1 packet to the peer.
  * 
@@ -136,19 +138,29 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
- 	int err = 0,dh_size,written, mask = 0;
- 	u8 *dh_data = NULL;
+ 	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
+ 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
+	struct hip_locator_info_addr_item *addr_list=NULL;
+	struct hip_locator *locator=NULL;
+	hip_ha_t *entry;
+       	uint32_t spi = 0;
 	int * service_list = NULL;
+	int addr_count=0;
 	int service_count = 0;
 	int *list;
 	int count = 0;
-	int i;
+	int i = 0;
+	struct hip_locator_info_addr_item *locators = NULL;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	int l, is_add, ii;
+
+
 	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
 		HIP_HIP_3DES_SHA1,
-		HIP_HIP_NULL_SHA1
-	};
+		HIP_HIP_NULL_SHA1	};
  	hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
@@ -158,14 +170,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
- 	/* Allocate memory for writing Diffie-Hellman shared secret */
-	HIP_IFEL((dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID)) == 0, 
-		 -1, "Could not get dh size\n");
-	HIP_IFEL(!(dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC)), 
-		 -1, "Failed to alloc memory for dh_data\n");
-	memset(dh_data, 0, dh_size);
+ 	/* Allocate memory for writing the first Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size1\n");
+	HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data1\n");
+	memset(dh_data1, 0, dh_size1);
 
-	_HIP_DEBUG("dh_size=%d\n", dh_size);
+	_HIP_DEBUG("dh_size=%d\n", dh_size1);
+
+ 	/* Allocate memory for writing the second Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size2\n");
+	HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data2\n");
+	memset(dh_data2, 0, dh_size2);
+
+	_HIP_DEBUG("dh_size=%d\n", dh_size2);
+
 	//	HIP_IFEL(!(host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO)),
 	//	 -1, "Could not acquire localhost public key\n");
 	//HIP_HEXDUMP("Our pub host id\n", host_id_pub,
@@ -190,14 +212,24 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Cookies were burned. Bummer!\n");
 
  	/********** Diffie-Hellman **********/
-	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
-					  HIP_DEFAULT_DH_GROUP_ID)) < 0,
-		 -1, "Could not extract DH public key\n");
-	
-	HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
-							 HIP_DEFAULT_DH_GROUP_ID,
-							 dh_data, written), -1,
-		 "Building of DH failed.\n");
+	HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+					  HIP_FIRST_DH_GROUP_ID)) < 0,
+		 -1, "Could not extract the first DH public key\n");
+
+	if (number_dh_keys == TWO){
+	         HIP_IFEL((written2 = hip_insert_dh(dh_data2, dh_size2,
+		       HIP_SECOND_DH_GROUP_ID)) < 0,
+		       -1, "Could not extract the second DH public key\n");
+
+	         HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+		       HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
+		       HIP_SECOND_DH_GROUP_ID, dh_data2, written2), -1,
+		       "Building of DH failed.\n");
+	}else
+	         HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
+		       HIP_FIRST_DH_GROUP_ID, dh_data1, written1,
+		       HIP_MAX_DH_GROUP_ID, dh_data2, 0), -1,
+		       "Building of DH failed.\n");
 
  	/********** HIP transform. **********/
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
@@ -230,16 +262,41 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                         -1, "Building of reg_info failed\n");	
 	}
 
+	
+
+
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
  	/********** Signature 2 **********/	
+
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
+	
+	/************LOCATOR PARAMETER **********************/
+
+	if (locators)
+	{				
+		list_for_each_safe(item, tmp, addresses, ii)
+			{
+				n = list_entry(item);
+				memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+				hip_print_hit("LOCATOR is\n",&locators[i].address);
+					i++;
+			}
+		_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+		HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
+			 "Building LOCATOR failed\n");			
+	}
+	
+	
+	/********************LOCATOR PARAMETER******************************/
+	
 	/* Fill puzzle parameters */
 	{
 		struct hip_puzzle *pz;
@@ -260,12 +317,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		pz->I = random_i;
 	}
 
+	
+
  	/************** Packet ready ***************/
 
         // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
 	//HIP_HEXDUMP("r1", msg, hip_get_msg_total_len(msg));
 
@@ -276,11 +337,59 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	//	HIP_FREE(host_id_pub);
  	if (msg)
  		HIP_FREE(msg);
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
   	return NULL;
 }
+
+
+int hip_for_each_locator_addr_list(hip_ha_t *entry,
+                                   struct hip_locator *locator,
+                                   void *opaque)
+{
+	int i = 0, err = 0;
+	struct hip_common *msg;
+	struct hip_locator_info_addr_item *locators;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	int l, is_add, ii;
+	
+
+			if (locators)
+			{
+				
+				list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					hip_print_hit("the hits are\n",&locators[i].address);
+					i++;
+				}
+				HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+				
+			}
+
+	memset(n,0,sizeof(n));
+	
+	//HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
+	//	 "Building LOCATOR failed\n");
+ out_err:
+
+	return err;
+}
+
+
+/* really ugly hack ripped from rea.c, must convert to list_head asap */
+struct hip_update_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
+
 
 /**
  * Transmits an R1 packet to the network.
@@ -652,6 +761,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	if (src6->sin6_family != dst6->sin6_family) {
+	  /* @todo: Check if this may cause any trouble.
+	     It happens every time we send update packet that contains few locators in msg, one is 
+	     the IPv4 address of the source, another is IPv6 address of the source. But even if one of 
+	     them is ok to send raw IPvX to IPvX raw packet, another one cause the trouble, and all 
+	     updates are dropped.  by Andrey "laser".
+
+	   */
 		err = -1;
 		HIP_ERROR("Source and destination address families differ\n");
 		goto out_err;
@@ -957,7 +1073,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = checksum_packet((char *)msg, 
+	msg->checksum = hip_checksum_packet((char *)msg, 
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);
 

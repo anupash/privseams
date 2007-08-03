@@ -207,6 +207,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
  * hip_produce_keying_material - Create shared secret and produce keying material 
  * @param msg the HIP packet received from the peer
  * @param ctx context
+ * @param dhpv pointer to the DH public value choosen
  *
  * The initial ESP keys are drawn out of the keying material.
  *
@@ -216,7 +217,8 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 int hip_produce_keying_material(struct hip_common *msg,
 				struct hip_context *ctx,
 				uint64_t I,
-				uint64_t J)
+				uint64_t J,
+				struct hip_dh_public_value **dhpv)
 {
 	char *dh_shared_key = NULL;
 	int hip_transf_length, hmac_transf_length;
@@ -229,7 +231,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	size_t keymat_len; /* note SHA boundary */
 	struct hip_tlv_common *param = NULL;
 	uint16_t esp_keymat_index, esp_default_keymat_index;
-	struct hip_diffie_hellman * dhf;
+	struct hip_diffie_hellman *dhf;
 	hip_ha_t *blind_entry;
 	int type = 0;
 	uint16_t nonce;
@@ -303,15 +305,16 @@ int hip_produce_keying_material(struct hip_common *msg,
 	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
 		 -ENOENT,  "No Diffie-Hellman param found\n");
 
-	HIP_IFEL((htons(dhf->pub_len) != hip_get_diffie_hellman_param_public_value_len(dhf)), -1,
-		 "Bad DHF len or multiple DHF not supported\n");
+	/* If the message has two DH keys, select (the stronger, usually) one. */
+	*dhpv = hip_dh_select_key(dhf);
 
-	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(dhf->public_value, 
-							      dhf->group_id,
-							      ntohs(dhf->pub_len), 
-							      dh_shared_key,
-							      dh_shared_len)) < 0,
-		 -EINVAL, "Calculation of shared secret failed\n");
+	_HIP_DEBUG("dhpv->group_id= %d\n",(*dhpv)->group_id);
+	_HIP_DEBUG("dhpv->pub_len= %d\n", ntohs((*dhpv)->pub_len));
+
+	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
+	     (*dhpv)->public_value,(*dhpv)->group_id, ntohs((*dhpv)->pub_len), 
+	     dh_shared_key, dh_shared_len)) < 0,
+	     -EINVAL, "Calculation of shared secret failed\n");
 	HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
 	HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
 	HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
@@ -695,6 +698,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
  * @param ctx Context that includes the incoming R1 packet
  * @param solved_puzzle Value that solves the puzzle
  * @param entry HA
+ * @param dhpv the DH public value choosen 
  *
  * @return zero on success, non-negative on error.
  */
@@ -702,15 +706,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
 		  hip_ha_t *entry,
-	          hip_portpair_t *r1_info)
+	          hip_portpair_t *r1_info,
+		  struct hip_dh_public_value *dhpv)
 {
-	int err = 0, dh_size = 0, written, host_id_in_enc_len;
+	int err = 0, host_id_in_enc_len, written;
 	uint32_t spi_in = 0;
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
 	struct in6_addr daddr;
-	u8 *dh_data = NULL;
 	struct hip_esp_info *esp_info;
 	struct hip_common *i2 = NULL;
 	struct hip_param *param;
@@ -725,13 +729,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_ASSERT(entry);
 
 	/* allocate space for new I2 */
-	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n");
+	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n")
 
-	/* allocate memory for writing Diffie-Hellman shared secret */
-	HIP_IFEL(!(dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID)), -EINVAL,
-		 "Could not get dh size\n");
-	HIP_IFEL(!(dh_data = HIP_MALLOC(dh_size, GFP_KERNEL)), -ENOMEM, 
-		 "Failed to alloc memory for dh_data\n");
 
 	/* TLV sanity checks are are already done by the caller of this
 	   function. Now, begin to build I2 piece by piece. */
@@ -791,14 +790,16 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********** Diffie-Hellman *********/
 	HIP_IFEL(!(dh_req = hip_get_param(ctx->input, HIP_PARAM_DIFFIE_HELLMAN)), -ENOENT, "Internal error\n");
-	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size, dh_req->group_id)) < 0, -ENOENT, 
-		 "Error while extracting DH key\n");
+	HIP_IFEL((written = hip_insert_dh(dhpv->public_value, 
+		 ntohs(dhpv->pub_len), dhpv->group_id)) < 0,
+		 -1, "Could not extract the DH public key\n");
+	
+	HIP_IFEL(hip_build_param_diffie_hellman_contents(i2,
+		 dhpv->group_id, dhpv->public_value, written, 
+		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
+		 "Building of DH failed.\n");
 
-	_HIP_HEXDUMP("Own DH key: ", dh_data, dh_size);
 
-	HIP_IFEL(hip_build_param_diffie_hellman_contents(i2,dh_req->group_id,
-							 dh_data, written), -1, 
-		 "Building of DH failed\n");
 
         /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
@@ -920,7 +921,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
-
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("******** Blind is OFF\n");
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
@@ -936,6 +936,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
@@ -950,7 +951,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
 	}
-	
+
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
@@ -1043,20 +1044,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
-
-	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
-	   No retransmission here, the packet is sent directly because this
-	   is the last packet of the base exchange. */
-	
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 0);
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
 	if (i2)
 		HIP_FREE(i2);
-	if (dh_data)
-		HIP_FREE(dh_data);
 	if (reg_type)
 		HIP_FREE(reg_type);
 
@@ -1100,6 +1094,7 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_host_id *peer_host_id;
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
+	struct hip_dh_public_value *dhpv = NULL;
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1263,7 +1258,7 @@ int hip_handle_r1(struct hip_common *r1,
 	/* note: we could skip keying material generation in the case
 	   of a retransmission but then we'd had to fill ctx->hmac etc */
 	HIP_IFEL(entry->hadb_misc_func->hip_produce_keying_material(r1, ctx, I,
-								solved_puzzle),
+							 solved_puzzle, &dhpv),
 			 -EINVAL, "Could not produce keying material\n");
 	
 	/* TODO BLIND: What is this?*/
@@ -1283,7 +1278,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 	entry->peer_controls = ntohs(r1->control);
 
- 	err = entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info);
+ 	err = entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info, dhpv);
 	HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT)
@@ -1579,6 +1574,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint64_t I, J;
 	struct in6_addr *plain_peer_hit = NULL, *plain_local_hit = NULL;
 	uint16_t nonce;
+	struct hip_dh_public_value *dhpv = NULL;
 
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
@@ -1637,7 +1633,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   sure if this could be replaced with a function pointer which is set
 	   from hadb. Usually you shouldn't have state here, right? */
 
-	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J), -1,
+	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J, &dhpv), -1,
 		 "Unable to produce keying material. Dropping I2\n");
 
 	/* Verify HMAC. */

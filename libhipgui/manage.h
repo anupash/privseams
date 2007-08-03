@@ -67,6 +67,12 @@ int all_add_local(HIT_Local *, void *);
 void all_update_local(char *, char *);
 void all_update_rgroups(char *, char *);
 
+void about(void);
+
+void opt_handle_action(GtkWidget *, int);
+
+void hip_gui_update_nat_safe(int);
+
 
 /*! @} addtogroup libhipgui */
 

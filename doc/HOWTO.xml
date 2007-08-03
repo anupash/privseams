@@ -3,7 +3,6 @@
                   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
 <book>
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
-  <!-- http://www.ibiblio.org/godoy/sgml/docbook/howto/writing-docbook.html -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <title>HIPL User Manual</title>
   <chapter>
@@ -179,7 +178,7 @@
             &lt;M&gt; Packet socket
     </para></listitem>
     <listitem><para>
-            &lt;M&gt; IPsec user configuration interface
+            [*] IPsec user configuration interface
     </para></listitem>
     <listitem><para>
             &lt;M&gt; PF_KEY sockets
@@ -188,22 +187,19 @@
             &lt;M&gt; IP tunneling
     </para></listitem>
     <listitem><para>
-            [*] The IPv6 protocol (EXPERIMENTAL)
+            [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
-            [*] IPv4: IPsec BEET mode (2.6.19 and above)
+            [*] IPv6: IPsec BEET mode
     </para></listitem>
     <listitem><para>
-            [*] IPv6: IPsec BEET mode (2.6.19 and above)
-    </para></listitem>
-    <listitem><para>
-            &lt;M&gt; IP: ESP transform (kernel versions below 2.6.19)
+            &lt;M&gt; IP: ESP transform
     </para></listitem>
     <listitem><para>
             [*] The IPv6 Protocol
     </para></listitem>
     <listitem><para>
-            &lt;M&gt; IPv6: ESP transformation (kernel versions below 2.6.19)
+            &lt;M&gt; IPv6: ESP transformation
     </para></listitem>
     <listitem><para>
             &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
@@ -232,9 +228,15 @@
     <listitem><para>
             &lt;M&gt; Dummy network device support
     </para></listitem>
+    <listitem><para>
+            Security options ---&gt;
+    </para></listitem>
+    <listitem><para>
+            [ ] Enable different security models
+    </para></listitem>
     </itemizedlist>
     <para>
-      The hipd tries to probe the necessary kernel modules automatically,
+      The hipd probes the necessary kernel modules automatically,
     </para>
   </chapter>
   <chapter>
@@ -273,14 +275,16 @@
     </para>
   </chapter>
   <chapter id="basictest">
-    <title>Testing a HIP connection between two hosts</title>
+    <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
-      HIPL developers test HIP using two machines called crash (3ffe::1) and
-      oops (3ffe::2). They are used through this whole document as examples
-      even though you probably have your own naming and addressing
-      conventions. It is possible to use IPv4 addresses on-wire as well
-      but the applications being used need to support IPv6 currently.
-      </para>
+      You can test HIP with any networking application, but in this
+      section we will demonstrate few development-oriented test
+      applications.  Here we assume two machines called crash
+      (3ffe::1) and oops (3ffe::2) that in the same network. They are
+      used through this whole document as examples even though you
+      probably have your own naming and addressing conventions. It is
+      possible to use IPv4 addresses on-wire as well but the
+      applications being used need to support IPv6 currently.</para>
     <para>
       We expect that you have two hosts for testing HIP which will be
       referred to as "crash" and "oops". You should run these commands in
@@ -371,6 +375,24 @@
       network as we are or not.
       </para>
     <para>
+      The log messages displayed by the hip daemon can be changed dynamically: 
+    </para>
+    <para>
+            tools/hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
+    </para>
+    <para>
+            tools/hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	    HIP_INFO messages&gt;
+    </para>
+    <para>
+            tools/hipconf debug all # &lt;shows all messages, including 
+	    HIP_DEBUG&gt;
+    </para>
+    <para>
+      These options can be also set in "/etc/hip/hipd_config" to configure 
+      hipd and other libraries at startup.
+    </para>
+    <para>
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
@@ -382,6 +404,39 @@
       quick testing of the base exchange. Run it without arguments to see
       how it is used.
     </para>
+    <para>
+      It should be noticed that starting a new hipd process automatically
+      kills the previous one.
+    </para>
+  </chapter>
+  <chapter id="itest">
+    <title>HIPL Internet Test Servers</title>
+    <para>
+    Below is a list of HIPL test servers if you want to test HIP over Internet:
+    </para>
+    <table frame="all"><title>Test Servers</title>
+          <tgroup cols="1">
+            <thead>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+            </thead>
+            <tbody>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:007d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>RSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:0074:f967:5cb2:cd63:15b5:1737:b083</entry><entry>193.167.187.130</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
+              <!--
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              -->
+            </tbody>
+          </tgroup>
+    </table>
+
   </chapter>
   <chapter>
     <title>Closing HIP Security Associations Manually</title>
@@ -640,7 +695,7 @@
     </para>
 
     <para>
-    3. Use HIP agent GUI to run the application. You can execute applications
+    3. Use HIP configuration GUI to run the application. You can execute applications
        with GUI and edit their library-path as you like. Also you should be
        able to see list of processes you have executed from GUI.
     </para>
@@ -1076,68 +1131,278 @@
 	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
 
   </chapter>
-  <chapter>
-    <title>HIP User Agent and GUI</title>
-      <para>Manage HITs with graphical user interface.</para>
-      <para>When new HIT is received, it and local HIT is filtered
-            trough agent, which asks user for accepting the HIT pair.
-            Then HIT is saved into database and accept/reject is
-            returned to daemon. User can also manage HITs trough graphical
-            user interface. The interface is under development,
+
+<chapter><title>HIP configuration GUI</title>
+	<section><title>General</title>
+	<formalpara><title>About</title><para></para></formalpara>
+		<para>Manage HITs with graphical user interface.</para>
+		<para>
+			When new HIT is received, it and local HIT is filtered
+			trough configuration GUI, which asks user for accepting the HIT pair.
+			Then HIT is saved into database and accept/reject is
+			returned to daemon. User can also manage HITs trough graphical
+			user interface. The interface is under development,
 			and is quite in alpha state yet.
 		</para>
-      <para>
-		To compile agent and GUI atleast following packages are needed (asuming you have debian):</para>
-    <itemizedlist>
-<listitem><para>
-		gcc and g++ compilers, both should be at least version 4.0.
-</para></listitem>
-<listitem><para>
-		Package: xbase-clients - miscellaneous X clients
-</para></listitem>
-<listitem><para>
-		   GTK 2.x and development files for it (Package called libgtk2.0-dev).
-		   If you want to use 'system  tray' icon, you need atleast 2.10.0 version
-		   of GTK. See info about manual GTK 2.10 installation below.
-</para></listitem>
-<listitem><para>
+	
+	<screenshot>
+		<screeninfo>HIP configuration GUI main window</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI main window</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
+		
+	<formalpara><title>Usage</title><para></para></formalpara>
+		<para>
+			Configuration GUI uses '$HOMEDIR/.hipagent/' -directory to store
+			per user configuration files. There should be atleast 'database'
+			file which contains information about configured local and remote hits
+			and remote groups. Optionally user can create file called 'config'.
+			This file can contain different options to change GUI behaviour.
+			Following paragraphs tell more.
+		</para>
+		
+		<itemizedlist>
+			<listitem><para>
+				'lang=...' can be used to select one of compiled-in languages. These are
+				currently 'en' and 'fi'. 'en' means english and is default.
+				'fi' means finnish. If you want to change GUI language to finnish,
+				type line 'lang=fi' into your config-file in .hipagent-dir.
+			</para></listitem>
+	
+			<listitem><para>
+			'lang-file=...' can be used to define external language file, which
+			can override some or all compiled-in language strings.
+			This language file should contain lines which are somewhat like this:
+			'value-name=value'. Example line 'title-main=HIPL Graphical Config' would
+			change GUI main window title to 'HIPL Graphical Config'.
+			</para></listitem>
+		</itemizedlist>
+		<para>
+			The configuration GUI executable is called "hipagent". You should run it using
+			normal user (non-root) priviledges.
+		</para>
 
-		Automake 1.9
-</para></listitem>
-	</itemizedlist>
+	<screenshot>
+		<screeninfo>HIP configuration GUI tray icon</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI tray icon</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
 
-	 <para>
-		   In order to install GTK 2.10 manually into
-		   debian/ubuntu, you should do following:
-		   Download gtk from gtk.org.
-		   Also some other libraries are needed, but they can be found using
-		   "aptitude search" and then installed using "aptitude install"
-		   (Atleast cairo, pango, atk, glib and development versions of those are needed).
-		   If you dont like to overide default gtk library,
-		   install gtk using "./configure --prefix=/opt".
-		   If you do it in that way, you need to set some envars:
-		   add to PATH "/opt/bin", add to LD_LIBRARY_PATH
-		   "/opt/lib" and add to PKG_CONFIG_PATH "/opt/lib/pkgconfig".
-		   Example like this:
-		   "export PATH=/opt/bin:$PATH", 
-		   "export LD_LIBRARY_PATH=/opt/lib:$LID_LIBRARY_PATH"
-		   "export PKG_CONFIG_PATH=/opt/lib/pkgconfig:$PKG_CONFIG_PATH"
-	  </para>
-	  
-	  <para>
-		  In order to the agent start properly with right window and system tray icon,
-		  you must first do 'make install' to install the data files in right directory.
-		  System tray icon will not be shown at all, if you don't do this.
-	  </para>
-      <para>
-		HIT database is saved and loaded on agent startup as default from
-		'$HOMEDIR/.hipagentdb'-file.
-      </para>
-      <para>The agent executable is called "hipagent". You should run it using
-            normal user (non-root) priviledges.
-      </para>
-  </chapter>
-  <chapter>
+	<formalpara><title>Compilation</title><para></para></formalpara>
+		<para>To compile HIP configuration GUI atleast following packages are needed (asuming you have debian):
+			<itemizedlist>
+				<listitem><para>
+					gcc and g++ compilers, both should be at least version 4.0.
+				</para></listitem>
+				<listitem><para>
+					Package: xbase-clients - miscellaneous X clients
+				</para></listitem>
+				<listitem><para>
+					GTK 2.x and development files for it (Package called libgtk2.0-dev).
+				</para></listitem>
+				<listitem><para>
+					Automake 1.9
+				</para></listitem>
+			</itemizedlist>
+			<note><title>Notes</title>
+				<para>
+					If you want to use 'system  tray' icon, you need atleast 2.10.0 version of GTK.
+				</para>
+				<para>
+					In order to the configuration GUI start properly with right window and system tray icon,
+					you must first do 'make install' to install the data files in right directory.
+					System tray icon will not be shown at all, if you don't do this.
+				</para>
+			</note>
+		</para>
+</section>
+
+<section><title>Language files</title>
+	<para>
+		As described in previous section,
+		'lang-file=...' can be used to define external language file, which can override some or all compiled-in language strings.
+		This language file should contain lines which are somewhat like this: 'value-name=value'. Example line 'title-main=HIPL 
+		Graphical Config' would change GUI main window title to 'HIPL Graphical Config'.
+	</para>
+	<para>
+		As said, language files contains lines, which define different variables in GUI.
+		Format of those lines is following:
+		<itemizedlist>
+			<listitem><para>Commented line starts with '#'-character</para></listitem>
+			<listitem><para>To create/reset value, use 'value-name=value'</para></listitem>
+			<listitem><para>
+				To add new line to value (also creates new value, if not yet defined), use 'value-name+value'
+			</para></listitem>
+		</itemizedlist>
+	</para>
+<example><title>Here is a complete english version of a example language file:</title>
+<programlisting>
+
+# Example language file for HIP configuration GUI.
+# Language: English
+
+# Different window titles.
+title-main=HIP configuration
+title-newhit=New HIT
+title-newgroup=Create new group
+title-runapp=Execute application
+title-locals=Local HIT
+title-msgdlg=Question
+
+# System tray menu.
+systray-show=Configuration
+systray-exec=Execute
+systray-exit=Exit
+systray-about=About
+
+# Main window menu.
+menu-file=File
+menu-file-exit=Exit
+menu-file-runapp=Execute
+	
+menu-edit=Edit
+menu-edit-locals=Local HITs
+menu-edit-newgroup=Create new group
+menu-edit-addhit=Add new HIT
+	
+menu-help=Help
+menu-help-about=About
+
+# Toolbar items.
+tb-newgroup=New group
+tb-newgroup-tooltip=Create new group
+tb-newgroup-tooltip+Groups help in ordering and managing HIT's.
+tb-runapp=Execute
+tb-runapp-tooltip=Execute new application using HIP libraries
+tb-newhit=New HIT
+tb-newhit-tooltip=Add new HIT
+	
+# Tabs.
+tabs-hits=HITs
+tabs-options=Options
+tabs-connections=Connections
+
+# New HIT dialog.
+nhdlg-button-accept=Accept
+nhdlg-button-drop=Drop
+nhdlg-err-invalid=Invalid HIT name given!
+nhdlg-err-exists=HIT with given name already exists!
+nhdlg-err-reserved=Given HIT name is reserved!
+nhdlg-err-reserved+Choose another one.
+nhdlg-err-invchar=HIT name contains invalid characters!
+nhdlg-err-invchar+Rename.
+nhdlg-err-hit=HIT is invalid!
+nhdlg-newinfo=New HIT information
+nhdlg-newhit=New HIT:
+nhdlg-name=Name:
+nhdlg-group=Group:
+nhdlg-advanced=Advanced
+nhdlg-url=URL:
+nhdlg-port=Port:
+nhdlg-g-info=Group info
+nhdlg-g-localhit=Local HIT:
+nhdlg-g-type=Type:
+nhdlg-g-lightweight=Lightweight:
+nhdlg-tt-hit=The fingerprint (HIT, Host Identity Tag) of the remote host.
+nhdlg-tt-hit-priv=HIT (Host Identity Tag) identifies hosts from each other.
+
+# New group dialog.
+ngdlg-name=Name:
+ngdlg-localhit=Local HIT:
+ngdlg-type=Type:
+ngdlg-type2=Encryption:
+ngdlg-button-create=Create
+ngdlg-button-cancel=Cancel
+ngdlg-err-invalid=Invalid group name!
+ngdlg-err-exists=Group already exists!
+ngdlg-err-reserved=Given group name is reserved!
+ngdlg-err-reserved+Choose another one.
+ngdlg-err-invchar=Group name contains invalid characters!
+ngdlg-err-invchar+Rename.
+	
+# Tool window (HIT handling).
+tw-button-apply=Apply
+tw-button-cancel=Cancel
+tw-button-delete=Delete
+tw-button-edit=Edit
+tw-hit-info=HIT information
+tw-hit-name=Name:
+tw-hit-group=Group:
+tw-hit-advanced=Advanced
+tw-hit-hit=HIT:
+tw-hit-port=Port:
+tw-hit-url=URL:
+tw-hit-groupinfo=Group info:
+tw-hit-local=Local HIT:
+tw-group-info=Group information
+tw-group-name=Name:
+tw-group-advanced=Advanced
+tw-group-local=Local HIT:
+	
+tw-hitgroup-type=Type:
+tw-hitgroup-lightweight=Encryption:
+	
+# Local HIT handling.
+lhdlg-button-apply=Apply
+lhdlg-button-cancel=Cancel
+lh-info=Local HIT information:
+lh-hit=	HIT:
+lh-name=Name:
+lhdlg-err-invalid=Invalid name for local HIT!
+lhdlg-err-exists=Local HIT name is already in use!
+lhdlg-err-invchar=Name of local HIT contains invalid characters!
+
+# General message dialog.
+msgdlg-button-ok=OK
+msgdlg-button-cancel=Cancel
+
+# GUI info (status bar) strings.
+gui-info-000=HIP service available on this computer.
+gui-info-001=HIP service unavailable.
+gui-info-002=HIP GUI started.
+
+# Other strings.
+newgroup-error-nolocals=Can't create new group,
+newgroup-error-nolocals+no local HITs defined.
+newgroup-error-nolocals+Check HIP daemon.
+newhit-error-nolocals=Can't add new remote HIT,
+newhit-error-nolocals+no local HITs defined.
+newhit-error-nolocals+Check HIP daemon.
+# NOTE! Empty group must have spaces in both sides of the item name!
+hits-group-emptyitem= &lt;empty&gt; 
+ask-delete-hit=Are you sure you want to delete selected HIT?
+ask-delete-group=Are you sure you want to delete selected group?
+ask-apply-hit=Are you sure you want to apply the changes?
+ask-apply-hit-move=Are you sure you want move the hit?
+ask-apply-group=Are you sure you want to apply the changes?
+
+group-type-accept=accept
+group-type-deny=deny
+group-type2-lightweight=lightweight
+group-type2-normal=normal
+
+hits-number-of-used=Number of HITs in use
+default-group-name=ungrouped
+combo-newgroup=&lt;create new...&gt;
+</programlisting>
+</example>
+
+</section>
+</chapter>
+  
+<chapter>
     <title>HIP socket handler kernel module</title>
     <para>The HIP socket handler is a component of the HIPL HIP
 	  implementation. It is used to intercept HIP socket

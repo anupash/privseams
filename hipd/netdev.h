@@ -13,6 +13,7 @@
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <netinet/ip6.h>
+#include <openssl/rand.h>
 
 #include "nlink.h"
 #include "list.h"

@@ -51,9 +51,9 @@
 #endif
 
 #define HIP_SELECT_TIMEOUT        1
-#define HIP_RETRANSMIT_MAX        10
+#define HIP_RETRANSMIT_MAX        5
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
-#define HIP_OPP_WAIT              2 /* seconds */
+#define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
 #define HIP_OPP_FALLBACK_INIT \
            (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -62,11 +62,12 @@
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
    the actual time is between n and n + RETRANSMIT_INIT seconds */
-#define HIP_RETRANSMIT_WAIT 5 
+#define HIP_RETRANSMIT_WAIT 5
+ 
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INTERVAL 1 /* seconds Original 60*/
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
@@ -96,6 +97,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_un hip_firewall_addr;
 
+extern int is_active_handover;
 
 int hip_agent_is_alive();
 

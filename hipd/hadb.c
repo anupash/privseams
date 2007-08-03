@@ -397,10 +397,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		goto out_err;
 	}
 
-	HIP_DEBUG_HIT("Peer HIT\n", peer_hit);
-	HIP_DEBUG_HIT("Our HIT\n", &entry->hit_our);
-	HIP_DEBUG_IN6ADDR("Our IPv6\n", &entry->local_address);
-	HIP_DEBUG_IN6ADDR("Peer IPv6\n", peer_addr);
+	HIP_DEBUG_HIT("Peer HIT ", peer_hit);
+	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
@@ -1719,6 +1719,14 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   If the status of the address is DEPRECATED, the status is
 	   changed to UNVERIFIED.  If the address is not already bound,
 	   the address is added, and its status is set to UNVERIFIED. */
+	
+
+	/* We switch off the part that make no answer with echo response message 
+	   to the initiator. The reason is that we need the whole update schema work
+	   for the program to run corrctly. This purely optimization part can be changed
+	   latter. - Andrey.
+	*/
+#if 0
 	if (!new)
 	{
 		switch (new_addr->address_state)
@@ -1738,6 +1746,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	}
 	else
 	{
+#endif
 		if (is_bex_address)
 		{
 			/* workaround for special case */
@@ -1750,8 +1759,11 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+
+			// @todo: check! If not acctually a problem (during Handover). Andrey.
+			if( err==-ECOMM ) err = 0;
 		}
-	}
+		//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
@@ -2257,6 +2269,7 @@ void hip_uninit_hadb()
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
+//	hip_ht_uninit(hadb_hit);
 #if 0
 	HIP_DEBUG("DELETING HA HT\n");
 	list_for_each_entry_safe(ha, tmp, hadb_byhit[i], next_hit)
@@ -2268,6 +2281,7 @@ void hip_uninit_hadb()
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 #endif
+	
 }
 
 void hip_delete_all_sp()
@@ -2480,6 +2494,8 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	int counter = 0;
 
+	/* @todo: check that the deletion below actually works (hits and addresses are
+	   used inconsistenly) */
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{ 
 		spi_item = list_entry(item);

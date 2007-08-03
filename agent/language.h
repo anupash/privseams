@@ -18,7 +18,7 @@
 /* FUNCTION DEFINITIONS */
 
 /* This is a template file for new files. */
-int lang_init(const char *);
+int lang_init(const char *, const char *);
 void lang_quit(void);
 char *lang_get(const char *);
 

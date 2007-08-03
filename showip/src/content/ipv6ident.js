@@ -507,7 +507,7 @@ function isHipUsed(aIps) {
                 var i1 = parseInt(v1, 16);
                 var i2 = parseInt(v2, 16) & 0xfff0;
                 if (i1 == 0x2001) iship = 1;
-                if (i2 != 0x0070) iship = 0;
+                if (i2 != 0x0010) iship = 0;
         }
         //return iship;
 	return iship;

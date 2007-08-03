@@ -71,11 +71,19 @@
 #define SO_HIP_CANCEL_ESCROW                    138
 #define SO_HIP_CANCEL_RENDEZVOUS                139
 #define SO_HIP_GET_LOCAL_HI                     140
-/* Socket option for hipconf to change the used gateway with openDHT */
+/* Socket option for hipconf to change the used gateway with OpenDHT */
 #define SO_HIP_DHT_GW                           141
 #define SO_HIP_GET_HITS                         142
 #define SO_HIP_GET_HA_INFO			143
 #define SO_HIP_DEFAULT_HIT			144
+#define SO_HIP_SET_DEBUG_ALL			145
+#define SO_HIP_SET_DEBUG_MEDIUM			146
+#define SO_HIP_SET_DEBUG_NONE			147
+/* Socket option for hipconf to ask about the used gateway with OpenDHT*/
+#define SO_HIP_DHT_SERVING_GW                   148
+#define SO_HIP_HANDOFF_ACTIVE			149
+#define SO_HIP_HANDOFF_LAZY			150
+
 /** @} */
 
 #endif /* _HIP_ICOMM */

@@ -41,7 +41,8 @@
 #define HIP_DH_OAKLEY_15              4 /* 3072-bit MODP group */
 #define HIP_DH_OAKLEY_17              5 /* 6144-bit MODP group */
 #define HIP_DH_OAKLEY_18              6 /* 8192-bit MODP group */
-#define HIP_DEFAULT_DH_GROUP_ID       HIP_DH_OAKLEY_5
+#define HIP_FIRST_DH_GROUP_ID       HIP_DH_OAKLEY_5
+#define HIP_SECOND_DH_GROUP_ID      HIP_DH_384
 #define HIP_MAX_DH_GROUP_ID 7 
 
 #define HIP_MAX_DSA_KEY_LEN 4096
@@ -50,6 +51,9 @@
 
 #define DSA_KEY_DEFAULT_BITS    (128 * 8)
 #define RSA_KEY_DEFAULT_BITS    1024
+
+//#define DSA_KEY_DEFAULT_BITS    512
+//#define RSA_KEY_DEFAULT_BITS    512
 
 #define DEFAULT_CONFIG_DIR        "/etc/hip"
 #define DEFAULT_CONFIG_DIR_MODE   0755

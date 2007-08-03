@@ -7,6 +7,7 @@
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 
 int hip_xfrmapi_beet;
+int hip_xfrmapi_sa_default_prefix;
 
 char **e_algo_names; 
 char **a_algo_names;
@@ -34,6 +35,10 @@ void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
 
 void hip_xfrm_set_beet(int beet) {
 	hip_xfrmapi_beet = beet;
+}
+
+void hip_xfrm_set_default_sa_prefix_len(int len) {
+	hip_xfrmapi_sa_default_prefix = len;
 }
 
 int hip_xfrm_get_beet(void) {
@@ -302,7 +307,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   0, 0, 0,0, AF_INET6), -1);
+			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -472,7 +477,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
-	HIP_IFEL((enckey < 0 || authkey_len < 0), 1,
+	HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
 		 "Bad enc or auth key len\n");
 
 	/* XX CHECK: is there some kind of range for the SPIs ? */
@@ -542,7 +547,7 @@ int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 	hip_hit_t src_hit, dst_hit;
 	struct in6_addr ip;
-#if 0
+#if 1
 	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));

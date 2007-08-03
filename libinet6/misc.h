@@ -22,8 +22,6 @@
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {
-	HIP_HEXDUMP("a1: ", a1, sizeof(struct in6_addr));
-	HIP_HEXDUMP("a2: ", a2, sizeof(struct in6_addr));
 	return memcmp((const void *) a1, (const void *) a2,
 		      sizeof(struct in6_addr));
 }

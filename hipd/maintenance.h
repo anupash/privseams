@@ -6,6 +6,7 @@
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
+#include "fcntl.h"
 
 #define FORCE_EXIT_COUNTER_START		5
 
@@ -21,9 +22,12 @@ int hip_agent_filter(struct hip_common *msg,
                      struct in6_addr *dst_addr,
 	                 hip_portpair_t *msg_info);
 void register_to_dht();
+void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str);
+int publish_addr(char *tmp_hit_str, char *tmp_addr_str);
 int periodic_maintenance();
 int hip_get_firewall_status();
 void hip_set_firewall_status();
+int hip_agent_update_status(int msg_type, void *data, size_t size);
 
 #endif /* _HIPD_MAINTENANCE */
 

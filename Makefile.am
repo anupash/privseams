@@ -10,8 +10,12 @@ EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 EXTRA_DIST += libhipgui/logo.png libhipgui/newhit.png libhipgui/run.png libhipgui/swtool.png libhipgui/newgroup.png libhipgui/hipstart.conf
+EXTRA_DIST += libhipgui/stock_id_24.png libhipgui/stock_id_48.png libhipgui/stock_keyring_24.png libhipgui/stock_keyring_48.png libhipgui/exec.png
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
+EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
+# Andrei: please insert i3 after OpenDHT after it works. Remove this line
+#
 # Note: libinet6 has to be the first one
 #
 SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent
@@ -25,13 +29,16 @@ rpm:
 	test/packaging/create-rpm.sh
 deb:
 	test/packaging/create-deb.sh
-	test/packaging/create-deb.sh -s
+#	test/packaging/create-deb.sh -s
 
 armel-deb:
 	test/packaging/create-deb.sh -a
 
 source-deb:
 	test/packaging/create-deb.sh -s
+
+agent-deb:
+	test/packaging/create-agent-deb.sh -s
 
 corporate-deb:
 	test/packaging/create-deb.sh -c

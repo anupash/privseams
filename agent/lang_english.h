@@ -23,42 +23,46 @@ char *lang_english[] =
 	/* First is variable name, second is content. */
 	
 	/* Different window titles. */
-	"title-main",				"HIP configuration",
+	"title-main",				"HIP Manager",
 	"title-newhit",				"New HIT",
 	"title-newgroup",			"Create new group",
-	"title-runapp",				"Run application",
+	"title-runapp",				"Execute application",
 	"title-locals",				"Local HIT",
 	"title-msgdlg",				"Question",
 
 	/* System tray menu. */
-	"systray-hide",				"Hide",
-	"systray-show",				"Show",
+	"systray-show",				"Configuration",
+	"systray-exec",				"Execute",
 	"systray-exit",				"Exit",
-	
+	"systray-about",			"About",
+
 	/* Main window menu. */
 	"menu-file",				"File",
 	"menu-file-exit",			"Exit",
+	"menu-file-runapp",			"Execute",
 	
 	"menu-edit",				"Edit",
 	"menu-edit-locals",			"Local HITs",
+	"menu-edit-newgroup",		"Create new group",
+	"menu-edit-addhit",			"Add new HIT",
 	
-	"menu-tools",				"Tools",
-	"menu-tools-runapp",		"Run",
-	"menu-tools-newgroup",		"Create new group\n"
-								"Groups help in ordering and managing HIT's.",
-	"menu-tools-addhit",		"Add new HIT",
+	"menu-help",				"Help",
+	"menu-help-about",			"About",
 
 	/* Toolbar items. */
 	"tb-newgroup",				"New group",
-	"tb-newgroup-tooltip",		"Create new group",
-	"tb-runapp",				"Run",
-	"tb-runapp-tooltip",		"Run new application using HIP libraries",
+	"tb-newgroup-tooltip",		"Create new group\n"
+								"Groups help in ordering and managing HIT's.",
+	"tb-runapp",				"Execute",
+	"tb-runapp-tooltip",		"Execute new application using HIP libraries",
 	"tb-newhit",				"New HIT",
 	"tb-newhit-tooltip",		"Add new HIT",
 	
 	/* Tabs. */
 	"tabs-hits",				"HITs",
-	
+	"tabs-options",				"Options",
+	"tabs-connections",			"Connections",
+
 	/* New HIT dialog. */
 	"nhdlg-button-accept",		"Accept",
 	"nhdlg-button-drop",		"Drop",
@@ -93,7 +97,7 @@ char *lang_english[] =
 	"ngdlg-err-reserved",		"Given group name is reserved!\nChoose another one.",
 	"ngdlg-err-invchar",		"Group name contains invalid characters!\nRename.",
 	
-	/* Tool window (HIT handling). */
+	/* Remote HIT/group handling. */
 	"tw-button-apply",			"Apply",
 	"tw-button-cancel",			"Cancel",
 	"tw-button-delete",			"Delete",
@@ -114,6 +118,13 @@ char *lang_english[] =
 	
 	"tw-hitgroup-type",			"Type:",
 	"tw-hitgroup-lightweight",	"Encryption:",
+
+	/* Options tab. */
+	"opt-title",				"HIP options:",
+	"opt-nat",					"Enable NAT extensions",
+	"opt-info",					"NOTE: Changes are applied instantaneously",
+	"dbg-title",				"Debug options:",
+	"dbg-rstall",				"Reset all SAs (hipconf rst all)",
 	
 	/* Local HIT handling. */
 	"lhdlg-button-apply",		"Apply",
@@ -136,6 +147,7 @@ char *lang_english[] =
 
 	/* Other strings. */
 	"newgroup-error-nolocals",	"Can't create new group,\nno local HITs defined.\nCheck HIP daemon.",
+	"newhit-error-nolocals",	"Can't add new remote HIT,\nno local HITs defined.\nCheck HIP daemon.",
 	"hits-group-emptyitem",		" <empty> ",
 	"ask-delete-hit",			"Are you sure you want to delete selected HIT?",
 	"ask-delete-group",			"Are you sure you want to delete selected group?",

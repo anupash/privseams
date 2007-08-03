@@ -53,7 +53,6 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	}
 
 	HIP_DEBUG("Received a netlink message\n");
-
         memset(&nladdr, 0, sizeof(nladdr));
         nladdr.nl_family = AF_NETLINK;
         nladdr.nl_pid = 0;
@@ -276,7 +275,6 @@ int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 
         memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
-
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
@@ -573,11 +571,18 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	int err = 0, entry;
 
 	/* see print_route() in ip/iproute.c */
-
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
-	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	HIP_DEBUG("sizeof(struct nlmsghdr) =%d\n",sizeof(struct nlmsghdr));
+	HIP_DEBUG("sizeof(struct rtmsg) =%d\n",sizeof(struct rtmsg));
+	HIP_DEBUG("sizeof  n->nlmsg_len =%d\n",  n->nlmsg_len );
+	HIP_HEXDUMP("nlmsghdr : ", n,sizeof(struct nlmsghdr));
+	HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
+	HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
+	HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC],sizeof(struct rtattr));
+	//entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
+	entry=7;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
-
 	if(r->rtm_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(addr.in, src_addr);
 	} else
@@ -896,36 +901,37 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 
 void rtnl_tab_initialize(char *file, char **tab, int size)
 {
-        char buf[512];
-        FILE *fp;
+	char buf[512];
+	FILE *fp;
 
-        fp = fopen(file, "r");
-        if (!fp)
-                return;
-        while (fgets(buf, sizeof(buf), fp)) {
-                char *p = buf;
-                int id;
-                char namebuf[512];
+	fp = fopen(file, "r");
+	if (!fp) return;
 
-                while (*p == ' ' || *p == '\t')
-                        p++;
-                if (*p == '#' || *p == '\n' || *p == 0)
-                        continue;
-                if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s #", &id, namebuf) != 2) {
-                        HIP_ERROR("Database %s is corrupted at %s\n",
-                                file, p);
-                        return;
-                }
+	while (fgets(buf, sizeof(buf), fp))
+	{
+		char *p = buf;
+		int id;
+		char namebuf[512];
 
-                if (id<0 || id>size)
-                        continue;
+		while (*p == ' ' || *p == '\t') p++;
+		
+		if (*p == '#' || *p == '\n' || *p == 0) continue;
 
-                tab[id] = strdup(namebuf);
-        }
-        fclose(fp);
+		if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s #", &id, namebuf) != 2)
+		{
+				HIP_ERROR("Database %s is corrupted at %s\n", file, p);
+				return;
+		}
+
+		if (id < 0 || id > size) continue;
+
+		tab[id] = strdup(namebuf);
+	}
+	
+	fclose(fp);
 }
 
 int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)
@@ -1111,7 +1117,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 n->nlmsg_flags |= NLM_F_ACK;
 
         status = sendmsg(rtnl->fd, &msg, 0);
-
+	HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
         if (status < 0) {
                 HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
@@ -1181,6 +1187,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         }
                         if (answer) {
                                 memcpy(answer, h, h->nlmsg_len);
+				HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
                                 return 0;
                         }
 

@@ -41,6 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
+"handoff mode lazy|active\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
@@ -50,9 +51,10 @@ const char *hipconf_usage =
 "set opp on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPENDHT
-"dht gw <IPv4|hostname> <port> <ttl>\n"
+"dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
-#endif 
+#endif
+"debug all|medium|none\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -79,6 +81,8 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
+	hip_conf_handle_handoff,
+	hip_conf_handle_debug,
 	NULL, /* run */
 };
 
@@ -118,7 +122,11 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
         else if (!strcmp("dht", text))
                 ret = ACTION_DHT;
-	
+	else if (!strcmp("debug", text))
+                ret = ACTION_DEBUG;
+	else if (!strcmp("handoff", text))
+                ret = ACTION_HANDOFF;
+
 	return ret;
 }
 
@@ -169,6 +177,15 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA:
                 count=2;
                 break;
+	case ACTION_HANDOFF:
+	        count = 2;
+                break;
+	case ACTION_DEBUG:
+	        count = 1;
+                break;
+	
+	default:
+	        break;
 
 	}
 
@@ -208,8 +225,11 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_NAT;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
-	else if (!strcmp("all", text))
-		ret = TYPE_ALL;
+	else if (!strcmp("debug", text))
+		ret = TYPE_DEBUG;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
+
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -255,9 +275,18 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_DHT:
 	case ACTION_RST:
 	case ACTION_BOS:
+	case ACTION_HANDOFF:
 	
                 type_arg = 2;
                 break;
+
+	case ACTION_DEBUG:
+	
+                type_arg = 1;
+                break;
+	
+	default:
+	        break;
         }
 
         return type_arg;
@@ -542,6 +571,51 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
 }
 
 
+
+/**
+ * Handles the hipconf commands where the type is @c debug.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_debug(struct hip_common *msg, int action,
+		   const char *opt[], int optc) 
+{
+	int err = 0;
+	int status = 0;
+	struct in6_addr hit;
+
+	if(optc != 0)
+	        HIP_IFEL(1, -EINVAL, "Wrong amount of arguments. Usage:\nhipconf debug all|medium|none\n");
+
+	if (!strcmp("all", opt[0])) {
+	  HIP_INFO("Displaying all debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_ALL;
+	} else if (!strcmp("medium", opt[0])) {
+	  HIP_INFO("Displaying ERROR and INFO debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_MEDIUM;
+	} else if (!strcmp("none", opt[0])) {
+	  HIP_INFO("Displaying no debugging messages\n");
+	  memset(&hit, 0, sizeof(struct in6_addr));
+	  status = SO_HIP_SET_DEBUG_NONE;
+	} else
+	  HIP_IFEL(1, -EINVAL, "Unknown argument\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+
+ out_err:
+	return err;
+}
+
+
+
 /**
  * Handles the hipconf commands where the type is @c bos.
  *
@@ -601,7 +675,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 		memset(&hit,0,sizeof(struct in6_addr));
                 status = SO_HIP_SET_NAT_OFF;
 	} else {
-		HIP_IFEL(0, -1, "bad args\n");
+		HIP_IFEL(1, -1, "bad args\n");
 	}
 #if 0 /* Not used currently */
 	else {
@@ -860,6 +934,7 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
 {
     int ret = 0;
     printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+    /* useless function remove */
     return(ret);
 }
 
@@ -892,10 +967,10 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 #endif /* CONFIG_HIP_OPENDHT */
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
-        /*
-        HIP_DEBUG("addr %s ", inet_ntoa(sa->sin_addr));       
-        HIP_DEBUG("port %s ttl %s\n", opt[1], opt[2]);      
-        */  
+        
+        HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
+                  inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
+          
         ret = 0;
 	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
         IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -909,7 +984,11 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		goto out_err;
 	}
 
+         
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        /*
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 1, 2);
+        */
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out_err;
@@ -931,10 +1010,9 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
 #ifdef CONFIG_HIP_OPENDHT
     int s, error;
     char dht_response[1024];
-    char opendht[] = "planetlab1.diku.dk";
+    char opendht[] = "opendht.nyuld.net";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
-    struct addrinfo serving_gateway;
-    memset(&serving_gateway, '0', sizeof(struct addrinfo));
+    struct addrinfo * serving_gateway;
 
     s = init_dht_gateway_socket(s);
     if (s < 0) 
@@ -950,7 +1028,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit(-1);
     }
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway);
+    error = connect_dht_gateway(s, serving_gateway, 1);
     if (error < 0) 
     {
         HIP_DEBUG("Connect error!\n");
@@ -958,7 +1036,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     }
 
     memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr);
+    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr, 5851);
     ret = opendht_read_response(s, dht_response); 
     close(s);
     if (ret == -1) 
@@ -1028,15 +1106,18 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 					   (char **) &opt[0], optc);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only) {
+int hip_do_hipconf(int argc, char *argv[], int send_only)
+{
 	int err = 0, type_arg,i;
 	long int action, type,hiparg;
 	struct hip_common *msg = NULL;
 	char *text;
 	
 
+	/* This was printing debug messages in STDOUT even with hipd/hipd -b
+	   -- Alberto. */
 	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
+	/* hip_set_logtype(LOGTYPE_STDERR); */
 	
 	/* parse args */
 
@@ -1060,31 +1141,36 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Invalid type argument '%s'\n", argv[type_arg]);
 	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	memset(msg, 0, HIP_MAX_PACKET);
 	hip_get_all_hits(msg,argv);
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
 	if (argc ==3)
-	{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[2],argc - 3);
-	}else{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[3],argc - 3);
-	}
+		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
+	else
+		err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
 	HIP_IFEL(err, -1, "failed to handle msg\n");
 
 	/* hipconf new hi does not involve any messages to hipd */
 	if (hip_get_msg_type(msg) == 0)
 		goto out_err;
 	
+	/* Tell hip daemon, that this message is from agent. */
+/*	if (from_agent)
+	{
+		err = hip_build_param_contents(msg, NULL, HIP_PARAM_AGENT_SEND_THIS, 0);
+		HIP_IFEL(err, -1, "Failed to add parameter to message!\n");
+	}*/
+
 	/* send msg to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
-		 "sending msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
 	if (msg)
 		free(msg);
-	
+
 	return err;
 }
 
@@ -1138,6 +1224,31 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
         return err;
 }
 
+int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
+{	
+	int err=0;
+
+		
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	
+	if (strcmp("active",opt[0]) ==0)
+	{
+		HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+                	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to active successfully\n");
+	}else{
+		
+	  	HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+              	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to lazy successfully\n");
+	}
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+
+   out_err:
+	return err;
+	
+}
 
 
 int hip_get_all_hits(struct hip_common *msg,char *argv[])
@@ -1149,38 +1260,41 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	struct in6_addr *defhit;
 	struct hip_hadb_user_info_state *ha;
 	
-	if (strcmp(argv[1],"get")==0)
-	{	
+	if (strcmp(argv[1], "get") == 0)
+	{
 	
-		if ((strcmp(argv[3],"all")==0) && (strcmp(argv[2],"hi")==0))
+		if ((strcmp(argv[3],"all") == 0) && (strcmp(argv[2],"hi") == 0))
 		{
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
 		
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {	
-		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-		if (strcmp(argv[3], "all") == 0){
-			HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-			HIP_DEBUG_HIT("hi is ", &endp->id.hit);
-		}
-		
-	}
-
-		}else if (strcmp(argv[3], "default")==0) {
-
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+				if (strcmp(argv[3], "all") == 0)
+				{
+					HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+					HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+					HIP_DEBUG_HIT("\n",&endp->id.hit);
+				}
 				
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		defhit = (struct in6_addr *) hip_get_param_contents_direct(current_param);
-		set_hit_prefix(defhit);
-		HIP_DEBUG_IN6ADDR("default hi is ",defhit);
-			
-	}
-			
+			}
 		}
-	}	
-   out_err:
+		else if (strcmp(argv[3], "default") == 0)
+		{
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
+	
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+				set_hit_prefix(defhit);
+				HIP_DEBUG_IN6ADDR("default hi is ",defhit);
+			}
+		}
+	}
+
+out_err:
 	return err;
 	
 }
@@ -1200,6 +1314,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
  * EXEC_LOADLIB_HIP\n
  * EXEC_LOADLIB_NONE\n
  *
+ * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
@@ -1217,20 +1332,28 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	if (do_fork)
 		err = fork();
 
-	if (err < 0) {
+	if (err < 0)
+	{
 		HIP_ERROR("Failed to exec new application.\n");
-	} else if (err > 0) {
+	}
+	else if (err > 0)
+	{
 		err = 0;
-	} else if(err == 0) {
+	}
+	else if(err == 0)
+	{
 		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
-		if (type == EXEC_LOADLIB_HIP) {
+		if (type == EXEC_LOADLIB_HIP)
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
 #else
 			libs = "libinet6.so:libhiptool.so";
 #endif
-		} else {
+		}
+		else
+		{
 #ifdef CONFIG_HIP_OPENDHT
 			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 #else
@@ -1241,7 +1364,8 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 
 		HIP_DEBUG("LD_PRELOADing\n");
 		err = execvp(argv[0], argv);
-		if (err != 0) {
+		if (err != 0)
+		{
 			HIP_DEBUG("Executing new application failed!\n");
 			exit(1);
 		}

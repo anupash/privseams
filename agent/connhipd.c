@@ -123,13 +123,23 @@ int connhipd_handle_msg(struct hip_common *msg,
 	if (type == HIP_AGENT_PING_REPLY)
 	{
 		term_print("Received ping reply from daemon. Connection to daemon established.\n");
-		gui_set_info(lang_get("gui-info-000"));
+		gui_set_info_safe(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
+	}
+	else if (type == HIP_NAT_ON)
+	{
+		hip_gui_update_nat_safe(1);
+		term_print("NAT extensions on.\n");
+	}
+	else if (type == HIP_NAT_OFF)
+	{
+		hip_gui_update_nat_safe(0);
+		term_print("NAT extensions off.\n");
 	}
 	else if (type == HIP_DAEMON_QUIT)
 	{
 		term_print("Daemon quit. Waiting daemon to wake up again...\n");
-		gui_set_info(lang_get("gui-info-001"));
+		gui_set_info_safe(lang_get("gui-info-001"));
 		hip_agent_connected = 0;
 	}
 	else if (type == HIP_ADD_DB_HI)
