@@ -2295,7 +2295,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer,
 							&entry->hit_our)), 
 			 -1, "Error while acquiring a SPI\n");
-		HIP_DEBUG("Got SP :alue for the SA 0x%x\n", new_spi_in);
+		HIP_DEBUG("Got SP :value for the SA 0x%x\n", new_spi_in);
 
 		/** @todo move to rekeying_finish */
 		if (!mapped_spi) {

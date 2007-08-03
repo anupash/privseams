@@ -140,17 +140,27 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	struct hip_common *msg;
  	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
  	u8 *dh_data1 = NULL, *dh_data2 = NULL;
+	struct hip_locator_info_addr_item *addr_list=NULL;
+	struct hip_locator *locator=NULL;
+	hip_ha_t *entry;
+       	uint32_t spi = 0;
 	int * service_list = NULL;
+	int addr_count=0;
 	int service_count = 0;
 	int *list;
 	int count = 0;
-	int i;
+	int i = 0;
+	struct hip_locator_info_addr_item *locators;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	int l, is_add, ii;
+
+
 	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
 		HIP_HIP_3DES_SHA1,
-		HIP_HIP_NULL_SHA1
-	};
+		HIP_HIP_NULL_SHA1	};
  	hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
@@ -252,16 +262,41 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                         -1, "Building of reg_info failed\n");	
 	}
 
+	
+
+
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
  	/********** Signature 2 **********/	
+
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 
+	
+	/************LOCATOR PARAMETER **********************/
+
+	if (locators)
+	{				
+		list_for_each_safe(item, tmp, addresses, ii)
+			{
+				n = list_entry(item);
+				memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+				hip_print_hit("LOCATOR is\n",&locators[i].address);
+					i++;
+			}
+				_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+				
+	}
+	
+	HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,"Building LOCATOR failed\n");			
+	
+	/********************LOCATOR PARAMETER******************************/
+	
 	/* Fill puzzle parameters */
 	{
 		struct hip_puzzle *pz;
@@ -281,6 +316,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
 	}
+
+	
 
  	/************** Packet ready ***************/
 
@@ -307,6 +344,52 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
   	return NULL;
 }
+
+
+int hip_for_each_locator_addr_list(hip_ha_t *entry,
+                                   struct hip_locator *locator,
+                                   void *opaque)
+{
+	int i = 0, err = 0;
+	struct hip_common *msg;
+	struct hip_locator_info_addr_item *locators;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	int l, is_add, ii;
+	
+
+			if (locators)
+			{
+				
+				list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					hip_print_hit("the hits are\n",&locators[i].address);
+					i++;
+				}
+				HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+				
+			}
+
+	memset(n,0,sizeof(n));
+	
+	//HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
+	//	 "Building LOCATOR failed\n");
+ out_err:
+
+	return err;
+}
+
+
+/* really ugly hack ripped from rea.c, must convert to list_head asap */
+struct hip_update_kludge {
+	hip_ha_t **array;
+	int count;
+	int length;
+};
+
 
 /**
  * Transmits an R1 packet to the network.
