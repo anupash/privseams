@@ -454,13 +454,14 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   struct in6_addr tmp_hit, tmp_addr;
   struct addrinfo * serving_gateway;
   char ownaddr[] = "127.0.0.1";
+  
   /*
   struct sigaction act, oact;
   act.sa_handler = connect_alarm;
   sigemptyset(&act.sa_mask);
   act.sa_flags = 0;
   */
-  
+   
   struct hip_common *msg;
   struct hip_opendht_gw_info *gw_info;
   struct in_addr tmp_v4;

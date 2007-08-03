@@ -381,7 +381,7 @@ void register_to_dht ()
 			}
 	
 			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-			tmp_addr_str = hip_convert_hit_to_str(hip_cas-t_sa_addr(&opendht_n->addr), 
+			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), 
                                                               NULL);
 			
 			/*

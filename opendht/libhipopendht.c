@@ -13,6 +13,7 @@
 #include <netinet/ip.h>
 #include <openssl/sha.h>
 #include <errno.h>
+#include <signal.h>
 #include "libhipopendht.h"
 #include "libhipopendhtxml.h"
 #include "debug.h"
@@ -25,6 +26,19 @@
 struct timeval opendht_timer_before, opendht_timer_after;
 unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 */
+
+
+/**
+ *  For interrupting the connect in gethosts_hit 
+ *  @param signo signal number
+ *
+ *  @return void
+ */
+static void 
+connect_alarm(int signo)
+{
+  return; 
+}
 
 /**
  * init_dht_gateway_socket - Initializes socket for the openDHT communications
@@ -83,9 +97,14 @@ int resolve_dht_gateway_info(char * gateway_name,
  */
 int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
-    int flags = 0;
+    int flags = 0, error = 0;
     struct sockaddr_in *sa;
-  
+ 
+    struct sigaction act, oact;
+    act.sa_handler = connect_alarm;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    
     if (gateway == NULL) 
       {
           HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
@@ -94,44 +113,62 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
     
     if (blocking == 1)
       {
-        if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0) 
-          {
-            HIP_PERROR("OpenDHT connect:");
-            return(-1);
-          }
-        else
-          {
-            sa = (struct sockaddr_in *)gateway->ai_addr;
-            HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-            return(0);
-          }
+          error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+          
+          if (sigaction(SIGALRM, &act, &oact) <0 ) 
+              {
+                  HIP_DEBUG("Signal error before OpenDHT connect, connecting without alarm\n");
+                  error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+              }
+          else 
+              {
+                  HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+                  if (alarm(4) != 0)
+                      HIP_DEBUG("Alarm was already set, connecting without\n");
+                  error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+                  alarm(0);
+                  if (sigaction(SIGALRM, &oact, &act) <0 ) 
+                      HIP_DEBUG("Signal error after OpenDHT connect\n");
+              }
+          
+          if (error < 0) 
+              {
+                  HIP_PERROR("OpenDHT connect:");
+                  if (errno == EINTR)
+                      HIP_DEBUG("Connect to OpenDHT timedout\n");
+                  return(-1);
+              }
+          else
+              {
+                  sa = (struct sockaddr_in *)gateway->ai_addr;
+                  HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+                  return(0);
+              }
       }
     else
-      {
+        {
             flags = fcntl(sockfd, F_GETFL, 0);
             fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
-
+            
             sa = (struct sockaddr_in *)gateway->ai_addr;
             HIP_DEBUG("Connecting to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-
+            
             if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
-              {
-                if (errno == EINPROGRESS)
-                  return(EINPROGRESS);
-                else 
-                  {
-                    HIP_PERROR("OpenDHT connect:");
-                    return(-1);
-                  }
-              }
+                {
+                    if (errno == EINPROGRESS)
+                        return(EINPROGRESS);
+                    else 
+                        {
+                            HIP_PERROR("OpenDHT connect:");
+                            return(-1);
+                        }
+                }
             else
-              {
-                /* connect ok */
-                return(0);
-              }
-
-      }
-
+                {
+                    /* connect ok */
+                    return(0);
+                }   
+        }
 } 
 
 /** 
