@@ -150,7 +150,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int *list;
 	int count = 0;
 	int i = 0;
-	struct hip_locator_info_addr_item *locators;
+	struct hip_locator_info_addr_item *locators = NULL;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
 	int l, is_add, ii;
