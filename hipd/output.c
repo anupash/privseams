@@ -289,11 +289,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				hip_print_hit("LOCATOR is\n",&locators[i].address);
 					i++;
 			}
-				_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
-				
+		_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+		HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
+			 "Building LOCATOR failed\n");			
 	}
 	
-	HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,"Building LOCATOR failed\n");			
 	
 	/********************LOCATOR PARAMETER******************************/
 	
