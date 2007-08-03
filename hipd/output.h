@@ -23,6 +23,10 @@
 #include "string.h"
 #include "nat.h"
 
+#ifdef CONFIG_HIP_HI3
+//#include "i3_id.h"
+#endif
+
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern int hip_nat_status;

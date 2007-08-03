@@ -1074,7 +1074,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	}
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = checksum_packet((char *)msg, 
+	msg->checksum = hip_checksum_packet((char *)msg, 
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);
 
