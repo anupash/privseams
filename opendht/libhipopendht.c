@@ -93,7 +93,7 @@ int resolve_dht_gateway_info(char * gateway_name,
  *  @param addrinfo Address to connect to 
  *  @param blocking 1 for blocking connect 0 for nonblocking
  *
- *  @return Returns 0 on success -1 otherwise, if nonblocking can return also EINPRGORESS
+ *  @return Returns 0 on success -1 otherwise, if nonblocking can return EINPRGORESS
  */
 int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
@@ -113,11 +113,12 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
     
     if (blocking == 1)
       {
-          error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+          //       error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen); 
           
           if (sigaction(SIGALRM, &act, &oact) <0 ) 
               {
-                  HIP_DEBUG("Signal error before OpenDHT connect, connecting without alarm\n");
+                  HIP_DEBUG("Signal error before OpenDHT connect, "
+                            "connecting without alarm\n");
                   error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
               }
           else 
