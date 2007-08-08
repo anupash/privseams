@@ -62,7 +62,7 @@ void info_set(const char *string, ...)
 	vasprintf(&str, string, args);
 	va_end(args);
 	
-	/* Set info to statusbar in safe mode. */
+	/* Set info to statusbar in normal mode. */
 	_info_set(str, 0);
 	
 	/* Free allocated string pointer. */
@@ -414,7 +414,7 @@ int group_remote_create(const char *name)
 			g->lightweight = lw;
 
 			pthread_create(&pt, NULL, _group_remote_add_thread, g);
-			pthread_join(pt, NULL);
+			//pthread_join(pt, NULL);
 			err = 0;
 		}
 		else err = -1;
@@ -686,6 +686,53 @@ void edit_reset(void)
 	str_var_set("edit-mode", "none");
 }
 
+
+/******************************************************************************/
+/**
+ * Set remote HIT info to edit.
+ *
+ * @param hit_name Name of HIT.
+ */
+void edit_hit_remote(char *hit_name)
+{
+	GtkWidget *container = widget(ID_TW_CONTAINER);
+	GtkWidget *w;
+	HIT_Remote *hit;
+	char str[320], *ps;
+	int i;
+
+	hit = hit_db_find(hit_name, NULL);
+	if (!hit) return;
+	
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_NAME)), hit->name);
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_URL)), hit->url);
+	//sprintf(str, "%d", hit->port);
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_PORT)), hit->port);
+
+	print_hit_to_buffer(str, &hit->hit);
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_REMOTE)), str);
+
+	i = combo_box_find(hit->g->name, widget(ID_TWR_RGROUP));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), i);
+
+//		tw_set_remote_rgroup_info(hit->g);
+	
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), TRUE);
+	gtk_container_add(GTK_CONTAINER(container), widget(ID_TWREMOTE));
+	gtk_widget_show(GTK_WIDGET(widget(ID_TWREMOTE)));
+	g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
+	
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), TRUE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), TRUE);
+	gtk_widget_show(GTK_WIDGET(widget(ID_TW_APPLY)));
+	gtk_widget_show(GTK_WIDGET(widget(ID_TW_DELETE)));
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_NAME)), TRUE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_RGROUP)), TRUE);
+
+	/* Set edit mode as HIT edit. */
+	pointer_set(ID_EDIT_REMOTE, hit);
+	str_var_set("edit-mode", "hit-remote");
+}
 
 
 /******************************************************************************/

@@ -140,7 +140,7 @@ void e_button(GtkWidget *warg, gpointer data)
 		break;
 	
 	case IDM_NEWHIT:
-// 		gui_ask_new_hit(NULL, 2);
+		gui_hit_remote_ask(NULL, 2);
 		break;
 	
 	case IDM_NEWGROUP:
@@ -217,10 +217,7 @@ gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
 			else if (depth == 1)
 				edit_group_remote(str);
 			else if (depth == 2)
-			{
-// 				tw_set_mode(TWMODE_REMOTE);
-// 				tw_set_remote_info(str);
-			}
+				edit_hit_remote(str);
 		}
 		
 		gtk_tree_path_free(path);

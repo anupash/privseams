@@ -21,6 +21,7 @@
 int main_create_content(void);
 int create_content_local_edit(void);
 int create_content_msgdlg(void);
+int create_content_ngdlg(void);
 
 
 #endif /* END OF HEADER FILE */
