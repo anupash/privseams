@@ -18,18 +18,22 @@ int main(int argc, char *argv[])
 {
     if (argc != 3) {
         printf("Usage: %s num iterations\n", argv[0]);
-        printf("Num = 0 for regular testing of functions (iterations not used just give 1)\n");
-        printf("Num = 1 get test times when value not found\n");
-        printf("Num = 2 get test times when value is found\n");
-        printf("Num = 3 put test times with 10 byte value (same key)\n");
-        printf("Num = 4 put test times with 10 byte value, waiting 5 sec in between puts(same key)\n");
-        printf("Num = 5 put test times with 10 byte value (random key, short TTL)\n");
-        printf("Num = 6 put test times with 10 byte value, waiting 5 sec in between puts(random key, short TTL)\n");
-        printf("Num = 7 put test times with consecutive keys and 985 byte values\n");
-        printf("Num = 8 put test times with consecutive keys and 985 byte values with 5 sec sleep in between puts\n");
-        printf("Num = 9 get test times with consecutive keys (do number 8 first)\n");
-        printf("Iterations, just as it says\n");
-        printf("Connect errors will print 999;999\n");
+        printf("Num = 0 for regular testing of functions "
+               "(iterations not used just give 1)\n"
+               "Num = 1 get test times when value not found\n"
+               "Num = 2 get test times when value is found\n"
+               "Num = 3 put test times with 10 byte value (same key)\n"
+               "Num = 4 put test times with 10 byte value, "
+               "waiting 5 sec in between puts(same key)\n"
+               "Num = 5 put test times with 10 byte value (random key, short TTL)\n"
+               "Num = 6 put test times with 10 byte value, waiting 5 sec "
+               "in between puts(random key, short TTL)\n"
+               "Num = 7 put test times with consecutive keys and 985 byte values\n"
+               "Num = 8 put test times with consecutive keys and 985 byte values "
+               "with 5 sec sleep in between puts\n"
+               "Num = 9 get test times with consecutive keys (do number 7 or 8 first)\n"
+               "Iterations, just as it says\n"
+               "Connect errors will print 999;999\n");
         exit(EXIT_SUCCESS);
     }
 
@@ -39,18 +43,22 @@ int main(int argc, char *argv[])
     struct in6_addr val_ip_addr; 
     */
     char opendht[] = "opendht.nyuld.net";
-    char dht_response[1024];
-    char dht_response2[1024];
+    /* both responses were 1024 before */
+    /* now more because base64 lengthens the message */
+    char dht_response[1400]; 
+    char dht_response2[1400]; 
     /* Test values */  
     char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
     char key_test[] = "Testiavain";
     char key_rand[] = "random_key";
     char val_tenbyte[] = "1234567890";
-    char val_onekilo[985];
+    /* smaller than 1K actually because any larger will bounce from DHT */
+    char val_onekilo[985]; 
     char val_hit[] = "2001:0071:7c97:a5b4:6c73:1b1b:081e:126d";
     char val_ip[] = "128.196.1.100";
-    char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
+    /* TODO change this to something smarter :) */
+    char host_addr[] = "127.0.0.1"; 
     int n = 0, iter = 0;
     struct timeval conn_before, conn_after; 
     struct timeval stat_before, stat_after;
@@ -91,8 +99,10 @@ int main(int argc, char *argv[])
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
-            ret = opendht_put(s, (unsigned char *)val_host,
-                              (unsigned char *)val_hit, (unsigned char *)host_addr,5851,120);   
+            ret = opendht_put(s, 
+                              (unsigned char *)val_host,
+                              (unsigned char *)val_hit, 
+                              (unsigned char *)host_addr,5851,120);   
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (fqdn->hit) sent and ...\n");
@@ -105,8 +115,10 @@ int main(int argc, char *argv[])
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
-            ret = opendht_put(s, (unsigned char *)val_hit,
-                              (unsigned char *)val_ip, (unsigned char *)host_addr,5851,120);
+            ret = opendht_put(s, 
+                              (unsigned char *)val_hit,
+                              (unsigned char *)val_ip, 
+                              (unsigned char *)host_addr,5851,120);
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (hit->ip) sent and ...\n");
@@ -193,7 +205,8 @@ int main(int argc, char *argv[])
                             ret = 0;
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
-                            ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, 5851); 
+                            ret = opendht_get(s, (unsigned char *)val_bogus, 
+                                              (unsigned char *)host_addr, 5851); 
                             ret = opendht_read_response(s, dht_response2); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -212,7 +225,8 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '2')
         {
             printf("Get test times when value is found\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             
             s = init_dht_gateway_socket(s);
@@ -221,7 +235,8 @@ int main(int argc, char *argv[])
             ret = 0;
             /* iterations by estimate seconds, so the value is there long enough */
             ret = opendht_put(s, (unsigned char *)val_hit,
-                              (unsigned char *)val_ip, (unsigned char *)host_addr,5851,(iter * 3)); 
+                              (unsigned char *)val_ip, 
+                              (unsigned char *)host_addr,5851,(iter * 3)); 
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (hit->ip) sent and ...\n");
@@ -245,7 +260,8 @@ int main(int argc, char *argv[])
                             ret = 0;
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
-                            ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851); 
+                            ret = opendht_get(s, (unsigned char *)val_hit, 
+                                              (unsigned char *)host_addr, 5851); 
                             ret = opendht_read_response(s, dht_response2); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -264,7 +280,8 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '3')
         {
             printf("Put test times with 10 byte value (same key)\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
@@ -286,7 +303,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
                             ret = opendht_put(s, (unsigned char *)key_test,
-                                              (unsigned char *)val_tenbyte, (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)val_tenbyte, 
+                                              (unsigned char *)host_addr,5851,20); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -304,8 +322,10 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '4')
         {
-            printf("Put test times with 10 byte value, waiting 5 sec in between puts (same key)\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Put test times with 10 byte value, waiting "
+                   "5 sec in between puts (same key)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             
             for (n = 0; n < iter; n++)
@@ -327,7 +347,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
                             ret = opendht_put(s, (unsigned char *)key_test,
-                                              (unsigned char *)val_tenbyte, (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)val_tenbyte, 
+                                              (unsigned char *)host_addr,5851,20); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -347,7 +368,8 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '5')
         {
             printf("Put test times with 10 byte value (random key, short TTL)\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
 
             srand(time(NULL));
@@ -374,7 +396,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
                             ret = opendht_put(s, (unsigned char *)key_rand,
-                                              (unsigned char *)val_tenbyte, (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)val_tenbyte, 
+                                              (unsigned char *)host_addr,5851,20); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -392,8 +415,10 @@ int main(int argc, char *argv[])
         }
     else if (argv[1][0] == '6')
         {
-            printf("Put test times with 10 byte value, waiting 5 sec in between puts(random key, short TTL)\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Put test times with 10 byte value, waiting 5 sec in "
+                   "between puts(random key, short TTL)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
@@ -419,7 +444,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
                             ret = opendht_put(s, (unsigned char *)key_rand,
-                                              (unsigned char *)val_tenbyte, (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)val_tenbyte, 
+                                              (unsigned char *)host_addr,5851,20); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -440,14 +466,16 @@ int main(int argc, char *argv[])
         {
             memset(val_onekilo,'a',sizeof(val_onekilo));
             printf("Put test times with consecutive keys and 985 byte values\n");
-            printf("Printing \"connection time; get time; DHT answer (0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Printing \"connection time; get time; DHT answer "
+                   "(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    ra= (n + 1) * 1000000; /* consecutive key instead of random as the variable says */
+                    /* consecutive key instead of random as the variable says */
+                    ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
                     s = init_dht_gateway_socket(s);
@@ -466,7 +494,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just iter * 60 secs so values can be found in get test */
                             ret = opendht_put(s, (unsigned char *)key_rand,
-                                              (unsigned char *)val_onekilo, (unsigned char *)host_addr,5851,(iter* 60)); 
+                                              (unsigned char *)val_onekilo, 
+                                              (unsigned char *)host_addr,5851,(iter* 60)); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -485,7 +514,8 @@ int main(int argc, char *argv[])
     else if (argv[1][0] == '8')
         {
             memset(val_onekilo,'a',sizeof(val_onekilo));
-            printf("Put test times with consecutive keys and 985 byte values with 5 sec sleep between puts\n");
+            printf("Put test times with consecutive keys and 985 byte values"
+                   " with 5 sec sleep between puts\n");
             printf("Printing \"connection time; get time; DHT answer\n");
             printf("(0 = OK, 1 = error, 2 = retry, or some value)\n");
             printf("Doing %s iterations\n", argv[2]);
@@ -494,7 +524,8 @@ int main(int argc, char *argv[])
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    ra= (n + 1 ) * 1000000; /* consecutive key instead of random as the variable says */
+                    /* consecutive key instead of random as the variable says */
+                    ra= (n + 1 ) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
                     s = init_dht_gateway_socket(s);
@@ -513,7 +544,8 @@ int main(int argc, char *argv[])
                             gettimeofday(&stat_before, NULL);
                             /* TTL just iter * 60 secs so values can be found in get test */
                             ret = opendht_put(s, (unsigned char *)key_rand,
-                                              (unsigned char *)val_onekilo, (unsigned char *)host_addr,5851,(iter * 60)); 
+                                              (unsigned char *)val_onekilo, 
+                                              (unsigned char *)host_addr,5851,(iter * 60)); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -532,16 +564,19 @@ int main(int argc, char *argv[])
         }        
     else if (argv[1][0] == '9')
         {     
-            printf("Get test times with consecutive keys (do number 8 first, otherwise it will be num 2)\n");
+            printf("Get test times with consecutive keys (do number 7 or 8 first,"
+                   " otherwise it will be num 2)\n");
             printf("Printing \"connection time; get time; DHT answer\n");
-            printf("(0 = OK, 1 = error, 2 = retry, or some value (printing just first character, its just 985 'a's))\n");
+            printf("(0 = OK, 1 = error, 2 = retry, or some value "
+                   "(printing just first character, its just 985 'a's))\n");
             printf("Doing %s iterations\n", argv[2]);
             srand(time(NULL));
             int ra = 0;
             for (n = 0; n < iter; n++)
                 {
                     HIP_DEBUG("Iteration no %d\n",n);
-                    ra= (n + 1) * 1000000; /* consecutive key instead of random as the variable says */
+                    /* consecutive key instead of random as the variable says */
+                    ra= (n + 1) * 1000000; 
                     sprintf(key_rand, "%.d", ra);
                     HIP_DEBUG("Consecutive key  %s\n", key_rand);
                     s = init_dht_gateway_socket(s);
@@ -558,7 +593,8 @@ int main(int argc, char *argv[])
                             ret = 0;
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
-                            ret = opendht_get(s, (unsigned char *)key_rand, (unsigned char *)host_addr, 5851); 
+                            ret = opendht_get(s, (unsigned char *)key_rand, 
+                                              (unsigned char *)host_addr, 5851); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
