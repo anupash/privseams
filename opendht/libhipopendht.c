@@ -277,7 +277,7 @@ int opendht_get(int sockfd,
         key_len = sizeof(addrkey.s6_addr);
     }
 
-    /* Put operation FQDN->HIT */
+    /* Get operation */
     memset(get_packet, '\0', sizeof(get_packet));
     if (build_packet_get((unsigned char *)tmp_key,
                          key_len,
