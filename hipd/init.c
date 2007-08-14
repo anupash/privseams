@@ -328,8 +328,8 @@ int hip_set_lowcapability() {
 	HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
 		 "Error while retrieving USER 'nobody' uid\n"); 
 
-	HIP_IFEL(capget(&header, &data). -1,
-		 "error while retrieving capabilities through 'capget()'");
+	HIP_IFEL(capget(&header, &data), -1,
+		 "error while retrieving capabilities through capget()\n");
 
 	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
 		  data.effective, data.permitted, data.inheritable);
@@ -360,7 +360,7 @@ int hip_set_lowcapability() {
 
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
 	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective, data. permitted,data.inheritable);
+		  data.effective, data.permitted, data.inheritable);
 #endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:

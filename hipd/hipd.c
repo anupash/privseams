@@ -166,12 +166,12 @@ int hip_sock_recv_agent(void)
 		}
 		else if (emsg && src_addr && dst_addr && msg_info)
 		{
-		#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 
 			HIP_DEBUG("Received rejected R1 packet from agent.\n");
 			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
-		#endif
+#endif
 		}
 	}
 	
@@ -325,7 +325,8 @@ int hipd_main(int argc, char *argv[])
 	else
 	{
 		hip_set_logtype(LOGTYPE_SYSLOG);
-		if (fork() > 0) return(0);
+		if (fork() > 0)
+			return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());
