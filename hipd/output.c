@@ -786,11 +786,12 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1,
 			 "Queueing failed.\n");
 	
-	/* Required for mobility; ensures that we are sending packets from
-	   the correct source address */
+	/* Handover may cause e.g. on-link duplicate address detection which may cause bind to fail.
+	   This is a kludge because we don't have UPDATE retransmissions yet. */
 	for (try_again = 0; try_again < 2; try_again++) {
 		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
-		if (err == EADDRNOTAVAIL) {
+		HIP_DEBUG("Binding to raw socket returned %d\n", err);
+		if (err) {
 			HIP_DEBUG("Binding failed 1st time, trying again\n");
 			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
 			sleep(2);
@@ -798,7 +799,9 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 			break;
 		}
 	}
+
 	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
+
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
 		HIP_DEBUG("Packet was lost (simulation)\n");
