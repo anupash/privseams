@@ -2437,7 +2437,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  			if (ntohs(*tfm) == table[j]) {
  				_HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
  					  table[j], i);
- 				return table[j];
+ 				return table[j];  
  			}
  		}
  	}
@@ -2484,6 +2484,41 @@ int hip_build_param_locator(struct hip_common *msg,
 	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
 	//	       addresses, addrs_len);
 
+ out_err:
+	if (locator_info)
+		free(locator_info);
+
+	return err;
+}
+
+int hip_build_param_locator_list(struct hip_common *msg,
+			struct hip_locator_info_addr_item *addresses,
+			int address_count)
+{
+	int err = 0;
+	struct hip_locator *locator_info = NULL;
+	int addrs_len = address_count *
+		(sizeof(struct hip_locator_info_addr_item));
+
+	HIP_IFE(!(locator_info =
+		  malloc(sizeof(struct hip_locator) + addrs_len)), -1);
+
+	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(locator_info,
+				   sizeof(struct hip_locator),
+				   addrs_len);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len);
+
+	memcpy(locator_info + 1, addresses, addrs_len);
+	HIP_IFE(hip_build_param(msg, locator_info), -1);
+
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	//if (addrs_len > 0)
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	       addresses, addrs_len);
  out_err:
 	if (locator_info)
 		free(locator_info);
