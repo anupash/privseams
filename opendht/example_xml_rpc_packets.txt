@@ -1,6 +1,7 @@
 Example XML RPC packets used with the opendht (indented for easier reading).
 Packets are divided into to output and input packets. Output packets are put
-and get packets. Input packets are key was not found, status code, value, and fault code
+and get packets. Input packets are key was not found, status code, value, and 
+fault code
 
 ==============
 Output packets
@@ -41,6 +42,67 @@ Content-length: 354
         <int>
           120
         </int> 
+      </value>
+    </param>
+    <param>
+      <value>
+        <string>
+          HIPL
+        </string>
+      </value>
+    </param>
+  </params>
+</methodCall>
+
+----------------------
+(put_removable packet)
+----------------------
+
+POST /RPC2 HTTP/1.0
+User-Agent: hipl
+Host: 127.0.0.1:5851
+Content-Type: text/xml
+Content-length: 493
+
+<?xml version="1.0"?>
+<methodCall>
+  <methodName>
+    put_removable
+  </methodName>
+  <params>
+    <param>
+      <value>
+        <base64>
+          qUqP5cyxm6YcTAhz05Hphw==
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <base64>
+          MjAwMTowMDcxOjdjOTc6YTViNDo2YzczOjFiMWI6MDgxZToxMjZk
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <string>
+          SHA
+        </string>
+      </value>
+    </param>
+    <param>
+      <value>
+        <base64>
+          c2VjcmV0X3N0cl9pc19zZWNyZXQ=
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <int>
+          120
+        </int>
       </value>
     </param>
     <param>
@@ -217,13 +279,17 @@ Content-Length: 311
             <array>
               <data>
                 <value>
-                  <base64>8LhGCeXxLFXdhauo1dm+92gI87Vy5ZABErgZJ7pbtfZ+G9ootASb8OSu142xXXvy/Aw06amd5O87wrF8gTetZQ==</base64>
+                  <base64>
+		    8LhGCeXxLFXdhauo1dm+92gI87Vy5ZABErgZJ7pbtfZ+G9ootASb8OSu142xXXvy/Aw06amd5O87wrF8gTetZQ==
+		  </base64>
                 </value>
               </data>
             </array>
           </value>
           <value>
-            <base64>AAPub+SbJ7AAAAB4c9Uau9icuBlvDvtokvlNaPzMLDW9mjT/gSAUXQFBomDTS2VurrSRkAF/AAAB</base64>
+            <base64>
+	      AAPub+SbJ7AAAAB4c9Uau9icuBlvDvtokvlNaPzMLDW9mjT/gSAUXQFBomDTS2VurrSRkAF/AAAB
+            </base64>
           </value>
         </data>
       </array>
@@ -234,6 +300,9 @@ Content-Length: 311
 
 ---------------------------------
 (Error received from the openDHT)
+(                               )
+(usually caused by malformed xml)
+(or exceeding limits            )
 ---------------------------------
 
 HTTP/1.0 200 OK

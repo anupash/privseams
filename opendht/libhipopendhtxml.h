@@ -1,9 +1,15 @@
 /* All XML RPC packet creation and reading functions */
 
+int build_packet_put_rm(unsigned char *, int, unsigned char *, 
+                     int, unsigned char *, int, int, unsigned char*, char *, int);
+
 int build_packet_put(unsigned char *, int, unsigned char *, 
                      int, int, unsigned char*, char *, int);
 
 int build_packet_get(unsigned char *, int, int, unsigned char*, char *);
+
+int build_packet_rm(unsigned char *, int, unsigned char *,
+                    int, unsigned char *, int, int, unsigned char *, char *, int); 
 
 int read_packet_content(char *, char *);
 

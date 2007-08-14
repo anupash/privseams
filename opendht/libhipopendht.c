@@ -19,15 +19,6 @@
 #include "debug.h"
 #include "fcntl.h"
 
-
-/*
-#include "time.h"
-
-struct timeval opendht_timer_before, opendht_timer_after;
-unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
-*/
-
-
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -37,7 +28,7 @@ unsigned long opendht_timer_diff_sec, opendht_timer_diff_usec;
 static void 
 connect_alarm(int signo)
 {
-  return; 
+    return; 
 }
 
 /**
@@ -50,8 +41,8 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
-   else HIP_DEBUG("\n OpenDHT communication socket created successfully \n");
-
+    else HIP_DEBUG("\n OpenDHT communication socket created successfully \n");
+    
     return(sockfd);      
 }
 
@@ -65,26 +56,26 @@ int init_dht_gateway_socket(int sockfd)
 int resolve_dht_gateway_info(char * gateway_name, 
                              struct addrinfo ** gateway)
 {
-        struct addrinfo hints;
-	struct sockaddr_in *sa = NULL;
-	int error;
-	
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_NODHT;
-	error = 0;
-	
-	error = getaddrinfo(gateway_name, "5851", &hints, gateway);
-	if (error != 0)
-		HIP_DEBUG("OpenDHT gateway resolving failed\n");
-	else
+    struct addrinfo hints;
+    struct sockaddr_in *sa = NULL;
+    int error;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NODHT;
+    error = 0;
+    
+    error = getaddrinfo(gateway_name, "5851", &hints, gateway);
+    if (error != 0)
+        HIP_DEBUG("OpenDHT gateway resolving failed\n");
+    else
 	{
-		sa = (struct sockaddr_in *) (*gateway)->ai_addr;
-		HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
+            sa = (struct sockaddr_in *) (*gateway)->ai_addr;
+            HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
 	}
-
-	return error;
+    
+    return error;
 }
 
 /**
@@ -99,53 +90,51 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 {
     int flags = 0, error = 0;
     struct sockaddr_in *sa;
- 
+    
     struct sigaction act, oact;
     act.sa_handler = connect_alarm;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
     
     if (gateway == NULL) 
-      {
-          HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
-          return(-1);
-      }
+        {
+            HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
+            return(-1);
+        }
     
     if (blocking == 1)
-      {
-          //       error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen); 
-          
-          if (sigaction(SIGALRM, &act, &oact) <0 ) 
-              {
-                  HIP_DEBUG("Signal error before OpenDHT connect, "
-                            "connecting without alarm\n");
-                  error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
-              }
-          else 
-              {
-                  HIP_DEBUG("Connecting to OpenDHT with alarm\n");
-                  if (alarm(4) != 0)
-                      HIP_DEBUG("Alarm was already set, connecting without\n");
-                  error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
-                  alarm(0);
-                  if (sigaction(SIGALRM, &oact, &act) <0 ) 
-                      HIP_DEBUG("Signal error after OpenDHT connect\n");
-              }
-          
-          if (error < 0) 
-              {
-                  HIP_PERROR("OpenDHT connect:");
-                  if (errno == EINTR)
-                      HIP_DEBUG("Connect to OpenDHT timedout\n");
-                  return(-1);
-              }
-          else
-              {
-                  sa = (struct sockaddr_in *)gateway->ai_addr;
-                  HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-                  return(0);
-              }
-      }
+        {
+            if (sigaction(SIGALRM, &act, &oact) <0 ) 
+                {
+                    HIP_DEBUG("Signal error before OpenDHT connect, "
+                              "connecting without alarm\n");
+                    error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+                }
+            else 
+                {
+                    HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+                    if (alarm(4) != 0)
+                        HIP_DEBUG("Alarm was already set, connecting without\n");
+                    error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+                    alarm(0);
+                    if (sigaction(SIGALRM, &oact, &act) <0 ) 
+                        HIP_DEBUG("Signal error after OpenDHT connect\n");
+                }
+            
+            if (error < 0) 
+                {
+                    HIP_PERROR("OpenDHT connect:");
+                    if (errno == EINTR)
+                        HIP_DEBUG("Connect to OpenDHT timedout\n");
+                    return(-1);
+                }
+            else
+                {
+                    sa = (struct sockaddr_in *)gateway->ai_addr;
+                    HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+                    return(0);
+                }
+        }
     else
         {
             flags = fcntl(sockfd, F_GETFL, 0);
@@ -173,6 +162,73 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
 } 
 
 /** 
+ * opendht_put_rm - Builds XML RPC packet and sends it through given socket and reads the response
+ * @param sockfd Socket to be used with the send
+ * @param key Key for the openDHT
+ * @param value Value to be stored to the openDHT
+ * @param secret Value to be used as a secret in remove
+ * @param host Host address
+ * @param response Buffer where the possible error message is saved 
+ *
+ * @return Returns integer -1 on error, on success 0
+ */
+int opendht_put_rm(int sockfd, 
+                   unsigned char * key,
+                   unsigned char * value, 
+                   unsigned char * secret,
+                   unsigned char * host,
+                   int opendht_port,
+                   int opendht_ttl)
+{
+    int key_len = 0, i = 0;
+    unsigned char *sha_retval;
+    char put_packet[2048];
+    char tmp_key[21];
+    struct in6_addr addrkey;
+    
+    /* check for too long keys and convert HITs to numeric form */
+    memset(tmp_key, '\0', sizeof(tmp_key));
+    if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
+        {
+        /* inet_pton failed because of invalid IPv6 address */
+            memset(tmp_key,'\0',sizeof(tmp_key));
+            sha_retval = SHA1(key, sizeof(key), tmp_key);
+            key_len = 16;
+            if (!sha_retval)
+                {
+                    HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                    return(-1);
+                }                
+        } 
+    else 
+        {
+            /* key was in IPv6 format so propably is a HIT */
+            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+            key_len = sizeof(addrkey.s6_addr);
+        }
+    
+    /* Put operation FQDN->HIT */
+    memset(put_packet, '\0', sizeof(put_packet));
+    if (build_packet_put_rm((unsigned char *)tmp_key,
+                         key_len,
+                         (unsigned char *)value,
+	                 strlen((char *)value),
+                         (unsigned char *)secret,
+                         strlen((char *)secret),
+                         opendht_port,
+                         (unsigned char *)host,
+                         put_packet, opendht_ttl) != 0)
+        {
+            HIP_DEBUG("Put(rm) packet creation failed.\n");
+            return(-1);
+        }
+    HIP_DEBUG("Host address in OpenDHT put(rm) : %s\n", host); 
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
+    send(sockfd, put_packet, strlen(put_packet), 0);
+    return(0);
+}
+
+/** 
  * opendht_put - Builds XML RPC packet and sends it through given socket and reads the response
  * @param sockfd Socket to be used with the send
  * @param key Key for the openDHT
@@ -194,41 +250,41 @@ int opendht_put(int sockfd,
     char put_packet[2048];
     char tmp_key[21];
     struct in6_addr addrkey;
-
+    
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-    {
-        /* inet_pton failed because of invalid IPv6 address */
-        memset(tmp_key,'\0',sizeof(tmp_key));
-        sha_retval = SHA1(key, sizeof(key), tmp_key);
-        key_len = 16;
-        if (!sha_retval)
-            {
-                HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
-                return(-1);
-            }                
-    } 
+        {
+            /* inet_pton failed because of invalid IPv6 address */
+            memset(tmp_key,'\0',sizeof(tmp_key));
+            sha_retval = SHA1(key, sizeof(key), tmp_key);
+            key_len = 16;
+            if (!sha_retval)
+                {
+                    HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                    return(-1);
+                }                
+        } 
     else 
-    {
-        /* key was in IPv6 format so propably is a HIT */
-        memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
-        key_len = sizeof(addrkey.s6_addr);
-    }
-
+        {
+            /* key was in IPv6 format so propably is a HIT */
+            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+            key_len = sizeof(addrkey.s6_addr);
+        }
+    
     /* Put operation FQDN->HIT */
     memset(put_packet, '\0', sizeof(put_packet));
     if (build_packet_put((unsigned char *)tmp_key,
                          key_len,
-                        (unsigned char *)value,
+                         (unsigned char *)value,
 	                 strlen((char *)value),
                          opendht_port,
                          (unsigned char *)host,
                          put_packet, opendht_ttl) != 0)
-    {
+        {
         HIP_DEBUG("Put packet creation failed.\n");
         return(-1);
-    }
+        }
     HIP_DEBUG("Host address in OpenDHT put : %s\n", host); 
     HIP_DEBUG("Actual OpenDHT send starts here\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
@@ -259,24 +315,24 @@ int opendht_get(int sockfd,
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-    {
-        /* inet_pton failed because of invalid IPv6 address */
-        memset(tmp_key,'\0',sizeof(tmp_key));
-        sha_retval = SHA1(key, sizeof(key), tmp_key);
-        key_len = 16;
-        if (!sha_retval)
-            {
-                HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
-                return(-1);
-            }
-    }
+        {
+            /* inet_pton failed because of invalid IPv6 address */
+            memset(tmp_key,'\0',sizeof(tmp_key));
+            sha_retval = SHA1(key, sizeof(key), tmp_key);
+            key_len = 16;
+            if (!sha_retval)
+                {
+                    HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                    return(-1);
+                }
+        }
     else 
-    {
-        /* key was in IPv6 format so propably is a HIT */
-        memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
-        key_len = sizeof(addrkey.s6_addr);
-    }
-
+        {
+            /* key was in IPv6 format so propably is a HIT */
+            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+            key_len = sizeof(addrkey.s6_addr);
+        }
+    
     /* Get operation */
     memset(get_packet, '\0', sizeof(get_packet));
     if (build_packet_get((unsigned char *)tmp_key,
@@ -284,11 +340,11 @@ int opendht_get(int sockfd,
                          port,
                          (unsigned char *)host,
                          get_packet) !=0)
-    {
-        HIP_DEBUG("Get packet creation failed.\n");  
-        return(-1);
-    }
-  
+        {
+            HIP_DEBUG("Get packet creation failed.\n");  
+            return(-1);
+        }
+    
     send(sockfd, get_packet, strlen(get_packet), 0);
     return(0);
 }
@@ -306,17 +362,17 @@ int opendht_read_response(int sockfd, char * answer)
     int bytes_read;
     char read_buffer[2048];
     char tmp_buffer[2048];
-
+    
     memset(read_buffer, '\0', sizeof(read_buffer));
     do
-    {
-        memset(tmp_buffer, '\0', sizeof(tmp_buffer));
-        bytes_read = recv(sockfd, tmp_buffer, sizeof(tmp_buffer), 0);
-        if (bytes_read > 0)
-            memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
-    }
+        {
+            memset(tmp_buffer, '\0', sizeof(tmp_buffer));
+            bytes_read = recv(sockfd, tmp_buffer, sizeof(tmp_buffer), 0);
+            if (bytes_read > 0)
+                memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
+        }
     while (bytes_read > 0);
-
+    
     /* Parse answer */
     memset(answer, '\0', sizeof(answer));
     ret = 0;

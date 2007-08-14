@@ -7,6 +7,107 @@
 #include "debug.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
+ 
+/** 
+ * build_packet_put_rm - Builds HTTP XML packet for removable put
+ * @param key Key that is used in to the openDHT
+ * @param key_len Length of the key in bytes
+ * @param value Value to be stored in to the openDHT 
+ * @param value_len Lenght of value in bytes
+ * @param secret Secret used in remove
+ * @param secret_len Length of the secret used in remove
+ * @param port Port for the openDHT (5851)
+ * @param host_ip Host IP
+ * @param out_buffer Completed packet will be in this buffer
+ *
+ * @return integer 0
+ */
+int build_packet_put_rm(unsigned char * key, 
+                     int key_len,
+		     unsigned char * value,
+                     int value_len, 
+                     unsigned char *secret,
+                     int secret_len,
+                     int port,
+                     unsigned char * host_ip,
+		     char * out_buffer,
+                     int ttl) 
+{
+    char *key64 = NULL;
+    char *value64 = NULL;
+    char *secret64 = NULL;
+    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
+    value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
+    secret64 = (char *)base64_encode((unsigned char *)secret, (unsigned int)secret_len);
+
+    unsigned char *sha_retval;
+    char secret_hash[21];
+    memset(secret_hash, '\0', sizeof(secret_hash));
+
+    sha_retval = SHA1(secret, secret_len, secret_hash);
+    if (!sha_retval)
+        {
+            HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
+            return(-1);
+        }
+
+    char ttl_str[10];
+    memset(ttl_str, '\0', sizeof(char[10]));
+    sprintf(&ttl_str, "%d", ttl);
+    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
+
+    /* Create a XML document */
+    xmlDocPtr xml_doc = NULL;
+    xmlNodePtr xml_root = NULL;
+    xmlNodePtr xml_node;
+    xmlNodePtr xml_node_skip;
+    unsigned char *xml_buffer = NULL;
+    int xml_len = 0;
+
+    xml_doc = xmlNewDoc(BAD_CAST "1.0");
+    xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
+    xmlDocSetRootElement(xml_doc, xml_root);
+    if (secret_len > 0)
+        xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "put_removable");
+    else
+        xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "put");
+    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
+    xml_new_param(xml_node, "base64", (char *)key64);
+    xml_new_param(xml_node, "base64", (char *)value64);
+
+    xml_node_skip = xml_node;
+    if (secret_len > 0)
+        {
+            xml_new_param(xml_node, "string", "SHA");
+            xml_new_param(xml_node, "base64", (char *)secret64);
+            /*
+              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "param", NULL);
+              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "value", NULL);
+              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "secret", NULL);
+              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "base64", (char *)secret64);
+            */
+        }
+
+    xml_new_param(xml_node_skip, "int", &ttl_str);  
+    xml_new_param(xml_node_skip, "string", BAD_CAST "HIPL");
+    xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
+
+    memset(out_buffer, '\0', sizeof(out_buffer));
+    sprintf(out_buffer, 
+            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
+            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "text/xml\r\nContent-length: %d\r\n\r\n", 
+            host_ip, port, xml_len); 
+    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
+
+    HIP_DEBUG("\n\n%s\n\n", out_buffer);
+
+    xmlFree(xml_buffer);
+    xmlFreeDoc(xml_doc);
+    free(key64);
+    free(value64); 
+    return(0);
+}
 
 /** 
  * build_packet_put - Builds HTTP XML packet for put
@@ -14,6 +115,8 @@ xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
  * @param key_len Length of the key in bytes
  * @param value Value to be stored in to the openDHT 
  * @param value_len Lenght of value in bytes
+ * @param secret Secret used in remove
+ * @param secret_len Length of the secret used in remove
  * @param port Port for the openDHT (5851)
  * @param host_ip Host IP
  * @param out_buffer Completed packet will be in this buffer
@@ -29,47 +132,18 @@ int build_packet_put(unsigned char * key,
 		     char * out_buffer,
                      int ttl) 
 {
-    char *key64 = NULL;
-    char *value64 = NULL;
-    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
-    value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
-
-    char ttl_str[10];
-    memset(ttl_str, '\0', sizeof(char[10]));
-    sprintf(&ttl_str, "%d", ttl);
-    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
-
-    /* Create a XML document */
-    xmlDocPtr xml_doc = NULL;
-    xmlNodePtr xml_root = NULL;
-    xmlNodePtr xml_node;
-    unsigned char *xml_buffer = NULL;
-    int xml_len = 0;
-
-    xml_doc = xmlNewDoc(BAD_CAST "1.0");
-    xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
-    xmlDocSetRootElement(xml_doc, xml_root);
-    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "put");
-    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
-    xml_new_param(xml_node, "base64", (char *)key64);
-    xml_new_param(xml_node, "base64", (char *)value64);
-    xml_new_param(xml_node, "int", &ttl_str);  
-    xml_new_param(xml_node, "string", BAD_CAST "HIPL");
-    xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
-
-    memset(out_buffer, '\0', sizeof(out_buffer));
-    sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
-            "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
-    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-
-    xmlFree(xml_buffer);
-    xmlFreeDoc(xml_doc);
-    free(key64);
-    free(value64); 
-    return(0);
+    int ret = 0;
+    ret = build_packet_put_rm(key,
+                              key_len,
+                              value,
+                              value_len,
+                              "",
+                              0,
+                              port,
+                              host_ip,
+                              out_buffer,
+                              ttl);
+    return(ret);
 }
 
 /** 
@@ -116,10 +190,92 @@ int build_packet_get(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-
+    /*
+    HIP_DEBUG("\n\n%s\n\n", out_buffer);
+    */
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);  
     free(key64);
+    return(0);
+}
+
+/** 
+ * build_packet_rm - Builds HTTP XML packet for rm
+ * @param key Key that is used in to the openDHT
+ * @param key_len Length of the key in bytes
+ * @param value Value to be removed in to the openDHT 
+ * @param value_len Lenght of value in bytes
+ * @param secret Plain text secret (has of which sent earlier)
+ * @param secret_len Length of the secret
+ * @param port Port for the openDHT (5851)
+ * @param host_ip Host IP
+ * @param out_buffer Completed packet will be in this buffer
+ *
+ * @return integer 0
+ */
+int build_packet_rm(unsigned char * key, 
+                    int key_len,
+                    unsigned char * value,
+                    int value_len, 
+                    unsigned char * secret,
+                    int secret_len,
+                    int port,
+                    unsigned char * host_ip,
+                    char * out_buffer,
+                    int ttl) 
+{
+    char *key64 = NULL;
+    char *value64 = NULL;
+    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
+    value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
+  
+    unsigned char *sha_retval;
+    char value_hash[21];
+    memset(value_hash, '\0', sizeof(value_hash));
+    sha_retval = SHA1(value, value_len, value_hash);
+    if (!sha_retval)
+        {
+            HIP_DEBUG("SHA1 error when creating hash of the value for rm msg\n");
+            return(-1);
+        }
+
+    char ttl_str[10];
+    memset(ttl_str, '\0', sizeof(char[10]));
+    sprintf(&ttl_str, "%d", ttl);
+    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
+
+    /* Create a XML document */
+    xmlDocPtr xml_doc = NULL;
+    xmlNodePtr xml_root = NULL;
+    xmlNodePtr xml_node;
+    unsigned char *xml_buffer = NULL;
+    int xml_len = 0;
+
+    xml_doc = xmlNewDoc(BAD_CAST "1.0");
+    xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
+    xmlDocSetRootElement(xml_doc, xml_root);
+    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "put");
+    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
+    xml_new_param(xml_node, "base64", (char *)key64);
+    xml_new_param(xml_node, "base64", (char *)value64);
+    xml_new_param(xml_node, "int", &ttl_str);  
+    xml_new_param(xml_node, "string", BAD_CAST "HIPL");
+    xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
+
+    memset(out_buffer, '\0', sizeof(out_buffer));
+    sprintf(out_buffer, 
+            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
+            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "text/xml\r\nContent-length: %d\r\n\r\n", 
+            host_ip, port, xml_len); 
+    memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
+
+    HIP_DEBUG("\n\n%s\n\n", out_buffer);
+
+    xmlFree(xml_buffer);
+    xmlFreeDoc(xml_doc);
+    free(key64);
+    free(value64); 
     return(0);
 }
 
@@ -146,9 +302,9 @@ int read_packet_content(char * in_buffer, char * out_value)
     answers.count = 0;
     answers.addrs[0] = '\0';
 
-    /*    
+        
     HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-    */
+    
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
     { 

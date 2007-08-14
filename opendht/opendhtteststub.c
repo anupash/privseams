@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
     /* Test values */  
     char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
+    char secret_str[] = "secret_str_is_secret";
     char key_test[] = "Testiavain";
     char key_rand[] = "random_key";
     char val_tenbyte[] = "1234567890";
@@ -73,19 +74,6 @@ int main(int argc, char *argv[])
         printf("Resolving error\n");
         exit(0);
     }
-
-    /*
-    if ((ret = inet_pton(AF_INET6, val_hit, &val_hit_addr)) != 1)
-    {
-        printf("Could not create test in6_addr struct for hit.\n");
-        exit(1);
-    }
-    if ((ret = inet_pton(AF_INET, val_ip, &val_ip_addr)) != 1)
-    {
-        printf("Could not create test in6_addr struct for ip.\n");
-        exit(1);
-    }
-    */
 
     if (argv[1][0] == '0') 
         {
@@ -180,6 +168,25 @@ int main(int argc, char *argv[])
             printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
             printf("Value received from DHT: %s\n",dht_response2);   
             close(s);
+
+            /* put removable testing */
+            s = init_dht_gateway_socket(s);
+            error = connect_dht_gateway(s, serving_gateway, 1);
+            if (error < 0) exit(0);
+            ret = 0;
+            memset(dht_response2, '\0', sizeof(dht_response2));
+            ret = opendht_put_rm(s, 
+                                 (unsigned char *)val_host,
+                                 (unsigned char *)val_hit,
+                                 (unsigned char *)secret_str,
+                                 (unsigned char *)host_addr,5851,120);   
+            ret = opendht_read_response(s, dht_response); 
+            if (ret == -1) exit(1);
+            printf("Put(rm) packet (fqdn->hit) sent and ...\n");
+            printf("Put(rm) was success\n");
+            close(s);
+
+            /* basic testing done */
             exit(EXIT_SUCCESS);
         }
     else if (argv[1][0] == '1') 
