@@ -74,9 +74,7 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 
 int hip_send_recv_daemon_info(struct hip_common *msg) {
 	int hip_user_sock = 0, err = 0, n, len;
-	struct in6_addr hits;  
-	
-	hits=msg->hitr;
+
 	HIP_IFE(((hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0), -1);
 
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,

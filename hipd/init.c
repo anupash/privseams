@@ -306,7 +306,7 @@ int hipd_init(int flush_ipsec, int killold)
 	register_to_dht();
 	hip_load_configuration();
 	
-	if(hip_set_lowcapability()==1) HIP_DEBUG("Successful in lowering the capability");
+	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
 out_err:
 	return err;
@@ -316,7 +316,7 @@ out_err:
 int hip_set_lowcapability() {
 //-- BUG 172 -- try to lower the capabilities of the daemon 
 	struct passwd *nobody_pswd;
-	int err=0;
+	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
 	uid_t ruid,euid;
 	capheader_t header;
