@@ -664,14 +664,16 @@
   </chapter>
   <chapter>
 
-    <title> How to Use HIP with Applications?</title>
+    <title>How to Use HIP with Applications?</title>
 
     <para>You need to execute first "make install" in the top directory if
           you have not done it before. Otherwise you have to configure
           library paths using LD_LIBRARY_PATH environment variable.
     </para>
-    <para>There are several methods of using HIP in applications. We have
-          categorized the methods to "easy" and "advanced" here. 
+    <para>This section lists different methods on how to set-up HIP manually
+          in order to make applications use HIP.
+          We have categorized the local methods to "easy"
+          and "advanced" here. 
     </para>
     <section>
     <title>Easy Methods</title>
@@ -704,12 +706,28 @@
        able to see list of processes you have executed from GUI.
     </para>
     <para>
-    4. You can also use HITs directly in the application. Insert the HIT of
-       the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
-       do e.g. "ping6 PEER_HIT". You can set this also to /etc/hip/hipd_config.
+    4. You can also use HITs directly in the application. For example, you can
+       do "ping6 PEER_HIT". However, hipd must know the mapping from the
+       PEER_HIT to the corresponding IP address. You can tell this mapping to
+       hipd using several ways. First way is to configure the HIT-hostname
+       pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
+       way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
+       hipconf command also to /etc/hip/hipd_config and restart hipd when you
+       want the mapping to be permanent. Works only with IPv6-enabled
+       applications.
     </para>
-
+    <para>
+    5. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+       file and use the hostname in your application. You need to make sure
+       that hipd finds the corresponding IP address as instructed in the
+       previous point. Works only with IPv6-enabled applications.
+    </para>
+    <para>
+    6. Use external nameservices for HIT-IP mapping. For example, you can use
+       AAAA records in DNS for testing (HI records are not supported yet).
+       Alternatively, use the free OpenDHT name service for automatic host
+       naming as described in <xref linkend="opendht" />.
+    </para>
     </section>
     <section>
     <title>Advanced Methods</title>

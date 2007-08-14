@@ -1020,8 +1020,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     char dht_response[1024];
     char opendht[] = "opendht.nyuld.net";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
-    struct addrinfo serving_gateway;
-    memset(&serving_gateway, '0', sizeof(struct addrinfo));
+    struct addrinfo * serving_gateway;
 
     s = init_dht_gateway_socket(s);
     if (s < 0) 
@@ -1037,7 +1036,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit(-1);
     }
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway, 1);
+    error = connect_dht_gateway(s, serving_gateway, 1);
     if (error < 0) 
     {
         HIP_DEBUG("Connect error!\n");

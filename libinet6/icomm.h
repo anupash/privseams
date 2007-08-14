@@ -13,7 +13,8 @@
 #   include "i3_client_api.h" 
 #endif
 
-#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+//#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+#define HIP_DAEMON_LOCAL_PORT                  40400
 #define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 #define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 #define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"

@@ -13,6 +13,8 @@ EXTRA_DIST += libhipgui/hipmanager.png
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 
+# Andrei: please insert i3 after OpenDHT after it works. Remove this line
+#
 # Note: libinet6 has to be the first one
 #
 SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent

@@ -214,7 +214,8 @@ gaih_local (const char *name, const struct gaih_service *service,
   struct utsname utsname;
 
   if (service)
-    _HIP_DEBUG("name='%s' service->name='%s' service->num=%d\n", name, service->name, service->num);
+    _HIP_DEBUG("name='%s' service->name='%s' service->num=%d\n", name, 
+               service->name, service->num);
   else
     _HIP_DEBUG("name='%s'\n", name);
 
@@ -445,7 +446,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   char dht_response_hit[1024];
   char dht_response_addr[1024];
   struct in6_addr tmp_hit, tmp_addr;
-  struct addrinfo serving_gateway;
+  struct addrinfo * serving_gateway;
   char ownaddr[] = "127.0.0.1";
 
   /*
@@ -504,7 +505,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     goto skip_dht;
   }
   error = 0;
-  error = connect_dht_gateway(s, &serving_gateway, 1);
+  error = connect_dht_gateway(s, serving_gateway, 1);
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
@@ -1130,7 +1131,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
     
       HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
       /* HIP: Finally remove IP addresses from the list to be
-	 returned depending on the AI_HIP flag */
+	 returned depending on the AI_HIP flag */ 
       if (req->ai_flags & AI_HIP) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
 	HIP_DEBUG("HIP: AI_HIP set: remove IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);
@@ -1138,9 +1139,14 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	while (a != NULL) {
 	  struct gaih_addrtuple *nxt = a->next;
 	  
-	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
-		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  
+	  HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
+		    req->ai_family, a->family, 
+                    ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
+	  if (a->family == AF_INET)
+              hip_print_lsi("\na->addr",a->addr);
+          if (a->family == AF_INET6)
+              hip_print_hit("\na->addr",a->addr);
+
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
