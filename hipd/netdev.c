@@ -1054,7 +1054,7 @@ out_err:
 	return err;
 }
 
-int hip_select_default_hit(struct in6_addr *src, struct in6_addr *dst,struct hip_common *msg)
+int hip_select_default_hit(struct in6_addr *src, struct in6_addr *dst, struct hip_common *msg)
 {
 	int err = 0;
 	int family = AF_INET6;

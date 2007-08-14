@@ -38,7 +38,7 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
 			const struct in6_addr *ip_our,
-			const struct sockaddr_un *caller);
+			const struct sockaddr_in6 *caller);
 hip_ha_t *hip_get_opp_hadb_entry(hip_hit_t *resp_hit,
 				 struct in6_addr *resp_addr);
 int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our);

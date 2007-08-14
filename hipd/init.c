@@ -125,7 +125,7 @@ int hipd_init(int flush_ipsec, int killold)
 {
 	int err = 0, fd;
 	char str[64];
-	struct sockaddr_un daemon_addr;
+	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
 
 	/* Open daemon lock file and read pid from it. */
@@ -266,19 +266,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
-	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
-	daemon_addr.sun_family = AF_UNIX;
-	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
-	unlink(HIP_DAEMONADDR_PATH);
-	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
-	         /*sizeof(daemon_addr)*/
-	         strlen(daemon_addr.sun_path) +
-	         sizeof(daemon_addr.sun_family)),
-	         1, "Bind on daemon addr failed.");
-	HIP_IFEL(chmod(daemon_addr.sun_path, S_IRWXO),
-	         1, "Changing permissions of daemon addr failed.")
+	daemon_addr.sin6_family = AF_INET6;
+	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
+		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, 1,

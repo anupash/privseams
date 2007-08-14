@@ -91,7 +91,7 @@ inline void *hip_oppdb_get_key(void *entry)
 void hip_oppdb_del_entry_by_entry(hip_opp_block_t *entry)
 {
 	HIP_DEBUG_HIT("peer_real_hit", &entry->peer_real_hit);
-	HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
+	_HIP_HEXDUMP("caller", &entry->caller, sizeof(struct sockaddr_un));
 	
 	HIP_LOCK_OPP(entry);
 	hip_ht_delete(oppdb, entry);
@@ -147,7 +147,7 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
 			const struct in6_addr *ip_our,
-			const struct sockaddr_un *caller)
+			const struct sockaddr_in6 *caller)
 {
 	int err = 0;
 	hip_opp_block_t *tmp = NULL;
@@ -168,7 +168,7 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
 	if (ip_our)
 		ipv6_addr_copy(&new_item->our_ip, ip_our);
-	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_un));
+	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_in6));
 	
 	err = hip_ht_add(oppdb, new_item);
 	hip_oppdb_dump();
@@ -228,15 +228,13 @@ void hip_oppdb_dump()
 //		HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
 		HIP_DEBUG_HIT("this->peer_real_hit",
 					&this->peer_real_hit);
-		HIP_HEXDUMP("caller", &this->caller,
-				sizeof(struct sockaddr_un));
 	}
 
 	HIP_UNLOCK_HT(&oppdb);
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_un *app_id, hip_hit_t *hit,
+int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
 			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
@@ -435,11 +433,9 @@ out_err:
 /**
  * No description.
  */
-int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_un *src)
+int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
-	int n = 0;
-	int err = 0;
-	int alen = 0;
+	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our;
 	struct in6_addr *ptr = NULL;
 	hip_opp_block_t *entry = NULL;
