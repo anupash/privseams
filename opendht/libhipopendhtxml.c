@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -226,9 +227,10 @@ int build_packet_rm(unsigned char * key,
 {
     char *key64 = NULL;
     char *value64 = NULL;
+    char *secret64 = NULL;
     key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
-    value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
-  
+    secret64 = (char *)base64_encode((unsigned char *)secret, (unsigned int)secret_len);
+
     unsigned char *sha_retval;
     char value_hash[21];
     memset(value_hash, '\0', sizeof(value_hash));
@@ -238,6 +240,7 @@ int build_packet_rm(unsigned char * key,
             HIP_DEBUG("SHA1 error when creating hash of the value for rm msg\n");
             return(-1);
         }
+    value64 = (char *)base64_encode((unsigned char *)value_hash, 20);
 
     char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
@@ -254,10 +257,12 @@ int build_packet_rm(unsigned char * key,
     xml_doc = xmlNewDoc(BAD_CAST "1.0");
     xml_root = xmlNewNode(NULL, BAD_CAST "methodCall");
     xmlDocSetRootElement(xml_doc, xml_root);
-    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "put");
+    xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "methodName", BAD_CAST "rm");
     xml_node = xmlNewChild(xml_root, NULL, BAD_CAST "params", NULL);
     xml_new_param(xml_node, "base64", (char *)key64);
     xml_new_param(xml_node, "base64", (char *)value64);
+    xml_new_param(xml_node, "string", BAD_CAST "SHA");
+    xml_new_param(xml_node, "base64", (char *)secret64);
     xml_new_param(xml_node, "int", &ttl_str);  
     xml_new_param(xml_node, "string", BAD_CAST "HIPL");
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);

@@ -193,7 +193,7 @@ int opendht_put_rm(int sockfd,
         /* inet_pton failed because of invalid IPv6 address */
             memset(tmp_key,'\0',sizeof(tmp_key));
             sha_retval = SHA1(key, sizeof(key), tmp_key);
-            key_len = 16;
+            key_len = 20;
             if (!sha_retval)
                 {
                     HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
@@ -258,7 +258,7 @@ int opendht_put(int sockfd,
             /* inet_pton failed because of invalid IPv6 address */
             memset(tmp_key,'\0',sizeof(tmp_key));
             sha_retval = SHA1(key, sizeof(key), tmp_key);
-            key_len = 16;
+            key_len = 20;
             if (!sha_retval)
                 {
                     HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
@@ -292,6 +292,73 @@ int opendht_put(int sockfd,
 }
 
 /** 
+ * opendht_rm - Builds XML RPC packet and sends it through given socket and reads the response
+ * @param sockfd Socket to be used with the send
+ * @param key Key for the openDHT
+ * @param value Value to be removed to the openDHT
+ * @param secret Value to be used as a secret in remove
+ * @param host Host address
+ * @param response Buffer where the possible error message is saved 
+ *
+ * @return Returns integer -1 on error, on success 0
+ */
+int opendht_rm(int sockfd, 
+                   unsigned char * key,
+                   unsigned char * value, 
+                   unsigned char * secret,
+                   unsigned char * host,
+                   int opendht_port,
+                   int opendht_ttl)
+{
+    int key_len = 0, i = 0;
+    unsigned char *sha_retval;
+    char put_packet[2048];
+    char tmp_key[21];
+    struct in6_addr addrkey;
+    
+    /* check for too long keys and convert HITs to numeric form */
+    memset(tmp_key, '\0', sizeof(tmp_key));
+    if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
+        {
+        /* inet_pton failed because of invalid IPv6 address */
+            memset(tmp_key,'\0',sizeof(tmp_key));
+            sha_retval = SHA1(key, sizeof(key), tmp_key);
+            key_len = 20;
+            if (!sha_retval)
+                {
+                    HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+                    return(-1);
+                }                
+        } 
+    else 
+        {
+            /* key was in IPv6 format so propably is a HIT */
+            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+            key_len = sizeof(addrkey.s6_addr);
+        }
+    
+    /* Rm operation */
+    memset(put_packet, '\0', sizeof(put_packet));
+    if (build_packet_rm((unsigned char *)tmp_key,
+                         key_len,
+                         (unsigned char *)value,
+	                 strlen((char *)value),
+                         (unsigned char *)secret,
+                         strlen((char *)secret),
+                         opendht_port,
+                         (unsigned char *)host,
+                         put_packet, opendht_ttl) != 0)
+        {
+            HIP_DEBUG("Rm packet creation failed.\n");
+            return(-1);
+        }
+    HIP_DEBUG("Host address in OpenDHT rm : %s\n", host); 
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
+    send(sockfd, put_packet, strlen(put_packet), 0);
+    return(0);
+}
+
+/** 
  * opendht_get - Builds XML RPC packet and sends it through given socket and reads the response
  * @param sockfd Socket to be used with the send
  * @param key Key for the openDHT
@@ -319,7 +386,7 @@ int opendht_get(int sockfd,
             /* inet_pton failed because of invalid IPv6 address */
             memset(tmp_key,'\0',sizeof(tmp_key));
             sha_retval = SHA1(key, sizeof(key), tmp_key);
-            key_len = 16;
+            key_len = 20;
             if (!sha_retval)
                 {
                     HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");

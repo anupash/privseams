@@ -23,6 +23,9 @@ int opendht_put_rm(int, unsigned char *, unsigned char *,
 int opendht_put(int, unsigned char *, unsigned char *, 
                 unsigned char *, int, int);
 
+int opendht_rm(int, unsigned char *, unsigned char *,
+               unsigned char *, unsigned char *, int, int);
+
 int opendht_get(int, unsigned char *, unsigned char *, int);
 
 int opendht_read_response(int, char *);
