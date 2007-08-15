@@ -86,12 +86,10 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
         int n = 0;
-	HIP_DEBUG("sending user msg: family=%d sender=%s\n",
-		  dst->sun_family, &dst->sun_path);
         n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
         return n;
 }
 
@@ -167,12 +165,12 @@ int hip_sock_recv_agent(void)
 		}
 		else if (emsg && src_addr && dst_addr && msg_info)
 		{
-		#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 
 			HIP_DEBUG("Received rejected R1 packet from agent.\n");
 			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
-		#endif
+#endif
 		}
 	}
 	
@@ -322,7 +320,8 @@ int main(int argc, char *argv[])
 	else
 	{
 		hip_set_logtype(LOGTYPE_SYSLOG);
-		if (fork() > 0) return(0);
+		if (fork() > 0)
+			return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());

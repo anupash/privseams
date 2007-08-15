@@ -125,7 +125,7 @@ int hipd_init(int flush_ipsec, int killold)
 {
 	int err = 0, fd;
 	char str[64];
-	struct sockaddr_un daemon_addr;
+	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
 
 	/* Open daemon lock file and read pid from it. */
@@ -266,19 +266,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
-	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
-	daemon_addr.sun_family = AF_UNIX;
-	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
-	unlink(HIP_DAEMONADDR_PATH);
-	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
-	         /*sizeof(daemon_addr)*/
-	         strlen(daemon_addr.sun_path) +
-	         sizeof(daemon_addr.sun_family)),
-	         1, "Bind on daemon addr failed.");
-	HIP_IFEL(chmod(daemon_addr.sun_path, S_IRWXO),
-	         1, "Changing permissions of daemon addr failed.")
+	daemon_addr.sin6_family = AF_INET6;
+	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
+		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, 1,
@@ -306,71 +301,51 @@ int hipd_init(int flush_ipsec, int killold)
 	register_to_dht();
 	hip_load_configuration();
 	
-	if(hip_set_lowcapability()==1) HIP_DEBUG("Successful in lowering the capability");
+	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
 out_err:
 	return err;
 }
 
 
-int hip_set_lowcapability( ) {
-//-- BUG 172 -- try to lowerise the capabilities of the deamon 
- 	
-	int err=0;
+int hip_set_lowcapability() {
+//-- BUG 172 -- try to lower the capabilities of the daemon 
+	struct passwd *nobody_pswd;
+	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
 	uid_t ruid,euid;
 	capheader_t header;
 	capdata_t data;	
+
 	header.pid=0;
 	header.version = _LINUX_CAPABILITY_VERSION;
-	struct passwd *nobody_pswd=getpwnam(USER_NOBODY);
-
 	data.effective = data.permitted = data.inheritable = 0;
 
-	if (prctl(PR_SET_KEEPCAPS, 1) < 0)  {
-    		perror ("prctl");
-    		err=-1;
-		goto out_err;
-  	}
+	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 	
 	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-	if(nobody_pswd==NULL){
-		err=-1;
-		HIP_ERROR("Error while retrieving USER 'nobody' uid\n"); 
-		goto out_err;	
-	}
+	HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+		 "Error while retrieving USER 'nobody' uid\n"); 
 
-	if (capget(&header, &data)!= 0){
-		err=-1;
-		HIP_ERROR("error while retrieving capabilities through 'capget()'");
-		goto out_err;
+	HIP_IFEL(capget(&header, &data), -1,
+		 "error while retrieving capabilities through capget()\n");
 
-	}
-
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective, data.permitted, data.inheritable);
 
 	ruid=nobody_pswd->pw_uid; 
 	euid=nobody_pswd->pw_uid; 
 	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
   	
-	if (setreuid(ruid,euid)!=0){
-		if(errno==EAGAIN) HIP_ERROR("Error no is EAGAIN\n");
-		else if (errno==EPERM) HIP_ERROR("Error no is EPERM\n");
-		err=-1;
-		goto out_err;
-
-	}
+	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
 	
 	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
-	if (capget(&header, &data)!= 0){
-		err=-1;
-		HIP_ERROR("error while retrieving capabilities through 'capget()'");
-		goto out_err;
+	HIP_IFEL(capget(&header, &data), -1,
+		 "error while retrieving capabilities through 'capget()'\n");
 
-	}
-
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective,data.permitted, data.inheritable);
 	HIP_DEBUG ("We are going to clear all capabilities except the ones we need:\n");
 	data.effective = data.permitted = data.inheritable = 0;
   	// for CAP_NET_RAW capability 
@@ -380,15 +355,12 @@ int hip_set_lowcapability( ) {
 	data.effective |= (1 <<CAP_NET_ADMIN );
   	data.permitted |= (1 <<CAP_NET_ADMIN );
 
-	if (capset(&header, &data)!= 0){
-		err=-1;
-		HIP_ERROR("error while setting new capabilities through 'capset()'");
-		goto out_err;
-
-	}
+	HIP_IFEL(capset(&header, &data), -1, 
+		 "error while setting new capabilities through 'capset()'\n");
 
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",data.effective,data.permitted,data.inheritable);
+	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective, data.permitted, data.inheritable);
 #endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:

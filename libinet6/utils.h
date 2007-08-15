@@ -54,7 +54,7 @@ struct hip_opp_blocking_request_entry
   time_t                creation_time;
   struct in6_addr       peer_ip;
   struct in6_addr       our_ip;
-  struct sockaddr_un    caller;
+  struct sockaddr_in6    caller;
 };
 
 inline static int ipv6_addr_is_null(struct in6_addr *ip){
