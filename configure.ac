@@ -256,6 +256,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
+AC_PREFIX_DEFAULT("/usr/local")
+
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")
@@ -287,8 +289,6 @@ AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 
-AC_PREFIX_DEFAULT("/usr/local")
-
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_I3_SERVER -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
 
@@ -306,5 +306,6 @@ AC_CONFIG_FILES([ Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile])
+		  libipsec/Makefile
+                  dnsmasq/Makefile])
 AC_OUTPUT

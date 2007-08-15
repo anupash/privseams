@@ -18,7 +18,7 @@ EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 #
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent
+SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent dnsmasq
 
 showip:
 	cd showip && sh create.sh
