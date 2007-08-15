@@ -2151,7 +2151,7 @@ struct daemon *read_opts(int argc, char **argv, char *compile_opts)
   daemon->tftp_max = TFTP_MAX_CONNECTIONS;
   daemon->edns_pktsz = EDNS_PKTSZ;
   daemon->log_fac = -1;
-  add_txt(daemon, "version.bind", "dnsmasq-" VERSION );
+  add_txt(daemon, "version.bind", "dnsmasq-" DNSMASQ_VERSION );
   add_txt(daemon, "authors.bind", "Simon Kelley");
   add_txt(daemon, "copyright.bind", COPYRIGHT);
 

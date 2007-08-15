@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
-CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB) -DLOCALEDIR=$(prefix)/share/locale
+CFLAGS = $(hipl_common_cflags) -L$(HIPL_LIBINET6_LIB) -DLOCALEDIR=\"$(prefix)/share/locale\"
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
