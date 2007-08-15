@@ -32,12 +32,14 @@ int main(int argc, char *argv[])
                "Num = 8 put test times with consecutive keys and 985 byte values "
                "with 5 sec sleep in between puts\n"
                "Num = 9 get test times with consecutive keys (do number 7 or 8 first)\n"
+               "Num = 'a' remove testing\n" 
                "Iterations, just as it says\n"
                "Connect errors will print 999;999\n");
         exit(EXIT_SUCCESS);
     }
 
     int s, ret, error;
+    int ttl = 60;
     /*
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
@@ -66,8 +68,14 @@ int main(int argc, char *argv[])
     int n = 0, iter = 0;
     struct timeval conn_before, conn_after; 
     struct timeval stat_before, stat_after;
+    struct timeval put_rm_before, put_rm_after;
+    struct timeval put_rm2_before, put_rm2_after;
+    struct timeval rm_before, rm_after;
     unsigned long conn_diff_sec, conn_diff_usec;
     unsigned long stat_diff_sec, stat_diff_usec;
+    unsigned long put_rm_diff_sec, put_rm_diff_usec;
+    unsigned long put_rm2_diff_sec, put_rm2_diff_usec;
+    unsigned long rm_diff_sec, rm_diff_usec;
     iter = atoi(argv[2]);
     struct addrinfo * serving_gateway;
 
@@ -93,27 +101,12 @@ int main(int argc, char *argv[])
             ret = opendht_put(s, 
                               (unsigned char *)val_host,
                               (unsigned char *)val_hit, 
-                              (unsigned char *)host_addr,5851,120);   
+                              (unsigned char *)host_addr,5851,ttl);   
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (fqdn->hit) sent and ...\n");
             printf("Put was success\n");
             close(s);
-
-            s = init_dht_gateway_socket(s);
-            error = 0;
-            error = connect_dht_gateway(s, serving_gateway, 1);
-            if (error < 0) exit(0);
-            ret = 0;
-            ret = opendht_put(s, 
-                              (unsigned char *)val_hosti,
-                              (unsigned char *)val_something, 
-                              (unsigned char *)host_addr,5851,120);   
-            ret = opendht_read_response(s, dht_response); 
-            if (ret == -1) exit(1);
-            printf("Put packet (fqdn->hit) sent and ...\n");
-            printf("Put was success\n");
-            close(s);           
  
             /*!!!! put hit->ip !!!!*/ 
             
@@ -124,7 +117,7 @@ int main(int argc, char *argv[])
             ret = opendht_put(s, 
                               (unsigned char *)val_hit,
                               (unsigned char *)val_ip, 
-                              (unsigned char *)host_addr,5851,120);
+                              (unsigned char *)host_addr,5851,ttl);
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (hit->ip) sent and ...\n");
@@ -199,7 +192,7 @@ int main(int argc, char *argv[])
                                  (unsigned char *)val_host_test,
                                  (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
-                                 (unsigned char *)host_addr,5851,120);   
+                                 (unsigned char *)host_addr,5851,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Put(rm) packet (fqdn->hit) sent and ...\n");
@@ -228,7 +221,7 @@ int main(int argc, char *argv[])
                                  (unsigned char *)val_host_test,
                                  (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
-                                 (unsigned char *)host_addr,5851,120);   
+                                 (unsigned char *)host_addr,5851,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Rm packet sent and ...\n");
@@ -677,6 +670,119 @@ int main(int argc, char *argv[])
                                    (conn_diff_sec + conn_diff_usec)/1000000.0, 
                                    (stat_diff_sec + stat_diff_usec)/1000000.0,
                                    dht_response);
+                        }
+                }
+
+        }
+    else if (argv[1][0] == 'a')
+        {
+            printf("Rm test times, put_removable, rm, put_removable\n"
+                   "get (check that it is the new one you get)\n"
+                   "sleep for rm ttl again...\n");
+            printf("Printing \"put time; rm time; put time; DHT answer\n");
+            printf("(0 = OK, 1 = error, 2 = retry, or some value)\n");
+            printf("Doing %s iterations\n", argv[2]);
+            
+            for (n = 0; n < iter; n++)
+                {
+                    HIP_DEBUG("Iteration no %d\n",n);
+                    /* first put removabe */
+                    s = init_dht_gateway_socket(s);
+                    gettimeofday(&put_rm_before, NULL);
+                    error = connect_dht_gateway(s, serving_gateway, 1);
+                    if (error < 0)
+                        {
+                            printf("9999;999;999\n");
+                            close(s);
+                        }
+                    else 
+                        {
+                            ret = 0;
+                            memset(dht_response2, '\0', sizeof(dht_response2));
+                            ret = opendht_put_rm(s, 
+                                                 (unsigned char *)val_host_test,
+                                                 (unsigned char *)val_something,
+                                                 (unsigned char *)secret_str,
+                                                 (unsigned char *)host_addr,5851,20);   
+                            ret = opendht_read_response(s, dht_response2); 
+                            gettimeofday(&put_rm_after, NULL);
+                            if (ret == -1) exit(1);
+                            close(s);
+                            /* removing the value */
+                            s = init_dht_gateway_socket(s);
+                            gettimeofday(&rm_before, NULL);
+                            error = connect_dht_gateway(s, serving_gateway, 1);
+                            if (error < 0) 
+                                {
+                                    printf("999;9999;999\n");
+                                    close(s);
+                                }
+                            else
+                                {
+                                    ret = 0;
+                                    memset(dht_response2, '\0', sizeof(dht_response2));
+                                    ret = opendht_rm(s, 
+                                                     (unsigned char *)val_host_test,
+                                                     (unsigned char *)val_something,
+                                                     (unsigned char *)secret_str,
+                                                     (unsigned char *)host_addr,5851,20);   
+                                    ret = opendht_read_response(s, dht_response2); 
+                                    gettimeofday(&rm_after, NULL);
+                                    if (ret == -1) exit(1);
+                                    close(s);
+                                    /* putting a new value */
+          
+                                    s = init_dht_gateway_socket(s);
+                                    gettimeofday(&put_rm2_before, NULL);
+                                    error = connect_dht_gateway(s, serving_gateway, 1);
+                                    if (error < 0)
+                                        {
+                                            printf("999;999;9999\n");
+                                            close(s);
+                                        }
+                                    else 
+                                        {
+                                            ret = 0;
+                                            memset(dht_response2, '\0', sizeof(dht_response2));
+                                            ret = opendht_put_rm(s, 
+                                                                 (unsigned char *)val_host_test,
+                                                                 (unsigned char *)val_something,
+                                                                 (unsigned char *)secret_str,
+                                                                 (unsigned char *)host_addr,
+                                                                 5851,20);   
+                                            ret = opendht_read_response(s, dht_response2); 
+                                            gettimeofday(&put_rm2_after, NULL);
+                                            if (ret == -1) exit(1);
+                                            close(s);
+
+                                            /* Print findings*/
+                                            put_rm_diff_sec = (put_rm_after.tv_sec 
+                                                               - put_rm_before.tv_sec) *1000000;
+                                            put_rm_diff_usec = (put_rm_after.tv_usec 
+                                                                - put_rm_before.tv_usec);
+                                            
+                                            rm_diff_sec = (rm_after.tv_sec 
+                                                           - rm_before.tv_sec) *1000000;
+                                            rm_diff_usec = (rm_after.tv_usec 
+                                                            - rm_before.tv_usec);
+
+                                            put_rm2_diff_sec = (put_rm2_after.tv_sec 
+                                                                - put_rm2_before.tv_sec) *1000000;
+                                            put_rm2_diff_usec = (put_rm2_after.tv_usec 
+                                                         - put_rm2_before.tv_usec);
+                                            
+                                            printf("%.6f;%.6f;%.6f;%s\n", 
+                                                   ((put_rm_diff_sec + put_rm_diff_usec)
+                                                    /1000000.0),
+                                                   ((rm_diff_sec + rm_diff_usec)/1000000.0),
+                                                   ((put_rm2_diff_sec + 
+                                                    put_rm2_diff_usec)/1000000.0),
+                                                   dht_response2);
+                                            HIP_DEBUG("sleeping for 30 secs to get rid off "
+                                                      "old values and removes\n"); 
+                                            sleep(30);
+                                        }
+                                }
                         }
                 }
 

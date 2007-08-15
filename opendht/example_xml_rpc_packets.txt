@@ -1,15 +1,17 @@
 Example XML RPC packets used with the opendht (indented for easier reading).
-Packets are divided into to output and input packets. Output packets are put
-and get packets. Input packets are key was not found, status code, value, and 
-fault code
+Packets are divided into to output and input packets. Output packets
+are put, rm and get packets. Input packets are key was not found,
+status code, value, and fault code
 
 ==============
 Output packets
 ==============
 
-------------
-(put packet)
-------------
+------------------------------------------------------
+(put packet                                          )
+(                                                    )
+( order of fields key, value, ttl, application_string)
+------------------------------------------------------
 
 POST /RPC2 HTTP/1.0
 User-Agent: hipl
@@ -54,9 +56,12 @@ Content-length: 354
   </params>
 </methodCall>
 
-----------------------
-(put_removable packet)
-----------------------
+---------------------------------------------------------
+(put_removable packet                                   )
+(                                                       )
+( order of fields key, value, hash_type, hash_of_secret,)
+( ttl, application_string                               )
+---------------------------------------------------------
 
 POST /RPC2 HTTP/1.0
 User-Agent: hipl
@@ -115,9 +120,13 @@ Content-length: 493
   </params>
 </methodCall>
 
-------------
-(get packet)
-------------
+------------------------------------------
+(get packet                              )
+(                                        )
+( order of fields key, max_values_wanted,)
+( possible_pointer_to_extra_values,      )
+( application_string                     )
+------------------------------------------
 
 POST /RPC2 HTTP/1.0
 User-Agent: hipl
@@ -156,6 +165,69 @@ Content-length: 302
         <string>
           HIPL
         </string> 
+      </value>
+    </param>
+  </params>
+</methodCall>
+
+---------------------------------------------------------------
+(rm packet                                                    ) 
+(                                                             )
+( order of fields key, hash_of_value, hash_type, plain_secret,)
+( ttl and application_string                                  )
+---------------------------------------------------------------
+
+
+POST /RPC2 HTTP/1.0
+User-Agent: hipl
+Host: 127.0.0.1:5851
+Content-Type: text/xml
+Content-length: 462
+
+<?xml version="1.0"?>
+<methodCall>
+<methodName>rm</methodName>
+  <params>
+    <param>
+      <value>
+        <base64>
+          ht0c9FFC6QTLLpnCch+sPKGYxso=
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <base64>
+          QiBNzoEGkjp6vkPAMU8srkWRfBI=
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <string>
+          SHA
+        </string>
+      </value>
+    </param>
+    <param>
+      <value>
+        <base64>
+          c2VjcmV0X3N0cl9pc19zZWNyZXQ=
+        </base64>
+      </value>
+    </param>
+    <param>
+      <value>
+        <int>
+          120
+        </int>
+       </value>
+    </param>
+    <param>
+      <value>
+        <string>
+          HIPL
+        </string>
       </value>
     </param>
   </params>

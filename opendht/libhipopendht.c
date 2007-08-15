@@ -253,11 +253,13 @@ int opendht_put(int sockfd,
     
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
+
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
         {
             /* inet_pton failed because of invalid IPv6 address */
             memset(tmp_key,'\0',sizeof(tmp_key));
-            sha_retval = SHA1(key, sizeof(key), tmp_key);
+            /* strlen works now but maybe not later */
+            sha_retval = SHA1(key, strlen(key), tmp_key); 
             key_len = 20;
             if (!sha_retval)
                 {
