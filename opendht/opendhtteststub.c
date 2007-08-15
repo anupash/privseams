@@ -50,7 +50,9 @@ int main(int argc, char *argv[])
     /* Test values */  
     char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
-    char val_host_test[] = "testhostname2";
+    char val_hosti[] = "testhostname2";
+    char val_host_test[] = "hosttestname2";
+    char val_something[] = "hi-to-everyone";
     char secret_str[] = "secret_str_is_secret";
     char key_test[] = "Testiavain"; 
     char key_rand[] = "random_key";
@@ -97,7 +99,22 @@ int main(int argc, char *argv[])
             printf("Put packet (fqdn->hit) sent and ...\n");
             printf("Put was success\n");
             close(s);
-            
+
+            s = init_dht_gateway_socket(s);
+            error = 0;
+            error = connect_dht_gateway(s, serving_gateway, 1);
+            if (error < 0) exit(0);
+            ret = 0;
+            ret = opendht_put(s, 
+                              (unsigned char *)val_hosti,
+                              (unsigned char *)val_something, 
+                              (unsigned char *)host_addr,5851,120);   
+            ret = opendht_read_response(s, dht_response); 
+            if (ret == -1) exit(1);
+            printf("Put packet (fqdn->hit) sent and ...\n");
+            printf("Put was success\n");
+            close(s);           
+ 
             /*!!!! put hit->ip !!!!*/ 
             
             s = init_dht_gateway_socket(s);
@@ -180,10 +197,10 @@ int main(int argc, char *argv[])
             memset(dht_response2, '\0', sizeof(dht_response2));
             ret = opendht_put_rm(s, 
                                  (unsigned char *)val_host_test,
-                                 (unsigned char *)val_hit,
+                                 (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
                                  (unsigned char *)host_addr,5851,120);   
-            ret = opendht_read_response(s, dht_response); 
+            ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Put(rm) packet (fqdn->hit) sent and ...\n");
             printf("Put(rm) was success\n");
@@ -194,7 +211,8 @@ int main(int argc, char *argv[])
             if (error < 0) exit(0);
             ret = 0;
             memset(dht_response2, '\0', sizeof(dht_response2));
-            ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr, 5851); 
+            ret = opendht_get(s, (unsigned char *)val_host_test, 
+                              (unsigned char *)host_addr, 5851); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
             printf("Get packet sent and (value should be found, just sent it)...\n");
@@ -208,16 +226,15 @@ int main(int argc, char *argv[])
             memset(dht_response2, '\0', sizeof(dht_response2));
             ret = opendht_rm(s, 
                                  (unsigned char *)val_host_test,
-                                 (unsigned char *)val_hit,
+                                 (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
                                  (unsigned char *)host_addr,5851,120);   
-            ret = opendht_read_response(s, dht_response); 
+            ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Rm packet sent and ...\n");
             printf("Rm was success\n");
             close(s);
             /* can you get it anymore */
-            printf("Sleeping for 15 secs before get\n");
       
             s = init_dht_gateway_socket(s);
             error = connect_dht_gateway(s, serving_gateway, 1);

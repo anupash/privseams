@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +38,6 @@ int build_packet_put_rm(unsigned char * key,
     char *secret64 = NULL;
     key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
     value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
-    secret64 = (char *)base64_encode((unsigned char *)secret, (unsigned int)secret_len);
 
     unsigned char *sha_retval;
     char secret_hash[21];
@@ -51,6 +49,7 @@ int build_packet_put_rm(unsigned char * key,
             HIP_DEBUG("SHA1 error when creating hash of the secret for the removable put\n");
             return(-1);
         }
+    secret64 = (char *)base64_encode((unsigned char *)secret_hash, (unsigned int)20);
 
     char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
@@ -81,12 +80,6 @@ int build_packet_put_rm(unsigned char * key,
         {
             xml_new_param(xml_node, "string", "SHA");
             xml_new_param(xml_node, "base64", (char *)secret64);
-            /*
-              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "param", NULL);
-              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "value", NULL);
-              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "secret", NULL);
-              xml_node = xmlNewChild(xml_node, NULL, BAD_CAST "base64", (char *)secret64);
-            */
         }
 
     xml_new_param(xml_node_skip, "int", &ttl_str);  
@@ -100,9 +93,9 @@ int build_packet_put_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-
+    /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
-
+    */
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -245,7 +238,6 @@ int build_packet_rm(unsigned char * key,
     char ttl_str[10];
     memset(ttl_str, '\0', sizeof(char[10]));
     sprintf(&ttl_str, "%d", ttl);
-    //    HIP_DEBUG("TTL STR %s INT %d\n",ttl_str, ttl);
 
     /* Create a XML document */
     xmlDocPtr xml_doc = NULL;
@@ -274,9 +266,9 @@ int build_packet_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-
+    /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
-
+    */
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -307,9 +299,9 @@ int read_packet_content(char * in_buffer, char * out_value)
     answers.count = 0;
     answers.addrs[0] = '\0';
 
-        
+    /*  
     HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-    
+    */
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
     { 
@@ -439,8 +431,6 @@ int read_packet_content(char * in_buffer, char * out_value)
             ret = 0;
             goto out_err;
          }   
-          
-         //xml_node = xml_node->children;
 
          for (xml_node = xml_node->children; xml_node; xml_node = xml_node->next) {
            if (!strcmp((char *)xml_node->children->name, "base64"))
@@ -467,7 +457,6 @@ int read_packet_content(char * in_buffer, char * out_value)
  out_err:
     if (xml_doc != NULL) 
         xmlFreeDoc(xml_doc);
-    //    if (xml_data != NULL)    
     if (answers.count > 0)
       xmlFree(xml_data);
     return(ret);
