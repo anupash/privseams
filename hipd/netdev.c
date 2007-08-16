@@ -638,7 +638,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	if (!entry) {
 		//struct in6_addr res;
 		char dst[INET6_ADDRSTRLEN];	
-		int ret;
+		//int ret;
 		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
 		   then resolve the hostname to an IP. The natural place to
 		   handle this is either in the getaddrinfo or
@@ -656,35 +656,33 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		/* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts' 
  		 * and '/etc/hosts' files 	
  		 */
-		ret = hip_get_peer_endpointinfo((const char *)&dst, &dst_addr);
-		
-		if( ret == 1) {
+		err = hip_get_peer_endpointinfo((const char *)&dst, &dst_addr);
+		if(err == 0) {
 			HIP_DEBUG("hip_get_peer_endpointinfo succeeded !\n");
-		} else {
-			/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
+			goto continue_acq;
+		}
+
+		/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
 #ifdef CONFIG_HIP_OPENDHT
-			ret = opendht_get_endpointinfo((const char *)dst, &dst_addr);
+		err = opendht_get_endpointinfo((const char *)dst, &dst_addr);
 #endif
+		if (err == 0) {
+			HIP_DEBUG("OpenDHT look-up succeeded\n");
+			goto continue_acq;
+		}
+			
+		if (hip_for_each_ha(hip_hadb_find_peer_address, &dst_addr) != 0) {
+			HIP_DEBUG("Reusing mapping from another host association\n");
+			goto continue_acq;
 		}
 
-		if (ret != 0) {
-			if (hip_for_each_ha(hip_hadb_find_peer_address, &dst_addr) == 0) {
-				HIP_DEBUG("Reusing mapping from another host association\n");
-				ret = 1;
-			} else {
-				HIP_DEBUG("Giving up, no locator mapping found\n");
-				ret = 0;
-			}
-		}
+		HIP_IFEL(-1, -1, "Giving up, no locator mapping found\n");
 
-		if (ret == 1) {
-			err = hip_hadb_add_peer_info(dst_hit, &dst_addr);
-		}
-		else {
-			HIP_ERROR("Failed to find entry\n");
-			err = -1;
-		}
-		goto out_err;
+ continue_acq:
+		HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1, "map failed\n");
+
+		HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+			 "Internal lookup error\n");
 	}
 
 	if (entry->state == HIP_STATE_NONE ||
