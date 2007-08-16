@@ -2693,6 +2693,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 /**
  * @todo: scan also the locators exchanged in UPDATE
+ * @todo: we should copy also the nat traversal port
  */
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id)
 {
