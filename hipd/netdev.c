@@ -670,7 +670,8 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 			HIP_DEBUG("OpenDHT look-up succeeded\n");
 			goto continue_acq;
 		}
-			
+		
+		memcpy(&dst_addr, dst_hit, sizeof(struct in6_addr));
 		if (hip_for_each_ha(hip_hadb_find_peer_address, &dst_addr) != 0) {
 			HIP_DEBUG("Reusing mapping from another host association\n");
 			goto continue_acq;
