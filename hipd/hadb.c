@@ -2696,7 +2696,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
  */
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id)
 {
-	if (memcmp(&entry->hit_peer, id, sizeof(struct in6_addr) == 0)) {
+	HIP_DEBUG_HIT("hit1", &entry->hit_peer);
+	HIP_DEBUG_HIT("hit2", id);
+	if (!ipv6_addr_cmp(&entry->hit_peer, id)) {
 		HIP_DEBUG_IN6ADDR("Found match", &entry->hit_peer);
 		memcpy(id, &entry->preferred_address, sizeof(struct in6_addr));
 		return -1; /* Select first match; signal using error */
