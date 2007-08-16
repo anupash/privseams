@@ -401,6 +401,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
 	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
+
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
@@ -2688,6 +2689,20 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
     out_err:
 	return err;
 
+}
+
+/**
+ * @todo: scan also the locators exchanged in UPDATE
+ */
+int hip_hadb_find_peer_address(hip_ha_t *entry, void *id)
+{
+	/* Note: upon multiple matches, the last one will be selected */
+	if (memcmp(&entry->hit_peer, id, sizeof(struct in6_addr) == 0)) {
+		HIP_DEBUG_IN6ADDR("Found match", &entry->hit_peer);
+		memcpy(id, &entry->preferred_address, sizeof(struct in6_addr));
+	}
+
+	return 0;
 }
 
 #ifdef CONFIG_HIP_RVS

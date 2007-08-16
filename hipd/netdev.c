@@ -636,8 +636,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (!entry) {
-
-#if 1
+		//struct in6_addr res;
+		char dst[INET6_ADDRSTRLEN];	
+		int ret;
 		/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
 		   then resolve the hostname to an IP. The natural place to
 		   handle this is either in the getaddrinfo or
@@ -647,53 +648,49 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 		HIP_DEBUG("\n I am here just before getendpointinfo() \n");
 		
-		//err = getendpointinfo(); /* TBD */
-
-		struct in6_addr res;
-		char dst[INET6_ADDRSTRLEN];	
 		hip_in6_ntop(dst_hit, dst);
 		
 		/* book keeping stuff */
-		memset(&res,0,sizeof(res));
-		memset(&dst_addr,0,sizeof(struct in6_addr));  
+		memset(&dst_addr,0,sizeof(dst_addr));
 
-		int ret;
 		/* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts' 
  		 * and '/etc/hosts' files 	
  		 */
-		ret = hip_get_peer_endpointinfo((const char *)&dst,&res);
+		ret = hip_get_peer_endpointinfo((const char *)&dst, &dst_addr);
 		
-		if( ret==1){
+		if( ret == 1) {
 			HIP_DEBUG("hip_get_peer_endpointinfo succeeded !\n");
-			dst_addr = res;
-		}else {
-
-		/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server
-		 */
+		} else {
+			/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
 #ifdef CONFIG_HIP_OPENDHT
-			ret=opendht_get_endpointinfo((const char *)dst,&res);
-			dst_addr=res;
+			ret = opendht_get_endpointinfo((const char *)dst, &dst_addr);
 #endif
 		}
 
-		if (ret==1){
+		if (ret != 0) {
+			if (hip_for_each_ha(hip_hadb_find_peer_address, &dst_addr) == 0) {
+				HIP_DEBUG("Reusing mapping from another host association\n");
+				ret = 1;
+			} else {
+				HIP_DEBUG("Giving up, no locator mapping found\n");
+				ret = 0;
+			}
+		}
+
+		if (ret == 1) {
 			err = hip_hadb_add_peer_info(dst_hit, &dst_addr);
 		}
 		else {
 			HIP_ERROR("Failed to find entry\n");
 			err = -1;
 		}
-#endif 
 		goto out_err;
 	}
 
 	if (entry->state == HIP_STATE_NONE ||
-	    entry->state == HIP_STATE_UNASSOCIATED)
-	{
+	    entry->state == HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("State is %d, sending i1\n", entry->state);
-	}
-	else
-	{
+	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
 		goto out_err;
 	}
