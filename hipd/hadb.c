@@ -2691,21 +2691,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 }
 
-/**
- * @todo: scan also the locators exchanged in UPDATE
- * @todo: we should copy also the nat traversal port
- */
-int hip_hadb_find_peer_address(hip_ha_t *entry, void *id)
-{
-	if (!ipv6_addr_cmp(&entry->hit_peer, id)) {
-		HIP_DEBUG_IN6ADDR("Found match", &entry->hit_peer);
-		memcpy(id, &entry->preferred_address, sizeof(struct in6_addr));
-		return -1; /* Select first match; signal using error */
-	}
-
-	return 0;
-}
-
 #ifdef CONFIG_HIP_RVS
 
 /**

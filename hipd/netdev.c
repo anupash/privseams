@@ -448,7 +448,9 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0, is_ipv4_locator,
-		reuse_hadb_local_address = 0;
+		reuse_hadb_local_address = 0, ha_nat_mode = 0,
+		old_global_nat_mode = hip_nat_status;
+	in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
 	struct xfrm_user_acquire *acq;
@@ -474,26 +476,35 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	   create the entry */
 
 	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
-
 	if (err) {
 		/* Search HADB for existing entries */
-		memcpy(&ha_match, dst_hit, sizeof(struct in6_addr));
-		if (hip_for_each_ha(hip_hadb_find_peer_address, &ha_match) != 0) {
-			HIP_DEBUG("Reusing mapping from another host association\n");
-			HIP_DEBUG_IN6ADDR("ha match", &ha_match);
-			ipv6_addr_copy(&dst_addr, &ha_match);
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		if (entry) {
+			HIP_DEBUG_IN6ADDR("reusing HA",
+					  &entry->preferred_address);
+			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+			ha_peer_port = entry->peer_udp_port;
+			ha_nat_mode = entry->nat_mode;
 			err = 0;
 		}
-	
 	}
 
 	HIP_IFEL(err, -1, "Giving up, no locator mapping found\n");
-		
+
+	/* @fixme: changing global state won't work with threads */
+	hip_nat_status = ha_nat_mode;
+
 	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
 		 "map failed\n");
+
+	hip_nat_status = old_global_nat_mode;
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
+
+	/* Preserve NAT status with peer */
+	entry->peer_udp_port = ha_peer_port;
+	entry->nat_mode = ha_nat_mode;
 
 	reuse_hadb_local_address = 1;
 
@@ -530,6 +541,8 @@ skip_entry_creation:
 		 "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */
+
+	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
