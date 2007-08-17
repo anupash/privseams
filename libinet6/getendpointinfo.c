@@ -2236,43 +2236,44 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char dht_response[1024];
 	char host_addr[] = "127.0.0.1"; 
 	struct addrinfo *serving_gateway;
-	int err, ret, my_socket;
-	/* book keeping stuff */
-	//memset(&serving_gateway, '0', sizeof(serving_gateway));
+	int err, my_socket;
 	
 	/* get OpenDHT server address */
 	err =  resolve_dht_gateway_info (opendht, &serving_gateway);
-	if(err < 0) HIP_DEBUG("Error -> resolve_dht_gateway_info() failed\n");
-
+	if(err < 0)
+            {
+                HIP_DEBUG("Error -> resolve_dht_gateway_info() failed\n");
+                return(err);
+            }
 	/* make a connection to OpenDHT server */
 	my_socket = init_dht_gateway_socket(my_socket);
 	err = connect_dht_gateway(my_socket, serving_gateway, 1);
-	if (err <0) HIP_DEBUG("Error -> connect_dht_gateway failed\n");
-	
-	/* get the address of peer from OpenDHT server corresponding to 
-	 * given HIT using that as a Key for the OpenDHT server communication 
-	 */
- 
+	if (err <0)
+            {
+                HIP_DEBUG("Error -> connect_dht_gateway failed\n");
+                return(err);
+            }   
 	memset(dht_response, '\0', sizeof(dht_response));
-	ret = opendht_get(my_socket, (unsigned char *) node_hit,
-			  (unsigned char *)host_addr, 5851); 
-	HIP_DEBUG("KEY WE are sending -> %s \n",node_hit);     	
-
-	ret = opendht_read_response(my_socket, dht_response); 
-	if (ret == -1) HIP_DEBUG("Error -> opendht_read_response failed \n");
-	    HIP_DEBUG("Get packet (hit) sent and ...\n");
-	if (ret == 0){
-		HIP_DEBUG("Value received from DHT: %s\n",dht_response);
-    	}
-
+	err = opendht_get(my_socket, (unsigned char *) node_hit,
+			  (unsigned char *)host_addr, 5851);
+        if (err < 0)
+            {
+                HIP_DEBUG("Error -> opendht_get failed\n");
+            } 
+	HIP_DEBUG("KEY WE are getting %s\n", node_hit);     	
+	err = opendht_read_response(my_socket, dht_response);  
+	if (err < 0) 
+            {
+                HIP_DEBUG("Error -> opendht_read_response failed \n");
+                return(err);
+            }
+        HIP_DEBUG("Value received from DHT: %s\n",dht_response);
 	if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1){
 		HIP_DEBUG("Got the peer address successfully\n");
-		err =1;
-		return err;
+		return(0);
 	} else {
 		HIP_DEBUG("failed to get the peer address successfully\n");
-		err= -1; 
-		return err;
+		return -1;
 	}
 
 }
