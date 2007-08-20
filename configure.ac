@@ -300,6 +300,7 @@ AC_CONFIG_FILES([ Makefile
                   libinet6/include_glibc23/Makefile
                   libopphip/Makefile
                   opendht/Makefile
+		  i3/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
