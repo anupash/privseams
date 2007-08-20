@@ -1,3 +1,5 @@
+CFLAGS = -I /usr/include/libxml2
+
 noinst_LIBRARIES = libi3.a
 noinst_HEADERS = i3_config.h  i3_header.h  i3_options.h \
 		 i3_trigger.h  i3_addr.h  i3_fun.h  i3_id.h \
