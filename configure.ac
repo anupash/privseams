@@ -301,6 +301,11 @@ AC_CONFIG_FILES([ Makefile
                   libopphip/Makefile
                   opendht/Makefile
 		  i3/Makefile
+		i3/aeshash/Makefile
+		i3/chord/Makefile
+		i3/i3/Makefile
+		i3/i3_client/Makefile
+		i3/utils/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile

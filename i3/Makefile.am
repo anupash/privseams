@@ -10,5 +10,5 @@
 
 I3SERVER_SUBDIR = chord 
 #i3_server
-SUBDIRS= aeshash utils i3 i3_client $(EXAMPLE_SUBDIR) $(I3SERVER_SUBDIR)
+SUBDIRS= aeshash utils i3 i3_client $(I3SERVER_SUBDIR)
 
