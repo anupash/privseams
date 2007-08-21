@@ -352,8 +352,11 @@
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
-      "ip addr show dummy0".
+      If you want to know the HIT of the localhost, run
+      "hipconf get hi default". To avoid routing problems especially with
+      UDP, it is highly recommend to use the default HIT of the machine!
+      You can list all HITs of the machine with "hipconf get hi all", but
+      it is safe to use the optional HITs only with TCP connections!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
