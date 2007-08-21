@@ -448,7 +448,7 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0, is_ipv4_locator,
-		reuse_hadb_local_address = 0, ha_nat_mode = 0,
+		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
 		old_global_nat_mode = hip_nat_status;
 	in_port_t ha_peer_port;
 	hip_ha_t *entry;
@@ -497,7 +497,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
 		 "map failed\n");
 
-	hip_nat_status = old_global_nat_mode;
+	hip_nat_status = old_global_nat_mode; /* restore nat status */
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");

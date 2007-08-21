@@ -73,7 +73,7 @@ HIP_HASHTABLE *addresses;
 time_t load_time;
 
 #ifdef CONFIG_HIP_HI3
-char *i3_config = NULL;
+char *i3_config_file = NULL;
 #endif
 
 void usage() {
@@ -256,8 +256,9 @@ int main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
-#ifdef CONFIG_HIP_HI3
-	char *i3_config = NULL;
+#if 0 
+	//#ifdef CONFIG_HIP_HI3 - ERROR redefinition of i3_config_file??? - Andrey
+	char *i3_config_file = NULL;
 #endif
 	fd_set read_fdset;
 
@@ -277,7 +278,7 @@ int main(int argc, char *argv[])
 	int flush_ipsec = 1;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "bk")) != -1)
+	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
 	{		
 		switch (ch)
 		{
@@ -289,7 +290,8 @@ int main(int argc, char *argv[])
 			break;
 #ifdef CONFIG_HIP_HI3
 		case '3':
-			i3_config = strdup(optarg);
+		  HIP_INFO("hipd is stared with i3 config file: %s", optarg);
+			i3_config_file = strdup(optarg);
 			break;
 #endif
 		case 'N':
@@ -305,7 +307,7 @@ int main(int argc, char *argv[])
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
-	HIP_IFEL(!i3_config, 1,
+	HIP_IFEL(!i3_config_file, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
 	

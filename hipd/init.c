@@ -196,7 +196,7 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_kea_endpoints();
 #endif
 #ifdef CONFIG_HIP_HI3
-	cl_init(i3_config);
+	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC

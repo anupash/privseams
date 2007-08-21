@@ -26,7 +26,7 @@
 #include "oppipdb.h"
 
 #define USER_NOBODY "nobody"
-extern char *i3_config;
+extern char *i3_config_file;
 
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();

@@ -230,8 +230,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	{
 		e = list_entry(item);
 		ipv6_addr_copy(&our_hit,&e->lhi.hit);
-		HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
-		HIP_DEBUG_HIT("hit:", hit);
+		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+		_HIP_DEBUG_HIT("hit:", hit);
 		entry = hip_hadb_find_byhits(hit, &our_hit);
 		if (!entry) continue;
 		else return entry;
