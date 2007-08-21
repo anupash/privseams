@@ -1,5 +1,7 @@
 $(PROGRAMS): $(LDEPS)
 
+if HIP_HI3
+
 noinst_LIBRARIES = libutils.a
 noinst_HEADERS =    byteorder.h  \
                     eprintf.h  \
@@ -10,6 +12,8 @@ noinst_HEADERS =    byteorder.h  \
 		    netwrap.h
 
 libutils_a_SOURCES = byteorder.c  eprintf.c  gen_utils.c  inetfns.c event.c netwrap_posix.c
+
+endif
 
 #EXTRA_DIST = .cvsignore
 CLEANFILES = core *.core *~ *.rpo
