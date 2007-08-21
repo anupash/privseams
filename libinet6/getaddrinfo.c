@@ -517,31 +517,10 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   }
   error = 0;
   error = connect_dht_gateway(s, serving_gateway, 1);
-  /* 
-  if (sigaction(SIGALRM, &act, &oact) <0 ) 
-    {
-      HIP_DEBUG("Signal error before OpenDHT connect, connecting without alarm\n");
-      error = connect_dht_gateway(s, &serving_gateway, 1);
-    }
-  else 
-    {
-      HIP_DEBUG("Connecting to OpenDHT with alarm\n");
-      if (alarm(4) != 0)
-        HIP_DEBUG("Alarm was already set, connecting without\n");
-      error = connect_dht_gateway(s, &serving_gateway, 1);
-      alarm(0);
-      if (sigaction(SIGALRM, &oact, &act) <0 ) 
-        HIP_DEBUG("Signal error after OpenDHT connect\n");
-    }
-  */
   if (error < 0)
   {
     HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
     close(s);
-    /*
-    if (errno == EINTR)
-      HIP_DEBUG("Connect to OpenDHT timedout\n");
-    */
     goto skip_dht;
   }
   ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
