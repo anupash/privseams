@@ -2084,6 +2084,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	int err = 0, i, preferred_address_found = 0, choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
+	struct in6_addr *saddr, *comp_addr = hip_cast_sa_addr(addr);
 
 	HIP_DEBUG("\n");
 	
@@ -2102,9 +2103,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		   sizeof(struct hip_locator_info_addr_item)) == 0) {
  		HIP_DEBUG("Same address set as before, return\n");
  		return GOTO_OUT;
-	} else
-	
-	HIP_DEBUG("Address set has changed, continue\n");
+	} else {
+		HIP_DEBUG("Address set has changed, continue\n");
+	}
 
 	/* Peer's preferred address. Can be changed by the source address
 	   selection below if we don't find any addresses of the same family
@@ -2119,19 +2120,20 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	loc_addr_item = addr_list;
 
-	HIP_IFEL( addr->sa_family == AF_INET, -1, "all addresses in update should be mapped");
-
-	struct in6_addr* comp_addr = hip_cast_sa_addr(addr);
+	HIP_IFEL((addr->sa_family == AF_INET), -1, "all addresses in update should be mapped");
 
 	/* if we have deleted the old address and it was preferred than 
 	   we chould make new preferred address. Now, we chose it as random address in list 
 	*/
-	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr))==0 ) {
-	  choose_random = 1;
+	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr)) == 0 ) {
+		choose_random = 1;
 	}
 
-	if( is_add && is_active_handover ) { change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */}
-	else { comp_addr = &entry->local_address; }
+	if( is_add && is_active_handover ) {
+		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
+	} else {
+		comp_addr = &entry->local_address;
+	}
 
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
@@ -2165,15 +2167,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	    }
 	
 
-	if (preferred_address_found) goto skip_pref_update;
+	if (preferred_address_found)
+		goto skip_pref_update;
 
 	loc_addr_item = addr_list;
 	/* Select the first match */
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
-		struct in6_addr *saddr = &loc_addr_item->address;
-/*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
-		HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));*/
+		saddr = &loc_addr_item->address;
 		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
 		{
 			loc_addr_item->reserved = ntohl(1 << 31);
@@ -2310,12 +2311,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 			HIP_IFEL(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN,
 						  &spi_in_data), -1, 
 				 "Add_spi failed\n");
-		}
-		else {
+		} else {
 			_HIP_DEBUG("is previously mapped ifindex\n");
 		}
-	} else
+	} else {
 		HIP_DEBUG("not creating a new SA\n");
+	}
 
 	_HIP_DEBUG("entry->current_keymat_index=%u\n",
 		   entry->current_keymat_index);
@@ -2470,6 +2471,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
+	struct sockaddr_in6 addr_sin6;
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */
@@ -2477,6 +2479,18 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	HIP_DEBUG("ifindex=%d\n", ifindex);
 	if (!ifindex) {
 		HIP_DEBUG("test: returning, ifindex=0 (fix this for non-mm UPDATE)\n");
+		return;
+	}
+
+	if (addr->sa_family == AF_INET) {
+		memset(&addr_sin6, 0, sizeof(addr_sin6));
+		addr_sin6.sin6_family = AF_INET6;
+		IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
+				 ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
+	} else if (addr->sa_family == AF_INET6) {
+		memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	} else {
+		HIP_ERROR("Bad address family %d\n", addr->sa_family);
 		return;
 	}
 
@@ -2490,7 +2504,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
 			hip_send_update(rk.array[i], addr_list, addr_count,
-					ifindex, flags, is_add, addr);
+					ifindex, flags, is_add, &addr_sin6);
 			hip_hadb_put_entry(rk.array[i]);
 			//hip_put_ha(rk.array[i]);
 		}

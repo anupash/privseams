@@ -230,8 +230,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	{
 		e = list_entry(item);
 		ipv6_addr_copy(&our_hit,&e->lhi.hit);
-		HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
-		HIP_DEBUG_HIT("hit:", hit);
+		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+		_HIP_DEBUG_HIT("hit:", hit);
 		entry = hip_hadb_find_byhits(hit, &our_hit);
 		if (!entry) continue;
 		else return entry;
@@ -401,6 +401,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
 	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
+
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
