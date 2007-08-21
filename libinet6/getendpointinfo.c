@@ -1123,7 +1123,7 @@ int get_peer_endpointinfo(const char *hostsfile,
 			  const struct endpointinfo *hints,
 			  struct endpointinfo **res)
 {
-  int err, match_found = 0, ret = 0, i=0;
+  int err = 0, match_found = 0, ret = 0, i=0;
   unsigned int lineno = 0, fqdn_str_len = 0;
   FILE *hosts = NULL;
   char *hi_str, *fqdn_str;
@@ -1375,20 +1375,20 @@ int get_peer_endpointinfo(const char *hostsfile,
  * it will copy the 'fqdn' string from the file. After that it will search that 'fqdn' string in 
  * "/etc/hosts" and if a suitable match is found for that 'fqdn' then it will return the IPv4/IPv6 
  * address back to the caller in res field.
- * @todo: WTF? this kludge is a copy-paste of the previous function. FIX!
+ * @todo: WTF? this kludge is a copy-paste of the previous function. FIX! -mk
  */
 
 int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
-  int err, ret = 0, i=0;
+  int err = -1, ret = 0, i=0;
   unsigned int lineno = 0, fqdn_str_len = 0;
   FILE *hip_hosts,*hosts = NULL;
   char *hi_str, *fqdn_str, *temp_str;
-  
   char line[500];
   struct in6_addr hit, dst_hit, ipv6_dst;
   struct in_addr ipv4_dst;
   List mylist;
 
+  initlist(&mylist);
   /* check whether  given nodename is actually a HIT */
 
   ret=inet_pton(AF_INET6, nodename, &dst_hit);
@@ -1402,7 +1402,6 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
 
   if (!hip_hosts) {
-    err = -1; 
     HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
     goto out_err;
   }
@@ -1412,7 +1411,6 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
   while(getwithoutnewline(line, 500, hip_hosts)!= NULL){
     lineno++;
     if(strlen(line)<=1) continue; 
-    initlist(&mylist);
     extractsubstrings(line,&mylist);
      
     /* find out the fqdn string amongst the HITS - 
@@ -1433,11 +1431,8 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
     }		
    }       
  
-   err = -1;
    goto out_err;
 
-
- /* HOSTS_FILE='/etc/hsots' */
  find_address:
    hosts = fopen(HOSTS_FILE, "r");
    lineno=0; 
@@ -1468,12 +1463,12 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
 	     if(inet_pton(AF_INET6, getitem(&mylist,j), &ipv6_dst)>0) {
 		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
 		memcpy((void *)res,(void *)&ipv6_dst,sizeof(struct in6_addr));
-		err=1;
+		err=0;
 		goto out_err;
 	     } else if(inet_pton(AF_INET, getitem(&mylist,j), &ipv4_dst)>0) {
 		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
 		IPV4_TO_IPV6_MAP(&ipv4_dst,res);
-		err=1;
+		err = 0;
 		goto out_err;
 	     }  
 	  }
@@ -1484,6 +1479,8 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
 
  out_err:
 	destroy(&mylist);
+	if (hosts)
+	  fclose(hosts);
    	return err;
 
 }
