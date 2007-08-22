@@ -43,6 +43,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 struct hip_host_id *src_privkey,
 				 const struct hip_host_id *src_pubkey,
 				 int cookie);
+int hip_build_locators(struct hip_common *);
 int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
 		struct in6_addr *, const in_port_t, struct in6_addr *,
 		hip_portpair_t *, const void *, const int, uint16_t *);

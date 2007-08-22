@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
@@ -254,9 +255,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                         -1, "Building of reg_info failed\n");	
 	}
 
-	
-
-
+	/********* LOCATOR PARAMETER ************/
+        
+        if ((err = hip_build_locators(msg)) < 0) 
+            HIP_DEBUG("LOCATOR parameter building failed\n");;
+        
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
@@ -264,10 +267,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	/********** Signature 2 **********/	
 
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
-	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
+	HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
-
 	
 	/* Fill puzzle parameters */
 	{
@@ -313,6 +315,60 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  		HIP_FREE(dh_data2);
 
   	return NULL;
+}
+
+/**
+ * Builds locator list to msg
+ *
+ * @param msg          a pointer to hip_common to append the LOCATORS
+ * @return             zero on success, or negative error value on error
+ */
+int hip_build_locators(struct hip_common *msg) 
+{
+    int err = 0, i = 0;
+    struct netdev_address *n;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_locator_info_addr_item *locs = NULL;
+    int addr_count = 0;
+
+    HIP_DEBUG("Started building LOCATOR parameter\n");
+
+    /* count addresses for malloc */
+    list_for_each_safe(item, tmp, addresses, i)
+        {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            addr_count++;
+        }
+
+    if (addr_count > 1)
+        {
+            HIP_IFEL(!(locs = malloc(addr_count * sizeof(struct hip_locator_info_addr_item))), 
+                     -1, "Malloc for LOCATORS failed\n");
+            memset(locs,0,(addr_count * sizeof(struct hip_locator_info_addr_item)));
+            i = 0;
+            err = 0;
+            item = NULL;
+            tmp = NULL;
+            list_for_each_safe(item, tmp, addresses, i)
+                {
+                    n = list_entry(item);
+                    if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                        continue;
+                    /* FIX LEN PART FAST*/
+                    memcpy(&locs[i].address, &n->addr, sizeof(struct in6_addr));
+                }
+            err = hip_build_param_locator(msg, locs, addr_count);
+        }
+    else
+        HIP_DEBUG("Host has only one or no addresses no point "
+                  "in building LOCATOR parameters\n");
+
+ out_err:
+    if (locs) free(locs);
+    HIP_DEBUG("Stopped building LOCATOR parameter (one way or another)\n");
+    return err;
 }
 
 /**
