@@ -1183,7 +1183,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     /* find out the fqdn string amongst the HITS - 
        it's a non-valid ipv6 addr */
     for(i=0;i<length(&mylist);i++) {
-      ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);
+      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
       if (ret < 1) {
 	fqdn_str = getitem(&mylist,i);
 	fqdn_str_len = strlen(getitem(&mylist,i));
@@ -1392,96 +1392,104 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
   /* check whether  given nodename is actually a HIT */
 
   ret=inet_pton(AF_INET6, nodename, &dst_hit);
-  if(ret < 1) HIP_ERROR("given nodename is not a HIT");
+  if (ret < 1) 
+    HIP_ERROR("given nodename is not a HIT");
  
 
- /* Open /etc/hip/hosts file in read mode 
- *  *  HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
- *   * */
+  /* Open /etc/hip/hosts file in read mode
+   * HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
+   */
 
- hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
+  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
 
   if (!hip_hosts) {
+    err = -1;
     HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
     goto out_err;
   }
 
 
   /* find entry corresponding to given 'nodename' HIT */ 
-  while(getwithoutnewline(line, 500, hip_hosts)!= NULL){
+  while (getwithoutnewline(line, 500, hip_hosts) != NULL){
     lineno++;
-    if(strlen(line)<=1) continue; 
-    extractsubstrings(line,&mylist);
+    if (strlen(line) <= 1) 
+      continue;
+    initlist(&mylist);
+    extractsubstrings(line, &mylist);
      
     /* find out the fqdn string amongst the HITS - 
        it's a non-valid ipv6 addr */
-    for(i=0;i<length(&mylist);i++){
-      ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);
+    for (i=0; i<length(&mylist); i++){
+      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
       if (ret < 1) {
-	fqdn_str = getitem(&mylist,i);
-	fqdn_str_len = strlen(getitem(&mylist,i));
+	fqdn_str = getitem(&mylist, i);
+	fqdn_str_len = strlen(getitem(&mylist, i));
 	break;
       }
     }
 
-    for(i=0;i<length(&mylist);i++){
-     temp_str=getitem(&mylist,i);
-     ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);  	
-     if(ret >0 && ipv6_addr_cmp(&hit,&dst_hit)==0)  goto find_address;
-    }		
-   }       
+    for (i=0; i<length(&mylist); i++) {
+      temp_str = getitem(&mylist, i);
+      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
+      if (ret > 0 && ipv6_addr_cmp(&hit,&dst_hit) == 0)
+	goto find_address;
+    }
+  }
  
-   goto out_err;
+  err = -1;
+  goto out_err;
 
- find_address:
-   hosts = fopen(HOSTS_FILE, "r");
-   lineno=0; 
-   memset(&line,0,sizeof(line));
 
-   if (!hosts) {
-     err = -1;
-     HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
-     goto out_err;
-   }
+ /* HOSTS_FILE='/etc/hosts' */
+find_address:
+  hosts = fopen(HOSTS_FILE, "r");
+  lineno = 0;
+  memset(&line, 0, sizeof(line));
+
+  if (!hosts) {
+    err = -1;
+    HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
+    goto out_err;
+  }
 
   
-  while(getwithoutnewline(line,500,hosts) != NULL ) {
+  while(getwithoutnewline(line, 500, hosts) != NULL) {
     lineno++;
-    if(strlen(line)<=1) continue; 
+    if (strlen(line) <= 1) 
+      continue;
     initlist(&mylist);
-    extractsubstrings(line,&mylist);
+    extractsubstrings(line, &mylist);
      
     /* find out the fqdn string amongst the Ipv4/Ipv6 addresses - 
        it's a non-valid ipv6 addr */
-    for(i=0;i<length(&mylist);i++) {
-      if(inet_pton(AF_INET6, getitem(&mylist,i), &ipv6_dst)<1||
-	inet_pton(AF_INET, getitem(&mylist,i), &ipv4_dst)<1){
-	temp_str = getitem(&mylist,i);
-	if((strlen(temp_str)==strlen(fqdn_str))&&(strcmp(temp_str,fqdn_str)==0)) {
-	  int j;
-	  for(j=0;j<length(&mylist);j++){
-	     if(inet_pton(AF_INET6, getitem(&mylist,j), &ipv6_dst)>0) {
-		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
-		memcpy((void *)res,(void *)&ipv6_dst,sizeof(struct in6_addr));
-		err=0;
-		goto out_err;
-	     } else if(inet_pton(AF_INET, getitem(&mylist,j), &ipv4_dst)>0) {
-		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
-		IPV4_TO_IPV6_MAP(&ipv4_dst,res);
-		err = 0;
-		goto out_err;
-	     }  
+    for (i=0; i<length(&mylist); i++) {
+      temp_str = getitem(&mylist, i);
+      if ( (inet_pton(AF_INET6, temp_str, &ipv6_dst) < 1 ||
+	  inet_pton(AF_INET, temp_str, &ipv4_dst) < 1) &&
+	  strlen(temp_str)==strlen(fqdn_str) && strcmp(temp_str, fqdn_str)==0 ) {
+	int j;
+	for (j=0; j<length(&mylist); j++) {
+	  if (inet_pton(AF_INET6, getitem(&mylist, j), &ipv6_dst) > 0) {
+	    HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n", getitem(&mylist, j));
+	    memcpy((void *)res, (void *)&ipv6_dst, sizeof(struct in6_addr));
+	    err = 0;
+	    goto out_err;
+	  } else if (inet_pton(AF_INET, getitem(&mylist, j), &ipv4_dst) > 0) {
+	    HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n", getitem(&mylist, j));
+	    IPV4_TO_IPV6_MAP(&ipv4_dst, res);
+	    err = 0;
+	    goto out_err;
 	  }
-        }
-     } 
-   }
- }
+	}
+      }
+    }
+  }
 
  out_err:
-	destroy(&mylist);
-	if (hosts)
-	  fclose(hosts);
-   	return err;
+  destroy(&mylist);
+  if (hosts)
+    fclose(hosts);
+  return err;
 
 }
 

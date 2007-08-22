@@ -1,3 +1,5 @@
+if HIP_HI3
+
 noinst_LIBRARIES = libi3client.a
 noinst_HEADERS =  \
 		  downhill_simplex.h \
@@ -43,6 +45,8 @@ libi3client_a_SOURCES = \
                         qsort.c 
                         
 libi3client_a_LIBADD = ../i3/libi3.a ../utils/libutils.a
+
+endif
 
 EXTRA_DIST = shortcut.txt
 CLEANFILES = core *.core *~ *.rpo
