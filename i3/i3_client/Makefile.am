@@ -1,6 +1,6 @@
 if HIP_HI3
 
-AM_CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
+CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 noinst_LIBRARIES = libi3client.a

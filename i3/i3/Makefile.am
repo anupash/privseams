@@ -1,6 +1,6 @@
 #AM_CFLAGS = -I /usr/include/libxml2
 
-AM_CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
+CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 if HIP_HI3
