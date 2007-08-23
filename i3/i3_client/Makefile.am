@@ -48,6 +48,6 @@ libi3client_a_LIBADD = ../i3/libi3.a ../utils/libutils.a
 
 endif
 
-EXTRA_DIST = shortcut.txt
+#EXTRA_DIST = shortcut.txt
 CLEANFILES = core *.core *~ *.rpo
 MAINTAINERCLEANFILES = Makefile.in
