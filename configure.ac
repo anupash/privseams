@@ -286,11 +286,13 @@ AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
+AC_SUBST(HIPL_DEFAULT_PREFIX, "/usr/local")
 
-AC_PREFIX_DEFAULT("/usr/local")
+AC_PREFIX_DEFAULT("$HIPL_DEFAULT_PREFIX")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
+AC_SUBST(hipl_default_prefix, "$HIPL_DEFAULT_PREFIX")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile
@@ -301,11 +303,11 @@ AC_CONFIG_FILES([ Makefile
                   libopphip/Makefile
                   opendht/Makefile
 		  i3/Makefile
-		i3/aeshash/Makefile
-		i3/chord/Makefile
-		i3/i3/Makefile
-		i3/i3_client/Makefile
-		i3/utils/Makefile
+  		  i3/aeshash/Makefile
+		  i3/chord/Makefile
+		  i3/i3/Makefile
+		  i3/i3_client/Makefile
+		  i3/utils/Makefile
                   tools/Makefile
                   hipd/Makefile
                   test/Makefile
