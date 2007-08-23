@@ -28,44 +28,44 @@ AC_HEADER_STDBOOL
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_TYPE_UID_T
-AC_C_INLINE
-AC_TYPE_MODE_T
-AC_TYPE_OFF_T
-AC_TYPE_PID_T
-AC_TYPE_SIZE_T
-AC_CHECK_MEMBERS([struct stat.st_blksize])
-AC_STRUCT_ST_BLOCKS
-AC_CHECK_MEMBERS([struct stat.st_rdev])
-AC_HEADER_TIME
-AC_STRUCT_TM
-AC_C_VOLATILE
-AC_CHECK_TYPES([ptrdiff_t])
+#AC_C_CONST
+#AC_TYPE_UID_T
+#AC_C_INLINE
+#AC_TYPE_MODE_T
+#AC_TYPE_OFF_T
+#AC_TYPE_PID_T
+#AC_TYPE_SIZE_T
+#AC_CHECK_MEMBERS([struct stat.st_blksize])
+#AC_STRUCT_ST_BLOCKS
+#AC_CHECK_MEMBERS([struct stat.st_rdev])
+#AC_HEADER_TIME
+#AC_STRUCT_TM
+#AC_C_VOLATILE
+#AC_CHECK_TYPES([ptrdiff_t])
 
 # Checks for library functions.
-AC_FUNC_FORK
-AC_FUNC_CHOWN
-AC_FUNC_CLOSEDIR_VOID
-AC_FUNC_ERROR_AT_LINE
-AC_FUNC_GETPGRP
-AC_PROG_GCC_TRADITIONAL
-AC_HEADER_MAJOR
-AC_FUNC_ALLOCA
-AC_FUNC_MALLOC
-AC_FUNC_MEMCMP
-AC_FUNC_MKTIME
-AC_FUNC_MMAP
-AC_FUNC_REALLOC
-AC_FUNC_SELECT_ARGTYPES
-AC_FUNC_SETPGRP
-AC_TYPE_SIGNAL
-AC_FUNC_STAT
-AC_FUNC_STRFTIME
-AC_FUNC_UTIME_NULL
-AC_FUNC_VPRINTF
+#AC_FUNC_FORK
+#AC_FUNC_CHOWN
+#AC_FUNC_CLOSEDIR_VOID
+#AC_FUNC_ERROR_AT_LINE
+#AC_FUNC_GETPGRP
+#AC_PROG_GCC_TRADITIONAL
+#AC_HEADER_MAJOR
+#AC_FUNC_ALLOCA
+#AC_FUNC_MALLOC
+#AC_FUNC_MEMCMP
+#AC_FUNC_MKTIME
+#AC_FUNC_MMAP
+#AC_FUNC_REALLOC
+#AC_FUNC_SELECT_ARGTYPES
+#AC_FUNC_SETPGRP
+#AC_TYPE_SIGNAL
+#AC_FUNC_STAT
+#AC_FUNC_STRFTIME
+#AC_FUNC_UTIME_NULL
+#AC_FUNC_VPRINTF
 #AC_FUNC_STRNLEN
-AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
+#AC_CHECK_FUNCS([atexit bzero dup2 floor getcwd gethostbyaddr gethostbyname gethostname getpagesize getpass gettimeofday inet_ntoa isascii memchr memmove memset mkdir munmap next_dev pathconf regcomp rmdir select setenv setlocale socket strcasecmp strchr strcspn strdup strerror strncasecmp strndup strpbrk strrchr strspn strstr strtol strtoul uname utime])
 
 glibc_version=2.3
 usagi_libc=23
