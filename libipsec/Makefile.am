@@ -15,6 +15,19 @@ libipsec_HEADERS = libpfkey.h
 AM_YFLAGS = -d -p __libipsec
 AM_LFLAGS = -P__libipsec -olex.yy.c
 
+############################ NOTE ##################################
+#
+# Note: when you upgrade this library, please do the following:
+#
+# 1. uncomment policy_parse.y and policy_token.l lines
+# 2. "make"
+# 3. disable the policy_parse.y and policy_token.l lines again
+# 4. commit the code (including lex/yacc generated c files)
+#
+# I could not make the lex/yacc stuff work with "make dist" which
+# is mandatory for building e.g. rpm packages. -mk
+####################################################################
+
 libipsec_la_SOURCES =
 
 if HIP_PFKEY
@@ -24,9 +37,9 @@ libipsec_la_SOURCES += \
   ipsec_strerror.c \
   key_debug.c \
   pfkey.c \
-  pfkey_dump.c \
-  policy_parse.y \
-  policy_token.l
+  pfkey_dump.c
+#  policy_parse.y \
+#  policy_token.l
 endif
 
 # version is current:revision:age.
