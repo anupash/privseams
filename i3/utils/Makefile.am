@@ -1,4 +1,4 @@
-#$(PROGRAMS): $(LDEPS)
+AUTOMAKE_OPTIONS = foreign
 
 CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
 AM_INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)

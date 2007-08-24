@@ -1,5 +1,7 @@
+AUTOMAKE_OPTIONS = foreign
+
 CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) 
 
 if HIP_HI3
 
@@ -10,8 +12,6 @@ noinst_HEADERS =  downhill_simplex.h coordinates.h i3_client_api.h \
                     i3_client_id.h i3_client_pkt.h i3_client_timer.h i3_client_trigger.h \
                     i3_client_params.h i3server_list.h ping.h http.h ping_thread.h qsort.h
                     
-INCLUDES = -I../i3 -I../utils -I../aeshash
-
 libi3client_a_SOURCES = downhill_simplex.c coordinates.c i3_client_api.c \
 			i3_client_api_ctx.c i3_client_api_ext.c i3_client_callback.c \
                         i3_client_context.c i3_client_fd.c i3_client_id.c i3_client_pkt.c \

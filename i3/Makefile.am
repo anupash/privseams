@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS = foreign
+
 # Copyright (C) 2004 Dilip Antony Joseph <dilip@cs.berkeley.edu>
 #  
 # This file is free software; as a special exception the author gives
@@ -9,6 +11,5 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 I3SERVER_SUBDIR = chord 
-#i3_server
 SUBDIRS= aeshash utils i3 i3_client $(I3SERVER_SUBDIR)
 
