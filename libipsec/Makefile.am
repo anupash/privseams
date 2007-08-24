@@ -17,7 +17,6 @@ AM_LFLAGS = -P__libipsec -olex.yy.c
 
 libipsec_la_SOURCES =
 
-if HIP_PFKEY
 libipsec_la_SOURCES += \
   ipsec_dump_policy.c \
   ipsec_get_policylen.c \
@@ -27,7 +26,6 @@ libipsec_la_SOURCES += \
   pfkey_dump.c \
   policy_parse.y \
   policy_token.l
-endif
 
 # version is current:revision:age.
 # See: http://www.gnu.org/manual/libtool-1.4.2/html_chapter/libtool_6.html#SEC32
