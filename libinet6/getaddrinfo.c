@@ -1188,11 +1188,11 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       /* HIP: If AF_UNSPEC flag is set, order the link list so HITs are first and then IPs. */
       if (req->ai_flags == AF_UNSPEC) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
-	HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+	_HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
 	while (a != NULL) {
 	  struct gaih_addrtuple *nxt = a->next;
 	  
-	  HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
+	  _HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
 		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
 	  
 	  /* do not move HITs if request is not IPv4 */

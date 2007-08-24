@@ -1,4 +1,7 @@
-$(PROGRAMS): $(LDEPS)
+AUTOMAKE_OPTIONS = foreign
+
+CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 if HIP_HI3
 
