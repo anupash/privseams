@@ -73,7 +73,7 @@ HIP_HASHTABLE *addresses;
 time_t load_time;
 
 #ifdef CONFIG_HIP_HI3
-char *i3_config = NULL;
+char *i3_config_file = NULL;
 #endif
 
 void usage() {
@@ -86,12 +86,10 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
         int n = 0;
-	HIP_DEBUG("sending user msg: family=%d sender=%s\n",
-		  dst->sun_family, &dst->sun_path);
         n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
         return n;
 }
 
@@ -167,12 +165,12 @@ int hip_sock_recv_agent(void)
 		}
 		else if (emsg && src_addr && dst_addr && msg_info)
 		{
-		#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 
 			HIP_DEBUG("Received rejected R1 packet from agent.\n");
 			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
-		#endif
+#endif
 		}
 	}
 	
@@ -258,8 +256,9 @@ int main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
-#ifdef CONFIG_HIP_HI3
-	char *i3_config = NULL;
+#if 0 
+	//#ifdef CONFIG_HIP_HI3 - ERROR redefinition of i3_config_file??? - Andrey
+	char *i3_config_file = NULL;
 #endif
 	fd_set read_fdset;
 
@@ -279,7 +278,7 @@ int main(int argc, char *argv[])
 	int flush_ipsec = 1;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "bk")) != -1)
+	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
 	{		
 		switch (ch)
 		{
@@ -291,7 +290,8 @@ int main(int argc, char *argv[])
 			break;
 #ifdef CONFIG_HIP_HI3
 		case '3':
-			i3_config = strdup(optarg);
+		  HIP_INFO("hipd is stared with i3 config file: %s", optarg);
+			i3_config_file = strdup(optarg);
 			break;
 #endif
 		case 'N':
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
-	HIP_IFEL(!i3_config, 1,
+	HIP_IFEL(!i3_config_file, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
 	
@@ -322,7 +322,8 @@ int main(int argc, char *argv[])
 	else
 	{
 		hip_set_logtype(LOGTYPE_SYSLOG);
-		if (fork() > 0) return(0);
+		if (fork() > 0)
+			return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());

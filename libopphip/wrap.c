@@ -186,8 +186,10 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 		return 0;
 	
 	if (sa) {
-		if (sa->sa_family == AF_INET6 && ipv6_addr_is_hit(hip_cast_sa_addr(sa)))
-			return 0;
+		if (sa->sa_family == AF_INET6)
+			if (ipv6_addr_is_hit(hip_cast_sa_addr(sa)) || IN6_IS_ADDR_LOOPBACK(hip_cast_sa_addr(sa)))
+				return 0;
+		
 		if (!(sa->sa_family == AF_INET || sa->sa_family == AF_INET6))
 			return 0;
 		if (sa->sa_family == AF_INET) {
@@ -195,10 +197,6 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 			if (oip->s_addr == htonl(INADDR_LOOPBACK) || oip->s_addr == htonl(INADDR_ANY))
 				return 0;
 		}
-		if (sa->sa_family == AF_INET6 &&
-		    IN6_IS_ADDR_LOOPBACK(hip_cast_sa_addr(sa)))
-			return 0;
-
 	}
 
 	return 1;
@@ -691,7 +689,7 @@ int hip_translate_socket(const int *orig_socket,
 	is_translated =
 		(is_peer ? entry->peer_id_is_translated :
 		 entry->local_id_is_translated);
-	wrap_applicable = hip_wrapping_is_applicable(orig_id, entry);
+	wrap_applicable = (orig_id == NULL) ? 0 : hip_wrapping_is_applicable(orig_id, entry);
 
 	_HIP_DEBUG("orig_id=%p is_dgram=%d wrap_applicable=%d already=%d is_peer=%d force=%d\n",
 		  orig_id, is_dgram, wrap_applicable, is_translated, is_peer,
@@ -706,7 +704,7 @@ int hip_translate_socket(const int *orig_socket,
 			_HIP_DEBUG("orig_id family %d\n", orig_id->sa_family);
 	}
 	
-	if (!is_translated)
+	if (!is_translated && orig_id)
 		hip_store_orig_socket_info(entry, is_peer, *orig_socket,
 					   orig_id, *orig_id_len);
 	

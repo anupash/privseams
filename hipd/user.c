@@ -20,7 +20,7 @@
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_un *src)
+int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
@@ -29,10 +29,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_un *src)
 	int err = 0, msg_type, n = 0, len = 0, state=0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
-	
-	int send_response = (src && src->sun_family == AF_FILE);
+	int send_response = (src ? 1 : 0);
 
-	HIP_DEBUG("handling user msg: family=%d sender=%s\n", src->sun_family, &src->sun_path);
+	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
+		  src->sin6_family, &src->sin6_port);
 
 	err = hip_check_userspace_msg(msg);
 	if (err)
@@ -369,7 +369,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_un *src)
 		break;
 	case SO_HIP_DEFAULT_HIT:
 		hip_msg_init(msg);
-		err =  hip_select_default_hit(&my_src,&my_dst,msg);
+		err =  hip_select_default_hit(&my_src, &my_dst,msg);
 		break;
 	case SO_HIP_HANDOFF_ACTIVE:
 		//hip_msg_init(msg);
