@@ -729,7 +729,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
+			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)); //, -1,
 			// 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
@@ -740,7 +741,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, entry->peer_udp_port);
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/,
+			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port);
 			 //1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
@@ -1719,7 +1721,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    &entry->default_spi_out, entry->esp_transform,
 			    &entry->esp_out, &entry->auth_out, 1, 
 	   		    HIP_SPI_DIRECTION_OUT, 0,  
-			    0, entry->peer_udp_port ), -1, 
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
@@ -1732,7 +1735,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    &entry->hit_our,
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
-	   		    HIP_SPI_DIRECTION_IN, 0,  
+	   		    HIP_SPI_DIRECTION_IN,
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),  
 			    entry->peer_udp_port, 0 ), -1, 
 			   "Error while changing inbound security association for new preferred address\n");
 
@@ -2082,7 +2086,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    &entry->default_spi_out, entry->esp_transform,
 			    &entry->esp_out, &entry->auth_out, 1, 
 	   		    HIP_SPI_DIRECTION_OUT, 0,  
-			    0, entry->peer_udp_port ), -1, 
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
 	/*hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
@@ -2104,7 +2109,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
 	   		    HIP_SPI_DIRECTION_IN, 0,  
-			    entry->peer_udp_port, 0 ), -1, 
+			    entry->peer_udp_port,
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)), -1, 
 			   "Error while changing inbound security association for new preferred address\n");
 
 	ipv6_addr_copy(&entry->local_address, new_pref_addr);
