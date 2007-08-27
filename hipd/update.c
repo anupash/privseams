@@ -1179,7 +1179,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 
 	/* return value currently ignored, no need to abort on error? */ 
 	/* XX FIXME: we should ADD the locator, not overwrite */
-#if 0
+#if 1
 	if (entry->nat_mode)
 		hip_update_check_simple_nat(src_ip, locator);
 #endif
@@ -1735,9 +1735,9 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    &entry->hit_our,
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
-	   		    HIP_SPI_DIRECTION_IN,
+	   		    HIP_SPI_DIRECTION_IN, 0,
 			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),  
-			    entry->peer_udp_port, 0 ), -1, 
+			    entry->peer_udp_port), -1, 
 			   "Error while changing inbound security association for new preferred address\n");
 
 out_err:
