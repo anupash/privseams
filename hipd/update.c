@@ -77,7 +77,7 @@ int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
 	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
 	{
 		addr = list_entry(item);
-	    HIP_IFE(func(entry, addr, spi_out, opaq), -1);
+		HIP_IFE(func(entry, addr, spi_out, opaq), -1);
 	}
 
  out_err:
@@ -729,7 +729,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 /*&esp_info->new_spi*/ &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg  : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 0); //, -1,
+			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
+			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)); //, -1,
 			// 1, HIP_SPI_DIRECTION_IN, 0, 0, 0); //, -1,
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
@@ -740,7 +741,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 			 &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, entry->peer_udp_port);
+			 1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/,
+			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port);
 			 //1, HIP_SPI_DIRECTION_OUT, 0 /*prev_spi_out == new_spi_out*/, 0, 0);
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
@@ -1114,6 +1116,36 @@ int hip_update_send_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
+int hip_update_find_address_match(hip_ha_t *entry,
+				  struct hip_locator_info_addr_item *item,
+				  void *opaque) {
+	struct in6_addr *addr = (struct in6_addr *) opaque;
+
+	HIP_DEBUG_IN6ADDR("addr1", addr);
+	HIP_DEBUG_IN6ADDR("addr2", &item->address);
+
+	return !ipv6_addr_cmp(addr, &item->address);
+}
+
+int hip_update_check_simple_nat(struct in6_addr *peer_ip,
+				struct hip_locator *locator) {
+	int err = 0, found;
+	struct hip_locator_info_addr_item *item;
+
+        found = hip_for_each_locator_addr_item(hip_update_find_address_match,
+					       NULL, locator, peer_ip);
+	HIP_IFEL(found, 0, "No address translation\n");
+
+	HIP_IFEL(!(item = hip_get_locator_first_addr_item(locator)), -1,
+		 "No addresses in locator\n");
+	ipv6_addr_copy(&item->address, peer_ip);
+	HIP_DEBUG("Assuming NATted peer, overwrote locator\n");
+
+out_err:
+
+	return err;
+}
+
 /** hip_handle_update_plain_locator - handle UPDATE(LOCATOR, SEQ)
  * @param entry hadb entry corresponding to the peer
  * @param msg the HIP packet
@@ -1144,6 +1176,14 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	HIP_IFEL(locator == NULL, -1, "No locator!\n");
 	HIP_IFEL(esp_info == NULL, -1, "No esp_info!\n");
+
+	/* return value currently ignored, no need to abort on error? */ 
+	/* XX FIXME: we should ADD the locator, not overwrite */
+#if 1
+	if (entry->nat_mode)
+		hip_update_check_simple_nat(src_ip, locator);
+#endif
+
 	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
 		 -1, "hip_update_handle_locator_parameter failed\n")
 	
@@ -1365,7 +1405,7 @@ int hip_handle_esp_info(struct hip_common *msg,
 	keymat_index = ntohs(esp_info->keymat_index);
 	
 	keying_state = hip_set_rekeying_state(entry, esp_info);	
-        HIP_IFEL(keying_state, -1, "Protocol Error: mm-04 Sec 5.3");   	
+        //HIP_IFEL(keying_state, -1, "Protocol Error: mm-04 Sec 5.3\n");
  
 	switch(keying_state){
 		case HIP_UPDATE_STATE_REKEYING:
@@ -1681,7 +1721,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    &entry->default_spi_out, entry->esp_transform,
 			    &entry->esp_out, &entry->auth_out, 1, 
 	   		    HIP_SPI_DIRECTION_OUT, 0,  
-			    0, entry->peer_udp_port ), -1, 
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
@@ -1694,8 +1735,9 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    &entry->hit_our,
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
-	   		    HIP_SPI_DIRECTION_IN, 0,  
-			    entry->peer_udp_port, 0 ), -1, 
+	   		    HIP_SPI_DIRECTION_IN, 0,
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),  
+			    entry->peer_udp_port), -1, 
 			   "Error while changing inbound security association for new preferred address\n");
 
 out_err:
@@ -1863,6 +1905,37 @@ int hip_receive_update(struct hip_common *msg,
 	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
 		 "Verification of UPDATE signature failed\n");
  	
+	/* Node moves within public Internet or from behind a NAT to public
+	   Internet. */
+	if(sinfo->dst_port == 0){
+		HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n");
+		entry->nat_mode = 0;
+		entry->peer_udp_port = 0;
+		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
+		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
+	} else {
+		/* Node moves from public Internet to behind a NAT, stays
+		   behind the same NAT or moves from behind one NAT to behind
+		   another NAT. */
+		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
+		entry->nat_mode = 1;
+		entry->peer_udp_port = sinfo->src_port;
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+		ipv6_addr_copy(&entry->local_address, dst_ip);
+		ipv6_addr_copy(&entry->preferred_address, src_ip);
+		
+		/* Somehow the addresses in the entry doesn't get updated for
+		   mobility behind nat case. The "else" would be called only
+		   when the client moves from behind NAT to behind NAT.
+		   Updating the entry addresses here.
+		   
+		   Miika: Is it the correct place to be done? -- Abi
+		   
+		   Error was because of multiple locator parameter, code
+		   shifted to after setting of preferred address by the
+		   mm logic
+		   -- Bagri */	
+	}
 	
 	if(esp_info)
 		HIP_IFEL(hip_handle_esp_info(msg, entry), -1, "Error in processing esp_info\n");
@@ -1916,36 +1989,6 @@ int hip_receive_update(struct hip_common *msg,
                         type_count), -1, "Error handling reg_info\n");
         }
         
-	/* Node moves within public Internet or from behind a NAT to public
-	   Internet. */
-	if(sinfo->dst_port != HIP_NAT_UDP_PORT){
-		HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n");
-		entry->nat_mode = 0;
-		entry->peer_udp_port = 0;
-		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
-		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
-	}
-	/* Node moves from public Internet to behind a NAT, stays behind the
-	   same NAT or moves from behind one NAT to behind another NAT. */
-	else{
-		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
-		entry->nat_mode = 1;
-		entry->peer_udp_port = sinfo->src_port;
-		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		ipv6_addr_copy(&entry->local_address, dst_ip);
-		ipv6_addr_copy(&entry->preferred_address, src_ip);
-		
-		/* Somehow the addresses in the entry doesn't get updated for
-		   mobility behind nat case. The "else" would be called only
-		   when the client moves from behind NAT to behind NAT. Updating
-		   the entry addresses here.
-		   
-		   Miika: Is it the correct place to be done? -- Abi
-		   
-		   Error was because of multiple locator parameter, code shifted
-		   to after setting of preferred address by the mm logic
-		   -- Bagri */	
-	}
  out_err:
 	if (err)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
@@ -2043,7 +2086,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    &entry->default_spi_out, entry->esp_transform,
 			    &entry->esp_out, &entry->auth_out, 1, 
 	   		    HIP_SPI_DIRECTION_OUT, 0,  
-			    0, entry->peer_udp_port ), -1, 
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new preferred address\n");
 	
 	/*hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
@@ -2065,7 +2109,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
 	   		    HIP_SPI_DIRECTION_IN, 0,  
-			    entry->peer_udp_port, 0 ), -1, 
+			    entry->peer_udp_port,
+			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)), -1, 
 			   "Error while changing inbound security association for new preferred address\n");
 
 	ipv6_addr_copy(&entry->local_address, new_pref_addr);
