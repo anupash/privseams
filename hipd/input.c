@@ -778,6 +778,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
+	/********* LOCATOR PARAMETER ************/
+        /** Type 193 **/ 
+        if ((err = hip_build_locators(i2)) < 0) 
+            HIP_DEBUG("LOCATOR parameter building failed\n");
+
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -1095,6 +1100,7 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
 	struct hip_dh_public_value *dhpv = NULL;
+        struct hip_locator *locator;
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1137,6 +1143,15 @@ int hip_handle_r1(struct hip_common *r1,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
+        if (locator)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, NULL),
+                         -1, "hip_update_handle_locator_parameter with NULL esp_info failed\n");
+            }
+        else
+            HIP_DEBUG("R1 did not have locator\n");
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
@@ -1575,6 +1590,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	struct in6_addr *plain_peer_hit = NULL, *plain_local_hit = NULL;
 	uint16_t nonce;
 	struct hip_dh_public_value *dhpv = NULL;
+        struct hip_locator *locator;
 
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
@@ -1849,6 +1865,16 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	HIP_IFEL(hip_hadb_add_peer_addr(entry, i2_saddr, 0, 0,
 					PEER_ADDR_STATE_ACTIVE), -1,
 		 "Error while adding the preferred peer address\n");
+
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator && esp_info)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+            }
+        else
+            HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));

@@ -198,6 +198,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
+	/********* LOCATOR PARAMETER ************/
+        /** Type 193 **/ 
+        if ((err = hip_build_locators(msg)) < 0) 
+            HIP_DEBUG("LOCATOR parameter building failed\n");
+
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
@@ -254,11 +259,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                         hip_get_service_max_lifetime(), service_list, service_count), 
                         -1, "Building of reg_info failed\n");	
 	}
-
-	/********* LOCATOR PARAMETER ************/
-        
-        if ((err = hip_build_locators(msg)) < 0) 
-            HIP_DEBUG("LOCATOR parameter building failed\n");;
         
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
