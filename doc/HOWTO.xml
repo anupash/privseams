@@ -39,11 +39,8 @@
       Linux Operating System
       </para></listitem>
       <listitem><para>
-      A BEET patched Linux 2.6 kernel with dummy device,
-      security capabilities,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support. Also,
-      you should have also CONFIG_IP_ADVANCED_ROUTER and
-      CONFIG_IP_MULTIPLE_TABLES as built-in.
+      A BEET patched Linux 2.6 kernel with the modules listed in
+      <xref linkend="kernel" />.
       </para></listitem>
       <listitem><para>
       OpenSSL-library and developer headers
@@ -63,7 +60,7 @@
       <listitem><para>
       wxgtk 2.6.2 and libgtk-2.x library and development headers
       </para></listitem>
-      <para><listitem>
+      <listitem><para>
       Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
       because atleast in Ubuntu Feisty it messes up the compilation.
       </para></listitem>
@@ -145,7 +142,7 @@
     </itemizedlist>
 
   </chapter>
-  <chapter>
+  <chapter id="kernel">
     <title>Compiling the Kernel</title>
     
     <para>
@@ -163,6 +160,7 @@
       Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
+    <!-- ADD: CONFIG_IP_ADVANCED_ROUTER and CONFIG_IP_MULTIPLE_TABLES ?? -->
     <itemizedlist>
     <listitem><para>
             Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
@@ -237,7 +235,7 @@
             Security options ---&gt;
     </para></listitem>
     <listitem><para>
-            [ ] Enable different security models
+            [*] Enable different security models
     </para></listitem>
     </itemizedlist>
     <para>
