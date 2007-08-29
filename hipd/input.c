@@ -1143,6 +1143,7 @@ int hip_handle_r1(struct hip_common *r1,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
+
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
