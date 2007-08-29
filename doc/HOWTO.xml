@@ -160,7 +160,6 @@
       Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
-    <!-- ADD: CONFIG_IP_ADVANCED_ROUTER and CONFIG_IP_MULTIPLE_TABLES ?? -->
     <itemizedlist>
     <listitem><para>
             Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
@@ -175,7 +174,19 @@
             Networking support ---&gt; Networking options
     </para></listitem>
     <listitem><para>
+            &lt;M&gt;  Unix domain sockets
+    </para></listitem>
+    <listitem><para>
+            [*] Transformation user configuration interface
+    </para></listitem>
+    <listitem><para>
             [*] TCP/IP networking
+    </para></listitem>
+    <listitem><para>
+            [*] Advanced router
+    </para></listitem>
+    <listitem><para>
+            [*] IP: policy routing
     </para></listitem>
     <listitem><para>
             &lt;M&gt; Packet socket
@@ -193,9 +204,6 @@
             [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
-            [*] IPv6: IPsec BEET mode
-    </para></listitem>
-    <listitem><para>
             &lt;M&gt; IP: ESP transform
     </para></listitem>
     <listitem><para>
@@ -205,7 +213,13 @@
             &lt;M&gt; IPv6: ESP transformation
     </para></listitem>
     <listitem><para>
+            [*] IPv6: IPsec BEET mode
+    </para></listitem>
+    <listitem><para>
             &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: Multiple Routing Tables
     </para></listitem>
     <listitem><para>
             Cryptographic options
