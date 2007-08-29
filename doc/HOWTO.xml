@@ -237,6 +237,9 @@
     <listitem><para>
             [*] Enable different security models
     </para></listitem>
+    <listitem><para>
+            [M] Default Linux Capabilities
+    </para></listitem>
     </itemizedlist>
     <para>
       The hipd probes the necessary kernel modules automatically,
