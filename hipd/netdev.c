@@ -536,8 +536,8 @@ skip_entry_creation:
 	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
 	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
 
-	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1,
-			 "if_index NOT determined\n");
+	if_index = hip_devaddr2ifindex(&entry->local_address);
+	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */
 
@@ -557,8 +557,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
-	struct rtattr *rta, *tb[IFA_MAX+1];
-	int l, is_add, i, ii;
+	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
+	int l = 0, is_add, i, ii;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	struct hip_locator_info_addr_item *locators;
