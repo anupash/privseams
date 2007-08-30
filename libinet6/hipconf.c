@@ -1428,8 +1428,8 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		//system(preload);
 		//env[0] = preload;
 		//env[1] = NULL;
-		HIP_DEBUG("preload0: %s\n", env[0]);
-		HIP_DEBUG("preload1: %s\n", env[1]);
+		//HIP_DEBUG("preload0: %s\n", env[0]);
+		//HIP_DEBUG("preload1: %s\n", env[1]);
 		//	for (n = 1; n <= argc; n++)
 		//  cmd[n + 1] = argv[n-1];
 

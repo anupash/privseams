@@ -34,11 +34,10 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
 	/*
-	
-	// @todo: Here we have wrong checking, because function  
-	// hip_get_locator_addr_item_count(locator) has already
-	// divided the length on sizeof(struct hip_locator_info_addr_item)
-	// hence we already have number of elements. Andrey
+	  @todo: Here we have wrong checking, because function  
+	  hip_get_locator_addr_item_count(locator) has already
+	  divided the length on sizeof(struct hip_locator_info_addr_item)
+	  hence we already have number of elements. Andrey
 
 	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
 		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
@@ -296,7 +295,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	struct hip_locator *locator = (void *) _locator;
 	struct hip_spi_in_item *item, *tmp;
 
-	HIP_DEBUG("\n\n\nlocators\n\n");
+	HIP_DEBUG("\n");
 
 	// @todo: try to delete all unnecessary connections. Temprorary solution, to make handovers work.
 	if (list_item->is_preferred) //hip_update_locator_contains_item(locator, list_item))
@@ -1139,7 +1138,7 @@ int hip_update_check_simple_nat(struct in6_addr *peer_ip,
 	HIP_IFEL(!(item = hip_get_locator_first_addr_item(locator)), -1,
 		 "No addresses in locator\n");
 	ipv6_addr_copy(&item->address, peer_ip);
-	HIP_DEBUG("Assuming NATted peer, overwrote locator\n");
+	HIP_DEBUG("Assuming NATted peer, overwrote first locator\n");
 
 out_err:
 
@@ -1179,10 +1178,8 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 
 	/* return value currently ignored, no need to abort on error? */ 
 	/* XX FIXME: we should ADD the locator, not overwrite */
-#if 1
 	if (entry->nat_mode)
 		hip_update_check_simple_nat(src_ip, locator);
-#endif
 
 	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
 		 -1, "hip_update_handle_locator_parameter failed\n")
@@ -1833,8 +1830,6 @@ int hip_receive_update(struct hip_common *msg,
 	struct in6_addr *src_ip, *dst_ip;
 	struct hip_tlv_common *encrypted = NULL;
 	
-	_HIP_HEXDUMP("msg", msg, hip_get_msg_total_len(msg));
-
 	HIP_DEBUG("enter\n");
 
 	src_ip = update_saddr;
@@ -1850,7 +1845,7 @@ int hip_receive_update(struct hip_common *msg,
 	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
 	 * process from ESTABLISHED state
 	 *
-	 * CHK: Is it too eqarly to do this?
+	 * CHK: Is it too early to do this?
 	 *                           -Bagri */
 	if (state == HIP_STATE_R2_SENT) {
 		state = entry->state = HIP_STATE_ESTABLISHED;
@@ -1889,9 +1884,10 @@ int hip_receive_update(struct hip_common *msg,
 
 	if (ack)
 		//process ack
-		entry->hadb_update_func->hip_update_handle_ack(entry, ack, has_esp_info);
+		entry->hadb_update_func->hip_update_handle_ack(entry, ack,
+							       has_esp_info);
 	if (seq)
-		HIP_IFEL(hip_handle_update_seq(entry, msg),-1,"");
+		HIP_IFEL(hip_handle_update_seq(entry, msg), -1, "seq\n");
 	
         /* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -1917,7 +1913,7 @@ int hip_receive_update(struct hip_common *msg,
 		/* Node moves from public Internet to behind a NAT, stays
 		   behind the same NAT or moves from behind one NAT to behind
 		   another NAT. */
-		HIP_DEBUG("UPDATE packet was destined to port 50500.\n");
+		HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
 		entry->nat_mode = 1;
 		entry->peer_udp_port = sinfo->src_port;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
@@ -1938,17 +1934,18 @@ int hip_receive_update(struct hip_common *msg,
 	}
 	
 	if(esp_info)
-		HIP_IFEL(hip_handle_esp_info(msg, entry), -1, "Error in processing esp_info\n");
+		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
+			 "Error in processing esp_info\n");
 	
 	//mm stuff after this
-	if(locator)
+	if (locator)
 		//handle locator parameter
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
-	else if(echo){
+	else if (echo) {
 		//handle echo_request
 		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
 	}
-	else if(echo_response){
+	else if (echo_response) {
 		//handle echo response
 		hip_update_handle_echo_response(entry, echo_response, src_ip);
 	}
