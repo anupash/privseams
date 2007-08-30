@@ -2242,6 +2242,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char host_addr[] = "127.0.0.1"; 
 	struct addrinfo *serving_gateway;
 	int err, my_socket;
+        struct in_addr tmp_v4;
 	
 	/* get OpenDHT server address */
 	err =  resolve_dht_gateway_info (opendht, &serving_gateway);
@@ -2276,6 +2277,12 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1){
 		HIP_DEBUG("Got the peer address successfully\n");
 		return(0);
+                if(inet_aton(dht_response, &tmp_v4))
+                    {
+                        IPV4_TO_IPV6_MAP(&tmp_v4, res);
+                        HIP_DEBUG("Got the peer address succesfully\n");
+                        return(0);
+                    }
 	} else {
 		HIP_DEBUG("failed to get the peer address successfully\n");
 		return -1;
@@ -2295,7 +2302,7 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   We can fallback to e.g. DHT search if the mapping is not
 	   found from local files.*/
 	
-	HIP_DEBUG("I am here just before getendpointinfo() \n");
+	_HIP_DEBUG("I am here just before getendpointinfo() \n");
 	
 	hip_in6_ntop(dst_hit, peer_hit);
 	
@@ -2311,9 +2318,8 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	
 	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
 #ifdef CONFIG_HIP_OPENDHT
-	HIP_IFEL(!opendht_get_endpointinfo((const char *) peer_hit,
-					   dst_addr),
-		 0, "OpenDHT look-up succeeded\n");
+	err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
+	if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
 #endif
 
 out_err:
