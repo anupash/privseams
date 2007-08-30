@@ -202,6 +202,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         /** Type 193 **/ 
         if ((err = hip_build_locators(msg)) < 0) 
             HIP_DEBUG("LOCATOR parameter building failed\n");
+        _HIP_DUMP_MSG(msg);
 
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
@@ -331,44 +332,27 @@ int hip_build_locators(struct hip_common *msg)
     struct hip_locator_info_addr_item *locs = NULL;
     int addr_count = 0;
 
-    _HIP_DEBUG("Started building LOCATOR parameter\n");
-
-    /* count addresses for malloc */
-    list_for_each_safe(item, tmp, addresses, i)
-        {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            addr_count++;
-        }
-
-    if (addr_count > 1)
-        {
-            HIP_IFEL(!(locs = malloc(addr_count * sizeof(struct hip_locator_info_addr_item))), 
+    if (address_count > 1) {
+            HIP_IFEL(!(locs = malloc(address_count * 
+                              sizeof(struct hip_locator_info_addr_item))), 
                      -1, "Malloc for LOCATORS failed\n");
-            memset(locs,0,(addr_count * sizeof(struct hip_locator_info_addr_item)));
-            i = 0;
-            err = 0;
-            item = NULL;
-            tmp = NULL;
-            list_for_each_safe(item, tmp, addresses, i)
-                {
+            memset(locs,0,(address_count * 
+                           sizeof(struct hip_locator_info_addr_item)));
+            list_for_each_safe(item, tmp, addresses, i) {
                     n = list_entry(item);
                     if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
                         continue;
-                    /* FIX LEN PART FAST*/
-                    memcpy(&locs[ii].address, &n->addr, sizeof(struct in6_addr));
+                    memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                           sizeof(struct in6_addr));
                     ii++;
                 }
-            err = hip_build_param_locator(msg, locs, addr_count);
+            err = hip_build_param_locator(msg, locs, address_count);
         }
     else
         HIP_DEBUG("Host has only one or no addresses no point "
                   "in building LOCATOR parameters\n");
-
  out_err:
     if (locs) free(locs);
-    _HIP_DEBUG("Stopped building LOCATOR parameter (one way or another)\n");
     return err;
 }
 
