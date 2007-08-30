@@ -192,7 +192,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	}
 	memset(n, 0, sizeof(struct netdev_address));
 
-	/* AG convert IPv4 address to IPv6 */
+	/* Convert IPv4 address to IPv6 */
 	if (addr->sa_family == AF_INET)
 	{
 		struct sockaddr_in6 temp;
@@ -335,19 +335,6 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
-#if 0
-int hip_ipv4_devaddr2ifindex(struct in6_addr *addr)
-{
-	struct sockaddr_in6 a;
-	a.sin6_family = AF_INET6;
-	//a.sin_addr.s_addr = addr->s6_addr32[3];
-	ipv6_addr_copy(&a.sin6_addr, addr);
-	HIP_DEBUG("IPV4\n");
-	return hip_netdev_find_if((struct sockaddr *)&a);
-}
-
-#endif
-
 int static add_address(const struct nlmsghdr *h, int len, void *arg)
 {
         struct sockaddr_storage ss_addr;
@@ -445,10 +432,9 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	return err;
 }
 
-
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	int err = 0, if_index = 0, is_ipv4_locator,
-		reuse_hadb_local_address = 0, ha_nat_mode = 0,
+		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
 		old_global_nat_mode = hip_nat_status;
 	in_port_t ha_peer_port;
 	hip_ha_t *entry;
@@ -469,8 +455,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
-	if (entry)
+	if (entry) {
+		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
+	}
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
@@ -489,7 +477,17 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		}
 	}
 
-	HIP_IFEL(err, -1, "Giving up, no locator mapping found\n");
+	/* broadcast I1 as a last resource */
+	if (err) {
+		struct in_addr bcast = { INADDR_BROADCAST };
+		/* IPv6 multicast (see bos.c) failed to bind() to link local,
+		   so using IPv4 here -mk */
+		HIP_DEBUG("No information of peer found, trying broadcast\n");
+		IPV4_TO_IPV6_MAP(&bcast, &dst_addr);
+		/* Broadcast did not work with UDP packets -mk */
+		ha_nat_mode = 0;
+		err = 0;
+	}
 
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
@@ -497,7 +495,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
 		 "map failed\n");
 
-	hip_nat_status = old_global_nat_mode;
+	hip_nat_status = old_global_nat_mode; /* restore nat status */
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
@@ -535,19 +533,21 @@ skip_entry_creation:
 	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
 	       hip_sa_addr_len(addr));
 
-	HIP_DEBUG_IN6ADDR("local addr", &entry->local_address);
-
-	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1,
-		 "if_index NOT determined\n");
-        /* we could try also hip_select_source_address() here on failure,
-	   but it seems to fail too */
+	HIP_DEBUG_HIT("our hit", &entry->hit_our);
+        HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
+	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
+	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
 
 	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
 
-	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
+	if_index = hip_devaddr2ifindex(&entry->local_address);
+	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
+        /* we could try also hip_select_source_address() here on failure,
+	   but it seems to fail too */
 
-	HIP_DEBUG_HIT("entry->hit_our", &entry->hit_our);
-        HIP_DEBUG_HIT("entry->hit-peer", &entry->hit_peer);
+	HIP_DEBUG("Using ifindex %d\n", if_index);
+
+	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
@@ -561,8 +561,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
-	struct rtattr *rta, *tb[IFA_MAX+1];
-	int l, is_add, i, ii;
+	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
+	int l = 0, is_add, i, ii;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	struct hip_locator_info_addr_item *locators;
@@ -611,7 +611,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			memset(tb, 0, sizeof(tb));
 			memset(addr, 0, sizeof(struct sockaddr_storage));
-			is_add = (msg->nlmsg_type==RTM_NEWADDR);
+			is_add = ((msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0);
 
 			/* parse list of attributes into table
 			 * (same as parse_rtattr()) */

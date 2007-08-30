@@ -381,7 +381,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 							    entry,
 							    msg_info))
  out_err:
-	if (block_entry) {
+	if (block_entry && err) {
 		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
 		hip_oppdb_entry_clean_up(block_entry);
 	}
@@ -492,6 +492,9 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
 					     src), -1,
 			 "Add db failed\n");
+	       	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+			 "sending of I1 failed\n");
+		
 	} else if (ipv6_addr_any(&entry->peer_real_hit)) {
 		/* Two simultaneously connecting applications */
 		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
@@ -509,9 +512,9 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	}
 	
  send_i1:
-	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+	/*	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
-	
+	*/
  out_err:
 	return err;
 }

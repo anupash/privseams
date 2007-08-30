@@ -13,12 +13,13 @@ EXTRA_DIST += libhipgui/logo.png libhipgui/newhit.png libhipgui/run.png libhipgu
 EXTRA_DIST += libhipgui/stock_id_24.png libhipgui/stock_id_48.png libhipgui/stock_keyring_24.png libhipgui/stock_keyring_48.png libhipgui/exec.png
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
+EXTRA_DIST += i3-cfg-PL.xml
 
 # Andrei: please insert i3 after OpenDHT after it works. Remove this line
 #
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent dnsmasq
+SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent dnsmasq
 
 showip:
 	cd showip && sh create.sh

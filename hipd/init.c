@@ -196,7 +196,7 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_kea_endpoints();
 #endif
 #ifdef CONFIG_HIP_HI3
-	cl_init(i3_config);
+	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -309,7 +309,6 @@ out_err:
 
 
 int hip_set_lowcapability() {
-//-- BUG 172 -- try to lower the capabilities of the daemon 
 	struct passwd *nobody_pswd;
 	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
@@ -331,22 +330,24 @@ int hip_set_lowcapability() {
 	HIP_IFEL(capget(&header, &data), -1,
 		 "error while retrieving capabilities through capget()\n");
 
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 		  data.effective, data.permitted, data.inheritable);
 
 	ruid=nobody_pswd->pw_uid; 
 	euid=nobody_pswd->pw_uid; 
-	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+		  getuid(), geteuid());
   	
 	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
 	
-	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n", getuid(), geteuid());
+	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+		  getuid(), geteuid());
 	HIP_IFEL(capget(&header, &data), -1,
 		 "error while retrieving capabilities through 'capget()'\n");
 
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 		  data.effective,data.permitted, data.inheritable);
-	HIP_DEBUG ("We are going to clear all capabilities except the ones we need:\n");
+	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
 	data.effective = data.permitted = data.inheritable = 0;
   	// for CAP_NET_RAW capability 
 	data.effective |= (1 <<CAP_NET_RAW );
@@ -356,10 +357,10 @@ int hip_set_lowcapability() {
   	data.permitted |= (1 <<CAP_NET_ADMIN );
 
 	HIP_IFEL(capset(&header, &data), -1, 
-		 "error while setting new capabilities through 'capset()'\n");
+		 "error in capset (do you have capabilities kernel module?)");
 
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
-	HIP_DEBUG("CAPABILITY value is  effective=%u, permitted = %u, inheritable=%u\n",
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 		  data.effective, data.permitted, data.inheritable);
 #endif /* CONFIG_HIP_PRIVSEP */
 
@@ -670,7 +671,8 @@ void hip_probe_kernel_modules()
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
 		"ipv6", "aes", "crypto_null", "des",
-		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"
+		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
+		"capability"
 	};
 
 	mod_total = sizeof(mod_name) / sizeof(char *);
