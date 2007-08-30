@@ -1364,8 +1364,7 @@ int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
  * @return       zero on success, or negative error value on error.
  */
 int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
-{
-	/* Variables. */
+{	/* Variables. */
 	//char *libs;
 	char lib_all[LIB_LENGTH];
 	char preload[LIB_LENGTH + 20];
@@ -1422,13 +1421,13 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		}
 
 		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
-		//setenv("LD_PRELOAD", lib_all, 1);
+		setenv("LD_PRELOAD", lib_all, 1);
 		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
-		strcpy(preload, "LD_PRELOAD=");
-		strcat(preload, lib_all);
+		//strcpy(preload, "LD_PRELOAD=");
+		//strcat(preload, lib_all);
 		//system(preload);
-		env[0] = preload;
-		env[1] = NULL;
+		//env[0] = preload;
+		//env[1] = NULL;
 		HIP_DEBUG("preload0: %s\n", env[0]);
 		HIP_DEBUG("preload1: %s\n", env[1]);
 		//	for (n = 1; n <= argc; n++)
@@ -1438,10 +1437,10 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		//	err = execve(argv[0], cmd1, cmd);
 		HIP_DEBUG("preloaded!!\n");
 
-		//err = execvp(argv[0], argv);
+		err = execvp(argv[0], argv);
 		//err = execvp("/bin/bash", cmd);
 		//err = execvp("firefox", cmd1);
-		err = execve("/usr/bin/firefox", cmd, env);
+		//err = execve("/usr/bin/firefox", cmd, env);
 		if (err != 0)
 		{
 			HIP_DEBUG("Executing new application failed!\n");
