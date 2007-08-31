@@ -1586,7 +1586,8 @@ int hip_update_send_echo(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->local_address, &addr->address,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	

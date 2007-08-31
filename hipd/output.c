@@ -88,7 +88,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	// Send blinded i1
 	if (hip_blind_get_status()) {
 	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
-						    &daddr, 0, 
+						    &daddr, 
+						    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						    HIP_NAT_UDP_PORT,
 						    i1_blind, entry, 1);
 	}
@@ -96,7 +97,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
-				     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+				     HIP_NAT_UDP_PORT,
 				     i1, entry, 1);
 	}
 
@@ -543,7 +545,7 @@ void hip_send_notify(hip_ha_t *entry)
 	
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &daddr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, notify_packet,
 			      entry, 0),
 		 -ECOMM, "Sending NOTIFY packet failed.\n");

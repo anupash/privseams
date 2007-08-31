@@ -71,6 +71,14 @@
  */
 #define EXEC_LOADLIB_NONE	13
 
+/**
+ * Maximum length of the string for that stores all libraries.
+ * @see handle_exec_application()
+ */
+#define LIB_LENGTH	200
+
+
+
 /** @} addtogroup exec_app_types */
 
 /* 0 is reserved */
@@ -139,6 +147,7 @@
 
  
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
+int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);

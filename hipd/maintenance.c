@@ -43,19 +43,17 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
-		if (entry->hip_msg_retrans.count > 0 &&
-		    entry->state != HIP_STATE_ESTABLISHED &&
-		    entry->retrans_state == entry->state) {
-			
-			/* kludge fix: with slow ADSL line I1 packets were*/
-			if (!(entry->state == HIP_STATE_I2_SENT &&
-			    hip_get_msg_type(entry->hip_msg_retrans.buf) == HIP_I1))
-				goto out_err;
+		HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count, entry->state, entry->retrans_state);
+		if ((entry->hip_msg_retrans.count > 0) &&
+		    (entry->state != HIP_STATE_ESTABLISHED) &&
+		    (entry->retrans_state == entry->state)) {
 
+			/* @todo: verify that this works over slow ADSL line */
+			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
-					     HIP_NAT_UDP_PORT,
+					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);
