@@ -1385,9 +1385,9 @@ int hip_receive_r1(struct hip_common *r1,
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-	#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-	#endif
+#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
