@@ -1045,7 +1045,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 1);
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
@@ -1504,7 +1506,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
@@ -2918,7 +2921,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->local_address, &responder_ip,
-						     HIP_NAT_UDP_PORT, port,
+						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						     port,
 						     &i1, NULL, 0);
 				
 				break;
