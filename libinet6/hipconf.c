@@ -1299,6 +1299,48 @@ out_err:
 	
 }
 
+int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
+{
+
+      int c_count = lib_all_length, err = 0;
+      char *lib_aux = lib_all;
+      char *prefix = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
+
+      while(*libs != NULL){
+
+	  HIP_IFEL(c_count<strlen(prefix), -1, "Overflow in string lib_all\n");
+	  strncpy(lib_aux, prefix, c_count);
+
+	  while(*lib_aux != '\0'){
+	    lib_aux++;
+	    c_count--;
+	  }
+	  HIP_IFEL(c_count<5, -1, "Overflow in string lib_all\n");
+	  strncpy(lib_aux, "/lib/", c_count);
+	  c_count -= 5;
+	  lib_aux += 5;
+
+	  HIP_IFEL(c_count<strlen(*libs), -1, "Overflow in string lib_all\n");
+	  strncpy(lib_aux, *libs, c_count);
+
+	  while(*lib_aux != '\0'){
+	    lib_aux++;
+	    c_count--;
+	  }
+
+	  *lib_aux = ':';
+	  c_count--;
+	  lib_aux++;
+
+	  libs++;
+      }
+
+      *--lib_aux = '\0';
+  out_err:
+	return err;
+	
+}
+
 
 /**
  * Handles the hipconf commands where the type is @c run. Execute new
@@ -1324,14 +1366,20 @@ out_err:
 int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 {
 	/* Variables. */
-	char *libs;
-	char *path = "/usr/lib:/lib:/usr/local/lib";
+	//char *libs;
+	char lib_all[LIB_LENGTH];
+	char preload[LIB_LENGTH + 20];
+	//char *path = "/usr/lib:/lib:/usr/local/lib";
 	va_list args;
-	int err = 0;
+	int err = 0, n = 1;
+	char *libs[5];
+	char *env[2];
+	char *cmd[] = {"firefox", NULL};
+	//char *env[]={"LD_PRELOAD=/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", NULL};
+	//char *env[]={NULL};
 
 	if (do_fork)
 		err = fork();
-
 	if (err < 0)
 	{
 		HIP_ERROR("Failed to exec new application.\n");
@@ -1342,28 +1390,58 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	}
 	else if(err == 0)
 	{
-		setenv("LD_LIBRARY_PATH", path, 1);
+	  //setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
+		      libs[0] = "libinet6.so";
+		      libs[1] = "libhiptool.so";
+		      libs[3] = NULL;
+		      libs[4] = NULL;
+		  
 #ifdef CONFIG_HIP_OPENDHT
-			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
+		      libs[2] = "libhipopendht.so";
 #else
-			libs = "libinet6.so:libhiptool.so";
+		      libs[2] = NULL;
 #endif
 		}
 		else
 		{
+		      libs[0] = "libopphip.so";
+		      libs[1] = "libinet6.so";
+		      libs[2] = "libhiptool.so";
+		      libs[4] = NULL;
+
 #ifdef CONFIG_HIP_OPENDHT
-			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
+		      libs[3] = "libhipopendht.so";
+		      //libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 #else
-			libs = "libopphip.so:libinet6.so:libhiptool.so";
+		      libs[3] = NULL;
+		      //libs = "libopphip.so:libinet6.so:libhiptool.so";
 #endif
 		}
-		setenv("LD_PRELOAD", libs, 1);
 
-		HIP_DEBUG("LD_PRELOADing\n");
-		err = execvp(argv[0], argv);
+		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
+		//setenv("LD_PRELOAD", lib_all, 1);
+		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
+		strcpy(preload, "LD_PRELOAD=");
+		strcat(preload, lib_all);
+		//system(preload);
+		env[0] = preload;
+		env[1] = NULL;
+		HIP_DEBUG("preload0: %s\n", env[0]);
+		HIP_DEBUG("preload1: %s\n", env[1]);
+		//	for (n = 1; n <= argc; n++)
+		//  cmd[n + 1] = argv[n-1];
+
+
+		//	err = execve(argv[0], cmd1, cmd);
+		HIP_DEBUG("preloaded!!\n");
+
+		//err = execvp(argv[0], argv);
+		//err = execvp("/bin/bash", cmd);
+		//err = execvp("firefox", cmd1);
+		err = execve("/usr/bin/firefox", cmd, env);
 		if (err != 0)
 		{
 			HIP_DEBUG("Executing new application failed!\n");
