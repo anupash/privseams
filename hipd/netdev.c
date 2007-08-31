@@ -607,7 +607,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			memset(tb, 0, sizeof(tb));
 			memset(addr, 0, sizeof(struct sockaddr_storage));
-			is_add = (msg->nlmsg_type==RTM_NEWADDR);
+			is_add = ((msg->nlmsg_type == RTM_NEWADDR) ? 1 : 0);
 
 			/* parse list of attributes into table
 			 * (same as parse_rtattr()) */
