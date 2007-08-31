@@ -557,8 +557,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
-	struct rtattr *rta, *tb[IFA_MAX+1];
-	int l, is_add, i, ii;
+	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
+	int l = 0, is_add, i, ii;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	struct hip_locator_info_addr_item *locators;
