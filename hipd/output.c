@@ -406,8 +406,8 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	   hit. */
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
 #endif
-	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit); // blindattu
-	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit); // blindattu
+	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
+	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
 	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
 	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
 	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
