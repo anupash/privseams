@@ -378,38 +378,35 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_peer_addr_list_item *a, *tmp;
 	int zero = 0;
 
-        if (!(esp_info == NULL))
-            {
-                spi = ntohl(esp_info->new_spi);
-                HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
-            
 
-                /* If following does not exit, its a bug: outbound SPI must have been
-                   already created by the corresponding ESP_INFO in the same UPDATE
-                   packet */
-                HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
-                         "Bug: outbound SPI 0x%x does not exist\n", spi);
+        spi = ntohl(esp_info->new_spi);
+        HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
+        
+        
+        /* If following does not exit, its a bug: outbound SPI must have been
+           already created by the corresponding ESP_INFO in the same UPDATE
+           packet */
+        HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, spi)), -1,
+                 "Bug: outbound SPI 0x%x does not exist\n", spi);
+        
+        /* Set all peer addresses to unpreferred */
+        /* TODO: Compiler warning;
+           warning: passing argument 1 of 'hip_update_for_each_peer_addr'
+           from incompatible pointer type.*/
+        HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
+                                              entry, spi_out, &zero), -1);
                 
-                /* Set all peer addresses to unpreferred */
-                /* TODO: Compiler warning;
-                   warning: passing argument 1 of 'hip_update_for_each_peer_addr'
-                   from incompatible pointer type.*/
-                HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
-                                                      entry, spi_out, &zero), -1);
-            }
 
 	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
                                                 entry, locator, &spi), -1,
 		 "Locator handling failed\n");
         
-        if (!(esp_info == NULL))
-            {
-                /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
-                   parameter as DEPRECATED. */
-                HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
-                                                       entry, spi_out, locator), -1,
-                         "Depracating a peer address failed\n");
-            }
+
+        /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
+           parameter as DEPRECATED. */
+        HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
+                                               entry, spi_out, locator), -1,
+                 "Depracating a peer address failed\n");
 
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
