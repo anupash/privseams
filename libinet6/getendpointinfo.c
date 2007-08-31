@@ -1105,6 +1105,64 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
 }
 
 /**
+ * search_hostsfile - search query endpoint info about a peer
+ * @param hostsfile the filename where the endpoint information is stored
+ * @param nodename the name of the peer to be resolved
+ * @param servname the service port name (e.g. "http" or "12345")
+ * @param hints selects which type of endpoints is going to be resolved
+ * @param res the result of the query
+ *
+ * This function is for libinet6 internal purposes only.
+ *
+ * @return zero on success, or negative error value on failure
+ *
+ */
+/*
+int search_hostsfile(const char *hostsfile,
+			  const char *nodename,
+			  const char *servname,
+			  const struct endpointinfo *hints,
+			  struct endpointinfo **res)
+{
+  int err = 0, match_found = 0, ret = 0, i=0;
+  unsigned int lineno = 0, fqdn_str_len = 0;
+  FILE *hosts = NULL;
+  char *hi_str, *fqdn_str;
+  struct endpointinfo *einfo = NULL, *current = NULL, *new = NULL;
+  struct addrinfo ai_hints, *ai_res = NULL;
+  struct endpointinfo *previous_einfo = NULL;
+  /* Only HITs are supported, so endpoint_hip is statically allocated */
+/*  struct endpoint_hip endpoint_hip;
+  char line[500];
+  struct in6_addr hit;
+  List mylist;
+
+  hosts = fopen(hostsfile, "r");
+  if (!hosts) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Failed to open %s\n", _PATH_HIP_HOSTS);
+    goto out_err;
+  }
+
+  while( getwithoutnewline(line, 500, hosts) != NULL ) {
+    lineno++;
+    if(strlen(line)<=1) continue; 
+    initlist(&mylist);
+    extractsubstrings(line,&mylist);
+     
+    /* find out the fqdn string amongst the HITS - 
+       it's a non-valid ipv6 addr */
+/*    for(i=0;i<length(&mylist);i++) {
+      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
+      if (ret < 1) {
+	fqdn_str = getitem(&mylist,i);
+	fqdn_str_len = strlen(getitem(&mylist,i));
+	break;
+      }
+    }
+*/
+
+/**
  * get_peer_endpointinfo - query endpoint info about a peer
  * @param hostsfile the filename where the endpoint information is stored
  * @param nodename the name of the peer to be resolved
@@ -2242,6 +2300,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	char host_addr[] = "127.0.0.1"; 
 	struct addrinfo *serving_gateway;
 	int err, my_socket;
+        struct in_addr tmp_v4;
 	
 	/* get OpenDHT server address */
 	err =  resolve_dht_gateway_info (opendht, &serving_gateway);
@@ -2276,6 +2335,12 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 	if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1){
 		HIP_DEBUG("Got the peer address successfully\n");
 		return(0);
+                if(inet_aton(dht_response, &tmp_v4))
+                    {
+                        IPV4_TO_IPV6_MAP(&tmp_v4, res);
+                        HIP_DEBUG("Got the peer address succesfully\n");
+                        return(0);
+                    }
 	} else {
 		HIP_DEBUG("failed to get the peer address successfully\n");
 		return -1;
@@ -2295,7 +2360,7 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   We can fallback to e.g. DHT search if the mapping is not
 	   found from local files.*/
 	
-	HIP_DEBUG("I am here just before getendpointinfo() \n");
+	_HIP_DEBUG("I am here just before getendpointinfo() \n");
 	
 	hip_in6_ntop(dst_hit, peer_hit);
 	
@@ -2311,9 +2376,8 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	
 	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
 #ifdef CONFIG_HIP_OPENDHT
-	HIP_IFEL(!opendht_get_endpointinfo((const char *) peer_hit,
-					   dst_addr),
-		 0, "OpenDHT look-up succeeded\n");
+	err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
+	if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
 #endif
 
 out_err:

@@ -411,7 +411,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
         /** @todo Fill in information for UDP-NAT SAs. */
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
-		HIP_DEBUG("FILLING UP Port info while deleting\n");
+		HIP_DEBUG("FILLING UDP Port info while deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
