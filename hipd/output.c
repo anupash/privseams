@@ -333,21 +333,26 @@ int hip_build_locators(struct hip_common *msg)
     int addr_count = 0;
 
     if (address_count > 1) {
-            HIP_IFEL(!(locs = malloc(address_count * 
-                              sizeof(struct hip_locator_info_addr_item))), 
-                     -1, "Malloc for LOCATORS failed\n");
-            memset(locs,0,(address_count * 
-                           sizeof(struct hip_locator_info_addr_item)));
-            list_for_each_safe(item, tmp, addresses, i) {
-                    n = list_entry(item);
-                    if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                        continue;
-                    memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                           sizeof(struct in6_addr));
-                    ii++;
-                }
-            err = hip_build_param_locator(msg, locs, address_count);
+        HIP_IFEL(!(locs = malloc(address_count * 
+                                 sizeof(struct hip_locator_info_addr_item))), 
+                 -1, "Malloc for LOCATORS failed\n");
+        memset(locs,0,(address_count * 
+                       sizeof(struct hip_locator_info_addr_item)));
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            /* Fill out hip_locator_info_addr_item */
+            memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                   sizeof(struct in6_addr));
+            locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+            locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+            locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+            locs[ii].reserved = 0; /* should clear the P also  (last bit)*/
+            ii++;
         }
+        err = hip_build_param_locator(msg, locs, address_count);
+    }
     else
         HIP_DEBUG("Host has only one or no addresses no point "
                   "in building LOCATOR parameters\n");

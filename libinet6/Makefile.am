@@ -34,6 +34,8 @@ AUTOMAKE_OPTIONS = foreign
 
 # XX TODO: How to make autoconf link libcrypto.a to libinet6.a?
 
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+
 lib_LTLIBRARIES = libinet6.la
 
 # Original sources
