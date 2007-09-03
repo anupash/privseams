@@ -790,7 +790,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Handover may cause e.g. on-link duplicate address detection which may cause bind to fail.
 	   This is a kludge because we don't have UPDATE retransmissions yet. */
-	for (try_again = 0; try_again < 2; try_again++) {
+	for (try_again = 0; try_again < 1; try_again++) {
 		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
 		HIP_DEBUG("Binding to raw socket returned %d\n", err);
 		if (err) {
