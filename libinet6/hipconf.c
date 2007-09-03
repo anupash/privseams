@@ -1438,22 +1438,16 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[3] = NULL;
 #endif
 		}
-<<<<<<< TREE
 		
 		if (type != EXEC_LOADLIB_NONE)
 		{
 			setenv("LD_PRELOAD", libs, 1);
 			HIP_DEBUG("LD_PRELOADing\n");
 		}
-=======
->>>>>>> MERGE-SOURCE
 
-<<<<<<< TREE
-=======
 		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
 		setenv("LD_PRELOAD", lib_all, 1);
 		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
->>>>>>> MERGE-SOURCE
 		err = execvp(argv[0], argv);
 
 		if (err != 0)
