@@ -43,7 +43,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 
 	/* check if the last transmision was at least RETRANSMIT_WAIT seconds ago */
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
-		HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
+		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
 		if ((entry->hip_msg_retrans.count > 0) &&
 		    (entry->state != HIP_STATE_ESTABLISHED || entry->update_state != 0) &&
