@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
                "Num = 8 put test times with consecutive keys and 985 byte values "
                "with 5 sec sleep in between puts\n"
                "Num = 9 get test times with consecutive keys (do number 7 or 8 first)\n"
-               "Num = 'a' remove testing\n" 
+               "Num = 'a' remove testing\n"
                "Iterations, just as it says\n"
                "Connect errors will print 999;999\n");
         exit(EXIT_SUCCESS);
@@ -241,7 +241,18 @@ int main(int argc, char *argv[])
             printf("Get packet (was removed, will not be found (hopefully)) sent and ...\n");
             printf("Teststub: Value received from DHT: %s\n",dht_response2);   
             close(s);
+            
+            /* testing a wrapper for blocking dht call */
+            memset(dht_response, '\0', sizeof(dht_response));
+            ret = 0;
+            HIP_DEBUG("Trying out get wrapper\n");
+            ret = opendht_get_key(serving_gateway, val_hit, dht_response);
 
+            if (!ret)
+                HIP_DEBUG("DHT get succeeded\n");
+            else
+                HIP_DEBUG("DHT get was unsuccesfull\n");
+            
             /* basic testing done */
             exit(EXIT_SUCCESS);
         }

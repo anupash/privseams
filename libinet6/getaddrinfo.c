@@ -455,13 +455,6 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   struct addrinfo * serving_gateway;
   char ownaddr[] = "127.0.0.1";
   
-  /*
-  struct sigaction act, oact;
-  act.sa_handler = connect_alarm;
-  sigemptyset(&act.sa_mask);
-  act.sa_flags = 0;
-  */
-   
   struct hip_common *msg;
   struct hip_opendht_gw_info *gw_info;
   struct in_addr tmp_v4;
@@ -499,13 +492,14 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
             tmp_ip_str, tmp_port, tmp_ttl);
 /* THIS MIGHT CAUSE PROBLEMS LATER */
  out_err: 
-  
+  /*  
   s = init_dht_gateway_socket(s);
   if (s < 0) 
   {
     HIP_DEBUG("Socket creation for openDHT failed skipping openDHT\n");
     goto skip_dht;
   }
+  */
   error = 0;
   //  error = resolve_dht_gateway_info ("opendht.nyuld.net", &serving_gateway);
   error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
@@ -515,6 +509,7 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
     close(s);
     goto skip_dht;
   }
+  /*
   error = 0;
   error = connect_dht_gateway(s, serving_gateway, 1);
   if (error < 0)
@@ -525,56 +520,62 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   }
   ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
   ret_hit = opendht_read_response(s, dht_response_hit);
+  */
+  ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
   if (ret_hit == 0)
     HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
   close(s);
   if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
   {
-    s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, serving_gateway, 1);
-    if (error < 0)
-    {
-      HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
-      goto skip_dht;
-    }
-    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr, 5851);
-    ret_addr = opendht_read_response(s, dht_response_addr);
-    if (ret_addr == 0)
-      HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
-    close(s);
+      /*
+      s = init_dht_gateway_socket(s);
+      error = connect_dht_gateway(s, serving_gateway, 1);
+        if (error < 0)
+            {
+                HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
+                goto skip_dht;
+            }
+        ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, 
+                               (unsigned char *)ownaddr, 5851);
+        ret_addr = opendht_read_response(s, dht_response_addr);
+      */
+      ret_addr = opendht_get_key(serving_gateway, dht_response_hit, dht_response_addr);
+        if (ret_addr == 0)
+            HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
+        close(s);
   }
   if ((ret_hit == 0) && (ret_addr == 0) && 
       (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) 
-    { 
+      { 
+          
+          if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
+              inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
+              
+              if (**pat == NULL) {						
+                  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                      HIP_ERROR("Memory allocation error\n");
+                      exit(-EAI_MEMORY);
+                  }	  
+                  (**pat)->scopeid = 0;				
+              }
+              (**pat)->family = AF_INET6;					
+              memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+              *pat = &((**pat)->next);				     	
+              
+              if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                  HIP_ERROR("Memory allocation error\n");
+                  exit(-EAI_MEMORY);
+              }	  
 
-      if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-          inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
-
-	if (**pat == NULL) {						
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
-	  }	  
-	  (**pat)->scopeid = 0;				
-	}
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-	*pat = &((**pat)->next);				     	
-	
-	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	  HIP_ERROR("Memory allocation error\n");
-	  exit(-EAI_MEMORY);
-	}	  
-
-	(**pat)->scopeid = 0;				
-	(**pat)->next = NULL;						
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
-	*pat = &((**pat)->next);
-        /* dump_pai(*pat); */
-	return 1;
-      }
-    } 
+              (**pat)->scopeid = 0;				
+              (**pat)->next = NULL;						
+              (**pat)->family = AF_INET6;					
+              memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
+              *pat = &((**pat)->next);
+              /* dump_pai(*pat); */
+              return 1;
+          }
+      } 
   /* CONFIG_HIP_OPENDHT */
  skip_dht:
 #endif
