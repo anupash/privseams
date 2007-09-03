@@ -47,6 +47,28 @@ void *_group_remote_add_thread(void *data)
 
 /******************************************************************************/
 /**
+ * Thread function for deleting remote group.
+ */
+void *_group_remote_del_thread(void *data)
+{
+	hit_db_del_rgroup(data);
+	return NULL;
+}
+
+
+/******************************************************************************/
+/**
+ * Thread function for deleting remote hit.
+ */
+void *_hit_remote_del_thread(void *data)
+{
+	hit_db_del(data);
+	return NULL;
+}
+
+
+/******************************************************************************/
+/**
  * Set GUI statusbar info text.
  * @note Call this function ONLY inside gtk main loop!
  *
@@ -805,28 +827,28 @@ void edit_apply(void)
 	struct tree_update_data ud;
 	char *ps, str[256];
 	
-/*	if (str_var_is("edit-mode", "hit-remote"))
+	if (str_var_is("edit-mode", "hit-remote"))
 	{
 		strcpy(str, (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_NAME))));
-		if (!check_hit_name(str, r));
+		if (!check_name_hit(str, r));
 		else if (!check_apply_hit(str, r));
 		else
 		{
 			NAMECPY(ud.old_name, r->name);
 			NAMECPY(ud.new_name, str);
 			NAMECPY(r->name, str);
-			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
+/*			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
 			URLCPY(r->url, ps);
 			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_PORT)));
-			URLCPY(r->port, ps);
+			URLCPY(r->port, ps);*/
 
 			ud.depth = 2;
 			ud.indices_first = -1;
 			HIP_DEBUG("Updating remote HIT %s -> %s.\n", ud.old_name, ud.new_name);
-			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
+			gtk_tree_model_foreach(widget(ID_RLISTMODEL), update_tree_value, &ud);
 
 			/* Change group, if wanted. */
-/*			ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)));
+			ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)));
 			g = hit_db_find_rgroup(ps);
 			if (g && g != r->g)
 			{
@@ -836,16 +858,16 @@ void edit_apply(void)
 				r->g->remotec++;
 				
 				/* Delete old remote HIT from list. */
-/*				NAMECPY(ud.old_name, r->name);
+				NAMECPY(ud.old_name, r->name);
 				ud.new_name[0] = '\0';
-				gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
+				gtk_tree_model_foreach(widget(ID_RLISTMODEL), update_tree_value, &ud);
 				/* Add it to new group in list. */
-/*				gui_add_remote_hit(r->name, g->name);
-				if (g2->remotec < 1) gui_add_remote_hit("", g2->name);
+				hit_remote_add(r->name, g->name);
+				if (g2->remotec < 1) hit_remote_add("", g2->name);
 			}
-			tw_set_remote_info(r->name);
+			edit_hit_remote(r->name);
 		}
-	}*/
+	}
 
 	if (str_var_is("edit-mode", "group-remote"))
 	{
@@ -871,4 +893,86 @@ void edit_apply(void)
 	}
 }
 
+
+
+/******************************************************************************/
+/**
+ * When delete is pressed in edit.
+ */
+void edit_delete(void)
+{
+	HIT_Remote *r = (HIT_Remote *)pointer(ID_EDIT_REMOTE);
+	HIT_Group *g = (HIT_Group *)pointer(ID_EDIT_GROUP);
+	pthread_t pt;
+	int err;
+
+	if (str_var_is("edit-mode", "hit-remote"))
+	{
+		g = r->g;
+		err = message_dialog(lang_get("ask-delete-hit"));
+		if (err != 1);
+		else
+		{
+			pthread_create(&pt, NULL, _hit_remote_del_thread, r->name);
+			edit_reset();
+		}
+	}
+	
+	if (str_var_is("edit-mode", "group-remote"))
+	{
+		err = message_dialog(lang_get("ask-delete-group"));
+		if (err != 1);
+		else
+		{
+			pthread_create(&pt, NULL, _group_remote_del_thread, g->name);
+			edit_reset();
+		}
+	}
+}
+
+
+/******************************************************************************/
+/**
+ * Set group info to remote editing.
+ */
+void edit_set_remote_group(HIT_Group *g)
+{
+	char *ps;
+	int i;
+
+	i = combo_box_find(g->l->name, widget(ID_TWR_LOCAL));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_LOCAL)), i);
+
+	if (g->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
+	else ps = lang_get("group-type-deny");
+	i = combo_box_find(ps, widget(ID_TWR_TYPE1));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_TYPE1)), i);
+	if (g->lightweight == 1) ps = lang_get("group-type2-lightweight");
+	else ps = lang_get("group-type2-normal");
+	i = combo_box_find(ps, widget(ID_TWR_TYPE2));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_TYPE2)), i);
+}
+
+
+/******************************************************************************/
+/**
+ * Set group info to new hit dialog.
+ */
+void hit_dlg_set_remote_group(HIT_Group *g)
+{
+	char *ps;
+	int i;
+
+	i = combo_box_find(g->l->name, widget(ID_NH_LOCAL));
+	gtk_combo_box_set_active(widget(ID_NH_LOCAL), i);
+
+	if (g->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
+	else ps = lang_get("group-type-deny");
+	i = combo_box_find(ps, widget(ID_NH_TYPE1));
+	gtk_combo_box_set_active(widget(ID_NH_TYPE1), i);
+	if (g->lightweight == 1) ps = lang_get("group-type2-lightweight");
+	else ps = lang_get("group-type2-normal");
+	i = combo_box_find(ps, widget(ID_NH_TYPE2));
+	gtk_combo_box_set_active(widget(ID_NH_TYPE2), i);
+}
 

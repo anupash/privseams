@@ -44,7 +44,7 @@ void gui_quit(void);
 /* About HITs. */
 int gui_hit_remote_ask(HIT_Remote *, int);
 void gui_hit_remote_add(const char *, const char *);
-void gui_hit_remote_del(const char *);
+void gui_hit_remote_del(const char *, const char *);
 void gui_group_remote_add(const char *);
 void gui_group_remote_del(const char *);
 void gui_hit_local_add(HIT_Local *);

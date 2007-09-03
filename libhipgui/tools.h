@@ -61,7 +61,10 @@ void edit_reset(void);
 void edit_group_remote(char *);
 
 void edit_apply(void);
+void edit_delete(void);
 
+void edit_set_remote_group(HIT_Group *);
+void hit_dlg_set_remote_group(HIT_Group *);
 
 
 #endif /* END OF HEADER FILE */

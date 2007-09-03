@@ -56,6 +56,7 @@ void e_destroy_main(GtkWidget *w, gpointer data)
 /** When button is pressed. */
 void e_button(GtkWidget *warg, gpointer data)
 {
+	GtkWidget *w;
 	HIT_Group *g;
 	HIT_Remote *r;
 	int id = (int)data, i, err;
@@ -63,57 +64,41 @@ void e_button(GtkWidget *warg, gpointer data)
 	
 	switch (id)
 	{
-/*	case IDB_TW_RGROUPS:
-		ps = (char *)gtk_combo_box_get_active_text(GTK_COMBO_BOX(warg));
-		g = hit_db_find_rgroup(ps);
-		if (g)
-		{
-			tw_set_remote_rgroup_info(g);
-		}
-		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
-		{
-			r = tw_get_curitem();
-			err = group_remote_create("");
-			if (!err) i = 0;
-			else i = combo_box_find(r->g->name, widget(ID_TWR_RGROUP));
-			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), i);
-		}
-		break;
-
+	case IDB_TW_RGROUPS:
 	case IDB_NH_RGROUPS:
 		ps = (char *)gtk_combo_box_get_active_text(GTK_COMBO_BOX(warg));
 		g = hit_db_find_rgroup(ps);
 		if (g)
 		{
-			nh_set_remote_rgroup_info(g);
+			if (id == IDB_TW_RGROUPS) edit_set_remote_group(g);
+			if (id == IDB_NH_RGROUPS) hit_dlg_set_remote_group(g);
 		}
 		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
 		{
+			if (id == IDB_TW_RGROUPS)
+			{
+				w = widget(ID_TWR_RGROUP);
+				r = pointer(ID_EDIT_REMOTE);
+				ps = r->g->name;
+			}
+			if (id == IDB_NH_RGROUPS)
+			{
+				w = widget(ID_NH_RGROUP);
+				ps = lang_get("default-group-name");
+			}
 			err = group_remote_create("");
 			if (!err) i = 0;
-			else i = combo_box_find(lang_get("default-group-name"), widget(ID_NH_RGROUP));
-			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_NH_RGROUP)), i);
+			else i = combo_box_find(ps, w);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(w), i);
 		}
-		break;*/
+		break;
 
 	case IDB_TW_APPLY:
 		edit_apply();
 		break;
 
-	case IDB_TW_CANCEL:
-// 		tw_cancel();
-		break;
-
 	case IDB_TW_DELETE:
-// 		tw_delete();
-		break;
-		
-	case IDB_TWL_APPLY:
-// 		twl_apply();
-		break;
-
-	case IDB_TWL_CANCEL:
-// 		twl_cancel();
+ 		edit_delete();
 		break;
 		
 	case IDM_TRAY_SHOW:

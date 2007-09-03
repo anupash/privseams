@@ -264,7 +264,7 @@ int gui_hit_remote_ask(HIT_Remote *hit, int inout)
 	{
 		gtk_editable_set_editable(widget(ID_NH_HIT), TRUE);
 //		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_NH_HIT)), TRUE);
-		gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_HIT)), "2001:0070:0000:0000:0000:0000:0000:0000");
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_HIT)), "2001:0010:0000:0000:0000:0000:0000:0000");
 		gtk_editable_select_region(widget(ID_NH_HIT), 0, -1);
 		gtk_entry_set_text(GTK_ENTRY(widget(ID_NH_NAME)), "");
 		hit = &_hit;
@@ -351,7 +351,7 @@ out_err:
 /******************************************************************************/
 /**
  * Tell GUI to add new remote HIT into list.
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  * @param group Group name where to add new HIT.
  * @param name Name of new HIT to add.
@@ -371,20 +371,41 @@ out_err:
 
 /******************************************************************************/
 /**
+ * Call this GUI function to delete remote HIT.
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
+ * @param name Pointer to name of remote HIT to be deleted.
+ * @param group Name of group where the HIT was in.
  */
-void gui_hit_remote_del(const char *name)
+void gui_hit_remote_del(const char *name, const char *group)
 {
+	HIT_Group *g = hit_db_find_rgroup(group);
+	struct tree_update_data ud;
+
+	gdk_threads_enter();
+	
+	NAMECPY(ud.old_name, name);
+	ud.new_name[0] = '\0';
+	ud.depth = 2;
+	ud.indices_first = -1;
+	gtk_tree_model_foreach(widget(ID_RLISTMODEL), update_tree_value, &ud);
+	
+	if (g)
+		if (g->remotec < 1)
+			hit_remote_add("", g->name);
+	
+	gdk_threads_leave();
 }
 
 
 /******************************************************************************/
 /**
+ * Call this GUI function to add new remote HIT visible in GUI.
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
+ * @param name Pointer to name of remote HIT to be added.
  */
 void gui_group_remote_add(const char *name)
 {
@@ -415,18 +436,29 @@ void gui_group_remote_add(const char *name)
 /******************************************************************************/
 /**
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  */
 void gui_group_remote_del(const char *name)
 {
+	struct tree_update_data ud;
+
+	gdk_threads_enter();
+	
+	NAMECPY(ud.old_name, name);
+	ud.new_name[0] = '\0';
+	ud.depth = 1;
+	ud.indices_first = -1;
+	gtk_tree_model_foreach(widget(ID_RLISTMODEL), update_tree_value, &ud);
+
+	gdk_threads_leave();
 }
 
 
 /******************************************************************************/
 /**
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  */
 void gui_hit_local_add(HIT_Local *l)
@@ -437,7 +469,7 @@ void gui_hit_local_add(HIT_Local *l)
 /******************************************************************************/
 /**
  * Set GUI statusbar info text.
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  * @param string printf(3) formatted string presentation.
  */
@@ -462,7 +494,7 @@ void gui_set_info(const char *string, ...)
 /******************************************************************************/
 /**
  * Update GUI NAT status in options tab.
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  * @param status 1 if nat extension on, 0 if not.
  */
@@ -480,7 +512,7 @@ void gui_update_nat(int status)
 /******************************************************************************/
 /**
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  */
 void gui_hiu_clear(void)
@@ -491,7 +523,7 @@ void gui_hiu_clear(void)
 /******************************************************************************/
 /**
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  */
 void gui_hiu_add(HIT_Remote *r)
@@ -502,7 +534,7 @@ void gui_hiu_add(HIT_Remote *r)
 /******************************************************************************/
 /**
  * 
- * @note Dont call this function inside gtk main loop!
+ * @note Don't call this function inside gtk main loop!
  *
  */
 void gui_hiu_count(int c)

@@ -235,7 +235,7 @@ int hit_db_del(char *n)
 {
 	/* Variables. */
 	HIT_Remote *r1, *r2;
-	char name[MAX_NAME_LEN + 1];
+	char name[MAX_NAME_LEN + 1], group_name[MAX_NAME_LEN + 1];
 	int err = 0;
 	
 	/* Check that database is not empty. */
@@ -249,6 +249,7 @@ int hit_db_del(char *n)
 	{
 		r1 = remote_db;
 		r1->g->remotec--;
+		NAMECPY(group_name, r1->g->name);
 		remote_db = (HIT_Remote *)remote_db->next;
 		free(r1);
 		remote_db_n--;
@@ -277,6 +278,7 @@ int hit_db_del(char *n)
 		{
 			r1->next = r2->next;
 			r2->g->remotec--;
+			NAMECPY(group_name, r2->g->name);
 			if (remote_db_last == r2) remote_db_last = r1;
 			free(r2);
 		}
@@ -285,7 +287,7 @@ int hit_db_del(char *n)
 
 out_err:
 	if (err) _HIP_DEBUG("Deleting remote HIT failed: %s\n", name);
-	else gui_hit_remote_del(name);
+	else gui_hit_remote_del(name, group_name);
 
 	return (err);
 }
