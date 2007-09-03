@@ -201,6 +201,15 @@
             &lt;M&gt; IP tunneling
     </para></listitem>
     <listitem><para>
+            [*] IPv4: IPcomp transformation
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec transport mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec tunnel mode
+    </para></listitem>
+    <listitem><para>
             [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
@@ -211,6 +220,9 @@
     </para></listitem>
     <listitem><para>
             &lt;M&gt; IPv6: ESP transformation
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: IPcomp transformation
     </para></listitem>
     <listitem><para>
             [*] IPv6: IPsec BEET mode

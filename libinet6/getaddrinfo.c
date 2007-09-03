@@ -957,6 +957,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
   int rc;
   int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
     (req->ai_flags & AI_V4MAPPED);
+  char *namebuf = strdupa (name);
   _HIP_DEBUG(">> name != NULL\n");
   
   *at = malloc (sizeof (struct gaih_addrtuple));
@@ -1026,9 +1027,14 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	}
     }
   
-  // host name is not an IP address
-  if ((*at)->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0)
-    {     
+    // host name is not an IP address
+    /* Note: Due to problems in some platforms (FC7), it is not possible 
+       to use the flag AI_NUMERICHOST to identify whether the name is a 
+       numeric address. */
+
+    if ((*at)->family == AF_UNSPEC &&
+	inet_pton (AF_INET, name, (*at)->addr) <= 0 &&
+	inet_pton (AF_INET6, namebuf, (*at)->addr) <= 0) {
       struct gaih_addrtuple **pat = at;
       struct gaih_addrtuple *at_dns = *at;
       int no_data = 0;

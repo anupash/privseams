@@ -1299,46 +1299,64 @@ out_err:
 	
 }
 
+/**
+ * hip_append_pathtolib: Creates the string intended to set the 
+ * environmental variable LD_PRELOAD. The function recibes the required 
+ * libraries, and then includes the prefix (path where these libraries 
+ * are located) to each one. Finally it appends all of the them to the 
+ * same string.
+ *
+ * @param libs            an array of pointers to the required libraries
+ * @param lib_all         a pointer to the string to store the result
+ * @param lib_all_length  length of the string lib_all
+ * @return                zero on success, or -1 overflow in string lib_all
+ */
+
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
 {
 
-      int c_count = lib_all_length, err = 0;
-      char *lib_aux = lib_all;
-      char *prefix = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
+        int c_count = lib_all_length, err = 0;
+	char *lib_aux = lib_all;
+	char *prefix = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
 
-      while(*libs != NULL){
+	while(*libs != NULL){
 
-	  HIP_IFEL(c_count<strlen(prefix), -1, "Overflow in string lib_all\n");
-	  strncpy(lib_aux, prefix, c_count);
+	      // Copying prefix to lib_all
+	      HIP_IFEL(c_count<strlen(prefix), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, prefix, c_count);
+	      while(*lib_aux != '\0'){
+	            lib_aux++;
+		    c_count--;
+	      }
 
-	  while(*lib_aux != '\0'){
-	    lib_aux++;
-	    c_count--;
-	  }
-	  HIP_IFEL(c_count<5, -1, "Overflow in string lib_all\n");
-	  strncpy(lib_aux, "/lib/", c_count);
-	  c_count -= 5;
-	  lib_aux += 5;
+	      // Copying "/lib/" to lib_all
+	      HIP_IFEL(c_count<5, -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, "/lib/", c_count);
+	      c_count -= 5;
+	      lib_aux += 5;
 
-	  HIP_IFEL(c_count<strlen(*libs), -1, "Overflow in string lib_all\n");
-	  strncpy(lib_aux, *libs, c_count);
+	      // Copying the library name to lib_all
+	      HIP_IFEL(c_count<strlen(*libs), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, *libs, c_count);
+	      while(*lib_aux != '\0'){
+		    lib_aux++;
+		    c_count--;
+	      }
 
-	  while(*lib_aux != '\0'){
-	    lib_aux++;
-	    c_count--;
-	  }
+	      // Adding ':' to separate libraries
+	      *lib_aux = ':';
+	      c_count--;
+	      lib_aux++;
 
-	  *lib_aux = ':';
-	  c_count--;
-	  lib_aux++;
+	      // Next library
+	      libs++;
+	}
 
-	  libs++;
-      }
+	// Delete the last ':'
+	*--lib_aux = '\0';
 
-      *--lib_aux = '\0';
-  out_err:
+    out_err:
 	return err;
-	
 }
 
 
@@ -1364,18 +1382,13 @@ int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
  * @return       zero on success, or negative error value on error.
  */
 int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
-{	/* Variables. */
-	//char *libs;
+{	
+        /* Variables. */
 	char lib_all[LIB_LENGTH];
-	char preload[LIB_LENGTH + 20];
-	//char *path = "/usr/lib:/lib:/usr/local/lib";
 	va_list args;
-	int err = 0, n = 1;
+	int err = 0;
 	char *libs[5];
-	char *env[2];
-	char *cmd[] = {"firefox", NULL};
-	//char *env[]={"LD_PRELOAD=/usr/local/lib/libinet6.so:/usr/local/lib/libhiptool.so", NULL};
-	//char *env[]={NULL};
+
 
 	if (do_fork)
 		err = fork();
@@ -1389,7 +1402,6 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 	}
 	else if(err == 0)
 	{
-	  //setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
@@ -1413,34 +1425,16 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 
 #ifdef CONFIG_HIP_OPENDHT
 		      libs[3] = "libhipopendht.so";
-		      //libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
 #else
 		      libs[3] = NULL;
-		      //libs = "libopphip.so:libinet6.so:libhiptool.so";
 #endif
 		}
 
 		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
 		setenv("LD_PRELOAD", lib_all, 1);
 		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
-		//strcpy(preload, "LD_PRELOAD=");
-		//strcat(preload, lib_all);
-		//system(preload);
-		//env[0] = preload;
-		//env[1] = NULL;
-		//HIP_DEBUG("preload0: %s\n", env[0]);
-		//HIP_DEBUG("preload1: %s\n", env[1]);
-		//	for (n = 1; n <= argc; n++)
-		//  cmd[n + 1] = argv[n-1];
-
-
-		//	err = execve(argv[0], cmd1, cmd);
-		HIP_DEBUG("preloaded!!\n");
-
 		err = execvp(argv[0], argv);
-		//err = execvp("/bin/bash", cmd);
-		//err = execvp("firefox", cmd1);
-		//err = execve("/usr/bin/firefox", cmd, env);
+
 		if (err != 0)
 		{
 			HIP_DEBUG("Executing new application failed!\n");
