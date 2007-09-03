@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
             /* put_removable and rm tests */
       
             /* put_removable */
+            HIP_DEBUG("\n\nPut removable starts\n");
             s = init_dht_gateway_socket(s);
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
@@ -245,7 +246,7 @@ int main(int argc, char *argv[])
             /* testing a wrapper for blocking dht call */
             memset(dht_response, '\0', sizeof(dht_response));
             ret = 0;
-            HIP_DEBUG("Trying out get wrapper\n");
+            HIP_DEBUG("\n\nTrying out get wrapper\n");
             ret = opendht_get_key(serving_gateway, val_hit, dht_response);
 
             if (!ret)
