@@ -976,3 +976,60 @@ void hit_dlg_set_remote_group(HIT_Group *g)
 	gtk_combo_box_set_active(widget(ID_NH_TYPE2), i);
 }
 
+
+/******************************************************************************/
+/** Execute new application. */
+void exec_application(void)
+{
+	GtkWidget *dialog;
+	int err, cpid, opp, n, i, type;
+	char *ps, *ps2, *vargs[32 + 1];
+
+	dialog = widget(ID_EXECDLG);
+	gtk_widget_show(GTK_WIDGET(dialog));
+	gtk_widget_grab_focus(GTK_WIDGET(widget(ID_EXEC_COMMAND)));
+
+	err = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (err == GTK_RESPONSE_OK)
+	{
+		opp = gtk_toggle_button_get_active(widget(ID_EXEC_OPP));
+		ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_EXEC_COMMAND)));
+		
+		HIP_IFEL(strlen(ps) < 0, -1, "No command given.\n");
+			
+		HIP_DEBUG("Exec new application.\n");
+			
+		memset(vargs, 0, sizeof(char *) * 33);
+		ps2 = strpbrk(ps, " ");
+		vargs[0] = ps;
+		n = 1;
+		while (ps2 != NULL)
+		{
+			if (ps2[1] == '\0') break;
+			if (ps2[1] != ' ')
+			{
+				vargs[n] = &ps2[1];
+				n++;
+				if (n > 32) break;
+			}
+			ps2[0] = '\0';
+			ps2 = strpbrk(&ps2[1], " ");
+		}
+
+		if (opp) type = EXEC_LOADLIB_OPP;
+		else type = EXEC_LOADLIB_HIP;
+		
+		err = hip_handle_exec_application(1, type, n, vargs);
+		if (err != 0)
+		{
+			HIP_DEBUG("Executing new application failed!\n");
+			exit(1);
+		}
+	}
+
+out_err:
+	gtk_widget_hide(GTK_WIDGET(dialog));
+	return;
+}
+
+

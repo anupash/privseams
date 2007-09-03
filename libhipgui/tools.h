@@ -17,6 +17,7 @@
 #include "widgets.h"
 #include "hitdb.h"
 #include "events.h"
+#include "hipconf.h"
 
 
 /******************************************************************************/
@@ -65,6 +66,8 @@ void edit_delete(void);
 
 void edit_set_remote_group(HIT_Group *);
 void hit_dlg_set_remote_group(HIT_Group *);
+
+void exec_application(void);
 
 
 #endif /* END OF HEADER FILE */

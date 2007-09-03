@@ -121,7 +121,7 @@ void e_button(GtkWidget *warg, gpointer data)
 	
 	case IDM_TRAY_EXEC:
 	case IDM_RUNAPP:
-// 		exec_application();
+		exec_application();
 		break;
 	
 	case IDM_NEWHIT:

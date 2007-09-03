@@ -51,6 +51,7 @@ int connhipd_init(void)
 	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
+	chmod(agent_addr.sun_path, 0777);
 
 /*	bzero(&agent_addr, sizeof(agent_addr));
 	alen = sizeof(agent_addr);

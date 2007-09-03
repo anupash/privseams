@@ -156,7 +156,7 @@ int gui_init(void)
 	/* Create window content for all windows. */
 	HIP_IFEL(create_content_msgdlg(), -1, "Failed to create message-dialog contents.\n");
 	HIP_IFEL(create_content_nhdlg(), -1, "Failed to create accept-dialog contents.\n");
-// 	HIP_IFEL(create_content_execdlg(), -1, "Failed to create run-dialog contents.\n");
+ 	HIP_IFEL(create_content_execdlg(), -1, "Failed to create run-dialog contents.\n");
 	HIP_IFEL(create_content_ngdlg(), -1, "Failed to create create-dialog contents.\n");
 	HIP_IFEL(create_content_local_edit(), -1, "Failed to create local HITs edit -dialog contents.\n");
 	HIP_IFEL(create_content_main(), -1, "Failed to create main-window contents.\n");
