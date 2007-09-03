@@ -569,7 +569,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
-	        HIP_IFEL(!entry, "No entry when receiving R1\n", -1);
+	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
