@@ -55,10 +55,12 @@ hip_rva_t *hip_rvs_allocate(int gfpmask)
 		return NULL;
 	}
 
+	memset(res, 0, sizeof(*res));
+
 	atomic_set(&res->refcnt, 0);
 	HIP_LOCK_INIT(res);
 	res->lifetime = 0; // HIP_DEFAULT_RVA_LIFETIME
-	memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
+	//memset(res->ip_addrs, 0, HIP_RVA_MAX_IPS*sizeof(struct in6_addr));
 
 	return res;
 }
@@ -88,7 +90,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	_HIP_DEBUG("hip_rvs_ha2rva() invoked.\n");
 	_HIP_DEBUG("ha->peer_udp_port:%d.\n", ha->peer_udp_port);
 
-	if((rva = hip_rvs_allocate(GFP_KERNEL)) == NULL) {
+	if((rva = hip_rvs_allocate(0)) == NULL) {
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
 	}
@@ -108,7 +110,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	}
 	
 	/* Copy peer hit as the client hit. */
-	ipv6_addr_copy(&rva->hit, &ha->hit_peer);
+	ipv6_addr_copy(&rva->client_hit, &ha->hit_peer);
 	
 	/* Copy HMACs. */
 	memcpy(&rva->hmac_our, &ha->hip_hmac_in, sizeof(rva->hmac_our));
@@ -163,6 +165,11 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
  */
 hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
+	hip_rva_t find_rva;
+	/* @todo: the server hit should also be specified */
+	memset(&find_rva.server_hit, 0, sizeof(struct in6_addr));
+	ipv6_addr_copy(&find_rva.client_hit, hit);
+
  	return (hip_rva_t*)hip_ht_find(rva_table, hit);
 }
 
@@ -256,14 +263,14 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 {
 	int err;
 	HIP_DEBUG_HIT("hip_rvs_put_rva(): Inserting rendezvous association "\
-		      "with hit", &rva->hit);
+		      "with hit", &rva->client_hit);
 	
 	/* If assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
 
-	HIP_IFEL(ipv6_addr_any(&rva->hit), -EINVAL,
+	HIP_IFEL(ipv6_addr_any(&rva->client_hit), -EINVAL,
 		 "Trying to insert rva entry with NULL hit.\n");
-	HIP_IFEL(hip_ht_find(rva_table, &rva->hit), -EEXIST,
+	HIP_IFEL(hip_ht_find(rva_table, &rva->client_hit), -EEXIST,
 		 "Duplicate rva entry. Not adding hit to rva table.\n");
 	
 	err = hip_ht_add(rva_table, rva);
@@ -395,7 +402,8 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 	_HIP_DEBUG("hip_rvs_relay_i1() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 source address", i1_saddr);
 	HIP_DEBUG_IN6ADDR("hip_rvs_relay_i1():  I1 destination address", i1_daddr);
-	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit", &rva->hit);
+	HIP_DEBUG_HIT("hip_rvs_relay_i1(): Rendezvous association hit",
+		      &rva->client_hit);
 	HIP_DEBUG("Rendezvous association port: %d.\n", rva->client_udp_port);
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
