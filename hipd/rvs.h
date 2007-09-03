@@ -37,10 +37,9 @@ typedef enum { HIP_RVASTATE_INVALID=0, HIP_RVASTATE_VALID=1 } hip_rvastate_t;
     rendezvous hashtable. */
 typedef struct hip_rendezvous_association
 {
-	/** A linked list head.
-	    @todo Version 1.0 author can(?) explain what is the function
-	    of this.*/
-	hip_list_t      list_hit;
+	struct in6_addr       server_hit;
+	/** Client hit. */
+	struct in6_addr       client_hit;
 	/** Reference count of this rendezvous association. */
 	atomic_t              refcnt;
 	/** Spinlock. */
@@ -49,8 +48,6 @@ typedef struct hip_rendezvous_association
 	hip_rvastate_t        rvastate;
 	/** The lifetime of this rendezvous association. */
 	uint32_t              lifetime;
-	/** Client hit. */
-	struct in6_addr       hit;
 	/** An array of client IP addresses.
 	    @todo Indicate what is the preferred IP addresses. */
 	struct in6_addr       ip_addrs[HIP_RVA_MAX_IPS];
