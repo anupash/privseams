@@ -181,11 +181,9 @@ int opendht_put_rm(int sockfd,
                    int opendht_port,
                    int opendht_ttl)
 {
-    int key_len = 0, i = 0;
-    unsigned char *sha_retval;
+    int key_len = 0;
     char put_packet[2048];
     char tmp_key[21];
-    struct in6_addr addrkey;
     
     key_len = opendht_handle_key(key, tmp_key);
     
@@ -227,11 +225,9 @@ int opendht_put(int sockfd,
                 int opendht_port,
                 int opendht_ttl)
 {
-    int key_len = 0, i = 0;
-    unsigned char *sha_retval;
+    int key_len = 0;
     char put_packet[2048];
-    char tmp_key[21];
-    struct in6_addr addrkey;
+    char tmp_key[21];   
         
     key_len = opendht_handle_key(key, tmp_key);   
            
@@ -273,11 +269,9 @@ int opendht_rm(int sockfd,
                    int opendht_port,
                    int opendht_ttl)
 {
-    int key_len = 0, i = 0;
-    unsigned char *sha_retval;
+    int key_len = 0;
     char put_packet[2048];
     char tmp_key[21];
-    struct in6_addr addrkey;
     
     key_len = opendht_handle_key(key, tmp_key);
     
@@ -317,11 +311,9 @@ int opendht_get(int sockfd,
                 unsigned char * host,
                 int port)
 {
-    int key_len = 0, i = 0;
-    unsigned char *sha_retval;
+    int key_len = 0;
     char get_packet[2048];
     char tmp_key[21];
-    struct in6_addr addrkey;
 
     key_len = opendht_handle_key(key, tmp_key);
     
@@ -441,7 +433,7 @@ int opendht_handle_key(char * key, char * out_key)
 }
 
 /** 
- * opendht_read_respoonse - Reads from the given socket and parses the XML RPC response
+ * opendht_read_response - Reads from the given socket and parses the XML RPC response
  * @param sockfd Socket to be used with the send
  * @param answer Buffer where the response value will be saved
  *

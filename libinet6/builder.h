@@ -181,6 +181,4 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 
-
-
 #endif /* HIP_BUILDER */

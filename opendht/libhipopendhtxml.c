@@ -93,9 +93,9 @@ int build_packet_put_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    /*
+    
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    */
+    
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -299,9 +299,9 @@ int read_packet_content(char * in_buffer, char * out_value)
     answers.count = 0;
     answers.addrs[0] = '\0';
 
-    /*  
+     
     HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-    */
+    
     /*!!!! is there a http header !!!!*/
     if (strncmp(in_buffer, "HTTP", 4) !=0) 
     { 

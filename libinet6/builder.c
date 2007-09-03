@@ -3283,3 +3283,5 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit) {
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
+
+

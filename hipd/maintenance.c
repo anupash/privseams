@@ -501,9 +501,16 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
                                           opendht_serving_gateway, 0);
       if (opendht_error > -1 && opendht_error != EINPROGRESS)
         {
+            /*
           opendht_error = opendht_put(hip_opendht_sock_hit, 
                                       (unsigned char *)tmp_hit_str,
                                       (unsigned char *)tmp_addr_str, 
+                                      (unsigned char *)tmp_addr_str,
+                                      opendht_serving_gateway_port,
+                                      opendht_serving_gateway_ttl);
+            */
+            opendht_error = opendht_put_locator(hip_opendht_sock_hit, 
+                                      (unsigned char *)tmp_hit_str, 
                                       (unsigned char *)tmp_addr_str,
                                       opendht_serving_gateway_port,
                                       opendht_serving_gateway_ttl);
@@ -531,12 +538,19 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
     }
   else if (hip_opendht_hit_sent == STATE_OPENDHT_START_SEND)
     { /* connect finished send the data */
+        /*
       opendht_error = opendht_put(hip_opendht_sock_hit, 
                                   (unsigned char *)tmp_hit_str,
                                   (unsigned char *)tmp_addr_str, 
                                   (unsigned char *)tmp_addr_str,
                                   opendht_serving_gateway_port,
                                   opendht_serving_gateway_ttl);
+        */
+        opendht_error = opendht_put_locator(hip_opendht_sock_hit, 
+                                    (unsigned char *)tmp_hit_str, 
+                                    (unsigned char *)tmp_addr_str,
+                                    opendht_serving_gateway_port,
+                                    opendht_serving_gateway_ttl);
       if (opendht_error < 0)
         {
           HIP_DEBUG("Error sending HIT->IP mapping to the openDHT.\n");
@@ -748,6 +762,42 @@ int hip_firewall_set_escrow_active(int activate)
                 HIP_DEBUG("Sendto firewall OK.\n");
         }  
 out_err:
-        return err;        
+        return err;
 }
 
+int opendht_put_locator(int sockfd, 
+                   unsigned char * key, 
+                   unsigned char * host,
+                   int opendht_port,
+                   int opendht_ttl) 
+{
+    int err = 0, key_len = 0, value_len = 0, ret = 0;
+    struct hip_common *fake_msg;
+    char put_packet[2048];
+    char tmp_key[21];   
+    fake_msg = hip_msg_alloc();
+    value_len = hip_build_locators(fake_msg);
+    HIP_DUMP_MSG(fake_msg);
+        
+    key_len = opendht_handle_key(key, tmp_key);   
+           
+    /* Put operation FQDN->HIT */
+    memset(put_packet, '\0', sizeof(put_packet));
+    if (build_packet_put((unsigned char *)tmp_key,
+                         key_len,
+                         (unsigned char *)fake_msg,
+	                 value_len,
+                         opendht_port,
+                         (unsigned char *)host,
+                         put_packet, opendht_ttl) != 0)
+        {
+        HIP_DEBUG("Put packet creation failed.\n");
+        err = -1;
+        }
+    HIP_DEBUG("Host address in OpenDHT put : %s\n", host); 
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
+    send(sockfd, put_packet, strlen(put_packet), 0);
+    err = 0;
+ out_err:
+    return(err);
+}
