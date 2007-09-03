@@ -455,8 +455,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
-	if (entry)
+	if (entry) {
+		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
+	}
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
@@ -536,12 +538,14 @@ skip_entry_creation:
 	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
 	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
 
-	HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1,
-			 "if_index NOT determined\n");
+	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
+
+	if_index = hip_devaddr2ifindex(&entry->local_address);
+	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */
 
-	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
+	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 

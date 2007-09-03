@@ -1306,6 +1306,66 @@ out_err:
 	
 }
 
+/**
+ * hip_append_pathtolib: Creates the string intended to set the 
+ * environmental variable LD_PRELOAD. The function recibes the required 
+ * libraries, and then includes the prefix (path where these libraries 
+ * are located) to each one. Finally it appends all of the them to the 
+ * same string.
+ *
+ * @param libs            an array of pointers to the required libraries
+ * @param lib_all         a pointer to the string to store the result
+ * @param lib_all_length  length of the string lib_all
+ * @return                zero on success, or -1 overflow in string lib_all
+ */
+
+int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
+{
+
+        int c_count = lib_all_length, err = 0;
+	char *lib_aux = lib_all;
+	char *prefix = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
+
+	while(*libs != NULL){
+
+	      // Copying prefix to lib_all
+	      HIP_IFEL(c_count<strlen(prefix), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, prefix, c_count);
+	      while(*lib_aux != '\0'){
+	            lib_aux++;
+		    c_count--;
+	      }
+
+	      // Copying "/lib/" to lib_all
+	      HIP_IFEL(c_count<5, -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, "/lib/", c_count);
+	      c_count -= 5;
+	      lib_aux += 5;
+
+	      // Copying the library name to lib_all
+	      HIP_IFEL(c_count<strlen(*libs), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, *libs, c_count);
+	      while(*lib_aux != '\0'){
+		    lib_aux++;
+		    c_count--;
+	      }
+
+	      // Adding ':' to separate libraries
+	      *lib_aux = ':';
+	      c_count--;
+	      lib_aux++;
+
+	      // Next library
+	      libs++;
+	}
+
+	// Delete the last ':'
+	*--lib_aux = '\0';
+
+    out_err:
+	return err;
+}
+
 
 /**
  * Handles the hipconf commands where the type is @c run. Execute new
@@ -1333,12 +1393,14 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 	/* Variables. */
 	char *libs;
 	char *path = "/usr/lib:/lib:/usr/local/lib";
+	char lib_all[LIB_LENGTH];
 	va_list args;
 	int err = 0;
+	char *libs[5];
+
 
 	if (do_fork)
 		err = fork();
-
 	if (err < 0)
 	{
 		HIP_ERROR("Failed to exec new application.\n");
@@ -1349,32 +1411,51 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 	}
 	else if(err == 0)
 	{
-		setenv("LD_LIBRARY_PATH", path, 1);
 		HIP_DEBUG("Exec new application.\n");
 		if (type == EXEC_LOADLIB_HIP)
 		{
+		      libs[0] = "libinet6.so";
+		      libs[1] = "libhiptool.so";
+		      libs[3] = NULL;
+		      libs[4] = NULL;
+		  
 #ifdef CONFIG_HIP_OPENDHT
-			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
+		      libs[2] = "libhipopendht.so";
 #else
-			libs = "libinet6.so:libhiptool.so";
+		      libs[2] = NULL;
 #endif
 		}
 		else if (type == EXEC_LOADLIB_OPP)
 		{
+		      libs[0] = "libopphip.so";
+		      libs[1] = "libinet6.so";
+		      libs[2] = "libhiptool.so";
+		      libs[4] = NULL;
+
 #ifdef CONFIG_HIP_OPENDHT
-			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
+		      libs[3] = "libhipopendht.so";
 #else
-			libs = "libopphip.so:libinet6.so:libhiptool.so";
+		      libs[3] = NULL;
 #endif
 		}
+<<<<<<< TREE
 		
 		if (type != EXEC_LOADLIB_NONE)
 		{
 			setenv("LD_PRELOAD", libs, 1);
 			HIP_DEBUG("LD_PRELOADing\n");
 		}
+=======
+>>>>>>> MERGE-SOURCE
 
+<<<<<<< TREE
+=======
+		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
+		setenv("LD_PRELOAD", lib_all, 1);
+		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
+>>>>>>> MERGE-SOURCE
 		err = execvp(argv[0], argv);
+
 		if (err != 0)
 		{
 			HIP_DEBUG("Executing new application failed!\n");

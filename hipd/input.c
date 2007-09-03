@@ -569,7 +569,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
-	        HIP_IFEL(!entry, "No entry when receiving R1\n", -1);
+	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
@@ -1045,7 +1045,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 1);
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
@@ -1385,9 +1387,9 @@ int hip_receive_r1(struct hip_common *r1,
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-	#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-	#endif
+#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1504,7 +1506,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
@@ -2918,7 +2921,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->local_address, &responder_ip,
-						     HIP_NAT_UDP_PORT, port,
+						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						     port,
 						     &i1, NULL, 0);
 				
 				break;
