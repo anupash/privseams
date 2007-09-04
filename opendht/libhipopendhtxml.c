@@ -464,31 +464,8 @@ int read_packet_content(char * in_buffer, char * out_value)
                memcpy(answers.addrs, out_value, strlen(out_value));
                HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
-               if (evpret > 1) {
-                   struct hip_locator *locator;
-                   locator = hip_get_param((struct hip_common*)out_value,
-                                           HIP_PARAM_LOCATOR);
-                   if (locator) {
-                       int n_addrs = 0, i = 0;
-                       struct hip_locator_info_addr_item *locator_address_item = NULL;
-                       n_addrs = hip_get_locator_addr_item_count(locator);
-                       locator_address_item = hip_get_locator_first_addr_item(locator);
-                      
-                       for (i = 0; i < n_addrs; i++) {
-                           _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
-                                       sizeof(struct hip_locator_info_addr_item));
-                           if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                               
-                                 hip_print_hit("LOCATOR from DHT",
-                                         (struct in6_addr *)&locator_address_item[i].address);
-                           _HIP_HEXDUMP("Should be in6_addr", 
-                                       &locator_address_item[i].address,
-                                       sizeof(struct in6_addr));
-                               
-                           }
-                       }
-                   }
-               }
+               if (evpret > 1) 
+                   hip_print_locator_addresses((struct hip_common *)out_value);
                ret = 0;
              } 
            else 

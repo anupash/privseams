@@ -103,63 +103,64 @@ int connect_dht_gateway(int sockfd, struct addrinfo * gateway, int blocking)
             return(-1);
         }
     
-    if (blocking == 1)
+    if (blocking == 0)
+        goto unblock;
+    /* blocking connect */
+    if (sigaction(SIGALRM, &act, &oact) <0 ) 
         {
-            if (sigaction(SIGALRM, &act, &oact) <0 ) 
-                {
-                    HIP_DEBUG("Signal error before OpenDHT connect, "
-                              "connecting without alarm\n");
-                    error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
-                }
+            HIP_DEBUG("Signal error before OpenDHT connect, "
+                      "connecting without alarm\n");
+            error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+        }
+    else 
+        {
+            HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+            if (alarm(4) != 0)
+                HIP_DEBUG("Alarm was already set, connecting without\n");
+            error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+            alarm(0);
+            if (sigaction(SIGALRM, &oact, &act) <0 ) 
+                HIP_DEBUG("Signal error after OpenDHT connect\n");
+        }
+    
+    if (error < 0) 
+        {
+            HIP_PERROR("OpenDHT connect:");
+            if (errno == EINTR)
+                HIP_DEBUG("Connect to OpenDHT timedout\n");
+            return(-1);
+        }
+    else
+        {
+            sa = (struct sockaddr_in *)gateway->ai_addr;
+            HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+            return(0);
+        }
+        
+ unblock:
+    /* unblocking connect */    
+    flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
+    
+    sa = (struct sockaddr_in *)gateway->ai_addr;
+    HIP_DEBUG("Connecting to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+    
+    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
+        {
+            if (errno == EINPROGRESS)
+                return(EINPROGRESS);
             else 
                 {
-                    HIP_DEBUG("Connecting to OpenDHT with alarm\n");
-                    if (alarm(4) != 0)
-                        HIP_DEBUG("Alarm was already set, connecting without\n");
-                    error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
-                    alarm(0);
-                    if (sigaction(SIGALRM, &oact, &act) <0 ) 
-                        HIP_DEBUG("Signal error after OpenDHT connect\n");
-                }
-            
-            if (error < 0) 
-                {
                     HIP_PERROR("OpenDHT connect:");
-                    if (errno == EINTR)
-                        HIP_DEBUG("Connect to OpenDHT timedout\n");
                     return(-1);
-                }
-            else
-                {
-                    sa = (struct sockaddr_in *)gateway->ai_addr;
-                    HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-                    return(0);
                 }
         }
     else
         {
-            flags = fcntl(sockfd, F_GETFL, 0);
-            fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
-            
-            sa = (struct sockaddr_in *)gateway->ai_addr;
-            HIP_DEBUG("Connecting to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-            
-            if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
-                {
-                    if (errno == EINPROGRESS)
-                        return(EINPROGRESS);
-                    else 
-                        {
-                            HIP_PERROR("OpenDHT connect:");
-                            return(-1);
-                        }
-                }
-            else
-                {
-                    /* connect ok */
-                    return(0);
-                }   
-        }
+            /* connect ok */
+            return(0);
+        }   
+    
 } 
 
 /** 
@@ -344,19 +345,22 @@ int opendht_get(int sockfd,
  */
 int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned char *value)
 {
-    int err = 0, sfd = -1;
+    int err = 0, sfd = -1, n_addrs = 0;
     char dht_response[1400];
+    char hostname[256];
     char *host_addr = NULL;
     struct hostent *hoste = NULL;
-    char hostname[256];
-  
+    struct hip_locator *locator;
+    struct hip_locator_info_addr_item *locator_address_item = NULL;
+    struct in6_addr addr6;
+    struct in_addr addr4;
+
     memset(hostname,'\0',sizeof(hostname));
     HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
     HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
              "Encountered an error when getting host address\n");
-    if (hoste->h_addrtype == AF_INET) {
+    if (hoste->h_addrtype == AF_INET)
         host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
-    }
     else if (hoste->h_addrtype == AF_INET6) {
         HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
                            host_addr, sizeof(INET6_ADDRSTRLEN)),
@@ -373,11 +377,24 @@ int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned cha
     memset(dht_response, '\0', sizeof(dht_response));
     HIP_IFEL((err =opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
              -1, "Opendht_get error");
-    err = opendht_read_response(sfd, dht_response); 
-    if (err)
-        HIP_DEBUG("Opendht_read_response error\n"); 
-    else 
-        memcpy(value, dht_response, strlen(dht_response));
+    HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
+    _HIP_DUMP_MSG((struct hip_common *)dht_response);
+    /* check if there is locator, if is, take first and give it for the caller
+       should give the whole locator and let the caller decide */
+    locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
+    if (locator) {
+        locator_address_item = hip_get_locator_first_addr_item(locator);
+        memcpy(&addr6, (struct in6_addr*)&locator_address_item->address, 
+               sizeof(struct in6_addr));
+        if (IN6_IS_ADDR_V4MAPPED(&addr6.s6_addr)) {
+                IPV6_TO_IPV4_MAP(&addr6, &addr4);
+                sprintf(value, "%s", inet_ntoa(addr4));
+        } else {
+            inet_ntop(AF_INET6, &addr6, value, sizeof(struct in6_addr));
+        }
+        } else {
+            memcpy(value, dht_response, strlen(dht_response));
+        }
  out_err:
     if (sfd) close(sfd); 
     return(err);

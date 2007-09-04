@@ -361,7 +361,8 @@ void register_to_dht ()
 	
 	if (gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) 
 		return;
-	
+
+
 	list_for_each_safe(item, tmp, addresses, i)
 	{
 		opendht_n = list_entry(item);
@@ -370,20 +371,17 @@ void register_to_dht ()
 		double time_diff = 0;
 	
 		if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) continue;
-	
-		time_diff = difftime(opendht_n->timestamp, time(0));
-		if (time_diff < 10)
-		{
-			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-			{
+
+                /* also changed the counter back to 60 secs or so */	
+		//time_diff = difftime(opendht_n->timestamp, time(0));
+		//if (time_diff < 10) {
+			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
 				HIP_ERROR("No HIT found\n");
 				return;
 			}
-	
 			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), 
-                                                              NULL);
-			
+                                                              NULL); 
 			/*
 				HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
 				HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
@@ -391,19 +389,20 @@ void register_to_dht ()
 			*/
 			/* send the fqdn->hit mapping */
 			publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
-			
+			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
 			/* send the hit->ip mapping */
+                        /*
 			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
 			if (pub_addr_ret == 1)
-				opendht_n->timestamp = time(0) + 120; /* in seconds */
+				opendht_n->timestamp = time(0) + 120;
 			else if (pub_addr_ret == -1)
 				opendht_n->timestamp = time(0) + 30;
-		}
+                        */
+                        //} /* time diff */
 	
 		if (tmp_hit_str) free(tmp_hit_str);
 		if (tmp_addr_str) free(tmp_addr_str);
 	}
-
 out_err:
 	return;
 #endif
@@ -778,11 +777,10 @@ int opendht_put_locator(int sockfd,
     char tmp_key[21];   
     fake_msg = hip_msg_alloc();
     value_len = hip_build_locators(fake_msg);
-    HIP_DUMP_MSG(fake_msg);
-        
+    _HIP_DUMP_MSG(fake_msg);        
     key_len = opendht_handle_key(key, tmp_key);
     value_len = hip_get_msg_total_len(fake_msg);
-    HIP_DEBUG("Value len %d\n",value_len);
+    _HIP_DEBUG("Value len %d\n",value_len);
            
     /* Put operation FQDN->HIT */
     memset(put_packet, '\0', sizeof(put_packet));
@@ -797,7 +795,7 @@ int opendht_put_locator(int sockfd,
         HIP_DEBUG("Put packet creation failed.\n");
         err = -1;
         }
-    HIP_DEBUG("Host address in OpenDHT put : %s\n", host); 
+    HIP_DEBUG("Host address in OpenDHT put locator : %s\n", host); 
     HIP_DEBUG("Actual OpenDHT send starts here\n");
     send(sockfd, put_packet, strlen(put_packet), 0);
     err = 0;

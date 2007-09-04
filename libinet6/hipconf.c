@@ -986,9 +986,6 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 
          
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
-        /*
-        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 1, 2);
-        */
 	if (err) {
 		HIP_ERROR("build param hit failed: %s\n", strerror(err));
 		goto out_err;
@@ -1006,48 +1003,20 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-    int ret = 0;
+    int err = 0;
 #ifdef CONFIG_HIP_OPENDHT
-    int s, error;
     char dht_response[1024];
     char opendht[] = "opendht.nyuld.net";
-    char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
     struct addrinfo * serving_gateway;
 
-    s = init_dht_gateway_socket(s);
-    if (s < 0) 
-    {
-        HIP_DEBUG("Socket creation failed!\n");
-        exit(-1);
-    }
-    error = 0;
-    error = resolve_dht_gateway_info (opendht, &serving_gateway);
-    if (error < 0) 
-    {
-        HIP_DEBUG("Resolve error!\n");
-        exit(-1);
-    }
-    error = 0;
-    error = connect_dht_gateway(s, serving_gateway, 1);
-    if (error < 0) 
-    {
-        HIP_DEBUG("Connect error!\n");
-        exit(-1);
-    }
-
-    memset(dht_response, '\0', sizeof(dht_response));
-    ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr, 5851);
-    ret = opendht_read_response(s, dht_response); 
-    close(s);
-    if (ret == -1) 
-    {
-        HIP_DEBUG("Get error!\n");
-        exit (-1);
-    }
-    if (ret == 0)
-        HIP_DEBUG("Value received from the DHT %s\n",dht_response);
+    HIP_IFEL(resolve_dht_gateway_info(opendht, &serving_gateway),0,
+             "Resolve error!\n");
+    HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+             "Get error!\n");
+    HIP_DEBUG("Value received from the DHT %s\n",dht_response);
 #endif 
-    return(ret);
+ out_err:
+    return(err);
 }
 
 /* ================================================================================== */
