@@ -375,31 +375,31 @@ void register_to_dht ()
                 /* also changed the counter back to 60 secs or so */	
 		//time_diff = difftime(opendht_n->timestamp, time(0));
 		//if (time_diff < 10) {
-			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
-				HIP_ERROR("No HIT found\n");
-				return;
-			}
-			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-			tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), 
-                                                              NULL); 
-			/*
-				HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
-				HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
-						tmp_addr_str, ctime(&opendht_n->timestamp));
-			*/
-			/* send the fqdn->hit mapping */
-			publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
-			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
-			/* send the hit->ip mapping */
-                        /*
-			pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
-			if (pub_addr_ret == 1)
-				opendht_n->timestamp = time(0) + 120;
-			else if (pub_addr_ret == -1)
-				opendht_n->timestamp = time(0) + 30;
-                        */
-                        //} /* time diff */
-	
+                if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) {
+                    HIP_ERROR("No HIT found\n");
+                    return;
+                }
+                tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+                tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), 
+                                                      NULL); 
+                /*
+                  HIP_HEXDUMP("TESTLINE: secret: ", n->secret, 40);
+                  HIP_DEBUG("TESTLINE: addr=%s timestamp = %s (local time)\n",
+                  tmp_addr_str, ctime(&opendht_n->timestamp));
+                */
+                /* send the fqdn->hit mapping */
+                publish_hit(&hostname, tmp_hit_str, tmp_addr_str);
+                pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+                /* send the hit->ip mapping */
+                /*
+                  pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+                  if (pub_addr_ret == 1)
+                  opendht_n->timestamp = time(0) + 120;
+                  else if (pub_addr_ret == -1)
+                  opendht_n->timestamp = time(0) + 30;
+                */
+                //} /* time diff */
+                
 		if (tmp_hit_str) free(tmp_hit_str);
 		if (tmp_addr_str) free(tmp_addr_str);
 	}
