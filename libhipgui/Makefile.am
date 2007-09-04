@@ -23,3 +23,5 @@ endif
 tags:
 	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
 
+install:
+	cp hipmanager.png /usr/share/pixmaps/hipmanager.png
