@@ -765,6 +765,7 @@ out_err:
         return err;
 }
 
+#ifdef CONFIG_HIP_OPENDHT
 int opendht_put_locator(int sockfd, 
                    unsigned char * key, 
                    unsigned char * host,
@@ -779,7 +780,9 @@ int opendht_put_locator(int sockfd,
     value_len = hip_build_locators(fake_msg);
     HIP_DUMP_MSG(fake_msg);
         
-    key_len = opendht_handle_key(key, tmp_key);   
+    key_len = opendht_handle_key(key, tmp_key);
+    value_len = hip_get_msg_total_len(fake_msg);
+    HIP_DEBUG("Value len %d\n",value_len);
            
     /* Put operation FQDN->HIT */
     memset(put_packet, '\0', sizeof(put_packet));
@@ -801,3 +804,4 @@ int opendht_put_locator(int sockfd,
  out_err:
     return(err);
 }
+#endif

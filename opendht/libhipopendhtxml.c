@@ -5,6 +5,7 @@
 #include <libxml2/libxml/tree.h>
 #include "libhipopendhtxml.h"
 #include "debug.h"
+#include "netdev.h"
 
 xmlNodePtr xml_new_param(xmlNodePtr node_parent, char *type, char *value);
  
@@ -36,8 +37,11 @@ int build_packet_put_rm(unsigned char * key,
     char *key64 = NULL;
     char *value64 = NULL;
     char *secret64 = NULL;
-    key64 = (char *)base64_encode((unsigned char *)key, (unsigned int)key_len);
-    value64 = (char *)base64_encode((unsigned char *)value, (unsigned int)value_len);
+    
+    key64 = (char *)base64_encode((unsigned char *)key, 
+                                  (unsigned int)key_len);
+    value64 = (char *)base64_encode((unsigned char *)value, 
+                                    (unsigned int)value_len);
 
     unsigned char *sha_retval;
     char secret_hash[21];
@@ -93,9 +97,9 @@ int build_packet_put_rm(unsigned char * key,
             "text/xml\r\nContent-length: %d\r\n\r\n", 
             host_ip, port, xml_len); 
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
-    
+    /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
-    
+    */
     xmlFree(xml_buffer);
     xmlFreeDoc(xml_doc);
     free(key64);
@@ -281,13 +285,14 @@ int build_packet_rm(unsigned char * key,
  * @param in_buffer Should contain packet to be parsed including the HTTP header
  * @param out_value Value received is stored here
  *
- * @return Integer -1 if error, on success 0
+ * @return Integer -1 if error, on success 0, len if LOCATOR or other binary
  */
 int read_packet_content(char * in_buffer, char * out_value)
 {
-    int ret = 0;
+    int ret = 0, i = 0, ii = 0;
     int evpret = 0;
     char * place = NULL;
+    char tmp_tmp_buffer[2048];
     char tmp_buffer[2048]; 
     xmlDocPtr xml_doc = NULL;
     xmlNodePtr xml_node;
@@ -299,11 +304,23 @@ int read_packet_content(char * in_buffer, char * out_value)
     answers.count = 0;
     answers.addrs[0] = '\0';
 
-     
+    /*  
     HIP_DEBUG("\n\nXML Parser got this input\n\n%s\n\n",in_buffer);
-    
+    */
+    /* To be on the safe side, let's remove 0x0a's from in_buffer */
+    while (in_buffer[i] != '\0') {
+        if (in_buffer[i] != '\n') {
+            tmp_tmp_buffer[ii] = in_buffer[i];
+            ii++;
+        }
+        i++;
+    }
+    tmp_tmp_buffer[ii] = '\0';
+    /*
+    HIP_DEBUG("\n\nAfter clean up\n\n%s\n\n",tmp_tmp_buffer);
+    */    
     /*!!!! is there a http header !!!!*/
-    if (strncmp(in_buffer, "HTTP", 4) !=0) 
+    if (strncmp(tmp_tmp_buffer, "HTTP", 4) !=0) 
     { 
         HIP_DEBUG("Parser error: no HTTP header in the packet.\n");
         ret = -1;
@@ -311,7 +328,7 @@ int read_packet_content(char * in_buffer, char * out_value)
     }
     
     /* is there a xml document */
-    if ((place = strstr(in_buffer, "<?xml")) == NULL)
+    if ((place = strstr(tmp_tmp_buffer, "<?xml")) == NULL)
     {
         HIP_DEBUG("Parser error: no XML content in the packet.\n");
         ret = -1;
@@ -378,7 +395,8 @@ int read_packet_content(char * in_buffer, char * out_value)
         goto out_err;
     }    
 
-    /* If there is a string "<int>" in the response, then there is only status code */
+    /* If there is a string "<int>" in the response, 
+       then there is only status code */
     place = NULL;
     if ((place = strstr(tmp_buffer, "<int>")) != NULL)
     {
@@ -437,12 +455,40 @@ int read_packet_content(char * in_buffer, char * out_value)
              {         
                xml_node_value = xml_node->children->children;
                xml_data = xmlNodeGetContent(xml_node_value);
+               _HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, 
+                         strlen((char *)xml_data));
                evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
                                         strlen((char *)xml_data));
+               _HIP_HEXDUMP("LOC from DHT", out_value, evpret);
                out_value[evpret] = '\0';
                memcpy(answers.addrs, out_value, strlen(out_value));
                HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
+               if (evpret > 1) {
+                   struct hip_locator *locator;
+                   locator = hip_get_param((struct hip_common*)out_value,
+                                           HIP_PARAM_LOCATOR);
+                   if (locator) {
+                       int n_addrs = 0, i = 0;
+                       struct hip_locator_info_addr_item *locator_address_item = NULL;
+                       n_addrs = hip_get_locator_addr_item_count(locator);
+                       locator_address_item = hip_get_locator_first_addr_item(locator);
+                      
+                       for (i = 0; i < n_addrs; i++) {
+                           _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
+                                       sizeof(struct hip_locator_info_addr_item));
+                           if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                               
+                                 hip_print_hit("LOCATOR from DHT",
+                                         (struct in6_addr *)&locator_address_item[i].address);
+                           _HIP_HEXDUMP("Should be in6_addr", 
+                                       &locator_address_item[i].address,
+                                       sizeof(struct in6_addr));
+                               
+                           }
+                       }
+                   }
+               }
                ret = 0;
              } 
            else 
