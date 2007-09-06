@@ -521,7 +521,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
-	int err = 0, disable_fallback = 0;
+  int err = 0, disable_fallback = 1;//0;
 	time_t *now = (time_t*) current_time;
 	struct in6_addr *addr;
 	//HIP_DEBUG("now=%d e=%d\n", *now, entry->creation_time);
@@ -535,9 +535,11 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 					      &entry->peer_ip);
 		if (ha)
 			disable_fallback = ha->hip_opp_fallback_disable;
+		HIP_DEBUG("1disable_fallback: %d\n",disable_fallback);
+
 	}
 #endif
-	
+	HIP_DEBUG("2disable_fallback: %d\n",disable_fallback);
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		addr = (struct in6_addr *) &entry->peer_ip;
 		hip_ipdb_add(addr);

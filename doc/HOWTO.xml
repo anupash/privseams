@@ -46,7 +46,7 @@
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
-      libxml2 and development headers for OpenDHT support
+      libxml2 and its development headers for OpenDHT support
       </para></listitem>
       <listitem><para>
       GNU make
@@ -55,10 +55,10 @@
       the latest versions of autoconf, automake, autoreconf and libtool
       </para></listitem>
       <listitem><para>
-      iproute and its development headers
+      iproute
       </para></listitem>
       <listitem><para>
-      wxgtk 2.6.2 and libgtk-2.x library and development headers
+      gtk2 library and development headers
       </para></listitem>
       <listitem><para>
       Check that you DON'T have libpthread-dev installed (Ubuntu/debian)

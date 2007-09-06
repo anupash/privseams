@@ -94,7 +94,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 		HIP_ERROR("Error allocating memory for rendezvous association.\n");
 		return NULL;
 	}
-	
+
 	/* Incremented the refrerence count of the new rendezvous association. */
 	hip_hold_rva(rva);
 	
@@ -108,6 +108,8 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 	else {
 		rva->client_udp_port = 0;
 	}
+
+	HIP_DEBUG_HIT("Peer", &ha->hit_peer);
 	
 	/* Copy peer hit as the client hit. */
 	ipv6_addr_copy(&rva->client_hit, &ha->hit_peer);
@@ -167,7 +169,7 @@ hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
 	hip_rva_t find_rva;
 	/* @todo: the server hit should also be specified */
-	memset(&find_rva.server_hit, 0, sizeof(struct in6_addr));
+	memset(&find_rva, 0, sizeof(find_rva));
 	ipv6_addr_copy(&find_rva.client_hit, hit);
 
  	return (hip_rva_t*)hip_ht_find(rva_table, hit);
@@ -264,6 +266,8 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 	int err;
 	HIP_DEBUG_HIT("hip_rvs_put_rva(): Inserting rendezvous association "\
 		      "with hit", &rva->client_hit);
+
+	HIP_DEBUG("peer", &rva->client_hit);
 	
 	/* If assertation holds, then we don't need locking */
 	HIP_ASSERT(atomic_read(&rva->refcnt) <= 1); 
@@ -279,6 +283,7 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 	} else {
 		rva->rvastate |= HIP_RVASTATE_VALID;
 	}
+
  out_err:
 	return err;
 }

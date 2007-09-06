@@ -35,11 +35,9 @@ typedef enum { HIP_RVASTATE_INVALID=0, HIP_RVASTATE_VALID=1 } hip_rvastate_t;
 /** A rendezvous association used by the rendezvous server to store the
     HIT->IP address mappings of its clients. Used as an element of the
     rendezvous hashtable. */
-typedef struct hip_rendezvous_association
-{
-	struct in6_addr       server_hit;
-	/** Client hit. */
+typedef struct hip_rendezvous_association {
 	struct in6_addr       client_hit;
+	struct in6_addr       server_hit;
 	/** Reference count of this rendezvous association. */
 	atomic_t              refcnt;
 	/** Spinlock. */
@@ -60,7 +58,7 @@ typedef struct hip_rendezvous_association
         /** A function pointer to the function to be used for relaying the I1
 	    packet. */
 	hip_xmit_func_t       send_pkt;
-}hip_rva_t;
+} hip_rva_t;
 
 void hip_rvs_init_rvadb(void);
 void hip_rvs_free_rva(hip_rva_t*);
