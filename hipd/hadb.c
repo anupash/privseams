@@ -1586,7 +1586,8 @@ int hip_update_send_echo(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->local_address, &addr->address,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	
@@ -2033,37 +2034,6 @@ void hip_hadb_dump_hs_ht(void)
 
 void hip_init_hadb(void)
 {
-#if 0
-	memset(&hadb_hit,0,sizeof(hadb_hit));
-	memset(&hadb_spi_list,0,sizeof(hadb_spi_list));
-
-	hadb_hit.head =      hadb_byhit;
-	hadb_hit.hashsize =  HIP_HADB_SIZE;
-	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
-	hadb_hit.hash =      hip_hash_hit;
-	hadb_hit.compare =   hip_match_hit;
-	hadb_hit.hold =      hip_hadb_hold_entry;
-	hadb_hit.put =       hip_hadb_put_entry;
-	hadb_hit.get_key =   hip_hadb_get_key_hit;
-
-	strncpy(hadb_hit.name,"HADB_BY_HIT", 15);
-	hadb_hit.name[15] = 0;
-
-	hadb_spi_list.head =      hadb_byspi_list;
-	hadb_spi_list.hashsize =  HIP_HADB_SIZE;
-	hadb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
-	hadb_spi_list.hash =      hip_hash_spi;
-	hadb_spi_list.compare =   hip_hadb_match_spi;
-	hadb_spi_list.hold =      hip_hadb_hold_hs;
-	hadb_spi_list.put =       hip_hadb_put_hs;
-	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
-
-	strncpy(hadb_spi_list.name,"HADB_BY_SPI_LIST", 15);
-	hadb_spi_list.name[15] = 0;
-
-	hip_ht_init(hadb_hit);
-	hip_ht_init(hadb_spi_list);
-#endif
 	/** @todo Check for errors. */
 	hadb_hit = hip_ht_init(hip_hash_hit, hip_match_hit);
 
