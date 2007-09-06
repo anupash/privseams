@@ -279,6 +279,7 @@ int hip_rvs_put_rva(hip_rva_t *rva)
 	} else {
 		rva->rvastate |= HIP_RVASTATE_VALID;
 	}
+
  out_err:
 	return err;
 }

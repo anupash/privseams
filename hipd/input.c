@@ -1526,6 +1526,8 @@ int hip_create_r2(struct hip_context *ctx,
 		  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
 
+	hip_hold_rva(rva);
+
  out_err:
 	if (r2)
 		HIP_FREE(r2);
