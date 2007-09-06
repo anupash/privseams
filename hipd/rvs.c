@@ -95,8 +95,6 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
 		return NULL;
 	}
 
-	memset(rva, 0, sizeof(*rva));
-	
 	/* Incremented the refrerence count of the new rendezvous association. */
 	hip_hold_rva(rva);
 	
