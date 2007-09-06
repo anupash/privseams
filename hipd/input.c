@@ -1521,9 +1521,9 @@ int hip_create_r2(struct hip_context *ctx,
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 0, "Inserting rendezvous association failed\n");
 
-	/*Returns zero because blind code requires it*/
-	HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
-		  "Error while inserting RVA into hash table\n");
+	/* Returns zero because blind code requires it */
+	if (hip_rvs_put_rva(rva))
+		hip_put_rva(rva);
 #endif /* CONFIG_HIP_RVS */
 
 	hip_hold_rva(rva);
