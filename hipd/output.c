@@ -322,7 +322,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * Builds locator list to msg
  *
  * @param msg          a pointer to hip_common to append the LOCATORS
- * @return             zero on success, or negative error value on error
+ * @return             len of LOCATOR on success, or negative error value on error
  */
 int hip_build_locators(struct hip_common *msg) 
 {
@@ -342,16 +342,13 @@ int hip_build_locators(struct hip_common *msg)
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
                 continue;
-            /* Fill out hip_locator_info_addr_item */
             memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
                    sizeof(struct in6_addr));
-            locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-            locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-            locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-            locs[ii].reserved = 0; /* should clear the P also  (last bit)*/
             ii++;
         }
         err = hip_build_param_locator(msg, locs, address_count);
+        err = sizeof(struct hip_locator) + (address_count * 
+                                            sizeof(struct hip_locator_info_addr_item));
     }
     else
         HIP_DEBUG("Host has only one or no addresses no point "

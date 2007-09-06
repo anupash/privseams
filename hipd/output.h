@@ -55,6 +55,9 @@ void hip_send_notify_all(void);
 static void no_matching_trigger(void *, void *, void *);
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
+
+int hip_build_locators(struct hip_common *);
+
 #endif /* CONFIG_HIP_HI3 */
 
 #endif /* HIP_OUTPUT_H */
