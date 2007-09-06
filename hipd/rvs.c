@@ -167,7 +167,7 @@ hip_rva_t *hip_rvs_get(struct in6_addr *hit)
 {
 	hip_rva_t find_rva;
 	/* @todo: the server hit should also be specified */
-	memset(&find_rva.server_hit, 0, sizeof(struct in6_addr));
+	memset(&find_rva, 0, sizeof(find_rva));
 	ipv6_addr_copy(&find_rva.client_hit, hit);
 
  	return (hip_rva_t*)hip_ht_find(rva_table, hit);
