@@ -344,11 +344,13 @@ int hip_build_locators(struct hip_common *msg)
                 continue;
             memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
                    sizeof(struct in6_addr));
+            locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+            locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+            locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+            locs[ii].reserved = 0;
             ii++;
         }
         err = hip_build_param_locator(msg, locs, address_count);
-        err = sizeof(struct hip_locator) + (address_count * 
-                                            sizeof(struct hip_locator_info_addr_item));
     }
     else
         HIP_DEBUG("Host has only one or no addresses no point "
