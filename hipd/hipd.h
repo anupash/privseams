@@ -74,9 +74,9 @@
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             0
+#define HIP_SIMULATE_PACKET_LOSS             1
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
@@ -97,6 +97,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_un hip_firewall_addr;
 
+extern int is_active_handover;
 
 int hip_agent_is_alive();
 

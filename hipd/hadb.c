@@ -230,8 +230,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	{
 		e = list_entry(item);
 		ipv6_addr_copy(&our_hit,&e->lhi.hit);
-		HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
-		HIP_DEBUG_HIT("hit:", hit);
+		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
+		_HIP_DEBUG_HIT("hit:", hit);
 		entry = hip_hadb_find_byhits(hit, &our_hit);
 		if (!entry) continue;
 		else return entry;
@@ -397,10 +397,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		goto out_err;
 	}
 
-	HIP_DEBUG_HIT("Peer HIT\n", peer_hit);
-	HIP_DEBUG_HIT("Our HIT\n", &entry->hit_our);
-	HIP_DEBUG_IN6ADDR("Our IPv6\n", &entry->local_address);
-	HIP_DEBUG_IN6ADDR("Peer IPv6\n", peer_addr);
+	HIP_DEBUG_HIT("Peer HIT ", peer_hit);
+	HIP_DEBUG_HIT("Our HIT ", &entry->hit_our);
+	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
+
 	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
 				       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
@@ -1585,7 +1586,8 @@ int hip_update_send_echo(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->local_address, &addr->address,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	
@@ -1719,6 +1721,14 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   If the status of the address is DEPRECATED, the status is
 	   changed to UNVERIFIED.  If the address is not already bound,
 	   the address is added, and its status is set to UNVERIFIED. */
+	
+
+	/* We switch off the part that make no answer with echo response message 
+	   to the initiator. The reason is that we need the whole update schema work
+	   for the program to run corrctly. This purely optimization part can be changed
+	   latter. - Andrey.
+	*/
+#if 0
 	if (!new)
 	{
 		switch (new_addr->address_state)
@@ -1738,6 +1748,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	}
 	else
 	{
+#endif
 		if (is_bex_address)
 		{
 			/* workaround for special case */
@@ -1750,8 +1761,11 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+
+			// @todo: check! If not acctually a problem (during Handover). Andrey.
+			if( err==-ECOMM ) err = 0;
 		}
-	}
+		//}
 
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
@@ -2020,37 +2034,6 @@ void hip_hadb_dump_hs_ht(void)
 
 void hip_init_hadb(void)
 {
-#if 0
-	memset(&hadb_hit,0,sizeof(hadb_hit));
-	memset(&hadb_spi_list,0,sizeof(hadb_spi_list));
-
-	hadb_hit.head =      hadb_byhit;
-	hadb_hit.hashsize =  HIP_HADB_SIZE;
-	hadb_hit.offset =    offsetof(hip_ha_t, next_hit);
-	hadb_hit.hash =      hip_hash_hit;
-	hadb_hit.compare =   hip_match_hit;
-	hadb_hit.hold =      hip_hadb_hold_entry;
-	hadb_hit.put =       hip_hadb_put_entry;
-	hadb_hit.get_key =   hip_hadb_get_key_hit;
-
-	strncpy(hadb_hit.name,"HADB_BY_HIT", 15);
-	hadb_hit.name[15] = 0;
-
-	hadb_spi_list.head =      hadb_byspi_list;
-	hadb_spi_list.hashsize =  HIP_HADB_SIZE;
-	hadb_spi_list.offset =    offsetof(struct hip_hit_spi, list);
-	hadb_spi_list.hash =      hip_hash_spi;
-	hadb_spi_list.compare =   hip_hadb_match_spi;
-	hadb_spi_list.hold =      hip_hadb_hold_hs;
-	hadb_spi_list.put =       hip_hadb_put_hs;
-	hadb_spi_list.get_key =   hip_hadb_get_key_spi_list;
-
-	strncpy(hadb_spi_list.name,"HADB_BY_SPI_LIST", 15);
-	hadb_spi_list.name[15] = 0;
-
-	hip_ht_init(hadb_hit);
-	hip_ht_init(hadb_spi_list);
-#endif
 	/** @todo Check for errors. */
 	hadb_hit = hip_ht_init(hip_hash_hit, hip_match_hit);
 
@@ -2257,6 +2240,7 @@ void hip_uninit_hadb()
 	 *
 	 * The list traversing is not safe in smp way :(
 	 */
+//	hip_ht_uninit(hadb_hit);
 #if 0
 	HIP_DEBUG("DELETING HA HT\n");
 	list_for_each_entry_safe(ha, tmp, hadb_byhit[i], next_hit)
@@ -2268,6 +2252,7 @@ void hip_uninit_hadb()
 		hip_db_put_ha(ha, hip_hadb_delete_state);
 	}
 #endif
+	
 }
 
 void hip_delete_all_sp()

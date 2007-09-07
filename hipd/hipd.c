@@ -17,6 +17,7 @@
    of this file! */
 struct hip_common *hipd_msg = NULL;
 
+int is_active_handover = 1; /* which handover to use active or lazy? */
 int hip_blind_status = 0; /* Blind status */
 
 /* For receiving of HIP control messages */
@@ -56,7 +57,7 @@ int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
 int opendht_error = 0;
 char opendht_response[1024];
-struct addrinfo opendht_serving_gateway;
+struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
  
@@ -66,13 +67,13 @@ int opendht_serving_gateway_ttl = OPENDHT_TTL;
    Feel free to experiment by porting the required functionality from
    iproute2/ip/ipaddrs.c:ipaddr_list_or_flush(). It would make these global
    variable and most of the functions referencing them unnecessary -miika */
+
 int address_count;
 HIP_HASHTABLE *addresses;
-
 time_t load_time;
 
 #ifdef CONFIG_HIP_HI3
-char *i3_config = NULL;
+char *i3_config_file = NULL;
 #endif
 
 void usage() {
@@ -85,11 +86,10 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_un *dst){
+int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
         int n = 0;
-        HIP_DEBUG("hip_sendto() invoked.\n");
         n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_un));
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
         return n;
 }
 
@@ -165,12 +165,12 @@ int hip_sock_recv_agent(void)
 		}
 		else if (emsg && src_addr && dst_addr && msg_info)
 		{
-		#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 
 			HIP_DEBUG("Received rejected R1 packet from agent.\n");
 			err = hip_for_each_opp(hip_handle_opp_reject, src_addr);
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
-		#endif
+#endif
 		}
 	}
 	
@@ -254,10 +254,11 @@ out_err:
 
 int main(int argc, char *argv[])
 {
-	int ch;
+	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
-#ifdef CONFIG_HIP_HI3
-	char *i3_config = NULL;
+#if 0 
+	//#ifdef CONFIG_HIP_HI3 - ERROR redefinition of i3_config_file??? - Andrey
+	char *i3_config_file = NULL;
 #endif
 	fd_set read_fdset;
 
@@ -277,16 +278,20 @@ int main(int argc, char *argv[])
 	int flush_ipsec = 1;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, "b")) != -1)
+	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
 	{		
 		switch (ch)
 		{
 		case 'b':
 			foreground = 0;
 			break;
+		case 'k':
+			killold = 1;
+			break;
 #ifdef CONFIG_HIP_HI3
 		case '3':
-			i3_config = strdup(optarg);
+		  HIP_INFO("hipd is stared with i3 config file: %s", optarg);
+			i3_config_file = strdup(optarg);
 			break;
 #endif
 		case 'N':
@@ -302,7 +307,7 @@ int main(int argc, char *argv[])
 
 #ifdef CONFIG_HIP_HI3
 	/* Note that for now the Hi3 host identities are not loaded in. */
-	HIP_IFEL(!i3_config, 1,
+	HIP_IFEL(!i3_config_file, 1,
 		 "Please do pass a valid i3 configuration file.\n");
 #endif
 	
@@ -311,20 +316,21 @@ int main(int argc, char *argv[])
 	/* Configuration is valid! Fork a daemon, if so configured */
 	if (foreground)
 	{
-		printf("foreground\n");
 		hip_set_logtype(LOGTYPE_STDERR);
+		HIP_DEBUG("foreground\n");
 	}
 	else
 	{
 		hip_set_logtype(LOGTYPE_SYSLOG);
-		if (fork() > 0) return(0);
+		if (fork() > 0)
+			return(0);
 	}
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
 	
 	/* Default initialization function. */
-	HIP_IFEL(hipd_init(flush_ipsec), 1, "hipd_init() failed!\n");
+	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
 	highest_descriptor = maxof(10, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,

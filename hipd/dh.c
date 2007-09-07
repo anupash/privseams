@@ -4,7 +4,7 @@
  * Licence: GNU/GPL
  *
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Kristian Slavov <ksl@iki.fi>
  * - Tobias Heer <heer@tobibox.de>
  */ 

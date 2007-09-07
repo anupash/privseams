@@ -41,6 +41,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default\n"
 "load config default\n"
+"handoff mode lazy|active\n"
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
@@ -80,6 +81,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
+	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	NULL, /* run */
 };
@@ -122,6 +124,8 @@ int hip_conf_get_action(char *text) {
                 ret = ACTION_DHT;
 	else if (!strcmp("debug", text))
                 ret = ACTION_DEBUG;
+	else if (!strcmp("handoff", text))
+                ret = ACTION_HANDOFF;
 
 	return ret;
 }
@@ -173,9 +177,13 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA:
                 count=2;
                 break;
+	case ACTION_HANDOFF:
+	        count = 2;
+                break;
 	case ACTION_DEBUG:
 	        count = 1;
                 break;
+	
 	default:
 	        break;
 
@@ -219,6 +227,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
 
 
 
@@ -265,6 +275,7 @@ int hip_conf_get_type_arg(int action) {
         case ACTION_DHT:
 	case ACTION_RST:
 	case ACTION_BOS:
+	case ACTION_HANDOFF:
 	
                 type_arg = 2;
                 break;
@@ -273,7 +284,7 @@ int hip_conf_get_type_arg(int action) {
 	
                 type_arg = 1;
                 break;
-
+	
 	default:
 	        break;
         }
@@ -1001,8 +1012,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
     char dht_response[1024];
     char opendht[] = "opendht.nyuld.net";
     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
-    struct addrinfo serving_gateway;
-    memset(&serving_gateway, '0', sizeof(struct addrinfo));
+    struct addrinfo * serving_gateway;
 
     s = init_dht_gateway_socket(s);
     if (s < 0) 
@@ -1018,7 +1028,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
         exit(-1);
     }
     error = 0;
-    error = connect_dht_gateway(s, &serving_gateway, 1);
+    error = connect_dht_gateway(s, serving_gateway, 1);
     if (error < 0) 
     {
         HIP_DEBUG("Connect error!\n");
@@ -1096,15 +1106,18 @@ int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 					   (char **) &opt[0], optc);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only) {
+int hip_do_hipconf(int argc, char *argv[], int send_only)
+{
 	int err = 0, type_arg,i;
 	long int action, type,hiparg;
 	struct hip_common *msg = NULL;
 	char *text;
 	
 
+	/* This was printing debug messages in STDOUT even with hipd/hipd -b
+	   -- Alberto. */
 	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
+	/* hip_set_logtype(LOGTYPE_STDERR); */
 	
 	/* parse args */
 
@@ -1128,31 +1141,36 @@ int hip_do_hipconf(int argc, char *argv[], int send_only) {
 		 "Invalid type argument '%s'\n", argv[type_arg]);
 	
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	memset(msg, 0, HIP_MAX_PACKET);
 	hip_get_all_hits(msg,argv);
 	
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. */
 	if (argc ==3)
-	{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[2],argc - 3);
-	}else{
-		err = (*action_handler[type])(msg, action, (const char **)&argv[3],argc - 3);
-	}
+		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
+	else
+		err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
 	HIP_IFEL(err, -1, "failed to handle msg\n");
 
 	/* hipconf new hi does not involve any messages to hipd */
 	if (hip_get_msg_type(msg) == 0)
 		goto out_err;
 	
+	/* Tell hip daemon, that this message is from agent. */
+/*	if (from_agent)
+	{
+		err = hip_build_param_contents(msg, NULL, HIP_PARAM_AGENT_SEND_THIS, 0);
+		HIP_IFEL(err, -1, "Failed to add parameter to message!\n");
+	}*/
+
 	/* send msg to hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
-		 "sending msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
 	HIP_INFO("hipconf command successful\n");
 
 out_err:
 	if (msg)
 		free(msg);
-	
+
 	return err;
 }
 
@@ -1206,6 +1224,31 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
         return err;
 }
 
+int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
+{	
+	int err=0;
+
+		
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	
+	if (strcmp("active",opt[0]) ==0)
+	{
+		HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+                	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to active successfully\n");
+	}else{
+		
+	  	HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+              	 "Building of daemon header failed\n");
+		HIP_DEBUG("handoff mode set to lazy successfully\n");
+	}
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+
+   out_err:
+	return err;
+	
+}
 
 
 int hip_get_all_hits(struct hip_common *msg,char *argv[])
@@ -1217,40 +1260,103 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	struct in6_addr *defhit;
 	struct hip_hadb_user_info_state *ha;
 	
-	if (strcmp(argv[1],"get")==0)
-	{	
+	if (strcmp(argv[1], "get") == 0)
+	{
 	
-		if ((strcmp(argv[3],"all")==0) && (strcmp(argv[2],"hi")==0))
+		if ((strcmp(argv[3],"all") == 0) && (strcmp(argv[2],"hi") == 0))
 		{
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
 		
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {	
-		endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-		if (strcmp(argv[3], "all") == 0){
-			HIP_DEBUG("hit is %s\n",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-			HIP_DEBUG_HIT("hi is ", &endp->id.hit);
-		}
-		
-	}
-
-		}else if (strcmp(argv[3], "default")==0) {
-
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+				if (strcmp(argv[3], "all") == 0)
+				{
+					HIP_DEBUG("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+					HIP_DEBUG("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+					HIP_DEBUG_HIT("\n",&endp->id.hit);
+				}
 				
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		defhit = (struct in6_addr *) hip_get_param_contents_direct(current_param);
-		set_hit_prefix(defhit);
-		HIP_DEBUG_IN6ADDR("default hi is ",defhit);
-			
-	}
-			
+			}
 		}
-	}	
-   out_err:
+		else if (strcmp(argv[3], "default") == 0)
+		{
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+			hip_send_recv_daemon_info(msg);
+	
+			while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+			{
+				defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+				set_hit_prefix(defhit);
+				HIP_DEBUG_IN6ADDR("default hi is ",defhit);
+			}
+		}
+	}
+
+out_err:
 	return err;
 	
+}
+
+/**
+ * hip_append_pathtolib: Creates the string intended to set the 
+ * environmental variable LD_PRELOAD. The function recibes the required 
+ * libraries, and then includes the prefix (path where these libraries 
+ * are located) to each one. Finally it appends all of the them to the 
+ * same string.
+ *
+ * @param libs            an array of pointers to the required libraries
+ * @param lib_all         a pointer to the string to store the result
+ * @param lib_all_length  length of the string lib_all
+ * @return                zero on success, or -1 overflow in string lib_all
+ */
+
+int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
+{
+
+        int c_count = lib_all_length, err = 0;
+	char *lib_aux = lib_all;
+	char *prefix = HIPL_DEFAULT_PREFIX; /* translates to "/usr/local" etc */
+
+	while(*libs != NULL){
+
+	      // Copying prefix to lib_all
+	      HIP_IFEL(c_count<strlen(prefix), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, prefix, c_count);
+	      while(*lib_aux != '\0'){
+	            lib_aux++;
+		    c_count--;
+	      }
+
+	      // Copying "/lib/" to lib_all
+	      HIP_IFEL(c_count<5, -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, "/lib/", c_count);
+	      c_count -= 5;
+	      lib_aux += 5;
+
+	      // Copying the library name to lib_all
+	      HIP_IFEL(c_count<strlen(*libs), -1, "Overflow in string lib_all\n");
+	      strncpy(lib_aux, *libs, c_count);
+	      while(*lib_aux != '\0'){
+		    lib_aux++;
+		    c_count--;
+	      }
+
+	      // Adding ':' to separate libraries
+	      *lib_aux = ':';
+	      c_count--;
+	      lib_aux++;
+
+	      // Next library
+	      libs++;
+	}
+
+	// Delete the last ':'
+	*--lib_aux = '\0';
+
+    out_err:
+	return err;
 }
 
 
@@ -1268,6 +1374,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
  * EXEC_LOADLIB_HIP\n
  * EXEC_LOADLIB_NONE\n
  *
+ * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
@@ -1275,41 +1382,61 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
  * @return       zero on success, or negative error value on error.
  */
 int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
-{
-	/* Variables. */
-	char *libs;
-	char *path = "/usr/lib:/lib:/usr/local/lib";
+{	
+        /* Variables. */
+	char lib_all[LIB_LENGTH];
 	va_list args;
 	int err = 0;
+	char *libs[5];
+
 
 	if (do_fork)
 		err = fork();
-
-	if (err < 0) {
+	if (err < 0)
+	{
 		HIP_ERROR("Failed to exec new application.\n");
-	} else if (err > 0) {
+	}
+	else if (err > 0)
+	{
 		err = 0;
-	} else if(err == 0) {
-		setenv("LD_LIBRARY_PATH", path, 1);
+	}
+	else if(err == 0)
+	{
 		HIP_DEBUG("Exec new application.\n");
-		if (type == EXEC_LOADLIB_HIP) {
+		if (type == EXEC_LOADLIB_HIP)
+		{
+		      libs[0] = "libinet6.so";
+		      libs[1] = "libhiptool.so";
+		      libs[3] = NULL;
+		      libs[4] = NULL;
+		  
 #ifdef CONFIG_HIP_OPENDHT
-			libs = "libinet6.so:libhiptool.so:libhipopendht.so";
+		      libs[2] = "libhipopendht.so";
 #else
-			libs = "libinet6.so:libhiptool.so";
-#endif
-		} else {
-#ifdef CONFIG_HIP_OPENDHT
-			libs = "libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so";
-#else
-			libs = "libopphip.so:libinet6.so:libhiptool.so";
+		      libs[2] = NULL;
 #endif
 		}
-		setenv("LD_PRELOAD", libs, 1);
+		else
+		{
+		      libs[0] = "libopphip.so";
+		      libs[1] = "libinet6.so";
+		      libs[2] = "libhiptool.so";
+		      libs[4] = NULL;
 
-		HIP_DEBUG("LD_PRELOADing\n");
+#ifdef CONFIG_HIP_OPENDHT
+		      libs[3] = "libhipopendht.so";
+#else
+		      libs[3] = NULL;
+#endif
+		}
+
+		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
+		setenv("LD_PRELOAD", lib_all, 1);
+		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
 		err = execvp(argv[0], argv);
-		if (err != 0) {
+
+		if (err != 0)
+		{
 			HIP_DEBUG("Executing new application failed!\n");
 			exit(1);
 		}

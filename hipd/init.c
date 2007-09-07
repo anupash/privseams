@@ -12,8 +12,15 @@
  */
 
 #include "init.h"
+#include <linux/capability.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include "debug.h"
+#include <pwd.h>
 
 extern struct hip_common *hipd_msg;
+typedef struct __user_cap_header_struct capheader_t;
+typedef struct __user_cap_data_struct capdata_t;
 
 
 /******************************************************************************/
@@ -114,67 +121,52 @@ void hip_set_os_dep_variables()
 /**
  * Main initialization function for HIP daemon.
  */
-int hipd_init(int flush_ipsec)
+int hipd_init(int flush_ipsec, int killold)
 {
-	int err = 0, fd, pid = 0;
+	int err = 0, fd;
+	uid_t euid;
 	char str[64];
-	struct sockaddr_un daemon_addr;
-	extern struct addrinfo opendht_serving_gateway;
+	struct sockaddr_in6 daemon_addr;
+	extern struct addrinfo * opendht_serving_gateway;
+
+	euid = geteuid();
+	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
+
+	/* Open daemon lock file and read pid from it. */
+//	unlink(HIP_DAEMON_LOCK_FILE);
+	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
+
+	/* Write pid to file. */
+	if (fd > 0)
+	{
+		if (lockf(fd, F_TLOCK, 0) < 0)
+		{
+			int pid = 0;
+			memset(str, 0, sizeof(str));
+			read(fd, str, sizeof(str) - 1);
+			pid = atoi(str);
+			
+			if (!killold)
+			{
+				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
+				HIP_ERROR("Use -k option to kill old daemon.\n");
+				exit(1);
+			}
+		
+			HIP_INFO("Daemon is already running with pid %d?"
+			         "-k option given, terminating old one...\n", pid);
+			kill(pid, SIGKILL);
+		}
+		
+		sprintf(str, "%d\n", getpid());
+		write(fd, str, strlen(str)); /* record pid to lockfile */
+	}
 
 	hip_init_hostid_db(NULL);
 
 	hip_set_os_dep_variables();
 
 	hip_probe_kernel_modules();
-      
-	/* Kill hip daemon, if it already exists. */
-	for (pid = 0; pid >= 0; )
-	{
-		/* Open daemon lock file and read pid from it. */
-		fd = open(HIP_DAEMON_LOCK_FILE, O_RDONLY, 0644);
-		
-		/* If pid not read yet. */
-		if (fd > 0 && pid == 0)
-		{
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			close(fd);
-			pid = atoi(str);
-			/* Check if pid number is not valid. */
-			if (pid < 1) break;
-			HIP_INFO("Daemon is already running with pid %d?"
-			         " Trying to stop old one...\n", pid);
-			/* Signal old daemon to stop. */
-			kill(pid, SIGINT);
-			/* Wait a second for daemon to stop. */
-			HIP_INFO("Waiting old daemon to stop...\n");
-			//sleep(2);
-		}
-		/*
-		 * If pid already read, just check whether daemon has really stopped.
-		 * If not, then kill it brutally.
-		 */
-		else if (fd > 0)
-		{
-			HIP_INFO("Daemon did not stop, just kill it.\n");
-			close(fd);
-			kill(pid, SIGKILL);
-			break;
-		}
-		else break;
-	}
-
-	/* Write pid to file. */
-	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-	if (fd > 0)
-	{
-		/* Dont lock now, make this feature available later. */
-		//if (lockf(i, F_TLOCK, 0) < 0) exit (1);
-		/* Only first instance continues. */
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -198,9 +190,9 @@ int hipd_init(int flush_ipsec)
         hip_rvs_init_rvadb();
 #endif	
 #ifdef CONFIG_HIP_OPENDHT
-        memset(&opendht_serving_gateway, '0', sizeof(struct addrinfo));
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+        if (err < 0) 
+          HIP_DEBUG("Error resolving openDHT gateway!\n");
         err = 0;
 #endif
 #ifdef CONFIG_HIP_ESCROW
@@ -208,7 +200,7 @@ int hipd_init(int flush_ipsec)
 	hip_init_kea_endpoints();
 #endif
 #ifdef CONFIG_HIP_HI3
-	cl_init(i3_config);
+	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -278,19 +270,14 @@ int hipd_init(int flush_ipsec)
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
-	hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
-	daemon_addr.sun_family = AF_UNIX;
-	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
-	unlink(HIP_DAEMONADDR_PATH);
-	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)&daemon_addr,
-	         /*sizeof(daemon_addr)*/
-	         strlen(daemon_addr.sun_path) +
-	         sizeof(daemon_addr.sun_family)),
-	         1, "Bind on daemon addr failed.");
-	HIP_IFEL(chmod(daemon_addr.sun_path, S_IRWXO),
-	         1, "Changing permissions of daemon addr failed.")
+	daemon_addr.sin6_family = AF_INET6;
+	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
+		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, 1,
@@ -317,9 +304,73 @@ int hipd_init(int flush_ipsec)
 
 	register_to_dht();
 	hip_load_configuration();
+	
+	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
 out_err:
 	return err;
+}
+
+
+int hip_set_lowcapability() {
+	struct passwd *nobody_pswd;
+	int err = 0;
+#ifdef CONFIG_HIP_PRIVSEP
+	uid_t ruid,euid;
+	capheader_t header;
+	capdata_t data;	
+
+	header.pid=0;
+	header.version = _LINUX_CAPABILITY_VERSION;
+	data.effective = data.permitted = data.inheritable = 0;
+
+	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
+	
+	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+	HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+		 "Error while retrieving USER 'nobody' uid\n"); 
+
+	HIP_IFEL(capget(&header, &data), -1,
+		 "error while retrieving capabilities through capget()\n");
+
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective, data.permitted, data.inheritable);
+
+	ruid=nobody_pswd->pw_uid; 
+	euid=nobody_pswd->pw_uid; 
+	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+		  getuid(), geteuid());
+  	
+	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+	
+	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+		  getuid(), geteuid());
+	HIP_IFEL(capget(&header, &data), -1,
+		 "error while retrieving capabilities through 'capget()'\n");
+
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective,data.permitted, data.inheritable);
+	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
+	data.effective = data.permitted = data.inheritable = 0;
+  	// for CAP_NET_RAW capability 
+	data.effective |= (1 <<CAP_NET_RAW );
+  	data.permitted |= (1 <<CAP_NET_RAW );
+  	// for CAP_NET_ADMIN capability 
+	data.effective |= (1 <<CAP_NET_ADMIN );
+  	data.permitted |= (1 <<CAP_NET_ADMIN );
+
+	HIP_IFEL(capset(&header, &data), -1, 
+		 "error in capset (do you have capabilities kernel module?)");
+
+	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
+	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+		  data.effective, data.permitted, data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
+
+out_err:
+	return err;
+	
 }
 
 /**
@@ -508,8 +559,7 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	//hip_delete_default_prefix_sp_pair();
-
+	hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
@@ -554,7 +604,7 @@ void hip_exit(int signal)
 	if (hip_nl_route.fd)
 		rtnl_close(&hip_nl_route);
 
-        hip_uninit_hadb();
+	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
 
 	msg = hip_msg_alloc();
@@ -576,6 +626,11 @@ void hip_exit(int signal)
 		free(msg);
 	
 	unlink(HIP_DAEMON_LOCK_FILE);
+
+#ifdef CONFIG_HIP_OPENDHT
+	if (opendht_serving_gateway)
+		freeaddrinfo(opendht_serving_gateway);
+#endif
 
 	return;
 }
@@ -620,7 +675,8 @@ void hip_probe_kernel_modules()
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
 		"ipv6", "aes", "crypto_null", "des",
-		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1"
+		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
+		"capability"
 	};
 
 	mod_total = sizeof(mod_name) / sizeof(char *);
@@ -643,3 +699,4 @@ void hip_probe_kernel_modules()
 	}
 	HIP_DEBUG("Probing completed\n");
 }
+

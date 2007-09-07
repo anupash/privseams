@@ -4,7 +4,7 @@
 /*
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Tobias Heer <heer@tobibox.de>
  */
 
@@ -93,6 +93,9 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
                          struct hip_crypto_key *);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
+
+int hip_build_param_locator_list(struct hip_common *msg,struct hip_locator_info_addr_item *addresses,
+			int address_count);  /*locater list */                
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);

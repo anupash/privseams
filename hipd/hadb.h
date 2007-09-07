@@ -278,5 +278,6 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
+int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 
 #endif /* HIP_HADB_H */

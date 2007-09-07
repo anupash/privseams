@@ -570,7 +570,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
-		HIP_ASSERT(entry);
+	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
@@ -1045,13 +1045,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* todo: Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
-
-	/* State E1: Receive R1, process. If successful, send I2 and go to E2.
-	   No retransmission here, the packet is sent directly because this
-	   is the last packet of the base exchange. */
-	
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 0);
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
@@ -1391,9 +1388,9 @@ int hip_receive_r1(struct hip_common *r1,
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-	#ifdef CONFIG_HIP_OPPORTUNISTIC
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-	#endif
+#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1510,7 +1507,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
@@ -1524,10 +1522,11 @@ int hip_create_r2(struct hip_context *ctx,
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 0, "Inserting rendezvous association failed\n");
 
-	/*Returns zero because blind code requires it*/
-	HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
-		  "Error while inserting RVA into hash table\n");
+	if (hip_rvs_put_rva(rva))
+		hip_put_rva(rva);
 #endif /* CONFIG_HIP_RVS */
+
+	hip_hold_rva(rva);
 
  out_err:
 	if (r2)
@@ -2395,8 +2394,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	
 	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
 	   all. */
-	from_nat = (struct hip_from_nat *)hip_get_param(i1, HIP_PARAM_FROM_NAT);
-	from = (struct hip_from *)hip_get_param(i1, HIP_PARAM_FROM);
+	from_nat = (struct hip_from_nat *) hip_get_param(i1, HIP_PARAM_FROM_NAT);
+	from = (struct hip_from *) hip_get_param(i1, HIP_PARAM_FROM);
 	
 	if (!(from || from_nat)) {
 		/* Case 5. */
@@ -2407,11 +2406,11 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	/* @todo: how to the handle the blind code with RVS?? */
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is on\n");
-	  // We need for R2 transmission: see hip_xmit_r1 below
-	  HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
-		   -1, "hip_blind_get_nonce failed\n");
-	  goto skip_nat;
+		HIP_DEBUG("Blind is on\n");
+		// We need for R2 transmission: see hip_xmit_r1 below
+		HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
+			 -1, "hip_blind_get_nonce failed\n");
+		goto skip_nat;
 	}
 #endif
 
@@ -2550,8 +2549,21 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	  mask |= HIP_CONTROL_BLIND;
 #endif
 
-	HIP_IFEL(ipv6_addr_any(&i1->hitr), -EPROTONOSUPPORT, 
-		 "Received NULL receiver HIT. Opportunistic HIP is not supported yet in I1. Dropping\n");
+	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
+
+	/* check i1 for broadcast/multicast addresses */
+	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) {
+		struct in_addr addr4;
+		IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
+		if (addr4.s_addr == INADDR_BROADCAST) {
+			HIP_DEBUG("Received i1 broadcast\n");
+			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+				 "Could not find source address\n");
+		}
+	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
+			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+				 "Could not find source address\n");
+	}
 
 	/* we support checking whether we are rvs capable even with RVS support not enabled */
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
@@ -2621,10 +2633,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 		break;
 	case HIP_STATE_I1_SENT:
-                
- 	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-               	if (cmphits==1) {
-		
+		cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+               	if (cmphits == 1) {
 			HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
 				"Dropping HIP packet\n");
 		
@@ -2919,7 +2929,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->local_address, &responder_ip,
-						     HIP_NAT_UDP_PORT, port,
+						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						     port,
 						     &i1, NULL, 0);
 				
 				break;

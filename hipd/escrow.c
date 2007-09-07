@@ -659,7 +659,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	/** @todo Functionality on UDP has not been tested. */
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, update_packet,
 			      entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");

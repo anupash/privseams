@@ -22,7 +22,7 @@
 int tw_create_content(void)
 {
 	/* Variables. */
-	GtkWidget *w, *hb, *vb;
+	GtkWidget *w, *hb, *vb, *iconw;
 	int err = 0;
 
 	gtk_container_set_border_width(widget(ID_TOOLWND), 1);
@@ -42,6 +42,8 @@ int tw_create_content(void)
 	gtk_widget_show(hb);
 	
 	w = gtk_button_new_with_label(lang_get("tw-button-delete"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_DELETE, GTK_ICON_SIZE_MENU);
+	gtk_button_set_image(GTK_BUTTON(w), iconw);
 	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_DELETE);
 	gtk_widget_set_sensitive(w, FALSE);
@@ -49,6 +51,8 @@ int tw_create_content(void)
 	widget_set(ID_TW_DELETE, w);
 	
 	w = gtk_button_new_with_label(lang_get("tw-button-cancel"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_CANCEL, GTK_ICON_SIZE_MENU);
+	gtk_button_set_image(GTK_BUTTON(w), iconw);
 	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_CANCEL);
 	gtk_widget_set_sensitive(w, FALSE);
@@ -56,6 +60,8 @@ int tw_create_content(void)
 	widget_set(ID_TW_CANCEL, w);
 
 	w = gtk_button_new_with_label(lang_get("tw-button-apply"));
+	iconw = gtk_image_new_from_stock(GTK_STOCK_APPLY, GTK_ICON_SIZE_MENU);
+	gtk_button_set_image(GTK_BUTTON(w), iconw);
 	gtk_box_pack_end(hb, w, FALSE, FALSE, 1);
 	g_signal_connect(w, "clicked", G_CALLBACK(button_event), IDB_TW_APPLY);
 	GTK_WIDGET_SET_FLAGS(w, GTK_CAN_DEFAULT);

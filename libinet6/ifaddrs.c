@@ -219,6 +219,7 @@ nl_recvmsg (int sd, int request, int seq,
 
   for (;;)
     {
+      memset(&msg, 0, sizeof(msg));
       msg.msg_name = (void *) &nladdr;
       msg.msg_namelen = sizeof (nladdr);
       msg.msg_iov = &iov;

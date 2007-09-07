@@ -298,7 +298,7 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(const struct hip_dif
  */
 struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *dhf)
 {
-        struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL;
+        struct hip_dh_public_value *dhpv1 = NULL, *dhpv2 = NULL, *err = NULL;
 
 	if ( ntohs(dhf->pub_val.pub_len) == 
 	     hip_get_diffie_hellman_param_public_value_len(dhf) ){
@@ -306,10 +306,16 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
 		 return (struct hip_dh_public_value *)&dhf->pub_val.group_id;
 	} else {
 
-	         HIP_DEBUG("Multiple DHF public values received\n");
 		 dhpv1 = (struct hip_dh_public_value *)&dhf->pub_val.group_id;
 		 dhpv2 = (struct hip_dh_public_value *)
 		   (dhf->pub_val.public_value + ntohs(dhf->pub_val.pub_len));
+
+		 HIP_IFEL (hip_get_diffie_hellman_param_public_value_len(dhf) !=
+			   ntohs(dhpv1->pub_len) + sizeof(uint8_t) + sizeof(uint16_t) 
+			   + ntohs(dhpv2->pub_len), dhpv1, "Malformed DHF parameter\n");
+
+		 HIP_DEBUG("Multiple DHF public values received\n");
+
 		 _HIP_DEBUG("dhpv1->group_id= %d   dhpv2->group_id= %d\n",
 			    dhpv1->group_id, dhpv2->group_id);
 		 _HIP_DEBUG("dhpv1->pub_len= %d   dhpv2->pub_len= %d\n", 
@@ -328,6 +334,8 @@ struct hip_dh_public_value *hip_dh_select_key(const struct hip_diffie_hellman *d
 		 else
 		        return dhpv2;
 	}
+ out_err:
+	return err;
 }
 
 
@@ -2429,7 +2437,7 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  			if (ntohs(*tfm) == table[j]) {
  				_HIP_DEBUG("found supported tfm %u, pkt tlv index of tfm=%d\n",
  					  table[j], i);
- 				return table[j];
+ 				return table[j];  
  			}
  		}
  	}
@@ -2476,6 +2484,41 @@ int hip_build_param_locator(struct hip_common *msg,
 	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
 	//	       addresses, addrs_len);
 
+ out_err:
+	if (locator_info)
+		free(locator_info);
+
+	return err;
+}
+
+int hip_build_param_locator_list(struct hip_common *msg,
+			struct hip_locator_info_addr_item *addresses,
+			int address_count)
+{
+	int err = 0;
+	struct hip_locator *locator_info = NULL;
+	int addrs_len = address_count *
+		(sizeof(struct hip_locator_info_addr_item));
+
+	HIP_IFE(!(locator_info =
+		  malloc(sizeof(struct hip_locator) + addrs_len)), -1);
+
+	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(locator_info,
+				   sizeof(struct hip_locator),
+				   addrs_len);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len);
+
+	memcpy(locator_info + 1, addresses, addrs_len);
+	HIP_IFE(hip_build_param(msg, locator_info), -1);
+
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	//if (addrs_len > 0)
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	       addresses, addrs_len);
  out_err:
 	if (locator_info)
 		free(locator_info);
@@ -2967,11 +3010,11 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 
 	endpoint.family = PF_HIP;	
 	endpoint.length = sizeof(struct endpoint_hip); 	
-	endpoint.flags = HIP_ENDPOINT_FLAG_HIT;	
 	endpoint.algo= entry->lhi.algo;
+	endpoint.flags=entry->lhi.anonymous;
 	endpoint.algo=hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-		
+	
 	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
 
   out_err:

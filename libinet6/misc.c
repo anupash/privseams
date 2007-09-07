@@ -4,7 +4,7 @@
  * Licence: GNU/GPL
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
@@ -917,8 +917,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     
   }
 
-  dsa_lhi.anonymous = htons(anon);
-  rsa_lhi.anonymous = htons(anon);
+
   
   if (use_default) {
     HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);

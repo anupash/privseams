@@ -12,7 +12,7 @@
 #define STATE_OPENDHT_START_SEND 3
 
 int init_dht_gateway_socket(int);
-int resolve_dht_gateway_info(const char *, struct addrinfo *);
+int resolve_dht_gateway_info(char *, struct addrinfo **);
 int connect_dht_gateway(int, struct addrinfo *, int);
 int opendht_put(int, unsigned char *, unsigned char *, 
                 unsigned char *, int, int);
