@@ -548,9 +548,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
-	  err = ((hip_rcv_func_set_t *)
-		 hip_get_rcv_default_func_set())->
-		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
+	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
+								 dst_addr,
+								 entry,
+								 msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -2101,7 +2102,13 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
+		/* as there is no state established function pointers can't be
+		   used here */
+	  err = (hip_get_handle_default_func_set())->hip_handle_i2(i2,
+								   i2_saddr,
+								   i2_daddr,
+								   entry,
+								   i2_info);
 		break;
 	case HIP_STATE_I2_SENT:
 		/* WTF */
