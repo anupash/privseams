@@ -1151,9 +1151,9 @@ int hip_handle_r1(struct hip_common *r1,
             {
                 /* Lets save the LOCATOR to the entry 'till we
                    get the esp_info in r2 then handle it */
+                n_addrs = hip_get_locator_addr_item_count(locator);
                 loc_size = sizeof(struct hip_locator) +
                     (n_addrs * sizeof(struct hip_locator_info_addr_item));
-                n_addrs = hip_get_locator_addr_item_count(locator);
                 HIP_IFEL(!(entry->locator = malloc(loc_size)), 
                        -1, "Malloc for entry->locators failed\n");             
                 memcpy(entry->locator, locator, loc_size);
