@@ -91,6 +91,7 @@ extern int hip_nat_status;
 
 int hip_nat_on();
 int hip_nat_off();
+int hip_nat_is();
 int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();

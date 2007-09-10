@@ -91,6 +91,16 @@ int hip_nat_off()
 	return err;
 }
 
+
+/**
+ * Get HIP NAT status.
+ */
+int hip_nat_is()
+{
+	return hip_nat_status;
+}
+
+
 /**
  * Sets NAT status "on" for a single host association.
  *

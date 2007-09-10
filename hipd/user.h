@@ -16,6 +16,7 @@
 #include "timer.h"
 #include "bos.h"
 #include "close.h"
+#include "accessor.h"
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;

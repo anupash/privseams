@@ -204,31 +204,31 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
           break;
 #endif 
 #ifdef CONFIG_HIP_OPENDHT
-        case SO_HIP_DHT_SERVING_GW:
-          {
-            /*
-            struct in_addr ip_gw;
-            struct in6_addr ip_gw_mapped;
-            int rett = 0, errr = 0;
-            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway.ai_addr;
-            rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-            IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-            errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
-                                                   opendht_serving_gateway_port,
-                                                   opendht_serving_gateway_ttl);
-            if (errr)
-              {
-                HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-                goto out_err;
-              }
-            errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-            if (errr)
-              {
-                HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-              }
-            */
-          }
-          break;
+	case SO_HIP_DHT_SERVING_GW:
+		{
+		/*
+		struct in_addr ip_gw;
+		struct in6_addr ip_gw_mapped;
+		int rett = 0, errr = 0;
+		struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway.ai_addr;
+		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
+												opendht_serving_gateway_port,
+												opendht_serving_gateway_ttl);
+		if (errr)
+			{
+			HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+			goto out_err;
+			}
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr)
+			{
+			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+			}
+		*/
+		}
+		break;
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
@@ -249,26 +249,26 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 	
 	case SO_HIP_DEL_ESCROW:
-		
-                HIP_DEBUG("handling escrow user message (delete).\n");
-                HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-                        -1, "no hit found\n");
-                HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
-                        HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-                HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
-                        -1, "Could not find server entry");
-                HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
-                	"Could not find kea base entry");
-                if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
-                        // Cancel registration (REG_REQUEST with zero lifetime)
-                        HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
-                                "for_each_hi err.\n");
-                        hip_keadb_put_entry(kea);
-                        HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
-                                0, "for_each_hi err.\n");	
-                        HIP_IFEL(hip_kea_remove_base_entries(), 0,
-                                "Could not remove base entries\n");	
-                        HIP_DEBUG("Removed kea base entries.\n");	
+		HIP_DEBUG("handling escrow user message (delete).\n");
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+				-1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
+				HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+		HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
+				-1, "Could not find server entry");
+		HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
+			"Could not find kea base entry");
+		if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0)
+		{
+			// Cancel registration (REG_REQUEST with zero lifetime)
+			HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
+					"for_each_hi err.\n");
+			hip_keadb_put_entry(kea);
+			HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
+					0, "for_each_hi err.\n");	
+			HIP_IFEL(hip_kea_remove_base_entries(), 0,
+					"Could not remove base entries\n");	
+			HIP_DEBUG("Removed kea base entries.\n");	
 		}
 		/** @todo Not filtering I1, when handling escrow user message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
@@ -286,26 +286,27 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
                         "Failed to recreate R1-packets\n"); 
-                
-                if (hip_firewall_is_alive()) {
-                        HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
-                                "Failed to deliver activation message to firewall\n");
-                }
-                
+
+		if (hip_firewall_is_alive())
+		{
+				HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
+						"Failed to deliver activation message to firewall\n");
+		}
 		break;
-                
-        case SO_HIP_CANCEL_ESCROW:
-                HIP_DEBUG("Handling del escrow service -user message.\n");
-                if (hip_firewall_is_alive()) {
-                         HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
-                                "Failed to deliver activation message to firewall\n");
-                }
-                HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
-                        "Error while removing service\n");
-                HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
-                        "Failed to recreate R1-packets\n"); 
-                
-                break;                
+	
+	case SO_HIP_CANCEL_ESCROW:
+		HIP_DEBUG("Handling del escrow service -user message.\n");
+		if (hip_firewall_is_alive())
+		{
+			HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
+				"Failed to deliver activation message to firewall\n");
+		}
+		HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
+				"Error while removing service\n");
+		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
+				"Failed to recreate R1-packets\n"); 
+		
+		break;
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
@@ -384,6 +385,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		//hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0);
 		break;
 
+	case SO_HIP_RESTART:
+		HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
+		hipd_set_flag(HIPD_FLAG_RESTART);
+		hip_close(SIGINT);
+		break;
+	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -409,6 +416,5 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("No response sent\n");
 	}
 
-    
 	return err;
 }

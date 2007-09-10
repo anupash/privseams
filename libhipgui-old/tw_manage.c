@@ -28,19 +28,19 @@ void *twl_current_item = NULL;
 /** Just clear both toolwindows as empty ones. */
 void tw_clear(void)
 {
-	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), FALSE);
 	
-	gtk_widget_set_sensitive(widget(ID_TWR_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_PORT), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_TYPE1), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_RGROUP)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_PORT)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_TYPE1)), FALSE);
 	
-	gtk_entry_set_text(widget(ID_TWR_NAME), "");
-	gtk_entry_set_text(widget(ID_TWL_NAME), "");
-	gtk_entry_set_text(widget(ID_TWG_NAME), "");
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_NAME)), "");
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWL_NAME)), "");
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWG_NAME)), "");
 	
 	tw_current_item = NULL;
 	twl_current_item = NULL;
@@ -52,17 +52,17 @@ void tw_clear(void)
 /** Just clear remote toolwindow as empty ones. */
 void tw_clear_remote(void)
 {
-	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
-	gtk_entry_set_text(widget(ID_TWR_NAME), "");
-	gtk_entry_set_text(widget(ID_TWG_NAME), "");
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), FALSE);
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_NAME)), "");
+	gtk_entry_set_text(GTK_ENTRY(widget(ID_TWG_NAME)), "");
 	
-	gtk_widget_set_sensitive(widget(ID_TWR_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_PORT), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_TYPE1), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_RGROUP)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_PORT)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_TYPE1)), FALSE);
 
 	tw_current_item = NULL;
 }
@@ -81,48 +81,50 @@ void tw_set_mode(int mode)
 	GtkWidget *container = widget(ID_TW_CONTAINER);
 	GtkWidget *w;
 	
-	gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_CANCEL), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TW_DELETE), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), FALSE);
 	
-	gtk_widget_set_sensitive(widget(ID_TWR_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWR_PORT), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_NAME), FALSE);
-	gtk_widget_set_sensitive(widget(ID_TWG_TYPE1), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_RGROUP)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_PORT)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_NAME)), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_TYPE1)), FALSE);
 	
-	gtk_widget_show(widget(ID_TW_APPLY));
-	gtk_widget_show(widget(ID_TW_CANCEL));
-	gtk_widget_show(widget(ID_TW_DELETE));
+	gtk_widget_show(GTK_WIDGET(widget(ID_TW_APPLY)));
+	gtk_widget_show(GTK_WIDGET(widget(ID_TW_CANCEL)));
+	gtk_widget_show(GTK_WIDGET(widget(ID_TW_DELETE)));
 
 	w = widget(ID_TWREMOTE);
-	if (w->parent == GTK_WIDGET(container)) gtk_container_remove(container, w);
+	if ((void *)w->parent == (void *)container)
+		gtk_container_remove(GTK_CONTAINER(container), w);
 	w = widget(ID_TWRGROUP);
-	if (w->parent == GTK_WIDGET(container)) gtk_container_remove(container, w);
+	if ((void *)w->parent == (void *)container)
+		gtk_container_remove(GTK_CONTAINER(container), w);
 
 	/* Then show selected mode. */
 	switch (mode)
 	{
 	case TWMODE_NONE:
-		gtk_widget_hide(widget(ID_TW_APPLY));
-		gtk_widget_hide(widget(ID_TW_CANCEL));
-		gtk_widget_hide(widget(ID_TW_DELETE));
+		gtk_widget_hide(GTK_WIDGET(widget(ID_TW_APPLY)));
+		gtk_widget_hide(GTK_WIDGET(widget(ID_TW_CANCEL)));
+		gtk_widget_hide(GTK_WIDGET(widget(ID_TW_DELETE)));
 		break;
 
 	case TWMODE_REMOTE:
-		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
-//		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
-		gtk_container_add(container, widget(ID_TWREMOTE));
-		gtk_widget_show(widget(ID_TWREMOTE));
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), TRUE);
+//		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), TRUE);
+		gtk_container_add(GTK_CONTAINER(container), widget(ID_TWREMOTE));
+		gtk_widget_show(GTK_WIDGET(widget(ID_TWREMOTE)));
 		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		break;
 
 	case TWMODE_RGROUP:
-		gtk_widget_set_sensitive(widget(ID_TW_APPLY), TRUE);
-//		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_container_add(container, widget(ID_TWRGROUP));
-		gtk_widget_show(widget(ID_TWRGROUP));
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), TRUE);
+//		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), TRUE);
+		gtk_container_add(GTK_CONTAINER(container), widget(ID_TWRGROUP));
+		gtk_widget_show(GTK_WIDGET(widget(ID_TWRGROUP)));
 		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		break;
 	}
@@ -172,16 +174,16 @@ void tw_set_remote_info(char *hit_name)
 
 	if (hit)
 	{
-		gtk_entry_set_text(widget(ID_TWR_NAME), hit->name);
-		gtk_entry_set_text(widget(ID_TWR_URL), hit->url);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_NAME)), hit->name);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_URL)), hit->url);
 		//sprintf(str, "%d", hit->port);
-		gtk_entry_set_text(widget(ID_TWR_PORT), hit->port);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_PORT)), hit->port);
 
 		print_hit_to_buffer(str, &hit->hit);
-		gtk_entry_set_text(widget(ID_TWR_REMOTE), str);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWR_REMOTE)), str);
 
 		i = find_from_cb(hit->g->name, widget(ID_TWR_RGROUP));
-		gtk_combo_box_set_active(widget(ID_TWR_RGROUP), i);
+		gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), i);
 
 		tw_set_remote_rgroup_info(hit->g);
 
@@ -204,16 +206,16 @@ void tw_set_remote_rgroup_info(HIT_Group *g)
 	int i;
 
 	i = find_from_cb(g->l->name, widget(ID_TWR_LOCAL));
-	gtk_combo_box_set_active(widget(ID_TWR_LOCAL), i);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_LOCAL)), i);
 
 	if (g->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
 	else ps = lang_get("group-type-deny");
 	i = find_from_cb(ps, widget(ID_TWR_TYPE1));
-	gtk_combo_box_set_active(widget(ID_TWR_TYPE1), i);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_TYPE1)), i);
 	if (g->lightweight == 1) ps = lang_get("group-type2-lightweight");
 	else ps = lang_get("group-type2-normal");
 	i = find_from_cb(ps, widget(ID_TWR_TYPE2));
-	gtk_combo_box_set_active(widget(ID_TWR_TYPE2), i);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_TYPE2)), i);
 }
 /* END OF FUNCTION */
 
@@ -238,23 +240,23 @@ void tw_set_local_info(GtkWidget *warg, char *hit_name)
 
 	if (hit)
 	{
-		gtk_entry_set_text(widget(ID_TWL_NAME), hit->name);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWL_NAME)), hit->name);
 		print_hit_to_buffer(str, &hit->lhit);
-		gtk_entry_set_text(widget(ID_TWL_LOCAL), str);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWL_LOCAL)), str);
 		twl_current_item = (void *)hit;
-		//gtk_entry_select_region(widget(ID_TWL_NAME), 0, -1);
-		gtk_widget_grab_focus(widget(ID_TWL_NAME));
+		//gtk_entry_select_region(GTK_ENTRY(widget(ID_TWL_NAME)), 0, -1);
+		gtk_widget_grab_focus(GTK_WIDGET(widget(ID_TWL_NAME)));
 		
 		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
 		dialog = widget(ID_LTOOLWND);
-		gtk_window_set_keep_above(dialog, TRUE);
-		gtk_widget_show(dialog);
+		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+		gtk_widget_show(GTK_WIDGET(dialog));
 		do
 		{
-			err = gtk_dialog_run(dialog);
+			err = gtk_dialog_run(GTK_DIALOG(dialog));
 			if (err != GTK_RESPONSE_YES) break;
 		} while (!twl_apply());
-		gtk_widget_hide(dialog);
+		gtk_widget_hide(GTK_WIDGET(dialog));
 	}
 }
 /* END OF FUNCTION */
@@ -282,28 +284,28 @@ void tw_set_rgroup_info(char *group_name)
 
 		if (i >= 0)
 		{
-			gtk_entry_set_text(widget(ID_TWG_NAME), group->name);
-			gtk_combo_box_set_active(widget(ID_TWG_LOCAL), i);
+			gtk_entry_set_text(GTK_ENTRY(widget(ID_TWG_NAME)), group->name);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_LOCAL)), i);
 			if (group->accept == HIT_ACCEPT) ps = lang_get("group-type-accept");
 			else ps = lang_get("group-type-deny");
 			i = find_from_cb(ps, widget(ID_TWG_TYPE1));
-			gtk_combo_box_set_active(widget(ID_TWG_TYPE1), i);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_TYPE1)), i);
 			if (group->lightweight == 1) ps = lang_get("group-type2-lightweight");
 			else ps = lang_get("group-type2-normal");
 			i = find_from_cb(ps, widget(ID_TWG_TYPE2));
-			gtk_combo_box_set_active(widget(ID_TWG_TYPE2), i);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_TYPE2)), i);
 
 			tw_current_item = (void *)group;
 			
 			/* Cannot do any modifications to default group. */
 			if (strcmp(group->name, lang_get("default-group-name")) == 0)
 			{
-				gtk_widget_set_sensitive(widget(ID_TW_APPLY), FALSE);
+				gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_APPLY)), FALSE);
 			}
 			/* If group is empty and not default, allow deleting and modifying of the group. */
 			else if (group->remotec < 1)
 			{
-				gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
+				gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), TRUE);
 			 	if (strcmp(group->name, lang_get("default-group-name")) == 0);
 			}
 		}
@@ -325,7 +327,7 @@ int tw_add_rgroup(HIT_Group *group, void *p)
 	/* Variables. */
 	GtkWidget *w = (GtkWidget *)p;
 
-	gtk_combo_box_insert_text(w, 0, group->name);
+	gtk_combo_box_insert_text(GTK_COMBO_BOX(w), 0, group->name);
 
 	return (0);
 }
@@ -352,33 +354,33 @@ void tw_apply(void)
 	case TWMODE_REMOTE:
 		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		tw_current_mode = TWMODE_REMOTE_EDIT;
-		gtk_widget_set_sensitive(widget(ID_TWR_NAME), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TWR_RGROUP), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TWR_PORT), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
-		//gtk_entry_select_region(widget(ID_TWR_NAME), 0, -1);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_NAME)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_RGROUP)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWR_PORT)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), TRUE);
+		//gtk_entry_select_region(GTK_ENTRY(widget(ID_TWR_NAME)), 0, -1);
 		gtk_editable_set_position(widget(ID_TWR_NAME), -1);
-		gtk_widget_grab_focus(widget(ID_TWR_NAME));
-		gtk_widget_grab_default(widget(ID_TW_APPLY));
+		gtk_widget_grab_focus(GTK_WIDGET(widget(ID_TWR_NAME)));
+		gtk_widget_grab_default(GTK_WIDGET(widget(ID_TW_APPLY)));
 		break;
 
 	case TWMODE_RGROUP:
 		if (strcmp(g->name, lang_get("default-group-name")) == 0) break;
 		g_object_set(widget(ID_TW_APPLY), "label", lang_get("tw-button-apply"), NULL);
 		tw_current_mode = TWMODE_RGROUP_EDIT;
-		gtk_widget_set_sensitive(widget(ID_TWG_NAME), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TWG_TYPE1), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_CANCEL), TRUE);
-		gtk_widget_set_sensitive(widget(ID_TW_DELETE), TRUE);
-		//gtk_entry_select_region(widget(ID_TWG_NAME), 0, -1);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_NAME)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TWG_TYPE1)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_CANCEL)), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(widget(ID_TW_DELETE)), TRUE);
+		//gtk_entry_select_region(GTK_ENTRY(widget(ID_TWG_NAME)), 0, -1);
 		gtk_editable_set_position(widget(ID_TWG_NAME), -1);
-		gtk_widget_grab_focus(widget(ID_TWG_NAME));
-		gtk_widget_grab_default(widget(ID_TW_APPLY));
+		gtk_widget_grab_focus(GTK_WIDGET(widget(ID_TWG_NAME)));
+		gtk_widget_grab_default(GTK_WIDGET(widget(ID_TW_APPLY)));
 		break;
 
 	case TWMODE_REMOTE_EDIT:
-		strcpy(str, gtk_entry_get_text(widget(ID_TWR_NAME)));
+		strcpy(str, (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_NAME))));
 		if (!check_hit_name(str, r));
 		else if (!check_apply_hit(str, r))
 		{
@@ -389,9 +391,9 @@ void tw_apply(void)
 			NAMECPY(ud.old_name, r->name);
 			NAMECPY(ud.new_name, str);
 			NAMECPY(r->name, str);
-			ps = gtk_entry_get_text(widget(ID_TWR_URL));
+			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_URL)));
 			URLCPY(r->url, ps);
-			ps = gtk_entry_get_text(widget(ID_TWR_PORT));
+			ps = (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWR_PORT)));
 			URLCPY(r->port, ps);
 
 			ud.depth = 2;
@@ -400,7 +402,7 @@ void tw_apply(void)
 			gtk_tree_model_foreach(widget(ID_RLISTMODEL), gui_update_tree_value, &ud);
 
 			/* Change group, if wanted. */
-			ps = gtk_combo_box_get_active_text(widget(ID_TWR_RGROUP));
+			ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)));
 			g = hit_db_find_rgroup(ps);
 			if (g && g != r->g)
 			{
@@ -423,7 +425,7 @@ void tw_apply(void)
 		break;
 
 	case TWMODE_RGROUP_EDIT:
-		strcpy(str, gtk_entry_get_text(widget(ID_TWG_NAME)));
+		strcpy(str, (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWG_NAME))));
 		if (!check_group_name(str, g));
 		else if (!check_apply_group(str, g))
 		{
@@ -434,7 +436,7 @@ void tw_apply(void)
 			NAMECPY(ud.old_name, g->name);
 			NAMECPY(ud.new_name, str);
 			NAMECPY(g->name, str);
-			ps = gtk_combo_box_get_active_text(widget(ID_TWG_TYPE1));
+			ps = gtk_combo_box_get_active_text(GTK_COMBO_BOX(widget(ID_TWG_TYPE1)));
 			if (strcmp(lang_get("group-type-accept"), ps) == 0) g->accept = HIT_ACCEPT;
 			else g->accept = HIT_DENY;
 			ud.depth = 1;
@@ -447,8 +449,6 @@ void tw_apply(void)
 		}
 		break;
 	}
-
-	return (0);
 }
 /* END OF FUNCTION */
 
@@ -539,13 +539,13 @@ int twl_apply(void)
 	
 	if (!twl_current_item) return;
 
-	strcpy(str, gtk_entry_get_text(widget(ID_TWL_NAME)));
+	strcpy(str, (char *)gtk_entry_get_text(GTK_ENTRY(widget(ID_TWL_NAME))));
 	if (check_lhit_name(str, l))
 	{
 		HIP_DEBUG("Updating local HIT %s -> %s.\n", l->name, str);
 		all_update_local(l->name, str);
 		NAMECPY(l->name, str);
-		gtk_widget_hide(widget(ID_LTOOLWND));
+		gtk_widget_hide(GTK_WIDGET(widget(ID_LTOOLWND)));
 		err = 1;
 	}
 	
@@ -564,7 +564,7 @@ void twl_cancel(void)
 	if (!twl_current_item) return;
 
 	tw_set_local_info(NULL, l->name);
-	gtk_widget_hide(widget(ID_LTOOLWND));
+	gtk_widget_hide(GTK_WIDGET(widget(ID_LTOOLWND)));
 }
 /* END OF FUNCTION */
 

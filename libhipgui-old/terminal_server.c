@@ -47,7 +47,7 @@ void send_string(int sockfd, char *msg)
 
 /******************************************************************************/
 /** Send message to socket. */
-void term_server_send_string(char *msg)
+void *term_server_send_string(void *msg)
 {
 	/* Variables. */
 	int i;
@@ -60,6 +60,8 @@ void term_server_send_string(char *msg)
 		}
 	}
 	term_print(msg);
+
+	return NULL;
 }
 /* END OF FUNCTION */
 

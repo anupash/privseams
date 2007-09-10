@@ -31,7 +31,7 @@ void rh_drag_begin(GtkWidget *tree, GdkDragContext *dc, gpointer data)
 	int depth, *indices;
 
 	strcpy(drag_hit_name, "");
-	selection = gtk_tree_view_get_selection(tree);
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
@@ -127,9 +127,9 @@ void rh_drag_data_received(GtkWidget *tree, GdkDragContext *dc,
 
 	/* Bail out, if this was not valid drag&drop operation. */
 	if (strlen(drag_hit_name) < 1) return;
-	if (!gtk_tree_view_get_dest_row_at_pos(tree, x, y, &path, &pos)) return;
+	if (!gtk_tree_view_get_dest_row_at_pos(GTK_TREE_VIEW(tree), x, y, &path, &pos)) return;
 	
-	model = gtk_tree_view_get_model(tree);
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(tree));
 	depth = gtk_tree_path_get_depth(path);
 	gtk_tree_model_get_iter(model, &iter, path);
 	gtk_tree_model_get(model, &iter, 0, &str, -1);

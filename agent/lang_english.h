@@ -125,7 +125,8 @@ char *lang_english[] =
 	"opt-info",					"NOTE: Changes are applied instantaneously",
 	"dbg-title",				"Debug options:",
 	"dbg-rstall",				"Reset all SAs (hipconf rst all)",
-	
+	"dbg-restart-daemon",		"Restart HIP daemon",
+
 	/* Local HIT handling. */
 	"lhdlg-button-apply",		"Apply",
 	"lhdlg-button-cancel",		"Cancel",
