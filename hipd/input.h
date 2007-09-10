@@ -172,4 +172,12 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
 
+// 2007-02-26 oleg
+// prototype
+hip_rcv_func_set_t *hip_get_rcv_default_func_set();
+// 2006-02-26 oleg
+// prototype
+hip_handle_func_set_t *hip_get_handle_default_func_set();
+
+
 #endif /* HIP_INPUT_H */

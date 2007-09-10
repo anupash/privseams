@@ -535,9 +535,11 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 					      &entry->peer_ip);
 		if (ha)
 			disable_fallback = ha->hip_opp_fallback_disable;
+		HIP_DEBUG("disable_fallback: %d\n",disable_fallback);
+
 	}
 #endif
-	
+	HIP_DEBUG("disable_fallback: %d\n",disable_fallback);
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		addr = (struct in6_addr *) &entry->peer_ip;
 		hip_ipdb_add(addr);
