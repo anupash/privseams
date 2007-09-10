@@ -2127,7 +2127,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				int addr_count,	int esp_info_old_spi,
 				int is_add, struct sockaddr* addr){
 	   	
-	int err = 0, i, preferred_address_found = 0, choose_random = 0, change_preferred_address = 0;
+        int err = 0, i, preferred_address_found = 0; 
+        int choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 	struct in6_addr *saddr, *comp_addr = hip_cast_sa_addr(addr);
@@ -2183,35 +2184,49 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	/* XX FIXME: change daddr to an alternative peer address
 	   if no suitable saddr was found (interfamily handover) */
-	if( !choose_random ) 
-	  for(i = 0; i < addr_count; i++, loc_addr_item++)
-	    {
-	      struct in6_addr *saddr = &loc_addr_item->address;
-	      /*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
+	if (!choose_random) { 
+            int been_here = 0;
+        choose_random:
+            for(i = 0; i < addr_count; i++, loc_addr_item++) {
+                struct in6_addr *saddr = &loc_addr_item->address;
+                /*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
 				HIP_HEXDUMP("a2: ", daddr, sizeof(*daddr));
 				HIP_HEXDUMP("a3: ", &entry->local_address, sizeof(*daddr));*/
-	      if (memcmp(comp_addr, saddr, sizeof(struct in6_addr)) == 0)
-		{
-		  if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr))
-		    {
-		      /* Select the first match */
-		      loc_addr_item->reserved = 0x80;
-		      preferred_address_found = 1;
-		      if( change_preferred_address ) {
-			HIP_IFEL(hip_update_preferred_address(entry,saddr,
-							      daddr, 
-							      &spi_in->spi),-1, 
-				 "Setting New Preferred Address Failed\n");		      
-		      }
-		      else {
-			HIP_DEBUG("Preferred Address is the old preferred address\n");
-		      }
-		      HIP_DEBUG_IN6ADDR("addr: ", saddr);
-		      break;
-		    }
-		}	
-	    }
-	
+                if (memcmp(comp_addr, saddr, sizeof(struct in6_addr)) == 0) {
+                    if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr)) {
+                        /* Select the first match */
+                        loc_addr_item->reserved = 0x80;
+                        preferred_address_found = 1;
+                        if( change_preferred_address ) {
+                            HIP_IFEL(hip_update_preferred_address(entry,saddr,
+                                                                  daddr, 
+                                                                  &spi_in->spi),-1, 
+                                     "Setting New Preferred Address Failed\n");		      
+                        } else {
+                            HIP_DEBUG("Preferred Address is the old preferred address\n");
+                        }
+                        HIP_DEBUG_IN6ADDR("addr: ", saddr);
+                        break;
+                    }
+                }
+            }
+            if (!preferred_address_found && (been_here == 0)) {
+                hip_list_t *item, *tmp;
+                struct hip_peer_addr_list_item *addr;
+                struct hip_spi_out_item *spi_out;
+                int i = 0;
+                spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);   
+                list_for_each_safe(item, tmp, spi_out->peer_addr_list, i) {
+                    addr = list_entry(item);
+                    if (IN6_IS_ADDR_V4MAPPED(&addr->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
+                        hip_print_hit("SPIout addr", &addr->address);
+                        memcpy(&daddr, &addr->address, sizeof(struct in6_addr));
+                    }
+                }
+                been_here = 1;
+                goto choose_random;
+            }           
+        }
 
 	if (preferred_address_found)
 		goto skip_pref_update;
@@ -2223,14 +2238,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		saddr = &loc_addr_item->address;
 		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
 		{
-			loc_addr_item->reserved = ntohl(1 << 31);
-			HIP_DEBUG_IN6ADDR("first match: ", saddr);
-			HIP_IFEL(hip_update_preferred_address(entry,saddr,
-							      daddr, 
-							      &spi_in->spi),-1, 
-				 "Setting New Preferred Address Failed\n");
-			preferred_address_found = 1;
-			break;
+                    loc_addr_item->reserved = 0x80; /* ntohl(1 << 31); */
+                    HIP_DEBUG_IN6ADDR("first match: ", saddr);
+                    HIP_IFEL(hip_update_preferred_address(entry,saddr,
+                                                          daddr, 
+                                                          &spi_in->spi),-1, 
+                             "Setting New Preferred Address Failed\n");
+                    preferred_address_found = 1;
+                    break;
 		}
 	}
 
