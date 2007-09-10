@@ -14,7 +14,7 @@
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
-
+ 
 
 /**
  * Iterate a list of locators using a function.
@@ -223,14 +223,15 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		  ntohl(locator_address_item->reserved),
 		  lifetime);
 
+        /* Removed this because trying to get interfamily handovers to work --Samu */
 	// Check that addresses match, we doesn't support IPv4 <-> IPv6 update communnications
-	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(locator_address);
-	local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->local_address);
+        //	locator_is_ipv4 = IN6_IS_ADDR_V4MAPPED(locator_address);
+	//local_is_ipv4 = IN6_IS_ADDR_V4MAPPED(&entry->local_address);
 
-	if( locator_is_ipv4 != local_is_ipv4 ) {
+	//if( locator_is_ipv4 != local_is_ipv4 ) {
 	  // One of the addresses is IPv4 another is IPv6
-	  goto out_err;
-	}
+	//  goto out_err;
+	//}
 
 	/* Check that the address is a legal unicast or anycast
 	   address */
@@ -399,7 +400,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 
 	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
                                                 entry, locator, &spi), -1,
-		 "Locator handling failed\n");
+		 "Locator handling failed\n"); 
         
 
         /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
@@ -2187,6 +2188,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	if (!choose_random) { 
             int been_here = 0;
         choose_random:
+            loc_addr_item = addr_list;
             for(i = 0; i < addr_count; i++, loc_addr_item++) {
                 struct in6_addr *saddr = &loc_addr_item->address;
                 /*		HIP_HEXDUMP("a1: ", saddr, sizeof(*saddr));
@@ -2211,16 +2213,22 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                 }
             }
             if (!preferred_address_found && (been_here == 0)) {
-                hip_list_t *item, *tmp;
+                hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL;
                 struct hip_peer_addr_list_item *addr;
                 struct hip_spi_out_item *spi_out;
-                int i = 0;
-                spi_out = hip_hadb_get_spi_list(entry, entry->default_spi_out);   
-                list_for_each_safe(item, tmp, spi_out->peer_addr_list, i) {
-                    addr = list_entry(item);
-                    if (IN6_IS_ADDR_V4MAPPED(&addr->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
-                        hip_print_hit("SPIout addr", &addr->address);
-                        memcpy(&daddr, &addr->address, sizeof(struct in6_addr));
+                int i = 0, ii = 0;
+                list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+                    spi_out = list_entry(item_outer);
+                    ii = 0;
+                    tmp = NULL;
+                    item = NULL;
+                    list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+                        addr = list_entry(item);
+                        hip_print_hit("SPI out addresses", &addr->address);
+                        if (IN6_IS_ADDR_V4MAPPED(&addr->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
+                            HIP_DEBUG("Found other family than BEX address family\n");
+                            memcpy(daddr, &addr->address, sizeof(struct in6_addr));
+                        }
                     }
                 }
                 been_here = 1;
