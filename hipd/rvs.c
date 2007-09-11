@@ -158,7 +158,7 @@ hip_rva_t *hip_rvs_ha2rva(hip_ha_t *ha, hip_xmit_func_t send_pkt)
  * Gets a rendezvous association from the rendezvous association hashtable.
  *
  * Gets a rendezvous association matching the argument @c hit. If
- * a rendezvous association is found, it is automatically holded (refcnt
+ * a rendezvous association is found, it is automatically held (refcnt
  * incremented).
  *
  * @param hit the HIT of the rendezvous association to get.
@@ -182,7 +182,7 @@ hip_rva_t *hip_rvs_get(struct in6_addr *hit)
  * Gets a valid rendezvous association matching the argument hit. Finds
  * a rendezvous association matching the argument hit and whose state is
  * @c HIP_RVASTATE_VALID. If a valid rendezvous association is found,
- * it is automatically holded (refcnt incremented).
+ * it is automatically held (refcnt incremented).
  * 
  * @param hit the HIT of the rendezvous association to get.
  * @return a pointer to a matching valid rendezvous association or NULL if

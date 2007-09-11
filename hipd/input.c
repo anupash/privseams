@@ -1520,9 +1520,12 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(!(rva = hip_rvs_ha2rva(
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 0, "Inserting rendezvous association failed\n");
-
+	
 	if (hip_rvs_put_rva(rva))
 		hip_put_rva(rva);
+	/*Returns zero because blind code requires it*/
+	//HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
+	//  "Error while inserting RVA into hash table\n");
 #endif /* CONFIG_HIP_RVS */
 
 	hip_hold_rva(rva);

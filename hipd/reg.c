@@ -428,8 +428,8 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op)
         // TODO: support for cancelling rvs registration
         if (op && (entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
             (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
-                _HIP_DEBUG_HIT("HIT being registered to rvs", &i2->hits);
-                request_rvs = 1;
+		HIP_DEBUG_HIT("HIT being registered to rvs", &(entry->hit_our));
+		request_rvs = 1;
                 type_count++;
         }
 #endif /* CONFIG_HIP_RVS */

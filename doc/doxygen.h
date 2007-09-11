@@ -5,6 +5,29 @@
  * This is only for defining doxygen related things, such as
  * groups and lists.
  */
+
+/** @mainpage
+ * Welcome to Host Identity Protocol for Linux (HIPL) Doxygen page.
+ *
+ * @section sec_doc Project Documents
+ * <ul>
+ * <li>doc/HACKING. This file contains developer information on policies in the HIPL project.</li>
+ * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in project root directory.</li> 
+ * <!--<li><a href=""></a>.</li>-->
+ * </ul>
+ * 
+ * @section sec_links Links
+ * <ul>
+ * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
+ * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3 for C-library functions.</li>
+ * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
+ * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
+ * </ul>
+ *
+ * @date   04.09.2007
+ */ 
+
+
  
 /**
  * Error handling macros used for checking errors. To use these macros, define a
