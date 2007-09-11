@@ -2168,6 +2168,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	loc_addr_item = addr_list;
 
+        /*
+          What is the meaning of this FIXME 
+        */
 	HIP_IFEL((addr->sa_family == AF_INET), -1, "all addresses in update should be mapped");
 
 	/* if we have deleted the old address and it was preferred than 
@@ -2214,7 +2217,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
             }
             if (!preferred_address_found && (been_here == 0)) {
                 hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL;
-                struct hip_peer_addr_list_item *addr;
+                struct hip_peer_addr_list_item *addr_li;
                 struct hip_spi_out_item *spi_out;
                 int i = 0, ii = 0;
                 list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
@@ -2223,11 +2226,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                     tmp = NULL;
                     item = NULL;
                     list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
-                        addr = list_entry(item);
-                        hip_print_hit("SPI out addresses", &addr->address);
-                        if (IN6_IS_ADDR_V4MAPPED(&addr->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
+                        addr_li = list_entry(item);
+                        hip_print_hit("SPI out addresses", &addr_li->address);
+                        if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
                             HIP_DEBUG("Found other family than BEX address family\n");
-                            memcpy(daddr, &addr->address, sizeof(struct in6_addr));
+                            memcpy(daddr, &addr_li->address, sizeof(struct in6_addr));
                         }
                     }
                 }
