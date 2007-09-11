@@ -213,7 +213,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
         /* 0x80 == 10000000 */
-	int is_preferred = ntohl(locator_address_item->reserved) == 0x80;
+	int is_preferred = locator_address_item->reserved == 0x80;
 	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 	
@@ -2168,11 +2168,10 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	loc_addr_item = addr_list;
 
+        /* Is there any use for this */
         /*
-          What is the meaning of this FIXME 
-        */
 	HIP_IFEL((addr->sa_family == AF_INET), -1, "all addresses in update should be mapped");
-
+        */
 	/* if we have deleted the old address and it was preferred than 
 	   we chould make new preferred address. Now, we chose it as random address in list 
 	*/
