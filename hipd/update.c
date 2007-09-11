@@ -213,7 +213,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
         /* 0x80 == 10000000 */
-	int is_preferred = locator_address_item->reserved == 0x80;
+	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
 	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 	
@@ -2199,7 +2199,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                 if (memcmp(comp_addr, saddr, sizeof(struct in6_addr)) == 0) {
                     if (IN6_IS_ADDR_V4MAPPED(saddr)  == IN6_IS_ADDR_V4MAPPED(daddr)) {
                         /* Select the first match */
-                        loc_addr_item->reserved = 0x80;
+                        loc_addr_item->reserved = ntohl(1 << 7);
                         preferred_address_found = 1;
                         if( change_preferred_address ) {
                             HIP_IFEL(hip_update_preferred_address(entry,saddr,
@@ -2248,7 +2248,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		saddr = &loc_addr_item->address;
 		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
 		{
-                    loc_addr_item->reserved = 0x80; /* ntohl(1 << 31); */
+                    loc_addr_item->reserved = ntohl(1 << 7);
                     HIP_DEBUG_IN6ADDR("first match: ", saddr);
                     HIP_IFEL(hip_update_preferred_address(entry,saddr,
                                                           daddr, 
