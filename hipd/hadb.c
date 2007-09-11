@@ -100,6 +100,7 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 	hip_ha_t *ha = (hip_ha_t *)entry;
 	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
+        if (ha->locator) free(ha->locator);
 	hip_ht_delete(hadb_hit, entry);
 }
 
