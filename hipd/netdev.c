@@ -701,9 +701,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 					/* For testing preferred address */
 					//locators[i].reserved =
-					//	i == 0 ? htonl(1 << 31) : 0;
-                                        //   should this be 
-                                        //    i == 0 ? htonl(0x80) : 0;
+					//	i == 0 ? htonl(1 << 7) : 0;
+                                        
 					locators[i].lifetime = 0;
 					i++;
 				}
