@@ -699,7 +699,7 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
                                        sizeof(struct hip_locator_info_addr_item));
             if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                 
-                hip_print_hit("LOCATOR from DHT",
+                hip_print_hit("LOCATOR has address ",
                               (struct in6_addr *)&locator_address_item[i].address);
                 _HIP_HEXDUMP("Should be in6_addr", 
                              &locator_address_item[i].address,

@@ -377,13 +377,15 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
-	int zero = 0;
-
+	int zero = 0, n_addrs = 0;
+        int same_af = 0, new_local_af = 0, local_af = 0, comp_af = 0;
+        struct netdev_address *n;
+        struct sockaddr_storage *ss_addr = NULL;
+        hip_list_t *item = NULL, *tmplist = NULL;
 
         spi = ntohl(esp_info->new_spi);
         HIP_DEBUG("LOCATOR SPI=0x%x\n", spi);
-        
-        
+                
         /* If following does not exit, its a bug: outbound SPI must have been
            already created by the corresponding ESP_INFO in the same UPDATE
            packet */
@@ -402,12 +404,40 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                                                 entry, locator, &spi), -1,
 		 "Locator handling failed\n"); 
         
-
         /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
            parameter as DEPRECATED. */
         HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
                                                entry, spi_out, locator), -1,
                  "Depracating a peer address failed\n");
+
+        /* checking did the locator have any address with the same family as
+           entry->local_address, if not change local address to address that
+           has same family as the address(es) in locator, if possible */
+        if (locator) {
+            n_addrs = hip_get_locator_addr_item_count(locator);
+            locator_address_item = hip_get_locator_first_addr_item(locator);
+            local_af = IN6_IS_ADDR_V4MAPPED(&entry->local_address) ? AF_INET : AF_INET6;
+            if (local_af == 0) goto out_err;
+            for (i = 0; i < n_addrs; i++) {
+                /* check if af same as in entry->local_af */
+                comp_af = IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&locator_address_item[i].address) ? AF_INET : AF_INET6;
+                if (comp_af == local_af)
+                    same_af = 1;
+            }
+            if (same_af == 0) {
+                /* look for local address with family == new_local_af */
+                i = 0;
+                list_for_each_safe(item, tmplist, addresses, i) {
+                    ss_addr = &n->addr;
+                    if (ss_addr->ss_family == new_local_af) {
+                        memcpy(&entry->local_address, 
+                               hip_cast_sa_addr(ss_addr), 
+                               sizeof(struct in6_addr));
+                        continue;
+                    }
+                }
+            }
+        }
 
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
