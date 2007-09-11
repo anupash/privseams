@@ -377,10 +377,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp;
-	int zero = 0, n_addrs = 0;
-        int same_af = 0, new_local_af = 0, local_af = 0, comp_af = 0;
+	int zero = 0, n_addrs = 0, ii = 0;
+        int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
         struct netdev_address *n;
-        struct sockaddr_storage *ss_addr = NULL;
         hip_list_t *item = NULL, *tmplist = NULL;
 
         spi = ntohl(esp_info->new_spi);
@@ -399,17 +398,6 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
         HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
                                               entry, spi_out, &zero), -1);
                 
-
-	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-                                                entry, locator, &spi), -1,
-		 "Locator handling failed\n"); 
-        
-        /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
-           parameter as DEPRECATED. */
-        HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
-                                               entry, spi_out, locator), -1,
-                 "Depracating a peer address failed\n");
-
         /* checking did the locator have any address with the same family as
            entry->local_address, if not change local address to address that
            has same family as the address(es) in locator, if possible */
@@ -420,24 +408,36 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
             if (local_af == 0) goto out_err;
             for (i = 0; i < n_addrs; i++) {
                 /* check if af same as in entry->local_af */
-                comp_af = IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&locator_address_item[i].address) ? AF_INET : AF_INET6;
-                if (comp_af == local_af)
+                comp_af = IN6_IS_ADDR_V4MAPPED(&locator_address_item[i].address) ? AF_INET : AF_INET6;
+                if (comp_af == local_af) {
                     same_af = 1;
+                    break;
+                }
             }
             if (same_af == 0) {
-                /* look for local address with family == new_local_af */
-                i = 0;
-                list_for_each_safe(item, tmplist, addresses, i) {
-                    ss_addr = &n->addr;
-                    if (ss_addr->ss_family == new_local_af) {
+                /* look for local address with family == comp_af */
+                list_for_each_safe(item, tmplist, addresses, ii) {
+                    n = list_entry(item);
+                    tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))?AF_INET:AF_INET6;
+                    if (tmp_af == comp_af) {
                         memcpy(&entry->local_address, 
-                               hip_cast_sa_addr(ss_addr), 
+                               hip_cast_sa_addr(&n->addr), 
                                sizeof(struct in6_addr));
-                        continue;
+                        goto out_of_loop;
                     }
                 }
             }
         }
+ out_of_loop:
+	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
+                                                entry, locator, &spi), -1,
+		 "Locator handling failed\n"); 
+        
+        /* 4. Mark all addresses on the SPI that were NOT listed in the LOCATOR
+           parameter as DEPRECATED. */
+        HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
+                                               entry, spi_out, locator), -1,
+                 "Depracating a peer address failed\n");
 
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
@@ -1864,8 +1864,6 @@ int hip_receive_update(struct hip_common *msg,
         struct hip_tlv_common *reg_info = NULL;
 	struct in6_addr *src_ip, *dst_ip;
 	struct hip_tlv_common *encrypted = NULL;
-	
-	HIP_DEBUG("enter\n");
 
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
