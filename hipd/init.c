@@ -395,7 +395,7 @@ int hip_init_host_ids()
 		
 	/* Create default keys if necessary. */
 
-	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT)
+	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT)
 	{
 		hip_msg_init(user_msg);
 		err = hip_serialize_host_id_action(user_msg,
@@ -409,7 +409,7 @@ int hip_init_host_ids()
 			goto out_err;
 		}
 	}
-	
+
         /* Retrieve the keys to hipd */
 	hip_msg_init(user_msg);
 	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);

@@ -928,7 +928,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   
   switch(action) {
   case ACTION_NEW:
-    /* zero means "do not send any message to kernel */
+    /* zero means "do not send any message to hipd */
     numeric_action = 0;
 
     /* Default directory is created only in "hipconf new default hi" */
