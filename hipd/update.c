@@ -635,11 +635,11 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	/* Destination port of the received packet becomes the source
 	   port of the UPDATE packet. */
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&entry->local_address, src_ip,
+		 hip_send_pkt(dst_ip, src_ip,
 			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
-	
+
  out_err:
 	if (update_packet)
 		HIP_FREE(update_packet);
