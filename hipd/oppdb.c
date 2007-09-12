@@ -452,7 +452,7 @@ out_err:
 int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	int n = 0, err = 0, alen = 0;
-	struct in6_addr phit, dst_ip, hit_our;
+	struct in6_addr phit, dst_ip, hit_our, id;
 	struct in6_addr *ptr = NULL;
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
@@ -483,6 +483,23 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	
 	hip_msg_init(msg);
 
+	/* Return the HIT immediately if we have already a host
+	   association with the peer host */
+
+	ipv6_addr_copy(&id, &dst_ip);
+	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&id),
+					       HIP_PARAM_HIT,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
+		goto out_err;
+	}
+
+	/* Fallback if we have contacted peer before the peer did not
+	   support HIP the last time */
 	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
 	{
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
@@ -491,6 +508,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		goto out_err;
 	}
+
+	/* No previous contact, new host. Let's do the opportunistic magic */
 	
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
@@ -507,54 +526,26 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	
 	entry = hip_oppdb_find_byhits(&phit, src);
 	if(!entry) {
-	  // SEARCH HADB FOR DST_IP; RETURN PEER_HIT  IF FOUND
-
-	  if (0 ){//hip_for_each_ha(hip_hadb_compare_peer_addr, &dst_ip) ){
-	    HIP_DEBUG("found ha with matching dst_ip\n");
-	      } else {
-	
 		HIP_IFEL(hip_oppdb_add_entry(NULL, &phit, &hit_our, &dst_ip, NULL,
-					     src), -1,
-			 "Add db failed\n");
-	       	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
+					     src), -1, "Add db failed\n");
+		HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 			 "sending of I1 failed\n");
-	      }
 	} else {
-		/* Two applications connecting consequtively: let's just return
-		   the real HIT instead of sending I1 */
-	        HIP_DEBUG_HIT("Two applications connecting consequtively: using the real HIT", &entry->peer_real_hit);
-		HIP_IFEL(hip_build_param_contents(msg,
-					       (void *)(&entry->peer_real_hit),
-					       HIP_PARAM_HIT,
-					       sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed: %s\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
-			 "Building of msg header failed\n");
-
-	}
+		HIP_ASSERT(0);
 #if 0
- else if (ipv6_addr_any(&entry->peer_real_hit)) {
-		/* Two simultaneously connecting applications */
-		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
-		goto out_err;
-	} else {
 		/* Two applications connecting consequtively: let's just return
 		   the real HIT instead of sending I1 */
 	        HIP_DEBUG_HIT("Two applications connecting consequtively: using the real HIT", &entry->peer_real_hit);
 		HIP_IFEL(hip_build_param_contents(msg,
-					       (void *)(&entry->peer_real_hit),
+						  (void *)(&entry->peer_real_hit),
 					       HIP_PARAM_HIT,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
-	}
 #endif
+	}
 	
- send_i1:
-	/*	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
-		 "sending of I1 failed\n");
-	*/
  out_err:
 	return err;
 }

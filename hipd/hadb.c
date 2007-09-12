@@ -2661,6 +2661,28 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 }
 
+/*
+ * @todo: we could scan through all of the alternative locators as well
+ */
+int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
+{
+	struct in6_addr *id = id2;
+	int err = 0;
+
+	if (ipv6_addr_cmp(&entry->preferred_address, id) == 0 &&
+		!ipv6_addr_any(&entry->hit_peer) &&
+		!hit_is_opportunistic_hashed_hit(&entry->hit_peer)) {
+		ipv6_addr_copy(id, &entry->hit_peer);
+		HIP_DEBUG_HIT("hit", &entry->hit_peer);
+		HIP_DEBUG_HIT("pref", &entry->preferred_address);
+		HIP_DEBUG_HIT("id", id);
+		err = -1; /* break iteration */
+	}
+
+ out_err:
+	return err;
+}
+
 #ifdef CONFIG_HIP_RVS
 
 /**
