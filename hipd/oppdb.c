@@ -10,6 +10,7 @@
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 
 #include "oppdb.h"
+#include "hadb.h"
 
 HIP_HASHTABLE *oppdb;
 //static hip_list_t oppdb_list[HIP_OPPDB_SIZE]= { 0 };
@@ -20,7 +21,7 @@ unsigned long hip_oppdb_hash_hit(const void *ptr)
 	hip_opp_block_t *entry = (hip_opp_block_t *)ptr;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
-	hip_build_digest(HIP_DIGEST_SHA1, &entry->our_real_hit, sizeof(hip_hit_t) * 2, hash);
+	hip_build_digest(HIP_DIGEST_SHA1, &entry->peer_phit, sizeof(hip_hit_t) + sizeof(struct sockaddr_in6), hash);
 
 	return *((unsigned long *)hash);
 }
@@ -110,13 +111,15 @@ void hip_oppdb_uninit()
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
 
-hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
+hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *phit, struct sockaddr_in6 *src)
 {
 	hip_opp_block_t entry;
-	ipv6_addr_copy(&entry.peer_real_hit, hit_peer);
-	ipv6_addr_copy(&entry.our_real_hit, hit_our);
-	HIP_HEXDUMP("hit_peer is: ", hit_peer, sizeof(hip_hit_t));
-	HIP_HEXDUMP("hit_our is: ", hit_our, sizeof(hip_hit_t));
+
+	ipv6_addr_copy(&entry.peer_phit, phit);
+	memcpy(&entry.caller, src, sizeof(struct sockaddr_in6));
+	HIP_DEBUG("Searching for a pseudo-hit in oppdb\n");
+	//HIP_HEXDUMP("hit_peer is: ", hit_peer, sizeof(hip_hit_t));
+	//HIP_HEXDUMP("hit_our is: ", hit_our, sizeof(hip_hit_t));
 	return (hip_opp_block_t *)hip_ht_find(oppdb, (void *)&entry);
 }
 
@@ -135,7 +138,7 @@ hip_opp_block_t *hip_create_opp_block_entry()
 //	INIT_LIST_HEAD(&entry->next_entry);
   
 	HIP_LOCK_OPP_INIT(entry);
-	atomic_set(&entry->refcnt,0);
+	//atomic_set(&entry->refcnt,0);
 	time(&entry->creation_time);
 	HIP_UNLOCK_OPP_INIT(entry);
  out_err:
@@ -144,6 +147,7 @@ hip_opp_block_t *hip_create_opp_block_entry()
 
 //int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 int hip_oppdb_add_entry(const hip_hit_t *hit_peer, 
+			const hip_hit_t *phit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
 			const struct in6_addr *ip_our,
@@ -162,7 +166,10 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 
 //	hip_xor_hits(&new_item->hash_key, hit_peer, hit_our);
 
-	ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
+	if(hit_peer)
+	        ipv6_addr_copy(&new_item->peer_real_hit, hit_peer);
+	if(phit_peer)
+	        ipv6_addr_copy(&new_item->peer_phit, phit_peer);
 	ipv6_addr_copy(&new_item->our_real_hit, hit_our);
 	if (ip_peer)
 		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
@@ -176,11 +183,11 @@ int hip_oppdb_add_entry(const hip_hit_t *hit_peer,
 	return err;
 }
 
-int hip_oppdb_del_entry(const hip_hit_t *hit_peer, const hip_hit_t *hit_our)
+int hip_oppdb_del_entry(const hip_hit_t *phit, const struct sockaddr_in6 *src)
 {
 	hip_opp_block_t *entry = NULL;
 	
-	entry = hip_oppdb_find_byhits(hit_peer, hit_our);
+	entry = hip_oppdb_find_byhits(phit, src);
 	if (!entry) {
 		return -ENOENT;
 	}
@@ -225,9 +232,13 @@ void hip_oppdb_dump()
 		this = list_entry(item);
 
 		//hip_in6_ntop(&this->peer_real_hit, peer_real_hit);
-//		HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
+		//HIP_DEBUG("hash_key=%d  lock=%d refcnt=%d\n", this->hash_key, this->lock, this->refcnt);
 		HIP_DEBUG_HIT("this->peer_real_hit",
 					&this->peer_real_hit);
+		HIP_DEBUG_HIT("this->peer_phit",
+					&this->peer_phit);
+		HIP_DEBUG_HIT("this->our_real_hit",
+					&this->our_real_hit);
 	}
 
 	HIP_UNLOCK_HT(&oppdb);
@@ -362,12 +373,17 @@ int hip_receive_opp_r1(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
-		 "Failed to find opp entry by hit\n");
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg_info->src_port)), -1, "Failed to find opp entry by phit\n");
+
+	HIP_IFEL(hip_oppdb_add_entry(&msg->hits, &phit, &msg->hitr, dst_addr,
+		 src_addr, &block_entry->caller), -1, "Add definitive db failed\n");
 
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
+
+	hip_oppdb_del_entry_by_entry(block_entry);
+
 	// we should still get entry after delete old phit HA
 	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
@@ -415,8 +431,8 @@ int hip_receive_opp_r1_in_established(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 	
-	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg->hitr)), -1,
-		 "Failed to find opp entry by hit\n");
+	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg_info->src_port)), -1,
+		 "Failed to find opp entry by phit\n");
 
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
@@ -448,6 +464,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		err = -11; /* Force immediately to send message to app */
 		goto out_err;
 	}
+
+	/* Check each HA for the peer hit, if so, create the header of the message */
 
 	/* Create an opportunistic HIT from the peer's IP  */
 	
@@ -487,21 +505,42 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
 	
-	entry = hip_oppdb_find_byhits(&phit, &hit_our);
+	entry = hip_oppdb_find_byhits(&phit, src);
 	if(!entry) {
-		HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
+	  // SEARCH HADB FOR DST_IP; RETURN PEER_HIT  IF FOUND
+
+	  if (0 ){//hip_for_each_ha(hip_hadb_compare_peer_addr, &dst_ip) ){
+	    HIP_DEBUG("found ha with matching dst_ip\n");
+	      } else {
+	
+		HIP_IFEL(hip_oppdb_add_entry(NULL, &phit, &hit_our, &dst_ip, NULL,
 					     src), -1,
 			 "Add db failed\n");
 	       	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 			 "sending of I1 failed\n");
-		
-	} else if (ipv6_addr_any(&entry->peer_real_hit)) {
+	      }
+	} else {
+		/* Two applications connecting consequtively: let's just return
+		   the real HIT instead of sending I1 */
+	        HIP_DEBUG_HIT("Two applications connecting consequtively: using the real HIT", &entry->peer_real_hit);
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&entry->peer_real_hit),
+					       HIP_PARAM_HIT,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
+			 "Building of msg header failed\n");
+
+	}
+#if 0
+ else if (ipv6_addr_any(&entry->peer_real_hit)) {
 		/* Two simultaneously connecting applications */
 		HIP_DEBUG("Peer HIT still undefined, doing nothing\n");
 		goto out_err;
 	} else {
 		/* Two applications connecting consequtively: let's just return
 		   the real HIT instead of sending I1 */
+	        HIP_DEBUG_HIT("Two applications connecting consequtively: using the real HIT", &entry->peer_real_hit);
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&entry->peer_real_hit),
 					       HIP_PARAM_HIT,
@@ -510,6 +549,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
 			 "Building of msg header failed\n");
 	}
+#endif
 	
  send_i1:
 	/*	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,

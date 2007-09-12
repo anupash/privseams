@@ -32,7 +32,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	int send_response = (src ? 1 : 0);
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src->sin6_family, &src->sin6_port);
+		  src->sin6_family, src->sin6_port);
 
 	err = hip_check_userspace_msg(msg);
 	if (err)

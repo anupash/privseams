@@ -1326,7 +1326,13 @@ int hip_receive_r1(struct hip_common *r1,
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
-	_HIP_DEBUG("hip_receive_r1() invoked.\n");
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_ipdb_delentry(&(entry->preferred_address));
+#endif
+
 #ifdef CONFIG_HIP_RVS
 	/** @todo: Should RVS capability be stored somehow else? */
 	mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -1389,7 +1395,7 @@ int hip_receive_r1(struct hip_common *r1,
 		break;
 	case HIP_STATE_ESTABLISHED:
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
+	  hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
 #endif
 		break;
 	case HIP_STATE_NONE:
@@ -2316,6 +2322,11 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_ipdb_delentry(&(entry->preferred_address));
+#endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:

@@ -164,6 +164,8 @@ void hip_hadb_dump_spis(void);
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
+int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
+
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
 				uint32_t *spi, uint32_t *lifetime,
 				struct timeval *modified_time);
