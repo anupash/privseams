@@ -13,18 +13,20 @@ RELEASE=2
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
-DEBIAN=i386/DEBIAN
-DEBIANGPL=i386/DEBIAN-hiptool
+DEBARCH="i386"
+if uname -a|grep x86_64; then DEBARCH=amd64; fi
+DEBIAN=${DEBARCH}/DEBIAN
+DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
 HIPL=$PWD
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
-PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 # copy the tarball from the HIPL directory
 copy_tarball ()
@@ -299,7 +301,7 @@ if [ $TYPE = "binary" ];then
 	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
 		echo "** Successfully finished building the binary Debian package"
 		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-		echo "** The package can now be installed with dpkg -i $PKGNAME"
+		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
 	else
 		echo "** Error: unable to build package, exiting"
 		error_cleanup

@@ -2,7 +2,7 @@
 
 ldconfig
 
-invoke-rc.d --force --quiet hipd stopinvoke-rc.d --force --quiet hipd stop
+invoke-rc.d --force --quiet hipd stop
 update-rc.d -f hipd remove
 update-rc.d hipd defaults 
 invoke-rc.d hipd start
