@@ -191,8 +191,61 @@
 
 /**
  * @defgroup hip_msg HIP daemon message types
- * @note DONT MAKE THESE VALUES HIGHER THAN 255.
+ * @note <span style="color:#f00">Don't make these values higher than 255.</span>
  *       The variable, which stores this type, is 8 bits.
+ */
+
+/**
+ * @file libinet6/protodefs.h
+ * @def HIP_I1
+ * @def HIP_R1
+ * @def HIP_I2
+ * @def HIP_R2
+ * @def HIP_CER
+ * @def HIP_BOS
+ * @note removed from ietf-hip-base-01.
+ * @def HIP_UPDATE
+ * @def HIP_NOTIFY
+ * @def HIP_CLOSE
+ * @def HIP_CLOSE_ACK
+ * @def HIP_PSIG
+ *      Lightweight HIP pre signature.
+ * @def HIP_TRIG
+ *      Lightweight HIP signature trigger.
+ * @def HIP_PAYLOAD
+ * @def HIP_AGENT_PING
+ *      Agent can ping daemon with this message.
+ * @def HIP_AGENT_PING_REPLY
+ *      Daemon should reply to @c HIP_AGENT_PING with this one.
+ * @def HIP_AGENT_QUIT
+ *      Agent send this one to daemon when exiting.
+ * @def HIP_ADD_DB_HI
+ *      Daemon sends local HITs to agent with this message.
+ * @def HIP_I1_REJECT
+ *      Agent informs daemon about I1 rejection with this message.
+ * @def HIP_UPDATE_HIU
+ *      Daemon sends remote HITs in use with this message to agent.
+ * @def HIP_FIREWALL_PING
+ *      Firewall can ping daemon with this message.
+ * @def HIP_FIREWALL_PING_REPLY
+ *      Daemon should reply to @c HIP_FIREWALL_PING with this one.
+ * @def HIP_FIREWALL_QUIT
+ *      Firewall sends this one to daemon when exiting.
+ * @def HIP_ADD_ESCROW_DATA
+ *      Daemon sends escrow data to firewall with this message.
+ * @def HIP_DELETE_ESCROW_DATA
+ *      Daemon tells firewall to remove escrow data with this message.
+ * @def HIP_SET_ESCROW_ACTIVE
+ *      Daemon tells firewall that escrow is active with this message.
+ * @def HIP_SET_ESCROW_INACTIVE
+ *      Daemon tells firewall that escrow is inactive with this message.
+ * @def HIP_NAT_ON
+ *      Daemon tells, that nat extension status changed.
+ * @def HIP_NAT_OFF
+ *      Daemon tells, that nat extension status changed.
+ * @def HIP_DAEMON_QUIT
+ *      Daemon should send this message to other processes, when quiting.
+ *      Currently sending to: agent.
  */
 
 /** @defgroup hip_so HIP socket options */
@@ -234,6 +287,87 @@
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
  * @note     The order of the parameters is strictly enforced. The parameters
  *           @b must be in order from lowest to highest.
+ */
+
+/**
+ * @file#define  libinet6/protodefs.h
+ * @def HIP_PARAM_MIN
+ *      Defines the minimum parameter type value.
+ * @note exclusive
+ * @def HIP_PARAM_ESP_INFO
+ * @def HIP_PARAM_R1_COUNTER
+ * @def HIP_PARAM_LOCATOR
+ * @def HIP_PARAM_HASH_CHAIN_VALUE
+ *      lhip hash chain. 221 is is temporary.
+ * @def HIP_PARAM_HASH_CHAIN_ANCHORS
+ *      lhip hash chain anchors. 222 is temporary.
+ * @def HIP_PARAM_HASH_CHAIN_PSIG
+ *      lhip hash chain signature. 223 is temporary.
+ * @def HIP_PARAM_PUZZLE
+ * @def HIP_PARAM_SOLUTION
+ * @def HIP_PARAM_SEQ
+ * @def HIP_PARAM_ACK
+ * @def HIP_PARAM_DIFFIE_HELLMAN
+ * @def HIP_PARAM_HIP_TRANSFORM
+ * @def HIP_PARAM_ENCRYPTED
+ * @def HIP_PARAM_HOST_ID
+ * @def HIP_PARAM_CERT
+ * @def HIP_PARAM_NOTIFICATION
+ * @def HIP_PARAM_ECHO_REQUEST_SIGN
+ * @def HIP_PARAM_ECHO_RESPONSE_SIGN
+ * @def HIP_PARAM_ESP_TRANSFORM
+ * @def HIP_PARAM_HIT
+ * @def HIP_PARAM_IPV6_ADDR
+ * @def HIP_PARAM_DSA_SIGN_DATA
+ * @todo change to digest
+ * @def HIP_PARAM_HI
+ * @def HIP_PARAM_DH_SHARED_KEY
+ * @def HIP_PARAM_UNIT_TEST
+ * @def HIP_PARAM_EID_SOCKADDR
+ * @def HIP_PARAM_EID_ENDPOINT
+ *      Pass endpoint_hip structures into kernel.
+ * @def HIP_PARAM_EID_IFACE
+ * @def HIP_PARAM_EID_ADDR
+ * @def HIP_PARAM_UINT
+ *      Unsigned integer.
+ * @def HIP_PARAM_KEYS
+ * @def HIP_PSEUDO_HIT
+ * @def HIP_PARAM_REG_INFO
+ * @def HIP_PARAM_REG_REQUEST
+ * @def HIP_PARAM_REG_RESPONSE
+ * @def HIP_PARAM_REG_FAILED
+ * @def HIP_PARAM_BLIND_NONCE
+ *      Pass blind nonce
+ * @def HIP_PARAM_OPENDHT_GW_INFO
+ * @def HIP_PARAM_ENCAPS_MSG
+ * @def HIP_PARAM_PORTPAIR
+ * @def HIP_PARAM_SRC_ADDR
+ * @def HIP_PARAM_DST_ADDR
+ * @def HIP_PARAM_AGENT_REJECT
+ * @def HIP_PARAM_HA_INFO
+ * @def HIP_PARAM_HMAC
+ * @def HIP_PARAM_HMAC2
+ * @def HIP_PARAM_HIP_SIGNATURE2
+ * @def HIP_PARAM_HIP_SIGNATURE
+ * @def HIP_PARAM_ECHO_RESPONSE
+ * @def HIP_PARAM_ECHO_REQUEST
+ * @def HIP_PARAM_RELAY_FROM
+ *      HIP relay related parameter.
+ * @note Former FROM_NAT.
+ * @def HIP_PARAM_RELAY_TO
+ *      HIP relay related parameter.
+ * @note Former VIA_RVS_NAT
+ * @def HIP_PARAM_RELAY_VIA
+ * @def HIP_PARAM_TO_PEER
+ * @def HIP_PARAM_REG_FROM
+ * @def HIP_PARAM_FROM
+ * @def HIP_PARAM_RVS_HMAC
+ * @def HIP_PARAM_VIA_RVS
+ * @def HIP_PARAM_RELAY_HMAC
+ *      HIP relay related parameter.
+ * @def HIP_PARAM_MAX
+ *      Defines the maximum parameter type value.
+ * @note exclusive
  */
 
 /** 
@@ -301,7 +435,7 @@
  */
 
 /**
- * @file libhiptool/protodefs.h
+ * @file libinet6/protodefs.h
  * @def  HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
  *       Sent if the parameter type has the "critical" bit set and the
  *       parameter type is not recognized.  Notification Data contains the two

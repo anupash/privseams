@@ -12,23 +12,11 @@
 #ifndef HIP_HIPRELAY_H
 #define HIP_HIPRELAY_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h> /* For timing. */
 #include <openssl/lhash.h> /* For LHASH. */
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include "hashtable.h" /* For hip hashtable commons. */
 #include "misc.h" /* For hip_hash_hit and hip_match_hit. */
-
-/*
-#include "hadb.h"
-#include "hashtable.h"
-#include "misc.h"
-#include "builder.h"
-#include "output.h"
-#include "state.h"
-*/
 
 /** Default relay record life time in seconds. After this time, the record is
  *  deleted if it has been idle. */

@@ -502,7 +502,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_ESP_INFO,
                         HIP_PARAM_ESP_TRANSFORM,
                         HIP_PARAM_FROM,
-			HIP_PARAM_FROM_NAT,
+			HIP_PARAM_RELAY_FROM,
                         HIP_PARAM_HIP_SIGNATURE,
                         HIP_PARAM_HIP_SIGNATURE2,
                         HIP_PARAM_HIP_TRANSFORM,
@@ -522,7 +522,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
                         HIP_PARAM_VIA_RVS,
-			HIP_PARAM_VIA_RVS_NAT
+			HIP_PARAM_RELAY_TO
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -964,7 +964,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
 	case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
 	case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
-	case HIP_PARAM_FROM_NAT: return "HIP_PARAM_FROM_NAT";
+	case HIP_PARAM_RELAY_FROM: return "HIP_PARAM_RELAY_FROM";
 	case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
 	case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
 	case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
@@ -991,7 +991,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_VIA_RVS_NAT: return "HIP_PARAM_VIA_RVS_NAT";
+	case HIP_PARAM_RELAY_TO: return "HIP_PARAM_RELAY_TO";
 	}
 	return "UNDEFINED";
 }
@@ -1940,9 +1940,9 @@ int hip_build_param_from(struct hip_common *msg, const struct in6_addr *addr,
 }
 
 /**
- * Builds a @c FROM_NAT parameter.
+ * Builds a @c RELAY_FROM parameter.
  *
- * Builds a @c FROM_NAT parameter to the HIP packet @c msg.
+ * Builds a @c RELAY_FROM parameter to the HIP packet @c msg.
  *
  * @param msg  a pointer to a HIP packet common header
  * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
@@ -1957,7 +1957,7 @@ int hip_build_param_from_nat(struct hip_common *msg, const struct in6_addr *addr
 	struct hip_from_nat from_nat;
 	int err = 0;
 	
-	hip_set_param_type(&from_nat, HIP_PARAM_FROM_NAT);
+	hip_set_param_type(&from_nat, HIP_PARAM_RELAY_FROM);
 	ipv6_addr_copy((struct in6_addr *)&from_nat.address, addr);
 	from_nat.port = htons(port);
 	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat), 0);
@@ -1996,9 +1996,9 @@ int hip_build_param_via_rvs(struct hip_common *msg,
 }
 
 /**
- * Builds a @c VIA_RVS_NAT parameter.
+ * Builds a @c RELAY_TO parameter.
  *
- * Builds a @c VIA_RVS_NAT parameter to the HIP packet @c msg.
+ * Builds a @c RELAY_TO parameter to the HIP packet @c msg.
  *
  * @param msg            a pointer to a HIP packet common header
  * @param rvs_addr_ports a pointer to rendezvous server IPv6 or IPv4-in-IPv6
@@ -2017,7 +2017,7 @@ int hip_build_param_via_rvs_nat(struct hip_common *msg,
 	int err = 0;
 	struct hip_via_rvs_nat viarvsnat;
 	
-	hip_set_param_type(&viarvsnat, HIP_PARAM_VIA_RVS_NAT);
+	hip_set_param_type(&viarvsnat, HIP_PARAM_RELAY_TO);
 	hip_calc_generic_param_len(&viarvsnat, sizeof(struct hip_via_rvs_nat),
 				   address_count * sizeof(struct hip_in6_addr_port));
 	err = hip_build_generic_param(msg, &viarvsnat, sizeof(struct hip_via_rvs_nat),

@@ -477,7 +477,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	
 	HIP_DEBUG_HIT("hip_xmit_r1(): ripkt->hitr", &r1pkt->hitr);
 	
-	/* Build VIA_RVS or VIA_RVS_NAT parameter if the I1 packet was relayed
+	/* Build VIA_RVS or RELAY_TO parameter if the I1 packet was relayed
 	   through a rvs. */
 #ifdef CONFIG_HIP_RVS
 	if(traversed_rvs)
@@ -498,7 +498,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
-	   b) the received I1 packet had a FROM_NAT parameter. */
+	   b) the received I1 packet had a RELAY_FROM parameter. */
 	if(r1_dst_port != 0) {
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),

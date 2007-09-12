@@ -594,18 +594,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_BOS:
-		HIP_IFCS(entry, err = entry->hadb_rcv_func->
-			 hip_receive_bos(msg, src_addr, dst_addr, entry,
-					 msg_info));
-		/*In case of BOS the msg->hitr is null, therefore it is replaced
-		  with our own HIT, so that the beet state can also be
-		  synchronized. */
-		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
-		hip_init_us(&tmp, NULL);
-		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
-		skip_sync = 0;
-		break;
-		
+	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
+		      hip_receive_bos(msg, src_addr, dst_addr, entry,
+				      msg_info));
+	     
+	     /*In case of BOS the msg->hitr is null, therefore it is replaced
+	       with our own HIT, so that the beet state can also be
+	       synchronized. */
+
+	     ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
+	     hip_init_us(&tmp, NULL);
+	     ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
+	     skip_sync = 0;
+	     break;
 	case HIP_CLOSE:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close(msg, entry));
@@ -2325,8 +2326,8 @@ int hip_handle_r2(struct hip_common *r2,
 /**
  * Handles an incoming I1 packet.
  *
- * Handles an incoming I1 packet and parses @c FROM or @c FROM_NAT parameter
- * from the packet. If a @c FROM or a @c FROM_NAT parameter is found, there must
+ * Handles an incoming I1 packet and parses @c FROM or @c RELAY_FROM parameter
+ * from the packet. If a @c FROM or a @c RELAY_FROM parameter is found, there must
  * also be a @c RVS_HMAC parameter present. This hmac is first verified. If the
  * verification fails, a negative error value is returned and hip_xmit_r1() is
  * not invoked. If verification succeeds,
@@ -2335,12 +2336,12 @@ int hip_handle_r2(struct hip_common *r2,
  * parameter is passed to hip_xmit_r1() as the destination IP address. The
  * source IP address of the received I1 packet is passed to hip_xmit_r1() as
  * the IP of RVS.</li>
- * <li>and a @c FROM_NAT parameter is found, the IP address and
+ * <li>and a @c RELAY_FROM parameter is found, the IP address and
  * port number obtained from the parameter is passed to hip_xmit_r1() as the
  * destination IP address and destination port. The source IP address and source
  * port of the received I1 packet is passed to hip_xmit_r1() as the IP and port
  * of RVS.</li>
- * <li>If no @c FROM or @c FROM_NAT parameters are found, this function does
+ * <li>If no @c FROM or @c RELAY_FROM parameters are found, this function does
  * nothing else but calls hip_xmit_r1().</li>
  * </ol>
  *
@@ -2354,10 +2355,10 @@ int hip_handle_r2(struct hip_common *r2,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
- * @warning        This code only handles a single @c FROM or @c FROM_NAT
- *                 parameter. If there is a mix of @c FROM and @c FROM_NAT
+ * @warning        This code only handles a single @c FROM or @c RELAY_FROM
+ *                 parameter. If there is a mix of @c FROM and @c RELAY_FROM
  *                 parameters, only the first @c FROM parameter is parsed. Also,
- *                 if there are multiple @c FROM or @c FROM_NAT parameters
+ *                 if there are multiple @c FROM or @c RELAY_FROM parameters
  *                 present in the incoming I1 packet, only the first of a kind
  *                 is parsed.
  */
@@ -2384,13 +2385,13 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	   We have five cases:
 	   1. I1 was received on UDP and a FROM parameter was found.
 	   2. I1 was received on raw HIP and a FROM parameter was found.
-	   3. I1 was received on UDP and a FROM_NAT parameter was found.
-	   4. I1 was received on raw HIP and a FROM_NAT parameter was found.
-	   5. Neither FROM nor FROM_NAT parameter was not found. */
+	   3. I1 was received on UDP and a RELAY_FROM parameter was found.
+	   4. I1 was received on raw HIP and a RELAY_FROM parameter was found.
+	   5. Neither FROM nor RELAY_FROM parameter was not found. */
 	
-	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
+	/* Check if the incoming I1 packet has a FROM or RELAY_FROM parameters at
 	   all. */
-	from_nat = (struct hip_from_nat *) hip_get_param(i1, HIP_PARAM_FROM_NAT);
+	from_nat = (struct hip_from_nat *) hip_get_param(i1, HIP_PARAM_RELAY_FROM);
 	from = (struct hip_from *) hip_get_param(i1, HIP_PARAM_FROM);
 	
 	if (!(from || from_nat)) {
@@ -2411,7 +2412,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
 
 	HIP_DEBUG("Found %s parameter in I1.\n",
-		  from ? "FROM" : "FROM_NAT");
+		  from ? "FROM" : "RELAY_FROM");
 	
 	if(from) {
 		/* Cases 1. & 2. */
@@ -2420,7 +2421,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 	else {
 		/* Cases 3. & 4. */
-		param_type = HIP_PARAM_FROM_NAT;
+		param_type = HIP_PARAM_RELAY_FROM;
 		dst_ip = (struct in6_addr *)&from_nat->address;
 		dst_port = ntohs(from_nat->port);
 	}
@@ -2448,7 +2449,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
 	
 	/* I1 packet was received on UDP destined to port 50500.
-	   R1 packet will have a VIA_RVS_NAT parameter.
+	   R1 packet will have a RELAY_TO parameter.
 	   Cases 1. & 3. */
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		
@@ -2594,7 +2595,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
 				HIP_IFE(hip_rvs_reply_with_notify(
 						i1, i1_saddr, rva, i1_info,
-						HIP_PARAM_VIA_RVS_NAT),
+						HIP_PARAM_RELAY_TO),
 					-ECOMM);
 			}
 			/* Case 2. */
@@ -2606,7 +2607,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 					-ECOMM);
 				HIP_IFE(hip_rvs_reply_with_notify(
 						i1, i1_saddr, rva, i1_info,
-						HIP_PARAM_FROM_NAT),
+						HIP_PARAM_RELAY_FROM),
 					-ECOMM);
 			}
 			/* Case 3. */
@@ -2881,9 +2882,9 @@ int hip_handle_notify(const struct hip_common *notify,
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "I2_ACKNOWLEDGEMENT.\n");
 				break;
-			case HIP_PARAM_VIA_RVS_NAT:
-			case HIP_PARAM_FROM_NAT:
-				response = ((msgtype == HIP_PARAM_VIA_RVS_NAT) ? HIP_I1 : HIP_NOTIFY);
+			case HIP_PARAM_RELAY_TO:
+			case HIP_PARAM_RELAY_FROM:
+				response = ((msgtype == HIP_PARAM_RELAY_TO) ? HIP_I1 : HIP_NOTIFY);
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "RVS_NAT.\n");
 				

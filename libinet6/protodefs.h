@@ -10,65 +10,36 @@
 /** @addtogroup hip_msg
  * @{
  */
-#define HIP_I1         1
-#define HIP_R1         2
-#define HIP_I2         3
-#define HIP_R2         4
-#define HIP_CER        5
-#define HIP_UPDATE     16
-#define HIP_NOTIFY     17
-#define HIP_CLOSE      18
-#define HIP_CLOSE_ACK  19
-//#define HIP_REA 10     /* removed from ietf-hip-mm-00   */
-#define HIP_BOS 11     /* removed from ietf-hip-base-01 */
-//#define HIP_AC 12      /* removed from ietf-hip-mm-00   */
-//#define HIP_ACR 13     /* removed from ietf-hip-mm-00   */
-#define HIP_PSIG 20 /* lightweight HIP pre signature */
-#define HIP_TRIG 21 /* lightweight HIP signature trigger*/
-#define HIP_PAYLOAD 64 /* xxx */
-/** Agent can ping daemon with this message. */
-#define HIP_AGENT_PING				70
-/** Daemon should reply to @c HIP_AGENT_PING with this one. */
-#define HIP_AGENT_PING_REPLY		        71
-/** Agent send this one to daemon when exiting. */
-#define HIP_AGENT_QUIT				72
-/** Daemon sends local HITs to agent with this message. */
-#define HIP_ADD_DB_HI				73
-/** Agent informs daemon about I1 rejection with this message. */
-#define HIP_I1_REJECT				74
-/** Daemon sends remote HITs in use with this message to agent. */
-#define HIP_UPDATE_HIU				75
-/** Firewall can ping daemon with this message. */
-#define HIP_FIREWALL_PING			80
-/** Daemon should reply to @c HIP_FIREWALL_PING with this one. */
-#define HIP_FIREWALL_PING_REPLY		        81
-/** Firewall sends this one to daemon when exiting. */
-#define HIP_FIREWALL_QUIT			82
-/** Daemon sends escrow data to firewall with this message. */
-#define HIP_ADD_ESCROW_DATA			83
-/** Daemon tells firewall to remove escrow data with this message. */
-#define HIP_DELETE_ESCROW_DATA		        84
-/** Daemon tells firewall that escrow is active with this message. */
-#define HIP_SET_ESCROW_ACTIVE                   85
-/** Daemon tells firewall that escrow is inactive with this message. */
-#define HIP_SET_ESCROW_INACTIVE                 86
-/** Daemon tells, that nat extension status changed. */
-#define HIP_NAT_ON					87
-/** Daemon tells, that nat extension status changed. */
-#define HIP_NAT_OFF					88
-
-/**
- * Daemon should send this message to other processes, when quiting.
- * Currently sending to:
- *    agent
- */
-#define HIP_DAEMON_QUIT				127
-/*
- * DONT MAKE THESE VALUES HIGHER THAN 255
- * The variable, which stores this type, is 8 bits
- */
+#define HIP_I1                  1
+#define HIP_R1                  2
+#define HIP_I2                  3
+#define HIP_R2                  4
+#define HIP_CER                 5
+#define HIP_BOS                 11 /* removed from ietf-hip-base-01 */
+#define HIP_UPDATE              16
+#define HIP_NOTIFY              17
+#define HIP_CLOSE               18
+#define HIP_CLOSE_ACK           19
+#define HIP_PSIG                20 /* lightweight HIP pre signature */
+#define HIP_TRIG                21 /* lightweight HIP signature trigger*/
+#define HIP_PAYLOAD             64
+#define HIP_AGENT_PING          70
+#define HIP_AGENT_PING_REPLY    71
+#define HIP_AGENT_QUIT          72
+#define HIP_ADD_DB_HI           73
+#define HIP_I1_REJECT           74
+#define HIP_UPDATE_HIU          75
+#define HIP_FIREWALL_PING       80
+#define HIP_FIREWALL_PING_REPLY 81
+#define HIP_FIREWALL_QUIT       82
+#define HIP_ADD_ESCROW_DATA     83
+#define HIP_DELETE_ESCROW_DATA  84
+#define HIP_SET_ESCROW_ACTIVE   85
+#define HIP_SET_ESCROW_INACTIVE 86
+#define HIP_NAT_ON              87
+#define HIP_NAT_OFF             88
+#define HIP_DAEMON_QUIT         127
 /* @} */
-
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
@@ -86,78 +57,73 @@
 /** @addtogroup hip_param_type_numbers
  * @{ 
  */
-/** Defines the minimum parameter type value.
- * @note exclusive
- */
-#define HIP_PARAM_MIN                 -1
+#define HIP_PARAM_MIN                  -1
 
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
+#define HIP_PARAM_HASH_CHAIN_VALUE     221
+#define HIP_PARAM_HASH_CHAIN_ANCHORS   222
+#define HIP_PARAM_HASH_CHAIN_PSIG      223
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
 #define HIP_PARAM_HIP_TRANSFORM        577
-#define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ENCRYPTED            641
 #define HIP_PARAM_HOST_ID              705
 #define HIP_PARAM_CERT                 768
-#define HIP_PARAM_HASH_CHAIN_VALUE     221 /* lhip hash chain. 221 is temporary. */
-#define HIP_PARAM_HASH_CHAIN_ANCHORS   222 /* lhip hash chain anchors. 222 is temporary. */
-#define HIP_PARAM_HASH_CHAIN_PSIG      223 /* lhip hash chain signature. 223 is temporary. */
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
+#define HIP_PARAM_ESP_TRANSFORM        4095
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
-#define HIP_PARAM_HIT                   32768
-#define HIP_PARAM_IPV6_ADDR             32769
-/** @todo change to digest */
-#define HIP_PARAM_DSA_SIGN_DATA         32770
-#define HIP_PARAM_HI                    32771
-#define HIP_PARAM_DH_SHARED_KEY         32772
-#define HIP_PARAM_UNIT_TEST             32773
-#define HIP_PARAM_EID_SOCKADDR          32774
-#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
-#define HIP_PARAM_EID_IFACE             32776
-#define HIP_PARAM_EID_ADDR              32777
-#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
-#define HIP_PARAM_KEYS                  32779
-#define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO		32781
-#define HIP_PARAM_REG_REQUEST		32782
-#define HIP_PARAM_REG_RESPONSE		32783
-#define HIP_PARAM_REG_FAILED		32784
-#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
-#define HIP_PARAM_OPENDHT_GW_INFO       32786
-
-#define HIP_PARAM_ENCAPS_MSG		32787
-#define HIP_PARAM_PORTPAIR		32788
-#define HIP_PARAM_SRC_ADDR		32789
-#define HIP_PARAM_DST_ADDR		32790
-
-#define HIP_PARAM_AGENT_REJECT	        32791
-#define HIP_PARAM_HA_INFO               32792
+#define HIP_PARAM_HIT                  32768
+#define HIP_PARAM_IPV6_ADDR            32769
+#define HIP_PARAM_DSA_SIGN_DATA        32770
+#define HIP_PARAM_HI                   32771
+#define HIP_PARAM_DH_SHARED_KEY        32772
+#define HIP_PARAM_UNIT_TEST            32773
+#define HIP_PARAM_EID_SOCKADDR         32774
+#define HIP_PARAM_EID_ENDPOINT         32775
+#define HIP_PARAM_EID_IFACE            32776
+#define HIP_PARAM_EID_ADDR             32777
+#define HIP_PARAM_UINT                 32778
+#define HIP_PARAM_KEYS                 32779
+#define HIP_PSEUDO_HIT                 32780
+#define HIP_PARAM_REG_INFO             32781
+#define HIP_PARAM_REG_REQUEST          32782
+#define HIP_PARAM_REG_RESPONSE         32783
+#define HIP_PARAM_REG_FAILED           32784
+#define HIP_PARAM_BLIND_NONCE          32785
+#define HIP_PARAM_OPENDHT_GW_INFO      32786
+#define HIP_PARAM_ENCAPS_MSG           32787
+#define HIP_PARAM_PORTPAIR             32788
+#define HIP_PARAM_SRC_ADDR             32789
+#define HIP_PARAM_DST_ADDR             32790
+#define HIP_PARAM_AGENT_REJECT         32791
+#define HIP_PARAM_HA_INFO              32792
 
 /* End of HIPL private parameters. */
+#define HIP_PARAM_HMAC                 61505
+#define HIP_PARAM_HMAC2                61569
+#define HIP_PARAM_HIP_SIGNATURE2       61633
+#define HIP_PARAM_HIP_SIGNATURE        61697
+#define HIP_PARAM_ECHO_RESPONSE        63425
+#define HIP_PARAM_ECHO_REQUEST         63661
+#define HIP_PARAM_RELAY_FROM           63998
+#define HIP_PARAM_RELAY_TO             64002
+#define HIP_PARAM_RELAY_VIA            64006
+#define HIP_PARAM_TO_PEER              64010
+#define HIP_PARAM_REG_FROM             64012
+#define HIP_PARAM_FROM                 65498
+#define HIP_PARAM_RVS_HMAC             65500
+#define HIP_PARAM_VIA_RVS              65502
+#define HIP_PARAM_RELAY_HMAC           65520
 
-#define HIP_PARAM_HMAC            61505
-#define HIP_PARAM_HMAC2           61569
-#define HIP_PARAM_HIP_SIGNATURE2  61633
-#define HIP_PARAM_HIP_SIGNATURE   61697
-#define HIP_PARAM_ECHO_REQUEST    63661
-#define HIP_PARAM_ECHO_RESPONSE   63425
-#define HIP_PARAM_FROM_NAT        63998
-#define HIP_PARAM_VIA_RVS_NAT     64002
-#define HIP_PARAM_FROM            65498
-#define HIP_PARAM_RVS_HMAC        65500
-#define HIP_PARAM_VIA_RVS         65502
-/** Defines the maximum parameter type value.
- * @note exclusive
- */
-#define HIP_PARAM_MAX             65536
+#define HIP_PARAM_MAX                  65536
 /* @} */
 
 /** @addtogroup notification
