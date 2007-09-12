@@ -221,7 +221,7 @@ int hip_sock_recv_firewall(void)
 			hip_firewall_status = 1;
 		}
 		
-		if (hip_services_is_active(HIP_ESCROW_SERVICE))
+		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 
 		if (hip_firewall_is_alive())

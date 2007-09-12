@@ -1175,7 +1175,7 @@ int hip_handle_r1(struct hip_common *r1,
 			
 			switch(current_reg_type){
 #ifdef CONFIG_HIP_ESCROW
-			case HIP_ESCROW_SERVICE:
+			case HIP_SERVICE_ESCROW:
 				HIP_INFO("Responder offers escrow service.\n");
 						
 				HIP_KEA *kea;
@@ -1197,7 +1197,7 @@ int hip_handle_r1(struct hip_common *r1,
 				break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-			case HIP_RENDEZVOUS_SERVICE:
+			case HIP_SERVICE_RENDEZVOUS:
 				HIP_INFO("Responder offers rendezvous service.\n");
 				/** @todo Check if we have requested for
 				    rendezvous service in I1 packet. */
@@ -2366,13 +2366,13 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
-	int err = 0, is_via_rvs_nat = 0;
+	int err = 0, is_relay_to = 0;
 	struct in6_addr *dst_ip = NULL;
 	in_port_t dst_port = 0;
 	void *rvs_address = NULL;
 	hip_tlv_type_t param_type = 0;
 	hip_ha_t *rvs_ha_entry = NULL;
-	struct hip_from_nat *from_nat;
+	struct hip_relay_from *relay_from;
 	struct hip_from *from;
 	uint16_t nonce = 0;
 		
@@ -2391,10 +2391,10 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	
 	/* Check if the incoming I1 packet has a FROM or RELAY_FROM parameters at
 	   all. */
-	from_nat = (struct hip_from_nat *) hip_get_param(i1, HIP_PARAM_RELAY_FROM);
+	relay_from = (struct hip_relay_from *) hip_get_param(i1, HIP_PARAM_RELAY_FROM);
 	from = (struct hip_from *) hip_get_param(i1, HIP_PARAM_FROM);
 	
-	if (!(from || from_nat)) {
+	if (!(from || relay_from)) {
 		/* Case 5. */
 		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
 		goto skip_nat;
@@ -2422,8 +2422,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 		/* Cases 3. & 4. */
 		param_type = HIP_PARAM_RELAY_FROM;
-		dst_ip = (struct in6_addr *)&from_nat->address;
-		dst_port = ntohs(from_nat->port);
+		dst_ip = (struct in6_addr *)&relay_from->address;
+		dst_port = ntohs(relay_from->port);
 	}
 
 	/* Case 1. */
@@ -2454,7 +2454,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		
 		struct hip_in6_addr_port our_addr_port;
-		is_via_rvs_nat = 1;
+		is_relay_to = 1;
 		
 		HIP_IFEL(!(rvs_address = 
 			   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
@@ -2484,7 +2484,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
  skip_nat:
 #endif
 	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
-			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat, &nonce);
+			  &i1->hits, i1_info, rvs_address, is_relay_to, &nonce);
 	
  out_err:
 	if (rvs_address) {

@@ -1920,7 +1920,7 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
  * @param msg      a pointer to a HIP packet common header
  * @param addr     a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
  * @param not_used this parameter is not used, but it is needed to make the
- *                 parameter list uniform with hip_build_param_from_nat().
+ *                 parameter list uniform with hip_build_param_relay_from().
  * @return         zero on success, or negative error value on error.
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
@@ -1948,20 +1948,18 @@ int hip_build_param_from(struct hip_common *msg, const struct in6_addr *addr,
  * @param addr a pointer to an IPv6 or IPv4-in-IPv6 format IPv4 address.
  * @param port port number (host byte order).
  * @return     zero on success, or negative error value on error.
- * @see        <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
- *             draft-schmitt-hip-nat-traversal-01</a> section 3.1.4.
  */
-int hip_build_param_from_nat(struct hip_common *msg, const struct in6_addr *addr,
+int hip_build_param_relay_from(struct hip_common *msg, const struct in6_addr *addr,
 			     const in_port_t port)
 {
-	struct hip_from_nat from_nat;
+	struct hip_relay_from relay_from;
 	int err = 0;
 	
-	hip_set_param_type(&from_nat, HIP_PARAM_RELAY_FROM);
-	ipv6_addr_copy((struct in6_addr *)&from_nat.address, addr);
-	from_nat.port = htons(port);
-	hip_calc_generic_param_len(&from_nat, sizeof(struct hip_from_nat), 0);
-	err = hip_build_param(msg, &from_nat);
+	hip_set_param_type(&relay_from, HIP_PARAM_RELAY_FROM);
+	ipv6_addr_copy((struct in6_addr *)&relay_from.address, addr);
+	relay_from.port = htons(port);
+	hip_calc_generic_param_len(&relay_from, sizeof(relay_from), 0);
+	err = hip_build_param(msg, &relay_from);
 
 	return err;
 }
@@ -2005,22 +2003,20 @@ int hip_build_param_via_rvs(struct hip_common *msg,
  *                       format IPv4 addresses.
  * @param address_count  number of address port combinations in @c rvs_addr_ports.
  * @return               zero on success, or negative error value on error.
- * @see                  <a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-01.txt">
- *                       draft-schmitt-hip-nat-traversal-01</a> section 3.1.5.
  */
-int hip_build_param_via_rvs_nat(struct hip_common *msg,
+int hip_build_param_relay_to(struct hip_common *msg,
 				const struct hip_in6_addr_port rvs_addr_ports[],
 				const int address_count)
 {
 	HIP_DEBUG("hip_build_param_rvs_nat() invoked.\n");
 	HIP_DEBUG("sizeof(struct hip_in6_addr_port): %u.\n", sizeof(struct hip_in6_addr_port));
 	int err = 0;
-	struct hip_via_rvs_nat viarvsnat;
+	struct hip_relay_to relay_to;
 	
-	hip_set_param_type(&viarvsnat, HIP_PARAM_RELAY_TO);
-	hip_calc_generic_param_len(&viarvsnat, sizeof(struct hip_via_rvs_nat),
+	hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
+	hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
 				   address_count * sizeof(struct hip_in6_addr_port));
-	err = hip_build_generic_param(msg, &viarvsnat, sizeof(struct hip_via_rvs_nat),
+	err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
 				      (void *)rvs_addr_ports);
 	return err;
 }

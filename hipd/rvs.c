@@ -399,7 +399,7 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 	struct in6_addr final_dst;
 	hip_tlv_type_t param_type = 0;
 	/* A function pointer to either hip_build_param_from() or
-	   hip_build_param_from_nat(). */
+	   hip_build_param_relay_from(). */
 	int (*builder_function) (struct hip_common *msg,
 				 const struct in6_addr *addr,
 				 const in_port_t port);
@@ -416,7 +416,7 @@ int hip_rvs_relay_i1(const struct hip_common *i1,
 	/* If the incoming I1 packet was destined to port 50500, we know that
 	   there is a NAT between (I->NAT->RVS->R). */
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		builder_function = hip_build_param_from_nat;
+		builder_function = hip_build_param_relay_from;
 		param_type = HIP_PARAM_RELAY_FROM;
 	}
 	else {

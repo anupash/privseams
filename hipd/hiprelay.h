@@ -46,7 +46,10 @@ typedef struct{
      struct in6_addr ip_r;
 }hip_relrec_t;
 
-/** Relay record modes used to flag a relay record. */
+/** 
+ * Relay record modes used to flag a relay record.
+ * @enum
+ */
 typedef enum{HIP_REL_NONE_TO_NONE, HIP_REL_NONE_TO_UDP, HIP_REL_UDP_TO_NONE,
 		  HIP_REL_UDP_TO_UDP, HIP_REL_TCP_TO_TCP, HIP_REL_OFF,
 		  HIP_REL_ON}hip_relrec_mode_t;

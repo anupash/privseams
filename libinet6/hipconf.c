@@ -29,6 +29,7 @@ const char *hipconf_usage =
 "add|del map hit ipv6\n"
 "add|del service escrow|rvs\n"
 "add rvs <hit> <ipv6>\n"
+"add hipudprelay <hit> <ipv6>\n"
 "del hi <hit>\n"
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|hit\n"
@@ -68,6 +69,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_map,
 	hip_conf_handle_rst,
 	hip_conf_handle_rvs,
+	hip_conf_handle_hipudprelay,
 	hip_conf_handle_bos,
 	hip_conf_handle_puzzle,
 	hip_conf_handle_nat,
@@ -209,6 +211,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RST;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
+	else if (!strcmp("hipudprelay", text))
+		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
 	else if (!strcmp("service", text))
@@ -343,6 +347,60 @@ out_err:
 	return err;
 
 }
+
+
+/**
+ * Handles the hipconf commands where the type is @c hipudprelay.
+ *  
+ * Create a message to the kernel module from the function parameters @c msg,
+ * @c action and @c opt[].
+ * 
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type (should be the HIT and the corresponding
+ *               IPv6 address).
+ * @param optc   the number of elements in the array (@b 2).
+ * @return       zero on success, or negative error value on error.
+ * @note         Currently only action @c add is supported.
+ * @todo         If the current machine has more than one IP address
+ *               there should be a way to choose which of the addresses
+ *               to register to the rendezvous server.
+ * @todo         There are currently four different HITs at the @c dummy0
+ *               interface. There should be a way to choose which of the HITs
+ *               to register to the rendezvous server.
+ */ 
+int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], 
+	       int optc)
+{
+	struct in6_addr hit, ip6;
+	int err=0;
+	int ret;
+	HIP_DEBUG("handle_hipudprelay() invoked.\n");
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"hipudprelay\".\n");
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,"string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,"string to address conversion failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit,
+	HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,"build param hit failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY_UDP_HIP, 0), -1,
+		 "build hdr failed\n");
+out_err:
+	return err;
+
+}
+
 
 /**
  * Handles the hipconf commands where the type is @c hi.
@@ -1063,39 +1121,44 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
  * @param action the numeric action identifier for the action to be performed on
  *               the given mapping.
  * @param opt    an array of pointers to the command line arguments after
- *               the action and type (pointer to @b "escrow" or @b "rvs").
+ *               the action and type (pointer to @b "escrow", @b "rvs" or @b "hipudprelay").
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], 
-		       int optc)
+			    int optc)
 {
-	int err = 0;
+     int err = 0;
 
-	HIP_DEBUG("hipconf: handling service.\n");
-	HIP_INFO("action=%d optc=%d\n", action, optc);
+     HIP_DEBUG("hipconf: handling service.\n");
+     HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"service\".\n");
-	HIP_IFEL((optc < 1), -1, "Missing arguments\n");
-	HIP_IFEL((optc > 1), -1, "Too many arguments\n");
+     HIP_IFEL((action != ACTION_ADD), -1,
+	      "Only action \"add\" is supported for \"service\".\n");
+     HIP_IFEL((optc < 1), -1, "Missing arguments\n");
+     HIP_IFEL((optc > 1), -1, "Too many arguments\n");
 	
-	if (strcmp(opt[0], "escrow") == 0) {
-		HIP_INFO("Adding escrow service.\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-			 "build hdr failed\n");
-	}
-	else if (strcmp(opt[0], "rvs") == 0) {
-		HIP_INFO("Adding rvs service.\n");
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
-			 "build hdr failed\n");
-	}
-	else {
-		HIP_ERROR("Unknown service %s.\n", opt[0]);
-	}
+     if (strcmp(opt[0], "escrow") == 0) {
+	  HIP_INFO("Adding escrow service.\n");
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
+		   "build hdr failed\n");
+     }
+     else if (strcmp(opt[0], "rvs") == 0) {
+	  HIP_INFO("Adding rvs service.\n");
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
+		   "build hdr failed\n");
+     }
+     else if (strcmp(opt[0], "hipudprelay") == 0) {
+	  HIP_INFO("Adding HIP UDP relay service.\n");
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RELAY_UDP_HIP, 0), -1,
+		   "build hdr failed\n");
+     }
+     else {
+	  HIP_ERROR("Unknown service %s.\n", opt[0]);
+     }
 
  out_err:
-	return err;
+     return err;
 	
 }
 

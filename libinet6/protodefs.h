@@ -115,9 +115,9 @@
 #define HIP_PARAM_ECHO_REQUEST         63661
 #define HIP_PARAM_RELAY_FROM           63998
 #define HIP_PARAM_RELAY_TO             64002
-#define HIP_PARAM_RELAY_VIA            64006
-#define HIP_PARAM_TO_PEER              64010
-#define HIP_PARAM_REG_FROM             64012
+#define HIP_PARAM_TO_PEER              64006
+#define HIP_PARAM_FROM_PEER            64008
+#define HIP_PARAM_REG_FROM             64010
 #define HIP_PARAM_FROM                 65498
 #define HIP_PARAM_RVS_HMAC             65500
 #define HIP_PARAM_VIA_RVS              65502
@@ -238,13 +238,14 @@
 #define HIP_CONTROL_NONE            0x0000
 #define HIP_CONTROL_BLIND	    0x0004   /*3rd bit from the right tells if the blind is in use*/
 
-/* Registration types for registering to a service as specified in
-   draft-ietf-hip-registration-02. These are the registration types used in
-   REG_INFO, REG_REQUEST, REG_RESPONSE and REG_FAILED parameters.
-   Numbers 0-200 are reserved by IANA.
-   Numbers 201 - 255 are reserved by IANA for private use. */
-#define HIP_RENDEZVOUS_SERVICE	         1
-#define HIP_ESCROW_SERVICE	         201
+/** @addtogroup hip_services
+ * @{ 
+ */
+#define HIP_SERVICE_RENDEZVOUS	         1
+#define HIP_SERVICE_ESCROW	         201
+#define HIP_SERVICE_RELAY_UDP_HIP	 202
+#define HIP_SERVICE_RELAY_UDP_ESP	 203
+/* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
    Numbers 0-200 are reserved by IANA.
@@ -304,7 +305,7 @@ struct hip_host_id {
 } __attribute__ ((packed));
 
 
-/*
+/**
  * Localhost Host Identity. Used only internally in the implementation.
  * Used for wrapping anonymous bit with the corresponding HIT.
  */
@@ -324,7 +325,7 @@ struct hip_keymat_keymat
 	void *keymatdst; /* Pointer to beginning of key material */
 };
 
-/*
+/**
  * Used in executing a unit test case in a test suite in the kernel module.
  */
 struct hip_unit_test {
@@ -334,10 +335,10 @@ struct hip_unit_test {
 	uint16_t           caseid;
 } __attribute__ ((packed));
 
-/*
+/**
  * Fixed start of this struct must match to struct hip_peer_addr_list_item
  * for the part of address item. It is used in hip_update_locator_match().
- ** @todo Maybe fix this in some better way?
+ * @todo Maybe fix this in some better way?
  */
 struct hip_locator_info_addr_item {
 	uint8_t traffic_type;
@@ -356,7 +357,7 @@ struct hip_locator_info_addr_item {
 
 }  __attribute__ ((packed));
 
-/* Structure describing an endpoint. This structure is used by the resolver in
+/** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
  */
@@ -365,8 +366,8 @@ struct endpoint {
 	se_length_t   length;    /* length of the whole endpoint in octets */
 };
 
-/*
- * Note: not padded
+/**
+ * @note not padded
  */
 struct endpoint_hip {
 	se_family_t         family; /* PF_HIP */
@@ -387,7 +388,7 @@ struct sockaddr_eid {
 } __attribute__ ((packed));
 
 
-/*
+/**
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
@@ -396,17 +397,15 @@ struct hip_common {
 	uint8_t      payload_len;
 	uint8_t      type_hdr;
 	uint8_t      ver_res;
-
 	uint16_t     checksum;
 	uint16_t     control;
-
 	struct in6_addr hits;  /* Sender HIT   */
 	struct in6_addr hitr;  /* Receiver HIT */
 } __attribute__ ((packed));
 
 typedef struct hip_common hip_common_t;
 
-/*
+/**
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and length conversion.
  */ 
@@ -419,7 +418,6 @@ struct hip_tlv_common {
 struct hip_esp_info {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t      length;
-
 	uint16_t reserved;
 	uint16_t keymat_index;
 	uint32_t old_spi;
@@ -505,7 +503,6 @@ struct hip_any_transform {
 struct hip_encrypted_aes_sha1 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
         uint32_t     reserved;
 	uint8_t      iv[16];
 	/* fixed part ends */
@@ -514,7 +511,6 @@ struct hip_encrypted_aes_sha1 {
 struct hip_encrypted_3des_sha1 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
         uint32_t     reserved;
 	uint8_t      iv[8];
 	/* fixed part ends */
@@ -523,7 +519,6 @@ struct hip_encrypted_3des_sha1 {
 struct hip_encrypted_null_sha1 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
         uint32_t     reserved;
 	/* fixed part ends */
 } __attribute__ ((packed));
@@ -541,10 +536,8 @@ struct hip_sig {
 struct hip_sig2 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
 	uint8_t      algorithm;
 	uint8_t      signature[0]; /* variable length */
-
 	/* fixed part end */
 } __attribute__ ((packed));
 
@@ -588,8 +581,8 @@ struct hip_cert {
 
 	uint8_t  cert_count;
 	uint8_t  cert_id;
-	uint8_t  cert_type;
-	/* end of fixed part */
+     uint8_t  cert_type;
+     /* end of fixed part */
 } __attribute__ ((packed));
 
 struct hip_echo_request {
@@ -605,76 +598,43 @@ struct hip_echo_response {
 } __attribute__ ((packed));
 
 /* Parameters related to rendezvous service and NAT. */
-/** Rendezvous server hmac. A non-critical parameter whose only difference with
-    the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
-    This change causes it to be located after the @c FROM parameter (as
-    opposed to the @c HMAC) */
+
 struct hip_rvs_hmac {
-	/** Type code for the parameter. */
-	hip_tlv_type_t type;
-	/** Length (@b 20) of the parameter contents in bytes. */
-	hip_tlv_len_t  length;
-	/** @c HMAC is computed over the HIP packet, excluding @c RVS_HMAC
-	    and any following parameters. */
-	uint8_t hmac_data[HIP_AH_SHA_LEN];
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t hmac_data[HIP_AH_SHA_LEN]; /**< Computed over the HIP packet,
+					   excluding @c RVS_HMAC
+					   and any following parameters. */
 } __attribute__ ((packed));
 
-/** Parameter containing the original source IP address of a HIP packet. */
 struct hip_from {
-	/** Type code for the parameter. */
-	hip_tlv_type_t type;
-	/** Length (@b 16) of the parameter contents in bytes. */
-	hip_tlv_len_t  length;
-	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
-	uint8_t address[16];
+	hip_tlv_type_t type;  /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
-/** Parameter containing the IP addresses of traversed rendezvous servers. */
 struct hip_via_rvs {
-	/** Type code for the parameter. */
-	hip_tlv_type_t type;
-	/** Length (@b variable) of the parameter contents in bytes. */
-	hip_tlv_len_t  length;
-	/** A short cut pointer to the memory region where the rendezvous
-	    server addresses are to be put. */
-	uint8_t address[0];
+	hip_tlv_type_t type;  /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address[0]; /**< Rendezvous server addresses */
 } __attribute__ ((packed));
 
-/** Parameter containing the original source IP address and port number
-    of a HIP packet. */
-struct hip_from_nat {
-	/** Type code for the parameter. */
-	hip_tlv_type_t type;
-	/** Length (@b 18) of the parameter contents in bytes. */
-	hip_tlv_len_t  length;
-	/** An IPv6 address or an IPv4-in-IPv6 format IPv4 address. */
-	uint8_t address[16];
-	/** Port number. */
-	in_port_t port;
+struct hip_relay_from {
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address[16]; /**< IPv6 address */
+     	in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
-/* End of parameters related to rendezvous service. */
 
-/** Parameter containing the IP addresses and source ports of traversed
-    rendezvous servers. */
-struct hip_via_rvs_nat {
-	/** Type code for the parameter. */
-	hip_tlv_type_t type;
-	/** Length (@b variable) of the parameter contents in bytes. */
-	hip_tlv_len_t  length;
-	/** A short cut pointer to the memory region where the rendezvous
-	    server addresses and ports are to be put. */
-	uint8_t address_and_port[0];
+struct hip_relay_to {
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
-/* End of parameters related to rendezvous service and NAT. */
+
+/* End od rendezvous and NAT parameters. */ 
 
 
-/**
- * This structure is used by the native API to carry local and peer identities
- * from libc (setmyeid and setpeereid calls) to the HIP socket handler
- * (setsockopt). It is almost the same as endpoint_hip, but it is
- * length-padded like HIP parameters to make it usable with the builder
- * interface.
- */
 struct hip_eid_endpoint {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t       length;
@@ -729,7 +689,6 @@ struct hip_keys {
 	uint32_t 		spi_old;
 	uint16_t 		key_len;
 	struct hip_crypto_key enc;
-	//int direction; // ?
 } __attribute__ ((packed));
 
 struct hip_blind_nonce {

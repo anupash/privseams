@@ -102,27 +102,28 @@
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI      	1
-#define TYPE_MAP     	2
-#define TYPE_RST     	3
-#define TYPE_RVS     	4
-#define TYPE_BOS     	5
-#define TYPE_PUZZLE  	6
-#define TYPE_NAT     	7
-#define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	9
-#define TYPE_SERVICE 	10
-#define TYPE_CONFIG     11
-#define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_HI      	   1
+#define TYPE_MAP     	   2
+#define TYPE_RST     	   3
+#define TYPE_RVS     	   4
+#define TYPE_BOS     	   5
+#define TYPE_PUZZLE  	   6
+#define TYPE_NAT     	   7
+#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_ESCROW   	   9
+#define TYPE_SERVICE 	   10
+#define TYPE_CONFIG        11
+#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
 /* 3 points below for DHT TTL/GET/GW */
-#define TYPE_TTL        13
-#define TYPE_GW         14
-#define TYPE_GET        15
-#define TYPE_BLIND      16
-#define TYPE_HA         17
-#define TYPE_MODE       18
-#define TYPE_DEBUG      19
-#define TYPE_MAX    	22 /* exclusive */
+#define TYPE_TTL           13
+#define TYPE_GW            14
+#define TYPE_GET           15
+#define TYPE_BLIND         16
+#define TYPE_HA            17
+#define TYPE_MODE          18
+#define TYPE_DEBUG         19
+#define TYPE_RELAY_UDP_HIP 20
+#define TYPE_MAX    	   22 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -154,6 +155,7 @@ int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
@@ -173,6 +175,5 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
 
 #endif /* HIPCONF */

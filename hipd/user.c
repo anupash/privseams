@@ -278,11 +278,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
-		HIP_IFEL(hip_services_add(HIP_ESCROW_SERVICE), -1, 
+		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1, 
                         "Error while adding service\n");
 	
-		hip_services_set_active(HIP_ESCROW_SERVICE);
-		if (hip_services_is_active(HIP_ESCROW_SERVICE))
+		hip_services_set_active(HIP_SERVICE_ESCROW);
+		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
                         "Failed to recreate R1-packets\n"); 
@@ -300,7 +300,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                          HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
                                 "Failed to deliver activation message to firewall\n");
                 }
-                HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
+                HIP_IFEL(hip_services_remove(HIP_SERVICE_ESCROW), -1, 
                         "Error while removing service\n");
                 HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
                         "Failed to recreate R1-packets\n"); 
@@ -345,10 +345,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_RENDEZVOUS_SERVICE), -1);
-		hip_services_set_active(HIP_RENDEZVOUS_SERVICE);
+		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
+		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
-		if (hip_services_is_active(HIP_RENDEZVOUS_SERVICE)){
+		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
 		}
 		

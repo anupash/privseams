@@ -104,7 +104,7 @@ typedef struct hip_msg_retrans{
 
 /** 
  * A binder structure for storing an IPv6 address and transport layer port
- * number. This structure is used in hip_build_param_via_rvs_nat().
+ * number. This structure is used in hip_build_param_relay_to().
  * 
  * @note This has to be packed since it is used in building @c RELAY_FROM and
  *       @c RELAY_TO parameters.

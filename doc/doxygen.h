@@ -290,7 +290,7 @@
  */
 
 /**
- * @file#define  libinet6/protodefs.h
+ * @file libinet6/protodefs.h
  * @def HIP_PARAM_MIN
  *      Defines the minimum parameter type value.
  * @note exclusive
@@ -357,7 +357,7 @@
  * @def HIP_PARAM_RELAY_TO
  *      HIP relay related parameter.
  * @note Former VIA_RVS_NAT
- * @def HIP_PARAM_RELAY_VIA
+ * @def HIP_PARAM_FROM_
  * @def HIP_PARAM_TO_PEER
  * @def HIP_PARAM_REG_FROM
  * @def HIP_PARAM_FROM
@@ -500,6 +500,42 @@
  *       contact another HIP node in a publicly addressable network, the
  *       Rendezvous Server replies to the Initiator with a NOTIFY message
  *       having a NOTIFICATION parameter of this type.
+ */
+
+/**
+ * @defgroup hip_services Additional HIP services. 
+ *
+ * Registration types for registering to a service as specified in
+ * draft-ietf-hip-registration-02. These are the registrationion types used in
+ * @c REG_INFO, @c REG_REQUEST, @c REG_RESPONSE and @c REG_FAILED parameters.
+ * Numbers 0-200 are reserved by IANA.
+ * Numbers 201 - 255 are reserved by IANA for private use.
+ */
+
+/**
+ * @file   libinet6/protodefs.h
+ * @struct hip_rvs_hmac
+ *         Rendezvous server hmac. A non-critical parameter whose only difference with
+ *         the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
+ *         This change causes it to be located after the @c FROM parameter (as
+ *         opposed to the @c HMAC)
+ *
+ * @struct hip_from
+ *         Parameter containing the original source IP address of a HIP packet.
+ * @struct hip_via_rvs
+ *         Parameter containing the IP addresses of traversed rendezvous servers.
+ * @struct hip_relay_from
+ *         Parameter containing the original source IP address and port number
+ *         of a HIP packet.
+ * @struct hip_relay_to
+ *         Parameter containing the IP addresses and source ports of traversed
+ *         rendezvous servers.
+ * @struct hip_eid_endpoint
+ *         This structure is used by the native API to carry local and peer
+ *         identities from libc (setmyeid and setpeereid calls) to the HIP
+ *         socket handler (setsockopt). It is almost the same as endpoint_hip,
+ *         but it is length-padded like HIP parameters to make it usable with
+ *         the builder interface.
  */
 
 #endif /* _DOXYGEN_H */

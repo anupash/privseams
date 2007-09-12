@@ -424,7 +424,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		struct in6_addr *src_hit, struct in6_addr *dst_ip,
 		const in_port_t dst_port, struct in6_addr *dst_hit,
 		hip_portpair_t *i1_info, const void *traversed_rvs,
-		const int is_via_rvs_nat, uint16_t *nonce) 
+		const int is_relay_to, uint16_t *nonce) 
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
@@ -448,7 +448,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
 	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
 	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
-	HIP_DEBUG("hip_xmit_r1(): is_via_rvs_nat %d.\n", is_via_rvs_nat);
+	HIP_DEBUG("hip_xmit_r1(): is_relay_to %d.\n", is_relay_to);
 
 		
 #ifdef CONFIG_HIP_BLIND
@@ -485,7 +485,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
 		if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-			hip_build_param_via_rvs_nat(
+			hip_build_param_relay_to(
 				r1pkt,
 				(struct hip_in6_addr_port *)traversed_rvs, 1);
 		}

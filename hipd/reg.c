@@ -61,16 +61,16 @@ int hip_services_add(int service_type)
 		
 	service->state = HIP_SERVICE_INACTIVE;
 	
-	if (service_type == HIP_ESCROW_SERVICE) {
-		service->service_type = HIP_ESCROW_SERVICE;
+	if (service_type == HIP_SERVICE_ESCROW) {
+		service->service_type = HIP_SERVICE_ESCROW;
 		HIP_INFO("Adding escrow service.\n");
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
                 service->cancel_registration = hip_cancel_escrow_registration;
                 service->cancel_service = hip_cancel_escrow_service;
 		
-	} else if (service_type == HIP_RENDEZVOUS_SERVICE) {
-		service->service_type = HIP_RENDEZVOUS_SERVICE;
+	} else if (service_type == HIP_SERVICE_RENDEZVOUS) {
+		service->service_type = HIP_SERVICE_RENDEZVOUS;
 		HIP_INFO("Adding rendezvous service.\n");
 		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
@@ -456,14 +456,14 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op)
                  -ENOMEM, "Not enough memory\n");
 
         if(type_count == 2){
-                *types[0] = HIP_ESCROW_SERVICE;
-                *types[1] = HIP_RENDEZVOUS_SERVICE;
+                *types[0] = HIP_SERVICE_ESCROW;
+                *types[1] = HIP_SERVICE_RENDEZVOUS;
         }
         else if(request_escrow){
-                *types[0] = HIP_ESCROW_SERVICE;
+                *types[0] = HIP_SERVICE_ESCROW;
         }
         else if(request_rvs){
-                *types[0] = HIP_RENDEZVOUS_SERVICE;
+                *types[0] = HIP_SERVICE_RENDEZVOUS;
         }
      
         return type_count;
@@ -493,7 +493,7 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
                 HIP_DEBUG("Found REG_RESPONSE parameter.\n");                        
                 for (i = 1; i < typecnt; i++) {
                         HIP_DEBUG("Service type: %d.\n", types[i]);
-                        if (types[i] == HIP_ESCROW_SERVICE) {
+                        if (types[i] == HIP_SERVICE_ESCROW) {
                                 HIP_KEA *kea = NULL;
                                 HIP_DEBUG("Registration to escrow service completed!\n"); 
                                 HIP_IFE(!(kea = hip_kea_find(&entry->hit_our)), -1); 
@@ -501,7 +501,7 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
                                 kea->keastate = HIP_KEASTATE_VALID;
                                 hip_keadb_put_entry(kea);
                         } 
-                        if (types[i] == HIP_RENDEZVOUS_SERVICE) {
+                        if (types[i] == HIP_SERVICE_RENDEZVOUS) {
                                // TODO: RVS
                         }     
                 }       
@@ -537,12 +537,12 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
                 HIP_DEBUG("Found REG_FAILED parameter.\n");                        
                 for (i = 1; i < typecnt; i++) {
                         HIP_DEBUG("Service type: %d.\n", types[i]);
-                        if (types[i] == HIP_ESCROW_SERVICE) {
+                        if (types[i] == HIP_SERVICE_ESCROW) {
                               /** @todo Should the base entry be removed when registration fails?
                                  Registration unsuccessful - removing base keas*/
                               hip_kea_remove_base_entries();  
                         } 
-                        if (types[i] == HIP_RENDEZVOUS_SERVICE) {
+                        if (types[i] == HIP_SERVICE_RENDEZVOUS) {
                                 // TODO: RVS
                         }     
                 }       
