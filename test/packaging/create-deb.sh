@@ -237,9 +237,12 @@ if [ $TYPE = "binary" ];then
 	fi
 
     cd "$HIPL"
-
     echo "** Running make in $HIPL"
-    if ! make;then
+    ./autogen
+    ./configure --prefix=/usr
+    echo "** Running make in $HIPL"
+    echo "** Running make in $HIPL"
+    if ! make clean all;then
 	echo "** Error while running make in $HIPL, exiting"
 	exit 1
     fi
@@ -352,5 +355,10 @@ if [ $TYPE = "binary" ];then
     fi
 fi
 
+cd $HIPL
+echo "Resetting compilation environment, please wait..."
+./configure >/dev/null
+make clean >/dev/null
+echo "Done."
 
 exit 0
