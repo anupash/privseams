@@ -45,7 +45,7 @@ int check_hit(HIT_Remote *hit, int inout)
 	}
 
 	HIP_DEBUG("Calling GUI for accepting new HIT.\n");
-	err = gui_ask_new_hit(hit, inout);
+	err = gui_hit_remote_ask(hit, inout);
 
 	/* Add hit info to database, if answer was yes. */
 	if (err == 0)

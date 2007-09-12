@@ -1,11 +1,9 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=HIP Manager
-Exec=/usr/sbin/hipagent -b
-Icon=hipgconf.png
-Info=HIP Manager
-Categories=Application;Network;
 Comment=Graphical manager for HIPL daemon
+Exec=/usr/sbin/hipagent -b
 Terminal=false
 Type=Application
-StartupNotify=true
+Categories=
+Icon=hipmanager.png

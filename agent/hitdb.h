@@ -11,20 +11,17 @@
 
 /******************************************************************************/
 /* INCLUDES */
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <fcntl.h>
 //#include <socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
-#include <stdlib.h>
-#include <string.h>
+
 #include "debug.h"
 #include "ife.h"
 #include "language.h"
-
-#ifndef __cplusplus
-#else
-//#include <netinet/in6.h>
-#endif
 
 
 /******************************************************************************/

@@ -7,14 +7,7 @@
 
 /******************************************************************************/
 /* INCLUDES */
-
-/* STANDARD */
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-
-/* THIS */
-#include "hit_db.h"
+#include "hitdb.h"
 
 
 /******************************************************************************/
@@ -217,7 +210,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	if (group->name[0] != ' ')
 	{
 		_HIP_DEBUG("Calling GUI to show new HIT %s...\n", r->name);
-		gui_add_remote_hit(r->name, group->name);
+		gui_hit_remote_add(group->name, r->name);
 	}
 
 	_HIP_DEBUG("%d items in database.\n", remote_db_n);
@@ -242,7 +235,7 @@ int hit_db_del(char *n)
 {
 	/* Variables. */
 	HIT_Remote *r1, *r2;
-	char name[MAX_NAME_LEN + 1];
+	char name[MAX_NAME_LEN + 1], group_name[MAX_NAME_LEN + 1];
 	int err = 0;
 	
 	/* Check that database is not empty. */
@@ -256,6 +249,7 @@ int hit_db_del(char *n)
 	{
 		r1 = remote_db;
 		r1->g->remotec--;
+		NAMECPY(group_name, r1->g->name);
 		remote_db = (HIT_Remote *)remote_db->next;
 		free(r1);
 		remote_db_n--;
@@ -284,6 +278,7 @@ int hit_db_del(char *n)
 		{
 			r1->next = r2->next;
 			r2->g->remotec--;
+			NAMECPY(group_name, r2->g->name);
 			if (remote_db_last == r2) remote_db_last = r1;
 			free(r2);
 		}
@@ -292,7 +287,7 @@ int hit_db_del(char *n)
 
 out_err:
 	if (err) _HIP_DEBUG("Deleting remote HIT failed: %s\n", name);
-	else gui_delete_remote_hit(name);
+	else gui_hit_remote_del(name, group_name);
 
 	return (err);
 }
@@ -665,7 +660,7 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	if (g->name[0] != ' ')
 	{
 		_HIP_DEBUG("New group added with name \"%s\", calling GUI to show it.\n", name);
-		gui_add_rgroup(g);
+		gui_group_remote_add(g->name);
 	}
 	err = g;
 
@@ -707,7 +702,7 @@ int hit_db_del_rgroup(char *name)
 		if (g == group_db_last) group_db_last = g2;
 	}
 	
-	gui_delete_rgroup(name);
+	gui_group_remote_del(name);
 	free(g);
 	group_db_n--;
 
@@ -823,7 +818,7 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	_HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
 
 	/* Tell GUI to show local HIT. */
-	gui_add_local_hit(h);
+	gui_hit_local_add(h);
 	err = h;
 
 out_err:

@@ -134,6 +134,7 @@ out_err:
 	return (err);
 }
 
+
 /**
  * Send local HITs to agent.
  */
@@ -346,6 +347,20 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 
 out_err:
 	return err;
+}
+
+
+/**
+ * Update different items status to agent.
+ */
+int hip_agent_update(void)
+{
+	hip_agent_add_lhits();
+	
+	if (hip_nat_is())
+		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+	else
+		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
 }
 
 

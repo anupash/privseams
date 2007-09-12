@@ -4,4 +4,4 @@
     title="HIP Manager"\
     longtitle="Graphical manager for HIPL daemon"\
     command="/usr/sbin/hipagent -b"\
-	icon="/usr/share/pixmaps/hipgconf.png"
+	icon="/usr/share/pixmaps/hipmanager.png"
