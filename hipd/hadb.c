@@ -2648,8 +2648,10 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 	memset(&hid, 0, sizeof(hid));
 	hid.state = entry->state;
-    	hid.hit_our = entry->hit_our;
-	hid.hit_peer = entry->hit_peer;
+    	ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
+	ipv6_addr_copy(&hid.hit_peer, &entry->hit_peer);
+	ipv6_addr_copy(&hid.ip_our, &entry->local_address);
+	ipv6_addr_copy(&hid.ip_peer, &entry->preferred_address);
 			
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));

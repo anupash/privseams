@@ -1204,6 +1204,8 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
                         HIP_DEBUG("HA is %s\n", hip_state_str(ha->state));
                         HIP_DEBUG_HIT("local hit is", &ha->hit_our);
                         HIP_DEBUG_HIT("peer  hit is", &ha->hit_peer);
+                        HIP_DEBUG_IN6ADDR("local ip is", &ha->ip_our);
+                        HIP_DEBUG_IN6ADDR("peer  ip is", &ha->ip_peer);
 
                 }
 

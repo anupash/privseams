@@ -362,6 +362,8 @@ struct hip_hadb_user_info_state
 {
 	hip_hit_t            hit_our;
 	hip_hit_t            hit_peer;
+	struct in6_addr      ip_our;
+	struct in6_addr      ip_peer;
 	int                  state;
 };
 
