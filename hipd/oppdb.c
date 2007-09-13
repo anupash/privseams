@@ -127,19 +127,6 @@ int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 	return err;
 }
 
-#if 0
-hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *phit, struct sockaddr_in6 *src)
-{
-	hip_opp_block_t entry;
-
-	ipv6_addr_copy(&entry.peer_phit, phit);
-	memcpy(&entry.caller, src, sizeof(struct sockaddr_in6));
-	HIP_DEBUG("Searching for a pseudo-hit in oppdb\n");
-	//HIP_HEXDUMP("hit_peer is: ", hit_peer, sizeof(hip_hit_t));
-	//HIP_HEXDUMP("hit_our is: ", hit_our, sizeof(hip_hit_t));
-	return (hip_opp_block_t *)hip_ht_find(oppdb, (void *)&entry);
-}
-#endif
 
 hip_opp_block_t *hip_create_opp_block_entry() 
 {
@@ -198,39 +185,9 @@ int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 	return err;
 }
 
-#if 0
-int hip_oppdb_del_entry(const hip_hit_t *phit, const struct sockaddr_in6 *src)
-{
-	hip_opp_block_t *entry = NULL;
-	
-	entry = hip_oppdb_find_byhits(phit, src);
-	if (!entry) {
-		return -ENOENT;
-	}
-	hip_oppdb_del_entry_by_entry(entry);
-	return 0;
-}
-#endif
 
 void hip_init_opp_db()
 {
-#if 0
-	memset(&oppdb,0,sizeof(oppdb));
-	
-	oppdb.head =      oppdb_list;
-	oppdb.hashsize =  HIP_OPPDB_SIZE;
-	oppdb.offset =    offsetof(hip_opp_block_t, next_entry);
-	oppdb.hash =      hip_hash_hit;
-	oppdb.compare =   hip_match_hit;
-	oppdb.hold =      hip_oppdb_hold_entry;
-	oppdb.put =       hip_oppdb_put_entry;
-	oppdb.get_key =   hip_oppdb_get_key;
-	
-	strncpy(oppdb.name,"OPPDB_BY_HIT", 12);
-	oppdb.name[12] = 0;
-	
-	hip_ht_init(&oppdb);
-#endif
 	oppdb = hip_ht_init(hip_oppdb_hash_hit, hip_oppdb_match_hit);
 }
 
@@ -390,13 +347,6 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "pseudo hit conversion failed\n");
 
 	
-#if 0	
-	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg_info->src_port)), -1, "Failed to find opp entry by phit\n");
-
-	HIP_IFEL(hip_oppdb_add_entry(&phit, &msg->hitr, dst_addr,
-		 src_addr, &block_entry->caller), -1, "Add definitive db failed\n");
-#endif
- 
 	ipv6_addr_copy(&hit_pair.real_hit, &msg->hits);
 	ipv6_addr_copy(&hit_pair.pseudo_hit, &phit);
 	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
@@ -449,13 +399,6 @@ int hip_receive_opp_r1_in_established(struct hip_common *msg,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
 
-#if 0	
-	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg_info->src_port)), -1,
-		 "Failed to find opp entry by phit\n");
-
-	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
-		 "unblock failed\n");
-#endif
 	ipv6_addr_copy(&hit_pair.real_hit, &msg->hits);
 	ipv6_addr_copy(&hit_pair.pseudo_hit, &phit);
 	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
