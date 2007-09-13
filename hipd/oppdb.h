@@ -25,6 +25,8 @@
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
 
+typedef struct hip_opp_hit_pair hip_opp_hit_pair_t;
+
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
 
 void hip_init_opp_db();
@@ -34,8 +36,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time);
 void hip_oppdb_dump();
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *phit, struct sockaddr_in6 *src);
-int hip_oppdb_add_entry(const hip_hit_t *hit_peer, 
-			const hip_hit_t *phit_peer,
+int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 			const hip_hit_t *hit_our,
 			const struct in6_addr *ip_peer,
 			const struct in6_addr *ip_our,
