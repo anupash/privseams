@@ -34,7 +34,7 @@ void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 	HIP_UNLOCK_HS(hs);
 	HIP_FREE(hs);
 }
-
+ 
 void hip_hadb_hold_hs(void *entry)
 {
 	HIP_DB_HOLD_ENTRY(entry, struct hip_hit_spi);
@@ -1789,8 +1789,9 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-		HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-		ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+            //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		/* Don't do this -samu*/
+            //  ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
