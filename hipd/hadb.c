@@ -2606,9 +2606,11 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 		hip_hold_ha(this);
 		fail = func(this, opaque);
 		hip_db_put_ha(this, hip_hadb_delete_state);
-		if (fail) break;
+		if (fail)
+			goto out_err;
 	}
-	
+
+ out_err:	
 	HIP_UNLOCK_HT(&hadb_hit);
 	return fail;
 }

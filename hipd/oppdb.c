@@ -64,8 +64,10 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq), void *opaq
 		hip_hold_ha(this);
 		fail = func(this, opaque);
 		//hip_db_put_ha(this, hip_oppdb_del_entry_by_entry);
-		if (fail) break;
+		if (fail)
+			goto out_err;
 	}
+ out_err:
 	HIP_UNLOCK_HT(&opp_db);
 	return fail;
 }
