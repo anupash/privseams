@@ -1573,8 +1573,10 @@ int hip_update_send_echo(hip_ha_t *entry,
 			 uint32_t spi_out,
 			 struct hip_peer_addr_list_item *addr){
 	
-	int err = 0;
+	int err = 0, i = 0;
 	struct hip_common *update_packet = NULL;
+        hip_list_t *item = NULL, *tmp = NULL;
+        struct netdev_address *n;
 
 	HIP_DEBUG_HIT("new addr to check", &addr->address);
 	
@@ -1585,12 +1587,29 @@ int hip_update_send_echo(hip_ha_t *entry,
 					    &entry->hit_peer, &entry->hit_our),
 		 -1, "Building Echo Packet failed\n");
 
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&entry->local_address, &addr->address,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
-			      update_packet, entry, 1),
-		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
-	
+        /* Have to take care of UPDATE echos to opposite family */
+        if (IN6_IS_ADDR_V4MAPPED(&addr->address) == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+            HIP_IFEL(entry->hadb_xmit_func->
+                     hip_send_pkt(&entry->local_address, &addr->address,
+                                  HIP_NAT_UDP_PORT, entry->peer_udp_port,
+                                  update_packet, entry, 1),
+                     -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+	} else {
+            /* UPDATE echo is meant for opposite family of local_address*/
+            /* check if we have one, otherwise let fail */
+            list_for_each_safe(item, tmp, addresses, i) {
+                n = list_entry(item);
+                if (IN6_IS_ADDR_V4MAPPED(&n->addr) != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                    HIP_IFEL(entry->hadb_xmit_func->
+                             hip_send_pkt(&n->addr, &addr->address,
+                                          HIP_NAT_UDP_PORT, entry->peer_udp_port,
+                                          update_packet, entry, 1),
+                             -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+                } else {
+                    HIP_DEBUG("Sending UPDATE packet failed with echo data failed (IPV4 != IPV6)\n");
+                }
+            }
+        }
  out_err:
 	return err;
 
@@ -1749,10 +1768,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	else
 	{
 #endif
-		if (is_bex_address)
+             if (is_bex_address)
 		{
 			/* workaround for special case */
-			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
+ 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
 			HIP_DEBUG("setting bex addr as preferred address\n");
 			ipv6_addr_copy(&entry->preferred_address, addr);
@@ -1773,7 +1792,6 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
 		ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
-
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);

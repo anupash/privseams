@@ -212,8 +212,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	struct in6_addr *locator_address =
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
-        /* 0x80 == 10000000 */
-	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
+   	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
 	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
 	
@@ -243,9 +242,10 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	
 	/* Check if the address is already bound to the SPI +
 	   add/update address */
-	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-					 0,
-					 lifetime, is_preferred), -1);
+  
+        HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
+                                         0,
+                                         lifetime, is_preferred), -1);
 
  out_err:
 	return err;
@@ -470,6 +470,8 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 				  struct in6_addr *dst_ip, 
 				  hip_portpair_t *update_info)
 {
+        int err = -1;
+#if 0 
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_esp_info *esp_info;
 	struct hip_seq *seq;
@@ -479,7 +481,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	uint32_t prev_spi_in = 0, new_spi_in = 0;
 	uint16_t keymat_index = 0, mask = 0;
 	struct hip_common *update_packet = NULL;
-	int err = 0, esp_info_i = 1, need_to_generate_key = 0,
+	int esp_info_i = 1, need_to_generate_key = 0,
 		dh_key_generated = 0;
 
 	HIP_DEBUG("\n");
@@ -649,6 +651,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 			hip_hadb_delete_inbound_spi(entry, new_spi_in);
 	}
 
+#endif
 	return err;
 }
 
@@ -1937,7 +1940,8 @@ int hip_receive_update(struct hip_common *msg,
 	/* Node moves within public Internet or from behind a NAT to public
 	   Internet. */
 	if(sinfo->dst_port == 0){
-		HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n");
+                HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
+            	/* HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n"); */
 		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
