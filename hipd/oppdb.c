@@ -111,6 +111,22 @@ void hip_oppdb_uninit()
 	hip_for_each_opp(hip_oppdb_uninit_wrap, NULL);
 }
 
+int hip_oppdb_unblock_all_with_real_hit(hip_opp_block_t *entry, void *hit)
+{
+	int err = 0;
+
+	if (ipv6_addr_cmp(&entry->peer_real_hit, hit) != 0)
+		goto out_err;
+
+	HIP_IFEL(hip_opp_unblock_app(&entry->caller, hit, 0), -1,
+		 "unblock failed\n");
+
+	hip_oppdb_del_entry_by_entry(entry);
+	
+ out_err:
+	return err;
+}
+
 hip_opp_block_t *hip_oppdb_find_byhits(const hip_hit_t *phit, struct sockaddr_in6 *src)
 {
 	hip_opp_block_t entry;
@@ -372,6 +388,8 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
 					       HIP_HIT_TYPE_HASH100), -1,
 		 "pseudo hit conversion failed\n");
+
+	
 	
 	HIP_IFEL(!(block_entry = hip_oppdb_find_byhits(&phit, &msg_info->src_port)), -1, "Failed to find opp entry by phit\n");
 
@@ -379,10 +397,14 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 src_addr, &block_entry->caller), -1, "Add definitive db failed\n");
 
 	//memcpy(&block_entry->peer_real_hit, &msg->hits, sizeof(hip_hit_t));
+#if 1   /* Alberto, set to 0 */
 	HIP_IFEL(hip_opp_unblock_app(&block_entry->caller, &msg->hits, 0), -1,
 		 "unblock failed\n");
 
 	hip_oppdb_del_entry_by_entry(block_entry);
+#else
+	hip_for_each_opp(hip_oppdb_unblock_all_with_real_hit, &msg->hits);
+#endif
 
 	// we should still get entry after delete old phit HA
 	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
@@ -488,6 +510,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 	ipv6_addr_copy(&id, &dst_ip);
 	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
+		HIP_DEBUG_HIT("existing HA found with HIT", &id);
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&id),
 					       HIP_PARAM_HIT,
