@@ -1604,9 +1604,7 @@ int hip_update_send_echo(hip_ha_t *entry,
                              hip_send_pkt(&n->addr, &addr->address,
                                           HIP_NAT_UDP_PORT, entry->peer_udp_port,
                                           update_packet, entry, 1),
-                             -ECOMM, "Sending UPDATE packet with echo data failed.\n");
-                } else {
-                    HIP_DEBUG("Sending UPDATE packet failed with echo data failed (IPV4 != IPV6)\n");
+                             -ECOMM, "Sending UPDATE packet with echo data failed.\n"); 
                 }
             }
         }
