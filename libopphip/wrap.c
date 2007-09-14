@@ -123,15 +123,27 @@ void hip_initialize_db_when_not_exist()
 	hip_db_exist = 1;
 
      out_err:
-	return err;
+	return;
 
 }
 
 int hip_get_local_hit_wrapper(hip_hit_t *hit)
 {
 	int err = 0;
-	struct gaih_addrtuple *at = NULL;
+	char *param;
+	struct hip_common *msg = NULL;
+	//struct gaih_addrtuple *at = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0),
+		 -1, "Fail to get hits");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send/recv\n");
+	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1,
+		 "No HIT received\n");
+	ipv6_addr_copy(hit, hip_get_param_contents_direct(param));
+	HIP_DEBUG_HIT("hit", hit);
 	
+#if 0
 	err = get_local_hits(NULL, &at);
 	if (err)
 		HIP_ERROR("getting local hit failed\n");
@@ -140,7 +152,10 @@ int hip_get_local_hit_wrapper(hip_hit_t *hit)
 	
 	if (at)
 		HIP_FREE(at);
-
+#endif
+ out_err:
+	if (msg)
+		free(msg);
 	return err;
 }
 

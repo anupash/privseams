@@ -908,7 +908,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	hip_hit_t hit;
 	
 	hip_get_default_hit(&hit);
-	hip_build_param_contents(msg, &hit, 0, sizeof(hit));
+	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
 	
  out_err:
 
