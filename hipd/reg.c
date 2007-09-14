@@ -78,11 +78,15 @@ int hip_services_add(int service_type)
 	  service->cancel_service = hip_cancel_service;
      } else if (service_type == HIP_SERVICE_RELAY_UDP_HIP) {
 	  service->service_type = HIP_SERVICE_RELAY_UDP_HIP;
-	  HIP_INFO("Adding rendezvous service.\n");
+	  HIP_INFO("Adding UDP relay service for HIP packets.\n");
 	  strncpy(service->name, "RELAYUDPHIP_SERVICE", 20); 
 	  service->handle_registration = hip_handle_registration;
 	  service->cancel_registration = hip_cancel_registration;
 	  service->cancel_service = hip_cancel_service;
+	  /*if(hip_relht_init() == NULL)
+	  {
+	       err = -1;
+	       }*/
      } else {
 	  HIP_ERROR("Unknown service type.\n");
 	  err = -1;

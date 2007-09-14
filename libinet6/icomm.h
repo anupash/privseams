@@ -84,7 +84,7 @@
 #define SO_HIP_DHT_SERVING_GW                   148
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
-#define SO_HIP_OFFER_RELAY_UDP_HIP              151
+#define SO_HIP_OFFER_HIPUDPRELAY                151
 #define SO_HIP_ADD_RELAY_UDP_HIP                152
 
 /** @} */

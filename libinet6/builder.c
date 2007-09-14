@@ -1371,7 +1371,6 @@ int hip_build_user_hdr(struct hip_common *msg,
 		HIP_ERROR("msg null\n");
 		goto out;
 	}
-
 	if (hip_get_msg_total_len(msg) == 0) {
 		HIP_ERROR("hipd build hdr: could not calc size\n");
 		err = -EMSGSIZE;

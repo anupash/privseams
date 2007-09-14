@@ -356,7 +356,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 	
 #endif
-#ifdef CONFIG_HIP_UDPRELAY
+//#ifdef CONFIG_HIP_UDPRELAY
 	case SO_HIP_OFFER_HIPUDPRELAY:
 	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
 		server handles this message. Message indicates that the
@@ -368,13 +368,13 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
 		
 		if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
-			HIP_DEBUG("UDP relay service for HIP packtes"\
+			HIP_DEBUG("UDP relay service for HIP packets"\
 				  "is now active.\n");
 		}
 		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#endif
+//#endif
 
 	case SO_HIP_GET_HITS:
 		

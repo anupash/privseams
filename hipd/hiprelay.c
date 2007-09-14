@@ -19,7 +19,7 @@ static LHASH *hiprelay_ht = NULL;
 
 LHASH *hip_relht_init()
 {
-     return lh_new(LHASH_HASH_FN(hip_relht_hash), LHASH_COMP_FN(hip_relht_compare));
+     return hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash), LHASH_COMP_FN(hip_relht_compare));
 }
 
 void hip_relht_uninit()

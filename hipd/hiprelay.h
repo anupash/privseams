@@ -55,7 +55,7 @@ typedef enum{HIP_REL_NONE_TO_NONE, HIP_REL_NONE_TO_UDP, HIP_REL_UDP_TO_NONE,
 		  HIP_REL_ON}hip_relrec_mode_t;
 
 /**
- * Initializes the HIP relay hashtable. Allocates memory for a new hashtable.
+ * Initializes the global HIP relay hashtable. Allocates memory for hiprelay_ht.
  *
  * @return a pointer to a new hashtable, NULL if failed to init.
  */ 

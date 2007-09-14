@@ -377,20 +377,20 @@ int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *
      HIP_DEBUG("handle_hipudprelay() invoked.\n");
      HIP_INFO("action=%d optc=%d\n", action, optc);
      
+
      HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"hipudprelay\".\n");
      HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,"string to address conversion failed\n");
      HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,"string to address conversion failed\n");
-	
+     
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit,
 				       HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,"build param hit failed\n");
-	
      HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
 				       HIP_PARAM_IPV6_ADDR,
 				       sizeof(struct in6_addr)), -1,
 	      "build param hit failed\n");
-
+     
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY_UDP_HIP, 0), -1,
 	      "build hdr failed\n");
  out_err:
@@ -1187,7 +1187,7 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
      else if (strcmp(opt[0], "hipudprelay") == 0)
      {
 	  HIP_INFO("Adding HIP UDP relay service.\n");
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RELAY_UDP_HIP, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPUDPRELAY, 0), -1,
 		   "build hdr failed\n");
      }
      else
