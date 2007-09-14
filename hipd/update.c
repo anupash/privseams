@@ -2206,10 +2206,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	loc_addr_item = addr_list;
 
-        /* Is there any use for this */
-        /*
 	HIP_IFEL((addr->sa_family == AF_INET), -1, "all addresses in update should be mapped");
-        */
+
 	/* if we have deleted the old address and it was preferred than 
 	   we chould make new preferred address. Now, we chose it as random address in list 
 	*/
@@ -2217,14 +2215,13 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		choose_random = 1;
 	}
 
+
 	if( is_add && is_active_handover ) {
 		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
 	} else {
 		comp_addr = &entry->local_address;
 	}
 
-	/* XX FIXME: change daddr to an alternative peer address
-	   if no suitable saddr was found (interfamily handover) */
 	if (!choose_random) { 
             int been_here = 0;
         choose_random:
