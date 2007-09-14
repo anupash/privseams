@@ -454,10 +454,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
-	if (!ipv6_addr_is_hit(dst_hit)) {
-		HIP_DEBUG("Received rubbish from netlink, skip\n");
-		goto out_err;
-	}
+	/* Sometimes we get deformed HITs from kernel, skip them */
+	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
+		   hip_hidb_hit_is_our(dst_hit) &&
+		   hit_is_real_hit(dst_hit)), -1,
+		 "Received rubbish from netlink, skip\n");
 
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (entry) {
