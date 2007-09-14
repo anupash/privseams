@@ -47,12 +47,12 @@
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
  */
+
 /**
  * @addtogroup exec_app_types
  * @{
  */
- 
-/**
+ /**
  * Execute application with opportunistic library preloaded.
  * @see handle_exec_application()
  */
@@ -76,54 +76,54 @@
  * @see handle_exec_application()
  */
 #define LIB_LENGTH	200
-
-
-
 /** @} addtogroup exec_app_types */
 
-/* 0 is reserved */
-#define ACTION_ADD 1
-#define ACTION_DEL 2
-#define ACTION_NEW 3
-#define ACTION_NAT 4
-#define ACTION_HIP 5
-#define ACTION_SET 6
-#define ACTION_INC 7
-#define ACTION_DEC 8
-#define ACTION_GET 9
-#define ACTION_RUN 10
-#define ACTION_LOAD 11
-#define ACTION_DHT 12
-#define ACTION_HA  13
-#define ACTION_RST 14
-#define ACTION_BOS 15
-#define ACTION_DEBUG 16
-#define ACTION_HANDOFF 17
-#define ACTION_MAX 22 /* exclusive */
+/* hipconf tool actions. These are numerical values for the first commandline
+   argument. For example in "tools/hipconf get hi default" -command "get"
+   is the action. */
 
 /* 0 is reserved */
-#define TYPE_HI      	   1
-#define TYPE_MAP     	   2
-#define TYPE_RST     	   3
-#define TYPE_RVS     	   4
-#define TYPE_BOS     	   5
-#define TYPE_PUZZLE  	   6
-#define TYPE_NAT     	   7
-#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW   	   9
-#define TYPE_SERVICE 	   10
-#define TYPE_CONFIG        11
-#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
-/* 3 points below for DHT TTL/GET/GW */
-#define TYPE_TTL           13
-#define TYPE_GW            14
-#define TYPE_GET           15
-#define TYPE_BLIND         16
-#define TYPE_HA            17
-#define TYPE_MODE          18
-#define TYPE_DEBUG         19
-#define TYPE_RELAY_UDP_HIP 20
-#define TYPE_MAX    	   22 /* exclusive */
+#define ACTION_ADD                     1
+#define ACTION_DEL                     2
+#define ACTION_NEW                     3
+#define ACTION_GET                     4
+#define ACTION_SET                     5
+#define ACTION_INC                     6
+#define ACTION_DEC                     7
+#define ACTION_NAT                     8
+#define ACTION_BOS                     9
+#define ACTION_RST                     10
+#define ACTION_RUN                     11
+#define ACTION_LOAD                    12
+#define ACTION_DHT                     13
+#define ACTION_DEBUG                   14
+#define ACTION_HANDOFF                 15
+
+/* Important! These values are used as array indexes, so keep in this order.
+   Add values after the last value and increment TYPE_MAX. */
+/* 0 is reserved */
+#define TYPE_HI                        1
+#define TYPE_MAP                       2
+#define TYPE_RST                       3
+#define TYPE_RVS                       4
+#define TYPE_BOS                       5
+#define TYPE_PUZZLE                    6
+#define TYPE_NAT                       7
+#define TYPE_OPP                       EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_ESCROW                    9
+#define TYPE_SERVICE                   10
+#define TYPE_CONFIG                    11
+#define TYPE_RUN                       EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_TTL                       13 /* 3 points below for DHT TTL/GET/GW */
+#define TYPE_GW                        14
+#define TYPE_GET                       15
+#define TYPE_BLIND                     16
+#define TYPE_HA                        17
+#define TYPE_MODE                      18
+#define TYPE_DEBUG                     19
+#define TYPE_RELAY_UDP_HIP             20
+
+#define TYPE_MAX                       21 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -146,7 +146,6 @@
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
- 
 int hip_handle_exec_application(int fork, int type, char **argv, int argc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
 int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);

@@ -257,18 +257,20 @@
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
-typedef struct in6_addr hip_hit_t;
-typedef struct in6_addr in6_addr_t;
-typedef struct in_addr hip_lsi_t;
+typedef uint8_t hip_hdr_type_t;
+typedef uint8_t hip_hdr_len_t;
 typedef uint16_t se_family_t;
 typedef uint16_t se_length_t;
 typedef uint16_t se_hip_flags_t;
-typedef uint32_t sa_eid_t;
-typedef uint8_t hip_hdr_type_t;
-typedef uint8_t hip_hdr_len_t;
 typedef uint16_t hip_hdr_err_t;
 typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
+typedef uint16_t hip_transform_suite_t;
+typedef uint16_t hip_eid_iface_type_t;
+typedef uint32_t sa_eid_t;
+typedef struct in6_addr hip_hit_t;
+typedef struct in6_addr in6_addr_t;
+typedef struct in_addr hip_lsi_t;
 typedef struct hip_hadb_state hip_ha_t;
 typedef struct hip_hadb_rcv_func_set hip_rcv_func_set_t;
 typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
@@ -277,7 +279,7 @@ typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
-
+typedef struct hip_common hip_common_t;
 
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
@@ -288,7 +290,6 @@ struct hip_host_id_key_rdata {
 	uint16_t flags;
 	uint8_t protocol;
 	uint8_t algorithm;
-
 	/* fixed part ends */
 } __attribute__ ((packed));
 
@@ -296,10 +297,8 @@ struct hip_host_id_key_rdata {
 struct hip_host_id {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-
 	uint16_t     hi_length;
 	uint16_t     di_type_length;
-
 	struct hip_host_id_key_rdata rdata;
 	/* fixed part ends */
 } __attribute__ ((packed));
@@ -311,18 +310,17 @@ struct hip_host_id {
  */
 struct hip_lhi
 {
-	uint16_t           anonymous; /* Is this an anonymous HI */
+	uint16_t           anonymous; /**< Is this an anonymous HI */
 	struct in6_addr    hit;
-	uint16_t           algo; /* HIP_HI_RSA or HIP_HI_DSA */
+	uint16_t           algo; /**< HIP_HI_RSA or HIP_HI_DSA */
 } __attribute__ ((packed));
 
 
 struct hip_keymat_keymat
 {
-	size_t offset;      /* Offset into the key material */
-	size_t keymatlen;   /* Length of the key material */
-
-	void *keymatdst; /* Pointer to beginning of key material */
+	size_t offset;    /**< Offset into the key material */
+	size_t keymatlen; /**< Length of the key material */
+	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
 /**
@@ -349,11 +347,8 @@ struct hip_locator_info_addr_item {
 	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
-	
-	int state; /*State of our addresses,
-		     possible states are:
-		     WAITING_ECHO_REQUEST, ACTIVE
-		   */
+	int state; /**<State of our addresses, possible states are:
+		      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
 
@@ -362,19 +357,18 @@ struct hip_locator_info_addr_item {
  * members are in network byte order.
  */
 struct endpoint {
-	se_family_t   family;    /* PF_HIP, PF_XX */
-	se_length_t   length;    /* length of the whole endpoint in octets */
+	se_family_t   family;    /**< PF_HIP, PF_XX */
+	se_length_t   length;    /**< length of the whole endpoint in octets */
 };
 
 /**
  * @note not padded
  */
 struct endpoint_hip {
-	se_family_t         family; /* PF_HIP */
-	se_length_t         length; /* length of the whole endpoint in octets */
-	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
+	se_family_t         family; /**< PF_HIP */
+	se_length_t         length; /**< length of the whole endpoint in octets */
+	se_hip_flags_t      flags;  /**< e.g. ANON or HIT */
 	uint8_t             algo;
-	
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;
@@ -387,7 +381,6 @@ struct sockaddr_eid {
 	sa_eid_t eid_val;
 } __attribute__ ((packed));
 
-
 /**
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
@@ -399,11 +392,9 @@ struct hip_common {
 	uint8_t      ver_res;
 	uint16_t     checksum;
 	uint16_t     control;
-	struct in6_addr hits;  /* Sender HIT   */
-	struct in6_addr hitr;  /* Receiver HIT */
+	struct in6_addr hits;  /**< Sender HIT   */
+	struct in6_addr hitr;  /**< Receiver HIT */
 } __attribute__ ((packed));
-
-typedef struct hip_common hip_common_t;
 
 /**
  * Use accessor functions defined in hip_build.h, do not access members
@@ -414,7 +405,6 @@ struct hip_tlv_common {
 	hip_tlv_len_t      length;
 } __attribute__ ((packed));
 
-
 struct hip_esp_info {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t      length;
@@ -424,14 +414,12 @@ struct hip_esp_info {
 	uint32_t new_spi;
 } __attribute__ ((packed));
 
-
 /** @addtogroup hip_tlv
  * @{ 
  */
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-
 	uint32_t           reserved;
 	uint64_t           generation;
 } __attribute__ ((packed));
@@ -439,7 +427,6 @@ struct hip_r1_counter {
 struct hip_puzzle {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
 	uint8_t           K;
 	uint8_t           lifetime;
 	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
@@ -449,7 +436,6 @@ struct hip_puzzle {
 struct hip_solution {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
 	uint8_t           K;
 	uint8_t           reserved;
 	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
@@ -467,26 +453,19 @@ struct hip_dh_public_value {
 struct hip_diffie_hellman {
 	hip_tlv_type_t    type;
 	hip_tlv_len_t     length;
-
         struct hip_dh_public_value  pub_val;
 } __attribute__ ((packed));
-
-
-typedef uint16_t hip_transform_suite_t;
 
 struct hip_hip_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX];
 } __attribute__ ((packed));
 
 struct hip_esp_transform {
 	hip_tlv_type_t        type;
 	hip_tlv_len_t         length;
-
 	uint16_t reserved;
-
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
 
@@ -498,7 +477,6 @@ struct hip_any_transform {
 	hip_transform_suite_t suite_id[HIP_TRANSFORM_HIP_MAX +
 				       HIP_TRANSFORM_ESP_MAX];
 } __attribute__ ((packed));
-
 
 struct hip_encrypted_aes_sha1 {
 	hip_tlv_type_t     type;
@@ -526,10 +504,8 @@ struct hip_encrypted_null_sha1 {
 struct hip_sig {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
-
 	uint8_t      algorithm;
-	uint8_t      signature[0]; /* variable length */
-
+	uint8_t      signature[0]; /**< variable length */
 	/* fixed part end */
 } __attribute__ ((packed));
 
@@ -537,7 +513,7 @@ struct hip_sig2 {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t     length;
 	uint8_t      algorithm;
-	uint8_t      signature[0]; /* variable length */
+	uint8_t      signature[0]; /**< variable length */
 	/* fixed part end */
 } __attribute__ ((packed));
 
@@ -550,7 +526,7 @@ struct hip_seq {
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	uint32_t peer_update_id; /* n items */
+	uint32_t peer_update_id; /**< n items */
 } __attribute__ ((packed));
 
 struct hip_notification {
@@ -558,9 +534,7 @@ struct hip_notification {
 	hip_tlv_len_t length;
 	uint16_t reserved;
 	uint16_t msgtype;
-	/** A shortcut pointer to the memory region where the notification data
-	    is to be put. */
-	uint8_t data[0];
+	uint8_t data[0]; /**< A pointer to the notification data */
 } __attribute__ ((packed));
 
 struct hip_locator {
@@ -578,7 +552,6 @@ struct hip_hmac {
 struct hip_cert {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-
 	uint8_t  cert_count;
 	uint8_t  cert_id;
      uint8_t  cert_type;
@@ -597,8 +570,7 @@ struct hip_echo_response {
 	/* opaque */
 } __attribute__ ((packed));
 
-/* Parameters related to rendezvous service and NAT. */
-
+/** draft-ietf-hip-rvs-05 */
 struct hip_rvs_hmac {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
@@ -607,18 +579,21 @@ struct hip_rvs_hmac {
 					   and any following parameters. */
 } __attribute__ ((packed));
 
+/** draft-ietf-hip-rvs-05 */
 struct hip_from {
 	hip_tlv_type_t type;  /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
+/** draft-ietf-hip-rvs-05 */
 struct hip_via_rvs {
 	hip_tlv_type_t type;  /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	uint8_t address[0]; /**< Rendezvous server addresses */
 } __attribute__ ((packed));
 
+/** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_from {
 	hip_tlv_type_t type; /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
@@ -626,22 +601,37 @@ struct hip_relay_from {
      	in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
+/** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_to {
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address[16]; /**< IPv6 address */
+     	in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
+/** draft-ietf-hip-nat-traversal-02 */
+struct hip_relay_via {
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address[16]; /**< IPv6 address */
+     	in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
+/** 
+ * draft-ietf-hip-nat-traversal-01
+ * @note obsolete.
+ */
+struct hip_relay_to_old {
 	hip_tlv_type_t type; /**< Type code for the parameter. */
 	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
-
-/* End od rendezvous and NAT parameters. */ 
-
 
 struct hip_eid_endpoint {
 	hip_tlv_type_t      type;
 	hip_tlv_len_t       length;
 	struct endpoint_hip endpoint;
 } __attribute__ ((packed));
-
-typedef uint16_t hip_eid_iface_type_t;
 
 struct hip_eid_iface {
 	hip_tlv_type_t type;
@@ -654,7 +644,6 @@ struct hip_eid_sockaddr {
 	hip_tlv_len_t length;
 	struct sockaddr sockaddr;
 } __attribute__ ((packed));
-
 
 /* ESCROW */
 
@@ -680,14 +669,14 @@ struct hip_reg_failed {
 struct hip_keys {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
-	uint16_t 		operation;
-	uint16_t 		alg_id;
-	uint8_t 		address[16];
-	uint8_t 		hit[16];
-        uint8_t                 peer_hit[16];
-	uint32_t 		spi;
-	uint32_t 		spi_old;
-	uint16_t 		key_len;
+	uint16_t 	operation;
+	uint16_t 	alg_id;
+	uint8_t 	address[16];
+	uint8_t 	hit[16];
+        uint8_t         peer_hit[16];
+	uint32_t 	spi;
+	uint32_t 	spi_old;
+	uint16_t 	key_len;
 	struct hip_crypto_key enc;
 } __attribute__ ((packed));
 

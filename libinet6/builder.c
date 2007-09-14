@@ -2004,19 +2004,19 @@ int hip_build_param_via_rvs(struct hip_common *msg,
  * @param address_count  number of address port combinations in @c rvs_addr_ports.
  * @return               zero on success, or negative error value on error.
  */
-int hip_build_param_relay_to(struct hip_common *msg,
-				const struct hip_in6_addr_port rvs_addr_ports[],
-				const int address_count)
+int hip_build_param_relay_to_old(struct hip_common *msg,
+				 const struct hip_in6_addr_port rvs_addr_ports[],
+				 const int address_count)
 {
 	HIP_DEBUG("hip_build_param_rvs_nat() invoked.\n");
 	HIP_DEBUG("sizeof(struct hip_in6_addr_port): %u.\n", sizeof(struct hip_in6_addr_port));
 	int err = 0;
-	struct hip_relay_to relay_to;
+	struct hip_relay_to_old relay_to;
 	
 	hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-	hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
+	hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to_old),
 				   address_count * sizeof(struct hip_in6_addr_port));
-	err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
+	err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to_old),
 				      (void *)rvs_addr_ports);
 	return err;
 }

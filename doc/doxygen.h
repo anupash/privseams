@@ -357,7 +357,7 @@
  * @def HIP_PARAM_RELAY_TO
  *      HIP relay related parameter.
  * @note Former VIA_RVS_NAT
- * @def HIP_PARAM_FROM_
+ * @def HIP_PARAM_FROM_PEER
  * @def HIP_PARAM_TO_PEER
  * @def HIP_PARAM_REG_FROM
  * @def HIP_PARAM_FROM

@@ -116,8 +116,8 @@ int hip_build_param(struct hip_common *, const void *);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
-int hip_build_param_relay_to(struct hip_common *,
-                                const struct hip_in6_addr_port[], const int);
+int hip_build_param_relay_to_old(struct hip_common *,
+				 const struct hip_in6_addr_port[], const int);
 int hip_build_param_via_rvs(struct hip_common *, const struct in6_addr[],
                             const int);
 /** @} */

@@ -485,7 +485,7 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 		/** @todo Parameters must be in ascending order, should this
 		    be checked here? */
 		if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-			hip_build_param_relay_to(
+			hip_build_param_relay_to_old(
 				r1pkt,
 				(struct hip_in6_addr_port *)traversed_rvs, 1);
 		}
