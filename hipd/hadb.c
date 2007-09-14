@@ -1601,7 +1601,7 @@ int hip_update_send_echo(hip_ha_t *entry,
                 n = list_entry(item);
                 if (IN6_IS_ADDR_V4MAPPED(&n->addr) != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
                     HIP_IFEL(entry->hadb_xmit_func->
-                             hip_send_pkt(&n->addr, &addr->address,
+                             hip_send_pkt(hip_cast_sa_addr(&n->addr), (struct in6_addr*)&addr->address,
                                           HIP_NAT_UDP_PORT, entry->peer_udp_port,
                                           update_packet, entry, 1),
                              -ECOMM, "Sending UPDATE packet with echo data failed.\n"); 
@@ -1778,7 +1778,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
-
+ 
 			// @todo: check! If not acctually a problem (during Handover). Andrey.
 			if( err==-ECOMM ) err = 0;
 		}
