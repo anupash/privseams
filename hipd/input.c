@@ -1387,16 +1387,13 @@ int hip_receive_r1(struct hip_common *r1,
 		/* E1. The normal case. Process, send I2, goto E2. */
 		err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
 		HIP_LOCK_HA(entry);
-		if (err < 0)
+		if (err)
 			HIP_ERROR("Handling of R1 failed\n");
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	  hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1408,6 +1405,7 @@ int hip_receive_r1(struct hip_common *r1,
 	}
 
 	hip_put_ha(entry);
+
  out_err:
 	return err;
 }

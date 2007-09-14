@@ -41,8 +41,7 @@ int hip_oppdb_entry_clean_up(hip_opp_block_t *opp_entry)
 
 	HIP_ASSERT(opp_entry);
 	err = hip_del_peer_info(&opp_entry->peer_phit,
-				&opp_entry->our_real_hit,
-				&opp_entry->peer_ip);
+				&opp_entry->our_real_hit);
 	HIP_DEBUG("Del peer info returned %d\n", err);
 	hip_oppdb_del_entry_by_entry(opp_entry);
 	return err;
@@ -306,7 +305,6 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       hip_ha_t *opp_entry,
 		       hip_portpair_t *msg_info)
 {
-	hip_opp_block_t *block_entry = NULL;
 	hip_opp_hit_pair_t hit_pair;
 	hip_ha_t *entry_tmp = NULL, *entry;
 	hip_hit_t phit;
@@ -353,6 +351,8 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	ipv6_addr_copy(&hit_pair.pseudo_hit, &phit);
 	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
 
+	
+
 	// we should still get entry after delete old phit HA
 	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	HIP_ASSERT(entry_tmp);
@@ -364,53 +364,11 @@ int hip_receive_opp_r1(struct hip_common *msg,
 							    src_addr,
 							    dst_addr,
 							    entry,
-							    msg_info))
+							    msg_info));
+	hip_del_peer_info_entry(entry_tmp);
+
  out_err:
-	if (block_entry && err) {
-		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
-		hip_oppdb_entry_clean_up(block_entry);
-	}
-	return err;
-}
 
-
-/**
- * Receive opportunistic R1 when entry is in established mode already.
- * This is because we need to send right HIT to client app and not
- * empty packet. If this is not done, client app will fallback to normal
- * tcp connection without HIP after one connection to host has already
- * been made earlier.
- */
-int hip_receive_opp_r1_in_established(struct hip_common *msg,
-		       struct in6_addr *src_addr,
-		       struct in6_addr *dst_addr,
-		       hip_ha_t *opp_entry,
-		       hip_portpair_t *msg_info)
-{
-	hip_opp_block_t *block_entry = NULL;
-	hip_opp_hit_pair_t hit_pair;
-	hip_hit_t phit;
-	int err = 0;
-
-	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
-	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
-	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
-	HIP_DEBUG_HIT("!!!! local addr=", dst_addr);
-
-	HIP_IFEL(hip_opportunistic_ipv6_to_hit(src_addr, &phit,
-					       HIP_HIT_TYPE_HASH100), -1,
-		 "pseudo hit conversion failed\n");
-
-	ipv6_addr_copy(&hit_pair.real_hit, &msg->hits);
-	ipv6_addr_copy(&hit_pair.pseudo_hit, &phit);
-	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
- 
-
-out_err:
-	if (block_entry && err) {
-		HIP_DEBUG("Error %d occurred, cleaning up\n", err);
-		hip_oppdb_entry_clean_up(block_entry);
-	}
 	return err;
 }
 
@@ -421,7 +379,7 @@ out_err:
 int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	int n = 0, err = 0, alen = 0;
-	struct in6_addr phit, dst_ip, hit_our, id;
+	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
@@ -487,8 +445,12 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		 -1, "Opp HIT conversion failed\n");
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
 	HIP_DEBUG_HIT("phit", &phit);
+
+	HIP_IFEL(hip_select_source_address(&our_addr,
+					   &dst_ip), -1,
+		 "Cannot find source address\n");
 	
-	err = hip_hadb_add_peer_info(&phit, &dst_ip);
+	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n")
 

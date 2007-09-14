@@ -180,7 +180,7 @@ int hip_add_peer_map(const struct hip_common *input);
 
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
-int hip_del_peer_info(hip_hit_t *, hip_hit_t *, struct in6_addr *);
+int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 

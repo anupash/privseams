@@ -497,6 +497,7 @@ int hip_add_peer_map(const struct hip_common *input)
 
 }
 
+#if 0
 int hip_hadb_del_peer_info_wrapper(hip_ha_t *entry, void *peer_hit)
 {
 	hip_hit_t *hit = peer_hit;
@@ -504,7 +505,9 @@ int hip_hadb_del_peer_info_wrapper(hip_ha_t *entry, void *peer_hit)
 
 	if (memcmp(hit, &entry->hit_peer, sizeof(hip_hit_t)) == 0)
 	{
-		hip_hadb_delete_state(entry);
+		//hip_hadb_delete_state(entry);
+		hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
+				  &entry->preferred_address);		
 	}
 
  out_err:
@@ -521,6 +524,8 @@ int hip_hadb_del_peer_map(hip_hit_t *hit)
  out_err:
 	return err;
 }
+#endif
+
 
 #if 0
 /**
@@ -866,11 +871,28 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 	return;
 }
 
+int hip_del_peer_info_entry(hip_ha_t *ha)
+{
+	hip_hadb_remove_state_hit(ha);
+	/* by now, if everything is according to plans, the refcnt
+	   should be 1 */
+	HIP_DEBUG_HIT("our HIT", &ha->hit_our);
+	HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
+	hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
+			       IPPROTO_ESP, 1);
+	/* Not going to "put" the entry because it has been removed
+	   from the hashtable already (hip_exit won't find it
+	   anymore). */
+	//hip_hadb_delete_state(ha);
+	hip_hadb_delete_state(ha);
+	//hip_db_put_ha(ha, hip_hadb_delete_state);
+	/* and now zero --> deleted*/
+}
+
 /**
  * Currently deletes the whole entry...
  */		
-int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
-		      struct in6_addr *addr)
+int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 {
 	hip_ha_t *ha;
 
@@ -880,29 +902,8 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit,
 	}
 
 
-	if (!ipv6_addr_any(addr)) {
-	  	hip_hadb_delete_inbound_spi(ha, 0);
-		hip_hadb_delete_outbound_spi(ha, 0);
-		hip_hadb_remove_state_hit(ha);
-		/* by now, if everything is according to plans, the refcnt
-		   should be 1 */
-		HIP_DEBUG_HIT("our HIT", &ha->hit_our);
-		HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-		hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our,
-				       IPPROTO_ESP, 1);
-		/* Not going to "put" the entry because it has been removed
-		   from the hashtable already (hip_exit won't find it
-		   anymore). */
-		hip_hadb_delete_state(ha);
-		hip_db_put_ha(ha, hip_hadb_delete_state);
-		/* and now zero --> deleted*/
-	} else {
-		hip_hadb_delete_peer_addrlist_one(ha, addr);
-		hip_db_put_ha(ha, hip_hadb_delete_state);
-	}
+	return hip_del_peer_info_entry(ha);
 
-
-	return 0;
 }
 
 /* assume already locked entry */
@@ -2554,8 +2555,10 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 
 	/* Delete SAs */
 	
-	hip_hadb_delete_inbound_spi(ha, 0);
-	hip_hadb_delete_outbound_spi(ha, 0);
+	if (ha->spis_in)
+		hip_hadb_delete_inbound_spi(ha, 0);
+	if (ha->spis_out)
+		hip_hadb_delete_outbound_spi(ha, 0);
 	
 
 	if (ha->dh_shared_key)
