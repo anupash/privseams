@@ -306,16 +306,18 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       hip_portpair_t *msg_info)
 {
 	hip_opp_hit_pair_t hit_pair;
-	hip_ha_t *entry_tmp = NULL, *entry;
+	hip_ha_t *entry;
 	hip_hit_t phit;
 	int n = 0, err = 0;
 	
-	entry_tmp = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
-	if (!entry_tmp){
+#if 0
+	opp_entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
+	if (!opp_entry){
 		HIP_ERROR("Cannot find HA entry after receive r1\n");
 		err = -1;
 		goto out_err;
 	}
+#endif
 
 	// add new HA with real hit
 	//err = hip_hadb_add_peer_info(&msg->hits, src_addr);
@@ -352,11 +354,6 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
 
 	
-
-	// we should still get entry after delete old phit HA
-	entry_tmp = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-	HIP_ASSERT(entry_tmp);
-
 	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
 	entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	HIP_IFCS(entry,
@@ -365,7 +362,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 							    dst_addr,
 							    entry,
 							    msg_info));
-	hip_del_peer_info_entry(entry_tmp);
+	hip_del_peer_info_entry(opp_entry);
 
  out_err:
 
