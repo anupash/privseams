@@ -2211,7 +2211,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	/* if we have deleted the old address and it was preferred than 
 	   we chould make new preferred address. Now, we chose it as random address in list 
 	*/
-	if( !is_add && (&entry->local_address, comp_addr, sizeof(struct in6_addr)) == 0 ) {
+	if( !is_add && ipv6_addr_cmp(&entry->local_address, comp_addr) == 0 ) {
 		choose_random = 1;
 	}
 
