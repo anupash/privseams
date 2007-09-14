@@ -24,7 +24,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
-	struct in6_addr my_src,my_dst;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type, n = 0, len = 0, state=0;
 	hip_ha_t * server_entry = NULL;
@@ -370,7 +369,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_DEFAULT_HIT:
 		hip_msg_init(msg);
-		err =  hip_select_default_hit(&my_src, &my_dst,msg);
+		err =  hip_get_default_hit_msg(msg);
 		break;
 	case SO_HIP_HANDOFF_ACTIVE:
 		//hip_msg_init(msg);

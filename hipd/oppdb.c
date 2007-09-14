@@ -287,8 +287,8 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 		if(!hit_is_opportunistic_null(&msg->hitr)){
 			goto out_err;
 		}
-
-		hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
+		hip_get_default_hit(&msg->hitr);
+		//hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
 	} else if (type == HIP_R1) {
 		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
 	} else {
