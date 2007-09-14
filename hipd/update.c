@@ -376,7 +376,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	uint32_t spi = 0, i, err = 0;
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
-	struct hip_peer_addr_list_item *a, *tmp;
+	struct hip_peer_addr_list_item *a, *tmp, *addr;
 	int zero = 0, n_addrs = 0, ii = 0;
         int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
         struct netdev_address *n;
@@ -426,9 +426,12 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                         /* Replace the peer preferred address to match the family */
                         locator_address_item = hip_get_locator_first_addr_item(locator);
                         /* First should be OK, no opposite family in LOCATOR */
-                        memcpy(&entry->preferred_address,  
-                               &locator_address_item->address, 
+                        memcpy(&entry->preferred_address, &locator_address_item->address, 
                                sizeof(struct in6_addr));
+                        memcpy(&addr->address, &locator_address_item->address,
+                               sizeof(struct in6_addr));
+                        HIP_IFEL(hip_update_peer_preferred_address(entry, addr),-1,
+                                 "Setting peer preferred address failed\n");
                         goto out_of_loop;
                     }
                 }
