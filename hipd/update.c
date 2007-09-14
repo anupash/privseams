@@ -420,8 +420,13 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                     n = list_entry(item);
                     tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))?AF_INET:AF_INET6;
                     if (tmp_af == comp_af) {
+                        /* Replace the local address to match the family */
                         memcpy(&entry->local_address, 
-                               hip_cast_sa_addr(&n->addr), 
+                               hip_cast_sa_addr(&n->addr), sizeof(struct in6_addr));
+                        /* Replace the peer preferred address to match the family */
+                        i = 0; /* First should be OK, no opposite family in LOCATOR */
+                        memcpy(&entry->preferred_address, 
+                               hip_cast_sa_addr(&locator_address_item[i].address), 
                                sizeof(struct in6_addr));
                         goto out_of_loop;
                     }
