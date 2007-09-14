@@ -1773,23 +1773,13 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			hip_init_us(entry, &i2->hitr);
 		}
 
-#if 0
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
-		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
-			 "if_index NOT determined\n");
-
-		memset(addr, 0, sizeof(struct sockaddr_storage));
-		addr->sa_family = AF_INET6;
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index);
-                /* if_index = addr2ifindx(entry->local_address); */
-#endif
-
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 
 		_HIP_DEBUG("HA entry created.");
 	}
+
+	ipv6_addr_copy(&entry->local_address, i2_daddr);
 
 	/* If the incoming I2 packet has 50500 as destination port, NAT
 	   mode is set on for the host association, I2 source port is
