@@ -46,15 +46,21 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 
 struct hip_opp_blocking_request_entry
 {
-  hip_hit_t             our_real_hit;
-  hip_hit_t             peer_real_hit;
-  spinlock_t           	lock;
-  atomic_t             	refcnt;
+	hip_hit_t             peer_phit;
+	struct sockaddr_in6   caller;
+	hip_hit_t             our_real_hit;
+	//hip_hit_t             peer_real_hit;
+	//spinlock_t           	lock;
+	//atomic_t             	refcnt;
+	
+	time_t                creation_time;
+	struct in6_addr       peer_ip;
+	struct in6_addr       our_ip;
+};
 
-  time_t                creation_time;
-  struct in6_addr       peer_ip;
-  struct in6_addr       our_ip;
-  struct sockaddr_in6    caller;
+struct hip_opp_hit_pair {
+	hip_hit_t real_hit;
+	hip_hit_t pseudo_hit;
 };
 
 inline static int ipv6_addr_is_null(struct in6_addr *ip){

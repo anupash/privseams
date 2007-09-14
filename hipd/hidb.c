@@ -751,14 +751,13 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 		/*HIP_DEBUG_HIT("ALL HITS", &tmp->lhi.hit);*/
 
 		err = func(tmp, opaque);
-		if (err) break;
+		if (err)
+		  goto out_err;
 	}
 
+out_err:
 	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 
-	return (err);
-
-out_err:
 	return (err);
 }
 

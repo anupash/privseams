@@ -32,7 +32,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	int send_response = (src ? 1 : 0);
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src->sin6_family, &src->sin6_port);
+		  src->sin6_family, src->sin6_port);
 
 	err = hip_check_userspace_msg(msg);
 	if (err)
@@ -126,7 +126,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_GET_PEER_HIT:
 		err = hip_opp_get_peer_hit(msg, src);
 		if(err){
-			HIP_ERROR("get pseudo hit failed.\n");
+			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
 			if (err == -11) /* immediate fallback, do not pass */
 			 	err = 0;

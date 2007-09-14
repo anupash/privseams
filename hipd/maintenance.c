@@ -46,8 +46,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
 		if ((entry->hip_msg_retrans.count > 0) &&
-		    (entry->state != HIP_STATE_ESTABLISHED || entry->update_state != 0) &&
-		    (entry->retrans_state == entry->state || entry->retrans_state == entry->update_state)) {
+		    (entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
+		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
 			
@@ -75,14 +75,15 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
+
+			if (entry->state == HIP_STATE_ESTABLISHED)
+				entry->retrans_state = entry->update_state;
+			else
+				entry->retrans_state = entry->state;
 		}
 	}
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
-		entry->retrans_state = entry->update_state;
-	else
-		entry->retrans_state = entry->state;
 	
 	return err;
 }

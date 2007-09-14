@@ -245,6 +245,11 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 					 0,
 					 lifetime, is_preferred), -1);
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_ipdb_delentry(&(entry->preferred_address));
+#endif
+
  out_err:
 	return err;
 }

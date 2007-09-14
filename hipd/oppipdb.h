@@ -15,6 +15,7 @@
 int hip_ipdb_clear(void);
 int hip_ipdb_check(struct in6_addr *);
 void hip_ipdb_add(struct in6_addr *);
+void hip_ipdb_delentry(struct in6_addr *);
 
 
 #endif /* HIP_OPPIPDB_H */

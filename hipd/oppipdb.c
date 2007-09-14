@@ -42,7 +42,7 @@ int hip_ipdb_check(struct in6_addr *addr)
 	
 	for (i = 0; i < HIP_OPP_IP_DB_SIZE; i++)
 	{
-		if (memcmp(&oppipdb[i], addr, sizeof(*addr)) == 0)
+	        if (memcmp(&oppipdb[i], addr, sizeof(*addr)) == 0)
 		{
 			HIP_HEXDUMP("IP found from ip database, remote host not HIP capable: ",
 			            addr, sizeof(*addr));
@@ -68,9 +68,33 @@ void hip_ipdb_add(struct in6_addr *addr)
 	            addr, sizeof(*addr));
 	oppipdb_oldest++;
 	if (oppipdb_oldest >= HIP_OPP_IP_DB_SIZE) oppipdb_oldest = 0;
-
 	
 
 }
+
+/**
+ * hip_ipdb_delentry: This function should be called after a successful base 
+ * exchange in the opportunistic mode. It checks whether an address of a HIP 
+ * capable host is found from database. If the address is found, it is deleted 
+ * from the database; since the host is actually HIP capable.
+ *
+ * @param addr Address to check.
+ */
+void hip_ipdb_delentry(struct in6_addr *addr)
+{
+	int i;
+	
+	for (i = 0; i < HIP_OPP_IP_DB_SIZE; i++)
+	{
+	        if (memcmp(&oppipdb[i], addr, sizeof(*addr)) == 0)
+		{
+			HIP_HEXDUMP("HIP capable host found in non-HIP hosts database, deleting it from the database: ",
+			            addr, sizeof(*addr));
+			memset(&oppipdb[i], 0, sizeof(struct in6_addr));
+		}
+	}
+	
+}
+
 
 
