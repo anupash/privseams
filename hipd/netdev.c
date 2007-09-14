@@ -454,6 +454,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
+	if (!ipv6_addr_is_hit(dst_hit)) {
+		HIP_DEBUG("Received rubbish from netlink, skip\n");
+		goto out_err;
+	}
+
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (entry) {
 		reuse_hadb_local_address = 1;
