@@ -1874,17 +1874,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 					PEER_ADDR_STATE_ACTIVE), -1,
 		 "Error while adding the preferred peer address\n");
 
-        /***** LOCATOR PARAMETER ******/
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator && esp_info)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("I2 did not have locator or esp_info\n");
-
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
@@ -2040,6 +2029,17 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	HIP_DEBUG("state is %d\n", entry->state);
 	
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator && esp_info)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                         locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+            }
+        else
+            HIP_DEBUG("I2 did not have locator or esp_info\n");
+
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
 #ifdef CONFIG_HIP_RVS
