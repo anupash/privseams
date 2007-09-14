@@ -456,7 +456,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
-		   hip_hidb_hit_is_our(dst_hit) &&
+		   hip_hidb_hit_is_our(src_hit) &&
 		   hit_is_real_hit(dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
 
