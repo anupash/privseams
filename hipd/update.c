@@ -424,9 +424,10 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                         memcpy(&entry->local_address, 
                                hip_cast_sa_addr(&n->addr), sizeof(struct in6_addr));
                         /* Replace the peer preferred address to match the family */
-                        i = 0; /* First should be OK, no opposite family in LOCATOR */
-                        memcpy(&entry->preferred_address, 
-                               hip_cast_sa_addr(&locator_address_item[i].address), 
+                        locator_address_item = hip_get_locator_first_addr_item(locator);
+                        /* First should be OK, no opposite family in LOCATOR */
+                        memcpy(&entry->preferred_address,  
+                               &locator_address_item->address, 
                                sizeof(struct in6_addr));
                         goto out_of_loop;
                     }
