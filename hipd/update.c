@@ -410,6 +410,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                 /* check if af same as in entry->local_af */
                 comp_af = IN6_IS_ADDR_V4MAPPED(&locator_address_item[i].address) ? AF_INET : AF_INET6;
                 if (comp_af == local_af) {
+                    HIP_DEBUG("LOCATOR contained same family members as local_address\n");
                     same_af = 1;
                     break;
                 }
@@ -420,6 +421,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                     n = list_entry(item);
                     tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))?AF_INET:AF_INET6;
                     if (tmp_af == comp_af) {
+                        HIP_DEBUG("LOCATOR did not contain same family members\n"
+                                  "as local_address, changing local_address and "
+                                  "preferred_address\n");
                         /* Replace the local address to match the family */
                         memcpy(&entry->local_address, 
                                hip_cast_sa_addr(&n->addr), sizeof(struct in6_addr));

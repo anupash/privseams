@@ -1588,7 +1588,8 @@ int hip_update_send_echo(hip_ha_t *entry,
 		 -1, "Building Echo Packet failed\n");
 
         /* Have to take care of UPDATE echos to opposite family */
-        if (IN6_IS_ADDR_V4MAPPED(&addr->address) == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+        if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&addr->address)
+            == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
             HIP_IFEL(entry->hadb_xmit_func->
                      hip_send_pkt(&entry->local_address, &addr->address,
                                   HIP_NAT_UDP_PORT, entry->peer_udp_port,
@@ -1599,9 +1600,11 @@ int hip_update_send_echo(hip_ha_t *entry,
             /* check if we have one, otherwise let fail */
             list_for_each_safe(item, tmp, addresses, i) {
                 n = list_entry(item);
-                if (IN6_IS_ADDR_V4MAPPED(&n->addr) != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
+                    != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
                     HIP_IFEL(entry->hadb_xmit_func->
-                             hip_send_pkt(hip_cast_sa_addr(&n->addr), (struct in6_addr*)&addr->address,
+                             hip_send_pkt(hip_cast_sa_addr(&n->addr), 
+                                          (struct in6_addr*)&addr->address,
                                           HIP_NAT_UDP_PORT, entry->peer_udp_port,
                                           update_packet, entry, 1),
                              -ECOMM, "Sending UPDATE packet with echo data failed.\n"); 
