@@ -14,6 +14,15 @@
 
 #include "hiprelay.h"
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
+
 /** The hashtable storing the relay records. */
 static LHASH *hiprelay_ht = NULL;
 

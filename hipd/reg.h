@@ -12,7 +12,7 @@
 #include "misc.h"
 #include "hashtable.h"
 #include "escrow.h"
-//#include "hiprelay.h"
+#include "hiprelay.h"
 
 #define HIP_SERVICE_MAX_COUNT 2
 

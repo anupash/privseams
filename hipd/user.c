@@ -311,49 +311,49 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 #ifdef CONFIG_HIP_RVS
 		
 	case SO_HIP_ADD_RENDEZVOUS:
-		/* draft-ietf-hip-registration-02 RVS registration. Responder
-		   (of I,RVS,R hierarchy) handles this message. Message
-		   indicates that the current machine wants to register to a rvs
-		   server. This message is received from hipconf. */
-		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+	     /* draft-ietf-hip-registration-02 RVS registration. Responder
+		(of I,RVS,R hierarchy) handles this message. Message
+		indicates that the current machine wants to register to a rvs
+		server. This message is received from hipconf. */
+	     HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
-		/* Get rvs ip and hit given as commandline parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(
-				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-		/* Add HIT to IP mapping of rvs to hadb. */ 
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
+	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
+	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
+			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
+			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+	     /* Add HIT to IP mapping of rvs to hadb. */ 
+	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+	     /* Fetch the hadb entry just created. */
+	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+		      -1, "internal error: no hadb entry found\n");
 		
-		/* Set a rvs request flag. */
-		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
-			 -1, "setting of rvs request flag failed\n");
+	     /* Set a rvs request flag. */
+	     HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
+		      -1, "setting of rvs request flag failed\n");
 
-		/* Send a I1 packet to rvs. */
-		/** @todo Not filtering I1, when handling rvs message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-		break;
+	     /* Send a I1 packet to rvs. */
+	     /** @todo Not filtering I1, when handling rvs message! */
+	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		      -1, "sending i1 failed\n");
+	     break;
 	
 	case SO_HIP_OFFER_RENDEZVOUS:
-		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
-		   server handles this message. Message indicates that the
-		   current machine is willing to offer rendezvous service. This
-		   message is received from hipconf. */
-		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
+	     /* draft-ietf-hip-registration-02 RVS registration. Rendezvous
+		server handles this message. Message indicates that the
+		current machine is willing to offer rendezvous service. This
+		message is received from hipconf. */
+	     HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
-		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
+	     hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
-		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
-			HIP_DEBUG("Rendezvous service is now active.\n");
-		}
+	     if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
+		  HIP_DEBUG("Rendezvous service is now active.\n");
+	     }
 		
-		err = hip_recreate_all_precreated_r1_packets();
-		break;
+	     err = hip_recreate_all_precreated_r1_packets();
+	     break;
 	
 #endif
 //#ifdef CONFIG_HIP_UDPRELAY
@@ -364,16 +364,44 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		message is received from hipconf. */
 	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
-		hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
+	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
 		
-		if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
-			HIP_DEBUG("UDP relay service for HIP packets"\
-				  "is now active.\n");
-		}
+	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
+		  HIP_DEBUG("UDP relay service for HIP packets"\
+			    "is now active.\n");
+	     }
 		
-		err = hip_recreate_all_precreated_r1_packets();
-		break;
+	     err = hip_recreate_all_precreated_r1_packets();
+	     break;
+		
+	case SO_HIP_ADD_RELAY_UDP_HIP:
+	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
+		Responder (of I,RVS,R hierarchy) handles this message. Message
+		indicates that the current machine wants to register to a rvs
+		server. This message is received from hipconf. */
+	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
+		
+	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
+	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
+			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
+			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+	     /* Add HIT to IP mapping of relay to hadb. */ 
+	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+	     /* Fetch the hadb entry just created. */
+	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+		      -1, "internal error: no hadb entry found\n");
+		
+	     HIP_DEBUG("Lauri: DO THE HIPUDPRELAY related stuff now.\n");
+	     /* Set a flag to the ha to indicate that we have requested
+		HIPUDPRELAY service. Needed once the R1 packet arrives. */
+
+	     /* Send a I1 packet to relay. */
+	     /** @todo Not filtering I1, when handling rvs message! */
+	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		      -1, "sending i1 failed\n");
+	     break;
 //#endif
 
 	case SO_HIP_GET_HITS:

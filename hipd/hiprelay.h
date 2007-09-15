@@ -193,13 +193,4 @@ void hip_relrec_set_lifetime(hip_relrec_t *rec, time_t secs);
  */
 void hip_relrec_info(hip_relrec_t *rec);
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
-
 #endif /* HIP_HIPRELAY_H */
