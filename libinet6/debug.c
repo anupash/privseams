@@ -610,11 +610,12 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
  * only INET and INET6 addresses. 
  */
 void hip_print_sockaddr(const char *file, int line, const char *function,
-			const char *prefix, sa_family_t family,
+			const char *prefix,
 			const struct sockaddr *sockaddr) {
       char *default_str = "<unknown>";
       int maxlen;
       void *addr;
+      int family = sockaddr->sa_family;
       char addr_str[INET6_ADDRSTRLEN+1];
       
       switch (family) {

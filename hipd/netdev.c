@@ -454,6 +454,12 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
+	/* Sometimes we get deformed HITs from kernel, skip them */
+	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
+		   !hip_hidb_hit_is_our(src_hit) &&
+		   hit_is_real_hit(dst_hit)), -1,
+		 "Received rubbish from netlink, skip\n");
+
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (entry) {
 		reuse_hadb_local_address = 1;
@@ -873,22 +879,36 @@ out_err:
 	return err;
 }
 
-int hip_select_default_hit(struct in6_addr *src, struct in6_addr *dst, struct hip_common *msg)
+int hip_get_default_hit(struct in6_addr *hit)
 {
 	int err = 0;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
 	char *rtnl_rtdsfield_tab[256] = { "0",};
 	struct idxmap *idxmap[16] = { 0 };
+	hip_hit_t hit_tmpl;
 	
 	/* rtnl_rtdsfield_initialize() */
         rtnl_rtdsfield_init = 1;
 
         rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
-	set_hit_prefix(dst);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL,family, idxmap), -1,"Finding ip route failed\n");
-	HIP_DEBUG_IN6ADDR("src", src);
-	hip_build_param_contents(msg,src,0,sizeof(struct in6_addr));
+	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
+	set_hit_prefix(&hit_tmpl);
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
+		 -1,"Finding ip route failed\n");
+	
+ out_err:
+
+	return err;
+}
+
+int hip_get_default_hit_msg(struct hip_common *msg)
+{
+	int err = 0;
+	hip_hit_t hit;
+	
+	hip_get_default_hit(&hit);
+	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
 	
  out_err:
 
