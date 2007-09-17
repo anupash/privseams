@@ -61,7 +61,8 @@ int hip_services_add(int service_type)
 		
      service->state = HIP_SERVICE_INACTIVE;
 	
-     if (service_type == HIP_SERVICE_ESCROW) {
+     if (service_type == HIP_SERVICE_ESCROW)
+     {
 	  service->service_type = HIP_SERVICE_ESCROW;
 	  HIP_INFO("Adding escrow service.\n");
 	  strncpy(service->name, "ESCROW_SERVICE", 20);
@@ -69,20 +70,23 @@ int hip_services_add(int service_type)
 	  service->cancel_registration = hip_cancel_escrow_registration;
 	  service->cancel_service = hip_cancel_escrow_service;
 		
-     } else if (service_type == HIP_SERVICE_RENDEZVOUS) {
+     } else if (service_type == HIP_SERVICE_RENDEZVOUS)
+     {
 	  service->service_type = HIP_SERVICE_RENDEZVOUS;
 	  HIP_INFO("Adding rendezvous service.\n");
 	  strncpy(service->name, "RENDEZVOUS", 20); 
 	  service->handle_registration = hip_handle_registration;
 	  service->cancel_registration = hip_cancel_registration;
 	  service->cancel_service = hip_cancel_service;
-     } else if (service_type == HIP_SERVICE_RELAY_UDP_HIP) {
+     } else if (service_type == HIP_SERVICE_RELAY_UDP_HIP)
+     {
 	  service->service_type = HIP_SERVICE_RELAY_UDP_HIP;
 	  HIP_INFO("Adding UDP relay service for HIP packets.\n");
 	  strncpy(service->name, "RELAYUDPHIP_SERVICE", 20); 
 	  service->handle_registration = hip_handle_registration;
 	  service->cancel_registration = hip_cancel_registration;
 	  service->cancel_service = hip_cancel_service;
+	  
 	  if(hip_relht_init() == NULL)
 	  {
 	       err = -1;
@@ -441,8 +445,8 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op)
      /* Check that we have requested rvs service and that the 
 	peer is rvs capable. */
      // TODO: support for cancelling rvs registration
-     if (op && (entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS) &&
-	 (entry->peer_controls & HIP_CONTROL_RVS_CAPABLE)){
+     if (op && (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) &&
+	 (entry->peer_controls & HIP_HA_CTRL_LOCAL_RVS_CAPABLE)){
 	  HIP_DEBUG_HIT("HIT being registered to rvs", &(entry->hit_our));
 	  request_rvs = 1;
 	  type_count++;

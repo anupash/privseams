@@ -604,7 +604,7 @@ int hip_rvs_set_request_flag(hip_hit_t *src_hit,
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
 		 -1, "Could not set RVS request bit\n");
 
-	entry->local_controls |= HIP_PSEUDO_CONTROL_REQ_RVS;
+	entry->local_controls |= HIP_HA_CTRL_LOCAL_REQ_RVS;
 	hip_put_ha(entry);
 
  out_err:

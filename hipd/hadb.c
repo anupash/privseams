@@ -2213,13 +2213,75 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
 				     hip_update_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+     /** @todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_update_func = new_func_set;
 		return 0;
 	}
 	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
 	return -1;
+}
+
+/* NOTE! When modifying this function, remember that some control values may
+   not be allowed to co-exist. Therefore the logical OR might not be enough
+   for all controls. */
+void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  switch(mask)
+	  {
+	  case HIP_HA_CTRL_NONE:
+	       entry->local_controls &= mask;
+	  case HIP_HA_CTRL_LOCAL_HIT_ANON:
+	  case HIP_HA_CTRL_LOCAL_BLIND:
+	  case HIP_HA_CTRL_LOCAL_RVS_CAPABLE:
+	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
+	       entry->local_controls |= mask;
+	       break;
+	  default:
+	       HIP_ERROR("Unknown local controls given.\n");
+	  }
+     }
+}
+
+/* NOTE! When modifying this function, remember that some control values may
+   not be allowed to co-exist. Therefore the logical OR might not be enough
+   for all controls. */
+void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  switch(mask)
+	  {
+	  case HIP_HA_CTRL_NONE:
+	       entry->peer_controls &= mask;
+	  case HIP_HA_CTRL_PEER_HIT_ANON:
+	  case HIP_HA_CTRL_PEER_BLIND:
+	  case HIP_HA_CTRL_PEER_INFOED_RVS:
+	  case HIP_HA_CTRL_PEER_ACKED_RVS:
+	       entry->peer_controls |= mask;
+	       break;
+	  default:
+	       HIP_ERROR("Unknown peer controls given.\n");
+	  }
+     }
+}
+
+void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  entry->local_controls &= (~mask);
+     }
+}
+
+void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  entry->peer_controls &= (~mask);
+     }
 }
 
 void hip_uninit_hadb()

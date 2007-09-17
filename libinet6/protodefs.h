@@ -230,13 +230,23 @@
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
-#define HIP_PSEUDO_CONTROL_REQ_RVS  0x8000
-//#define HIP_CONTROL_ESP_64          0x1000   /* Use 64-bit sequence number */
-#define HIP_CONTROL_RVS_CAPABLE     0x8000    /* not yet defined */
-#define HIP_CONTROL_CONCEAL_IP               /* still undefined */
-#define HIP_CONTROL_HIT_ANON        0x0001   /* Anonymous HI */
-#define HIP_CONTROL_NONE            0x0000
-#define HIP_CONTROL_BLIND	    0x0004   /*3rd bit from the right tells if the blind is in use*/
+/**
+ * @addtogroup hip_ha_controls
+ * @{
+ */
+/* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
+#define HIP_HA_CTRL_NONE              0x0000
+
+#define HIP_HA_CTRL_LOCAL_HIT_ANON    0x0001 /**< We use anonymous HI */
+#define HIP_HA_CTRL_LOCAL_BLIND	      0x0004 /**< We use BLIND */
+#define HIP_HA_CTRL_LOCAL_RVS_CAPABLE 0x4000
+#define HIP_HA_CTRL_LOCAL_REQ_RVS     0x8000
+
+#define HIP_HA_CTRL_PEER_HIT_ANON     0x0001 /**< Peer uses anonymous HI */
+#define HIP_HA_CTRL_PEER_BLIND	      0x0004 /**< Peer uses BLIND */
+#define HIP_HA_CTRL_PEER_INFOED_RVS   0x4000
+#define HIP_HA_CTRL_PEER_ACKED_RVS    0x8000
+/* @} */
 
 /** @addtogroup hip_services
  * @{ 
@@ -267,6 +277,7 @@ typedef uint16_t hip_tlv_type_t;
 typedef uint16_t hip_tlv_len_t;
 typedef uint16_t hip_transform_suite_t;
 typedef uint16_t hip_eid_iface_type_t;
+typedef uint16_t hip_controls_t;
 typedef uint32_t sa_eid_t;
 typedef struct in6_addr hip_hit_t;
 typedef struct in6_addr in6_addr_t;

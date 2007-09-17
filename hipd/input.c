@@ -512,7 +512,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #ifdef CONFIG_HIP_BLIND
 	HIP_DEBUG("Blind block\n");
 	// Packet that was received is blinded
-	if (ntohs(msg->control) & HIP_CONTROL_BLIND) {
+	if (ntohs(msg->control) & HIP_HA_CTRL_PEER_BLIND) {
 	  HIP_DEBUG("Message is blinded\n");
 	  if(type == HIP_I1) { //Responder receives
 	    HIP_DEBUG("set_blind_on\n");
@@ -540,7 +540,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         }	  
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	if (!(ntohs(msg->control) & HIP_CONTROL_BLIND)) { // Normal packet received
+	if (!(ntohs(msg->control) & HIP_HA_CTRL_PEER_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #endif
@@ -743,7 +743,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_DEBUG("Build blinded I2\n");
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_HA_CTRL_PEER_BLIND;
 	  // Build network header by using blinded HITs
 	  entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
 						       &entry->hit_our_blind,
@@ -1324,16 +1324,16 @@ int hip_receive_r1(struct hip_common *r1,
 		   hip_ha_t *entry,
 		   hip_portpair_t *r1_info)
 {
-	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
+	int state, mask = HIP_HA_CTRL_LOCAL_HIT_ANON, err = 0;
 
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
 	/** @todo: Should RVS capability be stored somehow else? */
-	mask |= HIP_CONTROL_RVS_CAPABLE;
+	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
 #endif
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_HA_CTRL_PEER_BLIND;
 #endif
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
@@ -1441,8 +1441,8 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Set HIP_CONTROL_BLIND for R2\n");
-	  mask |= HIP_CONTROL_BLIND;
+	  HIP_DEBUG("Set HIP_HA_CTRL_PEER_BLIND for R2\n");
+	  mask |= HIP_HA_CTRL_PEER_BLIND;
 	  
 	  // Build network header by using blinded HITs
 	  entry->hadb_misc_func->
@@ -1763,7 +1763,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		/* The rest of the code assume already locked entry, so lock the
 		   newly created entry as well. */
 		HIP_LOCK_HA(entry);
-		if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
+		if (ntohs(i2->control) & HIP_HA_CTRL_PEER_BLIND && hip_blind_get_status()) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
 		}
@@ -2083,7 +2083,7 @@ int hip_receive_i2(struct hip_common *i2,
 		   hip_portpair_t *i2_info)
 {
 	int state = 0, err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	uint16_t mask = HIP_HA_CTRL_LOCAL_HIT_ANON;
 	_HIP_DEBUG("hip_receive_i2() invoked.\n");
 
 	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
@@ -2538,12 +2538,12 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 #ifdef CONFIG_HIP_RVS
  	hip_rva_t *rva;
-	mask |= HIP_CONTROL_RVS_CAPABLE;
+	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
 #endif
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_HA_CTRL_PEER_BLIND;
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
@@ -2753,7 +2753,7 @@ int hip_receive_notify(const struct hip_common *notify,
 {
 	int err = 0;
 	struct hip_notification *notify_param;
-	uint16_t mask = HIP_CONTROL_HIT_ANON, notify_controls = 0;
+	uint16_t mask = HIP_HA_CTRL_LOCAL_HIT_ANON, notify_controls = 0;
 	
 	_HIP_DEBUG("hip_receive_notify() invoked.\n");
 	

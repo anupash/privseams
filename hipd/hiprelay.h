@@ -50,9 +50,14 @@ typedef struct{
  * Relay record modes used to flag a relay record.
  * @enum
  */
-typedef enum{HIP_REL_NONE_TO_NONE, HIP_REL_NONE_TO_UDP, HIP_REL_UDP_TO_NONE,
-		  HIP_REL_UDP_TO_UDP, HIP_REL_TCP_TO_TCP, HIP_REL_OFF,
-		  HIP_REL_ON}hip_relrec_mode_t;
+typedef enum{HIP_REL_NONE_TO_NONE, /**< No encapsulation */
+		  HIP_REL_NONE_TO_UDP, /**< I--(HIP)-->Relay--(UDP)-->R */ 
+		  HIP_REL_UDP_TO_NONE, /**< I--(UDP)-->Relay--(HIP)-->R */ 
+		  HIP_REL_UDP_TO_UDP, /**< I--(UDP)-->Relay--(UDP)-->R */ 
+		  HIP_REL_TCP_TO_TCP, /**< I--(TCP)-->Relay--(TCP)-->R */ 
+		  HIP_REL_OFF, /**< Set relay off. */ 
+		  HIP_REL_ON  /**< Set relay on. */ 
+		  }hip_relrec_mode_t;
 
 /**
  * Initializes the global HIP relay hashtable. Allocates memory for hiprelay_ht.

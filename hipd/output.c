@@ -35,8 +35,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG("\n");
 
 #ifdef CONFIG_HIP_RVS
-	if ((entry->local_controls & HIP_PSEUDO_CONTROL_REQ_RVS)) {
-		mask |= HIP_CONTROL_RVS_CAPABLE;
+	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)) {
+		mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
 	}
 #endif
 	
@@ -197,7 +197,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	
  	/* Ready to begin building of the R1 packet */
 #ifdef CONFIG_HIP_RVS
-	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
+	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE; //XX: FIXME
 #endif
 
 	HIP_DEBUG("mask=0x%x\n", mask);

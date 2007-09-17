@@ -538,4 +538,63 @@
  *         the builder interface.
  */
 
+/**
+ * @defgroup hip_ha_controls HIP host association controls.
+ *
+ * These are bitmasks used in the @c hip_hadb_state stucture fields
+ * @c local_controls and @c peer_controls.
+ *
+ * @local_controls defines the flags of the current host, while peer_controls
+ * define the flags of the peer. The flags are used to indicate the state or
+ * status of the host. A status can be, for example, that we have requested
+ * for a service or that we are capable of offering a service.
+ * 
+ * Bitmask for local controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 We send packets with anonymous HI.
+ * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |+--- 0x0004 We use BLIND
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 - free -
+ * |||| |||| |+-------- 0x0040 - free -
+ * |||| |||| +--------- 0x0080 - free -
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 - free -
+ * |||| +-------------- 0x0800 - free -
+ * |||+---------------- 0x1000 We are capable of offering HIPUDPRELAY service.
+ * ||+----------------- 0x2000 We have requested HIPUDPRELAY service.
+ * |+------------------ 0x4000 We are capable of offering RVS service.
+ * +------------------- 0x8000 We have requested RVS service.
+ * </pre>
+ * Bitmask for peer controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 Peer sends packets with anonymous HI.
+ * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |+--- 0x0004 Peer uses BLIND
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 - free -
+ * |||| |||| |+-------- 0x0040 - free -
+ * |||| |||| +--------- 0x0080 - free -
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 - free -
+ * |||| +-------------- 0x0800 - free -
+ * |||+---------------- 0x1000 Peer has acknowledged our HIPUDPRELAY capability.
+ * ||+----------------- 0x2000 Peer has been informed that we offer HIPUDPRELAY service.
+ * |+------------------ 0x4000 Peer has acknowledged our RVS capability
+ * +------------------- 0x8000 Peer has been informed that we offer RVS service
+ * </pre>
+ *
+ * @note There has been some confusion about which bit does what, and which of
+ * the control fields to alter. To avoid this confusion, please do not alter
+ * the @c local_controls and @c peer_controls fields directly. Instead use
+ * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
+ * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ */
+
 #endif /* _DOXYGEN_H */

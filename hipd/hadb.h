@@ -271,6 +271,41 @@ int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
 
+/**
+ * Switches on a local control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask.
+ */
+void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
+/**
+ * Switches on a peer control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask.
+ */
+void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
+
+/**
+ * Switches off a local control bit for a host assosiation entry.
+ *
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask can be a logical AND or OR mask.
+ */
+void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
+
+/**
+ * Switches off a peer control bit for a host assosiation entry.
+ *
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask can be a logical AND or OR mask.
+ */
+void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
+
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
