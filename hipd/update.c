@@ -1728,42 +1728,63 @@ out_err:
 
 int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
 
-	int err = 0;
+	int err = 0, i = 0;
 	uint32_t spi_in;
 	struct hip_spi_in_item *item, *tmp;
+        hip_list_t *item_nd = NULL, *tmp_nd = NULL;
+        struct netdev_address *n;
+        struct in6_addr local_addr;
+        
 	HIP_DEBUG("Checking spi setting 0x%x\n",spi_in); 
 
 	HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	HIP_DEBUG_IN6ADDR("local", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("peer", &addr->address);
-
+        
 	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
 
+        if (IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
+            != IN6_IS_ADDR_V4MAPPED(&addr->address)) {
+            HIP_DEBUG("AF difference in addrs, checking if possible to choose same AF\n");
+            list_for_each_safe(item_nd, tmp_nd, addresses, i) {
+                n = list_entry(item_nd);
+                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
+                    == IN6_IS_ADDR_V4MAPPED(&addr->address)) {
+                    HIP_DEBUG("Found addr with same AF\n");
+                    hip_print_hit("Using addr for SA", &local_addr);
+                    ipv6_addr_copy(&local_addr, hip_cast_sa_addr(&n->addr));
+                    break;
+                }
+            }
+        } else {
+            /* same AF as in addr, use &entry->local_address */
+            ipv6_addr_copy(&local_addr, &entry->local_address);
+        }
 
 	/* @todo: enabling 1s makes hard handovers work, but softhandovers
 	   fail */
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, &addr->address, &entry->local_address, 
+	hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr, 
 		      AF_INET6, 0, (int)entry->peer_udp_port);
 #endif
 
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 
-	hip_delete_sa(spi_in, &addr->address, &entry->local_address, AF_INET6,
+	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
 #endif
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
-				       &entry->local_address, &addr->address,
+				       &local_addr, &addr->address,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
-	HIP_IFEL(hip_add_sa(&entry->local_address, &addr->address, 
+	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, 
 			    &entry->hit_our,
 			    &entry->hit_peer, 
 			    &entry->default_spi_out, entry->esp_transform,
@@ -1774,11 +1795,11 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-				       &addr->address, &entry->local_address,
+				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
-	HIP_IFEL(hip_add_sa(&addr->address, &entry->local_address, 
+	HIP_IFEL(hip_add_sa(&addr->address, &local_addr, 
 			    &entry->hit_peer, 
 			    &entry->hit_our,
 			    &spi_in, entry->esp_transform,
@@ -1792,7 +1813,8 @@ out_err:
 	return err;
 }
 
-int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, struct in6_addr *src_ip){
+int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *echo_resp, 
+                                    struct in6_addr *src_ip){
 
 	int err = 0, i;
 	hip_list_t *item, *tmp;
@@ -1813,7 +1835,8 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 			_HIP_DEBUG("checking address, seq=%u\n", addr->seq_update_id);
 			if (memcmp(&addr->address, src_ip, sizeof(struct in6_addr)) == 0)
 			{
-				if (hip_get_param_contents_len(echo_resp) != sizeof(addr->echo_data))
+				if (hip_get_param_contents_len(echo_resp) 
+                                    != sizeof(addr->echo_data))
 				{
 					HIP_ERROR("echo data len mismatch\n");
 					continue;
