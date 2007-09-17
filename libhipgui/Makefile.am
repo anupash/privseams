@@ -9,8 +9,9 @@ libhipgui_adir = $(pkgdatadir)/libhipgui
 
 noinst_LIBRARIES = libhipgui.a
 
-libhipgui_a_SOURCES = hipgui.c widgets.c tools.c events.c create.c dragndrop.c
+include_HEADERS = create.h  dragndrop.h  events.h  hipgui.h  tools.h  widgets.h
 
+libhipgui_a_SOURCES = hipgui.c widgets.c tools.c events.c create.c dragndrop.c
 
 libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
 LIBADD = @GTK_LIBS@
