@@ -67,7 +67,6 @@ void hip_rvs_put_ip(hip_rva_t*, struct in6_addr*, unsigned int);
 void hip_rvs_remove(hip_rva_t*);
 void hip_rvs_uninit_rvadb(void);
 int hip_rvs_put_rva(hip_rva_t*);
-int hip_rvs_set_request_flag(hip_hit_t*, hip_hit_t*);
 int hip_rvs_relay_i1(const struct hip_common*, const struct in6_addr*,
 		     const struct in6_addr*, hip_rva_t*,
 		     const hip_portpair_t*);

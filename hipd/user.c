@@ -186,6 +186,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
            
 
             IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+	    /** 
+	     * @todo this gives a compiler warning! warning: assignment from
+	     * incompatible pointer type
+	     */
             pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
             HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
                       tmp_ip_str, tmp_port, tmp_ttl);
@@ -329,8 +333,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      -1, "internal error: no hadb entry found\n");
 		
 	     /* Set a rvs request flag. */
-	     HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
-		      -1, "setting of rvs request flag failed\n");
+	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 
 	     /* Send a I1 packet to rvs. */
 	     /** @todo Not filtering I1, when handling rvs message! */
@@ -351,7 +354,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 		  HIP_DEBUG("Rendezvous service is now active.\n");
 	     }
-		
+	     
 	     err = hip_recreate_all_precreated_r1_packets();
 	     break;
 	
@@ -394,25 +397,32 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      -1, "internal error: no hadb entry found\n");
 		
 	     HIP_DEBUG("Lauri: DO THE HIPUDPRELAY related stuff now.\n");
-	     /* Set a flag to the ha to indicate that we have requested
-		HIPUDPRELAY service. Needed once the R1 packet arrives. */
+
+	     /* Set a hipudprelay request flag. */
+	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
 
 	     /* Send a I1 packet to relay. */
-	     /** @todo Not filtering I1, when handling rvs message! */
 	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 		      -1, "sending i1 failed\n");
 	     break;
 //#endif
 
 	case SO_HIP_GET_HITS:
-		
-		hip_msg_init(msg);
-		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
-		break;
+	     hip_msg_init(msg);
+	     /** 
+	      * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+	      * pointer type
+	      */
+	     err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
+	     break;
 	
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
+		/** 
+		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+		 * pointer type
+		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:

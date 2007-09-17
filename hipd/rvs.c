@@ -580,33 +580,3 @@ int hip_rvs_reply_with_notify(const struct hip_common *i1,
 	}
 	return err;
 }
-
-/**
- * Set a rendezvous server request flag for a host association.
- *
- * Set a rendezvous server request flag for a host association matching the
- * source/destination -hitpair. Calling this function indicates that the current
- * machine is requesting a rendezvous service for a host association entry. This
- * function is called when a host starts registering procedure to rendezvous
- * service by sending a @b I1 packet to the rendezvous server.
- *
- * @param  src_hit the source hit of a host association.
- * @param  dst_hit the destination hit of a host association.
- * @return zero on success, or negative error value if a matching entry is
- *         not found.
- */ 
-int hip_rvs_set_request_flag(hip_hit_t *src_hit,
-			     hip_hit_t *dst_hit)
-{
-	int err = 0;
-	hip_ha_t *entry;
-	
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)),
-		 -1, "Could not set RVS request bit\n");
-
-	entry->local_controls |= HIP_HA_CTRL_LOCAL_REQ_RVS;
-	hip_put_ha(entry);
-
- out_err:
-	return err;
-}
