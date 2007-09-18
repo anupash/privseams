@@ -177,7 +177,7 @@ int hip_oppipdb_add_entry(const struct in6_addr *ip_peer)
 	ipv6_addr_copy(new_item, ip_peer);
 
 	err = hip_ht_add(oppipdb, new_item);
-	hip_oppipdb_dump();
+	//hip_oppipdb_dump();
 	
  out_err:
 	return err;
@@ -231,13 +231,13 @@ hip_oppip_t *hip_oppipdb_find_byip(const struct in6_addr *ip_peer)
 {
 	hip_oppip_t *ret = NULL;
 
-	hip_oppipdb_dump();
-	HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
+	//hip_oppipdb_dump();
+	_HIP_DEBUG_IN6ADDR("Searching in oppipdb for ip:", ip_peer);
 	ret = hip_ht_find(oppipdb, (void *)ip_peer);
 	if (!ret)
-		HIP_DEBUG("The ip was not present in oppipdb\n");
+		HIP_DEBUG("The ip was not present in oppipdb. Peer HIP capable.\n");
 	else
-	        HIP_DEBUG("The ip was found in oppipdb\n");
+	        HIP_DEBUG("The ip was found in oppipdb. Peer non-HIP capable.\n");
 
 	return ret;
 }
@@ -255,7 +255,7 @@ void hip_oppipdb_delentry(const struct in6_addr *ip_peer)
 {
 	int i;
 	hip_oppip_t *ret;
-	HIP_DEBUG("***************************beginning of hip_oppipdb_delentry\n");
+	_HIP_DEBUG("beginning of hip_oppipdb_delentry\n");
 	
 	if (ret = hip_oppipdb_find_byip(ip_peer)){
 	      HIP_DEBUG_IN6ADDR("HIP capable host found in oppipbd (non-HIP hosts database). Deleting it from oppipdb.", ip_peer);
