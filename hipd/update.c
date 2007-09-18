@@ -376,7 +376,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	uint32_t spi = 0, i, err = 0;
 	struct hip_locator_info_addr_item *locator_address_item;
 	struct hip_spi_out_item *spi_out;
-	struct hip_peer_addr_list_item *a, *tmp, *addr;
+	struct hip_peer_addr_list_item *a, *tmp, addr;
 	int zero = 0, n_addrs = 0, ii = 0;
         int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
         struct netdev_address *n;
@@ -421,7 +421,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                     n = list_entry(item);
                     tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))?AF_INET:AF_INET6;
                     if (tmp_af == comp_af) {
-                        HIP_DEBUG("LOCATOR did not contain same family members\n"
+                        HIP_DEBUG("LOCATOR did not contain same family members "
                                   "as local_address, changing local_address and "
                                   "preferred_address\n");
                         /* Replace the local address to match the family */
@@ -432,7 +432,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                         /* First should be OK, no opposite family in LOCATOR */
                         memcpy(&entry->preferred_address, &locator_address_item->address, 
                                sizeof(struct in6_addr));
-                        memcpy(&addr->address, &locator_address_item->address,
+                        memcpy(&addr.address, &locator_address_item->address,
                                sizeof(struct in6_addr));
                         HIP_IFEL(hip_update_peer_preferred_address(entry, addr),-1,
                                  "Setting peer preferred address failed\n");
