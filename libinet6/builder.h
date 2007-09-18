@@ -134,7 +134,7 @@ u16 hip_checksum_packet(char *data, struct sockaddr *src,
 int hip_check_userspace_msg(const struct hip_common *);
 int hip_check_userspace_msg_type(const struct hip_common *);
 uint16_t hip_convert_msg_total_len_to_bytes(hip_hdr_len_t);
-uint16_t hip_create_control_flags(int, int, int, int);
+//uint16_t hip_create_control_flags(int, int, int, int);
 void hip_dump_msg(const struct hip_common *);
 void *hip_find_free_param(const struct hip_common *);
 void *hip_get_diffie_hellman_param_public_value_contents(const void *);
@@ -148,6 +148,7 @@ struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         struct hip_locator *);
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
+hip_controls_t hip_get_msg_controls(struct hip_common *msg);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
 hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *,

@@ -34,9 +34,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		
 	HIP_DEBUG("\n");
 
+/* Build a mask to be used in the "Controls" field of the outgoing I1 packet. */ 
+//#ifdef CONFIG_HIP_UDPRELAY
+	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))
+	{
+	     mask |= HIP_HA_CTRL_LOCAL_REQ_HIPUDP;
+	}
+//#endif
 #ifdef CONFIG_HIP_RVS
-	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)) {
-		mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
+	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS))
+	{
+	     mask |= HIP_HA_CTRL_LOCAL_REQ_RVS;
 	}
 #endif
 	
@@ -58,7 +66,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	/* We don't need to use hip_msg_alloc(), since the I1
 	   packet is just the size of struct hip_common. */ 
 
-	/* ..except that when calculating the msg size, we need to have more than just hip_common */
+	/* ..except that when calculating the msg size, we need to have more
+	   than just hip_common */
 	i1 = hip_msg_alloc();
 			
 	if (!hip_blind_get_status()) {
@@ -103,7 +112,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	}
 
 	HIP_DEBUG("err after sending: %d.\n", err);
-	
+
 	if (!err) {
 		HIP_LOCK_HA(entry);
 		entry->state = HIP_STATE_I1_SENT;
@@ -197,7 +206,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	
  	/* Ready to begin building of the R1 packet */
 #ifdef CONFIG_HIP_RVS
-	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE; //XX: FIXME
+	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
 #endif
 
 	HIP_DEBUG("mask=0x%x\n", mask);
@@ -704,7 +713,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): local_addr", local_addr);
 	HIP_DEBUG_IN6ADDR("hip_send_raw(): peer_addr", peer_addr);
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
-	_HIP_DUMP_MSG(msg);
+	HIP_DUMP_MSG(msg);
 
 	dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	len = hip_get_msg_total_len(msg);

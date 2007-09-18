@@ -429,49 +429,84 @@ uint8_t hip_get_service_max_lifetime()
 /** @todo This is just a temporary kludge until something more 
     elegant is build. Rationalize this. */
 
-
-/* op = 0/1, zero for registrations that are being cancelled */
-int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op) 
+int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op, uint8_t services[])
 {
      int err = 0;
-     int type_count = 0;        
+     int type_count = 0, new_count = 0;        
      int request_rvs = 0;
      int request_escrow = 0;
      HIP_KEA *kea = NULL;
      int *reg_type = NULL;
-        
+
+     HIP_DEBUG("Lauri: WE ARE HERE 1.\n");
+     
+     char local_binstring[20], peer_binstring[20];
+     uint16_to_binstring(entry->local_controls, local_binstring);
+     uint16_to_binstring(entry->peer_controls, peer_binstring);
+
+     HIP_DEBUG("\nlocal_controls: %s, peer_controls: %s\n", local_binstring, peer_binstring);
+     
 #ifdef CONFIG_HIP_RVS   
-     /* RVS */
      /* Check that we have requested rvs service and that the 
 	peer is rvs capable. */
      // TODO: support for cancelling rvs registration
-     if (op && (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) &&
-	 (entry->peer_controls & HIP_HA_CTRL_LOCAL_RVS_CAPABLE)){
+     /*if (op && (entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) &&
+	 (entry->peer_controls & HIP_HA_CTRL_PEER_RVS_CAPABLE)){
 	  HIP_DEBUG_HIT("HIT being registered to rvs", &(entry->hit_our));
 	  request_rvs = 1;
 	  type_count++;
+	  }*/
+     if(op &&
+	(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) &&
+	(entry->peer_controls & HIP_HA_CTRL_PEER_RVS_CAPABLE))
+     {
+	  services[new_count] = HIP_SERVICE_RENDEZVOUS;
+	  new_count ++;
+	  HIP_DEBUG("Lauri: WE ARE HERE 2.\n");
      }
 #endif /* CONFIG_HIP_RVS */
-#ifdef CONFIG_HIP_ESCROW        
-     /* ESCROW */
+//#ifdef CONFIG_HIP_UDPRELAY
+     if(op &&
+	(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP) &&
+	(entry->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE))
+     {
+	  services[new_count] = HIP_SERVICE_RELAY_UDP_HIP;
+	  new_count ++;
+	  HIP_DEBUG("Lauri: WE ARE HERE 3.\n");
+     }
+//#endif /* CONFIG_HIP_UDPRELAY */
+#ifdef CONFIG_HIP_ESCROW
+     /* This function was designed for just one service (escrow) in the first
+	place. I had to do some mods, once the RVS and HIPUDPRELAY started to
+	use the services database. The escrow part might have become
+	nonfunctional as a result. This part is not tested.
+	-Lauri Silvennoinen 18.09.2007 23:21 */
+
+     /** @todo what if the state is UNREGISTERING? */
      kea = hip_kea_find(&entry->hit_our);
-     /* TODO: what if the state is UNREGISTERING??*/
-     if (op && kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-	  request_escrow = 1;
-	  type_count++;
-     }
-     else if (!op && kea && kea->keastate == HIP_KEASTATE_UNREGISTERING) {
-	  request_escrow = 1;
-	  type_count++;
-     }
-     if (kea) {
+     if(kea)
+     {
+	  
+	  if (op && kea->keastate == HIP_KEASTATE_REGISTERING) {
+	       services[new_count] = HIP_SERVICE_ESCROW;
+	       new_count ++;
+	  }
+	  else if (!op && kea->keastate == HIP_KEASTATE_UNREGISTERING) {
+	       services[new_count] = HIP_SERVICE_ESCROW;
+	       new_count ++;
+	  }
 	  hip_keadb_put_entry(kea);
      }
 #endif /* CONFIG_HIP_ESCROW */
+     
+     return new_count;
+     
+
+     /* This next if-else rumba is outdated. 18.09.2007 22:25 */
 
      /* Have to use malloc() here, otherwise the macros will
 	"jump into scope of identifier with variably modified type". */
-     HIP_IFEL(!(*types = HIP_MALLOC(type_count * sizeof(int), 0)),
+     /*HIP_IFEL(!(*types = HIP_MALLOC(type_count * sizeof(int), 0)),
 	      -ENOMEM, "Not enough memory\n");
 
      if(type_count == 2){
@@ -488,7 +523,7 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op)
      return type_count;
 
  out_err:
-     return -1;
+ return -1;*/
 }
 
 

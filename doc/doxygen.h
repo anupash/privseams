@@ -511,6 +511,21 @@
  * Numbers 0-200 are reserved by IANA.
  * Numbers 201 - 255 are reserved by IANA for private use.
  */
+ 
+ /** 
+ * @file libinet6/protodefs.h
+ * @def HIP_SERVICE_RENDEZVOUS
+ *      Rendezvous service for relaying I1 packets.
+ * @def HIP_SERVICE_ESCROW
+ *      Escrow services for some key exchange.
+ * @def HIP_SERVICE_RELAY_UDP_HIP
+ *      UDP encapsulated relay service for HIP packets.
+ * @def HIP_SERVICE_RELAY_UDP_ESP
+ *      UDP encapsulated relay service for ESP packets.
+ * @def HIP_NUMBER_OF_EXISTING_SERVICES
+ *      Total number of services, which must equal the sum of all existing
+ *      services.
+ */
 
 /**
  * @file   libinet6/protodefs.h

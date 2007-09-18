@@ -131,6 +131,14 @@ void hip_print_packet(const char *file, int line, const char *function,
 void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix, sa_family_t family,
 			const struct sockaddr *sockaddr);
+/**
+ * Gets a binary string representation from an uint16_t value.
+ * 
+ * @val    the value whose binary string we want.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 17 * sizeof(char)
+ */
+void uint16_to_binstring(uint16_t val, char *buffer);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

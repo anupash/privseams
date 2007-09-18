@@ -89,8 +89,17 @@ uint8_t hip_get_service_max_lifetime();
 
 /**************/
 
-/* op = 0/1, zero for registrations that are being cancelled */
-int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op); 
+/**
+ * Get an array of incompleted registration types. In other words, services
+ * that we have requested, but not yet been granted.
+ * 
+ * @param types pointer to a memory region where incompleted registration types
+ *              are to be put.
+ * @param entry a pointer to a host association being under registration.
+ * @param op    0/1, zero for registrations that are being cancelled 
+ * @return      number of incomplete services found
+ */
+int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op, uint8_t services[]);
 
 int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg);
 

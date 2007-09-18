@@ -188,8 +188,20 @@ void hip_set_msg_err(struct hip_common *msg, hip_hdr_err_t err) {
 	msg->checksum = err;
 }
 
-uint16_t hip_get_msg_checksum(struct hip_common *msg) {
-	return msg->checksum; /* one byte, no ntohs() */
+uint16_t hip_get_msg_checksum(struct hip_common *msg)
+{
+     return msg->checksum; /* one byte, no ntohs() */
+}
+
+/**
+ * Get the HIP message @c Controls field value from the packet common header.
+ *
+ * @param msg a pointer to a HIP packet header
+ * @return    the HIP controls
+ */
+hip_controls_t hip_get_msg_controls(struct hip_common *msg)
+{
+     return msg->control; /* one byte, no ntohs() */
 }
 
 /**
@@ -881,39 +893,42 @@ void hip_calc_param_len(void *tlv_common, hip_tlv_len_t contents_size)
  */
 void hip_dump_msg(const struct hip_common *msg)
 {
-	struct hip_tlv_common *current_param = NULL;
-	void *contents = NULL;
-	/* The value of the "Length"-field in current parameter. */
-	hip_tlv_len_t len = 0;
-	/* Total length of the parameter (type+length+value+padding), and the
-	   length of padding. */
-	size_t total_len = 0, pad_len = 0;
-	HIP_DEBUG("--------------- MSG START ------------------\n");
-	HIP_DEBUG("Msg type : %s (%d)\n",
-		  hip_message_type_name(hip_get_msg_type(msg)),
-		  hip_get_msg_type(msg));
-	HIP_DEBUG("Msg length: %d\n", hip_get_msg_total_len(msg));
-	HIP_DEBUG("Msg err  : %d\n", hip_get_msg_err(msg));
+     struct hip_tlv_common *current_param = NULL;
+     void *contents = NULL;
+     char controls_bin[20];
+     /* The value of the "Length"-field in current parameter. */
+     hip_tlv_len_t len = 0;
+     /* Total length of the parameter (type+length+value+padding), and the
+	length of padding. */
+     size_t total_len = 0, pad_len = 0;
+     HIP_DEBUG("--------------- MSG START ------------------\n");
+     
+     HIP_DEBUG("Msg type :      %s (%d)\n",
+	       hip_message_type_name(hip_get_msg_type(msg)),
+	       hip_get_msg_type(msg));
+     HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
+     HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
+     HIP_DEBUG("Msg controls: 0x%04x\n", msg->control);
 	
-	while((current_param = hip_get_next_param(msg, current_param))
-	      != NULL) {
-		len = hip_get_param_contents_len(current_param);
-		/* Formula from base draft section 5.2.1. */
-		total_len = 11 + len - (len +3) % 8;
-		pad_len = total_len - len - sizeof(hip_tlv_type_t)
-			- sizeof(hip_tlv_len_t);
-		contents = hip_get_param_contents_direct(current_param);
-		HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+"\
-			  "length, %d content, %d padding).\n",
-			  hip_param_type_name(hip_get_param_type(current_param)),
-			  hip_get_param_type(current_param),
-			  total_len,
-			  len,
-			  pad_len);
-		HIP_HEXDUMP("Contents:", contents, len);
-		HIP_HEXDUMP("Padding:", contents + len , pad_len);
-	}
-	HIP_DEBUG("---------------- MSG END --------------------\n");
+     while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+     {
+	  len = hip_get_param_contents_len(current_param);
+	  /* Formula from base draft section 5.2.1. */
+	  total_len = 11 + len - (len +3) % 8;
+	  pad_len = total_len - len - sizeof(hip_tlv_type_t)
+	       - sizeof(hip_tlv_len_t);
+	  contents = hip_get_param_contents_direct(current_param);
+	  HIP_DEBUG("Parameter type:%s (%d). Total length: %d (4 type+"\
+		    "length, %d content, %d padding).\n",
+		    hip_param_type_name(hip_get_param_type(current_param)),
+		    hip_get_param_type(current_param),
+		    total_len,
+		    len,
+		    pad_len);
+	  HIP_HEXDUMP("Contents:", contents, len);
+	  HIP_HEXDUMP("Padding:", contents + len , pad_len);
+     }
+     HIP_DEBUG("---------------- MSG END --------------------\n");
 }
 
 /**

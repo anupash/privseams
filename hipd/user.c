@@ -397,7 +397,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      -1, "internal error: no hadb entry found\n");
 		
 	     HIP_DEBUG("Lauri: DO THE HIPUDPRELAY related stuff now.\n");
-
+	     
 	     /* Set a hipudprelay request flag. */
 	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
 

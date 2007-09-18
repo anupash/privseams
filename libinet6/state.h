@@ -243,8 +243,8 @@ struct hip_hadb_state
 					    retransmissions work properly
 					    also in non-established state.*/
      int                  update_state;
-     hip_controls_t       local_controls; /** @see hip_ha_controls */
-     hip_controls_t       peer_controls; /** @see hip_ha_controls */
+     hip_controls_t       local_controls; /**< @see hip_ha_controls */
+     hip_controls_t       peer_controls; /**< @see hip_ha_controls */
      int                  is_loopback;
      HIP_HASHTABLE        *spis_in; /**< SPIs for inbound SAs, hip_spi_in_item. */
      HIP_HASHTABLE        *spis_out; /**< SPIs for outbound SAs, hip_spi_out_item */

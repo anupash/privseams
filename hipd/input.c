@@ -800,8 +800,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
 
-
-
         /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
 	HIP_IFEL((transform_hip_suite =
@@ -966,26 +964,30 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         HIP_DEBUG("Could not deliver escrow data to server\n");
     }             
 #endif //CONFIG_HIP_ESCROW
-				      
-	/* Check if the incoming R1 has a REG_REQUEST parameter. */
+    
+    /* Lauri: Huomiseen. */
+    
+    /* Check if the incoming R1 has a REG_REQUEST parameter. */
 
-	/* Add service types to which the current machine wishes to
-	   register into the outgoing I2 packet. Each service type
-	   should check here if the current machines hadb is in correct
-	   state regarding to registering. This state is set before
-	   sending the I1 packet to peer (registrar). */
+    /* Add service types to which the current machine wishes to
+       register into the outgoing I2 packet. Each service type
+       should check here if the current machines hadb is in correct
+       state regarding to registering. This state is set before
+       sending the I1 packet to peer (registrar). */
 
-        // TODO: check also unregistrations   
-        type_count = hip_get_incomplete_registrations(&reg_type, entry, 1); 
-	
-	if (type_count > 0) {
-		HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-		/* TODO: Lifetime value usage. Now requesting maximum lifetime (255 ~= 178 days) always */
-                HIP_IFEL(hip_build_param_reg_request(i2, 255, reg_type, 
-                type_count, 1), -1, "Could not build REG_REQUEST parameter\n");
-	}
-		
-	/******** NONCE *************************/
+    // TODO: check also unregistrations
+    uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+    
+    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, &services); 
+    
+    if (type_count > 0) {
+	 HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
+	 /* TODO: Lifetime value usage. Now requesting maximum lifetime (255 ~= 178 days) always */
+	 HIP_IFEL(hip_build_param_reg_request(i2, 255, services, 
+					      type_count, 1), -1, "Could not build REG_REQUEST parameter\n");
+    }
+    
+    /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_DEBUG("add nonce to the message\n");
@@ -1019,13 +1021,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
 	{
-		struct hip_echo_request *ping;
-
-		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST);
-		if (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			HIP_IFEL(hip_build_param_echo(i2, (ping + 1), ln, 0, 0), -1, "Error while creating echo reply parameter\n");
-		}
+	     struct hip_echo_request *ping;
+	     
+	     ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST);
+	     if (ping) {
+		  int ln = hip_get_param_contents_len(ping);
+		  HIP_IFEL(hip_build_param_echo(i2, (ping + 1), ln, 0, 0), -1,
+			   "Error while creating echo reply parameter\n");
+	     }
 	}
 	
       	/********** I2 packet complete **********/
@@ -1171,41 +1174,62 @@ int hip_handle_r1(struct hip_common *r1,
 
 		/* Loop through all the registration types found in REG_INFO parameter. */ 
 		for(i = 0; i < typecount; i++){
-			current_reg_type = reg_types[i];
-			
-			switch(current_reg_type){
+		     current_reg_type = reg_types[i];
+		     
+		     switch(current_reg_type){
 #ifdef CONFIG_HIP_ESCROW
-			case HIP_SERVICE_ESCROW:
-				HIP_INFO("Responder offers escrow service.\n");
+		     case HIP_SERVICE_ESCROW:
+			  HIP_INFO("Responder offers escrow service.\n");
 						
-				HIP_KEA *kea;
-				kea = hip_kea_find(&entry->hit_our);
-				if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-					HIP_DEBUG("Registering to escrow service.\n");
-					hip_keadb_put_entry(kea);
-				} 
-				else if(kea){
-					kea->keastate = HIP_KEASTATE_INVALID;
-					HIP_DEBUG("Not doing escrow registration, "\
-						  "invalid kea state.\n");
-					hip_keadb_put_entry(kea);	  
-				}
-				else{
-					HIP_DEBUG("Not doing escrow registration.\n");
-				}
+			  HIP_KEA *kea;
+			  kea = hip_kea_find(&entry->hit_our);
+			  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			       HIP_DEBUG("Registering to escrow service.\n");
+			       hip_keadb_put_entry(kea);
+			  } 
+			  else if(kea){
+			       kea->keastate = HIP_KEASTATE_INVALID;
+			       HIP_DEBUG("Not doing escrow registration, "\
+					 "invalid kea state.\n");
+			       hip_keadb_put_entry(kea);	  
+			  }
+			  else{
+			       HIP_DEBUG("Not doing escrow registration.\n");
+			  }
 
-				break;
+			  break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-			case HIP_SERVICE_RENDEZVOUS:
-				HIP_INFO("Responder offers rendezvous service.\n");
-				/** @todo Check if we have requested for
-				    rendezvous service in I1 packet. */
-				break;
+		     case HIP_SERVICE_RENDEZVOUS:
+			  HIP_INFO("Responder offers rendezvous service.\n");
+			  
+			  /* If we have requested for RVS service in I1, we
+			     store the info of responder's capability here. */
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
+			  {
+			       hip_hadb_set_peer_controls(
+				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+			  }
+			  break;
 #endif /* CONFIG_HIP_RVS */
-			default:
-				HIP_INFO("Responder offers unsupported service.\n");
-			}
+//#ifdef CONFIG_HIP_UDPRELAY
+		     case HIP_SERVICE_RELAY_UDP_HIP:
+			  HIP_INFO("Responder offers UDP relay service for "\
+				   "HIP packets.\n");
+			  
+			  /* If we have requested for HIP UDP Relay service in
+			     I1, we store the info of responder's capability
+			     here. */
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
+			  {
+			       hip_hadb_set_peer_controls(
+				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+			  }
+			  break;
+//#endif CONFIG_HIP_UDPRELAY
+		     default:
+			  HIP_INFO("Responder offers unsupported service.\n");
+		     }
 		}
 	}
 #ifdef CONFIG_HIP_ESCROW
@@ -1264,7 +1288,7 @@ int hip_handle_r1(struct hip_common *r1,
 							 solved_puzzle, &dhpv),
 			 -EINVAL, "Could not produce keying material\n");
 	
-	/* TODO BLIND: What is this?*/
+	/** @todo BLIND: What is this? */
 	/* Blinded R1 packets do not contain HOST ID parameters,
 	 * so the saving peer's HOST ID mus be delayd to the R2
 	 */
@@ -1329,7 +1353,7 @@ int hip_receive_r1(struct hip_common *r1,
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
 #ifdef CONFIG_HIP_RVS
 	/** @todo: Should RVS capability be stored somehow else? */
-	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
+	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
 #endif
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
@@ -2274,7 +2298,7 @@ int hip_handle_r2(struct hip_common *r2,
     }
 #endif //CONFIG_HIP_ESCROW                          
 
-	/* source IPv6 address is implicitly the preferred
+        /* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
 				       1, 0, 1);
@@ -2286,21 +2310,20 @@ int hip_handle_r2(struct hip_common *r2,
 	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
 	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
 	//else
-		err = hip_devaddr2ifindex(r2_daddr);
+	err = hip_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
-		HIP_DEBUG("ifindex=%d\n", err);
+	     HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = 0;
-
-	/*
-	  HIP_DEBUG("clearing the address used during the bex\n");
-	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
-	*/
         
-        /* Check if we should expect REG_RESPONSE or REG_FAILED parameter */
-        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1); 
+	/* Registration of additional services. Check if we should expect
+	   REG_RESPONSE or REG_FAILED parameter */
+	
+	uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+
+        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, &services); 
         if (type_count > 0) {
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
                         "Error handling reg_response\n"); 
@@ -2538,7 +2561,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 #ifdef CONFIG_HIP_RVS
  	hip_rva_t *rva;
-	mask |= HIP_HA_CTRL_LOCAL_RVS_CAPABLE;
+	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
 #endif
 
 #ifdef CONFIG_HIP_BLIND

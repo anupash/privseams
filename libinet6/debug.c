@@ -682,3 +682,18 @@ void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_le
 	strncpy(dst, key->key, key_len);
 	HIP_DEBUG("%s: %s\n", str, dst);
 }
+
+void uint16_to_binstring(uint16_t val, char *buffer)
+{
+     int i = 0;
+     for(; i < 16; i++)
+     {
+	  if(val & 0x8000)
+	       buffer[i] = '1';
+	  else
+	       buffer[i] = '0';
+	  val <<= 1;
+     }
+     
+     buffer[i] = '\0';
+}

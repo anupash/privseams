@@ -239,15 +239,13 @@
 
 #define HIP_HA_CTRL_LOCAL_HIT_ANON       0x0001 /**< We use anonymous HI */
 #define HIP_HA_CTRL_LOCAL_BLIND	         0x0004 /**< We use BLIND */
-#define HIP_HA_CTRL_LOCAL_REQ_HIPUDP     0x1000
-#define HIP_HA_CTRL_LOCAL_HIPUDP_CAPABLE 0x2000
-#define HIP_HA_CTRL_LOCAL_RVS_CAPABLE    0x4000
+#define HIP_HA_CTRL_LOCAL_REQ_HIPUDP     0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 
 #define HIP_HA_CTRL_PEER_HIT_ANON        0x0001 /**< Peer uses anonymous HI */
 #define HIP_HA_CTRL_PEER_BLIND	         0x0004 /**< Peer uses BLIND */
-#define HIP_HA_CTRL_PEER_INFOED_RVS      0x4000
-#define HIP_HA_CTRL_PEER_ACKED_RVS       0x8000
+#define HIP_HA_CTRL_PEER_HIPUDP_CAPABLE  0x4000 
+#define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
 
 /** @addtogroup hip_services
@@ -257,6 +255,9 @@
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY_UDP_HIP	 202
 #define HIP_SERVICE_RELAY_UDP_ESP	 203
+
+/* IMPORTANT! This must be the sum of above services. */
+#define HIP_NUMBER_OF_EXISTING_SERVICES  4
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
