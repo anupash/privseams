@@ -2483,6 +2483,18 @@ int hip_send_update(struct hip_hadb_state *entry,
 		esp_info_new_spi = new_spi_in;
 	}
 
+        /* if del then we have to remove SAs for that address */
+        if (!is_add) {
+            HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
+            hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
+                          &entry->local_address, AF_INET6,0,
+                          (int)entry->peer_udp_port);
+            hip_delete_sa(entry->default_spi_out, &entry->local_address, 
+                          hip_cast_sa_addr(addr), AF_INET6,0,
+                          (int)entry->peer_udp_port);
+        }
+        /* and we have to do it before this chnges the local_address */
+
 	err = hip_update_src_address_list(entry, addr_list, &daddr,
 					  addr_count, esp_info_old_spi, is_add, addr);
 	if(err == GOTO_OUT)
