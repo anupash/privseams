@@ -1753,8 +1753,9 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
                 if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
                     == IN6_IS_ADDR_V4MAPPED(&addr->address)) {
                     HIP_DEBUG("Found addr with same AF\n");
+                    memset(&local_addr, 0, sizeof(struct in6_addr));
+                    memcpy(&local_addr, hip_cast_sa_addr(&n->addr), sizeof(struct in6_addr));
                     hip_print_hit("Using addr for SA", &local_addr);
-                    ipv6_addr_copy(&local_addr, hip_cast_sa_addr(&n->addr));
                     break;
                 }
             }
