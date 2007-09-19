@@ -40,7 +40,7 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 	  hence we already have number of elements. Andrey
 
 	if (n_addrs % sizeof(struct hip_locator_info_addr_item))
-		HIP_ERROR("addr item list len modulo not zero, (len=%d)\n",
+		HIP_ERROR(addr item list len modulo not zero, (len=%d)\n",
 			  ntohs(locator->length));
 	*/
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
@@ -2485,7 +2485,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
         /* if del then we have to remove SAs for that address */
-#if 0 
+#if 0
         if (!is_add) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
