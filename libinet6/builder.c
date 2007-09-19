@@ -677,18 +677,16 @@ void *hip_get_param(const struct hip_common *msg,
 }
 
 /**
- * hip_get_param_contents - get the first parameter contents of the given type
- * @param msg pointer to the beginning of the message header
+ * Get contents of the first parameter of the given type. If there are multiple
+ * parameters of the same type, one should use @c hip_get_next_param() after
+ * calling this function to iterate through them all.
+ *
+ * @param msg         a pointer to the beginning of the message header
  * @param param_type the type of the parameter to be searched from msg
- *              (in host byte order)
- *
- * If there are multiple parameters of the same type, one should use
- * hip_get_next_param after calling this function to iterate through
- * them all.
- *
- * @return a pointer to the contents of the first parameter of the type
- *          param_type, or NULL if no parameters of the type param_type
- *          were not found. 
+ *                   (in host byte order)
+ * @return           a pointer to the contents of the first parameter of the
+ *                   type @c param_type, or NULL if no parameters of type
+ *                   @c param_type were found. 
  */
 void *hip_get_param_contents(const struct hip_common *msg,
 			     hip_tlv_type_t param_type)
@@ -2085,7 +2083,7 @@ out_err:
  * @return zero for success, or non-zero on error
  */
 int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
-			int *type_list, int cnt, int request)
+				uint8_t type_list[], int cnt, int request)
 {
 	int err = 0;
 	int i;

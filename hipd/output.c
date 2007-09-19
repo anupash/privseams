@@ -148,24 +148,20 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-	struct hip_common *msg;
- 	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
- 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
-	struct hip_locator_info_addr_item *addr_list=NULL;
-	struct hip_locator *locator=NULL;
-	hip_ha_t *entry;
-       	uint32_t spi = 0;
-	int * service_list = NULL;
-	int addr_count=0;
-	int service_count = 0;
-	int *list;
-	int count = 0;
-	int i = 0;
-	struct hip_locator_info_addr_item *locators = NULL;
-	hip_list_t *item, *tmp;
+	struct hip_common *msg = NULL;
+	struct hip_locator_info_addr_item *addr_list = NULL;
+	struct hip_locator *locator = NULL;
+ 	struct hip_locator_info_addr_item *locators = NULL;
 	struct netdev_address *n;
-	int l, is_add, ii;
-
+	hip_ha_t *entry = NULL;
+	hip_list_t *item, *tmp;
+	int *service_list = NULL;
+	int *list;
+	u8 *dh_data1 = NULL, *dh_data2 = NULL;
+	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
+	int mask = 0, addr_count = 0, service_count = 0, count = 0, i = 0;
+	int  l = 0, is_add = 0, ii = 0;
+	uint32_t spi = 0;
 
 	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
@@ -177,8 +173,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
+	
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
-	//	struct hip_host_id  *host_id_pub = NULL;
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
  	/* Allocate memory for writing the first Diffie-Hellman shared secret */
@@ -198,19 +194,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	memset(dh_data2, 0, dh_size2);
 
 	_HIP_DEBUG("dh_size=%d\n", dh_size2);
-
-	//	HIP_IFEL(!(host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO)),
-	//	 -1, "Could not acquire localhost public key\n");
-	//HIP_HEXDUMP("Our pub host id\n", host_id_pub,
-	//	    hip_get_param_total_len(host_id_pub));
 	
  	/* Ready to begin building of the R1 packet */
+
 #ifdef CONFIG_HIP_RVS
 	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
 #endif
 
 	HIP_DEBUG("mask=0x%x\n", mask);
-	/*! \todo TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
+	/** @todo TH: hip_build_network_hdr has to be replaced with an
+	    apprporiate function pointer */
 	HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
@@ -267,14 +260,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	/* Get service list of all services offered by this system */
 	service_count = hip_get_services_list(&service_list);
 	if (service_count > 0) {
-		HIP_DEBUG("Adding REG_INFO parameter.\n");
-                HIP_IFEL(hip_build_param_reg_info(msg, hip_get_service_min_lifetime(), 
-                        hip_get_service_max_lifetime(), service_list, service_count), 
-                        -1, "Building of reg_info failed\n");	
+	     HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
+		       service_count);
+	     HIP_IFEL(hip_build_param_reg_info(
+			   msg, hip_get_service_min_lifetime(), 
+			   hip_get_service_max_lifetime(), service_list,
+			   service_count), 
+		      -1, "Building of reg_info failed\n");	
 	}
-
-	
-
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
@@ -286,13 +279,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
-
 	
 	/************LOCATOR PARAMETER **********************/
-
 	if (locators)
 	{				
-		list_for_each_safe(item, tmp, addresses, ii)
+	     list_for_each_safe(item, tmp, addresses, ii)
 			{
 				n = list_entry(item);
 				memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
@@ -304,7 +295,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
 			 "Building LOCATOR failed\n");			
 	}
-	
 	
 	/********************LOCATOR PARAMETER******************************/
 	
@@ -327,8 +317,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
 	}
-
-	
 
  	/************** Packet ready ***************/
 

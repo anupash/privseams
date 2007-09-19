@@ -359,25 +359,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     break;
 	
 #endif
-//#ifdef CONFIG_HIP_UDPRELAY
-	case SO_HIP_OFFER_HIPUDPRELAY:
-	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
-		server handles this message. Message indicates that the
-		current machine is willing to offer relay service. This
-		message is received from hipconf. */
-	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
-		
-	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
-	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
-		
-	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
-		  HIP_DEBUG("UDP relay service for HIP packets"\
-			    "is now active.\n");
-	     }
-		
-	     err = hip_recreate_all_precreated_r1_packets();
-	     break;
-		
+//#ifdef CONFIG_HIP_UDPRELAY	
 	case SO_HIP_ADD_RELAY_UDP_HIP:
 	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
 		Responder (of I,RVS,R hierarchy) handles this message. Message
@@ -404,6 +386,24 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     /* Send a I1 packet to relay. */
 	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 		      -1, "sending i1 failed\n");
+	     break;
+	     
+	case SO_HIP_OFFER_HIPUDPRELAY:
+	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
+		server handles this message. Message indicates that the
+		current machine is willing to offer relay service. This
+		message is received from hipconf. */
+	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
+		
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
+	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
+		
+	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
+		  HIP_DEBUG("UDP relay service for HIP packets"\
+			    "is now active.\n");
+	     }
+		
+	     err = hip_recreate_all_precreated_r1_packets();
 	     break;
 //#endif
 
