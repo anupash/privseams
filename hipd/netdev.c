@@ -517,6 +517,8 @@ skip_entry_creation:
 	if (entry->state == HIP_STATE_NONE ||
 	    entry->state == HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("State is %d, sending i1\n", entry->state);
+	} else if (entry->hip_msg_retrans.buf == NULL) {
+		HIP_DEBUG("Expired retransmissions, sending i1\n");
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
 		goto out_err;
