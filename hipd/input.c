@@ -2055,9 +2055,18 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
-                sleep(2);
+                /* 
+                   usleep is here because of the interfamily stuff 
+                   ipv6_raw_sock is handled always before ipv4_raw_sock
+                   so if update/echo request fly in wire too close to each other
+                   they might be received almost at the same time and the select loop
+                   will favor the ipv6 and cause seq numbering to fail
+                   similar thing can happen with r2 and first update
+                   -Samu
+                */
+                usleep(100);
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         locator, esp_info),
+                                                             locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
             }
         else
