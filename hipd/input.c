@@ -1578,7 +1578,7 @@ int hip_create_r2(struct hip_context *ctx,
  *                 sent.
  */
 int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
-		  struct in6_addr *i2_daddr, hip_ha_t *ha,
+	 	  struct in6_addr *i2_daddr, hip_ha_t *ha,
 		  hip_portpair_t *i2_info)
 {
 	int err = 0, retransmission = 0, replay = 0;
@@ -2028,17 +2028,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   of cycles */
 
 	HIP_DEBUG("state is %d\n", entry->state);
-	
-        /***** LOCATOR PARAMETER ******/
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator && esp_info)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
@@ -2060,6 +2049,17 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		}
 #endif /* CONFIG_HIP_RVS */
 	}
+
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator && esp_info)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                         locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+            }
+        else
+            HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 
