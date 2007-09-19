@@ -2064,7 +2064,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                    similar thing can happen with r2 and first update
                    -Samu
                 */
-                usleep(100);
+                usleep(200);
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
