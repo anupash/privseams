@@ -1433,6 +1433,7 @@ int hip_receive_r1(struct hip_common *r1,
  *
  * @return 0 on success, < 0 on error.
  */
+
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
@@ -2054,6 +2055,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
+                sleep(2);
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                          locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");

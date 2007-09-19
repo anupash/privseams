@@ -1377,7 +1377,7 @@ int hip_handle_update_seq(hip_ha_t *entry,
 	/* 
 	 * 3. The system MUST verify the HMAC in the UPDATE packet.
 	 * If the verification fails, the packet MUST be dropped. 
-	 * **Moved to receive_update due to commonality with ack processing**
+	 * **Moved to receive_updae due to commonality with ack processing**
 	 *
 	 *
 	 * 4. The system MAY verify the SIGNATURE in the UPDATE
@@ -2485,6 +2485,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
         /* if del then we have to remove SAs for that address */
+#if 0 
         if (!is_add) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
@@ -2494,6 +2495,7 @@ int hip_send_update(struct hip_hadb_state *entry,
                           hip_cast_sa_addr(addr), AF_INET6,0,
                           (int)entry->peer_udp_port);
         }
+#endif
         /* and we have to do it before this chnges the local_address */
 
 	err = hip_update_src_address_list(entry, addr_list, &daddr,

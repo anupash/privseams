@@ -604,9 +604,9 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	   different length */
 	if (!entry)
 		goto out_err;
-	else if (entry->hip_msg_retrans.buf) {
-		HIP_FREE(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf= NULL;
+	else if (entry->hip_msg_retrans.buf) { 
+            HIP_FREE(entry->hip_msg_retrans.buf);
+            entry->hip_msg_retrans.buf= NULL;
 	}
 
 	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -ENOMEM);

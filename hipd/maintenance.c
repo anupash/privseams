@@ -58,7 +58,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 					     HIP_NAT_UDP_PORT,
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
-					     entry, 0);
+					     entry, 0);  
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
