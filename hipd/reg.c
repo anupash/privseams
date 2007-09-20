@@ -47,7 +47,7 @@ int hip_services_add(int service_type)
      HIP_DEBUG("Adding service.\n");
 	
      /* Check if the service is already supported. */
-     tmp = hip_get_service(service_type);
+     tmp = hip_get_service((uint8_t)service_type);
      if(tmp) {
 	  HIP_ERROR("Trying to add duplicate service: %s. " \
 		    "Current service state is: %s\n", tmp->name,
@@ -165,7 +165,10 @@ int hip_services_remove(int service)
      return err;
 }
 
-hip_service_t *hip_get_service(int service_type)
+/**
+ * @return a HIP service if found, NULL otherwise.
+ */
+hip_service_t *hip_get_service(uint8_t service_type)
 {
      hip_list_t *item = NULL, *tmp = NULL;
      hip_service_t *s = NULL;
@@ -259,7 +262,7 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
      HIP_DEBUG("Service request count: %d.\n", request_count);
 
      for (i = 0; i < request_count; i++) {
-	  s = hip_get_service((int)requests[i]);
+	  s = hip_get_service(requests[i]);
 	  if (s) {
 	       if (s->state == HIP_SERVICE_ACTIVE) {
 		    if (s->handle_registration(hit)) {	
@@ -319,7 +322,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 
      /* Arrays for storing pointers to accepted and failed requests. These
 	pointers point to memoryregions inside the REG_REQUEST parameter. */
-     uint8_t *accepted_requests[type_count], *failed_reuests[type_count];
+     uint8_t *accepted_requests[type_count], *failed_requests[type_count];
 
      HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
 	       lifetime, type_count);
@@ -339,12 +342,47 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	  int i = 0;
 	  for(; i < type_count; i++)
 	  {
+	       /* Check if we have the requested service in our services. */
 	       service = hip_get_service(values[i]);
+	       if(service == NULL)
+	       {
+		    HIP_INFO("Client is trying to register to an service (%u) "\
+			     "that we do not have in our services database. "\
+			     "Registration REJECTED.\n", values[i]);
+		    failed_requests[rejected_count] = &values[i];
+		    rejected_count++;
+		    continue;
+	       }
+	       /* We could add an "else" branch to the above "if" here, and do
+		  the registration via each services handle_registration
+		  functionpointer. However, since the registration extension is
+		  unfinished in this respect, we handle the registration using
+		  the switch below. -Lauri 20.09.2007 21:17 */
 
 	       switch(values[i])
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
 		    HIP_INFO("Client is registering to rendezvous service.\n");
+		    /* Old RVS code is moved here. -Lauri 20.09.2007 22:59*/
+		    hip_rva_t *rva = NULL;
+		    rva = hip_rvs_ha2rva(entry,
+					 entry->hadb_xmit_func->hip_send_pkt);
+		    if(rva == NULL)
+		    {
+			 HIP_INFO("Inserting rendezvous association failed\n");
+			 failed_requests[rejected_count] = values[i];
+			 rejected_count++;
+		    }
+		    else
+		    {
+			 if (hip_rvs_put_rva(rva))
+			 {
+			      hip_put_rva(rva);
+			      accepted_requests[accepted_count] = &values[i];
+			      accepted_count++;
+			 }
+			 hip_hold_rva(rva);
+		    }
 		    break;
 	       case HIP_SERVICE_ESCROW:
 		    HIP_INFO("Client is registering to escrow service.\n");
@@ -352,17 +390,32 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	       case HIP_SERVICE_RELAY_UDP_HIP:
 		    HIP_INFO("Client is registering to UDP relay for HIP "\
 			     "packets service.\n");
+		    hip_relrec_t *relay_record =
+			 hip_relrec_alloc(&(entry->hit_peer),
+					  &(entry->preferred_address),
+					  entry->peer_udp_port,
+					  HIP_REL_NONE);
+		    hip_relht_put(relay_record);
+		    accepted_requests[accepted_count] = &values[i];
+		    accepted_count++;
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_ESP:
 		    HIP_INFO("Client is registering to to UDP relay for ESP "\
 			     "packets service.\n");
+		    /* Alas, we do not support UDP ESP relay yet. :( */
 		    break;
 	       default:
-		    HIP_INFO("Client is trying to register to an unsupported "\
-			     "service (%u).\n", values[i]);
+		    /* We should never come here, since the registration
+		       database check should fail for unsupported services. */
+		    HIP_ERROR("Client is trying to register to an service (%u) "\
+			      "that we do not support. "\
+			      "Registration REJECTED.\n", values[i]);
+		    failed_requests[rejected_count] = values[i];
+		    rejected_count++;
 	       }
 	       
 	  }
+	  /* Lauri: Huomiseen, rakenna REG_RESPONSE. */
      }
 
  out_err:
@@ -403,8 +456,8 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 	  HIP_DEBUG("Client is cancelling registration!\n");
 	  accepted_requests = HIP_MALLOC(request_count, 0);
 	  for (i = 0; i < request_count; i++) {
-	       HIP_DEBUG("service %d", (int)requests[i]);
-	       s = hip_get_service((int)requests[i]);
+	       HIP_DEBUG("service %u", requests[i]);
+	       s = hip_get_service(requests[i]);
 	       if (s) {
 		    if (s->cancel_registration(&entry->hit_peer) >= 0) {      
 			 HIP_DEBUG("Accepting cancel request %d.\n", (int)requests[i]); 

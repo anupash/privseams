@@ -123,7 +123,7 @@ void hip_relht_maintenance()
 }
 
 hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
-				 hip_relrec_mode_t mode)
+			       hip_relrec_mode_t mode, in_port_t port)
 {
      if(hit_r == NULL || ip_r == NULL)
 	  return NULL;
@@ -136,14 +136,28 @@ hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
 	  return NULL;
      }
 
+     rec->on_off = 1;
      rec->flags = 0;
      hip_relrec_set_mode(rec, mode);
      memcpy(&(rec->hit_r), hit_r, sizeof(*hit_r));
      memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
+     rec->udp_port_r = port;
      rec->lifetime = HIP_RELREC_LIFETIME;
      rec->last_contact = time(NULL);
      
      return rec;
+}
+
+void hip_relrec_switch_on(hip_relrec_t *rec)
+{
+     if(rec != NULL)
+	  rec->on_off = 1;
+}
+
+void hip_relrec_switch_off(hip_relrec_t *rec)
+{
+     if(rec != NULL)
+	  rec->on_off = 0;
 }
 
 void hip_relrec_set_mode(hip_relrec_t *rec, hip_relrec_mode_t mode)
@@ -152,32 +166,22 @@ void hip_relrec_set_mode(hip_relrec_t *rec, hip_relrec_mode_t mode)
 	  return;
      
      switch (mode){
-     case HIP_REL_ON:
-	  rec->flags |= 0x10;
+     case HIP_REL_NONE:
+	  rec->flags &= 0x00;
 	  break;
-     case HIP_REL_OFF:
-	  rec->flags &= ~0x10;
+     case HIP_REL_UDP:
+	  rec->flags &= 0x01;
 	  break;
-     case HIP_REL_NONE_TO_NONE:
-	  rec->flags &= 0xf0;
-	  break;
-     case HIP_REL_NONE_TO_UDP:
-	  rec->flags &= 0xf0;
-	  rec->flags |= 0x01;
-	  break;
-     case HIP_REL_UDP_TO_NONE:
-	  rec->flags &= 0xf0;
-	  rec->flags |= 0x04;
-	  break;
-     case HIP_REL_UDP_TO_UDP:
-	  rec->flags &= 0xf0;
-	  rec->flags |= 0x05;
-	  break;
-     case HIP_REL_TCP_TO_TCP:
-	  rec->flags &= 0xf0;
-	  rec->flags |= 0x0a;
+     case HIP_REL_TCP:
+	  rec->flags |= 0x02;
 	  break;
      }
+}
+
+void hip_relrec_set_udpport(hip_relrec_t *rec, in_port_t port)
+{
+     if(rec != NULL)
+	  rec->udp_port_r = port;
 }
 
 void hip_relrec_info(hip_relrec_t *rec)
@@ -188,11 +192,8 @@ void hip_relrec_info(hip_relrec_t *rec)
      char status[1024];
      char *cursor = status;
      cursor += sprintf(cursor, "Relay record info:\n");
-     cursor += sprintf(cursor, " HIP Relay status: ");
-     cursor += sprintf(cursor, (rec->flags & 0x10) ? "ON\n" : "OFF\n");
-     cursor += sprintf(cursor, " I -> Relay: ");
-     cursor += sprintf(cursor, (rec->flags & 0x04) ? "UDP\n" :
-		       (rec->flags & 0x08) ? "TCP\n" : "None\n");
+     //cursor += sprintf(cursor, " HIP Relay status: ");
+     //cursor += sprintf(cursor, (rec->flags & 0x10) ? "ON\n" : "OFF\n");
      cursor += sprintf(cursor, " Relay -> R: ");
      cursor += sprintf(cursor, (rec->flags & 0x01) ? "UDP\n" :
 		       (rec->flags & 0x02) ? "TCP\n" : "None\n");

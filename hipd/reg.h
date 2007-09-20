@@ -4,6 +4,10 @@
  * @author  Anu Markkola
  * @date    17.08.2006
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @todo    service_type field should be uint8_t not int. Services range from 0
+ *          to 255. Also, when dealing with HIP registration parameters, the values
+ *          are of type uint8_t. With int we must do excessive type casting.
+ *          -Lauri 20.09.2007 20:55
  */
 #ifndef REG_H_
 #define REG_H_
@@ -47,7 +51,7 @@ int hip_services_add(int service_type);
 int hip_services_set_active(int service_type);
 int hip_services_set_inactive(int service_type);
 int hip_services_remove(int service_type);
-hip_service_t *hip_get_service(int service_type);
+hip_service_t *hip_get_service(uint8_t service_type);
 int hip_get_services_list(int ** service_types);
 int hip_get_service_count();
 int hip_services_is_active(int service_type);

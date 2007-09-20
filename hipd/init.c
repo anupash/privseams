@@ -180,7 +180,7 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_INFO("Initializing HIP UDP relay database.\n");
 	if(hip_relht_init() == NULL)
 	{
-	     HIP_ERROR("Unable to initialize HI UDP relay database. \n");
+	     HIP_ERROR("Unable to initialize HI UDP relay database.\n");
 	}
 //#endif
 #ifdef CONFIG_HIP_OPENDHT
@@ -580,6 +580,10 @@ void hip_exit(int signal)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_uninit_rvadb();
 #endif
+//#ifdef CONFIG_HIP_UDPRELAY
+	HIP_INFO("Uninitializing HIP UDP relay database.\n");
+	hip_relht_uninit();
+//#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
 	hip_uninit_kea_endpoints();

@@ -24,15 +24,14 @@
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
-     /** Flags indicating the status of this record.
+     /** Zero of the record is off, non-zero otherwise. */
+     uint8_t on_off;
+     /** Flags indicating the encapsulation mode of this record.
       *  <pre>
       *    bitmap: 0000 0000
       *            |||| |||+ RVS -> R UDP     0x01
       *            |||| ||+- RVS -> R TCP     0x02
-      *            |||| |+-- I -> RVS UDP     0x04
-      *            |||| +--- I -> RVS TCP     0x08
-      *            |||+----- HIP relay status 0x10
-      *            +++------ Not used
+      *            ++++-++-- Not used
       *  </pre>
       */
      uint8_t flags;
@@ -44,19 +43,18 @@ typedef struct{
      struct in6_addr hit_r;
      /** IP address of Responder (Relay Client) */
      struct in6_addr ip_r;
+     /** Client UDP port received in I2 packet of registration. */
+     in_port_t udp_port_r;
 }hip_relrec_t;
 
 /** 
- * Relay record modes used to flag a relay record.
+ * Relay record encapsulation modes used in a relay record. This mode is between
+ * the Relay and the Responder.
  * @enum
  */
-typedef enum{HIP_REL_NONE_TO_NONE, /**< No encapsulation */
-		  HIP_REL_NONE_TO_UDP, /**< I--(HIP)-->Relay--(UDP)-->R */ 
-		  HIP_REL_UDP_TO_NONE, /**< I--(UDP)-->Relay--(HIP)-->R */ 
-		  HIP_REL_UDP_TO_UDP, /**< I--(UDP)-->Relay--(UDP)-->R */ 
-		  HIP_REL_TCP_TO_TCP, /**< I--(TCP)-->Relay--(TCP)-->R */ 
-		  HIP_REL_OFF, /**< Set relay off. */ 
-		  HIP_REL_ON  /**< Set relay on. */ 
+typedef enum{HIP_REL_NONE, /**< I--(any)-->Relay--(none)-->R */
+		  HIP_REL_UDP, /**< I--(any)-->Relay--(UDP)-->R */ 
+		  HIP_REL_TCP, /**< I--(any)-->Relay--(TCP)-->R */ 
 		  }hip_relrec_mode_t;
 
 /**
@@ -147,12 +145,22 @@ unsigned long hip_relht_size();
 void hip_relht_maintenance();
 
 /**
+ * Switches on a relay record.
+ */
+void hip_relrec_switch_on(hip_relrec_t *rec);
+
+/**
+ * Switches off a relay record.
+ */
+void hip_relrec_switch_off(hip_relrec_t *rec);
+
+/**
  * Allocates a new relay record.
  * 
  * @param hit_r a pointer to Responder (relay client) HIT.
  * @param ip_r  a pointer to Responder (relay client) IP address.
- * @param mode  the mode of this record (ON/OFF or encapsulation mode). Usually
- *              @c HIP_REL_ON.
+ * @param mode  the encapsulation mode of this record.
+ * @param port  Responder's UDP port.
  * @return      a pointer to a new relay record, or NULL if failed to allocate.
  * @note        All records to be put in the hashtable should be created with this
  *              function.
@@ -160,24 +168,18 @@ void hip_relht_maintenance();
  *              mode for the @c record with hip_relrec_set_mode().
  */
 hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
-			       hip_relrec_mode_t mode);
+			       hip_relrec_mode_t mode, in_port_t port);
 
 /**
  * Sets the mode of a relay record. This function sets the @c flags field of a
- * relay record. In the encapsulation modes, the first part in the names is from
- * Initiator to relay and the second part is from relay to Responder (relay client).
- * So HIP_REL_NONE_TO_UDP means <code>I--(raw HIP)--Relay--(UDP)--R</code>.
+ * relay record.
  * 
  * @param rec  a pointer to a relay record. 
  * @param mode the mode to be set for the parameter record. One of the following:
  *             <ul>
- *             <li>HIP_REL_NONE_TO_NONE</li>
- *             <li>HIP_REL_NONE_TO_UDP</li>
- *             <li>HIP_REL_UDP_TO_NONE</li>
- *             <li>HIP_REL_UDP_TO_UDP</li>
- *             <li>HIP_REL_TCP_TO_TCP</li>
- *             <li>HIP_REL_OFF</li>
- *             <li>HIP_REL_ON</li>
+ *             <li>HIP_REL_NONE</li>
+ *             <li>HIP_REL_UDP</li>
+ *             <li>HIP_REL_TCP</li>
  *             </ul>
  * @see        hip_relrec_t for a bitmap.
  */
@@ -190,6 +192,15 @@ void hip_relrec_set_mode(hip_relrec_t *rec, hip_relrec_mode_t mode);
  * @param mode the lifetime in seconds. 
  */
 void hip_relrec_set_lifetime(hip_relrec_t *rec, time_t secs);
+
+
+/**
+ * Sets the UDP port number of a relay record. 
+ * 
+ * @param rec  a pointer to a relay record. 
+ * @param port UDP port number. 
+ */
+void hip_relrec_set_udpport(hip_relrec_t *rec, in_port_t port);
 
 /**
  * Prints info of the parameter relay record using @c HIP_INFO() macro.
