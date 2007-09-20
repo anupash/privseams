@@ -1347,8 +1347,10 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 #endif
 	/********** REG_REQUEST **********/
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
-	HIP_DUMP_MSG(i2);
-	
+	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
+	hip_new_reg_handler(entry, i2, r2);
+	HIP_DEBUG("Lauri: EXITING OUR BRAVE NEW HANDLER.\n");
+
 	reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
 	
 	/* draft-ietf-hip-registration-02 4.3:
@@ -1367,7 +1369,6 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	     int type_count = hip_get_param_contents_len(reg_request)
 		  - sizeof(reg_request->lifetime);
 	     /* Build REG_RESPONSE and/or REG_FAILED */
-	     /* Lauri: Huomiseen... */
 	     hip_handle_registration_attempt(
 		  entry, r2, reg_request,
 		  (value + sizeof(reg_request->lifetime)), type_count);

@@ -19,7 +19,7 @@ void hip_init_services(void)
 void hip_uninit_services(void)
 {       
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s;
+     hip_service_t *s;
      int c;
      list_for_each_safe(item, tmp, services, c) {
 	  s = list_entry(item);
@@ -41,8 +41,8 @@ void hip_uninit_services(void)
 int hip_services_add(int service_type)
 {
      int err = 0;
-     HIP_SERVICE *tmp = NULL;
-     HIP_SERVICE *service = NULL;
+     hip_service_t *tmp = NULL;
+     hip_service_t *service = NULL;
         
      HIP_DEBUG("Adding service.\n");
 	
@@ -114,7 +114,7 @@ int hip_services_set_active(int service)
 {
      int err = 0, c;
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s;
+     hip_service_t *s;
 	
      list_for_each_safe(item, tmp, services, c) {
 	  s = list_entry(item);
@@ -131,7 +131,7 @@ int hip_services_set_inactive(int service)
 {
      int err = 0, c;
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
 
      list_for_each_safe(item, tmp, services, c) {
 	  s = list_entry(item);
@@ -148,7 +148,7 @@ int hip_services_remove(int service)
 {
      int err = 0, c;
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
 	
      list_for_each_safe(item, tmp, services, c) {
 	  s = list_entry(item);
@@ -165,10 +165,10 @@ int hip_services_remove(int service)
      return err;
 }
 
-HIP_SERVICE *hip_get_service(int service_type)
+hip_service_t *hip_get_service(int service_type)
 {
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
      int c;
 
      list_for_each_safe(item, tmp, services, c) {
@@ -184,7 +184,7 @@ HIP_SERVICE *hip_get_service(int service_type)
 
 int hip_get_services_list(int **service_types)
 {
-     HIP_SERVICE *s = NULL, *s2 = NULL;
+     hip_service_t *s = NULL, *s2 = NULL;
      hip_list_t *item = NULL, *item2 = NULL, *tmp = NULL, *tmp2 = NULL;
      int counter1 = 0, c;
      int counter2 = 0;
@@ -218,7 +218,7 @@ int hip_get_services_list(int **service_types)
 int hip_get_service_count()
 {
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
      int count = 0, c;
      list_for_each_safe(item, tmp, services, c) {
 	  s = list_entry(item);
@@ -232,7 +232,7 @@ int hip_get_service_count()
 int hip_services_is_active(int service)
 {
      hip_list_t *item = NULL, *tmp = NULL;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
      int c;
 
      list_for_each_safe(item, tmp, services, c) {
@@ -252,7 +252,7 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
      int accept_count = 0;
      int reject_count = 0;
      int count = 0;
-     HIP_SERVICE *s = NULL;
+     hip_service_t *s = NULL;
      int *a_req, *r_req;
      count = hip_get_service_count();
 	
@@ -291,8 +291,87 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
      return err;	
 }
 
-int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg, 
-				    struct hip_reg_request *reg_request, uint8_t *requests, int request_count)
+int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
+			hip_common_t *target_msg)
+{
+     struct hip_reg_request *reg_request = NULL;
+     hip_service_t *service = NULL;
+     int err = 0, accepted_count = 0, rejected_count = 0, type_count = 0;
+     uint8_t lifetime = 0;
+     uint8_t *values = NULL;
+     
+     HIP_DEBUG("Lauri: hip_new_reg_handler() invoked.\n");
+
+     /* Check if the incoming I2 has a REG_REQUEST parameter at all. */
+     reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
+     if(reg_request == NULL)
+     {
+	  HIP_DEBUG("No REG_REQUEST parameter found.\n");
+	  return err;
+     }
+     
+     /* Get the registration lifetime and count of registration types. */
+     lifetime = reg_request->lifetime;
+     type_count = hip_get_param_contents_len(reg_request) -
+	  sizeof(reg_request->lifetime);
+     values = hip_get_param_contents_direct(reg_request) +
+	  sizeof(reg_request->lifetime);
+
+     /* Arrays for storing pointers to accepted and failed requests. These
+	pointers point to memoryregions inside the REG_REQUEST parameter. */
+     uint8_t *accepted_requests[type_count], *failed_reuests[type_count];
+
+     HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
+	       lifetime, type_count);
+     
+     /* Cancelling a service. */
+     if(lifetime == 0)
+     {
+	  HIP_DEBUG("Client is cancelling registration.\n");
+	  hip_build_param_reg_request(
+	       target_msg, lifetime, values, type_count, 0);
+     }
+     
+     /* Adding a service. */
+     else
+     {
+	  HIP_DEBUG("Client is registrating for new services.\n");
+	  int i = 0;
+	  for(; i < type_count; i++)
+	  {
+	       service = hip_get_service(values[i]);
+
+	       switch(values[i])
+	       {
+	       case HIP_SERVICE_RENDEZVOUS:
+		    HIP_INFO("Client is registering to rendezvous service.\n");
+		    break;
+	       case HIP_SERVICE_ESCROW:
+		    HIP_INFO("Client is registering to escrow service.\n");
+		    break;
+	       case HIP_SERVICE_RELAY_UDP_HIP:
+		    HIP_INFO("Client is registering to UDP relay for HIP "\
+			     "packets service.\n");
+		    break;
+	       case HIP_SERVICE_RELAY_UDP_ESP:
+		    HIP_INFO("Client is registering to to UDP relay for ESP "\
+			     "packets service.\n");
+		    break;
+	       default:
+		    HIP_INFO("Client is trying to register to an unsupported "\
+			     "service (%u).\n", values[i]);
+	       }
+	       
+	  }
+     }
+
+ out_err:
+     return err;        
+}
+
+int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg, 
+				    struct hip_reg_request *reg_request,
+				    uint8_t *requests, int request_count)
 {
      int err = 0, accepted_count = 0, rejected_count = 0;
      int *accepted_requests = NULL, *rejected_requests = NULL;
@@ -300,20 +379,22 @@ int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg,
                 
      HIP_DEBUG("handle_registration_attempt\n");    
         
-     /* If reg_request parameter is NULL, the server itself is cancelling registration 
-      * -> send reg_response with zero lifetime */
+     /* If reg_request parameter is NULL, the server itself is cancelling
+	registration. -> send reg_response with zero lifetime */
      if (!reg_request) {
 	  lifetime = 0;
-	  HIP_DEBUG("Building REG_RESPONSE parameter.\n");
+	  HIP_DEBUG("Building REG_RESPONSE parameter with zero lifetime.\n");
 	  HIP_IFEL(hip_build_param_reg_request(
-			msg, lifetime, (int *) requests, request_count, 0), -1,
+			msg, lifetime, requests, request_count, 0), -1,
 		   "Building of REG_RESPONSE failed\n");
      }
-     /* Check if this is a cancel message (lifetime=0) */
-     else if (reg_request->lifetime == 0) {
+     
+     /* This is a cancel message (lifetime = 0) */
+     else if (reg_request->lifetime == 0)
+     {
 	  int i = 0;
 	  int accept_count = 0;
-	  HIP_SERVICE *s;
+	  hip_service_t *s;
 	  /* Client is cancelling registration 
 	   *      - remove client's kea entry
 	   *      - tell firewall to remove client-data
@@ -339,10 +420,11 @@ int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg,
 	  if (accept_count > 0) {
 	       lifetime = 0;
 	       HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-	       HIP_IFEL(hip_build_param_reg_request(msg, lifetime, accepted_requests, 
+	       HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
 						    accept_count, 0), -1, "Building of REG_RESPONSE failed\n");
 	  }
      }
+     /* This is a registration message (lifetime != 0) */
      else {
 	  HIP_IFEL(!(accepted_requests = HIP_MALLOC((sizeof(int) * request_count), 0)), -1, "alloc\n");
 	  HIP_IFEL(!(rejected_requests = HIP_MALLOC((sizeof(int) * request_count), 0)), 
@@ -357,7 +439,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, struct hip_common *msg,
 	  if (accepted_count > 0) {
 	       lifetime = hip_get_acceptable_lifetime(reg_request->lifetime);
 	       HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-	       HIP_IFEL(hip_build_param_reg_request(msg, lifetime, accepted_requests, 
+	       HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
 						    accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
 	  }
 	  if (rejected_count > 0) {

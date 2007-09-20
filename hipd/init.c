@@ -1,27 +1,14 @@
-
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/** @file
+ * This file defines initialization functions for the HIP daemon.
+ * 
+ * @date    1.1.2007
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
 #include "init.h"
-#include <linux/capability.h>
-#include <sys/prctl.h>
-#include <sys/types.h>
-#include "debug.h"
-#include <pwd.h>
 
 extern struct hip_common *hipd_msg;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
-
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -188,7 +175,14 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
-#endif	
+#endif
+//#ifdef CONFIG_HIP_UDPRELAY
+	HIP_INFO("Initializing HIP UDP relay database.\n");
+	if(hip_relht_init() == NULL)
+	{
+	     HIP_ERROR("Unable to initialize HI UDP relay database. \n");
+	}
+//#endif
 #ifdef CONFIG_HIP_OPENDHT
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 

@@ -2078,7 +2078,8 @@ out_err:
  * @param lifetime  lifetime in seconds in host byte order
  * @param type_list list of types to be appended
  * @param cnt number of addresses in type_list
- * @param request true if parameter is REG_REQUEST, otherwise parameter is REG_RESPONSE
+ * @param request non-zero if parameter is REG_REQUEST, otherwise parameter is
+ *        a REG_RESPONSE
  *
  * @return zero for success, or non-zero on error
  */

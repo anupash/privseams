@@ -61,7 +61,7 @@ void hip_relht_put(hip_relrec_t *rec)
      if(hiprelay_ht == NULL || rec == NULL)
 	  return;
 
-     /* lh_insert returns always NULL, we cannot return nothing from this function. */
+     /* lh_insert returns always NULL, we cannot return anything from this function. */
      lh_insert(hiprelay_ht, rec);
 }
 
