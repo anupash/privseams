@@ -1350,8 +1350,8 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
 	hip_new_reg_handler(entry, i2, r2);
 	HIP_DEBUG("Lauri: EXITING OUR BRAVE NEW HANDLER.\n");
-
-	reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
+	
+	//reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
 	
 	/* draft-ietf-hip-registration-02 4.3:
 	   The requester MUST NOT include more than one REG_REQUEST parameter in
@@ -1360,22 +1360,22 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 
 	   @todo Process excessive REG_REQUEST parameters, i.e. loop through all
 	   REG_REQUEST parameters. -Lauri 19.09.2007 21:58 */
-	if (reg_request)
-	{
+	//if (reg_request)
+	//{
 	     /* Get parameter value. */
-	     uint8_t *value =(uint8_t *)
-		  (hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
+	//   uint8_t *value =(uint8_t *)
+	//  (hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
 	     /* Registration types start after lifetime field. */
-	     int type_count = hip_get_param_contents_len(reg_request)
-		  - sizeof(reg_request->lifetime);
+	//   int type_count = hip_get_param_contents_len(reg_request)
+	//  - sizeof(reg_request->lifetime);
 	     /* Build REG_RESPONSE and/or REG_FAILED */
-	     hip_handle_registration_attempt(
-		  entry, r2, reg_request,
-		  (value + sizeof(reg_request->lifetime)), type_count);
-	}
-	else {
-	     HIP_DEBUG("No REG_REQUEST found in I2.\n");
-	}
+	//   hip_handle_registration_attempt(
+	//  entry, r2, reg_request,
+	//  (value + sizeof(reg_request->lifetime)), type_count);
+	//}
+	//else {
+	//   HIP_DEBUG("No REG_REQUEST found in I2.\n");
+	//}
 	
  	/* HMAC2 */
 	{

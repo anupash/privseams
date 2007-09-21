@@ -320,17 +320,19 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      values = hip_get_param_contents_direct(reg_request) +
 	  sizeof(reg_request->lifetime);
 
-     /* Arrays for storing pointers to accepted and failed requests. These
-	pointers point to memoryregions inside the REG_REQUEST parameter. */
-     uint8_t *accepted_requests[type_count], *failed_requests[type_count];
+     /* Arrays for storing accepted and failed request types. */
+     uint8_t accepted_requests[type_count], rejected_requests[type_count];
+     memset(accepted_requests, '\0', sizeof(accepted_requests));
+     memset(rejected_requests, '\0', sizeof(rejected_requests));
 
      HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
 	       lifetime, type_count);
-     
+     HIP_DEBUG("Typevalue: 0x%02x.\n", values[0]);
      /* Cancelling a service. */
      if(lifetime == 0)
      {
 	  HIP_DEBUG("Client is cancelling registration.\n");
+	  lifetime = hip_get_acceptable_lifetime(lifetime);
 	  hip_build_param_reg_request(
 	       target_msg, lifetime, values, type_count, 0);
      }
@@ -340,6 +342,8 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      {
 	  HIP_DEBUG("Client is registrating for new services.\n");
 	  int i = 0;
+	  lifetime = hip_get_acceptable_lifetime(lifetime);
+
 	  for(; i < type_count; i++)
 	  {
 	       /* Check if we have the requested service in our services. */
@@ -349,7 +353,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_INFO("Client is trying to register to an service (%u) "\
 			     "that we do not have in our services database. "\
 			     "Registration REJECTED.\n", values[i]);
-		    failed_requests[rejected_count] = &values[i];
+		    rejected_requests[rejected_count] = values[i];
 		    rejected_count++;
 		    continue;
 	       }
@@ -370,15 +374,21 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    if(rva == NULL)
 		    {
 			 HIP_INFO("Inserting rendezvous association failed\n");
-			 failed_requests[rejected_count] = values[i];
+			 rejected_requests[rejected_count] = values[i];
 			 rejected_count++;
 		    }
 		    else
 		    {
-			 if (hip_rvs_put_rva(rva))
+			 /* This needs rethinking. We never get an rejected
+			    request... */
+			 if (hip_rvs_put_rva(rva) != 0)
 			 {
 			      hip_put_rva(rva);
-			      accepted_requests[accepted_count] = &values[i];
+			      accepted_requests[accepted_count] = values[i];
+			      accepted_count++;
+			 } else
+			 {
+			      accepted_requests[accepted_count] = values[i];
 			      accepted_count++;
 			 }
 			 hip_hold_rva(rva);
@@ -390,14 +400,27 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	       case HIP_SERVICE_RELAY_UDP_HIP:
 		    HIP_INFO("Client is registering to UDP relay for HIP "\
 			     "packets service.\n");
+		    
 		    hip_relrec_t *relay_record =
 			 hip_relrec_alloc(&(entry->hit_peer),
 					  &(entry->preferred_address),
 					  entry->peer_udp_port,
 					  HIP_REL_NONE);
 		    hip_relht_put(relay_record);
-		    accepted_requests[accepted_count] = &values[i];
-		    accepted_count++;
+		    /* Check that the element really is in the hashtable. */
+		    if(hip_relht_get(relay_record) != NULL)
+		    {
+			 HIP_DEBUG("Inserted a new relay record.\n");
+			accepted_requests[accepted_count] = values[i];
+			accepted_count++; 
+		    } else
+		    {    /* The put was unsuccessful. */
+			 if(relay_record != NULL)
+			      free(relay_record);
+			 rejected_requests[rejected_count] = values[i];
+			 rejected_count++;
+		    }
+		    
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_ESP:
 		    HIP_INFO("Client is registering to to UDP relay for ESP "\
@@ -410,12 +433,28 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_ERROR("Client is trying to register to an service (%u) "\
 			      "that we do not support. "\
 			      "Registration REJECTED.\n", values[i]);
-		    failed_requests[rejected_count] = values[i];
+		    rejected_requests[rejected_count] = values[i];
 		    rejected_count++;
 	       }
 	       
 	  }
-	  /* Lauri: Huomiseen, rakenna REG_RESPONSE. */
+	  
+	  HIP_DEBUG("Accepted requests (%d) 0x%x, "\
+		    "rejected requests (%d) 0x%x\n",
+		    accepted_count, *accepted_requests,
+		    rejected_count, *rejected_requests);
+	  /* Build REG_RESPONSE and REG_FAILED parameters. */
+	  if(accepted_count > 0)
+	  {
+	       hip_build_param_reg_request(target_msg, lifetime, accepted_requests,
+					   accepted_count, 0);
+	  }
+	  /** @todo Determine failure type using some indicator. */
+	  if(rejected_count > 0)
+	  {
+	       hip_build_param_reg_failed(target_msg, HIP_REG_TYPE_UNAVAILABLE,
+					  rejected_requests, rejected_count);
+	  }
      }
 
  out_err:
@@ -532,17 +571,26 @@ int hip_cancel_service(void)
 }
 
 
+/**
+ * Check that the requested service lifetime falls within limits.
+ * 
+ * @requested_lifetime the lifetime requested.
+ * @return             a lifetime fitting within limits.
+ * @todo               we should have minumum and maximum lifetimes for each
+ *                     service. -Lauri 21.09.2007 20:11
+ */
 uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime)
 {
-     int temp = requested_lifetime;
-     if (temp > HIP_SERVICE_MAX_LIFETIME) {
-	  temp = HIP_SERVICE_MAX_LIFETIME; 
+     uint8_t time = requested_lifetime;
+     if (time > HIP_SERVICE_MAX_LIFETIME) {
+	  time = HIP_SERVICE_MAX_LIFETIME; 
      }
-     else if (temp < HIP_SERVICE_MIN_LIFETIME) {
-	  temp = HIP_SERVICE_MIN_LIFETIME;
+     else if (time < HIP_SERVICE_MIN_LIFETIME) {
+	  time = HIP_SERVICE_MIN_LIFETIME;
      }
-     HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d", requested_lifetime, temp);
-     return (uint8_t)temp;
+     HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d",
+	       requested_lifetime, time);
+     return time;
 }
 
 uint8_t hip_get_service_min_lifetime()

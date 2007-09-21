@@ -13,6 +13,7 @@
 
 
 #include "hiprelay.h"
+#include "misc.h"
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
@@ -52,7 +53,7 @@ int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
      if(rec1 == NULL || rec2 == NULL)
 	  return 1;
-
+     
      return hip_match_hit(&(rec1->hit_r), &(rec2->hit_r));
 }
 
@@ -60,7 +61,15 @@ void hip_relht_put(hip_relrec_t *rec)
 {
      if(hiprelay_ht == NULL || rec == NULL)
 	  return;
-
+     
+     /* If we are trying to insert a duplicate element (same HIT), we have to
+	delete the previous entry. If we do not do so, only the pointer in the
+	hash table is replaced and the refrence to the previous element is
+	lost resulting in a memory leak. */
+     hip_relrec_t dummy;
+     memcpy(&(dummy.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
+     hip_relht_rec_free(&dummy);
+     
      /* lh_insert returns always NULL, we cannot return anything from this function. */
      lh_insert(hiprelay_ht, rec);
 }
@@ -86,6 +95,7 @@ void hip_relht_rec_free(hip_relrec_t *rec)
      {
 	  memset(deleted_rec, '\0', sizeof(*deleted_rec));
 	  free(deleted_rec);
+	  HIP_DEBUG("Relay record deleted.\n");
      }
 }
 
