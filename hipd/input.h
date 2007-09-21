@@ -107,12 +107,12 @@ static inline const char *hip_msg_type_str(int type)
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	_HIP_DEBUG("hip_controls_sane() invoked.\n");
-	return ((controls & (   HIP_HA_CTRL_LOCAL_HIT_ANON
-//#ifdef CONFIG_HIP_RVS
-//				| HIP_HA_CTRL_LOCAL_RVS_CAPABLE
-//#endif
-			 )) | legal) == legal;
+     _HIP_DEBUG("hip_controls_sane() invoked.\n");
+     return ((controls & (   HIP_HA_CTRL_LOCAL_HIT_ANON
+/* #ifdef CONFIG_HIP_RVS
+   | HIP_HA_CTRL_PEER_RVS_CAPABLE
+   #endif */
+		   )) | legal) == legal;
 }
 
 int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,

@@ -327,14 +327,87 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 
      HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
 	       lifetime, type_count);
-     HIP_DEBUG("Typevalue: 0x%02x.\n", values[0]);
-     /* Cancelling a service. */
+     
+     /* Cancelling a service. draft-ietf-hip-registration-02:
+	"A zero lifetime is reserved for canceling purposes. .. A registrar
+	SHOULD respond and grant a registration with a zero lifetime."
+	Not a word about failed cancellations, so we won't be sending any
+	REG_FAILED parameters. -Lauri 21.09.2007 21:23*/
      if(lifetime == 0)
      {
 	  HIP_DEBUG("Client is cancelling registration.\n");
-	  lifetime = hip_get_acceptable_lifetime(lifetime);
-	  hip_build_param_reg_request(
-	       target_msg, lifetime, values, type_count, 0);
+	  int i = 0;
+	  for(; i < type_count; i++)
+	  {
+	       /* Check if we have the requested service in our services. */
+	       service = hip_get_service(values[i]);
+	       if(service == NULL)
+	       {
+		    HIP_INFO("Client is trying to cancel an service (%u) "\
+			     "that we do not have in our services database. "\
+			     "Cancellation REJECTED.\n", values[i]);
+		    continue;
+	       } else
+	       {
+		    HIP_INFO("Registration cancellation failed.\n");
+	       }
+	       /* We could do the cancellation via each services
+		  cancel_registration functionpointer inside the above else
+		  branch. However, since the registration extension is
+		  unfinished in this respect, we handle the cancellation using
+		  the switch below. -Lauri 21.09.2007 21:32 */
+	       switch(values[i])
+	       {
+	       case HIP_SERVICE_RENDEZVOUS:
+		    HIP_INFO("Client is cancelling rendezvous service.\n");
+
+		    hip_rva_t *rva = hip_rvs_get(&(entry->hit_peer));
+		    if(rva != NULL)
+		    {
+			 hip_rvs_remove(rva);
+			 accepted_requests[accepted_count] = values[i];
+			 accepted_count++; 
+			 HIP_DEBUG("Deleted a rendezvous association.\n");
+		    }
+		    break;
+	       case HIP_SERVICE_ESCROW:
+		    HIP_INFO("Client is cancelling registration to escrow "\
+			     "service.\n");
+		    if(service->cancel_registration(&entry->hit_peer) == 0)
+		    {
+			 accepted_requests[accepted_count] = values[i];
+			 accepted_count++; 
+		    }
+		    break;
+	       case HIP_SERVICE_RELAY_UDP_HIP:
+		    HIP_INFO("Client is cancelling registration to UDP relay"\
+			     "for HIP packets service.\n");
+		    
+		    hip_relrec_t dummy;
+		    memcpy(&(dummy.hit_r), &(entry->hit_peer),
+			   sizeof(&(entry->hit_peer)));
+		    hip_relht_rec_free(&dummy);
+		    /* Check that the element really got deleted. */
+		    if(hip_relht_get(&dummy) == NULL)
+		    {
+			 HIP_DEBUG("Deleted a relay record.\n");
+			 accepted_requests[accepted_count] = values[i];
+			 accepted_count++; 
+		    }
+		    break;
+	       case HIP_SERVICE_RELAY_UDP_ESP:
+		    HIP_INFO("Client is cancelling registration to UDP relay "\
+			     "for ESP packets service.\n");
+		    /* Alas, we do not support UDP ESP relay yet. :( */
+		    break;
+	       default:
+		    /* We should never come here, since the registration
+		       database check should fail for unsupported services. */
+		    HIP_ERROR("Client is trying to cancel  an service (%u) "\
+			      "that we do not support. "\
+			      "Cancellation REJECTED.\n", values[i]);
+	       }
+	  }
      }
      
      /* Adding a service. */
@@ -357,12 +430,9 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    rejected_count++;
 		    continue;
 	       }
-	       /* We could add an "else" branch to the above "if" here, and do
-		  the registration via each services handle_registration
-		  functionpointer. However, since the registration extension is
-		  unfinished in this respect, we handle the registration using
-		  the switch below. -Lauri 20.09.2007 21:17 */
-
+	       /* @todo Handle registration using each services
+		  handle_registration functionpointer (as now done in escrow).
+		  -Lauri 21.09.2007 22:25 */
 	       switch(values[i])
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
@@ -396,11 +466,28 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    break;
 	       case HIP_SERVICE_ESCROW:
 		    HIP_INFO("Client is registering to escrow service.\n");
+		    if (service->state == HIP_SERVICE_ACTIVE)
+		    {
+			 if(service->handle_registration(&entry->hit_peer) == 0)
+			 {
+			      accepted_requests[accepted_count] = values[i];
+			      accepted_count++; 
+			 } else
+			 {
+			      rejected_requests[rejected_count] = values[i];
+			      rejected_count++;
+			 }
+		    } else
+		    {
+			 HIP_DEBUG("Service inactive.\n");
+		    }
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_HIP:
 		    HIP_INFO("Client is registering to UDP relay for HIP "\
 			     "packets service.\n");
-		    
+
+		    /* Don't now should we take the peer HIT from the entry, or
+		       the I2 packet. Using the entry for now.*/
 		    hip_relrec_t *relay_record =
 			 hip_relrec_alloc(&(entry->hit_peer),
 					  &(entry->preferred_address),
@@ -410,7 +497,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    /* Check that the element really is in the hashtable. */
 		    if(hip_relht_get(relay_record) != NULL)
 		    {
-			 HIP_DEBUG("Inserted a new relay record.\n");
+			HIP_DEBUG("Inserted a new relay record.\n");
 			accepted_requests[accepted_count] = values[i];
 			accepted_count++; 
 		    } else
@@ -420,10 +507,9 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 			 rejected_requests[rejected_count] = values[i];
 			 rejected_count++;
 		    }
-		    
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_ESP:
-		    HIP_INFO("Client is registering to to UDP relay for ESP "\
+		    HIP_INFO("Client is registering to UDP relay for ESP "\
 			     "packets service.\n");
 		    /* Alas, we do not support UDP ESP relay yet. :( */
 		    break;
@@ -538,8 +624,10 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 	       HIP_DEBUG("Building REG_FAILED parameter");
 	       /* TODO: Fix failure type to mean something. Now we are using 
 		* HIP_REG_TYPE_UNAVAILABLE in any case.*/
-	       HIP_IFEL(hip_build_param_reg_failed(msg, HIP_REG_TYPE_UNAVAILABLE, rejected_requests, 
-						   rejected_count), -1, "Building of REG_FAILED failed\n");
+	       HIP_IFEL(hip_build_param_reg_failed(msg, HIP_REG_TYPE_UNAVAILABLE,
+						   (uint8_t)rejected_requests, 
+						   rejected_count), -1,
+			"Building of REG_FAILED failed\n");
 	  }
      }
         
@@ -582,10 +670,11 @@ int hip_cancel_service(void)
 uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime)
 {
      uint8_t time = requested_lifetime;
-     if (time > HIP_SERVICE_MAX_LIFETIME) {
+     if (time > HIP_SERVICE_MAX_LIFETIME)
+     {
 	  time = HIP_SERVICE_MAX_LIFETIME; 
-     }
-     else if (time < HIP_SERVICE_MIN_LIFETIME) {
+     } else if (time < HIP_SERVICE_MIN_LIFETIME)
+     {
 	  time = HIP_SERVICE_MIN_LIFETIME;
      }
      HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d",

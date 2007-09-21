@@ -2122,7 +2122,7 @@ out_err:
  * @return zero for success, or non-zero on error
  */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
-			int *type_list, int cnt)
+			uint8_t *type_list, int cnt)
 {
 	int err = 0;
 	int i;
@@ -2136,8 +2136,9 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
 		-1, "Failed to allocate memory");
 	memset(array, (sizeof(uint8_t) * cnt), 0);
+	/* Wtf? */
 	for (i = 0; i < cnt; i++) {
-		uint8_t val = (uint8_t)type_list[i];
+		uint8_t val = type_list[i];
 		array[i] = val;
 	}
 	

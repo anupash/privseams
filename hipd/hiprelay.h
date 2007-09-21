@@ -138,9 +138,12 @@ void hip_relht_free_expired(hip_relrec_t *rec);
 unsigned long hip_relht_size();
 
 /**
- * Periodic maintenance function of the hip relay. This function should be called once in
- * every maintenance cycle of the hip daemon. It clears the expired relay records by
- * calling @c hip_relht_free_expired() for every element in the hashtable.
+ * Periodic maintenance function of the hip relay. This function should be
+ * called once in every maintenance cycle of the hip daemon. It clears the
+ * expired relay records by calling @c hip_relht_free_expired() for every
+ * element in the hashtable.
+ * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
+ *       registration is cancelled.
  */
 void hip_relht_maintenance();
 

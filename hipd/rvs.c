@@ -328,7 +328,8 @@ void hip_rvs_uninit_rvadb()
  */ 
 void hip_rvs_free_rva(hip_rva_t *rva)
 {
-	HIP_FREE(rva);
+     if(rva != NULL)
+	  HIP_FREE(rva);
 }
 
 /**
