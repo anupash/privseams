@@ -1845,7 +1845,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				if (memcmp(addr->echo_data,
 				           (void *)echo_resp+sizeof(struct hip_tlv_common),
 				           sizeof(addr->echo_data)) != 0)
-				{
+				{ 
 					HIP_ERROR("ECHO_RESPONSE differs from ECHO_REQUEST\n");
 					continue;
 				}	
