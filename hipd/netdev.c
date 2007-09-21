@@ -684,6 +684,30 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			if (locators)
 			{
 				i = 0;
+                                /* BUG ID 392 thats why v6 first and v4 after */
+				list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					/* advertise only the addresses which are in
+					   the same interface which caused the event */
+					if (n->if_index != ifa->ifa_index)
+						continue;
+                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                                            memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+                                                   hip_sa_addr_len(&n->addr));
+                                            /* FIXME: Is this ok? (tkoponen), for boeing it is*/
+                                            locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                                            locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                                            locators[i].locator_length = sizeof(struct in6_addr) / 4;
+                                            
+                                            /* For testing preferred address */
+                                            //locators[i].reserved =
+                                            //	i == 0 ? htonl(1 << 7) : 0;
+                                            
+                                            locators[i].lifetime = 0;
+                                            i++;
+                                        }
+				}
 				list_for_each_safe(item, tmp, addresses, ii)
 				{
 					n = list_entry(item);
@@ -692,19 +716,21 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 					if (n->if_index != ifa->ifa_index)
 						continue;
 
-					memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-					/* FIXME: Is this ok? (tkoponen), for boeing it is*/
-					locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-					locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-					locators[i].locator_length = sizeof(struct in6_addr) / 4;
+                                        if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                                            memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+                                                   hip_sa_addr_len(&n->addr));
+                                            /* FIXME: Is this ok? (tkoponen), for boeing it is*/
+                                            locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                                            locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                                            locators[i].locator_length = sizeof(struct in6_addr) / 4;
 
-					/* For testing preferred address */
-					//locators[i].reserved =
-					//	i == 0 ? htonl(1 << 7) : 0;
-                                        
-					locators[i].lifetime = 0;
-					i++;
+                                            /* For testing preferred address */
+                                            //locators[i].reserved =
+                                            //	i == 0 ? htonl(1 << 7) : 0;
+                                            
+                                            locators[i].lifetime = 0;
+                                            i++;
+                                        }
 				}
 				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
 				hip_send_update_all(locators, i,

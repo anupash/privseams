@@ -342,13 +342,29 @@ int hip_build_locators(struct hip_common *msg)
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
                 continue;
-            memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                   sizeof(struct in6_addr));
-            locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-            locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-            locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-            locs[ii].reserved = 0;
-            ii++;
+            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs[ii].reserved = 0;
+                ii++;
+            }
+        }
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs[ii].reserved = 0;
+                ii++;
+            }
         }
         err = hip_build_param_locator(msg, locs, address_count);
     }

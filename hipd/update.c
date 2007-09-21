@@ -2654,16 +2654,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) { 
-                    /* 
-                       usleep is here because of the interfamily stuff 
-                       ipv6_raw_sock is handled always before ipv4_raw_sock
-                       so if update/echo request fly in wire too close to each other
-                       they might be received almost at the same time and the select loop
-                       will favor the ipv6 and cause seq numbering to fail
-                       similar thing can happen with r2 and first update
-                       -Samu
-                    */
-                    usleep(200);
                     hip_send_update(rk.array[i], addr_list, addr_count,
                                     ifindex, flags, is_add, &addr_sin6);
                     hip_hadb_put_entry(rk.array[i]);
