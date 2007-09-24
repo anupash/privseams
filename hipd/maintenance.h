@@ -28,6 +28,8 @@ int periodic_maintenance();
 int hip_get_firewall_status();
 void hip_set_firewall_status();
 int hip_agent_update_status(int msg_type, void *data, size_t size);
+int hip_agent_update(void);
+
 
 #endif /* _HIPD_MAINTENANCE */
 

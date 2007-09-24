@@ -247,6 +247,11 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
                                          0,
                                          lifetime, is_preferred), -1);
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_oppipdb_delentry(&(entry->preferred_address));
+#endif
+
  out_err:
 	return err;
 }
@@ -651,7 +656,7 @@ int hip_handle_update_established(hip_ha_t *entry, struct hip_common *msg,
 	   port of the UPDATE packet. */
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(dst_ip, src_ip,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -985,7 +990,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, struct hip_common *msg,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->local_address, &daddr,
-			      HIP_NAT_UDP_PORT, entry->peer_udp_port,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
@@ -1123,8 +1129,9 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 		 -1, "Building Verification Packet failed\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(src_ip, &addr->address, HIP_NAT_UDP_PORT,
-			      entry->peer_udp_port, update_packet, entry, 0),
+		 hip_send_pkt(src_ip, &addr->address,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
  out_err:
@@ -1319,12 +1326,15 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 
 	HIP_DEBUG("Sending reply UPDATE packet (address check).\n");
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(dst_ip, src_ip, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(dst_ip, src_ip,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, update_packet, entry, 0),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 	
 	HIP_IFEL(set_address_state(entry, src_ip),
 		 -1, "Setting Own address status to ACTIVE failed\n");
+
+	entry->update_state = 0; /* No retransmissions */
 
  out_err:
 	if (update_packet)
@@ -1904,6 +1914,8 @@ int hip_receive_update(struct hip_common *msg,
         struct hip_tlv_common *reg_info = NULL;
 	struct in6_addr *src_ip, *dst_ip;
 	struct hip_tlv_common *encrypted = NULL;
+	
+	HIP_DEBUG("enter\n");
 
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
@@ -2554,9 +2566,11 @@ int hip_send_update(struct hip_hadb_state *entry,
 	
 	HIP_DEBUG("Sending initial UPDATE packet.\n");
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
+
+	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
 	/** @todo 5. The system SHOULD start a timer whose timeout value
 	    should be ..*/
@@ -2564,7 +2578,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
  out_err:
 	entry->state = HIP_STATE_ESTABLISHED;
-	HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
+	_HIP_DEBUG("fallbacked to state ESTABLISHED (ok ?)\n");
 
 	hip_set_spi_update_status(entry, esp_info_old_spi, 0);
 	/* delete IPsec SA on failure */

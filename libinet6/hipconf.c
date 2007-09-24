@@ -45,7 +45,7 @@ const char *hipconf_usage =
 "get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
-        "set blind on|off\n"
+"set blind on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
@@ -55,6 +55,7 @@ const char *hipconf_usage =
 "dht get <fqdn/hit>\n"
 #endif
 "debug all|medium|none\n"
+"restart daemon\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -76,13 +77,14 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_service,
 	hip_conf_handle_load,
 	hip_conf_handle_run_normal, /* run */
-        hip_conf_handle_ttl,
-        hip_conf_handle_gw,
-        hip_conf_handle_get,
+	hip_conf_handle_ttl,
+	hip_conf_handle_gw,
+	hip_conf_handle_get,
 	hip_conf_handle_blind,
 	hip_conf_handle_ha,
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
+	hip_conf_handle_restart,
 	NULL, /* run */
 };
 
@@ -120,12 +122,14 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_RUN;
 	else if (!strcmp("load", text))
 		ret = ACTION_LOAD;
-        else if (!strcmp("dht", text))
-                ret = ACTION_DHT;
+	else if (!strcmp("dht", text))
+		ret = ACTION_DHT;
 	else if (!strcmp("debug", text))
-                ret = ACTION_DEBUG;
+		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
-                ret = ACTION_HANDOFF;
+		ret = ACTION_HANDOFF;
+	else if (!strcmp("restart", text))
+		ret = ACTION_RESTART;
 
 	return ret;
 }
@@ -167,23 +171,26 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_LOAD:
 		count=2;
 		break;
-        case ACTION_DHT:
-                count=2;
-                break;
+	case ACTION_DHT:
+		count=2;
+		break;
 	case ACTION_RST:
-                break;
+		break;
 	case ACTION_BOS:
 		break;
 	case ACTION_HA:
-                count=2;
-                break;
+		count=2;
+		break;
 	case ACTION_HANDOFF:
-	        count = 2;
-                break;
+		count = 2;
+		break;
 	case ACTION_DEBUG:
-	        count = 1;
-                break;
-	
+		count = 1;
+		break;
+	case ACTION_RESTART:
+		count = 1;
+		break;
+
 	default:
 	        break;
 
@@ -229,6 +236,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_DEBUG;
 	else if (!strcmp("mode", text))
 		ret = TYPE_MODE;
+	else if (!strcmp("daemon", text))
+		ret = TYPE_DAEMON;
 
 
 
@@ -245,12 +254,12 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_ESCROW;
 #endif		
 #ifdef CONFIG_HIP_OPENDHT
-        else if (!strcmp("ttl", text))
-                ret = TYPE_TTL;
-        else if (!strcmp("gw", text))
-                ret = TYPE_GW;
-        else if (!strcmp("get", text))
-                 ret = TYPE_GET;
+	else if (!strcmp("ttl", text))
+		ret = TYPE_TTL;
+	else if (!strcmp("gw", text))
+		ret = TYPE_GW;
+	else if (!strcmp("get", text))
+		ret = TYPE_GET;
 #endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
@@ -258,38 +267,39 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	return ret;
 }
 
-int hip_conf_get_type_arg(int action) {
-        int type_arg = -1;
-
-        switch (action) {
-        case ACTION_ADD:
-        case ACTION_DEL:
-        case ACTION_NEW:
-        case ACTION_NAT:
-        case ACTION_INC:
-        case ACTION_DEC:
-        case ACTION_SET:
-        case ACTION_GET:
-        case ACTION_RUN:
+int hip_conf_get_type_arg(int action)
+{
+	int type_arg = -1;
+	
+	switch (action)
+	{
+	case ACTION_ADD:
+	case ACTION_DEL:
+	case ACTION_NEW:
+	case ACTION_NAT:
+	case ACTION_INC:
+	case ACTION_DEC:
+	case ACTION_SET:
+	case ACTION_GET:
+	case ACTION_RUN:
 	case ACTION_LOAD:
-        case ACTION_DHT:
+	case ACTION_DHT:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
+	case ACTION_RESTART:
+		type_arg = 2;
+		break;
 	
-                type_arg = 2;
-                break;
-
 	case ACTION_DEBUG:
-	
-                type_arg = 1;
-                break;
+		type_arg = 1;
+		break;
 	
 	default:
-	        break;
-        }
-
-        return type_arg;
+		break;
+	}
+	
+	return type_arg;
 }
 
 /**
@@ -812,9 +822,7 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
 	int err = 0;
 
 	if (action == ACTION_RUN)
-		return hip_handle_exec_application(0, EXEC_LOADLIB_OPP,
-						   (char **) &opt[0],
-						   optc);
+		return hip_handle_exec_application(0, EXEC_LOADLIB_OPP, optc, (char **) &opt[0]);
 	if (optc != 1) {
 		HIP_ERROR("Incorrect number of arguments\n");
 		err = -EINVAL;
@@ -1102,8 +1110,7 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc)
 {
-	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP,
-					   (char **) &opt[0], optc);
+	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc, (char **) &opt[0]);
 }
 
 int hip_do_hipconf(int argc, char *argv[], int send_only)
@@ -1197,6 +1204,8 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
                         HIP_DEBUG("HA is %s\n", hip_state_str(ha->state));
                         HIP_DEBUG_HIT("local hit is", &ha->hit_our);
                         HIP_DEBUG_HIT("peer  hit is", &ha->hit_peer);
+                        HIP_DEBUG_IN6ADDR("local ip is", &ha->ip_our);
+                        HIP_DEBUG_IN6ADDR("peer  ip is", &ha->ip_peer);
 
                 }
 
@@ -1376,14 +1385,15 @@ int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
  *
  * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
+ * @param argc   the number of elements in the array.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
- * @param argc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
-{	
-        /* Variables. */
+int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
+{
+	/* Variables. */
+	char *path = "/usr/lib:/lib:/usr/local/lib";
 	char lib_all[LIB_LENGTH];
 	va_list args;
 	int err = 0;
@@ -1416,7 +1426,7 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		      libs[2] = NULL;
 #endif
 		}
-		else
+		else if (type == EXEC_LOADLIB_OPP)
 		{
 		      libs[0] = "libopphip.so";
 		      libs[1] = "libinet6.so";
@@ -1429,6 +1439,14 @@ int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
 		      libs[3] = NULL;
 #endif
 		}
+
+#if 0
+		if (type != EXEC_LOADLIB_NONE)
+		{
+			setenv("LD_PRELOAD", libs, 1);
+			HIP_DEBUG("LD_PRELOADing\n");
+		}
+#endif
 
 		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
 		setenv("LD_PRELOAD", lib_all, 1);
@@ -1446,6 +1464,19 @@ out_err:
 	return (err);
 }
 
+
+/**
+ * Send restart request to HIP daemon.
+ */
+int hip_conf_handle_restart(struct hip_common *msg, int type, const char *opt[], int optc)
+{
+	int err = 0;
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART, 0), -1, "hip_build_user_hdr() failed!");
+
+out_err:
+	return err;
+}
 
 
 

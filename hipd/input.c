@@ -548,9 +548,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
-	  err = ((hip_rcv_func_set_t *)
-		 hip_get_rcv_default_func_set())->
-		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
+	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
+								 dst_addr,
+								 entry,
+								 msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -569,7 +570,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
-	        HIP_IFEL(!entry, "No entry when receiving R1\n", -1);
+	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
@@ -1050,7 +1051,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr, HIP_NAT_UDP_PORT, r1_info->src_port, i2, entry, 1);
+	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
@@ -1346,7 +1349,13 @@ int hip_receive_r1(struct hip_common *r1,
 {
 	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
 
-	_HIP_DEBUG("hip_receive_r1() invoked.\n");
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_oppipdb_delentry(&(entry->preferred_address));
+#endif
+
 #ifdef CONFIG_HIP_RVS
 	/** @todo: Should RVS capability be stored somehow else? */
 	mask |= HIP_CONTROL_RVS_CAPABLE;
@@ -1401,16 +1410,13 @@ int hip_receive_r1(struct hip_common *r1,
 		/* E1. The normal case. Process, send I2, goto E2. */
 		err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
 		HIP_LOCK_HA(entry);
-		if (err < 0)
+		if (err)
 			HIP_ERROR("Handling of R1 failed\n");
 		HIP_UNLOCK_HA(entry);
 		break;
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-	#ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-	#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1422,6 +1428,7 @@ int hip_receive_r1(struct hip_common *r1,
 	}
 
 	hip_put_ha(entry);
+
  out_err:
 	return err;
 }
@@ -1528,7 +1535,8 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr, HIP_NAT_UDP_PORT,
+	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
+						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
@@ -1542,10 +1550,11 @@ int hip_create_r2(struct hip_context *ctx,
 			   entry, entry->hadb_xmit_func->hip_send_pkt)),
 		 0, "Inserting rendezvous association failed\n");
 
-	/*Returns zero because blind code requires it*/
-	HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
-		  "Error while inserting RVA into hash table\n");
+	if (hip_rvs_put_rva(rva))
+		hip_put_rva(rva);
 #endif /* CONFIG_HIP_RVS */
+
+	hip_hold_rva(rva);
 
  out_err:
 	if (r2)
@@ -1781,47 +1790,38 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		   newly created entry as well. */
 		HIP_LOCK_HA(entry);
 		if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
-		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
-		  hip_init_us(entry, plain_local_hit);
+			ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
+			hip_init_us(entry, plain_local_hit);
 		}
 		else {
-		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		  hip_init_us(entry, &i2->hitr);
+			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+			hip_init_us(entry, &i2->hitr);
 		}
-
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
-		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
-			 "if_index NOT determined\n");
-
-		memset(addr, 0, sizeof(struct sockaddr_storage));
-		addr->sa_family = AF_INET6;
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index);
-                /* if_index = addr2ifindx(entry->local_address); */
-
-		/* If the incoming I2 packet has 50500 as destination port, NAT
-		   mode is set on for the host association, I2 source port is
-		   stored as the peer UDP port and send function is set to
-		   "hip_send_udp()". Note that we must store the port not until
-		   here, since the source port can be different for I1 and I2. */
-		if(i2_info->dst_port == HIP_NAT_UDP_PORT)
-		{
-			entry->nat_mode = 1;
-			entry->peer_udp_port = i2_info->src_port;
-			HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-			HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-				  entry);
-			hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-			//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
-		}
-		entry->hip_transform = hip_tfm;
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 
 		_HIP_DEBUG("HA entry created.");
 	}
+
+	ipv6_addr_copy(&entry->local_address, i2_daddr);
+
+	/* If the incoming I2 packet has 50500 as destination port, NAT
+	   mode is set on for the host association, I2 source port is
+	   stored as the peer UDP port and send function is set to
+	   "hip_send_udp()". Note that we must store the port not until
+	   here, since the source port can be different for I1 and I2. */
+	if(i2_info->dst_port == HIP_NAT_UDP_PORT) {
+		  entry->nat_mode = 1;
+		  entry->peer_udp_port = i2_info->src_port;
+		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
+		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+		      entry);
+		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+		  //entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	}
 	entry->hip_transform = hip_tfm;
+
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -2133,7 +2133,13 @@ int hip_receive_i2(struct hip_common *i2,
  	switch(state) {
  	case HIP_STATE_UNASSOCIATED:
 		/* possibly no state created yet, entry == NULL */
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info); //as there is no state established function pointers can't be used here
+		/* as there is no state established function pointers can't be
+		   used here */
+	  err = (hip_get_handle_default_func_set())->hip_handle_i2(i2,
+								   i2_saddr,
+								   i2_daddr,
+								   entry,
+								   i2_info);
 		break;
 	case HIP_STATE_I2_SENT:
 		/* WTF */
@@ -2351,6 +2357,11 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_oppipdb_delentry(&(entry->preferred_address));
+#endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
@@ -2964,7 +2975,8 @@ int hip_handle_notify(const struct hip_common *notify,
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->local_address, &responder_ip,
-						     HIP_NAT_UDP_PORT, port,
+						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						     port,
 						     &i1, NULL, 0);
 				
 				break;

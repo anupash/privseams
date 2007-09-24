@@ -89,7 +89,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	// Send blinded i1
 	if (hip_blind_get_status()) {
 	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
-						    &daddr, 0, 
+						    &daddr, 
+						    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						    HIP_NAT_UDP_PORT,
 						    i1_blind, entry, 1);
 	}
@@ -97,7 +98,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
-				     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
+				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+				     HIP_NAT_UDP_PORT,
 				     i1, entry, 1);
 	}
 
@@ -528,7 +530,7 @@ void hip_send_notify(hip_ha_t *entry)
 	
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &daddr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, notify_packet,
 			      entry, 0),
 		 -ECOMM, "Sending NOTIFY packet failed.\n");
@@ -771,21 +773,11 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(&my_addr, peer_addr, msg, entry), -1,
 			 "Queueing failed.\n");
 	
-	/* Handover may cause e.g. on-link duplicate address detection which may cause bind to fail.
-	   This is a kludge because we don't have UPDATE retransmissions yet. */
-	for (try_again = 0; try_again < 2; try_again++) {
-		err = bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
-		HIP_DEBUG("Binding to raw socket returned %d\n", err);
-		if (err) {
-			HIP_DEBUG("Binding failed 1st time, trying again\n");
-			HIP_DEBUG("First, sleeping a bit (duplicate address detection)\n");
-			sleep(2);
-		} else {
-			break;
-		}
-	}
+	/* Handover may cause e.g. on-link duplicate address detection
+	   which may cause bind to fail. */
 
-	HIP_IFEL(err, -1, "Binding to raw sock failed\n");
+	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &src, sa_size),
+		 -1, "Binding to raw sock failed\n");
 
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
 		HIP_DEBUG("Packet loss probability: %f\n", ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100.f);
@@ -943,24 +935,24 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 	
 	/* Try to send the data. */
-	do{
+	do {
 		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
 				     (struct sockaddr *) &dst4, sizeof(dst4));
-		/* Failure. */
 		if(chars_sent < 0)
 		{
+			/* Failure. */
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
 				  "for %d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
 			sleep(HIP_NAT_SLEEP_TIME);
 		}
-		/* Success. */
 		else
 		{
+			/* Success. */
 			break;
 		}
 		xmit_count++;
-	}while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
+	} while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
 
 	/* Verify that the message was sent completely. */
 	HIP_IFEL((chars_sent != packet_length), -ECOMM,

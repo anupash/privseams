@@ -105,7 +105,7 @@ void hip_hadb_put_entry(void *entry);
 	/* assume already locked entry */                                    \
 	ipv6_addr_copy(&hit_p, hit_peer);                                    \
 	ipv6_addr_copy(&hit_o, hit_our);                                     \
-	tmp = hip_ht_find(hashtable, (void *)spi);                           \
+	tmp = hip_ht_find(hashtable, (void *) &spi);                         \
 	if (tmp) {                                                           \
 		put_hs(tmp);                                                 \
 		HIP_ERROR("BUG, SPI already inserted\n");                    \
@@ -133,7 +133,7 @@ void hip_hadb_put_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-	return (uint32_t) key_1 == (uint32_t) key_2;
+	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
 
 void hip_init_hadb(void);
@@ -164,6 +164,8 @@ void hip_hadb_dump_spis(void);
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
+int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
+
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
 				uint32_t *spi, uint32_t *lifetime,
 				struct timeval *modified_time);
@@ -178,7 +180,7 @@ int hip_add_peer_map(const struct hip_common *input);
 
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
-int hip_del_peer_info(hip_hit_t *, hip_hit_t *, struct in6_addr *);
+int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 
@@ -279,5 +281,6 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 
 int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
+int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 #endif /* HIP_HADB_H */

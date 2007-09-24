@@ -176,6 +176,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  */
 unsigned long hip_hash_spi(const void *ptr)
 {
+	u32 spi = * (u32 *) ptr;
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
 	return (hash % ULONG_MAX);
 }
@@ -927,7 +928,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   
   switch(action) {
   case ACTION_NEW:
-    /* zero means "do not send any message to kernel */
+    /* zero means "do not send any message to hipd */
     numeric_action = 0;
 
     /* Default directory is created only in "hipconf new default hi" */
