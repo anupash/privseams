@@ -174,15 +174,12 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_init_rvadb();
-#endif
-//#ifdef CONFIG_HIP_UDPRELAY
 	HIP_INFO("Initializing HIP UDP relay database.\n");
 	if(hip_relht_init() == NULL)
 	{
-	     HIP_ERROR("Unable to initialize HI UDP relay database.\n");
+	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
 	}
-//#endif
+#endif
 #ifdef CONFIG_HIP_OPENDHT
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 
@@ -578,12 +575,10 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_uninit_rvadb();
-#endif
-//#ifdef CONFIG_HIP_UDPRELAY
 	HIP_INFO("Uninitializing HIP UDP relay database.\n");
+	HIP_DEBUG("Size is now: %d.\n", hip_relht_size());
 	hip_relht_uninit();
-//#endif
+#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
 	hip_uninit_kea_endpoints();

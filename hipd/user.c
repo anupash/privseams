@@ -313,7 +313,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-		
 	case SO_HIP_ADD_RENDEZVOUS:
 	     /* draft-ietf-hip-registration-02 RVS registration. Responder
 		(of I,RVS,R hierarchy) handles this message. Message
@@ -353,16 +352,16 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 	     if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 		  HIP_DEBUG("Rendezvous service is now active.\n");
+		  we_are_relay = 1;
 	     }
 	     
 	     err = hip_recreate_all_precreated_r1_packets();
 	     break;
 	
-#endif
-//#ifdef CONFIG_HIP_UDPRELAY	
+
 	case SO_HIP_ADD_RELAY_UDP_HIP:
 	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
-		Responder (of I,RVS,R hierarchy) handles this message. Message
+		Responder (of I,Relay,R hierarchy) handles this message. Message
 		indicates that the current machine wants to register to a rvs
 		server. This message is received from hipconf. */
 	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
@@ -401,11 +400,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
 		  HIP_DEBUG("UDP relay service for HIP packets"\
 			    "is now active.\n");
+		  we_are_relay = 1;
 	     }
 		
 	     err = hip_recreate_all_precreated_r1_packets();
 	     break;
-//#endif
+#endif
 
 	case SO_HIP_GET_HITS:
 	     hip_msg_init(msg);

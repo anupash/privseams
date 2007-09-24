@@ -246,7 +246,6 @@ int hip_services_is_active(int service)
      return 0;
 }
 
-
 int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int request_count, 
 			       int **accepted_requests, int **rejected_requests, int *accepted_count, int *rejected_count)
 {
@@ -337,6 +336,8 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      {
 	  HIP_DEBUG("Client is cancelling registration.\n");
 	  int i = 0;
+	  hip_relrec_t dummy;
+	  
 	  for(; i < type_count; i++)
 	  {
 	       /* Check if we have the requested service in our services. */
@@ -360,14 +361,16 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
 		    HIP_INFO("Client is cancelling rendezvous service.\n");
-
-		    hip_rva_t *rva = hip_rvs_get(&(entry->hit_peer));
-		    if(rva != NULL)
+		    
+		    memcpy(&(dummy.hit_r), &(entry->hit_peer),
+			   sizeof(entry->hit_peer));
+		    hip_relht_rec_free(&dummy);
+		    /* Check that the element really got deleted. */
+		    if(hip_relht_get(&dummy) == NULL)
 		    {
-			 hip_rvs_remove(rva);
+			 HIP_DEBUG("Deleted a relay record.\n");
 			 accepted_requests[accepted_count] = values[i];
 			 accepted_count++; 
-			 HIP_DEBUG("Deleted a rendezvous association.\n");
 		    }
 		    break;
 	       case HIP_SERVICE_ESCROW:
@@ -383,9 +386,8 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_INFO("Client is cancelling registration to UDP relay"\
 			     "for HIP packets service.\n");
 		    
-		    hip_relrec_t dummy;
 		    memcpy(&(dummy.hit_r), &(entry->hit_peer),
-			   sizeof(&(entry->hit_peer)));
+			   sizeof(entry->hit_peer));
 		    hip_relht_rec_free(&dummy);
 		    /* Check that the element really got deleted. */
 		    if(hip_relht_get(&dummy) == NULL)
@@ -416,6 +418,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	  HIP_DEBUG("Client is registrating for new services.\n");
 	  int i = 0;
 	  lifetime = hip_get_acceptable_lifetime(lifetime);
+	  hip_relrec_t *relay_record = NULL;
 
 	  for(; i < type_count; i++)
 	  {
@@ -432,36 +435,39 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	       }
 	       /* @todo Handle registration using each services
 		  handle_registration functionpointer (as now done in escrow).
+		  Or alternatively remove the whole registration database, and
+		  create a state in each individual service indicating the state
+		  of the registration process.
 		  -Lauri 21.09.2007 22:25 */
 	       switch(values[i])
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
 		    HIP_INFO("Client is registering to rendezvous service.\n");
-		    /* Old RVS code is moved here. -Lauri 20.09.2007 22:59*/
-		    hip_rva_t *rva = NULL;
-		    rva = hip_rvs_ha2rva(entry,
-					 entry->hadb_xmit_func->hip_send_pkt);
-		    if(rva == NULL)
+		    
+		    /* Lauri: Huomiseen - poista relay UDP eka. */
+
+		    /* Don't now should we take the peer HIT from the entry, or
+		       the I2 packet. Using the entry for now.*/
+		    relay_record =
+			 hip_relrec_alloc(HIP_RVSRELAY,
+					  &(entry->hit_peer),
+					  &(entry->preferred_address),
+					  entry->peer_udp_port,
+					  &(entry->hip_hmac_in),
+					  entry->hadb_xmit_func->hip_send_pkt);
+		    hip_relht_put(relay_record);
+		    /* Check that the element really is in the hashtable. */
+		    if(hip_relht_get(relay_record) != NULL)
 		    {
-			 HIP_INFO("Inserting rendezvous association failed\n");
+			HIP_DEBUG("Inserted a new relay record.\n");
+			accepted_requests[accepted_count] = values[i];
+			accepted_count++; 
+		    } else
+		    {    /* The put was unsuccessful. */
+			 if(relay_record != NULL)
+			      free(relay_record);
 			 rejected_requests[rejected_count] = values[i];
 			 rejected_count++;
-		    }
-		    else
-		    {
-			 /* This needs rethinking. We never get an rejected
-			    request... */
-			 if (hip_rvs_put_rva(rva) != 0)
-			 {
-			      hip_put_rva(rva);
-			      accepted_requests[accepted_count] = values[i];
-			      accepted_count++;
-			 } else
-			 {
-			      accepted_requests[accepted_count] = values[i];
-			      accepted_count++;
-			 }
-			 hip_hold_rva(rva);
 		    }
 		    break;
 	       case HIP_SERVICE_ESCROW:
@@ -488,13 +494,13 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 
 		    /* Don't now should we take the peer HIT from the entry, or
 		       the I2 packet. Using the entry for now.*/
-		    hip_relrec_t *relay_record =
+		    relay_record =
 			 hip_relrec_alloc(HIP_FULLRELAY,
 					  &(entry->hit_peer),
 					  &(entry->preferred_address),
 					  entry->peer_udp_port,
 					  &(entry->hip_hmac_in),
-					  entry->hadb_xmit_func);
+					  entry->hadb_xmit_func->hip_send_pkt);
 		    hip_relht_put(relay_record);
 		    /* Check that the element really is in the hashtable. */
 		    if(hip_relht_get(relay_record) != NULL)
@@ -529,8 +535,8 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 	  
 	  HIP_DEBUG("Accepted requests (%d) 0x%x, "\
 		    "rejected requests (%d) 0x%x\n",
-		    accepted_count, *accepted_requests,
-		    rejected_count, *rejected_requests);
+		    accepted_count, accepted_requests[0],
+		    rejected_count, rejected_requests[0]);
 	  /* Building REG_RESPONSE and REG_FAILED parameters. */
 	  if(accepted_count > 0)
 	  {
@@ -627,7 +633,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 	       /* TODO: Fix failure type to mean something. Now we are using 
 		* HIP_REG_TYPE_UNAVAILABLE in any case.*/
 	       HIP_IFEL(hip_build_param_reg_failed(msg, HIP_REG_TYPE_UNAVAILABLE,
-						   (uint8_t)rejected_requests, 
+						   (uint8_t *)rejected_requests, 
 						   rejected_count), -1,
 			"Building of REG_FAILED failed\n");
 	  }
@@ -679,7 +685,7 @@ uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime)
      {
 	  time = HIP_SERVICE_MIN_LIFETIME;
      }
-     HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d",
+     HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d\n",
 	       requested_lifetime, time);
      return time;
 }

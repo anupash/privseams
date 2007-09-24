@@ -15,6 +15,7 @@
 #include <time.h> /* For timing. */
 #include <openssl/lhash.h> /* For LHASH. */
 #include <netinet/in.h> /* For IPv6 addresses etc. */
+#include <arpa/inet.h> /* For nthos() */
 #include "hashtable.h" /* For hip hashtable commons. */
 #include "misc.h" /* For hip_hash_hit and hip_match_hit. */
 
@@ -195,5 +196,40 @@ void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
  * @param rec a pointer to a relay record.
  */
 void hip_relrec_info(const hip_relrec_t *rec);
+
+int hip_we_are_relay();
+
+/**
+ * Relays an incoming I1 packet.
+ *
+ * This function relays an incoming I1 packet to the next node on path
+ * to receiver and inserts a @c FROM parameter encapsulating the source IP
+ * address. In case there is a NAT between the sender (the initiator or previous
+ * RVS) of the I1 packet, a @c RELAY_FROM parameter is inserted instead of a
+ * @c FROM parameter. Next node on path is typically the responder, but if the
+ * message is to travel multiple rendezvous servers en route to responder, next
+ * node can also be another rendezvous server. In this case the @c FROM
+ * (@c RELAY_FROM) parameter is appended after the existing ones. Thus current RVS
+ * appends the address of previous RVS and the final RVS (n) in the RVS chain
+ * sends @c FROM:I, @c FROM:RVS1, ... , <code>FROM:RVS(n-1)</code>. If initiator
+ * is located behind a NAT, the first @c FROM parameter is replaced with a
+ * @c RELAY_FROM parameter.
+ * 
+ * @param i1       a pointer to the I1 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i1_saddr a pointer to the source address from where the I1 packet was
+ *                 received.
+ * @param i1_daddr a pointer to the destination address where the I1 packet was
+ *                 sent to (own address).
+ * @param rec      a pointer to a relay record matching the HIT of Responder.
+ * @param i1_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error.
+ * @note           This code has not been tested thoroughly with multiple RVSes.
+ */
+int hip_relay_rvs(const hip_common_t *i1,
+		  const in6_addr_t *i1_saddr,
+		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+		  const hip_portpair_t *i1_info);
 
 #endif /* HIP_HIPRELAY_H */

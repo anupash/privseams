@@ -1094,8 +1094,6 @@ int hip_handle_r1(struct hip_common *r1,
 				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			  }
 			  break;
-#endif /* CONFIG_HIP_RVS */
-//#ifdef CONFIG_HIP_UDPRELAY
 		     case HIP_SERVICE_RELAY_UDP_HIP:
 			  HIP_INFO("Responder offers UDP relay service for "\
 				   "HIP packets.\n");
@@ -1110,7 +1108,7 @@ int hip_handle_r1(struct hip_common *r1,
 
 			  }
 			  break;
-//#endif CONFIG_HIP_UDPRELAY
+#endif /* CONFIG_HIP_RVS */
 		     default:
 			  HIP_INFO("Responder offers unsupported service.\n");
 		     }
@@ -1216,10 +1214,6 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	int state, mask = HIP_HA_CTRL_LOCAL_HIT_ANON, err = 0;
 
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
-//#ifdef CONFIG_HIP_RVS
-	/** @todo: Should RVS capability be stored somehow else? */
-	//mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
-//#endif
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
 	  mask |= HIP_HA_CTRL_PEER_BLIND;
@@ -1300,10 +1294,6 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
-	hip_rva_t *rva = NULL;
-#ifdef CONFIG_HIP_RVS
-	int create_rva = 0;
-#endif
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1325,7 +1315,6 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 				  &entry->hit_peer_blind);
 	}
 #endif
-	
 	/* Just swap the addresses to use the I2's destination HIT as
 	 * the R2's source HIT */
 	if (!hip_blind_get_status()) {
@@ -1347,38 +1336,14 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
+
+#if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
 	hip_new_reg_handler(entry, i2, r2);
 	HIP_DEBUG("Lauri: EXITING OUR BRAVE NEW HANDLER.\n");
-	
-	//reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
-	
-	/* draft-ietf-hip-registration-02 4.3:
-	   The requester MUST NOT include more than one REG_REQUEST parameter in
-           its I2 or UPDATE packets, while the registrar MUST be able to process
-           one or more REG_REQUEST parameters in received I2 or UPDATE packets.
-
-	   @todo Process excessive REG_REQUEST parameters, i.e. loop through all
-	   REG_REQUEST parameters. -Lauri 19.09.2007 21:58 */
-	//if (reg_request)
-	//{
-	     /* Get parameter value. */
-	//   uint8_t *value =(uint8_t *)
-	//  (hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
-	     /* Registration types start after lifetime field. */
-	//   int type_count = hip_get_param_contents_len(reg_request)
-	//  - sizeof(reg_request->lifetime);
-	     /* Build REG_RESPONSE and/or REG_FAILED */
-	//   hip_handle_registration_attempt(
-	//  entry, r2, reg_request,
-	//  (value + sizeof(reg_request->lifetime)), type_count);
-	//}
-	//else {
-	//   HIP_DEBUG("No REG_REQUEST found in I2.\n");
-	//}
-	
+#endif	
  	/* HMAC2 */
 	{
 	     struct hip_crypto_key hmac;
@@ -1398,24 +1363,6 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
-
-#ifdef CONFIG_HIP_RVS
-	/* Insert rendezvous association with appropriate xmit-function to
-	   rendezvous database. */
-	/** @todo Insert only if REG_REQUEST parameter with Reg Type
-	    RENDEZVOUS was received. */
-	/*HIP_IFEL(!(rva = hip_rvs_ha2rva(
-			   entry, entry->hadb_xmit_func->hip_send_pkt)),
-		 0, "Inserting rendezvous association failed\n");
-	
-	if (hip_rvs_put_rva(rva))
-	hip_put_rva(rva);*/
-	/*Returns zero because blind code requires it*/
-	//HIP_IFEBL(hip_rvs_put_rva(rva), 0, hip_put_rva(rva),
-	//  "Error while inserting RVA into hash table\n");
-#endif /* CONFIG_HIP_RVS */
-
-	//hip_hold_rva(rva);
 
  out_err:
 	if (r2)
@@ -1890,24 +1837,22 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
    -Lauri 19.09.2007 20:54.*/
 #ifdef CONFIG_HIP_RVS
-		/** @todo this should be dynamic (the rvs information should
-		   be stored in the HADB) instead of static */
-		entry->state = HIP_STATE_ESTABLISHED;
+	     entry->state = HIP_STATE_ESTABLISHED;
 #else
-		if (entry->state == HIP_STATE_UNASSOCIATED)
-		{
-		     HIP_DEBUG("TODO: should wait for ESP here or "
-			       "wait for implementation specific time, "
-			       "moving to ESTABLISHED\n");
-		     entry->state = HIP_STATE_ESTABLISHED;
-		} else if (entry->state == HIP_STATE_ESTABLISHED)
-		{
-		     HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
-		     HIP_DEBUG("Staying in ESTABLISHED.\n");
-		} else
-		{
-		     entry->state = HIP_STATE_R2_SENT;
-		}
+	     if (entry->state == HIP_STATE_UNASSOCIATED)
+	     {
+		  HIP_DEBUG("TODO: should wait for ESP here or "
+			    "wait for implementation specific time, "
+			    "moving to ESTABLISHED\n");
+		  entry->state = HIP_STATE_ESTABLISHED;
+	     } else if (entry->state == HIP_STATE_ESTABLISHED)
+	     {
+		  HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+		  HIP_DEBUG("Staying in ESTABLISHED.\n");
+	     } else
+	     {
+		  entry->state = HIP_STATE_R2_SENT;
+	     }
 #endif /* CONFIG_HIP_RVS */
 	}
 
@@ -2315,10 +2260,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	int err = 0, state, mask = 0,cmphits=0;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
-#ifdef CONFIG_HIP_RVS
- 	hip_rva_t *rva;
-	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
-#endif
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
@@ -2353,49 +2294,22 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 /* This code is executed at the rendezvous server. */ 
 #ifdef CONFIG_HIP_RVS
-	     HIP_DEBUG_HIT("Searching rendezvous association on HIT ",
-			   &i1->hitr);
-	     /* Try to find a rendezvous association matching Responder's
-		HIT. */
-	     rva = hip_rvs_get_valid(&i1->hitr);
-	     HIP_DEBUG("Valid rendezvous association found: %s \n",
-		       (rva != NULL ? "yes" : "no"));
-		
-	     /* If a matching rendezvous association is found, we have three
-		cases:
-		1. Only the Initiator is behind a NAT.
-		2. Both the Initiator and Responder are behind a NAT.
-		3. Only the Responder is behind a NAT or neither the
-		Initiator nor Responder is behind a NAT. */
-	     if (rva != NULL) {
-		  /* Case 1. */
-		  if(rva->client_udp_port == 0 &&
-		     i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		       HIP_IFE(hip_rvs_reply_with_notify(
-				    i1, i1_saddr, rva, i1_info,
-				    HIP_PARAM_RELAY_TO),
-			       -ECOMM);
-		  }
-		  /* Case 2. */
-		  else if(rva->client_udp_port == HIP_NAT_UDP_PORT &&
-			  i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		       HIP_IFE(hip_rvs_relay_i1(
-				    i1, i1_saddr, i1_daddr, rva,
-				    i1_info),
-			       -ECOMM);
-		       HIP_IFE(hip_rvs_reply_with_notify(
-				    i1, i1_saddr, rva, i1_info,
-				    HIP_PARAM_RELAY_FROM),
-			       -ECOMM);
-		  }
-		  /* Case 3. */
-		  else {
-		       HIP_IFE(hip_rvs_relay_i1(
-				    i1, i1_saddr, i1_daddr, rva,
-				    i1_info),
-			       -ECOMM);
-				
-		  }
+	     hip_relrec_t *rec = NULL, dummy;
+
+	     /* Check if we have a relay record in our database matching the
+		Responder's HIT. We should find one, if the Responder is
+		registered to relay.*/
+	     HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
+	     memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+	     rec = hip_relht_get(&dummy);
+	     if(rec == NULL)
+		  HIP_INFO("No matching relay record found.\n");
+	     else if(rec->type != HIP_RVSRELAY)
+		  HIP_INFO("Matching relay record found, but it is of "\
+			   "wrong type.\n");
+	     else
+	     {
+		  hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info); 
 	     }
 #endif
 		state = HIP_STATE_NONE;

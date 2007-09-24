@@ -137,22 +137,21 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 /* If this machine is a rendezvous server, then we need to delete the rendezvous
    association matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
-	hip_rva_t *rva = hip_rvs_get(&(close->hits));
-	if (rva != NULL) {
-		HIP_DEBUG_HIT("Deleting rendezvous association for HIT",
-			      &(close->hits));
-		hip_rvs_remove(rva);
+	hip_relrec_t *rec = NULL, dummy;
+	memcpy(&(dummy.hit_r), &(close->hits),
+	       sizeof(close->hits));
+	hip_relht_rec_free(&dummy);
+	/* Check that the element really got deleted. */
+	if(hip_relht_get(&dummy) == NULL)
+	{
+	     HIP_DEBUG_HIT("Deleted relay record for HIT",
+			   &(close->hits));
 	}
 #endif
 	
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
 				  &entry->preferred_address), -1,
 				   "Deleting peer info failed.\n");
-
-	/* by now, if everything is according to plans, the refcnt should
-	   be 1 */
-	//hip_put_ha(entry);
-
  out_err:
 
 	if (close_ack)

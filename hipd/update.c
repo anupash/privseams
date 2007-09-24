@@ -1493,8 +1493,8 @@ int hip_create_reg_response(hip_ha_t * entry,
         }
         /********** REG_RESPONSE/REG_FAILED **********/        
         /* Check service requests and build reg_response and/or reg_failed */
-        hip_handle_registration_attempt(entry, update_packet, reg_request, 
-               requests, request_count);
+	hip_handle_registration_attempt(entry, update_packet, reg_request, 
+					requests, request_count);
         
         
         /********** HMAC **********/

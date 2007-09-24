@@ -33,20 +33,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	int err = 0;
 		
 	HIP_DEBUG("\n");
-
-/* Build a mask to be used in the "Controls" field of the outgoing I1 packet. */ 
-//#ifdef CONFIG_HIP_UDPRELAY
-/*	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))
-	{
-	     mask |= HIP_HA_CTRL_LOCAL_REQ_HIPUDP;
-	     }*/
-//#endif
-/*#ifdef CONFIG_HIP_RVS
-	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS))
-	{
-	     mask |= HIP_HA_CTRL_LOCAL_REQ_RVS;
-	}
-	#endif*/
 	
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
@@ -196,10 +182,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	_HIP_DEBUG("dh_size=%d\n", dh_size2);
 	
  	/* Ready to begin building of the R1 packet */
-
-/*#ifdef CONFIG_HIP_RVS
-  mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
-  #endif*/
 	
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/** @todo TH: hip_build_network_hdr has to be replaced with an

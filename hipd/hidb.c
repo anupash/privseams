@@ -111,8 +111,9 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
-	HIP_DEBUG("Failed to find host id entry, returning NULL.\n");
+	HIP_DEBUG("Failed to find host id entry, RETURNING NULL\n");
 	return NULL;
+
 }
 
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
