@@ -24,27 +24,22 @@
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
-     /** Zero of the record is off, non-zero otherwise. */
-     uint8_t on_off;
-     /** Flags indicating the encapsulation mode of this record.
-      *  <pre>
-      *    bitmap: 0000 0000
-      *            |||| |||+ RVS -> R UDP     0x01
-      *            |||| ||+- RVS -> R TCP     0x02
-      *            ++++-++-- Not used
-      *  </pre>
-      */
-     uint8_t flags;
+     /** The type of this relay record (full relay or rvs) */
+     uint8_t type;
      /** The lifetime of this record, seconds. */
      time_t lifetime;
      /** Time when this record was last used, seconds since epoch. */
      time_t last_contact;
      /** HIT of Responder (Relay Client) */
-     struct in6_addr hit_r;
+     in6_addr_t hit_r;
      /** IP address of Responder (Relay Client) */
-     struct in6_addr ip_r;
+     in6_addr_t ip_r;
      /** Client UDP port received in I2 packet of registration. */
      in_port_t udp_port_r;
+     /** Integrity key established while registration occurred. */
+     hip_crypto_key_t hmac_relay;
+     /** Function pointer to send function (raw or udp). */
+     hip_xmit_func_t send_fn;
 }hip_relrec_t;
 
 /** 
@@ -52,10 +47,7 @@ typedef struct{
  * the Relay and the Responder.
  * @enum
  */
-typedef enum{HIP_REL_NONE, /**< I--(any)-->Relay--(none)-->R */
-		  HIP_REL_UDP, /**< I--(any)-->Relay--(UDP)-->R */ 
-		  HIP_REL_TCP, /**< I--(any)-->Relay--(TCP)-->R */ 
-		  }hip_relrec_mode_t;
+typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
 
 /**
  * Initializes the global HIP relay hashtable. Allocates memory for hiprelay_ht.
@@ -111,7 +103,7 @@ void hip_relht_put(hip_relrec_t *rec);
  * @param rec a pointer to a relay record.
  * @return    a pointer to a fully populated relay record if found, NULL otherwise.
  */
-hip_relrec_t *hip_relht_get(hip_relrec_t *rec);
+hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory allocated
@@ -148,16 +140,6 @@ unsigned long hip_relht_size();
 void hip_relht_maintenance();
 
 /**
- * Switches on a relay record.
- */
-void hip_relrec_switch_on(hip_relrec_t *rec);
-
-/**
- * Switches off a relay record.
- */
-void hip_relrec_switch_off(hip_relrec_t *rec);
-
-/**
  * Allocates a new relay record.
  * 
  * @param hit_r a pointer to Responder (relay client) HIT.
@@ -170,9 +152,11 @@ void hip_relrec_switch_off(hip_relrec_t *rec);
  * @note        After calling this function, you should set the appropriate encapsulation
  *              mode for the @c record with hip_relrec_set_mode().
  */
-hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
-			       hip_relrec_mode_t mode, in_port_t port);
-
+hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
+			       const in6_addr_t *hit_r, const hip_hit_t *ip_r,
+			       const in_port_t port,
+			       const hip_crypto_key_t *hmac,
+			       const hip_xmit_func_t func);
 /**
  * Sets the mode of a relay record. This function sets the @c flags field of a
  * relay record.
@@ -186,15 +170,15 @@ hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
  *             </ul>
  * @see        hip_relrec_t for a bitmap.
  */
-void hip_relrec_set_mode(hip_relrec_t *rec, hip_relrec_mode_t mode);
+void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
 
 /**
  * Sets the lifetime of a relay record. 
  * 
  * @param rec  a pointer to a relay record. 
- * @param mode the lifetime in seconds. 
+ * @param secs the lifetime in seconds. 
  */
-void hip_relrec_set_lifetime(hip_relrec_t *rec, time_t secs);
+void hip_relrec_set_lifetime(hip_relrec_t *rec, const time_t secs);
 
 
 /**
@@ -203,13 +187,13 @@ void hip_relrec_set_lifetime(hip_relrec_t *rec, time_t secs);
  * @param rec  a pointer to a relay record. 
  * @param port UDP port number. 
  */
-void hip_relrec_set_udpport(hip_relrec_t *rec, in_port_t port);
+void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
 
 /**
  * Prints info of the parameter relay record using @c HIP_INFO() macro.
  * 
  * @param rec a pointer to a relay record.
  */
-void hip_relrec_info(hip_relrec_t *rec);
+void hip_relrec_info(const hip_relrec_t *rec);
 
 #endif /* HIP_HIPRELAY_H */

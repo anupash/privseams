@@ -486,9 +486,9 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 
 	
  	/* Ready to begin building of the R1 packet */
-#ifdef CONFIG_HIP_RVS
-	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
-#endif
+//#ifdef CONFIG_HIP_RVS
+	//mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
+//#endif
 
 	mask |= HIP_HA_CTRL_PEER_BLIND;
 

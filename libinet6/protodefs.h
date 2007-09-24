@@ -299,6 +299,8 @@ struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
 };
 
+typedef struct hip_crypto_key hip_crypto_key_t;
+
 /* RFC2535 3.1 KEY RDATA format */
 struct hip_host_id_key_rdata {
 	uint16_t flags;

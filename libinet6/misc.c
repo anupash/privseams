@@ -201,13 +201,13 @@ int hip_match_spi(const void *ptr1, const void *ptr2)
  */
 unsigned long hip_hash_hit(const void *ptr)
 {
-     //hip_ha_t *ha = (hip_hit_t *)ptr;
-	uint8_t hash[HIP_AH_SHA_LEN];
-
-	//hip_build_digest(HIP_DIGEST_SHA1, &ha->hit_our, sizeof(hip_hit_t) * 2, hash);
-	hip_build_digest(HIP_DIGEST_SHA1, ptr, sizeof(hip_hit_t), hash);
-	
-	return *((unsigned long *)hash);
+      uint8_t hash[HIP_AH_SHA_LEN];
+      
+      /* All HITs start with the constan 0x2001, there's no has value in
+	 that so we skip it. */
+      hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
+		       7 * sizeof(uint16_t), hash);
+      return *((unsigned long *)hash);
 }
 
 int hip_match_hit(const void *ptr1, const void *ptr2)

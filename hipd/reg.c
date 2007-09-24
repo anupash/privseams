@@ -489,10 +489,12 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    /* Don't now should we take the peer HIT from the entry, or
 		       the I2 packet. Using the entry for now.*/
 		    hip_relrec_t *relay_record =
-			 hip_relrec_alloc(&(entry->hit_peer),
+			 hip_relrec_alloc(HIP_FULLRELAY,
+					  &(entry->hit_peer),
 					  &(entry->preferred_address),
 					  entry->peer_udp_port,
-					  HIP_REL_NONE);
+					  &(entry->hip_hmac_in),
+					  entry->hadb_xmit_func);
 		    hip_relht_put(relay_record);
 		    /* Check that the element really is in the hashtable. */
 		    if(hip_relht_get(relay_record) != NULL)
@@ -529,7 +531,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    "rejected requests (%d) 0x%x\n",
 		    accepted_count, *accepted_requests,
 		    rejected_count, *rejected_requests);
-	  /* Build REG_RESPONSE and REG_FAILED parameters. */
+	  /* Building REG_RESPONSE and REG_FAILED parameters. */
 	  if(accepted_count > 0)
 	  {
 	       hip_build_param_reg_request(target_msg, lifetime, accepted_requests,

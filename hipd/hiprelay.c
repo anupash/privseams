@@ -11,7 +11,6 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */ 
 
-
 #include "hiprelay.h"
 #include "misc.h"
 
@@ -74,7 +73,7 @@ void hip_relht_put(hip_relrec_t *rec)
      lh_insert(hiprelay_ht, rec);
 }
 
-hip_relrec_t *hip_relht_get(hip_relrec_t *rec)
+hip_relrec_t *hip_relht_get(const hip_relrec_t *rec)
 {
      if(hiprelay_ht == NULL || rec == NULL)
 	  return NULL;
@@ -132,10 +131,13 @@ void hip_relht_maintenance()
      hiprelay_ht->down_load = tmp;
 }
 
-hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
-			       hip_relrec_mode_t mode, in_port_t port)
+hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
+			       const in6_addr_t *hit_r, const hip_hit_t *ip_r,
+			       const in_port_t port,
+			       const hip_crypto_key_t *hmac,
+			       const hip_xmit_func_t func)
 {
-     if(hit_r == NULL || ip_r == NULL)
+     if(hit_r == NULL || ip_r == NULL || hmac == NULL || func == NULL)
 	  return NULL;
 
      hip_relrec_t *rec = (hip_relrec_t*) malloc(sizeof(hip_relrec_t));
@@ -146,55 +148,37 @@ hip_relrec_t *hip_relrec_alloc(struct in6_addr *hit_r, struct in6_addr *ip_r,
 	  return NULL;
      }
 
-     rec->on_off = 1;
-     rec->flags = 0;
-     hip_relrec_set_mode(rec, mode);
+     rec->type = type;
      memcpy(&(rec->hit_r), hit_r, sizeof(*hit_r));
      memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
      rec->udp_port_r = port;
+     memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
+     rec->send_fn = func;
      rec->lifetime = HIP_RELREC_LIFETIME;
      rec->last_contact = time(NULL);
      
      return rec;
 }
 
-void hip_relrec_switch_on(hip_relrec_t *rec)
+void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type)
 {
      if(rec != NULL)
-	  rec->on_off = 1;
+	  rec->type = type;
 }
 
-void hip_relrec_switch_off(hip_relrec_t *rec)
+void hip_relrec_set_lifetime(hip_relrec_t *rec, const time_t secs)
 {
      if(rec != NULL)
-	  rec->on_off = 0;
+	  rec->lifetime = secs;
 }
 
-void hip_relrec_set_mode(hip_relrec_t *rec, hip_relrec_mode_t mode)
-{
-     if(rec == NULL)
-	  return;
-     
-     switch (mode){
-     case HIP_REL_NONE:
-	  rec->flags &= 0x00;
-	  break;
-     case HIP_REL_UDP:
-	  rec->flags &= 0x01;
-	  break;
-     case HIP_REL_TCP:
-	  rec->flags |= 0x02;
-	  break;
-     }
-}
-
-void hip_relrec_set_udpport(hip_relrec_t *rec, in_port_t port)
+void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port)
 {
      if(rec != NULL)
 	  rec->udp_port_r = port;
 }
 
-void hip_relrec_info(hip_relrec_t *rec)
+void hip_relrec_info(const hip_relrec_t *rec)
 {
      if(rec == NULL)
 	  return;
@@ -204,9 +188,11 @@ void hip_relrec_info(hip_relrec_t *rec)
      cursor += sprintf(cursor, "Relay record info:\n");
      //cursor += sprintf(cursor, " HIP Relay status: ");
      //cursor += sprintf(cursor, (rec->flags & 0x10) ? "ON\n" : "OFF\n");
-     cursor += sprintf(cursor, " Relay -> R: ");
-     cursor += sprintf(cursor, (rec->flags & 0x01) ? "UDP\n" :
-		       (rec->flags & 0x02) ? "TCP\n" : "None\n");
+     cursor += sprintf(cursor, " Record type: ");
+     cursor += sprintf(cursor, (rec->type == HIP_FULLRELAY) ?
+		       "Full relay of HIP packets\n" :
+		       (rec->type == HIP_RVSRELAY) ?
+		       "RVS relay of I1 packet\n" : "undefined\n");
      cursor += sprintf(cursor, " Record lifetime: %lu seconds\n", rec->lifetime);
      cursor += sprintf(cursor, " Last contact: %lu seconds ago\n", time(NULL) - rec->last_contact);
      cursor += sprintf(cursor, " HIT of R: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",

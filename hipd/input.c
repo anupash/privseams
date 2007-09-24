@@ -499,10 +499,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_I2:
 		/* Possibly state. */
 		if(entry){
+		     HIP_DEBUG("Lauri: I2 with an entry.\n");
 			err = entry->hadb_rcv_func->
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
 					       msg_info);
 		} else {
+		     HIP_DEBUG("Lauri: I2 withOUT an entry.\n");
 			err = ((hip_rcv_func_set_t *)
 			       hip_get_rcv_default_func_set())->
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
@@ -1214,10 +1216,10 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	int state, mask = HIP_HA_CTRL_LOCAL_HIT_ANON, err = 0;
 
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
-#ifdef CONFIG_HIP_RVS
+//#ifdef CONFIG_HIP_RVS
 	/** @todo: Should RVS capability be stored somehow else? */
-	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
-#endif
+	//mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE;
+//#endif
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
 	  mask |= HIP_HA_CTRL_PEER_BLIND;
@@ -1445,7 +1447,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint16_t crypto_len, nonce;
 	int err = 0, retransmission = 0, replay = 0;
 	
-	_HIP_DEBUG("hip_handle_i2() invoked.\n");
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
@@ -1986,14 +1988,12 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	  err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 	  break;
      case HIP_STATE_ESTABLISHED:
-	  HIP_DEBUG("Received I2 in state ESTABLISHED\n");
 	  err = entry->hadb_handle_func->
 	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 	     
 	  break;
      case HIP_STATE_CLOSING:
      case HIP_STATE_CLOSED:
-	  HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
 	  err = entry->hadb_handle_func->
 	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 	  break;
@@ -2241,7 +2241,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 
 	/* Case 1. */
-	HIP_DEBUG("Found FROM parameter in I1.\n");
+	//HIP_DEBUG("Found FROM parameter in I1.\n");
 	
 	/* The relayed I1 packet has the initiator's HIT as source HIT,
 	   and the responder HIT as destination HIT. We would like to

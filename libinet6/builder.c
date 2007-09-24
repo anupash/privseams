@@ -893,7 +893,6 @@ void hip_dump_msg(const struct hip_common *msg)
 {
      struct hip_tlv_common *current_param = NULL;
      void *contents = NULL;
-     char controls_bin[20];
      /* The value of the "Length"-field in current parameter. */
      hip_tlv_len_t len = 0;
      /* Total length of the parameter (type+length+value+padding), and the

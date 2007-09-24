@@ -36,17 +36,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 /* Build a mask to be used in the "Controls" field of the outgoing I1 packet. */ 
 //#ifdef CONFIG_HIP_UDPRELAY
-	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))
+/*	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))
 	{
 	     mask |= HIP_HA_CTRL_LOCAL_REQ_HIPUDP;
-	}
+	     }*/
 //#endif
-#ifdef CONFIG_HIP_RVS
+/*#ifdef CONFIG_HIP_RVS
 	if ((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS))
 	{
 	     mask |= HIP_HA_CTRL_LOCAL_REQ_RVS;
 	}
-#endif
+	#endif*/
 	
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
@@ -197,10 +197,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	
  	/* Ready to begin building of the R1 packet */
 
-#ifdef CONFIG_HIP_RVS
-	mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
-#endif
-
+/*#ifdef CONFIG_HIP_RVS
+  mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
+  #endif*/
+	
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/** @todo TH: hip_build_network_hdr has to be replaced with an
 	    apprporiate function pointer */
@@ -345,42 +345,38 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 
-int hip_for_each_locator_addr_list(hip_ha_t *entry,
-                                   struct hip_locator *locator,
+int hip_for_each_locator_addr_list(hip_ha_t *entry, struct hip_locator *locator,
                                    void *opaque)
 {
-	int i = 0, err = 0;
-	struct hip_common *msg;
-	struct hip_locator_info_addr_item *locators;
-	hip_list_t *item, *tmp;
-	struct netdev_address *n;
-	int l, is_add, ii;
-	
+     int i = 0, err = 0;
+     struct hip_common *msg;
+     struct hip_locator_info_addr_item *locators;
+     hip_list_t *item, *tmp;
+     struct netdev_address *n;
+     int l, is_add, ii;
 
-			if (locators)
-			{
+     if (locators)
+     {
 				
-				list_for_each_safe(item, tmp, addresses, ii)
-				{
-					n = list_entry(item);
-					memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-					hip_print_hit("the hits are\n",&locators[i].address);
-					i++;
-				}
-				HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
-				
-			}
+	  list_for_each_safe(item, tmp, addresses, ii)
+	       {
+		    n = list_entry(item);
+		    memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
+			   hip_sa_addr_len(&n->addr));
+		    hip_print_hit("the hits are\n",&locators[i].address);
+		    i++;
+	       }
+	  HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
+     }
 
-	memset(n,0,sizeof(n));
+     memset(n,0,sizeof(n));
 	
-	//HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
-	//	 "Building LOCATOR failed\n");
+     //HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
+     //	 "Building LOCATOR failed\n");
  out_err:
 
-	return err;
+     return err;
 }
-
 
 /* really ugly hack ripped from rea.c, must convert to list_head asap */
 struct hip_update_kludge {
@@ -388,7 +384,6 @@ struct hip_update_kludge {
 	int count;
 	int length;
 };
-
 
 /**
  * Transmits an R1 packet to the network.
