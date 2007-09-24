@@ -623,6 +623,10 @@ out_err:
 int main(int argc, char *argv[])
 {
 	int err = 0;
+	uid_t euid;
+
+	euid = geteuid();
+	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
 
 	HIP_IFE(hipd_main(argc, argv), -1);
 	if (hipd_get_flag(HIPD_FLAG_RESTART))

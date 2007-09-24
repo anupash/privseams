@@ -128,13 +128,9 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	int err = 0, fd;
-	uid_t euid;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
-
-	euid = geteuid();
-	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -177,8 +173,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
-	HIP_IFEL(hip_ipdb_clear(), -1,
-	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
+	HIP_IFEL(hip_init_oppip_db(), -1,
+	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 

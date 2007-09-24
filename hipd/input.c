@@ -1330,7 +1330,7 @@ int hip_receive_r1(struct hip_common *r1,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_ipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 
 #ifdef CONFIG_HIP_RVS
@@ -2314,7 +2314,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_ipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	

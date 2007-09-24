@@ -426,7 +426,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 	/* Fallback if we have contacted peer before the peer did not
 	   support HIP the last time */
-	if (hip_ipdb_check((struct in6_addr *)&dst_ip))
+	if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
 	{
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
 		         "Building of user header failed\n");
@@ -481,14 +481,11 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 					      &entry->peer_ip);
 		if (ha)
 			disable_fallback = ha->hip_opp_fallback_disable;
-		HIP_DEBUG("disable_fallback: %d\n",disable_fallback);
-
 	}
 #endif
-	HIP_DEBUG("disable_fallback: %d\n",disable_fallback);
 	if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
 		addr = (struct in6_addr *) &entry->peer_ip;
-		hip_ipdb_add(addr);
+		hip_oppipdb_add_entry(addr);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
 		HIP_DEBUG("Unblock returned %d\n", err);
