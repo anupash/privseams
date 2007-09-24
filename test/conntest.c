@@ -1,52 +1,19 @@
 #include "conntest.h"
 
-
-/**
- * create_socket - create a socket given the protocol
- * @proto: type of protocol
- *
- * Returns: the socket id,
- * exits on error.
- */
-int create_socket(int proto) {
-	int fd;
-
-	if (proto == IPPROTO_TCP) {
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-	} else if (proto == IPPROTO_UDP)  {
-		fd = socket(AF_INET6, SOCK_DGRAM, 0);
-	} else {
-		perror("unhandled proto");
-		exit(1);
-	}
-
-	if (fd < 0) {
-		perror("socket");
-		exit(1);
-	}
-
-	return(fd);
-}
-
-
 /**
  * create_serversocket - given the port and the protocol
  * it binds the socket and listen to it
- * @proto: type of protocol
- * @port: the kind of protocol
+ * @param proto type of protocol
+ * @param port the kind of protocol
  *
- * Returns: the socket id,
+ * @return the socket id,
  * exits on error.
  */
-int create_serversocket(int proto, int port) {
+int create_serversocket(int type, int port) {
 	int fd, on = 1;
 	struct sockaddr_in6 addr;
-  
-	if (proto == IPPROTO_TCP) {
-		fd = socket(AF_INET6, SOCK_STREAM, 0);
-	} else {
-		fd = socket(AF_INET6, SOCK_DGRAM, 0);
-	}
+	
+	fd = socket(AF_INET6, type, 0);
 	if (fd < 0) {
 		perror("socket");
 		exit(1);
@@ -69,7 +36,7 @@ int create_serversocket(int proto, int port) {
 		exit(1);
 	}
 
-	if (proto == IPPROTO_TCP) {
+	if (type == SOCK_STREAM) {
 		if (listen(fd, 1) < 0) {
 			perror("listen");
 			close(fd);
@@ -80,178 +47,292 @@ int create_serversocket(int proto, int port) {
 	return(fd);
 }
 
-/**
- * main_server - given the port and the protocol
- * it handles the functionality of the responder
- * @proto: type of protocol
- * @port: the kind of protocol
- *
- * Returns: the socket id,
- * exits on error.
- */
-int main_server(int proto, int port)
-{
-	int serversock;
-	int peer;
+int main_server_tcp(int serversock) {
+	int peerfd = 0, err = 0;
+	socklen_t locallen;
 	unsigned int peerlen;
-	struct sockaddr_in6 peeraddr;
+	struct sockaddr_in6 localaddr, peeraddr;
 	char mylovemostdata[IP_MAXPACKET];
 	int recvnum, sendnum;
 	char addrstr[INET6_ADDRSTRLEN];
-	
-	serversock = create_serversocket(proto, port);
-  
+
 	peerlen = sizeof(struct sockaddr_in6);
   
-	while(1) {
-    
-		if (proto == IPPROTO_TCP) {
-			peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
-			if (peer < 0) {
-				perror("accept");
-				exit(2);
-			}
-			//fprintf(stderr, "accept %s\n", inet_ntop(AF_INET6, &peeraddr.sin6_addr, addrstr, sizeof(addrstr)));
-      
-			while((recvnum = recv(peer, mylovemostdata, sizeof(mylovemostdata), 0)) > 0 ) {
-				mylovemostdata[recvnum] = '\0';
-				printf("%s", mylovemostdata);
-				fflush(stdout);
-				if (recvnum == 0) {
-					close(peer);
-					break;
-				}
-	
-				/* send reply */
-				sendnum = send(peer, mylovemostdata, recvnum, 0);
-				if (sendnum < 0) {
-					perror("send");
-					exit(2);
-				}
-			}
-		} else { /* UDP */
-			peerlen = sizeof(struct sockaddr_in6);
-			peer = serversock;
-			while((recvnum = recvfrom(peer, mylovemostdata, sizeof(mylovemostdata), 0, (struct sockaddr *)&peeraddr, &peerlen)) > 0 ) {
-				//printf("server: peer addr=%s port=%d\n", inet_ntop(AF_INET6, &peeraddr.sin6_addr, addrstr, sizeof(addrstr)), ntohs(peeraddr.sin6_port));
-				mylovemostdata[recvnum] = '\0';
-				fprintf(stderr,"%s", mylovemostdata);
-				fflush(stdout);
-				if (recvnum == 0) {
-					close(peer);
-					break;
-				}
-	
-				/* send reply */
-				sendnum = sendto(peer, mylovemostdata, recvnum, 0, (struct sockaddr *)&peeraddr, peerlen);
-				if (sendnum < 0) {
-					perror("send");
-					exit(2);
-				}
-			}
-		}
-		//fprintf(stderr, "\n*CLOSED*\n");
+	peerfd = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
+	if (peerfd < 0) {
+		perror("accept");
+		err = -1;
+		goto out_err;
 	}
-  
-	close(peer);
-	close(serversock);
 	
+	locallen = sizeof(localaddr);
+	if (!getsockname(serversock,
+			 (struct sockaddr *)&localaddr,
+			 &locallen))
+		HIP_DEBUG_HIT("local addr", &localaddr.sin6_addr);
+	HIP_DEBUG_HIT("peer addr", &peeraddr.sin6_addr);
+	
+	while((recvnum = recv(peerfd, mylovemostdata,
+			      sizeof(mylovemostdata), 0)) > 0 ) {
+		mylovemostdata[recvnum] = '\0';
+		printf("Client sends: %s", mylovemostdata);
+		fflush(stdout);
+		if (recvnum == 0) {
+			close(peerfd);
+			err = -1;
+			break;
+		}
+		
+		/* send reply */
+		sendnum = send(peerfd, mylovemostdata, recvnum, 0);
+		if (sendnum < 0) {
+			perror("send");
+			err = -1;
+			break;
+		}
+		printf("Client has been replied.\n");
+	}
+
+	if (peerfd)
+		close(peerfd);
+
+out_err:
+	return err;
 }
 
-/**
- * hip_connect_func - allows to connect to the addresses specified by res
- * @proto: type of protocol
- * @res: list containing the peers addresses
- *
- * Returns: 0 on error, the sockid on success
- */
-int hip_connect_func(int proto, struct addrinfo *res, const char* filename)
-{
-	struct addrinfo *ai, hints;
-	int sock = 0;
-	struct timeval stats_before, stats_after;
-	unsigned long stats_diff_sec, stats_diff_usec;
-	FILE *fp = NULL;
-	if (filename)
-		if ((fp = fopen(filename, "a")) == NULL) {
-			HIP_ERROR("Error opening file\n");
-			goto out_err;
-		}
-	/* connect */
-
-	for(ai = res; ai != NULL; ai = ai->ai_next) {
-		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) ai->ai_addr;
-		char addr_str[INET6_ADDRSTRLEN];
-		int e;
-		
-		/* Currently only IPv6 socket structures are supported */
-		HIP_ASSERT(ai->ai_family == AF_INET6);
-		sock = create_socket(proto);
-		if (sock < 0) {
-			sock = 0;
-			printf("socket creation failed\n");
-			goto out_err;
-		}
-
-		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
-			       sizeof(addr_str))) {
-			perror("inet_ntop\n");
-			goto out_err;
-		}
-
-		if ((sin6->sin6_addr.s6_addr32[0] | sin6->sin6_addr.s6_addr32[1] | 
-		     sin6->sin6_addr.s6_addr32[2] | sin6->sin6_addr.s6_addr32[3] ) != 0) {
-			
-			printf("Trying to connect to %s\n", addr_str);
-			gettimeofday(&stats_before, NULL);
-			e = connect(sock, ai->ai_addr, sizeof(struct sockaddr_in6));
-			
-			gettimeofday(&stats_after, NULL);
-			stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-			stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-			
-			//printf("connect ret=%d errno=%d\n", e, errno);
-			if (e < 0) {
-				close(sock);
-				sock = 0;
-				printf("trying next\n");
-				continue; /* Try next address */
-			} else {
-				printf("connect took %.3f sec\n",
-					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				if (filename)
-					fprintf(fp, "%.3f\n", (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				else
-					printf("connect took %.3f sec\n",
-					       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-				break; /* Connect succeeded and data can be sent/received. */
-			}
-			//break; /* Connect succeeded and data can be sent/received. */
-		}
-	}
-
-	if (sock == 0) {
-		printf("failed to connect\n");
+int main_server_udp(int serversock) {
+	/* Use recvmsg/sendmsg instead of recvfrom/sendto because
+	   the latter combination may choose a different source
+	   HIT for the server */
+	struct sockaddr_in6 peeraddr;
+	char control[CMSG_SPACE(256)];
+	char mylovemostdata[IP_MAXPACKET];
+	struct iovec iov = { mylovemostdata,
+			     sizeof(mylovemostdata) - 1 };
+        struct cmsghdr *cmsg;
+	struct in6_pktinfo *pktinfo_in6;
+	struct msghdr msg = {
+		&peeraddr, sizeof(peeraddr),
+		&iov, 1,
+		control, sizeof(control), 0
+	};
+	int err = 0, on = 1, recvnum, sendnum;
+	
+        err = setsockopt(serversock, IPPROTO_IPV6,
+			 IPV6_2292PKTINFO, &on, sizeof(on));
+	if (err != 0) {
+		perror("setsockopt IPV6_RECVPKTINFO");
 		goto out_err;
 	}
 
+	memset(mylovemostdata, 0, sizeof(mylovemostdata));
+	memset(&peeraddr, 0, sizeof(peeraddr));
+
+	printf("=== Server listening IN6ADDR_ANY ===\n");
+
+	while((recvnum = recvmsg(serversock, &msg, 0)) > 0) {
+		fprintf(stderr,"=== received string: %s ===\n",
+			mylovemostdata);
+		fflush(stdout);
+		
+		/* Local address comes from ancillary data passed
+		 * with msg due to IPV6_PKTINFO socket option */
+		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg;
+		     cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+			_HIP_DEBUG("level=%d type=%d\n",
+				   cmsg->cmsg_level, cmsg->cmsg_type);
+			if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
+			    (cmsg->cmsg_type == IPV6_2292PKTINFO)) {
+				pktinfo_in6 =
+					(struct in6_pktinfo *) CMSG_DATA(cmsg);
+				HIP_DEBUG_HIT("localaddr",
+					      &pktinfo_in6->ipi6_addr);
+				break;
+			}
+		}
+
+		HIP_DEBUG_HIT("peeraddr", hip_cast_sa_addr(&peeraddr));
+
+		/* send only the data we received (notice that there is
+		   always a \0 in the end of the string) */
+		iov.iov_len = strlen(mylovemostdata);
+		
+		/* send reply using the ORIGINAL src/dst address pair
+		 (preserved in the control field) */
+		sendnum = sendmsg(serversock, &msg, 0);
+		if (sendnum < 0) {
+			perror("send");
+			err = -1;
+			break;
+		}
+
+		/* reset all fields for the next round */
+		memset(mylovemostdata, 0, sizeof(mylovemostdata));
+		memset(&peeraddr, 0, sizeof(peeraddr));
+		msg.msg_namelen = sizeof(peeraddr);
+		memset(control, 0, sizeof(control));
+		iov.iov_len = sizeof(mylovemostdata);
+
+		printf("=== Sent string successfully back ===\n");
+		printf("=== Server listening IN6ADDR_ANY ===\n");
+	}
+
+out_err:
+
+	return err;
+}
+
+/**
+ * main_server - given the port and the protocol
+ * it handles the functionality of the responder
+ * @param proto type of protocol
+ * @param port the kind of protocol
+ *
+ * @return the socket id,
+ * exits on error.
+ */
+int main_server(int type, int port)
+{
+	int serversock = 0, err = 0;
+	
+	serversock = create_serversocket(type, port);
+	if (serversock < 0)
+		err = -1;
+  
+	while(err == 0) {
+		if (type == SOCK_STREAM) {
+			err = main_server_tcp(serversock);
+		} else {
+			err = main_server_udp(serversock);
+		}
+	}
+
+	if (serversock)
+		close(serversock);
+	return err;
+}
+
+ /**
+  * hip_connect_func - allows to connect to the addresses specified by res
+  * @param proto type of protocol
+  * @param res list containing the peers addresses
+  * @param filename ?
+  *
+  * @return 0 on error, the sockid on success
+  */
+ int hip_connect_func(struct addrinfo *res, const char* filename)
+ {
+	 struct addrinfo *ai, hints;
+	 int sock = 0;
+	 struct timeval stats_before, stats_after;
+	 unsigned long stats_diff_sec, stats_diff_usec;
+	 FILE *fp = NULL;
+
+	 if (filename)
+		 if ((fp = fopen(filename, "a")) == NULL) {
+			 HIP_ERROR("Error opening file\n");
+			 goto out_err;
+		 }
+	 /* connect */
+
+	 for(ai = res; ai != NULL; ai = ai->ai_next) {
+		 struct sockaddr_in6 *sin6 =
+			 (struct sockaddr_in6 *) ai->ai_addr;
+		 struct sockaddr_in *sin =
+			 (struct sockaddr_in *) ai->ai_addr;
+		 struct sockaddr_in6 localaddr;
+		 char addr_str[INET6_ADDRSTRLEN];
+		 socklen_t locallen;
+		 int e;
+		
+		 /* Currently only IPv6 socket structures are supported */
+		 sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+		 if (sock < 0) {
+			 sock = 0;
+			 printf("socket creation failed\n");
+			 goto out_err;
+		 }
+		 
+		 HIP_DEBUG("ai_flags %d\n",ai->ai_flags );
+		 HIP_DEBUG("ai_family %d\n",ai->ai_family); 
+		 HIP_DEBUG("ai_socktype %d\n",ai->ai_socktype); 
+		 HIP_DEBUG("ai_protocol%d\n",ai->ai_protocol); 
+		 HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
+		 HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
+		 
+		 
+		 if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
+				sizeof(addr_str))) {
+			 if (!inet_ntop(AF_INET, (char *) &sin->sin_addr,
+					addr_str, sizeof(addr_str))) {
+				 perror("inet_ntop\n");
+				 goto out_err;
+			 }
+		 }
+		 
+		 locallen = sizeof(localaddr);
+		 if (!getsockname(sock,
+				  (struct sockaddr *)&localaddr,
+				  &locallen))
+			 HIP_DEBUG_HIT("local addr", &localaddr.sin6_addr);
+		 
+		 if (ai->ai_family == AF_INET6)
+			 HIP_DEBUG_IN6ADDR("Trying to connect to IPv6", hip_cast_sa_addr(sin6));
+		 else
+			 HIP_DEBUG_INADDR("Trying to connect to IPv4", hip_cast_sa_addr(sin6));
+		 
+		 gettimeofday(&stats_before, NULL);
+		 e = connect(sock, ai->ai_addr, ai->ai_addrlen);
+		 printf("After call conntest.c: connect to %s\n", addr_str);
+		 
+		 gettimeofday(&stats_after, NULL);
+		 stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
+		 stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
+
+		 locallen = sizeof(localaddr);
+		 printf("connect ret=%d errno=%d\n", e, errno);
+		 if (e < 0) {
+			 strerror(errno);
+			 close(sock);
+			 sock = 0;
+			 printf("trying next\n");
+			 continue; /* Try next address */
+		 }
+
+		 printf("connect took %.3f sec\n",
+			(stats_diff_sec+stats_diff_usec) / 1000000.0);
+
+		 if (filename)
+		   fprintf(fp, "%.3f\n",
+			   (stats_diff_sec+stats_diff_usec) / 1000000.0);
+		 else
+		   printf("connect took %.3f sec\n",
+			  (stats_diff_sec+stats_diff_usec) / 1000000.0);
+		 break; /* Connect succeeded and data can be sent/received. */
+		 
+	 }
+	 if (sock == 0) {
+		 printf("failed to connect\n");
+		 goto out_err;
+	 }
+	 
 	
 out_err:
-	if (filename && fp)
-		fclose(fp);
-	return sock;
+	 if (filename && fp)
+		 fclose(fp);
+	 return sock;
 }
 
 /**
  * main_client_gai - it handles the functionality of the client-gai
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
-int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int flags)
 {
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
@@ -262,13 +343,12 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 	
 	/* lookup host */
 	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = AI_HIP;
+	hints.ai_flags = flags;
 	/* If peer_name is not specified the destination is looked in the hadb */
 	if (!peer_name)
 		hints.ai_flags |= AI_KERNEL_LIST;
 	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = socktype;
-	hints.ai_protocol = proto;
 	
 	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	
@@ -288,13 +368,29 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		mylovemostdata[datalen] = (unsigned char) ch;
 		datalen++;
 	}
-	
+	/*
+	HIP_HEXDUMP("addr: ", res, sizeof(*res));
+        */
+        if (res->ai_family == AF_INET)
+            {
+                struct sockaddr_in * ad;
+                ad = (struct sockaddr_in *)res->ai_addr;
+                hip_print_lsi("Addr given to connect", &ad->sin_addr);
+            }
+        if (res->ai_family == AF_INET6)
+            {
+                struct sockaddr_in6 * ad6;
+                ad6 = (struct sockaddr_in6 *)res->ai_addr;
+                hip_print_hit("Addr given to connect", &ad6->sin6_addr);
+            }
+
 	gettimeofday(&stats_before, NULL);
 	/* Connecting... */
-	sock = hip_connect_func(proto, res, NULL);
+	HIP_INFO("!!!! conntest.c Connecting...\n");
+	sock = hip_connect_func(res, NULL);
 	if (!sock)
 		goto out_err;
-
+	HIP_INFO("!!!! conntest.c got sock %d\n", sock);
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
@@ -328,10 +424,11 @@ int main_client_gai(int proto, int socktype, char *peer_name, char *peer_port_na
 		}
 	}
 
+	printf("=== connection test result: ");
 	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		printf("OK\n");
+		printf("OK ===\n");
 	} else {
-		printf("FAIL\n");
+		printf("FAIL ===\n");
 		return(1);
 	}
 
@@ -346,14 +443,14 @@ out_err:
 
 /**
  * main_client_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param proto type of protocol
+ * @param socktype the type of socket
+ * @param peer_name the peer name
+ * @param peer_port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
-int main_client_native(int proto, int socktype, char *peer_name, char *peer_port_name)
+int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
 	struct endpointinfo hints, *epinfo, *res = NULL;
 	struct timeval stats_before, stats_after;
@@ -479,12 +576,10 @@ out:
 
 /**
  * main_server_native - it handles the functionality of the client-native
- * @proto: type of protocol
- * @socktype: the type of socket
- * @peer_name: the peer name
- * @peer_port_name: the prot number
+ * @param socktype the type of socket
+ * @param port_name the prot number
  *
- * Returns: 1 with success, 0 otherwise.
+ * @return 1 with success, 0 otherwise.
  */
 int main_server_native(int socktype, char *port_name)
 {

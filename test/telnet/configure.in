@@ -14,7 +14,7 @@ AC_SUBST(INSTALL_DIR)
 AC_CHECK_HEADERS(termcap.h ncurses/termcap.h)
 AC_CHECK_LIB(ncurses, main)
 
-CXXFLAGS="$CXXFLAGS -I../../tools -I../../libinet6/include -I../.. -I../../linux/include -I../../linux/net/ipv6/hip -DUSE_HIP -g"
-LIBS="-L../../libinet6/.libs -linet6 -lcrypto $LIBS"
+CXXFLAGS="$CXXFLAGS -I../../tools -I../../libinet6/include -I../.. -I../../libhiptool -DUSE_HIP -g"
+LIBS="-L../../libinet6/.libs -linet6 -L../../libhiptool/.libs -lhiptool -lcrypto $LIBS"
 
 AC_OUTPUT(Makefile)

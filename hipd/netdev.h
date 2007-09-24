@@ -13,14 +13,16 @@
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <netinet/ip6.h>
+#include <openssl/rand.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "list.h"
 #include "debug.h"
 
+#define HIP_RTDS_TAB_LEN 256
+
 extern int address_count;
-extern struct list_head addresses;
+extern HIP_HASHTABLE *addresses;
 struct rtnl_handle;
 
 int hip_devaddr2ifindex(struct in6_addr *addr);

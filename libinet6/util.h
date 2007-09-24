@@ -1,3 +1,6 @@
+#ifndef _LIBINET6_UTIL_H
+#define _LIBINET6_UTIL_H
+
 #if HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -56,3 +59,5 @@ void extractsubstrings(char *string, List *list);
 
 /* from getendpointinfo.c, make another header file? */
 int get_local_hits(const char *servname, struct gaih_addrtuple **adr);
+
+#endif

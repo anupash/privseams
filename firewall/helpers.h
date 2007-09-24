@@ -9,7 +9,6 @@
 #include "rule_management.h"
 #include "firewall.h"
 #include "firewall.h"
-#include "hip.h"
 
 char * addr_to_numeric(const struct in6_addr *addrp);
 struct in6_addr * numeric_to_addr(const char *num);

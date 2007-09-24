@@ -1,31 +1,56 @@
 #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
-#include <sys/socket.h>
-#include <linux/types.h>
-#include <linux/netlink.h>
 #include <stdio.h>
 #include <stdint.h>
 
 #include "builder.h"
 #include "debug.h"
-#include "hip.h"
-#include "hipd.h"
+#include "xfrm.h"
 
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        (void*)&((struct sockaddr_in*)x)->sin_addr : \
-        (void*)&((struct sockaddr_in6*)x)->sin6_addr
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-        sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+/* Keep this one as the last to avoid some weird compilation problems */
+#include <linux/netlink.h>
+
+#define HIP_MAX_NETLINK_PACKET 3072
+
+#ifndef  SOL_NETLINK
+#  define  SOL_NETLINK 270
+#endif
+
+#ifndef  NETLINK_ADD_MEMBERSHIP
+#  define  NETLINK_ADD_MEMBERSHIP 1
+#endif
+
+#ifndef  NETLINK_DROP_MEMBERSHIP
+#  define  NETLINK_DROP_MEMBERSHIP 2
+#endif
+
+#define PREFIXLEN_SPECIFIED 1
 
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
+struct hip_work_order_hdr {
+	int type;
+	int subtype;
+	struct in6_addr id1, id2, id3; /* can be a HIT or IP address */
+	int arg1, arg2, arg3;
+};
+
+struct hip_work_order {
+	struct hip_work_order_hdr hdr;
+	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
+	uint32_t seq;
+	hip_list_t queue;
+	void (*destructor)(struct hip_work_order *hwo);
+};
+
 struct netdev_address {
-	struct list_head next;
+  //hip_list_t next;
 	struct sockaddr_storage addr;
 	int if_index;
+        unsigned char secret[40];
+        time_t timestamp;
 };
 
 struct idxmap

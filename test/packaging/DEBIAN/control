@@ -1,6 +1,0 @@
-Package: hipl-userspace
-Version: 1.0
-Architecture: i386
-Maintainer: InfraHIP <infrahip@hiit.fi>
-Description: This package contains the necessary tools, libraries and documents
- for the HIPL kernel.

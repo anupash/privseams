@@ -4,15 +4,15 @@
  * Licence: GNU/GPL
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  */
 
 #include "debug.h"
 
 /**
  * hip_print_hit - print a HIT
- * @str: string to be printed before the HIT
- * @hit: the HIT to be printed
+ * @param str string to be printed before the HIT
+ * @param hit the HIT to be printed
  */
 inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
@@ -25,10 +25,10 @@ inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 
 /**
  * khexdump - hexdumper for HIP kernel module
- * @tag:  a start tag (a string ending in \0) that will be printed before
+ * @param tag a start tag (a string ending in \0) that will be printed before
  *        the actual hexdump
- * @data: the data to be hexdumped
- * @len:  the length of the data to hexdumped
+ * @param data the data to be hexdumped
+ * @param len the length of the data to hexdumped
  *
  * Hexdumps data starting from address @data of length @len.
  */

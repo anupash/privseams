@@ -3,17 +3,26 @@
                   "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
 <book>
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
+  <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <title>HIPL User Manual</title>
   <chapter>
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare or User Mode Linux is recommended for
+      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
       testing HIPL.
       </para>
     </chapter>
   <chapter>
-    <title>Requirements</title>
+    <title>Software Requirements</title>
+    <para>
+     It is recommended that you get the latest source and compile it yourself.
+     As an alternative, you may download frozen, binary releases of the kernel
+     from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
+     bugs, please have a go with the latest source instead of the binaries
+     because the bug may already have been resolved upstream. There is also a
+     Ubuntu based live cd available from the HIPL download pages.
+    </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
       compilation and usage. Refer to linux/README for further instructions.
@@ -23,74 +32,117 @@
       software bundle:
     </para>
     <para>
-      * Mandatory
+      Mandatory:
     </para>
+    <itemizedlist>
+      <listitem><para>
+      Linux Operating System
+      </para></listitem>
+      <listitem><para>
+      A BEET patched Linux 2.6 kernel with the modules listed in
+      <xref linkend="kernel" />.
+      </para></listitem>
+      <listitem><para>
+      OpenSSL-library and developer headers
+      </para></listitem>
+      <listitem><para>
+      libxml2 and its development headers for OpenDHT support
+      </para></listitem>
+      <listitem><para>
+      GNU make
+      </para></listitem>
+      <listitem><para>
+      the latest versions of autoconf, automake, autoreconf and libtool
+      </para></listitem>
+      <listitem><para>
+      iproute
+      </para></listitem>
+      <listitem><para>
+      gtk2 library and development headers
+      </para></listitem>
+      <listitem><para>
+      Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
+      because atleast in Ubuntu Feisty it messes up the compilation.
+      </para></listitem>
+    </itemizedlist>
     <para>
-     &nbsp; * Linux Operating System
+      Optional Software Requirements:
     </para>
-    <para>
-      &nbsp;* A BEET patched Linux 2.6 kernel with dummy device, XFRM,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support
-    </para>
-    <para>
-      &nbsp;* OpenSSL-library and developer headers
-    </para>
-    <para>
-      &nbsp;* GNU make
-    </para>
-    <para>
-      &nbsp;* the latest versions of autoconf, automake, autoreconf and libtool
-    </para>
-    <para>
-      &nbsp;* iproute and its development headers
-    </para>
-    <para>
-      &nbsp;* wxgtk 2.6.2 and libgtk-2.x library and development headers
-    </para>
-    <para>
-      * Optional
-    </para>
-    <para>
-      &nbsp;* iputils-ping (or netkit-ping): ping, ping6
-    </para>
-    <para>
-      &nbsp;* ipsec-tools: setkey
-    </para>
-    <para>
-      &nbsp;* iptables userspace tools and IPv6 netfilter in the kernel
+    <itemizedlist>
+    <listitem><para>
+             iputils-ping (or netkit-ping): ping, ping6
+    </para></listitem>
+    <listitem><para>
+              ipsec-tools: setkey
+    </para></listitem>
+    <listitem><para>
+              ip6tables userspace tools and IPv6 netfilter in the kernel
               (for the HIP firewall only)
-    </para>
-    <para>
-      &nbsp;* iptables development headers (HIP firewall)
-    </para>
-    <para>
-      &nbsp;* glib (www.gtk.org) and development headers (HIP firewall)
-    </para>
-    <para>
-      &nbsp;* netcat6
-    </para>
-    <para>
-      &nbsp;* latex, dvips, dvipdf, fig2dev, docbook-utils (for building the
-      HIPL documentation)
-    </para>
-    <para>
-      &nbsp;* java compiler for "jip" (java hip resolver) if you want to build
-      HIP enabled java programs
-    </para>
+    </para></listitem>
+    <listitem><para>
+              iptables development headers (HIP firewall)
+    </para></listitem>
+    <listitem><para>
+              glib (www.gtk.org) and development headers (HIP firewall)
+    </para></listitem>
+    <listitem><para>
+              netcat6
+    </para></listitem>
+    <listitem><para>
+              latex, dvips, dvipdf, fig2dev, doxygen (for building the
+      HIPL source code documentation)
+    </para></listitem>
+    <listitem><para>
+              java compiler for "jip" (java hip resolver) if you want to
+              build HIP enabled java programs
+    </para></listitem>
+    </itemizedlist>
+    <para> Network Requirements</para>
+    <itemizedlist>
+    <listitem><para>
+              Make sure that the end-host firewall does not block HIP
+              and ESP traffic (try "iptables -L") or otherwise you won't get
+              any traffic through. As a workaround, you try enabling the
+              NAT mode at the end-host.
+    </para></listitem>
+    <listitem><para>
+              Make sure that a middlebox is not blocking HIP traffic.
+              If there is firewall between the machines, it might have been
+              configured to block HIP or ESP traffic. If there is a NAT
+              between the machines, it might also be blocking traffic.
+              Either make sure that the middlebox allows HIP and ESP traffic,
+              or you can try enabling the NAT mode at the end-host.
+    </para></listitem>
+    </itemizedlist>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
     <para>
-      Architectural documentation:
+     Architectural documentation:
     </para>
+    <itemizedlist>
+    <listitem><para>
+            % cd hipl/doc
+    </para></listitem>
+    <listitem><para>
+            % make design_choices.dvi design_choices.ps design_choices.pdf
+    </para></listitem>
+    </itemizedlist>
+
     <para>
-     &nbsp; % cd hipl/doc
+    Source code documentation:
     </para>
-    <para>
-      &nbsp;% make design_choices.dvi design_choices.ps design_choices.pdf
-    </para>
+    <itemizedlist>
+    <listitem><para>
+           % cd hipl/doc
+    </para></listitem>
+    <listitem><para>
+           % doxygen
+    </para></listitem>
+    </itemizedlist>
+
   </chapter>
-  <chapter>
+  <chapter id="kernel">
     <title>Compiling the Kernel</title>
     
     <para>
@@ -108,38 +160,115 @@
       Download linux kernel 2.6.x.y. Compile the kernel with
       at least the following options:
     </para>
+    <itemizedlist>
+    <listitem><para>
+            Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
+    </para></listitem>
+    <listitem><para>
+            Code maturity level options
+    </para></listitem>
+    <listitem><para>
+            [*] Prompt for development and/or incomplete code/drivers
+    </para></listitem>
+    <listitem><para>
+            Networking support ---&gt; Networking options
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt;  Unix domain sockets
+    </para></listitem>
+    <listitem><para>
+            [*] Transformation user configuration interface
+    </para></listitem>
+    <listitem><para>
+            [*] TCP/IP networking
+    </para></listitem>
+    <listitem><para>
+            [*] Advanced router
+    </para></listitem>
+    <listitem><para>
+            [*] IP: policy routing
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Packet socket
+    </para></listitem>
+    <listitem><para>
+            [*] IPsec user configuration interface
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; PF_KEY sockets
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP tunneling
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPcomp transformation
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec transport mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec tunnel mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec BEET mode
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IP: ESP transform
+    </para></listitem>
+    <listitem><para>
+            [*] The IPv6 Protocol
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: ESP transformation
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: IPcomp transformation
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: IPsec BEET mode
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: Multiple Routing Tables
+    </para></listitem>
+    <listitem><para>
+            Cryptographic options
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Null algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; SHA1 digest algorithm
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; DES and Triple DES EDE cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; AES cipher algorithms (i586)
+    </para></listitem>
+    <listitem><para>
+            Device Drivers ---&gt; Network device support
+    </para></listitem>
+    <listitem><para>
+            &lt;M&gt; Dummy network device support
+    </para></listitem>
+    <listitem><para>
+            Security options ---&gt;
+    </para></listitem>
+    <listitem><para>
+            [*] Enable different security models
+    </para></listitem>
+    <listitem><para>
+            [M] Default Linux Capabilities
+    </para></listitem>
+    </itemizedlist>
     <para>
-      &nbsp;Legend: [*] built-in  [ ] excluded  &lt;M &gt; module  &lt; &gt; module capable
-    </para>
-    <para>
-      &nbsp;Code maturity level options
-    </para>
-    <para>
-      &nbsp;[*] Prompt for development and/or incomplete code/drivers
-    </para>
-    <para>
-      &nbsp;Processor type and features
-    </para>
-    <para>
-      &nbsp;Device Drivers ---&gt; Networking support ---&gt; Networking options
-    </para>
-    <para>
-      &nbsp;[*] TCP/IP networking
-    </para>
-    <para>
-      &nbsp;[*] The IPv6 protocol (EXPERIMENTAL)
-    </para>
-    <para>
-      IPsec, IPv6 security support, SHA1 and 3DES should be auto enabled as
-      dependencies after you have selected HIP. We recommend that you
-      compile HIP as a kernel module, and the IPv6 support as built-in.
-    </para>
-    <para>
-      HIP debugging is not mandatory, but use of it is highly recommended in
-      order to get more information when problems arise. HIP debugging
-      information is logged using syslog's facility "kernel" and priority
-      "debug". Remember to set up your /etc/syslog.conf correctly if you do
-      not see the log messages (see syslog.conf manual page for more info).
+      The hipd probes the necessary kernel modules automatically,
     </para>
   </chapter>
   <chapter>
@@ -150,27 +279,26 @@
       applications in order to use HIP. Start by moving to the top level directory
       of HIPL:
       </para>
-    <para>
-      &nbsp;cd hipl
-    </para>
-    <para>
+    <itemizedlist>
+    <listitem><para>
+      cd hipl
+    </para></listitem>
+    <listitem><para>
       If the file autogen.sh exists (to test type ls autogen.sh), run it:
-    </para>
-    <para>
-      &nbsp;./autogen.sh
-    </para>
+    </para></listitem>
+    <listitem><para>
+      ./autogen.sh
+    </para></listitem>
+    </itemizedlist>
     <para>
       Next, build the hipd, libinet6, tools and test directory as follows:
     </para>
     <para>
-      &nbsp;./configure &amp;&amp; make
+      ./configure &amp;&amp; make install
     </para>
     <para>
-      It is not necessary to "make install" the applications. You can
-      execute them straight from their source directories. Note that making
-      from the top directory does not currently build e.g. java libraries or
-      telnet. Follow the instructions presented later in this document to
-      build them.
+      Note: you can also try "make deb" or "make rpm" if you want to build a
+      binary package.
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
@@ -178,15 +306,17 @@
       See "./configure --help" for a full list of options.
     </para>
   </chapter>
-  <chapter>
-    <title>Testing a HIP connection between two hosts</title>
+  <chapter id="basictest">
+    <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
-      HIPL developers test HIP using two machines called crash (3ffe::1) and
-      oops (3ffe::2). They are used through this whole document as examples
-      even though you probably have your own naming and addressing
-      conventions. It is possible to use IPv4 addresses on-wire as well
-      but the applications being used need to support IPv6 currently.
-      </para>
+      You can test HIP with any networking application, but in this
+      section we will demonstrate few development-oriented test
+      applications.  Here we assume two machines called crash
+      (3ffe::1) and oops (3ffe::2) that in the same network. They are
+      used through this whole document as examples even though you
+      probably have your own naming and addressing conventions. It is
+      possible to use IPv4 addresses on-wire as well but the
+      applications being used need to support IPv6 currently.</para>
     <para>
       We expect that you have two hosts for testing HIP which will be
       referred to as "crash" and "oops". You should run these commands in
@@ -196,17 +326,22 @@
       privileges.
     </para>
     <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::1/64
+      oops:
     </para>
-    <para>
-      &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;hipd/hipd # (to start as a background daemon process, add -b flag)
-    </para>
-    <para>
-      &nbsp;test/conntest-server tcp 1111
-    </para>
+    <itemizedlist>
+    <listitem><para>
+            ifconfig eth0 inet6 add 3ffe::2/64
+    </para></listitem>
+    <listitem><para>
+            cd somewhere/hipl
+    </para></listitem>
+    <listitem><para>
+            hipd/hipd # (to start as a background daemon process, add -b flag)
+    </para></listitem>
+    <listitem><para>
+            test/conntest-server tcp 1111
+    </para></listitem>
+    </itemizedlist>
     <para>
       Crash will act as the connection initiator, so we need to configure
       the hosts files of crash (note: use of IPv4 addresses is also possible):
@@ -214,41 +349,46 @@
     <para>
       crash:
     </para>
-    <para>
-      &nbsp;/etc/hosts:
-    </para>
-    <para>
-      &nbsp;&nbsp;3ffe::1 oops
-      </para>
-    <para>
-     &nbsp; /etc/hip/hosts:
-      </para>
-    <para>
-      &nbsp;&nbsp;HIT_OF_OOPS oops
-    </para>
-    <para>
-      &nbsp;ifconfig eth0 inet6 add 3ffe::2/64
-      </para>
-    <para>
-      &nbsp;cd somewhere/hipl
-    </para>
-    <para>
-      &nbsp;hipd/hipd
-    </para>
-    <para>
-      &nbsp;test/conntest-client-gai oops tcp 1111
-    </para>
-    <para>
-      &nbsp;&lt;type some text in crash, press enter and ctrl+d and you
-      &nbsp;should see some text appearing in the output of the hosts&gt;
-    </para>
+    <itemizedlist>
+    <listitem><para>
+            /etc/hosts:
+    </para></listitem>
+    <listitem><para>
+                  3ffe::2 oops
+      </para></listitem>
+    <listitem><para>
+            /etc/hip/hosts:
+      </para></listitem>
+    <listitem><para>
+                  HIT_OF_OOPS oops
+    </para></listitem>
+    <listitem><para>
+            ifconfig eth0 inet6 add 3ffe::1/64
+      </para></listitem>
+    <listitem><para>
+            cd somewhere/hipl
+    </para></listitem>
+    <listitem><para>
+            hipd/hipd
+    </para></listitem>
+    <listitem><para>
+            test/conntest-client-gai oops tcp 1111
+    </para></listitem>
+    <listitem><para>
+           ;&lt;type some text in crash, press enter and ctrl+d and you
+                should see some text appearing in the output of the hosts&gt;
+    </para></listitem>
+    </itemizedlist>
     <para>
       This will setup a HIP connection between the two hosts (it may take a
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
-      "ip addr show dummy0".
+      If you want to know the HIT of the localhost, run
+      "hipconf get hi default". To avoid routing problems especially with
+      UDP, it is highly recommend to use the default HIT of the machine!
+      You can list all HITs of the machine with "hipconf get hi all", but
+      it is safe to use the optional HITs only with TCP connections!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -256,7 +396,12 @@
       possible but not necessary:
     </para>
     <para>
-      &nbsp;tools/hipconf add map PEER_HIT PEER_IP
+            tools/hipconf add map PEER_HIT PEER_IP
+    </para>
+    <para>
+      You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
+      It is also possible to use DNS or OpenDHT (<xref linkend="opendht" />)
+      for the mappings.
     </para>
     <para>
       Link local IPv6 addresses are not supported well, so do not use
@@ -265,15 +410,68 @@
       network as we are or not.
       </para>
     <para>
+      The log messages displayed by the hip daemon can be changed dynamically: 
+    </para>
+    <para>
+            tools/hipconf debug none # &lt;only HIP_DIE messages are shown&gt;
+    </para>
+    <para>
+            tools/hipconf debug medium # &lt;shows HIP_DIE, HIP_ERROR and 
+	    HIP_INFO messages&gt;
+    </para>
+    <para>
+            tools/hipconf debug all # &lt;shows all messages, including 
+	    HIP_DEBUG&gt;
+    </para>
+    <para>
+      These options can be also set in "/etc/hip/hipd_config" to configure 
+      hipd and other libraries at startup.
+    </para>
+    <para>
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
+      For tcpdump, you can use "tcpdump -n -i any esp or proto 253 or 
+      port 50500" to catch HIP-only traffic.
     </para>
     <para>
       There is also a program called "hipsetup" in "hipl/test" directory for
       quick testing of the base exchange. Run it without arguments to see
       how it is used.
     </para>
+    <para>
+      It should be noticed that starting a new hipd process automatically
+      kills the previous one.
+    </para>
+  </chapter>
+  <chapter id="itest">
+    <title>HIPL Internet Test Servers</title>
+    <para>
+    Below is a list of HIPL test servers if you want to test HIP over Internet:
+    </para>
+    <table frame="all"><title>Test Servers</title>
+          <tgroup cols="1">
+            <thead>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+            </thead>
+            <tbody>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:007d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>RSA</entry></row>
+              <row><entry>felwood.infrahip.net</entry><entry>2001:0074:f967:5cb2:cd63:15b5:1737:b083</entry><entry>193.167.187.130</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
+              <!--
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
+              -->
+            </tbody>
+          </tgroup>
+    </table>
+
   </chapter>
   <chapter>
     <title>Closing HIP Security Associations Manually</title>
@@ -282,7 +480,7 @@
       "hipconf hip rst all" to close all SAs. 
      </para>
   </chapter>
-  <chapter>
+  <chapter id="handover">
     <title>Testing Handover</title>
     <para>
       The handover code is based on draft-nikander-hip-mm-00
@@ -295,35 +493,36 @@
       to have the nc6 tool which can be found from e.g. "www.freshmeat.net".
       The example is based on IPv6 addresses but you can also use IPv4.
     </para>
-    <para>
-      &nbsp;&lt;first, establish a HIP connection as intructed in the previous
-      section&gt;
-      </para>
-    <para>
-      &nbsp;oops  # nc6 -l -p 12345
-      </para>
-    <para>
-      &nbsp;crash # nc6 &lt;the HIT of oops&gt; 12345
-    </para>
-    <para>
-      &nbsp;crash # &lt;type some text and press enter&gt;
-    </para>
-    <para>
-      &nbsp;oops  # &lt;the text that you typed in crash should appear in oops
+    <itemizedlist>
+    <listitem><para>
+            &lt;first, establish a HIP connection as intructed in <xref linkend="basictest" />&gt;
+      </para></listitem>
+    <listitem><para>
+            oops  # nc6 -l -p 12345
+      </para></listitem>
+    <listitem><para>
+            crash # nc6 &lt;the HIT of oops&gt; 12345
+    </para></listitem>
+    <listitem><para>
+            crash # &lt;type some text and press enter&gt;
+    </para></listitem>
+    <listitem><para>
+            oops  # &lt;the text that you typed in crash should appear in oops
       console&gt;
-    </para>
-    <para>
-      &nbsp;crash # ifconfig eth0 inet6 del 3ffe::1/64
-    </para>
-    <para>
-      &nbsp;crash # ifconfig eth0 inet6 add 3ffe::3/64
-    </para>
-    <para>
-      &nbsp;crash # &lt;type some text and press enter&gt;
-    </para>
-    <para>
-      &nbsp;oops  # &lt;the text that you typed in crash should appear in oops console&gt;
-    </para>
+    </para></listitem>
+    <listitem><para>
+            crash # ifconfig eth0 inet6 del 3ffe::1/64
+    </para></listitem>
+    <listitem><para>
+            crash # ifconfig eth0 inet6 add 3ffe::3/64
+    </para></listitem>
+    <listitem><para>
+            crash # &lt;type some text and press enter&gt;
+    </para></listitem>
+    <listitem><para>
+            oops  # &lt;the text that you typed in crash should appear in oops console&gt;
+    </para></listitem>
+    </itemizedlist>
     <para>
       Do not use link local addresses for the mobility scenarios for the
       hosts, unless you know what you are doing! For example, you are asking
@@ -332,13 +531,21 @@
       node to a different network. The readdressing fails, because either
       node has no way of reaching the other node.
     </para>
+
+    <para>
+	Make sure to add the route for the new address as soon as the new address is 
+	added. If the route is missing, the update packets might not get sent at all. 
+	The daemon waits for a couple of seconds if a transmit of an update fails for 
+	restransmitting it. 
+    </para>
   </chapter>
   <chapter>
     <title> Compiling Java Applications</title>
     <para>
       HIPL software bundle includes also a java wrapper library to the HIP
       enabled libinet6 resolver library. The library is called "jip" and it
-      is located in "path-to-hipl/jip".
+      is located in "path-to-hipl/jip". The use of the java library requires
+      the HIP socket handler defined elsewhere in this document.
       </para>
     <para>
       You need to have either Blackdown or Sun java jdk 1.4.x or later to
@@ -351,18 +558,20 @@
     <para>
       Compile libinet6.so and jip:
     </para>
-    <para>
-      # cd path-to-hipl/libinet6
-    </para>
-    <para>
-      # make libinet6.so
-    </para>
-    <para>
-      # cd ../jip
-    </para>
-    <para>
-      # make
-    </para>
+    <itemizedlist>
+    <listitem><para>
+      cd path-to-hipl/libinet6
+    </para></listitem>
+    <listitem><para>
+      make libinet6.so
+    </para></listitem>
+    <listitem><para>
+      cd ../jip
+    </para></listitem>
+    <listitem><para>
+      make
+    </para></listitem>
+    </itemizedlist>
     <para>
       The outcome of the previous operation is jip/jip.jar which you should
       use in your java applications to enable HIP. You can also run "make
@@ -373,21 +582,23 @@
       There are three example java applications in "test" directory that you
       must compile manually with the following procedure:
       </para>
-    <para>
-      # cd ../test
-    </para>
-    <para>
-      # javac -classpath ../jip/jip.jar HipClient.java
-    </para>
-    <para>
-      # javac -classpath ../jip/jip.jar HipUserkeyClient.java
-    </para>
-    <para>
-      # javac -classpath ../jip/jip.jar HipServer.java
-    </para>
+    <itemizedlist>
+    <listitem><para>
+      cd ../test
+    </para></listitem>
+    <listitem><para>
+      javac -classpath ../jip/jip.jar HipClient.java
+    </para></listitem>
+    <listitem><para>
+      javac -classpath ../jip/jip.jar HipUserkeyClient.java
+    </para></listitem>
+    <listitem><para>
+      javac -classpath ../jip/jip.jar HipServer.java
+    </para></listitem>
+    </itemizedlist>
     <para>
       You should have setup your networking environment as explained in
-      section "Testing a HIP Connection Between Two Hosts", that is, you
+      <xref linkend="basictest" />, that is, you
       should have configured your /etc/hosts and /etc/hip/hosts
       properly. However, hipd will automatically create your public keys,
       so you don't have to worry about them.
@@ -403,21 +614,23 @@
     <para>
       Run the example applications as follows:
     </para>
-    <para>
+    <itemizedlist>
+    <listitem><para>
       crash # cd path-to-hipl/test
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
       crash # ./java HipServer 12345
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
       oops # cd test
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
       oops # ./java HipClient crash 12345 54321
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
       &lt;wait for the prompt, type some text and press enter&gt;
-    </para>
+    </para></listitem>
+    </itemizedlist>
     <para>
       The shell script "test/java" contains some LD_PRELOAD, library and
       class path information necessary for executing the HIP enabled java
@@ -437,217 +650,304 @@
       see the required modifications to the code (ifdef USE_HIP). Here's how
       you compile the telnet applications:
     </para>
-    <para>
+    <itemizedlist>
+    <listitem><para>
 	# cd test/telnetd
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
 	# ./configure
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
 	# make
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
       # cd ../telnet
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
 	# ./configure
-    </para>
-    <para>
+    </para></listitem>
+    <listitem><para>
 	# make
-    </para>
+    </para></listitem>
+    </itemizedlist>
     <para>
-	
+       Before actually using the telnet, you should build and "insmod"
+       the HIP kernel module. It is needed for telnet because it uses
+       the native API (and not the legacy APIs). After that, you can
+       experiment with telnet as follows:
+    </para>
+    <itemizedlist>
+    <listitem><para>
 	oops  # telnetd/telnetd -debug 12345
-      </para>
-    <para>
+      </para></listitem>
+    <listitem><para>
 	crash # telnet/telnet -l username oops 12345
+    </para></listitem>
+    </itemizedlist>
+    <para>
+      Note: the username must be non-root.
     </para>
     <para>
-	
-      Note: the username must be non-root.
+      There is a limitation in the current version of the native API. It does
+      not support wildcard addresses at the server. This means that you have to
+      select the correct HIT at the client.
     </para>
   </chapter>
   <chapter>
-    <title> How to Use HIP in Other C Based Applications?</title>
+
+    <title>How to Use HIP with Applications?</title>
+
+    <para>You need to execute first "make install" in the top directory if
+          you have not done it before. Otherwise you have to configure
+          library paths using LD_LIBRARY_PATH environment variable.
+    </para>
+    <para>This section lists different methods on how to set-up HIP manually
+          in order to make applications use HIP.
+          We have categorized the local methods to "easy"
+          and "advanced" here. 
+    </para>
+    <section>
+    <title>Easy Methods</title>
     <para>
-      Use one the following methods:
+    1. Use the opportunistic mode as described in
+       <xref linkend="opportunistic" />. This method works with both IPv4 and
+       IPv6 applications. It does not require HIT configuration at all.
     </para>
     <para>
-      1. Port it to use the native HIP API. See the telnet code for a
-      practical example. The API is documented in url:
-      http://hipl.hiit.fi/hipl/hip-native-api-final.pdf
+    a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
     </para>
     <para>
-      2. Relink the application to use the libinet6 library provided in the HIPL
-      software bundle. Then, use either of the following methods:
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
     </para>
     <para>
-      a) Set the AI_HIP flag in the getaddrinfo call. This will make the
-      getaddrinfo function to return only HITs in the place of IP addresses
-      (no IP addresses are returned). Also, the getaddrinfo function sends
-      the HIT-to-IP-address mapping to the kernel.
+      2. Override the resolver library dynamically:
+    </para>
+    <para>
+      a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
+    </para>
+      <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
+
+    <para>
+     b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+    </para>
+
+    <para>
+    3. Use HIP configuration GUI to run the application. You can execute applications
+       with GUI and edit their library-path as you like. Also you should be
+       able to see list of processes you have executed from GUI.
+    </para>
+    <para>
+    4. You can also use HITs directly in the application. For example, you can
+       do "ping6 PEER_HIT". However, hipd must know the mapping from the
+       PEER_HIT to the corresponding IP address. You can tell this mapping to
+       hipd using several ways. First way is to configure the HIT-hostname
+       pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
+       way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
+       hipconf command also to /etc/hip/hipd_config and restart hipd when you
+       want the mapping to be permanent. Works only with IPv6-enabled
+       applications.
+    </para>
+    <para>
+    5. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+       file and use the hostname in your application. You need to make sure
+       that hipd finds the corresponding IP address as instructed in the
+       previous point. Works only with IPv6-enabled applications.
+    </para>
+    <para>
+    6. Use external nameservices for HIT-IP mapping. For example, you can use
+       AAAA records in DNS for testing (HI records are not supported yet).
+       Alternatively, use the free OpenDHT name service for automatic host
+       naming as described in <xref linkend="opendht" />.
+    </para>
+    </section>
+    <section>
+    <title>Advanced Methods</title>
+    <para>These methods assume that you have the source code available
+          for the application and the application is IPv6 enabled. You have
+          to relink the application to use the HIP libraries and,
+          in some methods, to modify the source code.
+    </para>
+    <para>
+	Following applications are IPv6 enabled (and use getaddrinfo for name
+        resolution): telnet, firefox, lynx, ssh. Not using getaddrinfo: ping,
+        ping6, tla, svn.
+    </para>
+    <para>
+      5. Relink the application to use the libinet6 library provided in the
+      HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
+      add the corresponding address to /etc/hosts. Then, use either of the
+      following methods:
+    </para>
+    <para>
+      a) Run the application by using the hostname you just configured to
+         the hosts files. It will use HIP for those hostnames. For hostnames
+         that are not present in /etc/hip/hosts, the application will just
+         use normal IPv4 or IPv6 connectivity. Good for environments where
+         the are both HIP and non-HIP enabled hosts, and backwards
+         compatibility is more important that the security of the connections.
+    </para>
+    <para>
+      b) Set the AI_HIP flag in the getaddrinfo call and recompile the
+         application (see test/conntest.c). This will make the getaddrinfo
+         function to return <emphasis>only</emphasis> HITs in the place of IP
+         addresses (no IP addresses are returned). This option good for
+         security critical applications for which you want to force the
+         use of HIP.
       </para>
     <para>
-      b) You are using the transparent mode in the resolver (see the
-      HIP_TRANSPARENT_API compilation flag in libinet6/Makefile.in). Only
-      relinking is required, no changes are needed in the application.
+      c. Port it to use the native HIP API. See the telnet code for a
+      practical example. The API is documented in url:
+      <ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
     </para>
-    <para>
-      3. Override the getaddrinfo function from the command line:
-      http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln=
-    </para>
-    <para>
-      Note! Methods two and three assume two prequisites! First, the
-      application must be IPv6 in order to support HITs. Second, the 
-      application must really use the getaddrinfo interface because 
-      otherwise the getaddrinfo hack (i.e. sending HIT-to-IPv6 mapping 
-      to the HIP module) does not work.
-    </para>
-    <para>
-    4. Insert the HIT to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add map HIT IP". This is the
-       quick-and-dirty method...
-    </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
-    <para>
-      The rendezvous server is similar to the home agent in Mobile IP. The
-      rendezvous server provides a stable IP for the responder and forwards
-      the initial I1 packet to the current location of the responder.
-      </para>
-    <para>
-      The rendezvous server is similar to the home agent in Mobile IP. The
-      rendezvous server provides a stable IP for the responder and forwards
-      the initial I1 packet to the current location of the responder.
-    </para>
-    <para>
-      Prerequisites:
-    </para>
-    <para>
-      ./configure --enable-rvs
-    </para>
-    <para>
-      The hipconf tool must support rvs option:
-    </para>
-    <para>
-      hipconf add rvs &lt;hit&gt; &lt;ip&gt;
-    </para>
-    <para>
-      For now it is best if all the hosts involved in communications have
-      the Rendezvous Mechanism option enabled. Although, for the initiator
-      this should not be a requirement. Also, you should have run the base
-      exchange once without rendezvous server to get familiar how the
-      /etc/hosts and /etc/hip/hosts are configured.
-    </para>
-    <para>
-      The participants:
-    </para>
-    <para>
-      &nbsp;I = Initiator
-    </para>
-    <para>
-      &nbsp;RVS = The Rendezvous server
-    </para>
-    <para>
-      &nbsp;R = Responder
-    </para>
-    <para>
-      The idea is that I wants to connect to R's HIT but only knows RVS's IP
-      address (and that RVS is representing R). We'll show how to use RVS
-      the native HIP example applications (although you can do it with
-      nc6 or the other conntest test applications).
-    </para>
-    <para>
-      Steps:
-    </para>
-    <para>
-      -----
-    </para>
-    <para>
-      	  1. Start and initialize HIP module in each host:
-    </para>
-    <para>
-      2. At the initiator, you must modify the "/etc/hosts" file. In the file,
-      responder's hostname must be mapped to the IP address of the rendezvous
-      server. It must not be mapped to the responder's IP address, or
-      otherwise the rendezvous server is not used at all!
-    </para>
-    <para>
-      The "/etc/hip/hosts" file should contain the hostname and HIT of the
-      responder as in the normal base exchange execution.
-    </para>
-    <para>
-      3. R has to tell the RVS that it would like to use RVS's services:
-    </para>
-    <para>
-      responder # hipconf rvs &lt;RVS-hit&gt; &lt;RVS-ip&gt;
-    </para>
-    <para>
-      This will establish a HIP SA between the rendezvous server and the responder.
-    </para>
-    <para>
-      4. Put some server listening at R:
-    </para>
-    <para>
-      responder # test/conntest-server-native tcp 5000
-    </para>
-    <para>
-      5. Start a connection at I:
-    </para>
-    <para>
-      initiator # test/conntest-client-native &lt;responder-hostname&gt; tcp 5000
-    </para>
-    <para>
-      6. Type some text...
-    </para>
-    <para>
-      Notes:
-    </para>
-    <para>
-      &nbsp;* The implemented mechanism is simple forwarding of I1 packet with 
-      source and  destination IP addresses rewritten.
-    </para>
-    <para>
-      &nbsp;* No changes were  made to the REA / mm-code,  which means that, for 
-      example, the double jump scenario does not work.
-    </para>
-    <para>
-      &nbsp;* Changes will be made when upgrade from mm-00 to mm-02 is finished.
-    </para>
-    <para>
-      &nbsp;* The mechanism  does not comply 100% with the RVS draft.
-    </para>
-    <para>
-      &nbsp;* We don't use REA TLV in R1 (from responder to initiator). The same 
-      functionality is achieved by using the sender's IP address of 
-      the R1 packet.
-    </para>
-    <para>
-      &nbsp;* The VIA_RVS TLV is also left out, since it is meant only for 
-      diagnostic purposes, and doesn't really add anything to the
-      implementation, except for bugs. :)
-    </para>
-    <para>
-      &nbsp;* The rendezvous mechanism is not yet guaranteed to be interoperable 
-		with other implementations than HIPL
-    </para>
+  <para>
+   The rendezvous extension extends HIP and the HIP registration extension for
+   initiating communication between HIP nodes via HIP rendezvous servers. The
+   rendezvous server (RVS) serves as an initial contact point ("rendezvous
+   point") for its clients. The clients of an RVS are HIP nodes that use the HIP
+   Registration Protocol to register their HIT->IP address mappings with the RVS.
+   After this registration, other HIP nodes can initiate a base exchange using
+   the IP address of the RVS instead of the current IP address of the node they
+   attempt to contact. Essentially, the clients of an RVS become reachable at
+   the RVS' IP addresses.
+  </para>
+  <para>
+   The rendezvous server is similar to the home agent in Mobile IP. The
+   rendezvous server provides a stable IP for the responder and forwards
+   the initial I1 packet to the current location of the responder.
+  </para>
+  <para>
+   The participants:
+  </para>
+  <para>
+  I = Initiator, RVS = RendezVous Server, R = Responder
+  </para>
+  <para>
+   You should have run
+   the base exchange once without rendezvous server to get familiar how the
+   "/etc/hosts" and "/etc/hip/hosts" are configured.
+  </para>
+  <para>
+   The idea is that I wants to connect to R's HIT but only knows RVS's IP
+   address (and that RVS is representing R). We'll show how to use RVS
+   the native HIP example applications (although you can do it with
+   nc6 or the other conntest test applications).
+  </para>
+  <para>
+   "/etc/hosts" and "/etc/hip/hosts" configurations:
+  </para>
+  <para>
+   INITIATOR: At the initiator, you must modify the "/etc/hosts" file. In the
+   file, responder's hostname must be mapped to the IP address of the rendezvous
+   server. It must not be mapped to the responder's IP address, or otherwise the
+   rendezvous server is not used at all! Thus in /etc/hosts you should have:
+   &lt;RVS IP&gt; &lt;RESPONDER NAME&gt;. The "/etc/hip/hosts" file should
+   contain the hostname and the HIT of the responder as in the normal base
+   exchange execution: &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. Notice
+   that there are currently four different HITs at each machine's "dummy0"
+   interface. When the responder registers to the rendezvous server, it can
+   choose any one four HITs. Please make sure that you use the same HIT here as
+   &lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
+   check which HIT is used from the messages the responders's hipdaemon prints;
+   there should be a line saying: "HIT being registered to rvs: &lt;HIT&gt;"
+  </para> 
+  <para>
+   RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
+   are left blank ("/etc/hosts" can of course contain the non-hiprelated
+   mappings). These files are left blank because the rendezvous server
+   is assumed to have no information of its clients beforehand, it just
+   offers the rendezvous service, and the responder then registers its
+   HIT->IP mapping to the rendezvous server.
+  </para>
+  <para>
+   RESPONDER: Also at the responder both files,"/etc/hosts" and 
+   "/etc/hip/hosts" are left blank ("/etc/hosts" can of course contain the
+   non-hiprelated mappings). The responder is assumed to know the IP address
+   and the HIT of the rendezvous server, but this information is given as
+   commandline parameters of "hipconf" tool.
+  </para>
+  <para>
+   Steps:
+  </para>
+  <orderedlist>
+  <listitem><para>
+      Start HIP daemon in each host: "hipd/hipd".
+  </para></listitem>
+  <listitem><para>
+      At the rendezvous server we have to indicate that we're willing to offer
+   rendezvous service: "tools/hipconf add service rvs".
+  </para></listitem>
+  <listitem><para>
+      At the responder we have to register to the rendezvous server:
+   "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
+   a HIP SA between the rendezvous server and the responder.
+  </para></listitem>
+  <listitem><para>
+      At the responder start a server listening for incoming connections:
+   "test/conntest-server tcp 5000"
+  </para></listitem>
+  <listitem><para>
+      At the initiator start a connection:
+   "test/conntest-client-gai &lt;RESPONDER-HOSTNAME&gt; tcp 5000"
+  </para></listitem>
+  <listitem><para>
+      At the initiator type some text and press CTRL + d. If everything works
+   ok, the typed text should be now echoed at the responder.
+  </para></listitem>
+  </orderedlist>
+  <para>
+    Notes:
+  </para>
+  <para>
+   The rendezvous server is only supposed to relay the I1 packet. Once the
+   I1 packet has been successfully relayed to the responder, all other traffic
+   flows directly between the initiator and the responder.
+  </para>
+  <para>
+   The implemented mechanism is simple forwarding of I1 packet with 
+   source and  destination IP addresses rewritten.
+  </para>
+  <para>
+   Drafts complied with: Host Identity Protocol (HIP) Registration Extension
+   draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
+   Extension draft-ietf-hip-rvs-05.
+  </para>
+  <para>
+   The initiator does not yet store the IP addresses received in the
+   VIA_RVS parameter encapsulated in R1 packet. This means that the double
+   jump scenario does not work.
+  </para>
+  <para>
+   Parameters used during registration: REG_INFO, REG_REQUEST, REG_RESPONSE,
+   REG_FAILED.
+  </para>
+  <para>
+   Parameters used with rendezvous service: RVS_HMAC, FROM, VIA_RVS.
+  </para>
+  <para>
+   The rendezvous mechanism is not yet guaranteed to be interoperable
+   with other implementations than HIPL.
+  </para>
   </chapter>
   <chapter>
     <title> Using HIP BOS support</title>
     <para>
-      &nbsp;* To generate a BOS packet (sent to the global multicast address
+        To generate a BOS packet (sent to the global multicast address
       on all interfaces), use the following command:
     </para>
     <para>
-      &nbsp;&nbsp;hipconf hip bos
+                  hipconf hip bos
     </para>
     <para>
-      &nbsp;BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
+            BOS-aware hosts will record the machine's HOST ID, HIT, and IP address.
     </para>
   </chapter>
+<!--
   <chapter>
-    
+
     <title>Accessing the kernel peer list</title>
     <itemizedlist>
       <listitem>
@@ -672,24 +972,29 @@
 	</listitem>
 	</itemizedlist>
   </chapter>
+-->
   <chapter>
     <title>HIP Firewall</title>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
-              queued in the user-space.  These rules must be inserted
-              so that they precede any other firewall rules that might
-              concern the HIP and ESP packets. If ESP packet filtering
-              is not necessary the ip6tables rules concerning ESP
-              packets (-p 50) can be left out.</para>
+              queued in the userspace.  These rules are inserted
+              automatically at the head of each chain. Other rules that might
+              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              inserted before them.</para>
 
-        <para>ip6tables -A FORWARD -p 99 -j QUEUE</para>
-        <para>ip6tables -A FORWARD -p 50 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 99 -j QUEUE</para>
-        <para>ip6tables -A INPUT -p 50 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 99 -j QUEUE</para>
-        <para>ip6tables -A OUTPUT -p 50 -j QUEUE</para>
+<itemizedlist>
+        <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
+</itemizedlist>
 
-        <para>ip6_queue must be loaded with: "modprobe ip6_queue"</para>
+        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
+              to one, if you want your firewall to forward IPv6 traffic.
+              Remember to configure IPv6 routes to the hosts.</para>
 
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
@@ -703,107 +1008,133 @@
               filtering packets.</para>
 
         <para>Rules follow (loosely) the syntax of Linux Iptables with
-        following syntax:</para>
+        following syntax.</para>
 
-        <para>Basic format of rule:</para>
+        <para>Basic format of rule is: HOOK [match] TARGET</para>
 
-        <para>HOOK [match] TARGET</para>
-
-        <para>Here HOOK is one of the netfilter hooks: "INPUT",
+<itemizedlist>
+        <listitem><para>Here HOOK is one of the netfilter hooks: "INPUT",
               "OUTPUT", "FORWARD".  Target is either "ACCEPT" or
               "DROP", whether packet should be allowed or not.  Match
-              is a combination of filtering option described below.</para>
+              is a combination of filtering option described below.</para></listitem>
+</itemizedlist>
 
         <para>Filtering options:</para>
 
-        <para>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</para>
+<variablelist>
+<varlistentry>
+        <term>-src_hit [!] &lt;hit value&gt; --hi &lt;file name&gt;</term>
 
-        <para>Matches source HIT of packet. HI can be given with
+        <listitem><para>Matches source HIT of packet. HI can be given with
               --hi option and by defining path to a public key
               file as an argument. This causes sender signatures to be
               verified. The file name must contain either "_rsa_" or
               "_dsa_" to define whether RSA or DSA is used as
-              algorithm.</para>
+              algorithm.</para></listitem>
+</varlistentry>
  
-        <para>-dst_hit [!] &lt;hit&gt;</para>
+<varlistentry>
+        <term>-dst_hit [!] &lt;hit&gt;</term>
 
-        <para>Matches destination HIT of packet.</para>
+        <listitem><para>Matches destination HIT of packet.</para></listitem>
+</varlistentry>
 
-        <para>-type [!] &lt;hip packet type&gt;</para>
+<varlistentry>
+        <term>-type [!] &lt;hip packet type&gt;</term>
 
-        <para>Matches HIP packet type. Type is one of following: 
+        <listitem><para>Matches HIP packet type. Type is one of following: 
               "I1", "R1", "I2", "R2", "CER", "UPDATE", "NOTIFY", "CLOSE",
-              "CLOSE_ACK"</para>
+              "CLOSE_ACK"</para></listitem>
+</varlistentry>
 
-        <para>-i [!] &lt;incoming interface&gt;</para>
+<varlistentry>
+        <term>-i [!] &lt;incoming interface&gt;</term>
 
-        <para>Matches incoming interface. Argument contains name of
+        <listitem><para>Matches incoming interface. Argument contains name of
               the interface. Can not be used for rules in OUTPUT hook
-              as packet has no incoming interface in that case.</para>
+              as packet has no incoming interface in that case.</para></listitem>
+</varlistentry>
 
-        <para>-o [!] &lt;outgoing interface&gt;</para>
+<varlistentry>
+        <term>-o [!] &lt;outgoing interface&gt;</term>
 
-        <para>Matches outgoing interface. Argument contains name of
+        <listitem><para>Matches outgoing interface. Argument contains name of
               the interface. Can not be used for rules in INPUT hook
-              as packet has no outgoing interface in that case.</para>
+              as packet has no outgoing interface in that case.</para></listitem>
 
-        <para>-state [!] &lt;state&gt; --verify_responder --accept_mobile</para>
+</varlistentry>
+<varlistentry>
+        <term>-state [!] &lt;state&gt; --verify_responder --accept_mobile --decrypt_contents</term>
 
-        <para>Matches state of HIP association: "NEW" or
+        <listitem><para>Matches state of HIP association: "NEW" or
               "ESTABLISHED". ESP packets are also filtered as part of
               the connection. With "--verify_responder" option the
               firewall stores responder HI from R1 packet and uses it
               for verifying signatures in the packets. With
               --accept_mobile option, the firewall may establish state
               for existing connection when a mobile host enters the
-              network protected by the firewall. In practice this
-              requires bringing down the previous interface and
-              bringing up a new one in the new network.</para>
+              network protected by the firewall. Please see
+              <xref linkend="handover" /> to see how mobility events
+              can be tested. When option --decrypt_contents is set firewall 
+              tries to decrypt ESP-packet contents. This can be done if 
+              session data has been delivered to firewall. See <xref
+              linkend="escrow" />
+               for details. Currently decrypted packet contents 
+              can be viewed in firewall output.</para></listitem>
+</varlistentry>
+</variablelist>
 
+
+        <para>If you get "No buffer space available" errors, please disable
+              all of the firewall debug messages (./configure --disable-debug;
+              make clean all). This can
+              occur when moving large files and the firewall cannot serve
+              with sufficient speed when it has to display debug messages.
+        </para>
 
         <para>Management interface:</para>
 
-        <para>Firewall management interface contains functions for
+<itemizedlist>
+        <listitem><para>Firewall management interface contains functions for
               altering rules of running firewall. Functions are
               defined in firewall/rule_management.h and implemented in
               firewall/rule_management.c. Rule_management.c also
               contains functions for copying, comparing and freeing
               rules, etc. If any functions are needed outside the
-              rule_management they can be defined in the header file.</para>
+              rule_management, they can be defined in the header file.</para></listitem>
 
-        <para>The argument "hook" in the rule is the Netfilter hook
+        <listitem><para>The argument "hook" in the rule is the Netfilter hook
               for which rule is intended. The hooks are defined in
               linux/netfilter_ipv6.h as NF_IP6_LOCAL_IN,
-              NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.</para>
+              NF_IP6_FORWARD, NF_IP6_LOCAL_OUT.</para></listitem>
 
-        <para>The argument rule is structure describing the rule
+        <listitem><para>The argument rule is structure describing the rule
               defined in rule_management.h. The structure contains
               pointers to options. The pointer value must be NULL,
               when option is not defined. The structures for options
               are also defined in rule_management.h. Function: rule *
               parse_rule(char * string) can be used for creating a
               rule structure from a string. This also inspects that
-              the rule syntax is correct.</para>
+              the rule syntax is correct.</para></listitem>
 
-        <para>void insert_rule(const struct rule * rule, int hook):</para>
+        <listitem><para>void insert_rule(const struct rule * rule, int hook): Inserts argument rule into with the hook. Insert makes
+              local copy of the argument rule.</para></listitem>
 
-        <para>Inserts argument rule into with the hook. Insert makes
-              local copy of the argument rule.</para>
+        <listitem><para>int delete_rule(const struct rule * rule, int hook):
 
-        <para>int delete_rule(const struct rule * rule, int hook):</para>
+        Deletes the local rule that is equal to the argument
+              rule. </para></listitem>
 
-        <para>Deletes the local rule that is equal to the argument
-              rule. </para>
+        <listitem><para>GList * list_rules(int hook):
 
-        <para>GList * list_rules(int hook):</para>
+               creates a copy of the rule list and returns it. Caller
+               must take care of freeing the returned list.</para></listitem>
 
-        <para>creates a copy of the rule list and returns it. Caller
-               must take care of freeing the returned list.</para>
+        <listitem><para>int flush(int hook): Clears all rules.</para></listitem>
+</itemizedlist>
 
-        <para>int flush(int hook):</para>
-
-        <para>Clears all rules.</para>
   </chapter>
+
   <chapter>
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
@@ -816,52 +1147,315 @@
     <para>The NAT traversal can be experimented in a similar way as depicted
           in earlier sections. The only difference is that you have to
           tell the initiator manually that it is behind a NAT using "hipconf
-          hip nat on". After this, you can initiate the base exchange
+          nat on". After this, you can initiate the base exchange
           according to the previous instructions. The manual configuration is
           currently required because support for automatic NAT detection (STUN)
           has not been implemented yet.
     </para>
     <para>If you have problems in even getting I1 triggered using NAT code
           e.g. with conntest-client-gai (occurred on 2.6.16.5), you may have
-          to specify the source HIT explicitly:
+          to specify the source HIT explicitly. The procedure to initiate a connection
+	  behind NAT is as follows:
     </para>
-     <para>
+    <itemizedlist>
+    <listitem><para>
+      &nbsp;tools/hipconf nat on
+    </para>    </listitem>
+    <listitem><para>
       &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
-    </para>    
-     <para>
-      &nbsp;tools/hipconf hip nat on
-    </para>    
-     <para>
+    </para> </listitem>   
+    <listitem><para>
       &nbsp; ping6 -I source_hit dst_hit
-    </para>    
+    </para>  </listitem>  
+    </itemizedlist>
     <para>Make sure that the source is the same as in "ip xfrm policy" output.
           We are aware of the problem (see bug id 161) and it is being solved.
           Also, it seemed like the responder could not route packets
           automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
           was necessary at the responder (occurred on 2.6.16.5).
     </para>
+    <para>
+	Three cases of mobility of the initiator have been implemented for the NAT code.
+    </para>
+	<para>Mobility from behind NAT to behind the same NAT:
+		For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
+	</para>
+	<para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
+	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
+
   </chapter>
-  <chapter>
-    <title>HIP User Agent and GUI</title>
-      <para>Manage HITs with graphical user interface.</para>
-      <para>When new HIT is received, it and local HIT is filtered
-            trough agent, which asks user for accepting the HIT pair.
-            Then HIT is saved into database and accept/reject is
-            returned to daemon. User can also manage HITs trough graphical
-            user interface. The interface is very unfinished, and nothing
-            very usefull cannot actually be done yet.</para>
-      <para>
-		To compile agent and GUI atleast following packages are needed (asuming you have debian):
-		1. gcc and g++ compilers, both should be at least version 4.0.
-		2. Package: xbase-clients - miscellaneous X clients
-		3. GTK 2.x and development files for it (Package called libgtk2.0-dev).
-      </para>
-      <para>
-		HIT database is saved and loaded on agent startup as default from
-		'/etc/hip/agentdb'-file.
-      </para>
-  </chapter>
-  <chapter>
+
+<chapter><title>HIP configuration GUI</title>
+	<section><title>General</title>
+	<formalpara><title>About</title><para></para></formalpara>
+		<para>Manage HITs with graphical user interface.</para>
+		<para>
+			When new HIT is received, it and local HIT is filtered
+			trough configuration GUI, which asks user for accepting the HIT pair.
+			Then HIT is saved into database and accept/reject is
+			returned to daemon. User can also manage HITs trough graphical
+			user interface. The interface is under development,
+			and is quite in alpha state yet.
+		</para>
+	
+	<screenshot>
+		<screeninfo>HIP configuration GUI main window</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-main-window.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI main window</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
+		
+	<formalpara><title>Usage</title><para></para></formalpara>
+		<para>
+			Configuration GUI uses '$HOMEDIR/.hipagent/' -directory to store
+			per user configuration files. There should be atleast 'database'
+			file which contains information about configured local and remote hits
+			and remote groups. Optionally user can create file called 'config'.
+			This file can contain different options to change GUI behaviour.
+			Following paragraphs tell more.
+		</para>
+		
+		<itemizedlist>
+			<listitem><para>
+				'lang=...' can be used to select one of compiled-in languages. These are
+				currently 'en' and 'fi'. 'en' means english and is default.
+				'fi' means finnish. If you want to change GUI language to finnish,
+				type line 'lang=fi' into your config-file in .hipagent-dir.
+			</para></listitem>
+	
+			<listitem><para>
+			'lang-file=...' can be used to define external language file, which
+			can override some or all compiled-in language strings.
+			This language file should contain lines which are somewhat like this:
+			'value-name=value'. Example line 'title-main=HIPL Graphical Config' would
+			change GUI main window title to 'HIPL Graphical Config'.
+			</para></listitem>
+		</itemizedlist>
+		<para>
+			The configuration GUI executable is called "hipagent". You should run it using
+			normal user (non-root) priviledges.
+		</para>
+
+	<screenshot>
+		<screeninfo>HIP configuration GUI tray icon</screeninfo>
+		<mediaobject>
+		<imageobject>
+		<imagedata fileref="docshot-agent-tray-icon.png" scale="100" align="center" format="PNG"/>
+		</imageobject>
+		<caption>
+		<para>HIP configuration GUI tray icon</para>
+		</caption>
+		</mediaobject>
+	</screenshot>
+
+	<formalpara><title>Compilation</title><para></para></formalpara>
+		<para>To compile HIP configuration GUI atleast following packages are needed (asuming you have debian):
+			<itemizedlist>
+				<listitem><para>
+					gcc and g++ compilers, both should be at least version 4.0.
+				</para></listitem>
+				<listitem><para>
+					Package: xbase-clients - miscellaneous X clients
+				</para></listitem>
+				<listitem><para>
+					GTK 2.x and development files for it (Package called libgtk2.0-dev).
+				</para></listitem>
+				<listitem><para>
+					Automake 1.9
+				</para></listitem>
+			</itemizedlist>
+			<note><title>Notes</title>
+				<para>
+					If you want to use 'system  tray' icon, you need atleast 2.10.0 version of GTK.
+				</para>
+				<para>
+					In order to the configuration GUI start properly with right window and system tray icon,
+					you must first do 'make install' to install the data files in right directory.
+					System tray icon will not be shown at all, if you don't do this.
+				</para>
+			</note>
+		</para>
+</section>
+
+<section><title>Language files</title>
+	<para>
+		As described in previous section,
+		'lang-file=...' can be used to define external language file, which can override some or all compiled-in language strings.
+		This language file should contain lines which are somewhat like this: 'value-name=value'. Example line 'title-main=HIPL 
+		Graphical Config' would change GUI main window title to 'HIPL Graphical Config'.
+	</para>
+	<para>
+		As said, language files contains lines, which define different variables in GUI.
+		Format of those lines is following:
+		<itemizedlist>
+			<listitem><para>Commented line starts with '#'-character</para></listitem>
+			<listitem><para>To create/reset value, use 'value-name=value'</para></listitem>
+			<listitem><para>
+				To add new line to value (also creates new value, if not yet defined), use 'value-name+value'
+			</para></listitem>
+		</itemizedlist>
+	</para>
+<example><title>Here is a complete english version of a example language file:</title>
+<programlisting>
+
+# Example language file for HIP configuration GUI.
+# Language: English
+
+# Different window titles.
+title-main=HIP configuration
+title-newhit=New HIT
+title-newgroup=Create new group
+title-runapp=Execute application
+title-locals=Local HIT
+title-msgdlg=Question
+
+# System tray menu.
+systray-show=Configuration
+systray-exec=Execute
+systray-exit=Exit
+systray-about=About
+
+# Main window menu.
+menu-file=File
+menu-file-exit=Exit
+menu-file-runapp=Execute
+	
+menu-edit=Edit
+menu-edit-locals=Local HITs
+menu-edit-newgroup=Create new group
+menu-edit-addhit=Add new HIT
+	
+menu-help=Help
+menu-help-about=About
+
+# Toolbar items.
+tb-newgroup=New group
+tb-newgroup-tooltip=Create new group
+tb-newgroup-tooltip+Groups help in ordering and managing HIT's.
+tb-runapp=Execute
+tb-runapp-tooltip=Execute new application using HIP libraries
+tb-newhit=New HIT
+tb-newhit-tooltip=Add new HIT
+	
+# Tabs.
+tabs-hits=HITs
+tabs-options=Options
+tabs-connections=Connections
+
+# New HIT dialog.
+nhdlg-button-accept=Accept
+nhdlg-button-drop=Drop
+nhdlg-err-invalid=Invalid HIT name given!
+nhdlg-err-exists=HIT with given name already exists!
+nhdlg-err-reserved=Given HIT name is reserved!
+nhdlg-err-reserved+Choose another one.
+nhdlg-err-invchar=HIT name contains invalid characters!
+nhdlg-err-invchar+Rename.
+nhdlg-err-hit=HIT is invalid!
+nhdlg-newinfo=New HIT information
+nhdlg-newhit=New HIT:
+nhdlg-name=Name:
+nhdlg-group=Group:
+nhdlg-advanced=Advanced
+nhdlg-url=URL:
+nhdlg-port=Port:
+nhdlg-g-info=Group info
+nhdlg-g-localhit=Local HIT:
+nhdlg-g-type=Type:
+nhdlg-g-lightweight=Lightweight:
+nhdlg-tt-hit=The fingerprint (HIT, Host Identity Tag) of the remote host.
+nhdlg-tt-hit-priv=HIT (Host Identity Tag) identifies hosts from each other.
+
+# New group dialog.
+ngdlg-name=Name:
+ngdlg-localhit=Local HIT:
+ngdlg-type=Type:
+ngdlg-type2=Encryption:
+ngdlg-button-create=Create
+ngdlg-button-cancel=Cancel
+ngdlg-err-invalid=Invalid group name!
+ngdlg-err-exists=Group already exists!
+ngdlg-err-reserved=Given group name is reserved!
+ngdlg-err-reserved+Choose another one.
+ngdlg-err-invchar=Group name contains invalid characters!
+ngdlg-err-invchar+Rename.
+	
+# Tool window (HIT handling).
+tw-button-apply=Apply
+tw-button-cancel=Cancel
+tw-button-delete=Delete
+tw-button-edit=Edit
+tw-hit-info=HIT information
+tw-hit-name=Name:
+tw-hit-group=Group:
+tw-hit-advanced=Advanced
+tw-hit-hit=HIT:
+tw-hit-port=Port:
+tw-hit-url=URL:
+tw-hit-groupinfo=Group info:
+tw-hit-local=Local HIT:
+tw-group-info=Group information
+tw-group-name=Name:
+tw-group-advanced=Advanced
+tw-group-local=Local HIT:
+	
+tw-hitgroup-type=Type:
+tw-hitgroup-lightweight=Encryption:
+	
+# Local HIT handling.
+lhdlg-button-apply=Apply
+lhdlg-button-cancel=Cancel
+lh-info=Local HIT information:
+lh-hit=	HIT:
+lh-name=Name:
+lhdlg-err-invalid=Invalid name for local HIT!
+lhdlg-err-exists=Local HIT name is already in use!
+lhdlg-err-invchar=Name of local HIT contains invalid characters!
+
+# General message dialog.
+msgdlg-button-ok=OK
+msgdlg-button-cancel=Cancel
+
+# GUI info (status bar) strings.
+gui-info-000=HIP service available on this computer.
+gui-info-001=HIP service unavailable.
+gui-info-002=HIP GUI started.
+
+# Other strings.
+newgroup-error-nolocals=Can't create new group,
+newgroup-error-nolocals+no local HITs defined.
+newgroup-error-nolocals+Check HIP daemon.
+newhit-error-nolocals=Can't add new remote HIT,
+newhit-error-nolocals+no local HITs defined.
+newhit-error-nolocals+Check HIP daemon.
+# NOTE! Empty group must have spaces in both sides of the item name!
+hits-group-emptyitem= &lt;empty&gt; 
+ask-delete-hit=Are you sure you want to delete selected HIT?
+ask-delete-group=Are you sure you want to delete selected group?
+ask-apply-hit=Are you sure you want to apply the changes?
+ask-apply-hit-move=Are you sure you want move the hit?
+ask-apply-group=Are you sure you want to apply the changes?
+
+group-type-accept=accept
+group-type-deny=deny
+group-type2-lightweight=lightweight
+group-type2-normal=normal
+
+hits-number-of-used=Number of HITs in use
+default-group-name=ungrouped
+combo-newgroup=&lt;create new...&gt;
+</programlisting>
+</example>
+
+</section>
+</chapter>
+  
+<chapter>
     <title>HIP socket handler kernel module</title>
     <para>The HIP socket handler is a component of the HIPL HIP
 	  implementation. It is used to intercept HIP socket
@@ -880,28 +1474,201 @@
     </para>
     <para>Use "insmod hipsock.ko" to activate the kernel module.
           Check dmesg for messages. Use "rmmod hipsock.ko" to 
-	  remove the module from the kernel. If you get the error
+          remove the module from the kernel. If you get the error
           "insmod: error inserting 'hipsock/hipsock.ko': -1 Invalid module
           format", you have to specify the path of the kernel source (using
           LINUX variable) for the system in which you are going to use the
           kernel module.
      </para>
    </chapter>
-  <chapter>
+  <chapter id="opendht">
     <title>OpenDHT Support (Experimental!)</title>
-    <para>
-    &nbsp; unpack patches/misc/dhtif.tar.bz2
+    <itemizedlist>
+    <listitem><para>
+           With OpenDHT support, the hip daemon pushes the hostname,
+           RSA public HIT and public IP address to the OpenDHT. The resolver
+           can then look up this information automatically without DNS or manual
+           /etc/(hip)/hosts configuration.
+    </para></listitem>
+    <listitem><para>
+           Once you start hipd, it will send its hostname, HIT and IP address
+           to OpenDHT. You can query this information with
+           "hipconf dht get &lt;hostname|HIT&gt;".
+    </para></listitem>
+    <listitem><para>
+           To test, just run normally conntest-server 
+	and conntest-client-gai between hosts. You would see messages 
+	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+        should work without additional actions.
+    </para></listitem>
+    </itemizedlist>
+
+    <para> May need a change of contact OpenDHT server, currently 
+	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
+	For documentation, please also check 
+        <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
-    <para>
-    &nbsp; make a link called "hipl--main--2.6/hip-dht" that points to
-    the unpacked hip-dht directory
-    </para>
-    <para>
-    &nbsp; Compile hipl--main--2.6 with ./configure --enable-opendht
-    </para>
-    <para>
-    &nbsp; XX TODO: how to test?
-    </para>
+  </chapter>
+
+  <chapter>
+    <title>Hi3 Support (Experimental!)</title>
+    <itemizedlist>
+    <listitem><para>
+           unpack <ulink url="http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz" /> in the top directory (hipl--main--2.6)
+    </para></listitem>
+    <listitem><para>
+           make sure that the link "hipl--main--2.6/i3" points to
+    the unpacked i3_0.3/i3 directory
+    </para></listitem>
+    <listitem><para>
+          Compile hipl--main--2.6 with ./configure --enable-hi3
+    </para></listitem>
+    <listitem><para>
+           Not tested for a long time. To work, needs to use some set of
+	i3 servers started locally from i3 distro or running on 
+        PlanetLab. See e.g. <ulink url="http://hipl.infrahip.net/i3_status.html or" /> 
+	http://rose.cs.berkeley.edu:8080/i3_status.html
+    </para></listitem>
+	</itemizedlist>
+
+  </chapter>
+  <chapter id="opportunistic">
+    <title>Using Opportunistic mode</title>
+    <itemizedlist>
+    <listitem><para>
+           Opportunistic mode has two benefits. First, you don't have to know
+    the HIT of the peer. This is makes HIP more suitable to "ad-hoc"
+    environments where preconfiguration of HITs is difficult. Second, the
+    opp. mode implementation allows the use of IPv4 addresses at the
+    application. This way, even IPv4-only legacy applications can benefit
+    from the security and mobility features of HIP.
+    </para></listitem>
+    <listitem><para>
+           Opportunistic mode is not compiled by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
+    </para></listitem>
+    <listitem><para>
+              Move to top level of HIPL
+    </para></listitem>
+    <listitem><para>
+           e.g. cd hipl
+    </para></listitem>
+    <listitem><para>
+              Run autogen.sh
+    </para></listitem>
+    <listitem><para>
+           ./autogen.sh
+    </para></listitem>
+    <listitem><para>
+              Run make
+    </para></listitem>
+    <listitem><para>
+           make
+    </para></listitem>
+    <listitem><para>
+              Run hip daemon on both "crash" and "oops"
+    </para></listitem>
+    <listitem><para>
+           hipd/hipd
+    </para></listitem>
+    <listitem><para>
+            . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
+    </para></listitem>
+    <listitem><para>
+           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="basictest" />. 
+    </para></listitem>
+	</itemizedlist>
+
+  </chapter>
+  <chapter>
+    <title>Mozilla/firefox showip addon</title>
+    <itemizedlist>
+
+     <listitem><para>
+		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
+		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
+		IP-address information trough HIP prefix. If using opportunistic mode, detecting
+		whether using HIP or not wont work.
+	</para></listitem>
+     <listitem><para>
+		&nbsp; If you have HIPL source code:
+		To install addon, open firefox and browse to folder where you have 
+		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
+		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
+		Firefox should now prompt you with installation instructions.
+	</para></listitem>
+     <listitem><para>
+		&nbsp; Another way to get showip-package, is to download it from:
+		<ulink url="http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi" />.
+		After download, firefox should prompt you with installation instructions.
+	</para></listitem>
+    </itemizedlist>
+
+	<para>
+		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
+	</para>
+  </chapter>
+  <chapter id="escrow">
+  	<title>Using Key Escrow</title>
+  	<para>
+  	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
+  	offered by the server, sends session data of all its HIP asssociations to the server. On the server HIP Firewall 
+  	can be used to decrypt ESP-traffic when keys are available. For testing escrow functionality three machines are needed, 
+  	the server offering escrow service, the client who registers to the server and an other host which is communicating 
+  	with the client. The session data of the association between the client and the other host are then delivered to the 
+  	escrow server. If the server is working as a firewall between the hosts HIP firewall can decrypt the ESP-traffic.  
+  	</para>
+  	<para>
+  	Follow these steps to compile and initialize escrow functionality:
+  	</para>
+  	<para>
+  	&nbsp; 1. Run autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; ./autogen.sh
+  	</para>
+  	<para>
+  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	</para>
+  	<para>
+  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	</para>
+  	<para>
+  	&nbsp; 3. Run make
+  	</para>
+  	<para>
+  	&nbsp; make
+  	</para>
+  	<para>
+  	&nbsp; 4. Start hip daemon on all machines
+  	</para>
+  	<para>
+  	&nbsp; ./hipd/hipd -b
+  	</para>
+  	<para>
+  	&nbsp; 5. On the server enable escrow service using hipconf
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add service escrow
+  	</para>
+  	<para>
+  	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
+  	</para>
+  	<para>
+  	 On client host register to escrow server using hipconf.
+  	</para>
+  	<para>
+  	&nbsp; ./tools/hipconf add escrow hit address
+  	</para>
+  	<para>
+  	After this connection between client and the other host can be tested using conntest-server and conntest-client-gai. 
+  	</para>
+  	<para>
+  	&nbsp; ./test/conntest-server tcp 5000 
+  	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	</para>
+  	<para>
+  	During base exchange session data is sent to escrow server in update-messages. 
+  	</para>
   </chapter>
 </book>    
 

@@ -32,7 +32,8 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <net/if.h>
-#include "libhiptool/debug.h"
+#include "debug.h"
+#include "ife.h"
 
 int main(int argc,char *argv[]) {
   struct endpointinfo hints, *epinfo, *res = NULL;
@@ -41,10 +42,10 @@ int main(int argc,char *argv[]) {
   unsigned long stats_diff_sec, stats_diff_usec;
   char mylovemostdata[IP_MAXPACKET];
   char receiveddata[IP_MAXPACKET];
-  char *proto_name, *peer_port_name, *peer_name;
+  char *type_name, *peer_port_name, *peer_name;
   int recvnum, sendnum;
   int datalen = 0;
-  int proto;
+  int type;
   int datasent = 0;
   int datareceived = 0;
   int ch;
@@ -53,9 +54,13 @@ int main(int argc,char *argv[]) {
   se_family_t endpoint_family;
   char *user_key_base = "/etc/hip/hip_host_dsa_key";
   struct endpoint *endpoint;
+  const char *cfile = "default";
 
   hip_set_logtype(LOGTYPE_STDERR);
   hip_set_logfmt(LOGFMT_SHORT);
+  HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	   "Error: Cannot set the debugging parameter.\n");
+
  
   if (argc != 4) {
     HIP_ERROR("Usage: %s host tcp|udp port\n", argv[0]);
@@ -64,16 +69,14 @@ int main(int argc,char *argv[]) {
   }
   
   peer_name = argv[1];
-  proto_name = argv[2];
+  type_name = argv[2];
   peer_port_name = argv[3];
   endpoint_family = PF_HIP;
   
   /* Set transport protocol */
-  if (strcmp(proto_name, "tcp") == 0) {
-    proto = IPPROTO_TCP;
+  if (strcmp(type_name, "tcp") == 0) {
     socktype = SOCK_STREAM;
-  } else if (strcmp(proto_name, "udp") == 0) {
-    proto = IPPROTO_UDP;
+  } else if (strcmp(type_name, "udp") == 0) {
     socktype = SOCK_DGRAM;
   } else {
     HIP_ERROR("Error: only TCP and UDP supported.\n");
@@ -197,5 +200,6 @@ out:
 
   HIP_INFO("Result of data transfer: %s.\n", (err ? "FAIL" : "OK"));
 
+out_err:
   return err;
 }

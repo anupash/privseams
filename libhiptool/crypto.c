@@ -5,7 +5,7 @@
  * of original HIPL kernel functions and Boeing HIPD crypto functions.
  *
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Miika Komu <miika@iki.fi>
  * - Teemu Koponen <tkoponen@iki.fi>
  * - Abhinav Pathak <abpathak@iitk.ac.in>  
@@ -293,51 +293,17 @@ int dhprime_len[HIP_MAX_DH_GROUP_ID] = {
 unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
 
 /**
- * hip_build_digest - calculate a digest over given data
- * @type: the type of digest, e.g. "sha1"
- * @in: the beginning of the data to be digested
- * @in_len: the length of data to be digested in octets
- * @out: the digest
- *
- * @out should be long enough to hold the digest. This cannot be
- * checked!
- *
- * Returns: 0 on success, otherwise < 0.
- */
-int hip_build_digest(const int type, const void *in, int in_len, void *out) {
-	SHA_CTX sha;
-	MD5_CTX md5;
-
-	switch(type) {
-	case HIP_DIGEST_SHA1:
-		SHA1_Init(&sha);
-		SHA1_Update(&sha, in, in_len);
-		SHA1_Final(out, &sha);
-		break;
-
-	case HIP_DIGEST_MD5:
-		MD5_Init(&md5);
-		MD5_Update(&md5, in, in_len);
-		MD5_Final(out, &md5);
-		break;
-
-	default:
-		HIP_ERROR("Unknown digest: %x\n",type);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-/**
- * hip_write_hmac - calculate hmac
- * @type: Type (digest algorithm) of HMAC
- * @key: Pointer to the key used for HMAC
- * @in: Input buffer pointer
- * @in_len: Length of buffer
- * @out: Output buffer pointer. For SHA1-HMAC this is 160bits
- *
- * Returns true, if ok.
+ * Calculates a hmac.
+ * 
+ * @param type   type (digest algorithm) of hmac.
+ * @param key    a pointer to the key used for hmac.
+ * @param in     a pointer to the input buffer.
+ * @param in_len the length of the input buffer @c in.
+ * @param out    a pointer to the output buffer. For SHA1-HMAC this is 160bits.
+ * @return       1 if ok, zero otherwise.
+ * @warning      This function returns 1 for success which is against the policy
+ *               defined in @c /doc/HACKING.
+ * @todo         Should this function return zero for success?
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
@@ -372,19 +338,19 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 
 /**
  * hip_crypto_encrypted - encrypt/decrypt data
- * @data: data to be encrypted/decrypted
- * @iv: initialization vector
- * @enc_alg: encryption algorithm to use
- * @enc_len: length of @data
- * @enc_key: encryption/decryption key to use
- * @direction: flag for selecting encryption/decryption
+ * @param data data to be encrypted/decrypted
+ * @param iv_orig initialization vector
+ * @param alg encryption algorithm to use
+ * @param len length of data
+ * @param key encryption/decryption key to use
+ * @param direction flag for selecting encryption/decryption
  *
- * @direction is HIP_DIRECTION_ENCRYPT if @data is to be encrypted
- * or HIP_DIRECTION_DECRYPT if @data is to be decrypted.
+ * @param direction is HIP_DIRECTION_ENCRYPT if data is to be encrypted
+ * or HIP_DIRECTION_DECRYPT if data is to be decrypted.
  *
- * The result of the encryption/decryption of @data is overwritten to @data.
+ * The result of the encryption/decryption of data is overwritten to data.
  *
- * Returns: 0 is encryption/decryption was successful, otherwise < 0.
+ * @return 0 is encryption/decryption was successful, otherwise < 0.
  */
 int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			 void* key, int direction)
@@ -396,16 +362,21 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
 	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
-	//HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
-        switch(alg) {
+	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
+        
+	HIP_DEBUG("d1\n");
+	switch(alg) {
         case HIP_HIP_AES_SHA1:
+	
+     	HIP_DEBUG("d2\n");
 		/* AES key must be 128, 192, or 256 bits in length */
 		memcpy(iv, iv_orig, 16);
 		if (direction == HIP_DIRECTION_ENCRYPT) {
+ 	HIP_DEBUG("d3\n");
 			HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			//HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			//HIP_HEXDUMP("AES IV: ", iv, 16);
+			HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_ENCRYPT);
 		} else {
 			HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
@@ -449,7 +420,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         }
 
 	
-	HIP_HEXDUMP("hip_crypto_encrypted decrypt data", data, len);	
+	_HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
 	err = 0;
 
  out_err:
@@ -457,11 +428,6 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 free(result);
 
         return err;
-}
-
-void get_random_bytes(void *buf, int n)
-{
-	RAND_bytes(buf, n);
 }
 
 /*
@@ -804,9 +770,9 @@ void hip_free_dh(DH *dh)
 
 /**
  * hip_get_dh_size - determine the size for required to store DH shared secret
- * @hip_dh_group_type: the group type from DIFFIE_HELLMAN parameter
+ * @param hip_dh_group_type the group type from DIFFIE_HELLMAN parameter
  *
- * Returns: 0 on failure, or the size for storing DH shared secret in bytes
+ * @return 0 on failure, or the size for storing DH shared secret in bytes
  */
 u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	u16 ret = -1;
@@ -814,8 +780,6 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	_HIP_DEBUG("dh_group_type=%u\n", hip_dh_group_type);
 	if (hip_dh_group_type == 0) 
 		HIP_ERROR("Trying to use reserved DH group type 0\n");
-	else if (hip_dh_group_type == HIP_DH_384)
-		HIP_ERROR("draft-09: Group ID 1 does not exist yet\n");
 	else if (hip_dh_group_type > ARRAY_SIZE(dhprime_len))
 		HIP_ERROR("Unknown/unsupported MODP group %d\n", hip_dh_group_type);
 	else
@@ -824,28 +788,13 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
 	return ret;
 }
 
-int hip_init_cipher(void)
-{
-	int err = 0;
-	u32 supported_groups;
-
-	supported_groups = (1 << HIP_DH_OAKLEY_1 |
-                            1 << HIP_DH_OAKLEY_5 |
-			    1 << HIP_DH_384);
-
-	HIP_DEBUG("Generating DH keys\n");
-	hip_regen_dh_keys(supported_groups);
-
-	return 1;
-}
-
 /**
  * create_dsa_key - generate DSA parameters and a new key pair
- * @bits: length of the prime
+ * @param bits length of the prime
  *
  * The caller is responsible for freeing the allocated DSA key.
  *
- * Returns: the created DSA structure, otherwise NULL.
+ * @return the created DSA structure, otherwise NULL.
  *
  */
 DSA *create_dsa_key(int bits) {
@@ -871,7 +820,7 @@ DSA *create_dsa_key(int bits) {
 	     ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
   }
-
+  HIP_DEBUG("*****************Creting DSA of %d bits\n\n\n", bits);
   return dsa;
 
  err_out:
@@ -884,11 +833,11 @@ DSA *create_dsa_key(int bits) {
 
 /**
  * create_rsa_key - generate RSA parameters and a new key pair
- * @bits: length of the prime
+ * @param bits length of the prime
  *
  * The caller is responsible for freeing the allocated RSA key.
  *
- * Returns: the created RSA structure, otherwise NULL.
+ * @return the created RSA structure, otherwise NULL.
  *
  */
 RSA *create_rsa_key(int bits) {
@@ -908,6 +857,7 @@ RSA *create_rsa_key(int bits) {
     goto err_out;
   }
 
+  HIP_DEBUG("*****************Creting RSA of %d bits\n\n\n", bits);
   return rsa;
 
  err_out:
@@ -918,885 +868,20 @@ RSA *create_rsa_key(int bits) {
   return NULL;
 }
 
-/* Note: public here means that you only have the public key,
-   not the private */
-int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
-		       hip_hit_t *hit, int is_public, int is_dsa) {
-  int err = 0, key_rr_len;
-  unsigned char *key_rr = NULL;
-  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  struct hip_host_id *host_id = NULL;
-  RSA *rsa_key = (RSA *) any_key;
-  DSA *dsa_key = (DSA *) any_key;
-
-  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-  HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
-  	   "gethostname failed\n");
-
-  if (is_dsa) {
-    HIP_IFEL(((key_rr_len = dsa_to_dns_key_rr(dsa_key, &key_rr)) <= 0), -1,
-	     "key_rr_len\n");
-    HIP_IFEL(alloc_and_build_param_host_id_only(&host_id, key_rr, key_rr_len,
-						HIP_HI_DSA, hostname), -1,
-	     "alloc\n");
-    if (is_public) {
-      HIP_IFEL(hip_dsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
-	       -1, "conversion from host id to hit failed\n");
-    } else {
-      HIP_IFEL(hip_private_dsa_host_id_to_hit(host_id, hit,
-					      HIP_HIT_TYPE_HASH120),
-	       -1, "conversion from host id to hit failed\n");
-    }
-  } else /* rsa */ {
-    HIP_IFEL(((key_rr_len = rsa_to_dns_key_rr(rsa_key, &key_rr)) <= 0), -1,
-	     "key_rr_len\n");
-    HIP_IFEL(alloc_and_build_param_host_id_only(&host_id, key_rr, key_rr_len,
-						HIP_HI_RSA, hostname), -1,
-	     "alloc\n");
-    if (is_public) {
-      HIP_IFEL(hip_rsa_host_id_to_hit(host_id, hit, HIP_HIT_TYPE_HASH120),
-	       -1, "conversion from host id to hit failed\n");
-    } else {
-      HIP_IFEL(hip_private_rsa_host_id_to_hit(host_id, hit,
-					      HIP_HIT_TYPE_HASH120),
-	       -1, "conversion from host id to hit failed\n");
-    }
-  }
-
-  HIP_DEBUG("the host id was %s\n", (is_public ? "public" : "private"));
-  
- out_err:
-
-  if (key_rr)
-    HIP_FREE(key_rr);
-  if (host_id)
-    HIP_FREE(host_id);
-
-  return err;
-}
-
-int hip_public_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
-			  struct in6_addr *hit) {
-  return hip_any_key_to_hit(rsa_key, rsa, type, hit, 1, 0);
-}
-
-int hip_private_rsa_to_hit(RSA *rsa_key, unsigned char *rsa, int type,
-			  struct in6_addr *hit) {
-  return hip_any_key_to_hit(rsa_key, rsa, type, hit, 0, 0);
-}
-
-int hip_public_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
-			  struct in6_addr *hit) {
-  return hip_any_key_to_hit(dsa_key, dsa, type, hit, 1, 1);
-}
-
-int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
-			   struct in6_addr *hit) {
-  return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
-}
-
-#if 0
-/**
- * dsa_to_hit - create HIT from DSA parameters
- * @dsa:            contains the DSA parameters from where the HIT is
- *                  calculated
- * @type:           the type of the HIT to be created
- * @hit:            where the resulting HIT is stored
- *
- * Currently only HIP_HIT_TYPE_HASH120 is supported for parameter
- * @type.
- *
- * Returns: 0 if HIT was created successfully, else negative.
- */
-int dsa_to_hit_old(DSA *dsa_key, unsigned char *dsa, int type,
-	       struct in6_addr *hit) {
-  int err = 0, pubkey_len = 0; // pubkey_len should be 405, calculated below
-  //unsigned char *pubkey = NULL;
-  char addrstr[INET6_ADDRSTRLEN];
-  unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
-  int i, t;
-  BIGNUM *bn, *tmp = NULL;
-
-  /// XX FIXME -- WHAT WAS THIS?
-  /* if hipd was given a HIT to use from the command line it is used,
-     else HIT is calculated from the HI. */
-  //if (!IN6_IS_ADDR_UNSPECIFIED(&lhi->hit)) {
-  //  HIP_INFO("Use given HIT\n");
-  //  goto out_err
-
-  t = (BN_num_bytes(dsa_key->p) - 64) / 8;
-  if (t < 0 || t > 8) {
-    HIP_ERROR("t=%d < 0 || t > 8\n", t);
-    err = -EINVAL;
-    goto out_err;
-  }
-  pubkey_len = 1 + 20 + 3 * (64 + t * 8); /* RFC 2536 section 2 */
-
-  HIP_DEBUG("DSA pubkey length=%d, t=%d\n", pubkey_len, t);
-  _HIP_INFO("Create HIT from HI\n");
-  
-  if (type == HIP_HIT_TYPE_HASH120) {
-    _HIP_DEBUG("HIT type is HASH126\n");
-  } else if (type == HIP_HIT_TYPE_HAA_HASH) {
-    HIP_ERROR("HIT type HAA hash not implemented\n");
-    err = -ENOSYS;
-    goto out_err;
-  } else {
-    HIP_ERROR("Unknown HIT type (%d)\n", type);
-    err = -EINVAL;
-    goto out_err;
-  }
-
-  /* If Bit 0 is zero and Bit 1 is one, then the rest of HIT is a 126
-     bits of a Hash of the key.  For example, if the Identity is DSA, these
-     bits MUST be the least significant 126 bits of the SHA-1 [FIPS-180-1]
-     hash of the DSA public key Host Identity.  */
-  sha = SHA1(dsa, pubkey_len, (unsigned char *) &sha_hash);
-  if (!sha) {
-    HIP_ERROR("sha hash failed\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-
-  _HIP_HEXDUMP("dsa: ", dsa, pubkey_len);
-  _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
-  _HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
-  _HIP_HEXDUMP("hit trunc hash:       ",
-	      (unsigned char *)&sha_hash+(SHA_DIGEST_LENGTH-128/8), 128/8);
-  _HIP_DEBUG("pos=%d\n", SHA_DIGEST_LENGTH - 128/8);
-  
-  /* Take 128 bits from the end of the hash */
-  bn = BN_bin2bn((const unsigned char *) &sha_hash + (SHA_DIGEST_LENGTH-128/8),
-		 128/8, NULL);
-  if (!bn) {
-    HIP_ERROR("!bn\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-
-  _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-
-  /* Clearing the 120-127 bits to zero
-   * and setting 126th bit to one - draft-ietf-hip-base-03 
-   */
-  for (i = 120; i<=127; i++) {
-    int ret = 0;
-    if (i != 126)
-      ret = BN_clear_bit(bn, i);
-    else
-      ret = BN_set_bit(bn, i);
-    if (!ret) {
-      HIP_ERROR("bn set/clear bit %d failed\n", i);
-      err = -EINVAL;
-      goto out_err;
-    }
-  }
-
-#if 0
-  if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
-    HIP_ERROR("bn set/clear bit failed\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-#endif
-
-  _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-  
-  tmp = BN_new();
-  /* store result to parameter hit */
-  for (i = 0; i < 4; i++) {
-    unsigned long l;
-    
-    BN_copy(tmp, bn); /* todo: if null ..*/
-    _HIP_DEBUG("i=%d tmp=%s", i, BN_bn2hex(tmp));
-    
-    BN_rshift(tmp, tmp, (3-i)*32);
-    _HIP_DEBUG("->%s", BN_bn2hex(tmp));
-    
-    BN_mask_bits(tmp, 32);
-    _HIP_DEBUG("->mask32=%s\n", BN_bn2hex(tmp));
-    
-    l = BN_get_word(tmp);
-    if (l == 0xffffffffL)
-      HIP_ERROR("l == 0xffffffffL\n"); /* can this happen normally ? */
-    
-    _HIP_DEBUG("SET l=%lx ", l);
-    l = ntohl(l);
-    _HIP_DEBUG("ntohl(l)=%lx\n", l);
-    hit->s6_addr32[i] = l;
-    _HIP_DEBUG("\n");
-  }
-
-  inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
-  HIP_DEBUG("HIT is %s\n", addrstr);
-  
- out_err:
-
-   if (tmp)
-    BN_free(tmp);
-
-  return err;
-}
-
-/**
- * rsa_to_hit - create HIT from RSA parameters
- * XX TODO: similar to the dsa_to_hit except from the pubkey_len,
- *          this is not very elegant...
- */
-int rsa_to_hit_old(RSA *rsa_key, unsigned char *rsa, int type,
-	       struct in6_addr *hit) {
-  int err = 0, pubkey_len = 0; 
-  //unsigned char *pubkey = NULL;
-  char addrstr[INET6_ADDRSTRLEN];
-  unsigned char *sha, sha_hash[SHA_DIGEST_LENGTH];
-  int i;
-  BIGNUM *bn, *tmp = NULL;
-  
-  /// XX FIXME -- WHAT WAS THIS?
-  /* if hipd was given a HIT to use from the command line it is used,
-     else HIT is calculated from the HI. */
-  //if (!IN6_IS_ADDR_UNSPECIFIED(&lhi->hit)) {
-  //  HIP_INFO("Use given HIT\n");
-  //  goto out_err
-  
-  /* calculate public key length, RFC 2537, section 2 */
-  pubkey_len = 1 + BN_num_bytes(rsa_key->e) + BN_num_bytes(rsa_key->n);
-  _HIP_DEBUG("RSA pub key length = %d\n", pubkey_len);
-  _HIP_INFO("Create HIT from HI\n");
-  
-  if (type == HIP_HIT_TYPE_HASH120) {
-    _HIP_DEBUG("HIT type is HASH126\n");
-  } else if (type == HIP_HIT_TYPE_HAA_HASH) {
-    HIP_ERROR("HIT type HAA hash not implemented\n");
-    err = -ENOSYS;
-    goto out_err;
-  } else {
-    HIP_ERROR("Unknown HIT type (%d)\n", type);
-    err = -EINVAL;
-    goto out_err;
-  }
-  
-  /* If Bit 0 is zero and Bit 1 is one, then the rest of HIT is a 126
-     bits of a Hash of the key. For example, if the Identity is DSA, these
-     bits MUST be the least significant 126 bits of the SHA-1 [FIPS-180-1]
-     hash of the DSA public key Host Identity.  */
-  sha = SHA1(rsa, pubkey_len, (unsigned char *) &sha_hash);
-  if (!sha) {
-    HIP_ERROR("sha hash failed\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-  
-  _HIP_HEXDUMP("rsa: ", rsa, pubkey_len);
-  
-  _HIP_DEBUG("sha_p=%p sha_hash_p=%p\n", sha, &sha_hash);
-  _HIP_HEXDUMP("hit hash:     ", &sha_hash, SHA_DIGEST_LENGTH);
-  _HIP_HEXDUMP("hit trunc hash:       ",
-	       (unsigned char *)&sha_hash+(SHA_DIGEST_LENGTH-128/8), 128/8);
-  _HIP_DEBUG("pos=%d\n", SHA_DIGEST_LENGTH - 128/8);
-  
-  /* Take 128 bits from the end of the hash */
-  bn = BN_bin2bn((const unsigned char *) &sha_hash + (SHA_DIGEST_LENGTH-128/8),
-		 128/8, NULL);
-  if (!bn) {
-    HIP_ERROR("!bn\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-  
-  _HIP_DEBUG("hit hash 128, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-
-
-  /* Clearing the 120-127 bits to zero
-   * and setting 126th bit to one - draft-ietf-hip-base-03 
-   */
-  for (i = 120; i<=127; i++){
-    int ret = 0;
-    if (i != 126)
-      ret = BN_clear_bit(bn, i);
-    else
-      ret = BN_set_bit(bn, i);
-    if (!ret) {
-      HIP_ERROR("bn set/clear bit %d failed\n", i);
-      err = -EINVAL;
-      goto out_err;
-    }
-  }
-
-#if 0
-  if (!BN_clear_bit(bn, 127) || !BN_set_bit(bn, 126)) {
-    HIP_ERROR("bn set/clear bit failed\n");
-    err = -EINVAL;
-    goto out_err;
-  }
-#endif
-
-  _HIP_DEBUG("hit hash 126, len=%d bn=%s\n", BN_num_bytes(bn), BN_bn2hex(bn));
-  
-  tmp = BN_new();
-  /* store result to parameter hit */
-  for (i = 0; i < 4; i++) {
-    unsigned long l;
-    
-    BN_copy(tmp, bn); /* todo: if null ..*/
-    _HIP_DEBUG("i=%d tmp=%s", i, BN_bn2hex(tmp));
-    
-    BN_rshift(tmp, tmp, (3-i)*32);
-    _HIP_DEBUG("->%s", BN_bn2hex(tmp));
-    
-    BN_mask_bits(tmp, 32);
-    _HIP_DEBUG("->mask32=%s\n", BN_bn2hex(tmp));
-    
-    l = BN_get_word(tmp);
-    if (l == 0xffffffffL)
-      HIP_ERROR("l == 0xffffffffL\n"); /* can this happen normally ? */
-    
-    _HIP_DEBUG("SET l=%lx ", l);
-    l = ntohl(l);
-    _HIP_DEBUG("ntohl(l)=%lx\n", l);
-    hit->s6_addr32[i] = l;
-    _HIP_DEBUG("\n");
-  }
-
-  inet_ntop(AF_INET6, hit, addrstr, sizeof(addrstr));
-  HIP_DEBUG("HIT is %s\n", addrstr);
-  
- out_err:
-  
-  if (tmp)
-    BN_free(tmp);
-  
-  return err;
-}
-#endif
-
-/**
- * dsa_to_dns_key_rr_old - create DNS KEY RR record from host DSA key
- * @dsa:        the DSA structure from where the KEY RR record is to be created
- * @dsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @dsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
- * and sets @dsa_key_rr to NULL.
- */
-int dsa_to_dns_key_rr_old(DSA *dsa, unsigned char **dsa_key_rr) {
-  int err = 0;
-  int dsa_key_rr_len = -1;
-  signed char t; /* in units of 8 bytes */
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-
-  HIP_ASSERT(dsa != NULL); /* should not happen */
-
-  *dsa_key_rr = NULL;
-
-  // HIP_DEBUG("numbytes dsa_key_rr_hdr=%d\n", sizeof(dsa_key_rr_hdr));
-  HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
-  HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
-  HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-  HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key));
-  //HIP_DEBUG("numbytes privkey=%d\n", BN_num_bytes(dsa->priv_key));
-
-  HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
-  HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
-  HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-  HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
-  //HIP_DEBUG("privkey=%s\n", BN_bn2hex(dsa->priv_key));
-
-  /* ***** is use of BN_num_bytes ok ? ***** */
-  t = (BN_num_bytes(dsa->p) - 64) / 8;
-  if (t < 0 || t > 8) {
-    HIP_ERROR("t=%d < 0 || t > 8\n", t);
-    err = -EINVAL;
-    goto out_err;
-  }
-  HIP_DEBUG("t=%d\n", t);
-
-  /* RFC 2536 section 2 */
-  /*
-           Field     Size
-           -----     ----
-            T         1  octet
-            Q        20  octets
-            P        64 + T*8  octets
-            G        64 + T*8  octets
-            Y        64 + T*8  octets
-	  [ X        20 optional octets (private key hack) ]
-	
-  */
-  dsa_key_rr_len = 1 + 20 + 3 * (64 + t * 8);
-
-  if (dsa->priv_key) {
-    dsa_key_rr_len += 20; /* private key hack */
-    HIP_DEBUG("Private key included\n");
-  } else {
-    HIP_DEBUG("No private key\n");
-  }
-
-  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
-  *dsa_key_rr = malloc(dsa_key_rr_len);
-  if (!*dsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* side-effect: does also padding for Q, P, G, and Y */
-  memset(*dsa_key_rr, 0, dsa_key_rr_len);
-
-  /* copy header */
-  p = *dsa_key_rr;
-
-  /* set T */
-  memset(p, t, 1); // XX FIX: WTF MEMSET?
-  p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
-
-  /* minimum number of bytes needed to store P, G or Y */
-  bn_buf_len = BN_num_bytes(dsa->p);
-  if (bn_buf_len <= 0) {
-    HIP_ERROR("bn_buf_len p <= 0\n");
-    err = -EINVAL;
-    goto out_err_free_rr;
-  }
-
-  bn_buf = malloc(bn_buf_len);
-  if (!bn_buf) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err_free_rr;
-  }
-  
-  /* Q */
-  bn2bin_len = bn2bin_safe(dsa->q, bn_buf, 20);
-  HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  HIP_ASSERT(bn2bin_len == 20);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
-
-  /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param, t)            \
-  bn2bin_len = bn2bin_safe(dsa_param, bn_buf, 64 + t*8); \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);                    \
-  if (!bn2bin_len) {                                     \
-    HIP_ERROR("bn2bin\n");                               \
-    err = -ENOMEM;                                       \
-    goto out_err_free_rr;                                \
-  }                                                      \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);                \
-  p += bn_buf_len-bn2bin_len; /* skip pad */             \
-  memcpy(p, bn_buf, bn2bin_len);                         \
-  p += bn2bin_len;
-
-  /* padding + P */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->p, t);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + G */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->g, t);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + Y */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key, t);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + X */
-
-#undef DSA_ADD_PGY_PARAM_TO_RR
-
-  bn2bin_len = bn2bin_safe(dsa->priv_key, bn_buf, 20);
-  memcpy(p,bn_buf,bn2bin_len);
-
-  p += bn2bin_len;
-  _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
-
-  /*  _HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  HIP_ASSERT(bn2bin_len == 20);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
-  */
-
-  goto out_err;
-
- out_err_free_rr:
-  if (*dsa_key_rr)
-    free(*dsa_key_rr);
-  if (bn_buf )
-    free(bn_buf);
-
-  //if (dsa->priv_key != NULL) {  // XX TODO: is this reduntant???
-  //    bn2bin_safe(dsa->priv_key, p, 20);
-  //} else {
-  //    HIP_INFO("No Private key?");
-  //}
- out_err:
-  return dsa_key_rr_len;
-}
-
-/**
- * dsa_to_dns_key_rr - create DNS KEY RR record from host DSA key
- * @dsa:        the DSA structure from where the KEY RR record is to be created
- * @dsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @dsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @dsa_key_rr. On error function returns negative
- * and sets @dsa_key_rr to NULL.
- */
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
-  int err = 0;
-  int dsa_key_rr_len = -1;
-  signed char t; /* in units of 8 bytes */
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-
-  HIP_ASSERT(dsa != NULL); /* should not happen */
-
-  *dsa_key_rr = NULL;
-
-  HIP_DEBUG("numbytes p=%d\n", BN_num_bytes(dsa->p));
-  HIP_DEBUG("numbytes q=%d\n", BN_num_bytes(dsa->q));
-  HIP_DEBUG("numbytes g=%d\n", BN_num_bytes(dsa->g));
-  HIP_DEBUG("numbytes pubkey=%d\n", BN_num_bytes(dsa->pub_key)); // shouldn't this be NULL also?
-
-  HIP_DEBUG("p=%s\n", BN_bn2hex(dsa->p));
-  HIP_DEBUG("q=%s\n", BN_bn2hex(dsa->q));
-  HIP_DEBUG("g=%s\n", BN_bn2hex(dsa->g));
-  HIP_DEBUG("pubkey=%s\n", BN_bn2hex(dsa->pub_key));
-
-  /* ***** is use of BN_num_bytes ok ? ***** */
-  t = (BN_num_bytes(dsa->p) - 64) / 8;
-  if (t < 0 || t > 8) {
-    HIP_ERROR("t=%d < 0 || t > 8\n", t);
-    err = -EINVAL;
-    goto out_err;
-  }
-  HIP_DEBUG("t=%d\n", t);
-
-  /* RFC 2536 section 2 */
-  /*
-           Field     Size
-           -----     ----
-            T         1  octet
-            Q        20  octets
-            P        64 + T*8  octets
-            G        64 + T*8  octets
-            Y        64 + T*8  octets
-	  [ X        20 optional octets (private key hack) ]
-	
-  */
-  dsa_key_rr_len = 1 + 20 + 3 * (64 + t * 8);
-
-  if (dsa->priv_key) {
-    dsa_key_rr_len += 20; /* private key hack */
-    HIP_DEBUG("Private key included\n");
-  } else {
-    HIP_DEBUG("No private key\n");
-  }
-
-  HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
-  *dsa_key_rr = malloc(dsa_key_rr_len);
-  if (!*dsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* side-effect: does also padding for Q, P, G, and Y */
-  memset(*dsa_key_rr, 0, dsa_key_rr_len);
-
-  /* copy header */
-  p = *dsa_key_rr;
-
-  /* set T */
-  memset(p, t, 1); // XX FIX: WTF MEMSET?
-  p += 1;
-  HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
-
-  /* minimum number of bytes needed to store P, G or Y */
-  bn_buf_len = BN_num_bytes(dsa->p);
-  if (bn_buf_len <= 0) {
-    HIP_ERROR("bn_buf_len p <= 0\n");
-    err = -EINVAL;
-    goto out_err_free_rr;
-  }
-
-  bn_buf = malloc(bn_buf_len);
-  if (!bn_buf) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err_free_rr;
-  }
-  
-  /* Q */
-  bn2bin_len = bn2bin_safe(dsa->q, bn_buf, 20);
-  HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  HIP_ASSERT(bn2bin_len == 20);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
-  HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
-
-  /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param, t)            \
-  bn2bin_len = bn2bin_safe(dsa_param, bn_buf, 64 + t*8); \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);                    \
-  if (!bn2bin_len) {                                     \
-    HIP_ERROR("bn2bin\n");                               \
-    err = -ENOMEM;                                       \
-    goto out_err_free_rr;                                \
-  }                                                      \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);                \
-  p += bn_buf_len-bn2bin_len; /* skip pad */             \
-  memcpy(p, bn_buf, bn2bin_len);                         \
-  p += bn2bin_len;
-
-  /* padding + P */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->p, t);
-  HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + G */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->g, t);
-  HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + Y */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key, t);
-  HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + X */
-
-#undef DSA_ADD_PGY_PARAM_TO_RR
-
-
-  if(dsa->priv_key){
-    bn2bin_len = bn2bin_safe(dsa->priv_key, bn_buf, 20);
-    memcpy(p,bn_buf,bn2bin_len);
-    
-    p += bn2bin_len;
-    HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
-
-  }
-
-  goto out_err;
-
- out_err_free_rr:
-  if (*dsa_key_rr)
-    free(*dsa_key_rr);
-  if (bn_buf )
-    free(bn_buf);
-
- out_err:
-  return dsa_key_rr_len;
-}
-
-
-/**
- * rsa_to_dns_key_rr_old - The function was marked as an old by Laura 10.4.2006.
- *                         It assumes that private RSA keys are used. 
- *                         Creates DNS KEY RR record from host RSA key
- * @rsa:        the RSA structure from where the KEY RR record is to be created
- * @rsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @rsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
- * and sets @rsa_key_rr to NULL.
- */
-int rsa_to_dns_key_rr_old(RSA *rsa, unsigned char **rsa_key_rr) {
-  int err = 0, len;
-  int rsa_key_rr_len = -1;
-  signed char t; /* in units of 8 bytes */
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-  unsigned char *c;
-
-  /* see RFC 2537 */
-  HIP_ASSERT(rsa != NULL); /* should not happen */
-
-  *rsa_key_rr = NULL;
-
-  HIP_DEBUG("rsa_to_dns_key_rr: debug 3\n");
-
-  /*
-  HIP_DEBUG("RSA vars: %d,%d,%d,%d,%d\n",BN_num_bytes(rsa->e),
-	     BN_num_bytes(rsa->n),BN_num_bytes(rsa->d),BN_num_bytes(rsa->p),
-	     BN_num_bytes(rsa->q));*/
-
-  HIP_DEBUG("rsa_to_dns_key_rr: debug 4\n");
-
-  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
-
-  HIP_DEBUG("rsa->e %d\n", BN_num_bytes(rsa->e));
-  HIP_DEBUG("rsa->n %d\n", BN_num_bytes(rsa->n)); 
-
-  HIP_DEBUG("rsa_to_dns_key_rr: debug 5\n");
-  /* e=3, n=128, d=128, p=64, q=64 (n=d, p=q=n/2) */
-  /* the u component does not exist in libgcrypt? */
-  /*rsa_key_rr_len = 3 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;*/
-  //rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) * 3;
-  rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +  
-    BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
- 
-  HIP_DEBUG("rsa key rr len = %d\n", rsa_key_rr_len);
-  *rsa_key_rr = malloc(rsa_key_rr_len);
-  if (!*rsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  memset(*rsa_key_rr, 0, rsa_key_rr_len);
-
-  c = *rsa_key_rr;
-  *c = (unsigned char) BN_num_bytes(rsa->e);
-  c++; // = e_length 
-
-  len = bn2bin_safe(rsa->e, c, 3);
-  c += len;
-
-  len = bn2bin_safe(rsa->n, c, 128);
-  c += len;  
-
-  len = bn2bin_safe(rsa->d, c, 128);
-  c += len;
-
-  len = bn2bin_safe(rsa->p, c, 64);
-  c += len;
-
-  len = bn2bin_safe(rsa->q, c, 64);
-  c += len;
-
-  rsa_key_rr_len = c - *rsa_key_rr;
-
- out_err:
-
-  return rsa_key_rr_len;
-}
-
-/**
- * rsa_to_dns_key_rr - This is a new version of the function above. This function 
- *                     assumes that RSA given as a parameter is always public (Laura/10.4.2006)
-                       Creates DNS KEY RR record from host RSA public key
- * @rsa:        the RSA structure from where the KEY RR record is to be created
- * @rsa_key_rr: where the resultin KEY RR is stored
- *
- * Caller must free @rsa_key_rr when it is not used anymore.
- *
- * Returns: On successful operation, the length of the KEY RR buffer is
- * returned (greater than zero) and pointer to the buffer containing
- * DNS KEY RR is stored at @rsa_key_rr. On error function returns negative
- * and sets @rsa_key_rr to NULL.
- */
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
-  int err = 0, len;
-  int rsa_key_rr_len = -1;
-  signed char t; // in units of 8 bytes
-  unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
-  unsigned char *c;
-  int public = -1;
-  
-  HIP_ASSERT(rsa != NULL); // should not happen
-  
-  *rsa_key_rr = NULL;
-  
-  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
-  
-  //let's check if the RSA key is public or private
-  //private exponent is NULL in public keys
-  if(rsa->d == NULL){ 
-    public = 1;
-  
-    // see RFC 2537
-  
-    //FIXME there may be something funny
-    rsa_key_rr_len = 4; // 4 four bytes for flags, protocol and algorithm // XX CHECK: LAURA
-    rsa_key_rr_len += 1; // public key exponent length 
-    rsa_key_rr_len += BN_num_bytes(rsa->e); // public key exponent (3 bytes)
-    rsa_key_rr_len += BN_num_bytes(rsa->n); // public key modulus (128 bytes)
-    
-  } else{
-    public = 0;
-    rsa_key_rr_len = 1 + BN_num_bytes(rsa->e) + BN_num_bytes(rsa->n) +  
-      BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
-    
-  }
-  *rsa_key_rr = malloc(rsa_key_rr_len);
-  if (!*rsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  memset(*rsa_key_rr, 0, rsa_key_rr_len);
-
-  c = *rsa_key_rr;
-  *c = (unsigned char) BN_num_bytes(rsa->e);
-  c++; // = e_length 
-
-  len = bn2bin_safe(rsa->e, c, 3);
-  c += len;
-
-  len = bn2bin_safe(rsa->n, c, 128);
-  c += len;  
-
-  if(!public){
-    len = bn2bin_safe(rsa->d, c, 128);
-    c += len;
-    
-    len = bn2bin_safe(rsa->p, c, 64);
-    c += len;
-    
-    len = bn2bin_safe(rsa->q, c, 64);
-    c += len;
-  }
-  
-  rsa_key_rr_len = c - *rsa_key_rr;
-
- out_err:
-
-  return rsa_key_rr_len;
-}
-
 /**
  * save_dsa_private_key - save host DSA keys to disk
- * @filenamebase: the filename base where DSA key should be saved
- * @dsa:      the DSA key structure
+ * @param filenamebase the filename base where DSA key should be saved
+ * @param dsa the DSA key structure
  *
- * The DSA keys from @dsa are saved in PEM format, public key to file
- * filenamebase.pub, private key to file @filenamebase and DSA parameters to
- * file @filenamebase.params. If any of the files cannot be saved, all
+ * The DSA keys from dsa are saved in PEM format, public key to file
+ * filenamebase.pub, private key to file filenamebase and DSA parameters to
+ * file filenamebase.params. If any of the files cannot be saved, all
  * files are deleted.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: 0 if all files were saved successfully, or non-zero if an error
+ * @return 0 if all files were saved successfully, or non-zero if an error
  * occurred.
  */
 int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
@@ -1876,18 +961,18 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
 
 /**
  * save_rsa_private_key - save host RSA keys to disk
- * @filenamebase: the filename base where RSA key should be saved
- * @rsa:      the RSA key structure
+ * @param filenamebase the filename base where RSA key should be saved
+ * @param rsa the RSA key structure
  *
- * The RSA keys from @rsa are saved in PEM format, public key to file
- * filenamebase.pub, private key to file @filenamebase and RSA
- * parameters to file @filenamebase.params. If any of the files cannot
+ * The RSA keys from rsa are saved in PEM format, public key to file
+ * filenamebase.pub, private key to file filenamebase and RSA
+ * parameters to file filenamebase.params. If any of the files cannot
  * be saved, all files are deleted.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: 0 if all files were saved successfully, or non-zero if an
+ * @return 0 if all files were saved successfully, or non-zero if an
  * error occurred.
  */
 int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
@@ -1971,17 +1056,18 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
 
 /**
  * load_dsa_private_key - load host DSA private keys from disk
- * @filenamebase: the file name base of the host DSA key
+ * @param filenamebase the file name base of the host DSA key
+ * @param dsa Pointer to the DSA key structure.
  *
  * Loads DSA public and private keys from the given files, public key
- * from file @filenamebase.pub and private key from file @filenamebase. DSA
+ * from file filenamebase.pub and private key from file filenamebase. DSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: On success *dsa contains the RSA structure. On failure
+ * @return On success *dsa contains the RSA structure. On failure
  * *dsa contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
@@ -2035,17 +1121,18 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
 
 /**
  * load_rsa_private_key - load host RSA private keys from disk
- * @filenamebase: the file name base of the host RSA key
+ * @param filenamebase the file name base of the host RSA key
+ * @param rsa Pointer to the RSA key structure.
  *
  * Loads RSA public and private keys from the given files, public key
- * from file @filenamebase.pub and private key from file @filenamebase. RSA
+ * from file filenamebase.pub and private key from file filenamebase. RSA
  * struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with RSA_free.
  *
  * XX FIXME: change filenamebase to filename! There is no need for a
  * filenamebase!!!
  *
- * Returns: On success *rsa contains the RSA structure. On failure
+ * @return On success *rsa contains the RSA structure. On failure
  * *rsa contains NULL if the key could not be loaded (not in PEM
  * format or file not found, etc).
  */
@@ -2099,14 +1186,14 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
 
 /**
  * load_dsa_public_key - load host DSA public keys from disk
- * @filename: the file name of the host DSA key
- * @dsa: the DSA 
+ * @param filename the file name of the host DSA key
+ * @param dsa the DSA 
  *
  * Loads DSA public key from the given file.
  * The DSA struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
- * Returns: NULL if the key could not be loaded (not in PEM format or file
+ * @return NULL if the key could not be loaded (not in PEM format or file
  * not found, etc).
  */
 int load_dsa_public_key(const char *filename, DSA **dsa) {
@@ -2114,7 +1201,7 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
   FILE *fp = NULL;
   int err = 0;
 
-  HIP_DEBUG("load_dsa_public_key called\n");
+  _HIP_DEBUG("load_dsa_public_key called\n");
 
   *dsa = NULL;
 
@@ -2162,10 +1249,10 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
     goto out_err;
   }
 
-  HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
   if (err && *dsa)
@@ -2180,14 +1267,14 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
 
 /**
  * load_rsa_public_key - load host RSA public keys from disk
- * @filename: the file name of the host RSA key
- * @rsa: the RSA 
+ * @param filename the file name of the host RSA key
+ * @param rsa the RSA 
  *
  * Loads RSA public key from the given file.
  * The RSA struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with RSA_free.
  *
- * Returns: NULL if the key could not be loaded (not in PEM format or file
+ * @return NULL if the key could not be loaded (not in PEM format or file
  * not found, etc).
  */
 int load_rsa_public_key(const char *filename, RSA **rsa) {
@@ -2197,7 +1284,7 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
 
   *rsa = NULL;
 
-  HIP_DEBUG("load_rsa_public_key called\n");
+  _HIP_DEBUG("load_rsa_public_key called\n");
 
   if (!filename) {
     HIP_ERROR("NULL filename\n");
@@ -2244,8 +1331,8 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
     goto out_err;
   }
 
-  HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
 
  out_err:
   if (err && *rsa)
@@ -2254,131 +1341,6 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
     RSA_free(rsa_tmp);
   if (fp)
     err = fclose(fp);
-
-  return err;
-}
-
-int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname)
-{
-  int err = 0;
-  unsigned char *dsa_key_rr = NULL;
-  int dsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-
-  HIP_DEBUG("dsa_to_hip_endpoint called\n");
-
-  dsa_key_rr_len = dsa_to_dns_key_rr(dsa, &dsa_key_rr);
-  if (dsa_key_rr_len <= 0) {
-    HIP_ERROR("dsa_key_rr_len <= 0\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
-  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
-			 HIP_HI_DSA, dsa_key_rr_len);
-
-  *endpoint = malloc(endpoint_hdr.length);
-  if (!(*endpoint)) {
-    err = -ENOMEM;
-    goto out_err;
-  }
-  memset(*endpoint, 0, endpoint_hdr.length);
-
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
-  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
-		     dsa_key_rr, dsa_key_rr_len);
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
-
- out_err:
-
-  if (dsa_key_rr)
-    free(dsa_key_rr);
-
-  return err;
-}
-
-int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
-			se_hip_flags_t endpoint_flags, const char *hostname)
-{
-  int err = 0;
-  unsigned char *rsa_key_rr = NULL;
-  int rsa_key_rr_len;
-  struct endpoint_hip endpoint_hdr;
-
-  HIP_DEBUG("rsa_to_hip_endpoint called\n");
-
-  rsa_key_rr_len = rsa_to_dns_key_rr(rsa, &rsa_key_rr);
-  if (rsa_key_rr_len <= 0) {
-    HIP_ERROR("rsa_key_rr_len <= 0\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-
-  /* build just an endpoint header to see how much memory is needed for the
-     actual endpoint */
-  hip_build_endpoint_hdr(&endpoint_hdr, hostname, endpoint_flags,
-			 HIP_HI_RSA, rsa_key_rr_len);
-
-    *endpoint = malloc(endpoint_hdr.length);
-  if (!(*endpoint)) {
-    err = -ENOMEM;
-    goto out_err;
-  }
-  memset(*endpoint, 0, endpoint_hdr.length);
-
-  HIP_DEBUG("Allocated %d bytes for endpoint\n", endpoint_hdr.length);
-
-  hip_build_endpoint(*endpoint, &endpoint_hdr, hostname,
-		     rsa_key_rr, rsa_key_rr_len);
-			   
-  HIP_HEXDUMP("endpoint contains: ", *endpoint, endpoint_hdr.length);
-
- out_err:
-
-  if (rsa_key_rr)
-    free(rsa_key_rr);
-
-  return err;
-}
-
-int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
-				    unsigned int key_rr_len,
-				    uint8_t algo,
-				    const char *hostname)
-{
-  int err = 0;
-  struct hip_host_id host_id_hdr;
-
-  hip_build_param_host_id_hdr(&host_id_hdr, hostname,
-			      key_rr_len, algo);
-
-  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
-  if (!host_id) {
-    err = -ENOMEM;
-  }  
-
-  memcpy(*host_id, &host_id_hdr, sizeof(host_id_hdr));
-
-  return err;
-}
-
-int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
-				       unsigned char *key_rr, int key_rr_len,
-				       int algo, char *hostname) {
-  int err = 0;
-
-  HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id, key_rr_len, algo,
-					   hostname), -1, "alloc\n");
-  hip_build_param_host_id_only(*host_id, key_rr, "hostname");
-
- out_err:
-  if (err && *host_id) {
-    *host_id = NULL;
-    HIP_FREE(host_id);
-  }
 
   return err;
 }

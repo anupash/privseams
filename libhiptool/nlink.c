@@ -5,7 +5,7 @@
  * libnetlink functions.
  */
 
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data, 
+int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen)
 {
 	int len = RTA_LENGTH(alen);
@@ -23,18 +23,16 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
-/* 
+/*
  * Unfortunately libnetlink does not provide a generic receive a
  * message function. This is a modified version of the rtnl_listen
  * function that processes only a finite amount of messages and then
- * returns. 
+ * returns.
 */
-int hip_netlink_receive(struct rtnl_handle *nl, 
+int hip_netlink_receive(struct rtnl_handle *nl,
 			hip_filter_t handler,
-			void *arg) 
+			void *arg)
 {
-	struct hip_work_order *result = NULL;
-	struct hip_work_order *hwo;
 	struct nlmsghdr *h;
 	struct sockaddr_nl nladdr;
 	struct iovec iov;
@@ -47,14 +45,20 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	int msg_len, status;
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
-	HIP_DEBUG("Received a netlink message\n");
+        msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
+			   MSG_PEEK, NULL, NULL);
+	if (msg_len != sizeof(struct nlmsghdr)) {
+		HIP_ERROR("Bad netlink msg\n");
+		return -1;
+	}
 
+	HIP_DEBUG("Received a netlink message\n");
         memset(&nladdr, 0, sizeof(nladdr));
         nladdr.nl_family = AF_NETLINK;
         nladdr.nl_pid = 0;
         nladdr.nl_groups = 0;
 	iov.iov_base = buf;
-	
+
 	while (1) {
                 iov.iov_len = sizeof(buf);
                 status = recvmsg(nl->fd, &msg, 0);
@@ -119,57 +123,80 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			unsigned groups, struct nlmsghdr *answer,
 			hip_filter_t junk, void *arg)
 {
-        int status;
-        unsigned seq;
-        struct nlmsghdr *h;
-        struct sockaddr_nl nladdr;
-        struct iovec iov = { (void*)n, n->nlmsg_len };
-        char   buf[16384];
-        struct msghdr msg = {
-                (void*)&nladdr, sizeof(nladdr),
-                &iov,   1,
-                NULL,   0,
-                0
-        };
+	int status, err = 0;
+	unsigned seq;
+	struct nlmsghdr *h;
+	struct sockaddr_nl nladdr;
+	char   buf[16384];
+	struct iovec iov = {
+		.iov_base = (void*) n,
+		.iov_len = n->nlmsg_len
+	};
+	struct msghdr msg = {
+		.msg_name = &nladdr,
+		.msg_namelen = sizeof(nladdr),
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
 
-        memset(&nladdr, 0, sizeof(nladdr));
-        nladdr.nl_family = AF_NETLINK;
-        nladdr.nl_pid = peer;
-        nladdr.nl_groups = groups;
+	memset(&nladdr, 0, sizeof(nladdr));
+	nladdr.nl_family = AF_NETLINK;
+	nladdr.nl_pid = peer;
+	nladdr.nl_groups = groups;
 
-        n->nlmsg_seq = seq = ++nl->seq;
+	n->nlmsg_seq = seq = ++nl->seq;
 
-        if (answer == NULL)
-                n->nlmsg_flags |= NLM_F_ACK;
+	/* Note: the TALK_ACK are here because I experienced problems
+	   with SMP machines. The application added a mapping which caused
+	   the control flow to arrive here. The sendmsg adds an SP and the
+	   while loop tries to read the ACK for the SP. However, there will
+	   be an acquire message arriving from the kernel before we read the
+	   ack which confuses the loop completely, so I disabled the ACK.
+	   The reason why this all happens is that we are using the same
+	   netlink socket to read both acquire messages and sending SP.
+	   Only a single netlink socket exist per PID, so we either do it
+	   as it is here or create another thread for handling acquires.
+	   For testing SP/SA related issues you might want to re-enable these
+	   -mk */
+	if (HIP_NETLINK_TALK_ACK)
+		if (answer == NULL)
+			n->nlmsg_flags |= NLM_F_ACK;
 
-        status = sendmsg(nl->fd, &msg, 0);
-        if (status < 0) {
-                HIP_PERROR("Cannot talk to rtnetlink");
-                return -1;
-        }
+	status = sendmsg(nl->fd, &msg, 0);
+	if (status < 0)
+	{
+		HIP_PERROR("Cannot talk to rtnetlink");
+		err = -1;
+		goto out_err;
+	}
 
-        memset(buf,0,sizeof(buf));
+	memset(buf,0,sizeof(buf));
+	iov.iov_base = buf;
 
-        iov.iov_base = buf;
+	while (HIP_NETLINK_TALK_ACK) {
+			iov.iov_len = sizeof(buf);
+			status = recvmsg(nl->fd, &msg, 0);
 
-        while (1) {
-                iov.iov_len = sizeof(buf);
-                status = recvmsg(nl->fd, &msg, 0);
-
-                if (status < 0) {
-                        if (errno == EINTR)
-                                continue;
-                        HIP_PERROR("OVERRUN");
-                        continue;
-                }
+			if (status < 0)
+			{
+				if (errno == EINTR)
+				{
+					HIP_DEBUG("EINTR\n");
+					continue;
+				}
+				HIP_PERROR("OVERRUN");
+				continue;
+			}
 		if (status == 0) {
                         HIP_ERROR("EOF on netlink.\n");
-                        return -1;
+			err = -1;
+			goto out_err;
                 }
                 if (msg.msg_namelen != sizeof(nladdr)) {
                         HIP_ERROR("sender address length == %d\n",
 				  msg.msg_namelen);
-                        return -1;
+			err = -1;
+			goto out_err;
                 }
                 for (h = (struct nlmsghdr*)buf; status >= sizeof(*h); ) {
                         int err;
@@ -179,44 +206,51 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                         if (l<0 || len>status) {
                                 if (msg.msg_flags & MSG_TRUNC) {
                                         HIP_ERROR("Truncated message\n");
-                                        return -1;
+					err = -1;
+					goto out_err;
                                 }
                                 HIP_ERROR("Malformed message: len=%d\n", len);
-                                return -1;
+				err = -1;
+				goto out_err;
                         }
 
                         if (nladdr.nl_pid != peer ||
                             h->nlmsg_seq != seq) {
+				HIP_DEBUG("%d %d %d %d\n", nladdr.nl_pid, peer, h->nlmsg_seq, seq);
                                 if (junk) {
-                                        err = junk(h, len, arg);
-                                        if (err < 0)
-                                                return err;
+					err = junk(h, len, arg);
+                                        if (err < 0) {
+						err = -1;
+						goto out_err;
+					}
                                 }
-
-				/* Original version lacked this: */
-				status -= len;
+                                /* Don't forget to skip that message. */
+                                status -= NLMSG_ALIGN(len);
+                                h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
                                 continue;
                         }
 
                         if (h->nlmsg_type == NLMSG_ERROR) {
-                                struct nlmsgerr *err = 
+                                struct nlmsgerr *nl_err =
 					(struct nlmsgerr*)NLMSG_DATA(h);
                                 if (l < sizeof(struct nlmsgerr)) {
                                         HIP_ERROR("Truncated\n");
                                 } else {
-                                        errno = -err->error;
+                                        errno = -nl_err->error;
                                         if (errno == 0) {
                                                 if (answer)
                                                         memcpy(answer, h, h->nlmsg_len);
-                                                return 0;
+						goto out_err;
                                         }
                                         HIP_PERROR("NETLINK answers");
                                 }
-                                return -1;
+				err = -1;
+				goto out_err;
+
                         }
                         if (answer) {
                                 memcpy(answer, h, h->nlmsg_len);
-                                return 0;
+				goto out_err;
                         }
 
                         HIP_ERROR("Unexpected netlink reply!\n");
@@ -230,9 +264,14 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
                 }
                 if (status) {
                         HIP_ERROR("Remnant of size %d\n", status);
-                        return -1;
+			err = -1;
+			goto out_err;
                 }
         }
+
+out_err:
+
+	return err;
 }
 
 
@@ -242,7 +281,6 @@ int hip_netlink_send_buf(struct rtnl_handle *rth, const char *buf, int len)
 
         memset(&nladdr, 0, sizeof(struct sockaddr_nl));
         nladdr.nl_family = AF_NETLINK;
-
         return sendto(rth->fd, buf, len, 0, (struct sockaddr*)&nladdr, sizeof(struct sockaddr_nl));
 }
 
@@ -253,7 +291,7 @@ int rtnl_open_byproto(struct rtnl_handle *rth, unsigned subscriptions,
         int sndbuf = 32768, rcvbuf = 32768;
 	int err = 0, on = 1;
 
-        memset(rth, 0, sizeof(rth));
+        memset(rth, 0, sizeof(*rth));
 
 	rth->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (rth->fd < 0) {
@@ -327,6 +365,8 @@ unsigned ll_name_to_index(const char *name, struct idxmap **idxmap)
                 }
         }
 
+	/* XX FIXME: having more that one NETLINK socket open at the same
+	   time is bad! See hipd.c:addresses comments */
         return if_nametoindex(name);
 }
 
@@ -468,7 +508,7 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 int hip_iproute_modify(struct rtnl_handle *rth,
 		       int cmd, int flags, int family, char *ip,
-		       char *dev, struct idxmap **idxmap)
+		       char *dev)
 {
         struct {
                 struct nlmsghdr         n;
@@ -476,9 +516,13 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                 char                    buf[1024];
         } req1;
         inet_prefix dst;
+	struct idxmap *idxmap[16];
         int dst_ok = 0, err;
-        int idx;
+        int idx, i;
+
         memset(&req1, 0, sizeof(req1));
+	for (i = 0; i < 16; i++)
+		idxmap[i] = NULL;
 
         req1.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
         req1.n.nlmsg_flags = NLM_F_REQUEST|flags;
@@ -515,6 +559,9 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 		"netlink_talk failed\n");
 
  out_err:
+	for (i = 0; i < 16; i++)
+	  if (idxmap[i])
+	    HIP_FREE(idxmap[i]);
 
         return 0;
 }
@@ -530,11 +577,18 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	int err = 0, entry;
 
 	/* see print_route() in ip/iproute.c */
-
         parse_rtattr(tb, RTA_MAX, RTM_RTA(r), n->nlmsg_len);
-	entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	HIP_DEBUG("sizeof(struct nlmsghdr) =%d\n",sizeof(struct nlmsghdr));
+	HIP_DEBUG("sizeof(struct rtmsg) =%d\n",sizeof(struct rtmsg));
+	HIP_DEBUG("sizeof  n->nlmsg_len =%d\n",  n->nlmsg_len );
+	HIP_HEXDUMP("nlmsghdr : ", n,sizeof(struct nlmsghdr));
+	HIP_HEXDUMP("rtmsg : ", r, sizeof(struct rtmsg));
+	HIP_HEXDUMP("nlmsg : ", n, n->nlmsg_len);
+	HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC],sizeof(struct rtattr));
+	//entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
+	addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
+	entry=7;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
-
 	if(r->rtm_family == AF_INET) {
 		IPV4_TO_IPV6_MAP(addr.in, src_addr);
 	} else
@@ -545,35 +599,30 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	return err;
 }
 
-int hip_iproute_get(struct rtnl_handle *rth,
-		    struct in6_addr *src_addr,
-		    struct in6_addr *dst_addr,
-		    char *idev,
-		    char *odev,
-		    int family,
-		    struct idxmap **idxmap)
+int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
+		    struct in6_addr *dst_addr, char *idev, char *odev,
+		    int family, struct idxmap **idxmap)
 {
 	struct {
 		struct nlmsghdr 	n;
 		struct rtmsg 		r;
 		char   			buf[1024];
 	} req;
+
 	int err = 0, idx, preferred_family = family;
 	inet_prefix addr;
 	char dst_str[INET6_ADDRSTRLEN];
 	struct in_addr ip4;
 	HIP_ASSERT(dst_addr);
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG_IN6ADDR("Getting route for destination address", dst_addr);
 
-	HIP_DEBUG_IN6ADDR("dst addr :", dst_addr);
-	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
 		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
 		preferred_family = AF_INET;
 		HIP_IFEL((!inet_ntop(preferred_family, &ip4, dst_str,
                              INET6_ADDRSTRLEN)), -1,"inet_pton\n");
-	} else {	
+	} else {
 		HIP_IFEL((!inet_ntop(preferred_family, dst_addr, dst_str,
 				     INET6_ADDRSTRLEN)), -1,
 			 "inet_pton\n");
@@ -591,7 +640,7 @@ int hip_iproute_get(struct rtnl_handle *rth,
 	req.r.rtm_src_len = 0;
 	req.r.rtm_dst_len = 0;
 	req.r.rtm_tos = 0;
-	
+
 	get_prefix(&addr, dst_str, req.r.rtm_family);
 	if (addr.bytelen)
 		addattr_l(&req.n, sizeof(req), RTA_DST, &addr.data,
@@ -638,14 +687,14 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
         req.n.nlmsg_flags = NLM_F_REQUEST;
         req.n.nlmsg_type = cmd;
-        req.ifa.ifa_family = family; 
+        req.ifa.ifa_family = family;
 
         lcl_arg = ip;
 	HIP_DEBUG("IP got %s\n", ip);
 	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
         addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
         local_len = lcl.bytelen;
-	// FIXED : prefix now adds - Abi
+
 	if (req.ifa.ifa_prefixlen == 0)
                 req.ifa.ifa_prefixlen = lcl.bitlen;
 
@@ -718,7 +767,7 @@ int set_up_device(char *dev, int up)
 	int err = -1;
 	__u32 mask = 0;
 	__u32 flags = 0;
-	
+
 	if(up == 1){
 		mask |= IFF_UP;
 		flags |= IFF_UP;
@@ -726,20 +775,20 @@ int set_up_device(char *dev, int up)
 		mask |= IFF_UP;
 		flags &= ~IFF_UP;
 	}
-	
-	err = do_chflags(dev, flags, mask);			
+
+	err = do_chflags(dev, flags, mask);
 	HIP_DEBUG("setting %s done\n", dev);
-	return err;	 
+	return err;
 }
 
 /**
  * xfrm_selector_ipspec - fill port info in the selector.
  * Selector is bound to HITs
- * @sel: pointer to xfrm_selector to be filled in
- * @src_port: Source port
- * @dst_port: Destination port
+ * @param sel pointer to xfrm_selector to be filled in
+ * @param src_port Source port
+ * @param dst_port Destination port
  *
- * Returns: 0
+ * @return 0
  */
 
 int xfrm_selector_upspec(struct xfrm_selector *sel,
@@ -752,14 +801,14 @@ int xfrm_selector_upspec(struct xfrm_selector *sel,
 	sel->dport = htons(dst_port);
         if (sel->dport)
         	sel->dport_mask = ~((__u16)0);
-	
+
 	return 0;
 
-	
+
 }
 int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct in6_addr *oa)
 {
-	encap->encap_type = UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
+	encap->encap_type = HIP_UDP_ENCAP_ESPINUDP_NONIKE; // value of 1
 	encap->encap_sport = htons(sport);
 	encap->encap_dport = htons(dport);
 	encap->encap_oa.a4 = oa->s6_addr32[3];
@@ -770,11 +819,16 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
 /**
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
- * @sel: pointer to xfrm_selector to be filled in
- * @hit_our: Source HIT
- * @hit_peer: Peer HIT
+ * @param sel pointer to xfrm_selector to be filled in
+ * @param hit_our Source HIT
+ * @param hit_peer Peer HIT
+ * @param proto ?
+ * @param hit_prefix ?
+ * @param src_port ?
+ * @param dst_port ?
+ * @param preferred_family ?
  *
- * Returns: 0
+ * @return 0
  */
 int xfrm_fill_selector(struct xfrm_selector *sel,
 		       struct in6_addr *hit_our,
@@ -796,14 +850,14 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	sel->prefixlen_s = hit_prefix;
 
 	//xfrm_selector_upspec(sel, src_port, dst_port);
-	
+
 	return 0;
 }
 
 /** xfrm_init_lft - Initializes the lft
- * @lft: pointer to the lft struct to be initialized
+ * @param lft pointer to the lft struct to be initialized
  *
- * Returns: 0
+ * @return 0
  */
 int xfrm_init_lft(struct xfrm_lifetime_cfg *lft) {
 
@@ -840,12 +894,12 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 	len = slen;
 	if (len > 0) {
 		if (len > max) {
-			return -1;
 			HIP_ERROR("\"ALGOKEY\" makes buffer overflow\n", key);
+			return -1;
 		}
 		memcpy(alg->alg_key, key, key_len * 8);
 	}
-	
+
 	alg->alg_key_len = len * 8;
 
 	return 0;
@@ -853,36 +907,37 @@ int xfrm_algo_parse(struct xfrm_algo *alg, enum xfrm_attr_type_t type,
 
 void rtnl_tab_initialize(char *file, char **tab, int size)
 {
-        char buf[512];
-        FILE *fp;
+	char buf[512];
+	FILE *fp;
 
-        fp = fopen(file, "r");
-        if (!fp)
-                return;
-        while (fgets(buf, sizeof(buf), fp)) {
-                char *p = buf;
-                int id;
-                char namebuf[512];
+	fp = fopen(file, "r");
+	if (!fp) return;
 
-                while (*p == ' ' || *p == '\t')
-                        p++;
-                if (*p == '#' || *p == '\n' || *p == 0)
-                        continue;
-                if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
-                    sscanf(p, "%d %s #", &id, namebuf) != 2) {
-                        HIP_ERROR("Database %s is corrupted at %s\n",
-                                file, p);
-                        return;
-                }
+	while (fgets(buf, sizeof(buf), fp))
+	{
+		char *p = buf;
+		int id;
+		char namebuf[512];
 
-                if (id<0 || id>size)
-                        continue;
+		while (*p == ' ' || *p == '\t') p++;
+		
+		if (*p == '#' || *p == '\n' || *p == 0) continue;
 
-                tab[id] = strdup(namebuf);
-        }
-        fclose(fp);
+		if (sscanf(p, "0x%x %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "0x%x %s #", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s\n", &id, namebuf) != 2 &&
+		    sscanf(p, "%d %s #", &id, namebuf) != 2)
+		{
+				HIP_ERROR("Database %s is corrupted at %s\n", file, p);
+				return;
+		}
+
+		if (id < 0 || id > size) continue;
+
+		tab[id] = strdup(namebuf);
+	}
+	
+	fclose(fp);
 }
 
 int rtnl_dsfield_a2n(__u32 *id, char *arg, char **rtnl_rtdsfield_tab)
@@ -929,12 +984,12 @@ int get_prefix(inet_prefix *dst, char *arg, int family)
         return 0;
 }
 
-int ll_remember_index(const struct sockaddr_nl *who, 
+int ll_remember_index(const struct sockaddr_nl *who,
                       struct nlmsghdr *n, void **arg)
 {
         int h;
         struct ifinfomsg *ifi = NLMSG_DATA(n);
-        struct idxmap *im, **imp;
+        struct idxmap *im = NULL, **imp;
 	struct idxmap **idxmap = (struct idxmap **) arg;
         struct rtattr *tb[IFLA_MAX+1];
 
@@ -953,9 +1008,10 @@ int ll_remember_index(const struct sockaddr_nl *who,
         h = ifi->ifi_index&0xF;
 
         for (imp=&idxmap[h]; (im=*imp)!=NULL; imp = &im->next)
-                if (im->index == ifi->ifi_index)
+		if (im->index == ifi->ifi_index)
                         break;
 
+        /* the malloc leaks memory */
         if (im == NULL) {
                 im = malloc(sizeof(*im));
                 if (im == NULL)
@@ -978,6 +1034,7 @@ int ll_remember_index(const struct sockaddr_nl *who,
                 memset(im->addr, 0, sizeof(im->addr));
         }
         strcpy(im->name, RTA_DATA(tb[IFLA_IFNAME]));
+
         return 0;
 }
 
@@ -1011,7 +1068,9 @@ int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
                 return -1;
         }
 
-        if (rtnl_dump_filter(rth, ll_remember_index, idxmap, NULL, NULL) < 0) {
+        if (rtnl_dump_filter(rth,
+			     /*ll_remember_index*/ NULL,
+			     idxmap, NULL, NULL) < 0) {
                 HIP_ERROR("Dump terminated\n");
                 return -1;
         }
@@ -1027,7 +1086,7 @@ int parse_rtattr(struct rtattr *tb[], int max, struct rtattr *rta, int len)
                 rta = RTA_NEXT(rta,len);
         }
         if (len)
-                HIP_ERROR("!!!Deficit len %d, rta_len=%d\n",
+                HIP_ERROR("Deficit len %d, rta_len=%d\n",
 			  len, rta->rta_len);
         return 0;
 }
@@ -1064,7 +1123,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                 n->nlmsg_flags |= NLM_F_ACK;
 
         status = sendmsg(rtnl->fd, &msg, 0);
-
+	HIP_HEXDUMP("Msg sent : ", &msg, sizeof(struct nlmsghdr));
         if (status < 0) {
                 HIP_PERROR("Cannot talk to rtnetlink");
                 return -1;
@@ -1102,7 +1161,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                         HIP_ERROR("Truncated message\n");
                                         return -1;
                                 }
-                                HIP_ERROR("!!!malformed message: len=%d\n", len);
+                                HIP_ERROR("malformed message: len=%d\n", len);
                                 return -1;
                         }
 
@@ -1134,6 +1193,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         }
                         if (answer) {
                                 memcpy(answer, h, h->nlmsg_len);
+				HIP_HEXDUMP("Answer : ", h,h->nlmsg_len);
                                 return 0;
                         }
 
@@ -1147,7 +1207,7 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                         continue;
                 }
                 if (status) {
-                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        HIP_ERROR("Remnant of size %d\n", status);
                         return -1;
                 }
         }
@@ -1169,11 +1229,11 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
         };
         char buf[16384];
 
-        iov.iov_base = buf;
         while (1) {
                 int status;
                 struct nlmsghdr *h;
 
+		        iov.iov_base = buf;
                 iov.iov_len = sizeof(buf);
                 status = recvmsg(rth->fd, &msg, 0);
 
@@ -1191,7 +1251,7 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
 
                 h = (struct nlmsghdr*)buf;
                 while (NLMSG_OK(h, status)) {
-                        int err;
+                        int err = 0;
 
                         if (nladdr.nl_pid != 0 ||
                             h->nlmsg_pid != rth->local.nl_pid ||
@@ -1216,7 +1276,8 @@ int rtnl_dump_filter(struct rtnl_handle *rth,
                                 }
                                 return -1;
                         }
-                        err = filter(&nladdr, h, arg1);
+			if (filter)
+				err = filter(&nladdr, h, arg1);
                         if (err < 0)
                                 return err;
 
@@ -1228,7 +1289,7 @@ skip_it:
                         continue;
                 }
                 if (status) {
-                        HIP_ERROR("!!!Remnant of size %d\n", status);
+                        HIP_ERROR("Remnant of size %d\n", status);
                         return -1;
                 }
         }

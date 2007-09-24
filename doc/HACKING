@@ -10,7 +10,6 @@ TODO
 
 - xx
 
-
 AUTOCONF AND AUTOMAKE
 =====================
 
@@ -39,11 +38,10 @@ link to it from userspace (CVS does not accept links). For example,
 	builder.c:
         	$(LN_S) ../linux/net/ipv6/hip/builder.c .
 
-
 CODING CONVENTIONS
 ==================
 
-- Don't invent your own coding style. It will give the the code an
+- Don't invent your own coding style. It will give the code an
   ununified look. Especially, if you don't follow the memory deallocation
   procedure below, you might even cause some memory leaks.
 
@@ -54,9 +52,9 @@ CODING CONVENTIONS
   coding style.
 
 - HIPL code should use the prefix "hip_" in all function and global variable
-  definitions to avoid namespace pollution in the kernel. The prefix is
-  not necessary in userspace code, but the same naming conventions might
-  be clearer to use anyway.
+  definitions to avoid namespace pollution, especially in the
+  libraries. The prefix is not necessary in userspace code, but the same
+  naming conventions might be clearer to use anyway.
 
 - The width of one line should be limited to 80 characters in
   userspace code. This rule may be relaxed in the kernel code because
@@ -66,6 +64,38 @@ CODING CONVENTIONS
   zero for success and non-zero for failure.
 
 - Use the HIP_IFE, HIP_IFEL macros to reduce the number of lines of code.
+
+- Do not make unreadable code by nesting code too much:
+
+  if (foo) {
+     if (bar) {
+        if(hello)
+        {
+           confuse_me();
+        }
+     }
+  }
+
+  Instead, join the conditional expressions (foo && bar && hello) or
+  use goto (goto skip;).
+
+- Declare variables right after beginning brace, not in the middle of the code:
+
+  int foo {
+    int i;  /* integers declared in the beginning of the function */
+    char c;
+
+    bar();
+
+    for (i = 0; i < 100; i++) {
+       int x; /* This is fine because it is after the beginning
+                 brace of loop */
+       hello(i, x);
+    }
+  }
+
+  hipsock shares code with the rest of the code and it requires ISO C90
+  style C code. Declare variables right after braces!
 
 - Memory (de)allocation procedure is as follows:
  
@@ -176,31 +206,6 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
-UPGRADING THE KERNEL
-====================
-
-# note: there is a perl script called "hashline" diff which is more
-# convinient to use in upgrading the kernel (to check for added/deleted
-# files)
-
-% <get the patch to ~/down>
-% cd hipl--fix--2.6/linux
-% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
-% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
-% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_LOG`
-% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-  (/error finding file id \(2: No such file or directory\)/)' \
-    </tmp/TLA_LOG|cut -d' ' -f3`
-% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
-% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
-    >/tmp/TLA_DIR_LOG
-% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
-    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
-
-Check HUNK messages from PATCH_LOG manually.
-
 DEBUGGING
 =========
 
@@ -258,43 +263,41 @@ or production build):
 DOCUMENTATION
 =============
 
-The list of available HIPL documentation is listed in README. Both the
-kernel and the userspace API are documented in Linux kernel docbook
-format (see hipl/linux/Documentation/DocBook). Here is an example how
-docbook style comments should be used for commenting functions:
+Doxygen is now used for documenting HIPL. Manual for how to use doxygen
+documentation, is found from here:
+http://www.stack.nl/~dimitri/doxygen/manual.html
+
+To create doxygen documentation in HTML format, execute "make doxygen". Doxygen will create documentation under doc/doxy/html.
+
+Simple example, how to use some doxygen features:
+
+/** Description of a #define. */
+#define HIP_ENABLED 1
 
 /**
- * sum2 - sum the given two integers
- * @a: the first integer to be summed
- * @b: the second integer to be summed
- *
- * the freeform longer description goes here (may
- * span multiple lines)
- *
- * Returns: the sum of @a and @b.
- *
+ * Description of a global variable.
+ * This can continue also to multiple lines,
+ * just like previous #define description.
  */
-int sum2(int a, int b) {
-  return a + b;
+int hip_sock = -1;
+
+/**
+ * This is a function description. Parameter documentation is in
+ * form "@param <param_name> description". Return value is documented
+ * using "@return description". Todos are documented using
+ * "/*! \todo description */". Then the todos are listed in doxygen
+ * created documentation as list.
+ *
+ * @param name This is a function parameter description.
+ * @return This is a return value description.
+ */
+int test(char *name)
+{
+	/*! \todo
+	 * Make contents for this function!!!
+	 */
 }
 
-
-NOTE!
-
-- The first two stars are REQUIRED. Otherwise docbook does not
-  include the function in its output.
-- The summary line may be just ONE line.
-- The description of the parameters must begin IMMEDIATELY on the
-  next line after the function summary. Otherwise you will experience    
-  odd docbook behaviour (the descriptions appear twice in the text).
-- Please use the following indentation type for the parameters:
-    @test:   blah blah
-    @foobar: description of foobar
-             continues to the next line
-- You can refence other functions by adding empty brackets() after the
-  function name.
-- see Documentation/kernel-doc-nano-HOWTO.txt for more details on
-  documentation styles
 
 SUBMITTING PATCHES
 ==================
@@ -318,8 +321,20 @@ some tangled functionality, especially in the kernel, that is
 very difficult to test with unit testing. Manual black box testing
 should be used to cover changes in the code in such cases.
 
+CREATING A TARBALL OF THE SOURCE CODE
+=====================================
+
+There is a "make dist" target which builds a tarball of the hipl source   
+code. It includes only the files which are necessary. The included files  
+are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
+possible to force some extra files in top most Makefile.am.
+
+
 PREBUILT BINARY PACKAGES
 ========================
+
+Redhat
+------
 
 Note well: Currently the status of the packaging scripts is in very initial
 phase. They are not tested throughly.
@@ -334,18 +349,170 @@ binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created. 
 
-To create the RPM package, go to the directory test/packaging. Then run
-./create-hip-us-pkg. This will create a source package (in tar.gz form in
-the same directory) which will be used when building the RPM file. After
-the script has run successfully, follow the instructions given by the
+To create the RPM package, type: "./autogen && ./configure && make rpm".
+This will create a source package (in tar.gz form in the same
+directory) which will be used when building the RPM file. After the
+script has run successfully, follow the instructions given by the
 script. That is, login as root and copy the source package (e.g.
-hipl-userspace-1.0-1.tgz) to directory /usr/src/rpm/SOURCES. Then issue the
-command "rpmbuild -ba <hiplroot>/test/packaging/hipl-userspace-1.0-1.spec".
-When everyting is finished successfully, there will be a binary RPM package
-"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package can
-then be installed with rpm -i.
+hipl-userspace-1.0-1.tgz) to directory /usr/src/redhat/SOURCES. Then
+issue the command "rpmbuild -ba
+<hiplroot>/test/packaging/hiplx.spec".  When everyting
+is finished successfully, there will be a binary RPM package
+"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
+can then be installed with rpm -i.
 
-DEB package is created similarly. First go to the directory test/packaging
-and then run ./create-hip-us-deb. The resulting package file is placed into
-the same directory. The package can be installed using dpkg, e.g. "dpkg -i
-hipl-userspace_1.0-1_i386.deb".
+For more info about rpm packaging, please see:
+
+http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
+http://fedoranews.org/tchung/htmldoc/htmldoc.spec
+
+Debian
+------
+
+DEB package is created similarly: "./autogen && ./configure && make
+deb".
+The result is both binary and source debian packages:
+- Binary
+Binary Debian package can be found in test/packaging/ directory
+with the following name: hipl-1.0-1_i386.deb.
+The package can be installed using dpkg, e.g. "dpkg -i
+hipl-1.0-1_i386.deb".
+- Source
+Debian source package is made of three files which are:
+
+	hipl-1.0.diff.gz
+	hipl-1.0.dsc
+	hipl-1.0.orig.tar.gz
+
+and can be found under directory test/packaging/hipl-1.0-deb-src/
+
+
+HOW TO CREATE KERNEL PACKAGES
+=============================
+
+Debian/Ubuntu
+-------------
+
+To create the package from vanilla sources for Debian distribution
+or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
+follow the following instructions.
+
+* Download and extract the vanilla kernel source (I got it from
+(ftp://ftp.funet.fi/pub/linux/kernel/v2.6)
+I extract it to /usr/src and I added my username to src group
+by typing adduser my_username src
+* cd linux-2.6.xx
+* Patch the kernel with the hip patches you can find under hipl/patches directory
+* cp /boot/config-something .config
+
+In order to build the binary package type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
+
+Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
+
+After the kernel has been successfully compiled, you will find the
+debian packages in the top directory.
+
+To install it type:
+dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
+and reboot. The debian package should already include the new 
+installed kernel for grub.
+If you need grub check this:
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
+
+Main reference (.)
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html
+
+
+Redhat notes
+------------
+
+The instructions below did not work anymore. Instead, I followed these
+instructions:
+
+http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
+see: test/packaging/kernel-2.6.17.14.spec 
+
+To create the package from vanilla sources (preferred method) for
+Fedora, follow the instructions of this document:
+
+http://www.openvps.org/Plone/docs/developer/kernelrpm
+http://www.fedoraforum.org/forum/archive/index.php/t-28290.html
+
+In short:
+* download and extract kernel sources
+* cd linux-2.6.xx
+* apply hip patches
+* cp /boot/config-something .config
+* make rpm # or bin-rpm??
+
+To install, do this:
+* rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
+* /sbin/new-kernel-pkg --mkinitrd --depmod --install --make-default 2.6.xx
+
+NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
+THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
+
+That will create and install vanilla rpm. However, if you want to use
+the Fedora/Redhat patches to improve e.g. hardware support, use the
+instructions below.
+
+To create rpm for Fedora patched kernel, you need to download the
+kernel from somewhere from here:
+
+  http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
+
+For RH/Enterprise, you need to have an account on rhn.redhat.com to
+get the latest packages. Browse/and search the channels list.
+
+I basically followed these instructions:
+
+  http://tqmcube.com/fc3_custom_kernel.htm
+
+This is what I did:
+
+  * rpm -ivh kernel-2.6.10-1.760_FC3.src.rpm
+  * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
+    patches:
+
+     %define rhbsys .beet
+
+     # HIPL patches
+     Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
+     Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
+     Patch192: policy-sleep-2.6.16.5-v2.patch
+     Patch193: hipmod-2.6.16.5-v1.patch 
+     # HIP patches
+     %patch190 -p1
+     %patch191 -p1
+     %patch192 -p1
+     %patch193 -p1
+
+   * copied the patches to /usr/src/redhat/SOURCES
+   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
+
+UPGRADING THE KERNEL - DEPRACATED
+=================================
+
+# note: there is a perl script called "hashline" diff which is more
+# convinient to use in upgrading the kernel (to check for added/deleted
+# files)
+
+% <get the patch to ~/down>
+% cd hipl--fix--2.6/linux
+% patch -p1 <~/down/patch-2.6.7 2>&1| tee /tmp/PATCH_LOG
+% grep ^patching /tmp/PATCH_LOG|cut -d' ' -f3 >/tmp/CHANGES
+% for i in `cat /tmp/CHANGES`; do tla id $i 2>&1; done >/tmp/TLA_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_LOG`
+% tla delete `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+  (/error finding file id \(2: No such file or directory\)/)' \
+    </tmp/TLA_LOG|cut -d' ' -f3`
+% find . -type d|grep -v .arch-ids >/tmp/LINUX_DIRS
+% for i in `cat /tmp/LINUX_DIRS`; do tla id $i 2>&1; done
+    >/tmp/TLA_DIR_LOG
+% tla add `perl -ne 'print "$_" if ($n); $n=0; $n=1 if
+    (/id: untagged file/)' </tmp/TLA_DIR_LOG`
+
+Check HUNK messages from PATCH_LOG manually.

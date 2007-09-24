@@ -40,15 +40,16 @@ static int addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
  */
 static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx) 
 {
-	cl_buf* clb = (cl_buf *)data;
 	struct hip_common *hip_common;
 	struct hip_work_order *hwo;
 	struct sockaddr_in6 src, dst;
 	struct hi3_ipv4_addr *h4;
 	struct hi3_ipv6_addr *h6;
 	int family, l, type;
+	cl_buf* clb = (cl_buf *)data;
 	char *buf = clb->data;
 	int len = clb->data_len;
+	hip_portpair_t msg_info;
 
 	/* First check the hi3 address header */
 
@@ -62,6 +63,8 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 	if (family == 0) goto out_err;
 	len -= l;
 	buf += l;
+
+	HIP_ASSERT(src.sin6_family == dst.sin6_family);
 
 	/* See if there is at least the HIP header in the packet */
         if (len < sizeof(struct hip_common)) {
@@ -86,64 +89,14 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 		HIP_ERROR("HIP packet is invalid\n");
 		goto out_err;
 	}
+	
+	memset(&msg_info, 0, sizeof(msg_info));
 
-	hwo = hip_init_job(GFP_ATOMIC);
-	if (!hwo) {
-		HIP_ERROR("No memory, dropping packet\n");
+	if (hip_receive_control_packet(hip_common, hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
+				       &msg_info, 0)) {
+		HIP_ERROR("HIP packet processsing failed\n");
 		goto out_err;
 	}
-
-	hwo->hdr.type = HIP_WO_TYPE_INCOMING;
-	len = hip_get_msg_total_len(hip_common);
-        hwo->msg = malloc(len);
-	if (!hwo->msg) {
-		HIP_ERROR("No memory, dropping packet\n");
-		HIP_FREE(hwo);
-		goto out_err;
-	}
-	
-	memcpy(hwo->msg, hip_common, len);
-
-	/* should we do some early state processing now?
-	 * we could prevent further DoSsing by dropping
-	 * illegal packets right now.
-	 */
-	
-        /* We need to save the addresses because the actual input handlers
-	   may need them later */
-	memcpy(&hwo->hdr.src_addr, SA2IP(&src), SAIPLEN(&src));
-	memcpy(&hwo->hdr.dst_addr, SA2IP(&dst), SAIPLEN(&dst));
-
-	type = hip_get_msg_type(hip_common);
-	HIP_DEBUG("Received HIP %s packet\n", hip_msg_type_str(type));
-        switch(type) {
-	case HIP_I1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I1;
-		break;
-	case HIP_R1:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R1;
-		break;
-	case HIP_I2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_I2;
-		break;
-	case HIP_R2:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_R2;
-		break;
-	case HIP_UPDATE:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_UPDATE;
-		break;
-	case HIP_NOTIFY:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_NOTIFY;
-		break;
-	case HIP_BOS:
-		hwo->hdr.subtype = HIP_WO_SUBTYPE_RECV_BOS;
-		break;
-	default:
-		HIP_FREE(hwo);
-		return;
-        }
-
-        hip_insert_work_order_cpu(hwo, 0);
 
  out_err:
 	cl_free_buf(clb);

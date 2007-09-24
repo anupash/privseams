@@ -1,0 +1,39 @@
+statusbarpanel#showip_status {
+/*	min-width: 12ex !important;
+	width: 12ex !important; */
+	-moz-binding: url("chrome://ipv6ident/content/ipv6ident.xml#statusbarpanel") !important;
+}
+
+#urlbar[level="hip"] > .autocomplete-textbox-container {
+        background-color: #D2E6FF; 
+        color: #000000;
+}
+
+#security-button[level="hip"] {
+        list-style-image: url("chrome://ipv6ident/content/Secure2.png");
+        -moz-image-region: rect(36px, 18px, 54px, 0px);
+        display: -moz-box;
+}
+
+#urlbar[level="hip"] #lock-icon {
+	-moz-image-region: rect(0px, 18px, 18px, 0px);
+	list-style-image: url("chrome://ipv6ident/content/Secure2.png");
+}
+
+/*
+label#showip_status_text {
+	color: black;
+}
+
+label#showip_status_text[status="unknown"] {
+	color: black;
+}
+
+label#showip_status_text[status="ipv4"] {
+	color: red;
+}
+
+label#showip_status_text[status="ipv6"] {
+	color: green;
+}
+*/

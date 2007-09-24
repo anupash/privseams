@@ -17,7 +17,6 @@
 #include <errno.h>
 #include <string.h>
 
-#include "hip.h"
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
@@ -25,10 +24,19 @@
 #include "linux/netlink.h"
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
+#include "icomm.h"
+
+#include "agent.h"
 #include "debug.h"
-#include "agent_tools.h"
-#include "hit_db.h"
+#include "tools.h"
+#include "hitdb.h"
 #include "gui_interface.h"
+
+
+/******************************************************************************/
+/* DEFINES */
+#define CONNHIPD_IN		0
+#define CONNHIPD_OUT	1
 
 
 /******************************************************************************/
@@ -43,7 +51,8 @@ extern "C" {
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
 int connhipd_sendto_hipd(char *, size_t);
-int connhipd_thread(void *);
+int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
+void *connhipd_thread(void *);
 void connhipd_quit(void);
 
 

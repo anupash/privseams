@@ -25,7 +25,6 @@ char *getwithoutnewline(char *buffer, int count, FILE *f) {
   return result;
 }
 
-
 /*
  * Checks if a string contains a particular substring.
  *
@@ -66,7 +65,6 @@ void extractsubstrings(char *string, List *list) {
   sub_string = strtok(string, separator);
   _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
   if(sub_string)
-
     insert(list, sub_string);
   else 
     return;
@@ -76,7 +74,6 @@ void extractsubstrings(char *string, List *list) {
     insert(list, sub_string);
     sub_string = NULL;
   }
-  
 }
 
 /*
@@ -108,7 +105,7 @@ void findkeyfiles(char *path, List *files) {
             findsubstring(entry->d_name, ".pub") &&    
 	    //!findsubstring(entry->d_name, ".pub") && original
 	    findsubstring(entry->d_name, "hip_host_")) {
-	  HIP_DEBUG("findkeyfiles: Public key file: %s \n",entry->d_name);
+	  _HIP_DEBUG("findkeyfiles: Public key file: %s \n",entry->d_name);
 	  insert(files, entry->d_name);
 	  
 	}

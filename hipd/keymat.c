@@ -3,8 +3,9 @@
  *  
  * Licence: GNU/GPL
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Kristian Slavov <ksl@iki.fi>
+ * - Tobias Heer <heer@tobibox.de>
  *
  */
 
@@ -46,7 +47,7 @@ u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
 	*(cur) = 1;
 	cur += sizeof(u8);
 
-	HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
+	_HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
 
 	return buffer;
 }
@@ -64,14 +65,14 @@ void hip_update_keymat_buffer(u8 *keybuf, u8 *Kold, size_t Kold_len,
 
 /**
  * hip_make_keymat - generate HIP keying material
- * @kij:     Diffie-Hellman Kij (as in the HIP drafts)
- * @kij_len: the length of the Kij material
- * @keymat:  pointer to a keymat structure which will be updated according
+ * @param kij Diffie-Hellman Kij (as in the HIP drafts)
+ * @param kij_len the length of the Kij material
+ * @param keymat pointer to a keymat structure which will be updated according
  *           to the generated keymaterial
- * @dstbuf:  the generated keymaterial will be written here
- * @hit1:    source HIT
- * @hit2:    destination HIT
- * @calc_index: where the one byte index is stored (n of Kn)
+ * @param dstbuf the generated keymaterial will be written here
+ * @param hit1 source HIT
+ * @param hit2 destination HIT
+ * @param calc_index where the one byte index is stored (n of Kn)
  *
  */
 void hip_make_keymat(char *kij, size_t kij_len,
@@ -167,11 +168,11 @@ void hip_make_keymat(char *kij, size_t kij_len,
 
 /**
  * hip_keymat_draw - draw keying material
- * @keymat: pointer to the keymat structure which contains information
+ * @param keymat pointer to the keymat structure which contains information
  *          about the actual
- * @length: size of keymat structure
+ * @param length size of keymat structure
  *
- * Returns: pointer the next point where one can draw the next keymaterial
+ * @return pointer the next point where one can draw the next keymaterial
  */
 void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 {
@@ -191,15 +192,34 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 	return ret;
 }
 
+/**
+ * hip_keymat_draw_and_copy - draw keying material and copy it to the given buffer
+ * @param dst destination buffer
+ * @param keymat pointer to the keymat structure which contains information
+ *          about the actual
+ * @param length size of keymat structure
+ *
+ * @return pointer the next point where one can draw the next keymaterial
+ */
+int hip_keymat_draw_and_copy(char *dst,
+			     struct hip_keymat_keymat *keymat, 
+			     int len){
+	int err  = 0;
+	void *p = hip_keymat_draw(keymat, len);
+	HIP_IFEL(!p, -EINVAL, "Could not draw from keymat\n");
+	memcpy(dst, p, len);
+out_err:
+	return err;
+}
 /** hip_keymat_get_new - calculate new keying material
- * @key: buffer where the created KEYMAT is stored
- * @key_len: length of @key in bytes
- * @kij: Kij, shared key
- * @kij_len: length of @kij in bytes
- * @keymat_index: Keymat Index
- * @calc_index: the one byte index value
- * @calc_index_keymat: Kn
- * @Kn_is_at: the byte offset where @calc_index_keymat starts
+ * @param key buffer where the created KEYMAT is stored
+ * @param key_len length of @key in bytes
+ * @param kij Kij, shared key
+ * @param kij_len length of @kij in bytes
+ * @param keymat_index Keymat Index
+ * @param calc_index the one byte index value
+ * @param calc_index_keymat Kn
+ * @param Kn_is_at the byte offset where @calc_index_keymat starts
  *
  * This function gets next @key_len bytes of KEYMAT to @key starting
  * from requested offset @keymat_index. On entry of this function
@@ -212,7 +232,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
  * @calc_index_keymat contains the last Kn, and @Kn_is_at contains the
  * byte offset value of @calc_index_keymat.
  *
- * Returns: 0 on success, < 0 otherwise.
+ * @return 0 on success, < 0 otherwise.
 */
 int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		       uint16_t *keymat_index, uint8_t *calc_index,
@@ -334,10 +354,10 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 
 
 /** hip_update_entry_keymat - update HADB's KEYMAT related information
- * @entry: HADB entry to be update
- * @new_keymat_index: new Keymat Index value
- * @new_calc_index: new one byte value
- * @new_current_keymat: Kn related to @new_calc_index
+ * @param entry HADB entry to be update
+ * @param new_keymat_index new Keymat Index value
+ * @param new_calc_index new one byte value
+ * @param new_current_keymat Kn related to @new_calc_index
  *
  */
 void hip_update_entry_keymat(struct hip_hadb_state *entry, 

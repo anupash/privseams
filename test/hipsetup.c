@@ -1,4 +1,4 @@
-#include "hipsetupNew.h"
+#include "hipsetup.h"
 
 extern char *optarg;
 extern int optind, opterr, optopt;
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 
-			err = hip_send_daemon_info(msg);
+			err = hip_send_daemon_info_wrapper(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;
@@ -75,12 +75,12 @@ int main(int argc, char *argv[])
 			else
 				peer_name = optarg;
 			sprintf(buf, "%d",DEFAULT_PORT);
-			main_client_gai(IPPROTO_TCP, SOCK_STREAM, peer_name, buf);
+			main_client_gai(SOCK_STREAM, peer_name, buf, AI_HIP);
 			break;
 		case 'r':
 			printf("Responder mode\n");
 			/* Base Exchange Responder */
-			main_server(IPPROTO_TCP, DEFAULT_PORT);
+			main_server(SOCK_STREAM, DEFAULT_PORT);
 			break;
 		case 's':
 			/* Base Exchange SSH  */
@@ -90,14 +90,14 @@ int main(int argc, char *argv[])
 			/* BOS  */
 			printf("BOS\n");
 #if 0
-			HIP_IFEL(handle_bos(msg, 0, (const char **) NULL, 0), -1, "Failed to handle BOS\n");
+			HIP_IFEL(hip_conf_handle_bos(msg, 0, (const char **) NULL, 0), -1, "Failed to handle BOS\n");
 
 			/* hipconf new hi does not involve any messages to kernel */
 			HIP_IFE((hip_get_msg_type(msg)), -1);
 
 			HIP_IFEL(hip_send_daemon_info(msg), -1, "Sending msg failed\n");
 #endif
-			err = handle_bos(msg, 0, (const char **) NULL, 0);
+			err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
 			if (err) {
 				HIP_ERROR("failed to handle msg\n");
 				goto out_err;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 			if (hip_get_msg_type(msg) == 0)
 				goto out_err;
 			
-			err = hip_send_daemon_info(msg);
+			err = hip_send_recv_daemon_info(msg);
 			if (err) {
 				HIP_ERROR("sending msg failed\n");
 				goto out_err;

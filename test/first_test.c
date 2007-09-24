@@ -50,7 +50,7 @@ int send_bos()
 	hip_msg_init(msg);
 
 	printf("Sending BOS... ");
-	err = handle_bos(msg, 0, (const char **) NULL, 0);
+	err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
 	if (err) {
 		HIP_ERROR("\nfailed to handle msg\n");
 		goto out_err;
@@ -61,7 +61,7 @@ int send_bos()
 		goto out_err;
 	}
 	
-	err = hip_send_daemon_info(msg);
+	err = hip_send_recv_daemon_info(msg);
 	if (err) {
 		HIP_ERROR("\nsending msg failed\n");
 		goto out_err;
@@ -128,7 +128,6 @@ int handle_single_connection()
 	hints.ai_flags = AI_HIP | AI_PASSIVE;
 	hints.ai_family = AF_INET6; /* Legacy API supports only HIT-in-IPv6 */
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
 	sprintf(buf, "%d",DEFAULT_PORT);
 	err = getaddrinfo(NULL, buf, &hints, &res);
 
@@ -175,7 +174,7 @@ int handle_single_connection()
 				hip_set_logtype(LOGTYPE_STDERR);
 				hip_set_logfmt(LOGFMT_SHORT);
 
-				sock = hip_connect_func(IPPROTO_TCP, res, "/tmp/results.txt");
+				sock = hip_connect_func(res, "/tmp/results.txt");
 				if (sock)
 					close(sock);
 				
@@ -186,7 +185,7 @@ int handle_single_connection()
 				/* my_hit is smaller ---> I am the responder */
 				printf("Responder mode ...\n");
 
-				serversock = create_serversocket(IPPROTO_TCP, DEFAULT_PORT);
+				serversock = create_serversocket(SOCK_STREAM, DEFAULT_PORT);
 				/* Base Exchange Responder */
 				peer = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
 				if (peer < 0) {

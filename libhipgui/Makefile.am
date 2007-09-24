@@ -1,24 +1,28 @@
-## Makefile.am for HIP GUI
-AM_CFLAGS = $(hipl_common_cflags) -O0
+## Makefile.am for HIP GTK GUI
+AUTOMAKE_OPTIONS = foreign
 
-GTKCFLAGS  = `pkg-config gtk+-2.0 --cflags`
-GTKLDADD   = `pkg-config gtk+-2.0 --libs`
-GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
-GOBJECTLDADD  = `pkg-config --cflags --libs gobject-2.0`
+CFLAGS = $(hipl_common_cflags)
 
-include_HEADERS = 
+if HIP_AGENT
+
+libhipgui_adir = $(pkgdatadir)/libhipgui
 
 noinst_LIBRARIES = libhipgui.a
 
-libhipgui_a_SOURCES = gui_event.c gui_main.c gui_manage.c
+include_HEADERS = create.h  dragndrop.h  events.h  hipgui.h  tools.h  widgets.h
 
-#libhipgui_a_CFLAGS = $(CFLAGS) @GTK_CFLAGS@
-libhipgui_a_CFLAGS = $(CFLAGS) $(GTKCFLAGS) $(GTHREADLDADD) $(GOBJECTLDADD)
+libhipgui_a_SOURCES = hipgui.c widgets.c tools.c events.c create.c dragndrop.c
 
-INCLUDES = $(hipl_common_include_paths)
-#INCLUDES += -I$(HIPL_AGENT) @GTK_CFLAGS@
-INCLUDES += -I$(HIPL_AGENT) $(GTKCFLAGS)
+libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
+LIBADD = @GTK_LIBS@
+#libhipgui_a_CFLAGS = $(CFLAGS) -DHIP_GUI_DATADIR=\"$(pkgdatadir)/libhipgui\"
+
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_AGENT) @GTK_CFLAGS@
+
+endif
 
 tags:
 	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
 
+install:
+	cp hipmanager.png /usr/share/pixmaps/hipmanager.png
