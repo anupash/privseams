@@ -54,7 +54,7 @@ const char *hipconf_usage =
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 #endif
-"interfamily on|off\n"
+"locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
 ;
@@ -126,7 +126,7 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
-        else if (!strcmp("interfamily", text))
+        else if (!strcmp("locator", text))
                 ret = ACTION_INTERFAMILY; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;

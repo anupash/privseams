@@ -439,10 +439,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                                sizeof(struct in6_addr));
                         memcpy(&addr.address, &locator_address_item->address,
                                sizeof(struct in6_addr));
-                        /*
                         HIP_IFEL(hip_update_peer_preferred_address(entry, addr),-1,
                                  "Setting peer preferred address failed\n");
-                        */
+                        
                         goto out_of_loop;
                     }
                 }
@@ -1326,7 +1325,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, struct hip_common *msg,
 				      hip_get_param_contents_len(echo), 0, 0),
 		 -1, "Building of ECHO_RESPONSE failed\n");
 
-	HIP_DEBUG("Sending reply UPDATE packet (address check).\n");
+	HIP_DEBUG("Sending ECHO RESPONSE/UPDATE packet (address check).\n");
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(dst_ip, src_ip,
 			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1778,6 +1777,9 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 
 	/* @todo: enabling 1s makes hard handovers work, but softhandovers
 	   fail */
+        /* modified the if 0/1s do only ones hip_delete_hit_sp_pair and
+           twice hip_delete_sa (one for each direction) 
+           similarly in the creation -samu */
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
@@ -1785,12 +1787,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 		      AF_INET6, 0, (int)entry->peer_udp_port);
 #endif
 
-#if 1
+#if 0
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+#endif 
 
 	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
-#endif
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       &local_addr, &addr->address,
@@ -1807,10 +1809,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
+#if 0
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
+#endif
 
 	HIP_IFEL(hip_add_sa(&addr->address, &local_addr, 
 			    &entry->hit_peer, 
@@ -1864,9 +1868,10 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 				addr->address_state = PEER_ADDR_STATE_ACTIVE;
 				HIP_DEBUG("Changing Security Associations for the new peer address\n");
-				
+				/*
 				HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
-					       "Error while changing SAs for mobility\n");	
+					       "Error while changing SAs for mobility\n");
+                                */
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred)
 				{
@@ -2152,9 +2157,9 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
-
+#if 0
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
-
+#endif
 	/* @todo: check that this works with the pfkey api */
 	hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
 			      (int)entry->peer_udp_port, 0);
@@ -2182,11 +2187,12 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
+#if 0 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
 				       daddr, new_pref_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 			"Setting up SP pair failed\n");
-
+#endif
 
 	HIP_IFEL(hip_add_sa(daddr, new_pref_addr, 
 			    &entry->hit_peer, 

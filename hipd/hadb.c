@@ -1679,8 +1679,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
             //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-		/* Don't do this -samu*/
-            //  ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+              ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
