@@ -270,7 +270,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_DEBUG("Removed kea base entries.\n");	
 		}
 		/** @todo Not filtering I1, when handling escrow user message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, server_entry),
 			 -1, "sending i1 failed\n");
 		break;
 		
