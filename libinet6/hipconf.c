@@ -236,7 +236,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RST;
 	else if	(strcmp("nat",argv[1])==0) 
 		ret = TYPE_NAT;
-        else if (strcmp("interfamily", argv[1])==0)
+        else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_INTERFAMILY;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
