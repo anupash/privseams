@@ -439,8 +439,10 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                                sizeof(struct in6_addr));
                         memcpy(&addr.address, &locator_address_item->address,
                                sizeof(struct in6_addr));
+                        /*
                         HIP_IFEL(hip_update_peer_preferred_address(entry, addr),-1,
                                  "Setting peer preferred address failed\n");
+                        */
                         goto out_of_loop;
                     }
                 }
