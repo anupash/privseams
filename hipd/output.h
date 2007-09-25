@@ -30,6 +30,7 @@
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern int hip_nat_status;
+extern int hip_interfamily_status;
 
 enum number_dh_keys_t { ONE, TWO };
 
