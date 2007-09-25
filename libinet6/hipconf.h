@@ -100,6 +100,7 @@
 #define ACTION_DEBUG 16
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
+#define ACTION_INTERFAMILY 19
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -115,7 +116,6 @@
 #define TYPE_SERVICE 	10
 #define TYPE_CONFIG     11
 #define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-/* 3 points below for DHT TTL/GET/GW */
 #define TYPE_TTL        13
 #define TYPE_GW         14
 #define TYPE_GET        15
@@ -123,7 +123,8 @@
 #define TYPE_HA         17
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
-#define TYPE_DAEMON		20
+#define TYPE_DAEMON     20
+#define TYPE_INTERFAMILY 21
 #define TYPE_MAX    	22 /* exclusive */
 
 /* for handle_hi() only */
@@ -158,6 +159,7 @@ int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_interfamily(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);

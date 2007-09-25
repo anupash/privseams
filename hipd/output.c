@@ -1,4 +1,5 @@
 
+
 /** @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
@@ -202,10 +203,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if ((err = hip_build_locators(msg)) < 0) 
-            HIP_DEBUG("LOCATOR parameter building failed\n");
-        _HIP_DUMP_MSG(msg);
-
+        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+            HIP_DEBUG("Building LOCATOR parameter\n");
+            if ((err = hip_build_locators(msg)) < 0) 
+                HIP_DEBUG("LOCATOR parameter building failed\n");
+            _HIP_DUMP_MSG(msg);
+        }
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 

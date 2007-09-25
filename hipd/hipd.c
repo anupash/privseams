@@ -61,7 +61,14 @@ char opendht_response[1024];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
- 
+
+/* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
+#ifdef CONFIG_HIP_INTERFAMILY
+int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+#else
+int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+#endif 
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).

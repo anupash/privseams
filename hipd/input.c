@@ -781,9 +781,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if ((err = hip_build_locators(i2)) < 0) 
-            HIP_DEBUG("LOCATOR parameter building failed\n");
-
+        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+            HIP_DEBUG("Building LOCATOR parameter\n");
+            if ((err = hip_build_locators(i2)) < 0) 
+                HIP_DEBUG("LOCATOR parameter building failed\n");
+        }
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;

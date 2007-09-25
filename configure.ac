@@ -238,7 +238,7 @@ AC_ARG_ENABLE(interfamily,
                             [Interfamily handover support (default is NO)]),
              [ac_cv_use_interfamily=$enableval], [ac_cv_use_interfamily=no])
 AC_CACHE_CHECK([whether to use interfamily],
-               [ac_cv_use_interfamily], [ac_cv_use_interfamily=yes])
+               [ac_cv_use_interfamily], [ac_cv_use_interfamily=no])
 if test x"$ac_cv_use_interfamily" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_INTERFAMILY, AC_PREREQ(2.53))
 fi
