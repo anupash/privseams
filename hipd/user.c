@@ -84,10 +84,14 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
         case SO_HIP_SET_INTERFAMILY_ON:
                 HIP_DEBUG("Setting INTERFAMILY ON\n");
                 hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
+                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_ON);
                 break;
         case SO_HIP_SET_INTERFAMILY_OFF:
                 HIP_DEBUG("Setting INTERFAMILY OFF\n");
                 hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
+                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
+                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_OFF);
                 break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
