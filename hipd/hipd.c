@@ -66,7 +66,7 @@ int opendht_serving_gateway_ttl = OPENDHT_TTL;
 #ifdef CONFIG_HIP_INTERFAMILY
 int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
 #else
-int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
 #endif 
 
 /* We are caching the IP addresses of the host here. The reason is that during
