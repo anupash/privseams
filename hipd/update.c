@@ -1787,7 +1787,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 		      AF_INET6, 0, (int)entry->peer_udp_port);
 #endif
 
-#if 0
+#if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif 
 
@@ -1809,7 +1809,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 			    entry->peer_udp_port ), -1, 
 			   "Error while changing outbound security association for new peer preferred address\n");
 	
-#if 0
+#if 1
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
@@ -2157,7 +2157,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
-#if 0
+#if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
 	/* @todo: check that this works with the pfkey api */
@@ -2187,7 +2187,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
-#if 0 
+#if 1
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
 				       daddr, new_pref_addr,
 				       IPPROTO_ESP, 1, 0), -1,
