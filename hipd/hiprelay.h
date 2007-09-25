@@ -16,6 +16,7 @@
 #include <openssl/lhash.h> /* For LHASH. */
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
+#include <math.h> /* For pow() */
 #include "hashtable.h" /* For hip hashtable commons. */
 #include "misc.h" /* For hip_hash_hit and hip_match_hit. */
 
@@ -143,17 +144,19 @@ void hip_relht_maintenance();
 /**
  * Allocates a new relay record.
  * 
- * @param hit_r a pointer to Responder (relay client) HIT.
- * @param ip_r  a pointer to Responder (relay client) IP address.
- * @param mode  the encapsulation mode of this record.
- * @param port  Responder's UDP port.
- * @return      a pointer to a new relay record, or NULL if failed to allocate.
- * @note        All records to be put in the hashtable should be created with this
- *              function.
- * @note        After calling this function, you should set the appropriate encapsulation
- *              mode for the @c record with hip_relrec_set_mode().
+ * @param tyoe     the type of this relay record (RVS or HIPUDP).
+ * @param lifetime the lifetime of this relayrecord as defined in registration
+ *                 draft.
+ * @param hit_r    a pointer to Responder (relay client) HIT.
+ * @param ip_r     a pointer to Responder (relay client) IP address.
+ * @param port     responder's UDP port.
+ * @return         a pointer to a new relay record, or NULL if failed to
+ *                 allocate.
+ * @note           All records to be put in the hashtable should be created with
+ *                 this function.
  */
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
+			       const uint8_t lifetime,
 			       const in6_addr_t *hit_r, const hip_hit_t *ip_r,
 			       const in_port_t port,
 			       const hip_crypto_key_t *hmac,
@@ -174,13 +177,13 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type);
 
 /**
- * Sets the lifetime of a relay record. 
+ * Sets the lifetime of a relay record.
+ * The service lifetime is set to 2^((lifetime - 64)/8) seconds.
  * 
- * @param rec  a pointer to a relay record. 
- * @param secs the lifetime in seconds. 
+ * @param rec      a pointer to a relay record. 
+ * @param lifetime the lifetime of the above formula. 
  */
-void hip_relrec_set_lifetime(hip_relrec_t *rec, const time_t secs);
-
+void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime);
 
 /**
  * Sets the UDP port number of a relay record. 

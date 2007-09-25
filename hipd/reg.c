@@ -299,6 +299,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      struct hip_reg_request *reg_request = NULL;
      hip_service_t *service = NULL;
      int err = 0, accepted_count = 0, rejected_count = 0, type_count = 0;
+     int request_got_rejected = 0;
      uint8_t lifetime = 0;
      uint8_t *values = NULL;
      
@@ -327,16 +328,22 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
 	       lifetime, type_count);
      
+     /* Check if we already have an relay record for the given HIT. */
+     hip_relrec_t dummy, *fetch_record = NULL;
+     memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+     fetch_record = hip_relht_get(&dummy);
+
      /* Cancelling a service. draft-ietf-hip-registration-02:
 	"A zero lifetime is reserved for canceling purposes. .. A registrar
 	SHOULD respond and grant a registration with a zero lifetime."
 	Not a word about failed cancellations, so we won't be sending any
 	REG_FAILED parameters. -Lauri 21.09.2007 21:23*/
+
+     /* Cancellation is not tested! */
      if(lifetime == 0)
      {
 	  HIP_DEBUG("Client is cancelling registration.\n");
 	  int i = 0;
-	  hip_relrec_t dummy;
 	  
 	  for(; i < type_count; i++)
 	  {
@@ -347,30 +354,37 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_INFO("Client is trying to cancel an service (%u) "\
 			     "that we do not have in our services database. "\
 			     "Cancellation REJECTED.\n", values[i]);
+		    rejected_requests[rejected_count] = values[i];
+		    rejected_count++;
 		    continue;
-	       } else
-	       {
-		    HIP_INFO("Registration cancellation failed.\n");
 	       }
+	       
 	       /* We could do the cancellation via each services
 		  cancel_registration functionpointer inside the above else
 		  branch. However, since the registration extension is
 		  unfinished in this respect, we handle the cancellation using
 		  the switch below. -Lauri 21.09.2007 21:32 */
+	       request_got_rejected = 0;
+
 	       switch(values[i])
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
 		    HIP_INFO("Client is cancelling rendezvous service.\n");
 		    
-		    memcpy(&(dummy.hit_r), &(entry->hit_peer),
-			   sizeof(entry->hit_peer));
-		    hip_relht_rec_free(&dummy);
-		    /* Check that the element really got deleted. */
-		    if(hip_relht_get(&dummy) == NULL)
+		    if(fetch_record != NULL && fetch_record->type == HIP_RVSRELAY)
 		    {
-			 HIP_DEBUG("Deleted a relay record.\n");
-			 accepted_requests[accepted_count] = values[i];
-			 accepted_count++; 
+			 hip_relht_rec_free(&dummy);
+			 /* Check that the element really got deleted. */
+			 if(hip_relht_get(&dummy) == NULL)
+			 {
+			      HIP_DEBUG("Deleted a relay record.\n");
+			 } else
+			 {
+			      request_got_rejected = 1;
+			 }
+		    } else
+		    {
+			 request_got_rejected = 1;
 		    }
 		    break;
 	       case HIP_SERVICE_ESCROW:
@@ -378,29 +392,36 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 			     "service.\n");
 		    if(service->cancel_registration(&entry->hit_peer) == 0)
 		    {
-			 accepted_requests[accepted_count] = values[i];
-			 accepted_count++; 
+			 HIP_DEBUG("Cancelled escrow service.\n");
+		    } else
+		    {
+			 request_got_rejected = 1;
 		    }
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_HIP:
 		    HIP_INFO("Client is cancelling registration to UDP relay"\
 			     "for HIP packets service.\n");
-		    
-		    memcpy(&(dummy.hit_r), &(entry->hit_peer),
-			   sizeof(entry->hit_peer));
-		    hip_relht_rec_free(&dummy);
-		    /* Check that the element really got deleted. */
-		    if(hip_relht_get(&dummy) == NULL)
+		    if(fetch_record != NULL && fetch_record->type == HIP_RVSRELAY)
 		    {
-			 HIP_DEBUG("Deleted a relay record.\n");
-			 accepted_requests[accepted_count] = values[i];
-			 accepted_count++; 
+			 hip_relht_rec_free(&dummy);
+			 /* Check that the element really got deleted. */
+			 if(hip_relht_get(&dummy) == NULL)
+			 {
+			      HIP_DEBUG("Deleted a relay record.\n");
+			 } else
+			 {
+			      request_got_rejected = 1;
+			 }
+		    } else
+		    {
+			 request_got_rejected = 1;
 		    }
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_ESP:
 		    HIP_INFO("Client is cancelling registration to UDP relay "\
 			     "for ESP packets service.\n");
 		    /* Alas, we do not support UDP ESP relay yet. :( */
+		    request_got_rejected = 1;
 		    break;
 	       default:
 		    /* We should never come here, since the registration
@@ -408,6 +429,19 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_ERROR("Client is trying to cancel  an service (%u) "\
 			      "that we do not support. "\
 			      "Cancellation REJECTED.\n", values[i]);
+		    request_got_rejected = 1;
+	       }
+	       /* By this far we know whether the request got accepted or
+		  rejected. Lets store the type value. */
+	       if(!request_got_rejected)
+	       {
+		    accepted_requests[accepted_count] = values[i];
+		    accepted_count++;
+	       }
+	       else
+	       {
+		    rejected_requests[rejected_count] = values[i];
+		    rejected_count++;
 	       }
 	  }
      }
@@ -416,10 +450,17 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      else
      {
 	  HIP_DEBUG("Client is registrating for new services.\n");
-	  int i = 0;
+	  /* Since the RVS and HIP relay services cannot co-exist for a single
+	     client HIT, we must accept only one of those services per
+	     REG_REQUEST. Also, if there already is a RVS service and client
+	     tries to register to UDP relay (or vice versa), we must not allow
+	     the registration. The client is required to cancel the previous
+	     service first. If the client tries to re-register to an existing
+	     service, we delete the old entry and insert a new one. */
+	  int i = 0, rr_already_inserted = 0;
 	  lifetime = hip_get_acceptable_lifetime(lifetime);
 	  hip_relrec_t *relay_record = NULL;
-
+	  
 	  for(; i < type_count; i++)
 	  {
 	       /* Check if we have the requested service in our services. */
@@ -431,6 +472,7 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 			     "Registration REJECTED.\n", values[i]);
 		    rejected_requests[rejected_count] = values[i];
 		    rejected_count++;
+		    HIP_DEBUG("Registration rejected (0).\n");
 		    continue;
 	       }
 	       /* @todo Handle registration using each services
@@ -439,35 +481,52 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		  create a state in each individual service indicating the state
 		  of the registration process.
 		  -Lauri 21.09.2007 22:25 */
+
+	       request_got_rejected = 0;
+
 	       switch(values[i])
 	       {
 	       case HIP_SERVICE_RENDEZVOUS:
 		    HIP_INFO("Client is registering to rendezvous service.\n");
-		    
-		    /* Lauri: Huomiseen - poista relay UDP eka. */
-
-		    /* Don't now should we take the peer HIT from the entry, or
-		       the I2 packet. Using the entry for now.*/
-		    relay_record =
-			 hip_relrec_alloc(HIP_RVSRELAY,
-					  &(entry->hit_peer),
-					  &(entry->preferred_address),
-					  entry->peer_udp_port,
-					  &(entry->hip_hmac_in),
-					  entry->hadb_xmit_func->hip_send_pkt);
-		    hip_relht_put(relay_record);
-		    /* Check that the element really is in the hashtable. */
-		    if(hip_relht_get(relay_record) != NULL)
+		    /* Check if a relay record already exists. If it exists,
+		       we must not replace a FULLRELAY to RVS. The client must
+		       cancel the RVS first*/
+		    if(fetch_record != NULL && fetch_record->type == HIP_FULLRELAY)
 		    {
-			HIP_DEBUG("Inserted a new relay record.\n");
-			accepted_requests[accepted_count] = values[i];
-			accepted_count++; 
-		    } else
-		    {    /* The put was unsuccessful. */
-			 if(relay_record != NULL)
-			      free(relay_record);
-			 rejected_requests[rejected_count] = values[i];
-			 rejected_count++;
+			 request_got_rejected = 1;
+			 HIP_DEBUG("Registration rejected (1).\n");
+		    }
+		    /* Check that we have not inserted a service for this
+		       REG_REQUEST. This is needed, if the client sends a
+		       request with multiple equal type values. */
+		    else if(rr_already_inserted == 0){
+			 relay_record =
+			      hip_relrec_alloc(HIP_RVSRELAY,
+					       lifetime,
+					       &(entry->hit_peer),
+					       &(entry->preferred_address),
+					       entry->peer_udp_port,
+					       &(entry->hip_hmac_in),
+					       entry->hadb_xmit_func->hip_send_pkt);
+			 hip_relht_put(relay_record);
+			 /* Check that the element really is in the hashtable. */
+			 if(hip_relht_get(relay_record) != NULL)
+			 {
+			      rr_already_inserted = 1;
+			      HIP_DEBUG("Registration accepted.\n");
+			 }else /* The put was unsuccessful. */
+			 {    
+			      if(relay_record != NULL)
+			      {
+				   free(relay_record);
+			      }
+			      request_got_rejected = 1;
+			      HIP_DEBUG("Registration rejected (2).\n");
+			 }
+		    } else /* We have already inserted one service. */
+		    {    
+			 request_got_rejected = 1;
+			 HIP_DEBUG("Registration rejected (3).\n");
 		    }
 		    break;
 	       case HIP_SERVICE_ESCROW:
@@ -476,50 +535,66 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    {
 			 if(service->handle_registration(&entry->hit_peer) == 0)
 			 {
-			      accepted_requests[accepted_count] = values[i];
-			      accepted_count++; 
+			      request_got_rejected = 0;
 			 } else
 			 {
-			      rejected_requests[rejected_count] = values[i];
-			      rejected_count++;
+			      request_got_rejected = 1;
 			 }
 		    } else
 		    {
+			 request_got_rejected = 1;
 			 HIP_DEBUG("Service inactive.\n");
 		    }
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_HIP:
 		    HIP_INFO("Client is registering to UDP relay for HIP "\
 			     "packets service.\n");
-
-		    /* Don't now should we take the peer HIT from the entry, or
-		       the I2 packet. Using the entry for now.*/
-		    relay_record =
-			 hip_relrec_alloc(HIP_FULLRELAY,
-					  &(entry->hit_peer),
-					  &(entry->preferred_address),
-					  entry->peer_udp_port,
-					  &(entry->hip_hmac_in),
-					  entry->hadb_xmit_func->hip_send_pkt);
-		    hip_relht_put(relay_record);
-		    /* Check that the element really is in the hashtable. */
-		    if(hip_relht_get(relay_record) != NULL)
+		    /* Check if a relay record already exists. If it exists,
+		       we must not replace an RVS with FULLRELAY. The client must
+		       cancel the RVS first*/
+		    if(fetch_record != NULL && fetch_record->type == HIP_RVSRELAY)
 		    {
-			HIP_DEBUG("Inserted a new relay record.\n");
-			accepted_requests[accepted_count] = values[i];
-			accepted_count++; 
-		    } else
-		    {    /* The put was unsuccessful. */
-			 if(relay_record != NULL)
-			      free(relay_record);
-			 rejected_requests[rejected_count] = values[i];
-			 rejected_count++;
+			 request_got_rejected = 1;
+			 HIP_DEBUG("Registration rejected (1).\n");
+		    }
+		    /* Check that we have not inserted a service for this
+		       REG_REQUEST. This is needed, if the client sends a
+		       request with multiple equal type values. */
+		    else if(rr_already_inserted == 0){
+			 relay_record =
+			      hip_relrec_alloc(HIP_FULLRELAY,
+					       lifetime,
+					       &(entry->hit_peer),
+					       &(entry->preferred_address),
+					       entry->peer_udp_port,
+					       &(entry->hip_hmac_in),
+					       entry->hadb_xmit_func->hip_send_pkt);
+			 hip_relht_put(relay_record);
+			 /* Check that the element really is in the hashtable. */
+			 if(hip_relht_get(relay_record) != NULL)
+			 {
+			      rr_already_inserted = 1;
+			      HIP_DEBUG("Registration accepted.\n");
+			 }else /* The put was unsuccessful. */
+			 {    
+			      if(relay_record != NULL)
+			      {
+				   free(relay_record);
+			      }
+			      request_got_rejected = 1;
+			      HIP_DEBUG("Registration rejected (2).\n");
+			 }
+		    } else /* We have already inserted one service. */
+		    {    
+			 request_got_rejected = 1;
+			 HIP_DEBUG("Registration rejected (3).\n");
 		    }
 		    break;
 	       case HIP_SERVICE_RELAY_UDP_ESP:
 		    HIP_INFO("Client is registering to UDP relay for ESP "\
 			     "packets service.\n");
 		    /* Alas, we do not support UDP ESP relay yet. :( */
+		    request_got_rejected = 1;
 		    break;
 	       default:
 		    /* We should never come here, since the registration
@@ -527,30 +602,38 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_ERROR("Client is trying to register to an service (%u) "\
 			      "that we do not support. "\
 			      "Registration REJECTED.\n", values[i]);
+		    request_got_rejected = 1;
+	       }
+	       /* By this far we know whether the request got accepted or
+		  rejected. Lets store the type value. */
+	       if(!request_got_rejected)
+	       {
+		    accepted_requests[accepted_count] = values[i];
+		    accepted_count++;
+	       }
+	       else
+	       {
 		    rejected_requests[rejected_count] = values[i];
 		    rejected_count++;
 	       }
-	       
-	  }
-	  
-	  HIP_DEBUG("Accepted requests (%d) 0x%x, "\
-		    "rejected requests (%d) 0x%x\n",
-		    accepted_count, accepted_requests[0],
-		    rejected_count, rejected_requests[0]);
-	  /* Building REG_RESPONSE and REG_FAILED parameters. */
-	  if(accepted_count > 0)
-	  {
-	       hip_build_param_reg_request(target_msg, lifetime, accepted_requests,
-					   accepted_count, 0);
-	  }
-	  /** @todo Determine failure type using some indicator. */
-	  if(rejected_count > 0)
-	  {
-	       hip_build_param_reg_failed(target_msg, HIP_REG_TYPE_UNAVAILABLE,
-					  rejected_requests, rejected_count);
 	  }
      }
 
+     HIP_DEBUG("Accepted requests (%d), rejected requests (%d)\n",
+	       accepted_count, rejected_count);
+     /* Building REG_RESPONSE and REG_FAILED parameters. */
+     if(accepted_count > 0)
+     {
+	  hip_build_param_reg_request(target_msg, lifetime, accepted_requests,
+				      accepted_count, 0);
+     }
+     /** @todo Determine failure type using some indicator. */
+     if(rejected_count > 0)
+     {
+	  hip_build_param_reg_failed(target_msg, HIP_REG_TYPE_UNAVAILABLE,
+				     rejected_requests, rejected_count);
+     }
+     
  out_err:
      return err;        
 }
@@ -817,16 +900,17 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
 	  hip_keadb_remove_entry(kea);
 	  hip_keadb_put_entry(kea); 
      }
-                
-     /* Checking REG_FAILED */
+     
+      /* Checking REG_FAILED */
      rfail = hip_get_param(msg, HIP_PARAM_REG_FAILED);
+     HIP_DEBUG("Checking REG_FAILED.\n");
      if (rfail) {
 	  uint8_t *types = (uint8_t *)
 	       (hip_get_param_contents(msg, HIP_PARAM_REG_FAILED));
-	  int typecnt = hip_get_param_contents_len(rresp);
+	  int typecnt = hip_get_param_contents_len(rfail);
 	  int i;
                         
-	  if (rresp->type == 0) {
+	  if (rfail->type == 0) {
 	       HIP_DEBUG("Registration failed: more credentials required.\n");
 	  }
 	  else {

@@ -14,7 +14,7 @@
 #define HIP_INPUT_H
 
 #ifdef CONFIG_HIP_RVS
-#  include "rvs.h"
+#  include "hiprelay.h"
 #endif
 
 #include "oppdb.h"

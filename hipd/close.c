@@ -134,8 +134,8 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED.\n");
 
-/* If this machine is a rendezvous server, then we need to delete the rendezvous
-   association matching the sender's HIT. */
+/* If this host has a relay hashtable, i.e. the host is a HIP UDP relay or RVS,
+   then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
 	hip_relrec_t *rec = NULL, dummy;
 	memcpy(&(dummy.hit_r), &(close->hits),

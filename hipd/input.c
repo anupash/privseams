@@ -2309,6 +2309,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 			   "wrong type.\n");
 	     else
 	     {
+		  /* @todo What to do with the original I1 here, once the
+		     relayed I1 is sent. -Lauri 25.09.2007 15:46 */
 		  hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info); 
 	     }
 #endif

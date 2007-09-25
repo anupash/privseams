@@ -20,9 +20,15 @@
 
 #define HIP_SERVICE_MAX_COUNT 2
 
-/* Lifetime-fields represent lifetime value of 2^((lifetime - 64)/8) seconds. These 
- * encoded values can be used directly in lifetime field of the packets. */
-#define HIP_SERVICE_MIN_LIFETIME 100
+/** Lifetime-fields represent lifetime value of 2^((lifetime - 64)/8) seconds.
+ * These encoded values can be used directly in lifetime field of the packets.
+ * @note "we use 57 as the minimum value here because it is the smallest
+ * possible value that gives a lifetime of at least one second. This is because
+ * we use time_t as the type of lifetime field in the relay record. time_t is
+ * used because we use time(NULL); to get the current time stamp. time() returns
+ * time_t.
+ */
+#define HIP_SERVICE_MIN_LIFETIME 57
 #define HIP_SERVICE_MAX_LIFETIME 200
 
 typedef enum { HIP_SERVICE_ACTIVE=0, HIP_SERVICE_INACTIVE=2 } hip_servicestate_t;

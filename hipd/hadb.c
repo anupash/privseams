@@ -2088,6 +2088,8 @@ void hip_init_hadb(void)
 	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
 	/* filter function sets */
+        /* Compiler warning: assignment from incompatible pointer type.
+	   -Lauri 25.09.2007 15:11. */
 	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
 	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 }
@@ -2746,9 +2748,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 					    hip_hit_t *rvs_ip)
 {
-	int err = 0, i;
-	hip_ha_t *this;
-	hip_list_t *item, *tmp, *result = NULL;
+	int err = 0, i = 0;
+	hip_ha_t *this = NULL, *result = NULL;
+	hip_list_t *item = NULL, *tmp = NULL; //
 
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)

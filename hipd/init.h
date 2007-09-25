@@ -15,7 +15,6 @@
 #include "hipconf.h"
 #include "oppipdb.h"
 #include "debug.h"
-#include "rvs.h"
 #include "hiprelay.h"
 #include "escrow.h"
 

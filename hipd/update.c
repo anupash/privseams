@@ -2553,6 +2553,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		if (rk.array[i] != NULL) {
+		     /* warning: passing argument 7 of 'hip_send_update'
+			from incompatible pointer type. -Lauri 25.09.2007 15:03 */
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add, &addr_sin6);
 			hip_hadb_put_entry(rk.array[i]);
@@ -2655,10 +2657,11 @@ int hip_update_send_registration_request(hip_ha_t *entry,
         HIP_IFEL(!update_id_out, -EINVAL,
                 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
         HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
-                "Building of SEQ param failed\n");
+		 "Building of SEQ param failed\n");
         
-        HIP_IFEL(hip_build_param_reg_request(update_packet, lifetime, types, 
-                type_count, 1), -1, "Building of REG_REQUEST failed\n");
+        HIP_IFEL(hip_build_param_reg_request(
+		      update_packet, lifetime, (uint8_t *)types, type_count, 1),
+		 -1, "Building of REG_REQUEST failed\n");
 
         /* Add HMAC */
         HIP_IFEL(hip_build_param_hmac_contents(update_packet,

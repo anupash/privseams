@@ -10,9 +10,7 @@
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */ 
-
 #include "hiprelay.h"
-#include "misc.h"
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
@@ -35,7 +33,8 @@ int we_are_relay = 0;
 
 LHASH *hip_relht_init()
 {
-     return hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash), LHASH_COMP_FN(hip_relht_compare));
+     return hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash),
+				 LHASH_COMP_FN(hip_relht_compare));
 }
 
 void hip_relht_uninit()
@@ -139,6 +138,7 @@ void hip_relht_maintenance()
 }
 
 hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
+			       const uint8_t lifetime,
 			       const in6_addr_t *hit_r, const hip_hit_t *ip_r,
 			       const in_port_t port,
 			       const hip_crypto_key_t *hmac,
@@ -160,7 +160,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
      rec->udp_port_r = port;
      memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
      rec->send_fn = func;
-     rec->lifetime = HIP_RELREC_LIFETIME;
+     hip_relrec_set_lifetime(rec, lifetime);
      rec->last_contact = time(NULL);
      
      return rec;
@@ -172,10 +172,17 @@ void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type)
 	  rec->type = type;
 }
 
-void hip_relrec_set_lifetime(hip_relrec_t *rec, const time_t secs)
+void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
 {
      if(rec != NULL)
-	  rec->lifetime = secs;
+     {
+	  /** @todo fix 600. */
+	  rec->lifetime = 600;
+	  /* Note that the above formula trucates the exponent to integer.
+	     Therefore we're getting only integers out. The correct formula
+	     is the "pow(2, ((double)(65-64)/8));", but that would require
+	     linking of the math libary (-lm). */
+     }
 }
 
 void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port)

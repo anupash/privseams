@@ -563,7 +563,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow is in use. */
+	/* This is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -576,7 +576,6 @@ void hip_exit(int signal)
 
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	HIP_DEBUG("Size is now: %d.\n", hip_relht_size());
 	hip_relht_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
