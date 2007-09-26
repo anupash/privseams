@@ -2293,7 +2293,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                         /* Select the first match */
                         loc_addr_item->reserved = ntohl(1 << 7);
                         preferred_address_found = 1;
-                        if( change_preferred_address ) {
+                        if( change_preferred_address && !is_add) {
                             HIP_IFEL(hip_update_preferred_address(entry,saddr,
                                                                   daddr, 
                                                                   &spi_in->spi),-1, 
@@ -2338,7 +2338,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	for(i = 0; i < addr_count; i++, loc_addr_item++)
 	{
 		saddr = &loc_addr_item->address;
-		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr))
+		if (IN6_IS_ADDR_V4MAPPED(saddr) == IN6_IS_ADDR_V4MAPPED(daddr) &&
+                    !is_add)
 		{
                     loc_addr_item->reserved = ntohl(1 << 7);
                     HIP_DEBUG_IN6ADDR("first match: ", saddr);
