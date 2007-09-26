@@ -1868,10 +1868,8 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				HIP_DEBUG("address verified successfully, setting state to ACTIVE\n");
 				addr->address_state = PEER_ADDR_STATE_ACTIVE;
 				HIP_DEBUG("Changing Security Associations for the new peer address\n");
-				/*
 				HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
 					       "Error while changing SAs for mobility\n");
-                                */
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred)
 				{
