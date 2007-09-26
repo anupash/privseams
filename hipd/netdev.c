@@ -229,8 +229,19 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int i, deleted = 0;
+        struct sockaddr_in6 addr_sin6;
 
-	HIP_HEXDUMP("deleting address=", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
+        if (addr->sa_family == AF_INET) {
+            memset(&addr_sin6, 0, sizeof(addr_sin6));
+            addr_sin6.sin6_family = AF_INET6;
+            IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
+                             ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
+	} 
+        if (addr->sa_family == AF_INET6) {
+            memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	}       
+
+        hip_print_hit("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -245,9 +256,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 /* remove from list if address matches */
                 hip_print_hit("interface address",
                               hip_cast_sa_addr(&n->addr));
-                hip_print_hit("address to be removed",hip_cast_sa_addr(addr));                
+                hip_print_hit("address to be removed",hip_cast_sa_addr(&addr_sin6));                
                 if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-                                 hip_cast_sa_addr(addr))==0) {
+                                 hip_cast_sa_addr(&addr_sin6))==0) {
                     list_del(n, addresses);
                     deleted = 1;
                 }
