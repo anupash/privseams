@@ -2396,6 +2396,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		    int is_add, struct sockaddr* addr)
 {
 	int err = 0, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
+        int i = 0;
 	uint32_t update_id_out = 0;
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
 	uint32_t new_spi_in = 0;
@@ -2404,6 +2405,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
 	uint16_t mask = 0;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
+        hip_list_t *tmp_li = NULL, *item = NULL;
+        struct netdev_address *n;
 
 	HIP_DEBUG("\n");
 	
@@ -2577,8 +2580,20 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Send UPDATE */
 	hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 
-	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-	
+
+        /* before sending check if the AFs match and do something about it
+           so it doesn't fail in raw send */
+        if(IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
+           == IN6_IS_ADDR_V4MAPPED(&daddr))
+            memcpy(&saddr, &entry->local_address, sizeof(saddr));
+	else {
+            list_for_each_safe(item, tmp_li, addresses, i) {
+                n = list_entry(item);
+                if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
+                    IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+                    memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
+            }
+        }
 	HIP_DEBUG("Sending initial UPDATE packet.\n");
         /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
