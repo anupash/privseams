@@ -228,49 +228,35 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
-	int i;
+	int i, deleted = 0;
 
 	HIP_HEXDUMP("deleting address=", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
-	list_for_each_safe(item, tmp, addresses, i)
-	{
-		int deleted = 0;
-		n = list_entry(item);
-
-		/* remove from list if if_index matches */
-		if (!addr)
-		{
-			if (n->if_index == ifindex)
-			{
-				list_del(n, addresses);
-				deleted = 1;
-			}
-		}
-		else
-		{
-			/* remove from list if address matches */
-			HIP_HEXDUMP("a1:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
-			HIP_HEXDUMP("a2:", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
-                        /*
-			if ((n->addr.ss_family == addr->sa_family) &&
-				((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
-				hip_sa_addr_len(addr))==0)) ||
-				IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr) )
-                        */
-                        if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr))==0) {
-				/* address match */
-				list_del(n, addresses);
-				deleted = 1;
-			}
-		}
-		if (deleted)
-		{
-			address_count--;
-			HIP_DEBUG("dec address_count to %d\n", address_count);
-		}
+	list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            /* remove from list if if_index matches */
+            if (!addr) {
+                if (n->if_index == ifindex) {
+                    list_del(n, addresses);
+                    deleted = 1;
+                }
+            } else {
+                /* remove from list if address matches */
+                hip_print_hit("interface address",
+                              hip_cast_sa_addr(&n->addr));
+                hip_print_hit("address to be removed",hip_cast_sa_addr(addr));                
+                if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
+                                 hip_cast_sa_addr(addr))==0) {
+                    list_del(n, addresses);
+                    deleted = 1;
+                }
+            }
+            if (deleted) {
+                address_count--;
+                HIP_DEBUG("dec address_count to %d\n", address_count);
+            }
 	}
-
 	HIP_DEBUG("address_count at exit=%d\n", address_count);
 	if (address_count < 0) HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
