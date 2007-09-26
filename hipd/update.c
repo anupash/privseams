@@ -1451,9 +1451,9 @@ out_err:
 	return err;
 }
 
-int hip_create_reg_response(hip_ha_t * entry, 
-        struct hip_tlv_common * reg, uint8_t *requests, 
-        int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
+			    uint8_t *requests, int request_count,
+			    in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
         int err = 0;
         uint16_t mask = 0;
@@ -1493,6 +1493,9 @@ int hip_create_reg_response(hip_ha_t * entry,
         }
         /********** REG_RESPONSE/REG_FAILED **********/        
         /* Check service requests and build reg_response and/or reg_failed */
+	/** @todo change to use hip_handle_regrequest(). For that we need
+	    entry, source message and destination message. We don't have the
+	    source message here... */
 	hip_handle_registration_attempt(entry, update_packet, reg_request, 
 					requests, request_count);
         
@@ -1814,15 +1817,13 @@ out_err:
  * validated, and the rest of the packet is handled if current state
  * allows it), otherwise < 0.
  */
-int hip_receive_update(struct hip_common *msg,
-		       struct in6_addr *update_saddr,
-		       struct in6_addr *update_daddr,
-		       hip_ha_t *entry,
+int hip_receive_update(struct hip_common *msg, struct in6_addr *update_saddr,
+		       struct in6_addr *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
 {
 	int err = 0, state = 0, has_esp_info = 0;
 	int updating_addresses = 0;
-	struct in6_addr *hits;
+	struct in6_addr *hits = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
@@ -1833,7 +1834,7 @@ int hip_receive_update(struct hip_common *msg,
         struct hip_tlv_common *reg_response = NULL;
         struct hip_tlv_common *reg_failed = NULL;
         struct hip_tlv_common *reg_info = NULL;
-	struct in6_addr *src_ip, *dst_ip;
+	struct in6_addr *src_ip = NULL , *dst_ip = NULL;
 	struct hip_tlv_common *encrypted = NULL;
 	
 	HIP_DEBUG("enter\n");

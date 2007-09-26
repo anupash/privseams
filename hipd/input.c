@@ -455,7 +455,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #ifdef CONFIG_HIP_BLIND
 	HIP_DEBUG("Blind block\n");
 	// Packet that was received is blinded
-	if (ntohs(msg->control) & HIP_HA_CTRL_PEER_BLIND) {
+	if (ntohs(msg->control) & HIP_PACKET_CTRL_BLIND) {
 	  HIP_DEBUG("Message is blinded\n");
 	  if(type == HIP_I1) { //Responder receives
 	    HIP_DEBUG("set_blind_on\n");
@@ -483,7 +483,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         }	  
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	if (!(ntohs(msg->control) & HIP_HA_CTRL_PEER_BLIND)) { // Normal packet received
+	if (!(ntohs(msg->control) & HIP_PACKET_CTRL_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #endif
@@ -654,7 +654,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_DEBUG("Build blinded I2\n");
-	  mask |= HIP_HA_CTRL_PEER_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 	  // Build network header by using blinded HITs
 	  entry->hadb_misc_func->
 	       hip_build_network_hdr(i2, HIP_I2, mask, &entry->hit_our_blind,
@@ -1211,12 +1211,12 @@ out_err:
 int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		   hip_ha_t *entry, hip_portpair_t *r1_info)
 {
-	int state, mask = HIP_HA_CTRL_LOCAL_HIT_ANON, err = 0;
+	int state, mask = HIP_PACKET_CTRL_ANON, err = 0;
 
 	_HIP_DEBUG("hip_receive_r1() invoked.\n");
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_HA_CTRL_PEER_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 #endif
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
@@ -1306,8 +1306,8 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Set HIP_HA_CTRL_PEER_BLIND for R2\n");
-	  mask |= HIP_HA_CTRL_PEER_BLIND;
+	  HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
+	  mask |= HIP_PACKET_CTRL_BLIND;
 	  
 	  // Build network header by using blinded HITs
 	  entry->hadb_misc_func->
@@ -1341,7 +1341,7 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	/********** REG_REQUEST **********/
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
-	hip_new_reg_handler(entry, i2, r2);
+	hip_handle_regrequest(entry, i2, r2);
 	HIP_DEBUG("Lauri: EXITING OUR BRAVE NEW HANDLER.\n");
 #endif	
  	/* HMAC2 */
@@ -1573,7 +1573,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* The rest of the code assume already locked entry, so lock the
 		   newly created entry as well. */
 		HIP_LOCK_HA(entry);
-		if (ntohs(i2->control) & HIP_HA_CTRL_PEER_BLIND && hip_blind_get_status()) {
+		if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
 		}
@@ -1887,7 +1887,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   hip_ha_t *entry, hip_portpair_t *i2_info)
 {
      int state = 0, err = 0;
-     uint16_t mask = HIP_HA_CTRL_PEER_HIT_ANON;
+     uint16_t mask = HIP_PACKET_CTRL_ANON;
      _HIP_DEBUG("hip_receive_i2() invoked.\n");
 	
      HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
@@ -2263,7 +2263,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_HA_CTRL_PEER_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
@@ -2424,7 +2424,7 @@ int hip_receive_notify(const struct hip_common *notify,
 {
 	int err = 0;
 	struct hip_notification *notify_param;
-	uint16_t mask = HIP_HA_CTRL_LOCAL_HIT_ANON, notify_controls = 0;
+	uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
 	
 	_HIP_DEBUG("hip_receive_notify() invoked.\n");
 	

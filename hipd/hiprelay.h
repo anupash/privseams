@@ -29,7 +29,7 @@ typedef struct{
      /** The type of this relay record (full relay or rvs) */
      uint8_t type;
      /** The lifetime of this record, seconds. */
-     time_t lifetime;
+     double lifetime;
      /** Time when this record was last used, seconds since epoch. */
      time_t last_contact;
      /** HIT of Responder (Relay Client) */

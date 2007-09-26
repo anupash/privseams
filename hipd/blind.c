@@ -236,7 +236,7 @@ struct hip_common *hip_blind_build_i1(hip_ha_t *entry, int *mask)
     HIP_ERROR("Out of memory\n");
     return NULL;
   }
-  *mask |= HIP_HA_CTRL_PEER_BLIND;
+  *mask |= HIP_PACKET_CTRL_BLIND;
   
   if(entry->blind)
     HIP_DEBUG("Blind flag is on\n");
@@ -272,7 +272,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
   HIP_DEBUG("/n");
 
   /*
-  *mask |= HIP_HA_CTRL_PEER_BLIND;
+  *mask |= HIP_PACKET_CTRL_BLIND;
     
   // Build network header by using blinded HITs
   entry->hadb_misc_func->
@@ -481,16 +481,9 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 	memset(dh_data2, 0, dh_size2);
 
 	_HIP_DEBUG("dh_size=%d\n", dh_size2);
-
-
-
 	
  	/* Ready to begin building of the R1 packet */
-//#ifdef CONFIG_HIP_RVS
-	//mask |= HIP_HA_CTRL_PEER_RVS_CAPABLE; //XX: FIXME
-//#endif
-
-	mask |= HIP_HA_CTRL_PEER_BLIND;
+	mask |= HIP_PACKET_CTRL_BLIND;
 
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/*! \todo TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */

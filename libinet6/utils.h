@@ -20,6 +20,14 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
+/* mktemp results to a compiler warning - or actually in a host of warnings
+ * since this function is called from tens of places.
+ * 
+ * warning: the use of `mktemp' is dangerous, better use `mkstemp' or `mkdtemp'
+ *
+ * Fix it, if you know it is safe to do so. I don't know, if we can use mkstemp
+ * here. -Lauri 26.09.2007 14:43
+ */
 static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
 	if (mktemp(fname) == NULL)

@@ -22,13 +22,12 @@
 
 /** Lifetime-fields represent lifetime value of 2^((lifetime - 64)/8) seconds.
  * These encoded values can be used directly in lifetime field of the packets.
- * @note "we use 57 as the minimum value here because it is the smallest
- * possible value that gives a lifetime of at least one second. This is because
- * we use time_t as the type of lifetime field in the relay record. time_t is
- * used because we use time(NULL); to get the current time stamp. time() returns
- * time_t.
+ *
+ * @note We us 91 as the minimum value, because it results to a service lifetime
+ *       of ~10 seconds. There's no use to accept values that result to
+ *       minuscule service lifetimes as hipd maintenance interval is ~20 seconds.
  */
-#define HIP_SERVICE_MIN_LIFETIME 57
+#define HIP_SERVICE_MIN_LIFETIME 91
 #define HIP_SERVICE_MAX_LIFETIME 200
 
 typedef enum { HIP_SERVICE_ACTIVE=0, HIP_SERVICE_INACTIVE=2 } hip_servicestate_t;
@@ -62,8 +61,26 @@ int hip_get_services_list(int ** service_types);
 int hip_get_service_count();
 int hip_services_is_active(int service_type);
 
-int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
-			hip_common_t *target_msg);
+/**
+ * Handles REG_REQUEST parameter. Parses REG_REQUEST parameter from HIP message
+ * @c source_msg, registers/cancels to requested services and builds
+ * REG_RESPONSE and/or REG_FAILED parameters to HIP message @c target_msg. 
+ *
+ * @param entry      a pointer to a host association
+ * @param source_msg a pointer to source HIP message (I2 / UPDATE)
+ * @param target_msg a pointer to target HIP message (R2 / UPDATE)
+ * @return           zero if REG_REQUEST was found, non-zero otherwise.
+ * @author           Lauri Silvennoinen
+ * @date             26.09.2007
+ * @note             This function replaces the old registration handlers.
+ * @note             Registration cancellation has not been tested.
+ * @todo             This is a monster function measure in length. It could be
+ *                   divided to smaller subfunctions or function pointers could
+ *                   also be used.
+ */
+int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
+			  hip_common_t *target_msg);
+
 /**
  *  Handles registration attempt.
  * 

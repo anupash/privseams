@@ -567,9 +567,9 @@
  * Bitmask for local controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 We send packets with anonymous HI.
+ * |||| |||| |||| |||+- 0x0001 - free -
  * |||| |||| |||| ||+-- 0x0002 - free -
- * |||| |||| |||| |+--- 0x0004 We use BLIND
+ * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 - free -
  * |||| |||| ||+------- 0x0020 - free -
@@ -587,9 +587,9 @@
  * Bitmask for peer controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 Peer sends packets with anonymous HI.
+ * |||| |||| |||| |||+- 0x0001 - free -
  * |||| |||| |||| ||+-- 0x0002 - free -
- * |||| |||| |||| |+--- 0x0004 Peer uses BLIND
+ * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 - free -
  * |||| |||| ||+------- 0x0020 - free -
@@ -610,6 +610,14 @@
  * the @c local_controls and @c peer_controls fields directly. Instead use
  * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
  * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ */
+
+/**
+ * @defgroup hip_packet_controls HIP packet Controls field values.
+ *
+ * These are the values that are used in the HIP message Controls field. More
+ * importantantly, these are <span style="color:#f00;">the only values allowed
+ * in that field.</span> Do not put any other bits on wire.
  */
 
 #endif /* _DOXYGEN_H */

@@ -165,7 +165,7 @@ int hip_receive_close(struct hip_common *close,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_HA_CTRL_LOCAL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX: CHECK THE SIGNATURE */
 
@@ -259,7 +259,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_HA_CTRL_LOCAL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX:  */
 
@@ -269,7 +269,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
 	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_HA_CTRL_LOCAL_HIT_ANON |
+		       //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
 		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
 		               )) {
 		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",

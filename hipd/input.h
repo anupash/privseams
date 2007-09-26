@@ -96,23 +96,27 @@ static inline const char *hip_msg_type_str(int type)
 }
 
 /**
- * Checks for illegal controls
+ * Checks for illegal controls in a HIP packet Controls field.
  *
- * Controls are given in host byte order.
+ * <b>Do not confuse these controls with host association control fields.</b> HIP
+ * packet Controls field values are dictated in RFCs/I-Ds. Therefore any bit
+ * that is not dictated in these documents should not appear in the message and
+ * should not be among legal values. Host association controls, on the other
+ * hand are implementation specific values, and can be used as we please. Just
+ * don't put those bits on wire!
  *
  * @param controls control value to be checked
- * @param legal   legal control values to check @c controls against
- * @return        1 if there are no illegal control values in @c controls,
- *                otherwise 0.
+ * @param legal    legal control values to check @c controls against
+ * @return         1 if there are no illegal control values in @c controls,
+ *                 otherwise 0.
+ * @note           controls are given in host byte order.
+ * @todo           If BLIND is in use we should include the BLIND bit
+ *                 in legal values, shouldn't we?
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
      _HIP_DEBUG("hip_controls_sane() invoked.\n");
-     return ((controls & (   HIP_HA_CTRL_LOCAL_HIT_ANON
-/* #ifdef CONFIG_HIP_RVS
-   | HIP_HA_CTRL_PEER_RVS_CAPABLE
-   #endif */
-		   )) | legal) == legal;
+     return ((controls & HIP_PACKET_CTRL_ANON) | legal) == legal;
 }
 
 int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,

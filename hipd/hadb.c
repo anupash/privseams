@@ -2235,8 +2235,6 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	  {
 	  case HIP_HA_CTRL_NONE:
 	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_HIT_ANON:
-	  case HIP_HA_CTRL_LOCAL_BLIND:
 	  case HIP_HA_CTRL_LOCAL_REQ_HIPUDP:
 	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
 	       entry->local_controls |= mask;
@@ -2258,8 +2256,6 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 	  {
 	  case HIP_HA_CTRL_NONE:
 	       entry->peer_controls &= mask;
-	  case HIP_HA_CTRL_PEER_HIT_ANON:
-	  case HIP_HA_CTRL_PEER_BLIND:
 	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 	  case HIP_HA_CTRL_PEER_HIPUDP_CAPABLE:
 	       entry->peer_controls |= mask;

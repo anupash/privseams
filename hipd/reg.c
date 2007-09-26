@@ -293,8 +293,8 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
      return err;	
 }
 
-int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
-			hip_common_t *target_msg)
+int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
+			  hip_common_t *target_msg)
 {
      struct hip_reg_request *reg_request = NULL;
      hip_service_t *service = NULL;
@@ -303,13 +303,14 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      uint8_t lifetime = 0;
      uint8_t *values = NULL;
      
-     HIP_DEBUG("Lauri: hip_new_reg_handler() invoked.\n");
+     HIP_DEBUG("hip_handle_regrequest() invoked.\n");
 
      /* Check if the incoming I2 has a REG_REQUEST parameter at all. */
      reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
      if(reg_request == NULL)
      {
 	  HIP_DEBUG("No REG_REQUEST parameter found.\n");
+	  err = 1;
 	  return err;
      }
      
@@ -336,8 +337,8 @@ int hip_new_reg_handler(hip_ha_t *entry, hip_common_t *source_msg,
      /* Cancelling a service. draft-ietf-hip-registration-02:
 	"A zero lifetime is reserved for canceling purposes. .. A registrar
 	SHOULD respond and grant a registration with a zero lifetime."
-	Not a word about failed cancellations, so we won't be sending any
-	REG_FAILED parameters. -Lauri 21.09.2007 21:23*/
+	Not a word about failed cancellations, but let's generate REG_FAILED
+	parameters for those. -Lauri 21.09.2007 21:23*/
 
      /* Cancellation is not tested! */
      if(lifetime == 0)

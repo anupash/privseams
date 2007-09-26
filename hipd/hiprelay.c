@@ -109,7 +109,7 @@ void hip_relht_free_expired(hip_relrec_t *rec)
      if(rec == NULL)
 	  return;
 
-     if(time(NULL) - rec->last_contact > HIP_RELREC_LIFETIME)
+     if((double)(time(NULL)) - rec->last_contact > HIP_RELREC_LIFETIME)
      {
 	  HIP_INFO("Relay record expired, deleting.\n");
 	  lh_delete(hiprelay_ht, rec);
@@ -176,12 +176,7 @@ void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
 {
      if(rec != NULL)
      {
-	  /** @todo fix 600. */
-	  rec->lifetime = 600;
-	  /* Note that the above formula trucates the exponent to integer.
-	     Therefore we're getting only integers out. The correct formula
-	     is the "pow(2, ((double)(65-64)/8));", but that would require
-	     linking of the math libary (-lm). */
+	  rec->lifetime = pow(2, ((double)(lifetime-64)/8));
      }
 }
 
@@ -206,7 +201,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 		       "Full relay of HIP packets\n" :
 		       (rec->type == HIP_RVSRELAY) ?
 		       "RVS relay of I1 packet\n" : "undefined\n");
-     cursor += sprintf(cursor, " Record lifetime: %lu seconds\n",
+     cursor += sprintf(cursor, " Record lifetime: %.2f seconds\n",
 		       rec->lifetime);
      cursor += sprintf(cursor, " Last contact: %lu seconds ago\n",
 		       time(NULL) - rec->last_contact);
