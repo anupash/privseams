@@ -246,6 +246,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
+            deleted = 0;
             /* remove from list if if_index matches */
             if (!addr) {
                 if (n->if_index == ifindex) {
