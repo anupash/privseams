@@ -242,10 +242,16 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	
 	/* Check if the address is already bound to the SPI +
 	   add/update address */
-  
-        HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-                                         0,
-                                         lifetime, is_preferred), -1);
+        /* lets try */
+        if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
+            HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
+                                             0,
+                                             lifetime, 1), -1);
+        } else {
+            HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
+                                             0,
+                                             lifetime, is_preferred), -1);
+        }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
@@ -439,7 +445,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                                sizeof(struct in6_addr));
                         memcpy(&addr.address, &locator_address_item->address,
                                sizeof(struct in6_addr));
-                        HIP_IFEL(hip_update_peer_preferred_address(entry, addr),-1,
+                       HIP_IFEL(hip_update_peer_preferred_address(entry, &addr),-1,
                                  "Setting peer preferred address failed\n");
                         
                         goto out_of_loop;
@@ -1772,14 +1778,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
             }
         } else {
             /* same AF as in addr, use &entry->local_address */
-            ipv6_addr_copy(&local_addr, &entry->local_address);
+            memset(&local_addr, 0, sizeof(struct in6_addr));
+            memcpy(&local_addr, &entry->local_address, sizeof(struct in6_addr));
         }
 
 	/* @todo: enabling 1s makes hard handovers work, but softhandovers
 	   fail */
-        /* modified the if 0/1s do only ones hip_delete_hit_sp_pair and
-           twice hip_delete_sa (one for each direction) 
-           similarly in the creation -samu */
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
