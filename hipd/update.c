@@ -333,7 +333,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	hip_delete_sa(entry->default_spi_out, &list_item->address,
 		      &entry->local_address, AF_INET6, 0,
 		      (int)entry->peer_udp_port);	
-	
+
 	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 	
 	// Why do we delete the SA associated to the local address? This is definitely wrong!
@@ -344,6 +344,9 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	// Without this line the hardhandover doesn't work.
 	
 	hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
+		      (int)entry->peer_udp_port, 0);
+
+	hip_delete_sa(spi_in, &list_item->address, &entry->local_address, AF_INET6,
 		      (int)entry->peer_udp_port, 0);
 	
 	if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
