@@ -2277,9 +2277,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
 	} else {
 		comp_addr = &entry->local_address;
-	}
+	} 
 
-	if (!choose_random) { 
+	if (choose_random) { 
             int been_here = 0;
         choose_random:
             loc_addr_item = addr_list;
@@ -2306,7 +2306,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                     }
                 }
             }
-            if (!preferred_address_found && (been_here == 0)) {
+            if ((preferred_address_found == 0) && (been_here == 0)) {
                 hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL;
                 struct hip_peer_addr_list_item *addr_li;
                 struct hip_spi_out_item *spi_out;
@@ -2510,7 +2510,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		esp_info_new_spi = new_spi_in;
 	}
 
-        /* if del then we have to remove SAs for that address */
+        /* if del then we have to remove SAs for that address 
+         what about hip_delete_sp_pair? TODOTODO */
 #if 0
         if (!is_add) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
@@ -2522,7 +2523,7 @@ int hip_send_update(struct hip_hadb_state *entry,
                           (int)entry->peer_udp_port);
         }
 #endif
-        /* and we have to do it before this chnges the local_address */
+        /* and we have to do it before this changes the local_address */
 
 	err = hip_update_src_address_list(entry, addr_list, &daddr,
 					  addr_count, esp_info_old_spi, is_add, addr);
