@@ -345,9 +345,6 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	
 	hip_delete_sa(spi_in, &entry->local_address, &list_item->address, AF_INET6,
 		      (int)entry->peer_udp_port, 0);
-
-	hip_delete_sa(spi_in, &list_item->address, &entry->local_address, AF_INET6,
-		      (int)entry->peer_udp_port, 0);
 	
 	if(ipv6_addr_cmp(&entry->preferred_address, &list_item->address) == 0)
 	{
@@ -2166,7 +2163,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
 			      (int)entry->peer_udp_port);
-#if 0
+#if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
 	/* @todo: check that this works with the pfkey api */
@@ -2196,7 +2193,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
-#if 0
+#if 1
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
 				       daddr, new_pref_addr,
 				       IPPROTO_ESP, 1, 0), -1,
@@ -2513,12 +2510,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 		esp_info_new_spi = new_spi_in;
 	}
 
-        /* if del then we have to remove SAs for that address 
-         what about hip_delete_sp_pair? TODOTODO */
+        /* if del then we have to remove SAs for that address */
 #if 1
         if (!is_add) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
-            hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
                           (int)entry->peer_udp_port);
