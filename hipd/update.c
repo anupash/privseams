@@ -2512,9 +2512,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         /* if del then we have to remove SAs for that address 
          what about hip_delete_sp_pair? TODOTODO */
-#if 0
+#if 1
         if (!is_add) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
+            hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
                           (int)entry->peer_udp_port);
