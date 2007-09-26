@@ -7,7 +7,7 @@
  *
  * @note Based on <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
-
+ 
 #include "update.h"
 
 /** A transmission function set for NAT traversal. */
@@ -2581,13 +2581,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 	memcpy(&saddr, &entry->local_address, sizeof(saddr));
 	
 	HIP_DEBUG("Sending initial UPDATE packet.\n");
-	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			      entry->peer_udp_port, update_packet, entry, 1),
-		 -ECOMM, "Sending UPDATE packet failed.\n");
-
+        /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
+	err= entry->hadb_xmit_func->
+		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port, update_packet, entry, 1);
+        HIP_DEBUG("Send_pkt returned %d\n", err);
+        //		 -ECOMM, "Sending UPDATE packet failed.\n");
+        err = 0;
 	/** @todo 5. The system SHOULD start a timer whose timeout value
 	    should be ..*/
 	goto out;
