@@ -252,11 +252,13 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 			/* remove from list if address matches */
 			HIP_HEXDUMP("a1:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
 			HIP_HEXDUMP("a2:", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
+                        /*
 			if ((n->addr.ss_family == addr->sa_family) &&
 				((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
 				hip_sa_addr_len(addr))==0)) ||
 				IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr) )
-			{
+                        */
+                        if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr))==0) {
 				/* address match */
 				list_del(n, addresses);
 				deleted = 1;
