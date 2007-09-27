@@ -1,11 +1,14 @@
 /** @file
- * This file defines a rendezvous extension for the Host Identity Protocol
- * (HIP).
+ * This file defines the rendezvous extension and the UDP relay for HIP packets
+ * for the Host Identity Protocol (HIP). See header file for usage
+ * instructions.
  * 
  * @author  Lauri Silvennoinen
  * @version 1.0
- * @date    10.9.2007
- * @note    Related draft:
+ * @date    27.09.2007
+ * @note    Related drafts:
+ *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
+ *          draft-ietf-hip-rvs-05</a>
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-02.txt">
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
@@ -26,7 +29,7 @@ static LHASH *hiprelay_ht = NULL;
 
 /** 
  * A dummy boolean to indicate the machine has relay capabilities.
- * This is only here for testing and developing purposes. It allows the same
+ * This is only here for testing and development purposes. It allows the same
  * code to be used at the relay and at endhosts without C precompiler #ifdefs
  */
 int we_are_relay = 0;
@@ -112,9 +115,7 @@ void hip_relht_free_expired(hip_relrec_t *rec)
      if((double)(time(NULL)) - rec->last_contact > HIP_RELREC_LIFETIME)
      {
 	  HIP_INFO("Relay record expired, deleting.\n");
-	  lh_delete(hiprelay_ht, rec);
-	  memset(rec, '\0', sizeof(*rec));
-	  free(rec);
+	  hip_relht_rec_free(rec);
      }
 }
 
@@ -194,8 +195,6 @@ void hip_relrec_info(const hip_relrec_t *rec)
      char status[1024];
      char *cursor = status;
      cursor += sprintf(cursor, "Relay record info:\n");
-     //cursor += sprintf(cursor, " HIP Relay status: ");
-     //cursor += sprintf(cursor, (rec->flags & 0x10) ? "ON\n" : "OFF\n");
      cursor += sprintf(cursor, " Record type: ");
      cursor += sprintf(cursor, (rec->type == HIP_FULLRELAY) ?
 		       "Full relay of HIP packets\n" :

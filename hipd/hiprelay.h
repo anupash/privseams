@@ -1,10 +1,68 @@
 /** @file
  * A header file for hip_relay.c.
+ *
+ * The HIP relay combines the functionalites of an rendezvous server (RVS) and
+ * a HIP UDP relay. The HIP relay consists of a hashtable for storing IP address
+ * to HIT mappings and of functions that do the actual relaying action. The
+ * hashtable is based on lhash library and its functionalites are the same
+ * except that the HIP relay stores data (allocated memory for relay records)
+ * instead of pointers.
+ *
+ * A few simple rules apply:
+ * <ul>
+ * <li>Allocate memory for relay records that are to be put into the hashtable
+ * only with hip_relrec_alloc().</li>
+ * <li>Once a relay record is <b>successfully</b> put into the hashtable, the
+ * only way delete it is to call hip_relht_rec_free(). This will remove the
+ * entry from the hashtable and free the memory allocated for the relay record.
+ * </li>
+ * </ul>
+ *
+ * Usage:
+ * <ul>
+ * <li>Inserting a new relay record:
+ * <pre>
+ * hip_relrec_t rr = hip_relrec_alloc(...);
+ * hip_relht_put(rr);
+ * if(hip_relht_get(rr) == NULL) // The put was unsuccessful.
+ * {
+ *   if(rr != NULL)
+ *     free(rr);
+ * }
+ * </pre>
+ * </li>
+ * <li>Fetching a relay record. We do not need (but can use) a fully populated
+ * relay record as a search key. A dummy record with hit_r field populated
+ * is sufficient. Note that there is no need to re-put the relay record into the
+ * hashtable once it has been succesfully inserted into the hashtable - except
+ * if we change the hit_r field of the relay record. If a relay record with same
+ * HIT is put into the hashtable, the existing element is deleted.
+ *
+ * <pre>
+ * hip_relrec_t dummy, *fetch_record = NULL;
+ * memcpy(&(dummy.hit_r), hit, sizeof(hit));
+ * fetch_record = hip_relht_get(&dummy);
+ * if(fetch_record != NULL)
+ * {
+ * // Do something with the record.
+ * }
+ * </pre>
+ * </li>
+ * <li>Deleting a relay record. A dummy record can be used:
+ * <pre>
+ * hip_relrec_t dummy;
+ * memcpy(&(dummy.hit_r), hit, sizeof(hit));
+ * hip_relht_rec_free(&dummy);
+ * </pre>
+ * </li>
+ * </ul>
  * 
  * @author  Lauri Silvennoinen
  * @version 1.0
- * @date    10.9.2007
- * @note    Related draft:
+ * @date    27.09.2007
+ * @note    Related drafts:
+ *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
+ *          draft-ietf-hip-rvs-05</a>
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-02.txt">
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
@@ -200,6 +258,13 @@ void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
  */
 void hip_relrec_info(const hip_relrec_t *rec);
 
+/** 
+ * A dummy function for development purposes.
+ * This is only here for testing and development purposes. It allows the same
+ * code to be used at the relay and at endhosts without C precompiler #ifdefs
+ * 
+ * @return zero if we are not an RVS or HIP RELAY, one otherwise.
+ */
 int hip_we_are_relay();
 
 /**
@@ -229,6 +294,8 @@ int hip_we_are_relay();
  *                 in use).
  * @return         zero on success, or negative error value on error.
  * @note           This code has not been tested thoroughly with multiple RVSes.
+ * @note           This function is a copy-paste from the previous RVS
+ *                 implementation
  */
 int hip_relay_rvs(const hip_common_t *i1,
 		  const in6_addr_t *i1_saddr,
