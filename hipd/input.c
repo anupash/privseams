@@ -1339,6 +1339,11 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
+	/* This part should only be executed in HIP relay or in the host
+	   offering escrow service.
+	   (hip_we_are_relay() || we_are_escrow_server()).
+	   But since I don't have a way to detect if we are an escrow server
+	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
 	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
 	hip_handle_regrequest(entry, i2, r2);
@@ -1833,11 +1838,33 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
    RVS options are compiled, we always take the first path.
    
    It might be wise to create compile options for each service, and one compile
-   option to indicate whether we want use the registration extension.  
+   option to indicate whether we want use the registration extension. This way
+   we would get rid of the stupid dummy hip_we_are_relay(). Also, the #ifdef
+   #else, #endif below would be clarified.
 
-   -Lauri 19.09.2007 20:54.*/
+   -Lauri 27.09.2007 18:41.*/
 #ifdef CONFIG_HIP_RVS
-	     entry->state = HIP_STATE_ESTABLISHED;
+	     if(hip_we_are_relay())
+	     {
+		  entry->state = HIP_STATE_ESTABLISHED;
+	     }
+	     else
+	     {
+		  if (entry->state == HIP_STATE_UNASSOCIATED)
+		  {
+		       HIP_DEBUG("TODO: should wait for ESP here or "
+				 "wait for implementation specific time, "
+				 "moving to ESTABLISHED\n");
+		       entry->state = HIP_STATE_ESTABLISHED;
+		  } else if (entry->state == HIP_STATE_ESTABLISHED)
+		  {
+		       HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+		       HIP_DEBUG("Staying in ESTABLISHED.\n");
+		  } else
+		  {
+		       entry->state = HIP_STATE_R2_SENT;
+		  }
+	     }
 #else
 	     if (entry->state == HIP_STATE_UNASSOCIATED)
 	     {
@@ -2135,9 +2162,19 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	struct hip_from *from;
 	uint16_t nonce = 0;
 		
-	_HIP_DEBUG("hip_handle_i1() invoked.\n");
+	HIP_DEBUG("hip_handle_i1() invoked.\n");
 		
 #ifdef CONFIG_HIP_RVS
+	in6_addr_t dest;
+	in_port_t  dest_port = 0;
+	memset(&dest, '\0', sizeof(dest));
+	
+	hip_relay_handle_from(i1, i1_saddr, &(i1_info->src_port), &dest,
+			      &dest_port);
+
+	HIP_DEBUG_IN6ADDR("DESTINATION", &dest);
+	HIP_DEBUG("PORT:%d\n", dest_port);
+
 	/* Note that this code effectively takes place at the responder of
 	   I->RVS->R hierachy, not at the RVS itself. 
 	   
@@ -2186,13 +2223,12 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 
 	/* Case 1. */
-	//HIP_DEBUG("Found FROM parameter in I1.\n");
 	
 	/* The relayed I1 packet has the initiator's HIT as source HIT,
 	   and the responder HIT as destination HIT. We would like to
 	   verify the HMAC against the host association that was created
 	   when the responder registered to the rvs. That particular
-	   host association has the responders HIT as source HIT and the
+	   host association has the responder's HIT as source HIT and the
 	   rvs' HIT as destination HIT. Let's get that host association
 	   using the responder's HIT and the IP address of the RVS as
 	   search keys. */
@@ -2311,7 +2347,9 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	     {
 		  /* @todo What to do with the original I1 here, once the
 		     relayed I1 is sent. -Lauri 25.09.2007 15:46 */
-		  hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info); 
+		  hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
+		  /*err = -ENONET;
+		    goto out_err;*/
 	     }
 #endif
 		state = HIP_STATE_NONE;

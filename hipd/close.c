@@ -137,15 +137,18 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 /* If this host has a relay hashtable, i.e. the host is a HIP UDP relay or RVS,
    then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
-	hip_relrec_t *rec = NULL, dummy;
-	memcpy(&(dummy.hit_r), &(close->hits),
-	       sizeof(close->hits));
-	hip_relht_rec_free(&dummy);
-	/* Check that the element really got deleted. */
-	if(hip_relht_get(&dummy) == NULL)
+	if(hip_we_are_relay())
 	{
-	     HIP_DEBUG_HIT("Deleted relay record for HIT",
-			   &(close->hits));
+	     hip_relrec_t *rec = NULL, dummy;
+	     memcpy(&(dummy.hit_r), &(close->hits),
+		    sizeof(close->hits));
+	     hip_relht_rec_free(&dummy);
+	     /* Check that the element really got deleted. */
+	     if(hip_relht_get(&dummy) == NULL)
+	     {
+		  HIP_DEBUG_HIT("Deleted relay record for HIT",
+				&(close->hits));
+	     }
 	}
 #endif
 	

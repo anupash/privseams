@@ -302,4 +302,8 @@ int hip_relay_rvs(const hip_common_t *i1,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info);
 
+int hip_relay_handle_from(hip_common_t *source_msg,
+			  in6_addr_t *rvs_ip, in_port_t *rvs_port,
+			  in6_addr_t *dest_ip, in_port_t *dest_port);
+
 #endif /* HIP_HIPRELAY_H */

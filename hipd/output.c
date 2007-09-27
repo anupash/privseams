@@ -385,6 +385,8 @@ struct hip_update_kludge {
  *                      (own HIT). 
  * @param dst_ip        a pointer to the destination IPv6 address where the R1
  *                      should be sent (peer ip).
+ * @param dst_port      Destination port for R1. If zero, I1 source port is
+ *                      used.
  * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
  *                      (peer HIT).
  * @param i1_info       a pointer to the source and destination ports

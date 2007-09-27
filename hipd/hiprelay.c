@@ -350,3 +350,47 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
      }
      return err;
 }
+
+int hip_relay_handle_from(hip_common_t *source_msg,
+			  in6_addr_t *rvs_ip, in_port_t *rvs_port,
+			  in6_addr_t *dest_ip, in_port_t *dest_port)
+{
+     struct hip_relay_from *relay_from = NULL;
+     struct hip_from *from = NULL;
+     hip_ha_t *rvs_ha_entry = NULL;
+
+     /* Check if the incoming I1 packet has a FROM or RELAY_FROM parameters. */
+     relay_from = (struct hip_relay_from *)
+	  hip_get_param(source_msg, HIP_PARAM_RELAY_FROM);
+     from = (struct hip_from *)
+	  hip_get_param(source_msg, HIP_PARAM_FROM);
+     
+     /* Copy parameter data to target buffers. */
+     if(relay_from == NULL && from == NULL)
+     {
+	  HIP_DEBUG("No FROM or RELAY_FROM parameters found in I1.\n");
+	  return 0;
+     } else if(from != NULL)
+     {
+	  HIP_DEBUG("Found FROM parameter in I1.\n");
+	  memcpy(dest_ip, &from->address, sizeof(from->address));
+     } else
+     {
+	  HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
+	  memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
+	  in_port_t port = ntohs(relay_from->port);
+	  memcpy(dest_port, &port, sizeof(port));
+     }
+
+     rvs_ha_entry =
+	  hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, rvs_ip);
+     
+     if (rvs_ha_entry == NULL)
+     {
+	  HIP_DEBUG("The I1 packet was received from RVS, but the host "\
+		    "association created during registration is not found. "
+		    "RVS_HMAC cannot be verified.\n");
+	  return 0;
+     }
+     return 1;
+}
