@@ -150,7 +150,7 @@ int hip_hi3_insert_trigger(hip_hit_t *hit
 
 //#if 0
 // FIXME: should these be here or not...
-	cl_set_private_id(&id);
+//	cl_set_private_id(&id);
 	cl_set_private_id(&ida);
 //#endif 
 

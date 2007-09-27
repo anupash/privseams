@@ -1083,7 +1083,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
 	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	cl_set_private_id(&id);
+	//cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */
 	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);
