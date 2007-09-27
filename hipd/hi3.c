@@ -1,15 +1,24 @@
 #include "hi3.h"
 
 #ifdef CONFIG_HIP_HI3
-static int hi3_hi_initializer(void **arg) {
-  //	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
-		       //	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
-	//	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
-	//	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
+int hip_i3_init(hip_hit_t *peer_hit)
+{
+	cl_init(hip_i3_config_file);
+
+	hip_hi3_insert_trigger(peer_hit);
+
 	return 0;
 }
 
-static int addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
+//static int hi3_hi_initializer(void **arg) {
+//	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
+		       //	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
+	//	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
+	//	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
+//	return 0;
+//}
+
+int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
 	if (len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
 		   sizeof(struct hi3_ipv6_addr))) {
@@ -38,7 +47,7 @@ static int addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 /**
  * This is the i3 callback to process received data.
  */
-static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx) 
+void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
 {
 	struct hip_common *hip_common;
 	struct hip_work_order *hwo;
@@ -54,12 +63,12 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 	/* First check the hi3 address header */
 
 	/* Source and destination address */
-	l = addr_parse(buf, &src, len, &family);
+	l = hip_addr_parse(buf, &src, len, &family);
 	if (family == 0) goto out_err;
 	len -= l;
 	buf += l;
 
-	l = addr_parse(buf, &dst, len, &family);
+	l = hip_addr_parse(buf, &dst, len, &family);
 	if (family == 0) goto out_err;
 	len -= l;
 	buf += l;
@@ -105,16 +114,16 @@ static void hip_i3_inbound(cl_trigger *t, void* data, void *fun_ctx)
 /* 
  * i3 callbacks for trigger management
  */
-static void constraint_failed(cl_trigger *t, void *data, void *fun_ctx) {
+void hip_hi3_constraint_failed(cl_trigger *t, void *data, void *fun_ctx) {
 	/* This should never occur if the infrastructure works */
 	HIP_ERROR("Trigger constraint failed\n");
 }
 
-static void trigger_inserted(cl_trigger *t, void *data, void *fun_ctx) {	
+void hip_hi3_trigger_inserted(cl_trigger *t, void *data, void *fun_ctx) {	
 	HIP_DEBUG("Trigger inserted\n");
 }
 
-static void trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
+void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 	/* FIXME: A small delay before trying again? */
 	HIP_ERROR("Trigger failed, reinserting...\n");
 	
@@ -122,26 +131,28 @@ static void trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 	cl_insert_trigger(t, 0);
 }
 
-static int insert_trigger(struct in6_addr *hit, 
-			  struct hip_host_id_entry *entry) {
+int hip_hi3_insert_trigger(hip_hit_t *hit
+		   /*, struct hip_host_id_entry *entry*/) {
 	ID id, ida;
 	cl_trigger *t1, *t2;
 	Key key;
 
-	HIP_ASSERT(entry);
+	//HIP_ASSERT(entry);
 
 	/*
 	 * Create and insert triggers (id, ida), and (ida, R), respectively.
 	 * All triggers are r-constrained (right constrained)
 	 */
 	bzero(&id, ID_LEN);
-	memcpy(&id, hit, sizeof(hit));
-	get_random_bytes(id.x, ID_LEN);	
-#if 0
- FIXME: should these be here or not...
+	memcpy(&id, hit, sizeof(hip_hit_t));
+	
+	get_random_bytes(ida.x, ID_LEN);	
+
+//#if 0
+// FIXME: should these be here or not...
 	cl_set_private_id(&id);
 	cl_set_private_id(&ida);
-#endif 
+//#endif 
 
 	/* Note: ida will be updated as ida.key = h_r(id.key) */
 	t1 = cl_create_trigger_id(&id, ID_LEN_BITS, &ida,
@@ -151,13 +162,13 @@ static int insert_trigger(struct in6_addr *hit,
 
 	/* associate callbacks with the inserted trigger */
 	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_CONSTRAINT_FAILED,
-				     constraint_failed, NULL);
+				     hip_hi3_constraint_failed, NULL);
 	cl_register_trigger_callback(t2, CL_CBK_RECEIVE_PAYLOAD,
-				     hip_i3_inbound, NULL);
+				     hip_hi3_receive_payload, NULL);
 	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_INSERTED,
-				     trigger_inserted, NULL);
+				     hip_hi3_trigger_inserted, NULL);
 	cl_register_trigger_callback(t2, CL_CBK_TRIGGER_REFRESH_FAILED,
-				     trigger_failure, NULL);
+				     hip_hi3_trigger_failure, NULL);
 
 	/* Insert triggers */
 	cl_insert_trigger(t2, 0);
@@ -167,6 +178,13 @@ static int insert_trigger(struct in6_addr *hit,
 	//entry->t2 = t2;
 }
 
+/*
+void hip_init_id_fromstr(ID* id, char* name) {
+	int i;
+	for(i = 0; i < ID_LEN; i++) 
+		id->x[i] = name[i % strlen(name)];
+		}
+*/
 #endif /* HIP_CONFIG_HI3 */
  
 
