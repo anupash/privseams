@@ -307,7 +307,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 	uint32_t spi_in;
 	struct hip_locator *locator = (void *) _locator;
 	struct hip_spi_in_item *item, *tmp;
-
+ 
 	HIP_DEBUG("\n");
 
 	// @todo: try to delete all unnecessary connections. Temprorary solution, to make handovers work.
@@ -408,7 +408,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
            from incompatible pointer type.*/
         HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
                                               entry, spi_out, &zero), -1);
-                
+                 
         /* checking did the locator have any address with the same family as
            entry->local_address, if not change local address to address that
            has same family as the address(es) in locator, if possible */
