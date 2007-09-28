@@ -50,7 +50,6 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
-			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,

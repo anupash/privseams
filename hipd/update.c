@@ -1165,6 +1165,8 @@ int hip_update_check_simple_nat(struct in6_addr *peer_ip,
 					       NULL, locator, peer_ip);
 	HIP_IFEL(found, 0, "No address translation\n");
 
+	/* @todo: xx fixme: should APPEND the address to locator */
+
 	HIP_IFEL(!(item = hip_get_locator_first_addr_item(locator)), -1,
 		 "No addresses in locator\n");
 	ipv6_addr_copy(&item->address, peer_ip);
