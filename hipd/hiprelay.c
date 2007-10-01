@@ -378,10 +378,17 @@ int hip_relay_handle_from(hip_common_t *source_msg,
      {
 	  HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
 	  memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
-	  in_port_t port = ntohs(relay_from->port);
-	  memcpy(dest_port, &port, sizeof(port));
+	  *dest_port = ntohs(relay_from->port);
      }
-
+     
+     /* The relayed I1 packet has the initiator's HIT as source HIT, and the
+	responder HIT as destination HIT. We would like to verify the HMAC
+	against the host association that was created when the responder
+	registered to the rvs. That particular host association has the
+	responder's HIT as source HIT and the rvs' HIT as destination HIT.
+	Because we do not have the HIT of RVS in the incoming I1 message, we
+	have to get the host association using the responder's HIT and the IP
+	address of the RVS as search keys. */
      rvs_ha_entry =
 	  hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, rvs_ip);
      
@@ -392,5 +399,23 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		    "RVS_HMAC cannot be verified.\n");
 	  return 0;
      }
+
+     HIP_DEBUG("RVS host association found.\n");
+     
+     /* Verify the RVS hmac. */
+     if(hip_verify_packet_rvs_hmac(source_msg, &rvs_ha_entry->hip_hmac_out)
+	!= 0)
+     {
+	  HIP_DEBUG("RVS_HMAC verification failed.\n");
+     }
+     
+     HIP_DEBUG("RVS_HMAC verified.\n");
+
+     /* Should we build a VIA_RVS or VIA_RVS_NAT parameter? If the relayed I1
+	was destined to UDP port 50500, we know that there's NAT between R
+	and RVS, and a VIA_RVS_NAT parameter is build. Else we build a VIA_RVS
+	parameter. We do not do the parameter building yet, but just get the
+	information to target buffers dest_ip and dest_port. */
+
      return 1;
 }

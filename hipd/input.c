@@ -2165,15 +2165,21 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG("hip_handle_i1() invoked.\n");
 		
 #ifdef CONFIG_HIP_RVS
-	in6_addr_t dest;
-	in_port_t  dest_port = 0;
+	in6_addr_t dest; // For the IP address in FROM/FROM_NAT
+	in_port_t  dest_port = 0; // For the port in FROM_NAT
 	memset(&dest, '\0', sizeof(dest));
 	
+	/* This is where the Responder handles the incoming relayed I1 packet.
+	   We need two things from the relayed packet:
+	   1) The destination IP address and port from the FROM/RELAY_FROM
+	      parameters.
+	   2) The source address and source port of the I1 packet to build the
+	      VIA_RVS/VIA_RVS_NAT parameter. */
 	hip_relay_handle_from(i1, i1_saddr, &(i1_info->src_port), &dest,
 			      &dest_port);
 
 	HIP_DEBUG_IN6ADDR("DESTINATION", &dest);
-	HIP_DEBUG("PORT:%d\n", dest_port);
+	HIP_DEBUG("PORT2:%u\n", dest_port);
 
 	/* Note that this code effectively takes place at the responder of
 	   I->RVS->R hierachy, not at the RVS itself. 
@@ -2206,32 +2212,25 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		goto skip_nat;
 	}
 #endif
-
+	/*
 	HIP_DEBUG("Found %s parameter in I1.\n",
 		  from ? "FROM" : "RELAY_FROM");
-	
 	if(from) {
-		/* Cases 1. & 2. */
-		param_type = HIP_PARAM_FROM;
-		dst_ip = (struct in6_addr *)&from->address;
+	param_type = HIP_PARAM_FROM;
+	dst_ip = (struct in6_addr *)&from->address;
 	}
 	else {
-		/* Cases 3. & 4. */
-		param_type = HIP_PARAM_RELAY_FROM;
-		dst_ip = (struct in6_addr *)&relay_from->address;
-		dst_port = ntohs(relay_from->port);
+	param_type = HIP_PARAM_RELAY_FROM;
+	dst_ip = (struct in6_addr *)&relay_from->address;
+	dst_port = ntohs(relay_from->port);
 	}
+	*/
+
+	//dst_ip = &dest;
+	//dst_port = &dest_port;
 
 	/* Case 1. */
 	
-	/* The relayed I1 packet has the initiator's HIT as source HIT,
-	   and the responder HIT as destination HIT. We would like to
-	   verify the HMAC against the host association that was created
-	   when the responder registered to the rvs. That particular
-	   host association has the responder's HIT as source HIT and the
-	   rvs' HIT as destination HIT. Let's get that host association
-	   using the responder's HIT and the IP address of the RVS as
-	   search keys. */
 	HIP_IFEL(((rvs_ha_entry =
 		   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
 		 -1, "A matching host association was not found for "\
@@ -2278,8 +2277,11 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
  skip_nat:
 #endif
-	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
-			  &i1->hits, i1_info, rvs_address, is_relay_to, &nonce);
+	err = hip_xmit_r1(i1, i1_saddr, i1_daddr,
+			  //&i1->hitr,
+			  &dest, dest_port,
+			  //&i1->hits, 
+			  i1_info, rvs_address, is_relay_to, &nonce);
 	
  out_err:
 	if (rvs_address) {

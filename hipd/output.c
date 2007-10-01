@@ -396,9 +396,10 @@ struct hip_update_kludge {
  * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *src_hit, struct in6_addr *dst_ip,
-		const in_port_t dst_port, struct in6_addr *dst_hit,
+int hip_xmit_r1(hip_common_t *i1,
+		struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
+		struct in6_addr *dst_ip,
+		const in_port_t dst_port,
 		hip_portpair_t *i1_info, const void *traversed_rvs,
 		const int is_relay_to, uint16_t *nonce) 
 {
@@ -417,10 +418,14 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* It sould not be null hit, null hit has been replaced by real local
 	   hit. */
-	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(src_hit));
+	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
 #endif
-	HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
-	HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
+	//HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
+	//HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
+
+	HIP_DEBUG_HIT("MANGO Source hit", &i1->hits);
+	HIP_DEBUG_HIT("MANGO Destination hit", &i1->hitr);
+
 	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
 	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
 	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
@@ -431,23 +436,23 @@ int hip_xmit_r1(struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
 	if (hip_blind_get_status()) {
 	  HIP_IFEL((local_plain_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
 		   -1, "Couldn't allocate memory\n");
-	  HIP_IFEL(hip_plain_fingerprint(nonce, src_hit, local_plain_hit), 
+	  HIP_IFEL(hip_plain_fingerprint(nonce, &i1->hitr, local_plain_hit), 
 		   -1, "hip_plain_fingerprints failed\n");
 	  HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, 
-					local_plain_hit, dst_hit)),
+					local_plain_hit, &i1->hits)),
 		   -ENOENT, "No precreated R1\n");
 	  // replace the plain hit with the blinded hit
-	  ipv6_addr_copy(&r1pkt->hits, src_hit);
+	  ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
 	}
 #endif
 	if (!hip_blind_get_status()) {
 	  HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, 
-					src_hit, dst_hit)),
+					&i1->hitr, &i1->hits)),
 		   -ENOENT, "No precreated R1\n");
 	}
 
-	if (dst_hit)
-		ipv6_addr_copy(&r1pkt->hitr, dst_hit);
+	if (&i1->hits)
+		ipv6_addr_copy(&r1pkt->hitr, &i1->hits);
 	else
 		memset(&r1pkt->hitr, 0, sizeof(struct in6_addr));
 	
