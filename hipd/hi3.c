@@ -10,14 +10,6 @@ int hip_i3_init(hip_hit_t *peer_hit)
 	return 0;
 }
 
-//static int hi3_hi_initializer(void **arg) {
-//	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
-		       //	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
-	//	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
-	//	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
-//	return 0;
-//}
-
 int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
 	if (len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
@@ -37,7 +29,7 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 		in6->sin6_addr = ((struct hi3_ipv6_addr *)buf)->sin6_addr;
 		in6->sin6_family = AF_INET6;
 		*res = AF_INET6;
-		return sizeof(struct hi3_ipv4_addr);
+		return sizeof(struct hi3_ipv6_addr);
 	} 
 
 	HIP_ERROR("Illegal family. Dropping\n");
@@ -49,6 +41,7 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
  */
 void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
 {
+#if 0
 	struct hip_common *hip_common;
 	struct hip_work_order *hwo;
 	struct sockaddr_in6 src, dst;
@@ -109,6 +102,25 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 
  out_err:
 	cl_free_buf(clb);
+#endif
+
+  struct msghdr msg;
+  struct iovec iov;
+  cl_buf* clb = (cl_buf *) data;  
+
+
+  //Construct message envelop as required by hip_handle_packet()
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = NULL;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+  iov.iov_len = clb->data_len;
+  iov.iov_base = clb->data;
+  
+  //  hip_handle_packet(&msg, clb->data_len, AF_INET);
 }
 
 /* 

@@ -1029,10 +1029,11 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		in_port_t not_used, in_port_t not_used2, struct hip_common *msg,
 		hip_ha_t *not_used3, int not_used4)
 {
+#if 0
 	ID id;
 	cl_buf *clb;
   	u16 csum;	
-	int err, msg_len, hdr_dst_len, hdr_src_len;
+	int err = 0, msg_len, hdr_dst_len, hdr_src_len;
 	struct sockaddr_in6 src, dst;
 	struct hi3_ipv6_addr hdr_src, hdr_dst;
 	char *buf;
@@ -1072,6 +1073,8 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 					(struct sockaddr *)&src, 
 					(struct sockaddr *)&dst);
 
+	clb->data_len = hdr_src_len + hdr_dst_len + msg_len;
+
 	buf = clb->data;
 	memcpy(buf, &hdr_src, hdr_src_len);
 	buf += hdr_src_len;
@@ -1092,5 +1095,46 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	
  out_err:
 	return err;
+#endif
+
+  int size =  hip_get_msg_total_len(msg);
+  ID id;
+  cl_buf  *clb;
+  struct ip *iph;
+  int dglen;
+
+  dglen = size + sizeof(struct ip);
+  clb = cl_alloc_buf(dglen);
+  
+  iph = (struct ip *) clb->data;
+  memcpy((char *)iph + sizeof(struct ip), msg, size);
+ 
+  /* create IP header for tunneling HIP packet through i3 */                   
+  iph->ip_v = 4;
+  iph->ip_hl = sizeof(struct ip) >> 2;
+  iph->ip_tos = 0;
+  iph->ip_len = htons(dglen);    /* network byte order */
+  iph->ip_id = 0;                  /* let IP set this */
+  iph->ip_off = 0;                 /* frag offset, MF and DF flags */
+  iph->ip_ttl = 200;
+  iph->ip_p = 99;
+  //  iph->ip_src = (struct in_addr)NULL;
+  //  iph->ip_dst = (struct in_addr)NULL;
+  //  iph->ip_sum = in_cksum((unsigned short *)iph, sizeof (struct ip));
+    
+  clb->data_len = dglen;
+
+  bzero(&id, ID_LEN);
+  memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
+  //cl_set_private_id(&id);
+
+  /* exception when matching trigger not found */
+  cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);
+
+
+  cl_send(&id, clb, 0);  
+  cl_free_buf(clb);
+  
+  return 0;
 }
 #endif
