@@ -2152,143 +2152,42 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
-	int err = 0, is_relay_to = 0;
-	struct in6_addr *dst_ip = NULL;
-	in_port_t dst_port = 0;
-	void *rvs_address = NULL;
-	hip_tlv_type_t param_type = 0;
-	hip_ha_t *rvs_ha_entry = NULL;
-	struct hip_relay_from *relay_from;
-	struct hip_from *from;
-	uint16_t nonce = 0;
-		
-	HIP_DEBUG("hip_handle_i1() invoked.\n");
-		
+     int err = 0;
+     uint16_t nonce = 0;
+     in6_addr_t dest; // For the IP address in FROM/FROM_NAT
+     in_port_t  dest_port = 0; // For the port in FROM_NAT
+
+     HIP_DEBUG("hip_handle_i1() invoked.\n");
+
+     ipv6_addr_copy(&dest, &in6addr_any);
+     
 #ifdef CONFIG_HIP_RVS
-	in6_addr_t dest; // For the IP address in FROM/FROM_NAT
-	in_port_t  dest_port = 0; // For the port in FROM_NAT
-	memset(&dest, '\0', sizeof(dest));
-	
-	/* This is where the Responder handles the incoming relayed I1 packet.
-	   We need two things from the relayed packet:
-	   1) The destination IP address and port from the FROM/RELAY_FROM
-	      parameters.
-	   2) The source address and source port of the I1 packet to build the
-	      VIA_RVS/VIA_RVS_NAT parameter. */
-	hip_relay_handle_from(i1, i1_saddr, &(i1_info->src_port), &dest,
-			      &dest_port);
+     if(!hip_we_are_relay())
+     {
+	  /* This is where the Responder handles the incoming relayed I1 packet.
+	     We need two things from the relayed packet:
+	     1) The destination IP address and port from the FROM/RELAY_FROM
+	     parameters.
+	     2) The source address and source port of the I1 packet to build the
+	     VIA_RVS/RELAY_TO parameter. */
+	  hip_relay_handle_from(i1, i1_saddr, &(i1_info->src_port), &dest,
+				&dest_port);
+     }
+#endif /* CONFIG_HIP_RVS */
 
-	HIP_DEBUG_IN6ADDR("DESTINATION", &dest);
-	HIP_DEBUG("PORT2:%u\n", dest_port);
-
-	/* Note that this code effectively takes place at the responder of
-	   I->RVS->R hierachy, not at the RVS itself. 
-	   
-	   We have five cases:
-	   1. I1 was received on UDP and a FROM parameter was found.
-	   2. I1 was received on raw HIP and a FROM parameter was found.
-	   3. I1 was received on UDP and a RELAY_FROM parameter was found.
-	   4. I1 was received on raw HIP and a RELAY_FROM parameter was found.
-	   5. Neither FROM nor RELAY_FROM parameter was not found.
-
-	/* Check if the incoming I1 packet has a FROM or RELAY_FROM parameters at
-	   all. */
-	relay_from = (struct hip_relay_from *) hip_get_param(i1, HIP_PARAM_RELAY_FROM);
-	from = (struct hip_from *) hip_get_param(i1, HIP_PARAM_FROM);
-	
-	if (!(from || relay_from)) {
-		/* Case 5. */
-		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
-		goto skip_nat;
-	}
-	
-	/* @todo: how to the handle the blind code with RVS?? */
+     /* @todo: how to the handle the blind code with RVS?? */
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-		HIP_DEBUG("Blind is on\n");
-		// We need for R2 transmission: see hip_xmit_r1 below
-		HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
-			 -1, "hip_blind_get_nonce failed\n");
-		goto skip_nat;
-	}
+     if (hip_blind_get_status()) {
+	  HIP_DEBUG("Blind is on\n");
+	  // We need for R2 transmission: see hip_xmit_r1 below
+	  HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
+		   -1, "hip_blind_get_nonce failed\n");
+     }
 #endif
-	/*
-	HIP_DEBUG("Found %s parameter in I1.\n",
-		  from ? "FROM" : "RELAY_FROM");
-	if(from) {
-	param_type = HIP_PARAM_FROM;
-	dst_ip = (struct in6_addr *)&from->address;
-	}
-	else {
-	param_type = HIP_PARAM_RELAY_FROM;
-	dst_ip = (struct in6_addr *)&relay_from->address;
-	dst_port = ntohs(relay_from->port);
-	}
-	*/
-
-	//dst_ip = &dest;
-	//dst_port = &dest_port;
-
-	/* Case 1. */
-	
-	HIP_IFEL(((rvs_ha_entry =
-		   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
-		 -1, "A matching host association was not found for "\
-		 "responder HIT / RVS IP.");
-	
-	HIP_DEBUG("RVS host association entry found: %p.\n", rvs_ha_entry);
-	
-	/* Verify the RVS hmac. */
-	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
-		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
-	
-	/* I1 packet was received on UDP destined to port 50500.
-	   R1 packet will have a RELAY_TO parameter.
-	   Cases 1. & 3. */
-	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		
-		struct hip_in6_addr_port our_addr_port;
-		is_relay_to = 1;
-		
-		HIP_IFEL(!(rvs_address = 
-			   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
-				      0)),
-			 -ENOMEM, "Not enough memory to rvs_address.");
-		
-		/* Insert source IP address and source port from the
-		   received I1 packet to "rvs_address". For this purpose
-		   a temporary hip_in6_addr_port struct is needed. */
-		memcpy(&our_addr_port.sin6_addr, i1_saddr,
-		       sizeof(struct in6_addr));
-		our_addr_port.sin6_port = htons(i1_info->src_port);
-		
-		memcpy(rvs_address, &our_addr_port,
-		       sizeof(struct hip_in6_addr_port));
-	} else {
-		/* I1 packet was received on raw IP/HIP.
-		   Cases 2. & 4. */
-		HIP_IFEL(!(rvs_address = 
-			   HIP_MALLOC(sizeof(struct in6_addr), 0)),
-			 -ENOMEM, "Not enough memory to rvs_address.");
-		
-		/* Insert source IP address from the received I1 packet
-		   to "rvs_address". */
-		memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
-	}
- skip_nat:
-#endif
-	err = hip_xmit_r1(i1, i1_saddr, i1_daddr,
-			  //&i1->hitr,
-			  &dest, dest_port,
-			  //&i1->hits, 
-			  i1_info, rvs_address, is_relay_to, &nonce);
-	
+     err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
+		       &nonce);
  out_err:
-	if (rvs_address) {
-		HIP_FREE(rvs_address);
-	}
-	
-	return err;
+     return err;
 }
 
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,

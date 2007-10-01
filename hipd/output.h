@@ -69,17 +69,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  *                      (peer HIT).
  * @param i1_info       a pointer to the source and destination ports
  *                      (when NAT is in use).
- * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
- *                      @c VIA_RVS parameter.
- * @param rvs_count     number of addresses in @c traversed_rvs.
  * @return              zero on success, or negative error value on error.
  */
-int hip_xmit_r1(hip_common_t *i1,
-		struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *dst_ip,
-		const in_port_t dst_port,
-		hip_portpair_t *i1_info, const void *traversed_rvs,
-		const int is_relay_to, uint16_t *nonce);
+int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
+		in6_addr_t *dst_ip, const in_port_t dst_port,
+		hip_portpair_t *i1_info, uint16_t *nonce);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);

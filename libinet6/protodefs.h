@@ -600,40 +600,40 @@ struct hip_rvs_hmac {
 
 /** draft-ietf-hip-rvs-05 */
 struct hip_from {
-	hip_tlv_type_t type;  /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address[16]; /**< IPv6 address */
+     hip_tlv_type_t type;  /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-rvs-05 */
 struct hip_via_rvs {
-	hip_tlv_type_t type;  /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address[0]; /**< Rendezvous server addresses */
+     hip_tlv_type_t type;  /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[0]; /**< Rendezvous server addresses */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_from {
-	hip_tlv_type_t type; /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address[16]; /**< IPv6 address */
-     	in_port_t port; /**< Port number. */
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_to {
-	hip_tlv_type_t type; /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address[16]; /**< IPv6 address */
-     	in_port_t port; /**< Port number. */
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_via {
-	hip_tlv_type_t type; /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address[16]; /**< IPv6 address */
-     	in_port_t port; /**< Port number. */
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
 /** 
@@ -641,9 +641,9 @@ struct hip_relay_via {
  * @note obsolete.
  */
 struct hip_relay_to_old {
-	hip_tlv_type_t type; /**< Type code for the parameter. */
-	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
 
 struct hip_eid_endpoint {

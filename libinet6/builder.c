@@ -844,11 +844,7 @@ void hip_calc_hdr_len(struct hip_common *msg)
 }
 
 /**
- * hip_calc_generic_param_len - calculate and write the length of any parameter
- * @param tlv_common pointer to the beginning of the parameter
- * @param tlv_size size of the TLV header  (in host byte order)
- * @param contents_size size of the contents after the TLV header
- *                 (in host byte order)
+ * Calculates and writes the length of any HIP packet parameter
  *
  * This function can be used for semi-automatic calculation of parameter
  * length field. This function should always be used instead of manual
@@ -856,6 +852,11 @@ void hip_calc_hdr_len(struct hip_common *msg)
  * sizeof(struct hip_tlv_common), but it can include other fields than
  * just the type and length. For example, DIFFIE_HELLMAN parameter includes
  * the group field as in hip_build_param_diffie_hellman_contents().
+ *
+ * @param tlv_common pointer to the beginning of the parameter
+ * @param tlv_size size of the TLV header  (in host byte order)
+ * @param contents_size size of the contents after the TLV header
+ *                 (in host byte order)
  */
 void hip_calc_generic_param_len(void *tlv_common,
 			      hip_tlv_len_t tlv_size,
@@ -1983,14 +1984,12 @@ int hip_build_param_relay_from(struct hip_common *msg, const struct in6_addr *ad
  * @param msg           a pointer to a HIP packet common header
  * @param rvs_addresses a pointer to rendezvous server IPv6 or IPv4-in-IPv6
  *                      format IPv4 addresses.
- * @param address_count number of addresses in @c rvs_addresses.
  * @return              zero on success, or negative error value on error.
  * @see                 <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                      draft-ietf-hip-rvs-05</a> section 4.2.3.
  */
 int hip_build_param_via_rvs(struct hip_common *msg,
-			    const struct in6_addr rvs_addresses[],
-			    const int address_count)
+			    const struct in6_addr rvs_addresses[])
 {
 	HIP_DEBUG("hip_build_param_rvs() invoked.\n");
 	int err = 0;
@@ -1998,7 +1997,7 @@ int hip_build_param_via_rvs(struct hip_common *msg,
 	
 	hip_set_param_type(&viarvs, HIP_PARAM_VIA_RVS);
 	hip_calc_generic_param_len(&viarvs, sizeof(struct hip_via_rvs),
-				   address_count * sizeof(struct in6_addr));
+				   sizeof(struct in6_addr));
 	err = hip_build_generic_param(msg, &viarvs, sizeof(struct hip_via_rvs),
 				      (void *)rvs_addresses);
 	return err;
@@ -2009,27 +2008,44 @@ int hip_build_param_via_rvs(struct hip_common *msg,
  *
  * Builds a @c RELAY_TO parameter to the HIP packet @c msg.
  *
- * @param msg            a pointer to a HIP packet common header
- * @param rvs_addr_ports a pointer to rendezvous server IPv6 or IPv4-in-IPv6
- *                       format IPv4 addresses.
- * @param address_count  number of address port combinations in @c rvs_addr_ports.
- * @return               zero on success, or negative error value on error.
+ * @param msg  a pointer to a HIP packet common header
+ * @param addr a pointer to IPv6 address
+ * @param port portnumber      
+ * @return     zero on success, or negative error value on error.
+ * @note       This used to be VIA_RVS_NAT, but because of the HIP-ICE
+ *             draft, this is now RELAY_TO.
  */
-int hip_build_param_relay_to_old(struct hip_common *msg,
-				 const struct hip_in6_addr_port rvs_addr_ports[],
-				 const int address_count)
+int hip_build_param_relay_to(struct hip_common *msg,
+			     const in6_addr_t *addr,
+			     const in_port_t port)
 {
-	HIP_DEBUG("hip_build_param_rvs_nat() invoked.\n");
-	HIP_DEBUG("sizeof(struct hip_in6_addr_port): %u.\n", sizeof(struct hip_in6_addr_port));
-	int err = 0;
-	struct hip_relay_to_old relay_to;
+     /*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
+     int err = 0;
+     struct hip_relay_to relay_to;
+     struct hip_in6_addr_port tmp;
+
+     hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
+     hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
+				sizeof(in6_addr_t) + sizeof(in_port_t));
+     
+     memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
+     memcpy(&(tmp.sin6_port), &port, sizeof(port));
 	
-	hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-	hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to_old),
-				   address_count * sizeof(struct hip_in6_addr_port));
-	err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to_old),
-				      (void *)rvs_addr_ports);
-	return err;
+     err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
+				   (void *)&tmp);
+     return err;
+     */
+     struct hip_relay_to relay_to;
+     int err = 0;
+     
+     hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
+     ipv6_addr_copy((struct in6_addr *)&relay_to.address, addr);
+     relay_to.port = htons(port);
+     hip_calc_generic_param_len(&relay_to, sizeof(relay_to), 0);
+     err = hip_build_param(msg, &relay_to);
+     
+     return err;
+
 }
 
 /**

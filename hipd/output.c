@@ -54,6 +54,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	/* ..except that when calculating the msg size, we need to have more
 	   than just hip_common */
+
+	/* So why don't we just have a hip_max_t struct to allow allocation of
+	   maximum sized HIP packets from the stack? Not that it would make any
+	   difference here, but playing with mallocs has always the chance of
+	   leaks... */
+	
 	i1 = hip_msg_alloc();
 			
 	if (!hip_blind_get_status()) {
@@ -367,41 +373,9 @@ struct hip_update_kludge {
 	int length;
 };
 
-/**
- * Transmits an R1 packet to the network.
- *
- * Sends an R1 packet to the peer and stores the cookie information that was
- * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
- * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
- * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
- * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
- * have the address of that middlebox.
- *
- * @param i1_saddr      a pointer to the source address from where the I1 packet
- *                      was received.
- * @param i1_daddr      a pointer to the destination address where to the I1
- *                      packet was sent to (own address).
- * @param src_hit       a pointer to the source HIT i.e. responder HIT
- *                      (own HIT). 
- * @param dst_ip        a pointer to the destination IPv6 address where the R1
- *                      should be sent (peer ip).
- * @param dst_port      Destination port for R1. If zero, I1 source port is
- *                      used.
- * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
- *                      (peer HIT).
- * @param i1_info       a pointer to the source and destination ports
- *                      (when NAT is in use).
- * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
- *                      @c VIA_RVS parameter.
- * @param rvs_count     number of addresses in @c traversed_rvs.
- * @return              zero on success, or negative error value on error.
- */
-int hip_xmit_r1(hip_common_t *i1,
-		struct in6_addr *i1_saddr, struct in6_addr *i1_daddr,
-		struct in6_addr *dst_ip,
-		const in_port_t dst_port,
-		hip_portpair_t *i1_info, const void *traversed_rvs,
-		const int is_relay_to, uint16_t *nonce) 
+int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
+		in6_addr_t *dst_ip, const in_port_t dst_port,
+		hip_portpair_t *i1_info, uint16_t *nonce) 
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
@@ -409,40 +383,36 @@ int hip_xmit_r1(hip_common_t *i1,
 	int err = 0;
 	
 	_HIP_DEBUG("hip_xmit_r1() invoked.\n");
-
-	/* Get the destination address and port. If destination port is zero,
-	   the source port of I1 becomes the destination port of R1.*/
-	r1_dst_addr = (!dst_ip || ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
+	
+	/* Get the final destination address and port for the outgoing R1.
+	   dst_ip and dst_port have values only if the incoming I1 had
+	   FROM/FROM_NAT parameter. */
+	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-	/* It sould not be null hit, null hit has been replaced by real local
+	/* It should not be null hit, null hit has been replaced by real local
 	   hit. */
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
 #endif
-	//HIP_DEBUG_HIT("hip_xmit_r1(): Source hit", src_hit);
-	//HIP_DEBUG_HIT("hip_xmit_r1(): Destination hit", dst_hit);
-
-	HIP_DEBUG_HIT("MANGO Source hit", &i1->hits);
-	HIP_DEBUG_HIT("MANGO Destination hit", &i1->hitr);
-
-	HIP_DEBUG_HIT("hip_xmit_r1(): Own address", i1_daddr);
+	
 	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
 	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
-	HIP_DEBUG("hip_xmit_r1(): is_relay_to %d.\n", is_relay_to);
-
-		
+	HIP_DEBUG("hip_xmit_r1(): param port %u.\n", dst_port);
+	HIP_DEBUG("hip_xmit_r1(): ANY? %d.\n", ipv6_addr_any(dst_ip));
+			
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-	  HIP_IFEL((local_plain_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
-		   -1, "Couldn't allocate memory\n");
-	  HIP_IFEL(hip_plain_fingerprint(nonce, &i1->hitr, local_plain_hit), 
-		   -1, "hip_plain_fingerprints failed\n");
-	  HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, 
-					local_plain_hit, &i1->hits)),
-		   -ENOENT, "No precreated R1\n");
-	  // replace the plain hit with the blinded hit
-	  ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
+	if (hip_blind_get_status())
+	{
+	     HIP_IFEL((local_plain_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL, 
+		      -1, "Couldn't allocate memory\n");
+	     HIP_IFEL(hip_plain_fingerprint(nonce, &i1->hitr, local_plain_hit), 
+		      -1, "hip_plain_fingerprints failed\n");
+	     HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, 
+					   local_plain_hit, &i1->hits)),
+		      -ENOENT, "No precreated R1\n");
+	     // replace the plain hit with the blinded hit
+	     ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
 	}
 #endif
 	if (!hip_blind_get_status()) {
@@ -458,38 +428,43 @@ int hip_xmit_r1(hip_common_t *i1,
 	
 	HIP_DEBUG_HIT("hip_xmit_r1(): ripkt->hitr", &r1pkt->hitr);
 	
+#ifdef CONFIG_HIP_RVS
 	/* Build VIA_RVS or RELAY_TO parameter if the I1 packet was relayed
 	   through a rvs. */
-#ifdef CONFIG_HIP_RVS
-	if(traversed_rvs)
-	{
-		/** @todo Parameters must be in ascending order, should this
-		    be checked here? */
-		if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-			hip_build_param_relay_to_old(
-				r1pkt,
-				(struct hip_in6_addr_port *)traversed_rvs, 1);
-		}
-		else {
-			hip_build_param_via_rvs(
-				r1pkt, (struct in6_addr *)traversed_rvs, 1);
-		}
+	/** @todo Parameters must be in ascending order, should this
+	    be checked here? Now we just assume that the VIA_RVS/RELAY_TO
+	    parameter is the last parameter. */
+	/* If I1 had a FROM/RELAY_FROM, then we must build a RELAY_TO/VIA_RVS
+	   parameter. */
+	if(!ipv6_addr_any(dst_ip))
+	{    // dst_port has the value of RELAY_FROM port.
+	     if(dst_port == HIP_NAT_UDP_PORT)
+	     {
+		  hip_build_param_relay_to(
+		       r1pkt, i1_saddr, i1_info->src_port);
+	     }
+	     else
+	     {
+		  hip_build_param_via_rvs(r1pkt, i1_saddr);
+	     }
 	}
 #endif
 
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
-	if(r1_dst_port != 0) {
+	if(r1_dst_port == HIP_NAT_UDP_PORT)
+	{
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
 	/* Else R1 is send on raw HIP. */
-	else {
-		HIP_IFEL(hip_send_raw(
-				 i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL, 0),
-			 -ECOMM, "Sending R1 packet on raw HIP failed.\n");
+	else
+	{
+	     HIP_IFEL(hip_send_raw(
+			   i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL, 0),
+		      -ECOMM, "Sending R1 packet on raw HIP failed.\n");
 	}
 	
  out_err:
