@@ -41,7 +41,6 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
  */
 void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
 {
-#if 0
 	struct hip_common *hip_common;
 	struct hip_work_order *hwo;
 	struct sockaddr_in6 src, dst;
@@ -102,25 +101,6 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 
  out_err:
 	cl_free_buf(clb);
-#endif
-
-  struct msghdr msg;
-  struct iovec iov;
-  cl_buf* clb = (cl_buf *) data;  
-
-
-  //Construct message envelop as required by hip_handle_packet()
-  msg.msg_name = NULL;
-  msg.msg_namelen = 0;
-  msg.msg_iov = &iov;
-  msg.msg_iovlen = 1;
-  msg.msg_control = NULL;
-  msg.msg_controllen = 0;
-  msg.msg_flags = 0;
-  iov.iov_len = clb->data_len;
-  iov.iov_base = clb->data;
-  
-  //  hip_handle_packet(&msg, clb->data_len, AF_INET);
 }
 
 /* 
