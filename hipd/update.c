@@ -2483,7 +2483,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         /* if del then we have to remove SAs for that address */
 #if 1
-        if (!is_add) {
+        if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
