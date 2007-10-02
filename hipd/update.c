@@ -2261,7 +2261,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                         /* Select the first match */
                         loc_addr_item->reserved = ntohl(1 << 7);
                         preferred_address_found = 1;
-                        if( change_preferred_address && !is_add) {
+                        if( change_preferred_address && is_add) {
                             HIP_IFEL(hip_update_preferred_address(entry,saddr,
                                                                   daddr, 
                                                                   &spi_in->spi),-1, 
@@ -2334,7 +2334,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		int j, addr_exists = 0;		
 		struct in6_addr *iter_addr = &loc_addr_item->address;
 		for(j = 0; j < spi_in->addresses_n; j++){
-			struct hip_locator_info_addr_item *spi_addr_item = (struct hip_locator_info_addr_item *) spi_in->addresses + j;				
+			struct hip_locator_info_addr_item *spi_addr_item = 
+                            (struct hip_locator_info_addr_item *) spi_in->addresses + j; 
 			if(ipv6_addr_cmp(&spi_addr_item->address, iter_addr)) {
 				loc_addr_item->state = spi_addr_item->state;
 				addr_exists = 1;
@@ -2484,7 +2485,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
         /* if del then we have to remove SAs for that address */
-#if 1
         if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
@@ -2493,16 +2493,15 @@ int hip_send_update(struct hip_hadb_state *entry,
             hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
                           hip_cast_sa_addr(addr), AF_INET6,0,
                           (int)entry->peer_udp_port);
-        }
-#endif
-        /* and we have to do it before this changes the local_address */
-
-	err = hip_update_src_address_list(entry, addr_list, &daddr,
-					  addr_count, esp_info_old_spi, is_add, addr);
-	if(err == GOTO_OUT)
+     
+            /* and we have to do it before this changes the local_address */
+            err = hip_update_src_address_list(entry, addr_list, &daddr,
+                                              addr_count, esp_info_old_spi, is_add, addr);
+            if(err == GOTO_OUT)
 		goto out;
-	else if(err)
-		goto out_err;
+            else if(err)
+                goto out_err;
+        }
 
 	/* Send UPDATE(ESP_INFO, LOCATOR, SEQ) */
 	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
