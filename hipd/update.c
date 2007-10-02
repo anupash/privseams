@@ -2565,9 +2565,16 @@ int hip_send_update(struct hip_hadb_state *entry,
         /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
-	err= entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			      entry->peer_udp_port, update_packet, entry, 1);
+        if (!is_add) {
+            err = entry->hadb_xmit_func->
+                hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+                             entry->peer_udp_port, update_packet, entry, 1);
+        } else {
+            err = entry->hadb_xmit_func->
+                hip_send_pkt(&entry->local_address, &entry->preferred_address,
+                             (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+                             entry->peer_udp_port, update_packet, entry, 1);
+        }
         HIP_DEBUG("Send_pkt returned %d\n", err);
         //		 -ECOMM, "Sending UPDATE packet failed.\n");
         err = 0;
