@@ -2394,7 +2394,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	/* Start building UPDATE packet */
 	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
 		 "Out of memory.\n");
-	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
+	HIP_DEBUG_HIT("sending UPDATE to HIT", &entry->hit_peer);
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
 						     &entry->hit_peer);
@@ -2484,7 +2484,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		esp_info_new_spi = new_spi_in;
 	}
 
-        /* if del then we have to remove SAs for that address */
+        /* if del then we have to remove SAs for that address */ 
         if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
@@ -2570,7 +2570,7 @@ int hip_send_update(struct hip_hadb_state *entry,
         /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
-        if (!is_add) {
+        if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
             err = entry->hadb_xmit_func->
                 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                              entry->peer_udp_port, update_packet, entry, 1);
