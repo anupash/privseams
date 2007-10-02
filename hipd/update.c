@@ -2552,6 +2552,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         /* before sending check if the AFs match and do something about it
            so it doesn't fail in raw send */
+#if 0
         if(IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
            == IN6_IS_ADDR_V4MAPPED(&daddr))
             memcpy(&saddr, &entry->local_address, sizeof(saddr));
@@ -2563,6 +2564,7 @@ int hip_send_update(struct hip_hadb_state *entry,
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
             }
         }
+#endif
 	HIP_DEBUG("Sending initial UPDATE packet.\n");
         /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
