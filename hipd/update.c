@@ -2291,7 +2291,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                         hip_print_hit("SPI out addresses", &addr_li->address);
                         if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
                             HIP_DEBUG("Found other family than BEX address family\n");
-                            memcpy(daddr, &addr_li->address, sizeof(struct in6_addr));
+                            ipv6_addr_copy(daddr, &addr_li->address);
+                            ipv6_addr_copy(&entry->preferred_address, &addr_li->address);
                             goto break_list_for_loop; /* or just break? FIX later */
                         }
                     }
@@ -2489,7 +2490,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         /* if del then we have to remove SAs for that address */
         was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address);
-        if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
+        if (!is_add && (was_bex_addr == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
