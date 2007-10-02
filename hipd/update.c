@@ -245,7 +245,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
         /* lets try */
         if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-                                             1,
+                                             0,
                                              lifetime, 1), -1);
         } else {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
@@ -306,10 +306,10 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
     int err = 0;
     uint32_t spi_in;
     struct hip_locator *locator = (void *) _locator;
-    
+
     if (hip_update_locator_contains_item(locator, list_item))
         goto out_err;
-	
+
     HIP_DEBUG_HIT("deprecating address", &list_item->address);
     list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
 
