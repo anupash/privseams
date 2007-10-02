@@ -2,7 +2,7 @@
  * This code is heavily based on Boeing HIPD hip_netlink.c
  *
  */
-
+ 
 #include "netdev.h"
 #include "opendht/libhipopendht.h"
 #include "debug.h"
@@ -716,6 +716,9 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                             i++;
                                         }
 				}
+                                ii = 0;
+                                item = NULL;
+                                tmp = NULL;
 				list_for_each_safe(item, tmp, addresses, ii)
 				{
 					n = list_entry(item);

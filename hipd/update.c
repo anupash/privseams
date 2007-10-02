@@ -2563,8 +2563,10 @@ int hip_send_update(struct hip_hadb_state *entry,
             list_for_each_safe(item, tmp_li, addresses, i) {
                 n = list_entry(item);
                 if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
-                    IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+                    IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
+                    break;
+                }
             }
         }
 
