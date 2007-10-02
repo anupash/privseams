@@ -245,7 +245,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
         /* lets try */
         if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
-                                             0,
+                                             1,
                                              lifetime, 1), -1);
         } else {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
@@ -1942,6 +1942,8 @@ int hip_receive_update(struct hip_common *msg,
 		HIP_DEBUG("LOCATOR: SPI new 0x%x\n", ntohl(esp_info->new_spi));
 		has_esp_info = 1;
 	}
+        if (locator)
+            HIP_DEBUG("LOCATOR found\n");
 	if (echo)
 		HIP_DEBUG("ECHO_REQUEST found\n");
 	if (echo_response)
