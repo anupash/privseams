@@ -2179,8 +2179,6 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			   "Error while changing inbound security association for new preferred address\n");
 
 	ipv6_addr_copy(&entry->local_address, new_pref_addr);
-        /* have to change this one too otherwise send raw will fail */
-        ipv6_addr_copy(&entry->preferred_address, daddr);
 
 out_err:
 	return err;
@@ -2292,14 +2290,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
                         if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) != IN6_IS_ADDR_V4MAPPED(daddr)) {
                             HIP_DEBUG("Found other family than BEX address family\n");
                             memcpy(daddr, &addr_li->address, sizeof(struct in6_addr));
+                            goto break_list_for_loop; /* or just break? FIX later */
                         }
                     }
                 }
+                break_list_for_loop:
                 been_here = 1;
                 goto choose_random;
             }           
         }
-
 	if (preferred_address_found)
 		goto skip_pref_update;
 
