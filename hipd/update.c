@@ -2366,6 +2366,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		    int is_add, struct sockaddr* addr)
 {
 	int err = 0, make_new_sa = 0, /*add_esp_info = 0,*/ add_locator;
+        int was_bex_addr = -1;
         int i = 0;
 	uint32_t update_id_out = 0;
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
@@ -2484,7 +2485,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 		esp_info_new_spi = new_spi_in;
 	}
 
-        /* if del then we have to remove SAs for that address */ 
+        /* if del then we have to remove SAs for that address */
+        was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address);
         if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
@@ -2570,7 +2572,7 @@ int hip_send_update(struct hip_hadb_state *entry,
         /* guarantees retransmissions */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
 
-        if (!is_add && (ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address) == 0)) {
+        if (!is_add && (was_bex_addr == 0)) {
             err = entry->hadb_xmit_func->
                 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                              entry->peer_udp_port, update_packet, entry, 1);
