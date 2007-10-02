@@ -2555,7 +2555,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 #if 0
         if(IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
            == IN6_IS_ADDR_V4MAPPED(&daddr))
+#endif 
             memcpy(&saddr, &entry->local_address, sizeof(saddr));
+#if 0
 	else {
             list_for_each_safe(item, tmp_li, addresses, i) {
                 n = list_entry(item);
