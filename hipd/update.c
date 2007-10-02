@@ -2116,6 +2116,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 				 struct in6_addr *new_pref_addr,
 				 struct in6_addr *daddr,
 				 uint32_t *_spi_in){
+
 	int err = 0;
 	struct hip_spi_in_item *item, *tmp;
 	uint32_t spi_in = *_spi_in;
@@ -2178,6 +2179,8 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			   "Error while changing inbound security association for new preferred address\n");
 
 	ipv6_addr_copy(&entry->local_address, new_pref_addr);
+        /* have to change this one too otherwise send raw will fail */
+        ipv6_addr_copy(&entry->preferred_address, daddr);
 
 out_err:
 	return err;
