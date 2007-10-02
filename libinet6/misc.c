@@ -4,7 +4,7 @@
  * Licence: GNU/GPL
  * Authors:
  * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Bing Zhou <bingzhou@cc.hut.fi>
  */
 
@@ -176,6 +176,7 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  */
 unsigned long hip_hash_spi(const void *ptr)
 {
+	u32 spi = * (u32 *) ptr;
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
 	return (hash % ULONG_MAX);
 }
@@ -916,8 +917,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     
   }
 
-  dsa_lhi.anonymous = htons(anon);
-  rsa_lhi.anonymous = htons(anon);
+
   
   if (use_default) {
     HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);
@@ -928,7 +928,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   
   switch(action) {
   case ACTION_NEW:
-    /* zero means "do not send any message to kernel */
+    /* zero means "do not send any message to hipd */
     numeric_action = 0;
 
     /* Default directory is created only in "hipconf new default hi" */

@@ -362,6 +362,8 @@ struct hip_hadb_user_info_state
 {
 	hip_hit_t            hit_our;
 	hip_hit_t            hit_peer;
+	struct in6_addr      ip_our;
+	struct in6_addr      ip_peer;
 	int                  state;
 };
 
@@ -501,12 +503,14 @@ struct hip_hadb_misc_func_set{
 	int (*hip_produce_keying_material)(struct hip_common *msg,
 					   struct hip_context *ctx,
 					   uint64_t I,
-					   uint64_t J);
+					   uint64_t J,
+					   struct hip_dh_public_value **);
 	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
-			     hip_portpair_t *);
+			     hip_portpair_t *,
+			     struct hip_dh_public_value *);
 	int (*hip_create_r2)(struct hip_context *ctx,
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,

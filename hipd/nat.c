@@ -63,8 +63,9 @@ int hip_nat_on()
 	hip_nat_status = 1;
 	
 	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
-		 "Error from for_each_ha().\n");
- out_err:
+	         "Error from for_each_ha().\n");
+
+out_err:
 	return err;
 }
 
@@ -89,6 +90,16 @@ int hip_nat_off()
  out_err:
 	return err;
 }
+
+
+/**
+ * Get HIP NAT status.
+ */
+int hip_nat_is()
+{
+	return hip_nat_status;
+}
+
 
 /**
  * Sets NAT status "on" for a single host association.
@@ -199,15 +210,16 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   a NAT between this host and the peer. Note, that there is no error
 	   (err is set to zero) if the condition does not hold. We just don't
 	   send the packet in that case. */
-	HIP_IFEL((entry->state != HIP_STATE_ESTABLISHED), 0, 
-		 "Not sending NAT keepalive, invalid hip state "\
-		 "in current host association. State is %s.\n", 
-		 hip_state_str(entry->state));
-	
-	HIP_IFEL(!(entry->nat_mode), 0, 
-		 "Not sending NAT keepalive, there is no NAT between this "\
-		 "host and the peer in current host association.\n");
-	
+	if (entry->state != HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("Not sending NAT keepalive state=%s\n", hip_state_str(entry->state));
+		goto out_err;
+        }
+
+	if (!(entry->nat_mode)) {
+		HIP_DEBUG("No nat between the localhost and the peer\n");
+		goto out_err;
+	}
+
 	memset(&update_packet, 0, sizeof(update_packet)); 
 
 	entry->hadb_misc_func->

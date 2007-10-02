@@ -51,6 +51,7 @@ int connhipd_init(void)
 	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
+	chmod(agent_addr.sun_path, 0777);
 
 /*	bzero(&agent_addr, sizeof(agent_addr));
 	alen = sizeof(agent_addr);
@@ -122,13 +123,23 @@ int connhipd_handle_msg(struct hip_common *msg,
 
 	if (type == HIP_AGENT_PING_REPLY)
 	{
-		term_print("Received ping reply from daemon. Connection to daemon established.\n");
+		HIP_DEBUG("Received ping reply from daemon. Connection to daemon established.\n");
 		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
+	else if (type == HIP_NAT_ON)
+	{
+		gui_update_nat(1);
+		HIP_DEBUG("NAT extensions on.\n");
+	}
+	else if (type == HIP_NAT_OFF)
+	{
+		gui_update_nat(0);
+		HIP_DEBUG("NAT extensions off.\n");
+	}
 	else if (type == HIP_DAEMON_QUIT)
 	{
-		term_print("Daemon quit. Waiting daemon to wake up again...\n");
+		HIP_DEBUG("Daemon quit. Waiting daemon to wake up again...\n");
 		gui_set_info(lang_get("gui-info-001"));
 		hip_agent_connected = 0;
 	}
@@ -154,7 +165,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 	{
 		n = 0;
 		
-		gui_clear_hiu();
+		gui_hiu_clear();
 		
 		while((param = hip_get_next_param(msg, param)))
 		{
@@ -169,13 +180,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 				r = hit_db_find(NULL, rhit);
 				if (r)
 				{
-					gui_add_hiu(r);
+					gui_hiu_add(r);
 					n++;
 				}
 			}
 		}
 		
-		gui_set_nof_hiu(n);
+		gui_hiu_count(n);
 	}
 	else if (type == HIP_I1 || type == HIP_R1)
 	{

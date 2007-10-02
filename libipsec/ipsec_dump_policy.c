@@ -29,6 +29,8 @@
  * SUCH DAMAGE.
  */
 
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -41,7 +43,7 @@
 #ifdef HAVE_NETINET6_IPSEC
 #  include <netinet6/ipsec.h>
 #else
-#  include <netinet/ipsec.h>
+#  include <linux/ipsec.h>
 #endif
 
 #include <arpa/inet.h>
@@ -416,3 +418,5 @@ set_address(buf, len, sa, withports)
 
 	return buf;
 }
+
+#endif /* CONFIG_HIP_PFKEY  */

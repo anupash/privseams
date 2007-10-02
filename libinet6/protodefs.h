@@ -52,6 +52,10 @@
 #define HIP_SET_ESCROW_ACTIVE                   85
 /** Daemon tells firewall that escrow is inactive with this message. */
 #define HIP_SET_ESCROW_INACTIVE                 86
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_ON					87
+/** Daemon tells, that nat extension status changed. */
+#define HIP_NAT_OFF					88
 
 /**
  * Daemon should send this message to other processes, when quiting.
@@ -69,7 +73,7 @@
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
-#define HIP_HIT_TYPE_MASK_100   0x20010070
+#define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
@@ -403,6 +407,7 @@ struct endpoint_hip {
 	se_length_t         length; /* length of the whole endpoint in octets */
 	se_hip_flags_t      flags;  /* e.g. ANON or HIT */
 	uint8_t             algo;
+	
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;
@@ -488,15 +493,20 @@ struct hip_solution {
 	uint64_t          J;
 } __attribute__ ((packed));
 
-struct hip_diffie_hellman {
-	hip_tlv_type_t    type;
-	hip_tlv_len_t     length;
-
+struct hip_dh_public_value {
 	uint8_t           group_id;  
 	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
 } __attribute__ ((packed));
+
+struct hip_diffie_hellman {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+
+        struct hip_dh_public_value  pub_val;
+} __attribute__ ((packed));
+
 
 typedef uint16_t hip_transform_suite_t;
 

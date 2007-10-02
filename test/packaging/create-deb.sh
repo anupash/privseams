@@ -9,40 +9,42 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=1
+RELEASE=2
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
-DEBIAN=i386/DEBIAN
-DEBIANGPL=i386/DEBIAN-hiptool
+DEBARCH="i386"
+if uname -a|grep x86_64; then DEBARCH=amd64; fi
+DEBIAN=${DEBARCH}/DEBIAN
+DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
 HIPL=$PWD
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
-PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 # copy the tarball from the HIPL directory
 copy_tarball ()
 {
-    set -e
-    
-    echo "** Copying the tarball"
- #cd ${PKGDIR}
-    cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
-    
-    echo "** Copying Debian control files to '${SRCDIR}/debian'"
-    mkdir -p "${SRCDIR}/debian"
-    cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-    for f in changelog copyright;do
+	set -e
+	
+	echo "** Copying the tarball"
+	#cd ${PKGDIR}
+	cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+	
+	echo "** Copying Debian control files to '${SRCDIR}/debian'"
+	mkdir -p "${SRCDIR}/debian"
+	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
+	for f in changelog copyright;do
 	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
-    done
-    
-    set +e
+	done
+	
+	set +e
 }
 
 # copy GPL files when building corporate packages
@@ -94,7 +96,7 @@ copy_files ()
     cp hipd/hipd $PKGDIR/usr/sbin/
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    cp agent/hipagent $PKGDIR/usr/sbin/
+#    cp agent/hipagent $PKGDIR/usr/sbin/
 
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
@@ -118,7 +120,7 @@ copy_files ()
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+#    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
 
     echo "** Copying init.d script to $PKGDIR"
@@ -235,9 +237,12 @@ if [ $TYPE = "binary" ];then
 	fi
 
     cd "$HIPL"
-
     echo "** Running make in $HIPL"
-    if ! make;then
+    ./autogen
+    ./configure --prefix=/usr
+    echo "** Running make in $HIPL"
+    echo "** Running make in $HIPL"
+    if ! make clean all;then
 	echo "** Error while running make in $HIPL, exiting"
 	exit 1
     fi
@@ -281,30 +286,32 @@ if [ $TYPE = "binary" ];then
 		echo "** Error: unable to copy GPL files, exiting"
 		exit 1
 		fi
+	
+		cd "$PKGROOT"
+		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+		echo "** Successfully finished building the binary GPL Debian package"
+		else
+		echo "** Error!"
+		echo "** Error: Unable to build the binary GPL Debian package!"
+		echo "** Error!"
+		exit 1
+		fi
 	fi
 
-	cd "$PKGROOT"
-	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-	echo "** Successfully finished building the binary GPL Debian package"
-	else
-	echo "** Error!"
-	echo "** Error: Unable to build the binary GPL Debian package!"
-	echo "** Error!"
-	fi
 
 	cd "$PKGROOT"
 	echo "** Creating the Debian package '$PKGNAME'"
-    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGNAME"
-    else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
-    fi
-    rm -rf ${PKGDIR}
-else
+	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+		echo "** Successfully finished building the binary Debian package"
+		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+	else
+		echo "** Error: unable to build package, exiting"
+		error_cleanup
+		exit 1
+	fi
+	rm -rf ${PKGDIR}
+	else
 # $TYPE == "source
 # Debian SOURCE package
 
@@ -348,5 +355,10 @@ else
     fi
 fi
 
+cd $HIPL
+echo "Resetting compilation environment, please wait..."
+./configure >/dev/null
+make clean >/dev/null
+echo "Done."
 
 exit 0

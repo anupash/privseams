@@ -107,7 +107,7 @@ static inline const char *hip_msg_type_str(int type)
  */
 static inline int hip_controls_sane(u16 controls, u16 legal)
 {
-	HIP_DEBUG("hip_controls_sane() invoked.\n");
+	_HIP_DEBUG("hip_controls_sane() invoked.\n");
 	return ((controls & (   HIP_CONTROL_HIT_ANON
 #ifdef CONFIG_HIP_RVS
 				| HIP_CONTROL_RVS_CAPABLE //XX:FIXME
@@ -164,10 +164,20 @@ int hip_handle_close_ack(struct hip_common *, hip_ha_t *);
 /* @} */
 
 int hip_produce_keying_material(struct hip_common *, struct hip_context *,
-				uint64_t, uint64_t );
+				uint64_t, uint64_t, 
+				struct hip_dh_public_value **);
 int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *,
+		  struct hip_dh_public_value *);
 int hip_create_r2(struct hip_context *, struct in6_addr *,
 		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+
+// 2007-02-26 oleg
+// prototype
+hip_rcv_func_set_t *hip_get_rcv_default_func_set();
+// 2006-02-26 oleg
+// prototype
+hip_handle_func_set_t *hip_get_handle_default_func_set();
+
 
 #endif /* HIP_INPUT_H */

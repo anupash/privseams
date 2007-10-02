@@ -21,14 +21,20 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 
+#include "xfrmapi.h"
 #include "hipconf.h"
 #include "oppipdb.h"
+#include "hi3.h"
 
 #include "nsupdate.h"
 
 extern char *i3_config;
+#define USER_NOBODY "nobody"
 
-int hipd_init(int flush_ipsec);
+extern char *hip_i3_config_file;
+extern int hip_use_i3;
+
+int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6);
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp);

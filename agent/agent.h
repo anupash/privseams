@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wait.h> 
+#include <unistd.h>
 
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
@@ -40,9 +41,8 @@
 #include "linux/rtnetlink.h"
 //#include "workqueue.h"
 
-#include "agent_tools.h"
+#include "tools.h"
 #include "gui_interface.h"
-#include "terminal.h"
 
 
 /******************************************************************************/

@@ -13,7 +13,8 @@
 #   include "i3_client_api.h" 
 #endif
 
-#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+//#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+#define HIP_DAEMON_LOCAL_PORT                  40400
 #define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 #define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 #define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"
@@ -76,8 +77,16 @@
 #define SO_HIP_GET_HITS                         142
 #define SO_HIP_GET_HA_INFO			143
 #define SO_HIP_DEFAULT_HIT			144
+#define SO_HIP_SET_DEBUG_ALL			145
+#define SO_HIP_SET_DEBUG_MEDIUM			146
+#define SO_HIP_SET_DEBUG_NONE			147
 /* Socket option for hipconf to ask about the used gateway with OpenDHT*/
-#define SO_HIP_DHT_SERVING_GW                   145
+#define SO_HIP_DHT_SERVING_GW                   148
+#define SO_HIP_HANDOFF_ACTIVE			149
+#define SO_HIP_HANDOFF_LAZY			150
+/* Restart daemon. */
+#define SO_HIP_RESTART							151
+
 /** @} */
 
 #endif /* _HIP_ICOMM */

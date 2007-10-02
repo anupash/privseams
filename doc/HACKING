@@ -310,16 +310,186 @@ patch follows the CVS POLICY (see above). Build your patches against
 the HEAD branch in CVS.  It would be nice if you would build one (or
 multiple) unit test case to validate your patch.
 
-TESTING
-=======
+TEST MATRIX
+===========
 
-The project has a tailored unit testing environment which makes it
-possible to run tests in the HIP kernel module and userspace. It is
-recommended that the developer builds a new test case when creating
-new functionality or repairing old functionality. Still, there are
-some tangled functionality, especially in the kernel, that is
-very difficult to test with unit testing. Manual black box testing
-should be used to cover changes in the code in such cases.
+* platform: 32-bit bit, 64-bit, mixed (32-bit Initiator, 64-bit Resp,
+  or reversed)
+* OS: Fedora, Ubuntu
+* memory leaks
+
+1. Compilation
+--------------
+
+1.1. Compilation on Ubuntu
+1.2. Compilation on Fedora
+
+2. Applications
+---------------
+
+2.1   conntest-client-gai peer_host_name_that_maps_to_hit
+2.2.  conntest-client-gai peer_hostname_without_hit_map
+2.3.  conntest-client hip_host_name
+2.4   conntest-client non_hip_host_name
+2.5   conntest-client peer_hit
+2.6   conntest-client ip_of_non_hip_host
+2.7   hipconf run normal firefox
+2.8   hipconf run opp firefox
+
+TBD: iperf normal + opp
+
+
+3. Base Exchange
+----------------
+
+TBD: base exchanges with different options
+
+4. Mobility Management
+----------------------
+
+4.1 Soft IPv4-Only Handover, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.2. Soft IPv6-Only Handover, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.3 Hard IPv4-Only Handover, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.4 Hard IPv6-Only Handover, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.5 Soft Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.6 Soft Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.7 Hard Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.8 Hard Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.9 Soft IPv4-Only Handover, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.10 Soft IPv6-Only Handover, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.11 Hard IPv4-Only Handover, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.12 Hard IPv6-Only Handover, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.13 Soft Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+4.14 Soft Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.15 Hard Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+4.16 Hard Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+5. Rendezvous
+-------------
+
+TBD
+
+6. NAT Relay
+------------
+
+TBD
+
+6. Closing of connections
+----------------------
+
+TBD
+
 
 CREATING A TARBALL OF THE SOURCE CODE
 =====================================
@@ -409,7 +579,7 @@ In order to build the binary package type the following:
 * fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
 
 Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
-* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
 
 After the kernel has been successfully compiled, you will find the
 debian packages in the top directory.
