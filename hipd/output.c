@@ -1067,10 +1067,10 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 		return -1;
 	}
 
-	//	hip_zero_msg_checksum(msg);
-	//	msg->checksum = hip_checksum_packet((char *)msg, 
-	//			(struct sockaddr *)&src, 
-	//			(struct sockaddr *)&dst);
+		hip_zero_msg_checksum(msg);
+		msg->checksum = hip_checksum_packet((char *)msg, 
+				(struct sockaddr *)&src, 
+				(struct sockaddr *)&dst);
 
 	clb->data_len = hdr_src_len + hdr_dst_len + msg_len;
 

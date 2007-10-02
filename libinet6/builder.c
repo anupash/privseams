@@ -1707,7 +1707,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
 		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
 	} else {
-		HIP_IFEL(hip_checksum_packet((char*)hip_common, src, dst),
+		HIP_IFEL(hip_checksum_packet((char*)hip_common, src, dst)!=hip_common->checksum,
 			 -EBADMSG, "HIP checksum failed.\n");
 	}
 	
