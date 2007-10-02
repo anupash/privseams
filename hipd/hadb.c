@@ -226,15 +226,27 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	hip_hit_t our_hit;
 	int i;
 
+	memset(&our_hit, 0, sizeof(our_hit));
+
+	/* Let's try with the default HIT first */
+	hip_get_default_hit(our_hit);
+	if (entry = hip_hadb_find_byhits(hit, &our_hit)) {
+		_HIP_DEBUG_HIT("Returning default HIT", our_hit);
+		return entry;
+	}
+
+	/* and then with rest (actually default HIT is here redundantly) */
 	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
 	{
 		e = list_entry(item);
-		ipv6_addr_copy(&our_hit,&e->lhi.hit);
+		ipv6_addr_copy(&our_hit, &e->lhi.hit);
 		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
 		_HIP_DEBUG_HIT("hit:", hit);
 		entry = hip_hadb_find_byhits(hit, &our_hit);
-		if (!entry) continue;
-		else return entry;
+		if (!entry)
+			continue;
+		else
+			return entry;
 	}
 	return NULL;
 }
