@@ -2242,7 +2242,6 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		choose_random = 1;
 	}
 
-
 	if( is_add && is_active_handover ) {
 		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
 	} else {
@@ -2328,6 +2327,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	if(!preferred_address_found){
 		HIP_DEBUG("Preferred address Not found !!\n");
+		memset(&entry->local_address, 0, sizeof(struct in6_addr));
 	}
 
 	/* remember the address set we have advertised to the peer */
@@ -2381,6 +2381,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct hip_own_addr_list_item *own_address_item, *tmp;
         hip_list_t *tmp_li = NULL, *item = NULL;
         struct netdev_address *n;
+	struct in6_addr zero_addr = IN6ADDR_ANY_INIT;
 
 	HIP_DEBUG("\n");
 	
@@ -2490,6 +2491,23 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         /* if del then we have to remove SAs for that address */
         was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address);
+
+	if (is_add && ipv6_addr_cmp(&entry->local_address, &zero_addr)) {
+	    ipv6_addr_copy(&entry->local_address, hip_cast_sa_addr(addr));
+            err = hip_update_src_address_list(entry, addr_list, &daddr,
+                                              addr_count, esp_info_old_spi, is_add, addr);
+           if(err == GOTO_OUT)
+		goto out;
+            else if(err)
+                goto out_err;
+
+	   HIP_IFEL(err = hip_update_preferred_address(entry, hip_cast_sa_addr(addr),
+						       &entry->preferred_address,
+						       &esp_info_old_spi), -1,
+		    "Updating peer preferred address failed\n");
+           
+	}
+
         if (!is_add && (was_bex_addr == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
@@ -2684,21 +2702,25 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		struct in6_addr *local_addr = &((rk.array[i])->local_address);
-		struct in6_addr zero_addr = { IN6ADDR_ANY_INIT };
 		if (rk.array[i] != NULL) { 
 
+#if 0
 			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {
 				HIP_DEBUG("Zero addresses, adding new default\n");
 				ipv6_addr_copy(local_addr, &addr_sin6);
 			}
+#endif
 
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add, &addr_sin6);
 
+#if 0
 			if (!is_add && addr_count == 0) {
 				HIP_DEBUG("Deleting last address\n");
 				memset(local_addr, 0, sizeof(struct in6_addr));
 			}
+#endif
+
 			hip_hadb_put_entry(rk.array[i]);
 			//hip_put_ha(rk.array[i]);
 		}
