@@ -1043,9 +1043,12 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	hdr_src.sin6_family = AF_INET6;
 	hdr_src_len = sizeof(struct hi3_ipv6_addr);
 	memcpy(&hdr_src.sin6_addr, src_addr, sizeof(struct in6_addr));
+	memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+
 	hdr_dst.sin6_family = AF_INET6;
 	hdr_dst_len = sizeof(struct hi3_ipv6_addr);
 	memcpy(&hdr_dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
+	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 	/* IPv6 specific code ends */
 
 	msg_len = hip_get_msg_total_len(msg);
@@ -1057,8 +1060,8 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	hip_zero_msg_checksum(msg);
 	msg->checksum = hip_checksum_packet((char *)msg, 
-					(struct sockaddr *)&src, 
-					(struct sockaddr *)&dst);
+					(struct sockaddr *)&hdr_src, 
+					(struct sockaddr *)&hdr_dst);
 
 	buf = clb->data;
 	memcpy(buf, &hdr_src, hdr_src_len);
