@@ -2683,11 +2683,24 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
+		struct in6_addr *local_addr = &((rk.array[i])->local_address);
+		struct in6_addr zero_addr = { IN6ADDR_ANY_INIT };
 		if (rk.array[i] != NULL) { 
-                    hip_send_update(rk.array[i], addr_list, addr_count,
-                                    ifindex, flags, is_add, &addr_sin6);
-                    hip_hadb_put_entry(rk.array[i]);
-                    //hip_put_ha(rk.array[i]);
+
+			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {
+				HIP_DEBUG("Zero addresses, adding new default\n");
+				ipv6_addr_copy(local_addr, &addr_sin6);
+			}
+
+			hip_send_update(rk.array[i], addr_list, addr_count,
+					ifindex, flags, is_add, &addr_sin6);
+
+			if (!is_add && addr_count == 0) {
+				HIP_DEBUG("Deleting last address\n");
+				memset(local_addr, 0, sizeof(struct in6_addr));
+			}
+			hip_hadb_put_entry(rk.array[i]);
+			//hip_put_ha(rk.array[i]);
 		}
 	}
 
