@@ -177,8 +177,16 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
         unsigned char tmp_secret[40];
         int err_rand = 0;
 
-	if (!filter_address(addr, ifindex))
-	{
+	if (addr->sa_family == AF_INET)
+		HIP_DEBUG_INADDR("filter addr", hip_cast_sa_addr(addr));
+	else if (addr->sa_family == AF_INET6)
+		HIP_DEBUG_IN6ADDR("filter addr", hip_cast_sa_addr(addr));
+	else
+		HIP_DEBUG("Unknown family\n");
+	
+	if (filter_address(addr, ifindex)) {
+		HIP_DEBUG("address accepted\n");
+	} else {
 		HIP_DEBUG("filtering this address\n");
 		return;
 	}
@@ -514,7 +522,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 skip_entry_creation:
 
-	if (entry->state == HIP_STATE_NONE ||
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
+		goto out_err;
+	} else if (entry->state == HIP_STATE_NONE ||
 	    entry->state == HIP_STATE_UNASSOCIATED) {
 		HIP_DEBUG("State is %d, sending i1\n", entry->state);
 	} else if (entry->hip_msg_retrans.buf == NULL) {
@@ -555,7 +566,7 @@ skip_entry_creation:
 
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
-	add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
+	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
