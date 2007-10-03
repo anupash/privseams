@@ -220,7 +220,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 		goto out_err;
 	}
 
-	if (IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+	if (!IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
 		HIP_DEBUG("Not IPv4 address, skip NAT keepalive\n");
 		goto out_err;
 	}
