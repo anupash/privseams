@@ -2327,7 +2327,9 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	if(!preferred_address_found){
 		HIP_DEBUG("Preferred address Not found !!\n");
+		err = GOTO_OUT;
 		memset(&entry->local_address, 0, sizeof(struct in6_addr));
+		
 	}
 
 	/* remember the address set we have advertised to the peer */
