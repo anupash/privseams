@@ -310,11 +310,8 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
     if (hip_update_locator_contains_item(locator, list_item))
         goto out_err;
 
-    if (!ipv6_addr_cmp(&list_item->address, &entry->preferred_address)) {
-        HIP_DEBUG_HIT("Deprecating preferred address", &list_item->address); 
-    } else {
-        HIP_DEBUG_HIT("Deprecating address", &list_item->address);
-    }
+    HIP_DEBUG_HIT("Deprecating address", &list_item->address);
+    
     list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
     spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
     
@@ -1223,8 +1220,10 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
             goto out_err;
         ipv6_addr_copy(&list_item->address, &entry->preferred_address);
         HIP_DEBUG_HIT("Checking if preferred address was in locator", &list_item->address);
-        if (!hip_update_locator_contains_item(locator, list_item))
+        if (hip_update_locator_contains_item(locator, list_item)) {
+            HIP_DEBUG("Preferred address was not in locator, so preferred");
             ipv6_addr_copy(&entry->preferred_address, src_ip); 
+        }
 
 	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
 		 -1, "hip_update_handle_locator_parameter failed\n");
