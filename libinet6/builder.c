@@ -1663,7 +1663,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 			      struct sockaddr *src, struct sockaddr *dst,
 			      int len)
 {
-	int err = 0, plen;
+	int err = 0, plen, checksum;
 
 	plen = hip_get_msg_total_len(hip_common);
 
@@ -1707,8 +1707,14 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	if (dst->sa_family == AF_INET && ((struct sockaddr_in *)dst)->sin_port) {
 		HIP_DEBUG("HIP IPv4 UDP packet: ignoring HIP checksum\n");
 	} else {
-		HIP_IFEL(hip_checksum_packet((char*)hip_common, src, dst),
+		checksum = hip_common->checksum;
+		hip_common->checksum = 0;
+
+		HIP_IFEL(hip_checksum_packet((char*)hip_common, src, dst)
+			 !=checksum,
 			 -EBADMSG, "HIP checksum failed.\n");
+
+		hip_common->checksum = checksum;
 	}
 	
 out_err:

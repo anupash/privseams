@@ -459,11 +459,13 @@ int opendht_handle_key(char * key, char * out_key)
  */
 int opendht_read_response(int sockfd, char * answer)
 {
-    int ret = 0;
+    int ret = 0, pton_ret = 0;
     int bytes_read;
     char read_buffer[2048];
     char tmp_buffer[2048];
-    
+    struct in_addr ipv4;
+    struct in6_addr ipv6;
+
     memset(read_buffer, '\0', sizeof(read_buffer));
     do
         {
@@ -478,6 +480,13 @@ int opendht_read_response(int sockfd, char * answer)
     memset(answer, '\0', sizeof(answer));
     ret = 0;
     ret = read_packet_content(read_buffer, answer); 
+    /* If answer was IPv4 address mapped to IPv6 revert to IPv4 format*/
+    pton_ret = inet_pton(AF_INET6, answer, &ipv6);
+    if(IN6_IS_ADDR_V4MAPPED(&ipv6) && pton_ret)
+        {
+            IPV6_TO_IPV4_MAP(&ipv6, &ipv4);
+            sprintf(answer, "%s", inet_ntoa(ipv4));
+        }
     return(ret);
 }
 

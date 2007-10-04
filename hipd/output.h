@@ -22,10 +22,16 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
+#include <netinet/ip.h>
+
+#ifdef CONFIG_HIP_HI3
+//#include "i3_id.h"
+#endif
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern int hip_nat_status;
+extern int hip_interfamily_status;
 
 enum number_dh_keys_t { ONE, TWO };
 
@@ -39,6 +45,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 struct hip_host_id *src_privkey,
 				 const struct hip_host_id *src_pubkey,
 				 int cookie);
+int hip_build_locators(struct hip_common *);
 int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
 		struct in6_addr *, const in_port_t, struct in6_addr *,
 		hip_portpair_t *, const void *, const int, uint16_t *);

@@ -21,7 +21,7 @@
      from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
      because the bug may already have been resolved upstream. There is also a
-     Knoppix based live cd available from the HIPL download pages.
+     Ubuntu based live cd available from the HIPL download pages.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -39,16 +39,14 @@
       Linux Operating System
       </para></listitem>
       <listitem><para>
-      A BEET patched Linux 2.6 kernel with dummy device,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support. Also,
-      you should have also CONFIG_IP_ADVANCED_ROUTER and
-      CONFIG_IP_MULTIPLE_TABLES as built-in.
+      A BEET patched Linux 2.6 kernel with the modules listed in
+      <xref linkend="kernel" />.
       </para></listitem>
       <listitem><para>
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
-      libxml2 and development headers for OpenDHT support
+      libxml2 and its development headers for OpenDHT support
       </para></listitem>
       <listitem><para>
       GNU make
@@ -57,10 +55,14 @@
       the latest versions of autoconf, automake, autoreconf and libtool
       </para></listitem>
       <listitem><para>
-      iproute and its development headers
+      iproute
       </para></listitem>
       <listitem><para>
-      wxgtk 2.6.2 and libgtk-2.x library and development headers
+      gtk2 library and development headers
+      </para></listitem>
+      <listitem><para>
+      Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
+      because atleast in Ubuntu Feisty it messes up the compilation.
       </para></listitem>
     </itemizedlist>
     <para>
@@ -140,7 +142,7 @@
     </itemizedlist>
 
   </chapter>
-  <chapter>
+  <chapter id="kernel">
     <title>Compiling the Kernel</title>
     
     <para>
@@ -172,7 +174,19 @@
             Networking support ---&gt; Networking options
     </para></listitem>
     <listitem><para>
+            &lt;M&gt;  Unix domain sockets
+    </para></listitem>
+    <listitem><para>
+            [*] Transformation user configuration interface
+    </para></listitem>
+    <listitem><para>
             [*] TCP/IP networking
+    </para></listitem>
+    <listitem><para>
+            [*] Advanced router
+    </para></listitem>
+    <listitem><para>
+            [*] IP: policy routing
     </para></listitem>
     <listitem><para>
             &lt;M&gt; Packet socket
@@ -187,10 +201,16 @@
             &lt;M&gt; IP tunneling
     </para></listitem>
     <listitem><para>
-            [*] IPv4: IPsec BEET mode
+            [*] IPv4: IPcomp transformation
     </para></listitem>
     <listitem><para>
-            [*] IPv6: IPsec BEET mode
+            [*] IPv4: IPsec transport mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec tunnel mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
             &lt;M&gt; IP: ESP transform
@@ -202,7 +222,16 @@
             &lt;M&gt; IPv6: ESP transformation
     </para></listitem>
     <listitem><para>
+            &lt;M&gt; IPv6: IPcomp transformation
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: IPsec BEET mode
+    </para></listitem>
+    <listitem><para>
             &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: Multiple Routing Tables
     </para></listitem>
     <listitem><para>
             Cryptographic options
@@ -232,7 +261,10 @@
             Security options ---&gt;
     </para></listitem>
     <listitem><para>
-            [ ] Enable different security models
+            [*] Enable different security models
+    </para></listitem>
+    <listitem><para>
+            [M] Default Linux Capabilities
     </para></listitem>
     </itemizedlist>
     <para>
@@ -352,8 +384,11 @@
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
-      "ip addr show dummy0".
+      If you want to know the HIT of the localhost, run
+      "hipconf get hi default". To avoid routing problems especially with
+      UDP, it is highly recommend to use the default HIT of the machine!
+      You can list all HITs of the machine with "hipconf get hi all", but
+      it is safe to use the optional HITs only with TCP connections!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -422,8 +457,6 @@
             <tbody>
               <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
               <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
-              <row><entry>felwood.infrahip.net</entry><entry>2001:007d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>RSA</entry></row>
-              <row><entry>felwood.infrahip.net</entry><entry>2001:0074:f967:5cb2:cd63:15b5:1737:b083</entry><entry>193.167.187.130</entry><entry>DSA</entry></row>
               <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
               <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
               <!--
@@ -660,14 +693,16 @@
   </chapter>
   <chapter>
 
-    <title> How to Use HIP with Applications?</title>
+    <title>How to Use HIP with Applications?</title>
 
     <para>You need to execute first "make install" in the top directory if
           you have not done it before. Otherwise you have to configure
           library paths using LD_LIBRARY_PATH environment variable.
     </para>
-    <para>There are several methods of using HIP in applications. We have
-          categorized the methods to "easy" and "advanced" here. 
+    <para>This section lists different methods on how to set-up HIP manually
+          in order to make applications use HIP.
+          We have categorized the local methods to "easy"
+          and "advanced" here. 
     </para>
     <section>
     <title>Easy Methods</title>
@@ -700,12 +735,28 @@
        able to see list of processes you have executed from GUI.
     </para>
     <para>
-    4. You can also use HITs directly in the application. Insert the HIT of
-       the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
-       do e.g. "ping6 PEER_HIT". You can set this also to /etc/hip/hipd_config.
+    4. You can also use HITs directly in the application. For example, you can
+       do "ping6 PEER_HIT". However, hipd must know the mapping from the
+       PEER_HIT to the corresponding IP address. You can tell this mapping to
+       hipd using several ways. First way is to configure the HIT-hostname
+       pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
+       way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
+       hipconf command also to /etc/hip/hipd_config and restart hipd when you
+       want the mapping to be permanent. Works only with IPv6-enabled
+       applications.
     </para>
-
+    <para>
+    5. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+       file and use the hostname in your application. You need to make sure
+       that hipd finds the corresponding IP address as instructed in the
+       previous point. Works only with IPv6-enabled applications.
+    </para>
+    <para>
+    6. Use external nameservices for HIT-IP mapping. For example, you can use
+       AAAA records in DNS for testing (HI records are not supported yet).
+       Alternatively, use the free OpenDHT name service for automatic host
+       naming as described in <xref linkend="opendht" />.
+    </para>
     </section>
     <section>
     <title>Advanced Methods</title>

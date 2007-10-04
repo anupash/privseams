@@ -107,7 +107,6 @@ int main(int argc, char *argv[])
             printf("Put packet (fqdn->hit) sent and ...\n");
             printf("Put was success\n");
             close(s);
- 
             /*!!!! put hit->ip !!!!*/ 
             
             s = init_dht_gateway_socket(s);

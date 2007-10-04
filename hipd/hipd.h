@@ -62,7 +62,7 @@
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
    the actual time is between n and n + RETRANSMIT_INIT seconds */
-#define HIP_RETRANSMIT_WAIT 5
+#define HIP_RETRANSMIT_WAIT 10
  
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
@@ -74,9 +74,9 @@
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             0
+#define HIP_SIMULATE_PACKET_LOSS             1
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */

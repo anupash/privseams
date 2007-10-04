@@ -30,6 +30,8 @@
  */
 
 %{
+#ifdef CONFIG_HIP_PFKEY
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -62,7 +64,10 @@
 #define yylval __libipseclval	/* XXX */
 
 int yylex __P((void));
+#endif /* CONFIG_HIP_PFKEY */
 %}
+
+#ifdef CONFIG_HIP_PFKEY
 
 %option noyywrap
 %option nounput
@@ -192,3 +197,4 @@ __policy__strbuffer__free__()
 
 	return;
 }
+#endif /* CONFIG_HIP_PFKEY */
