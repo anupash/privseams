@@ -1202,6 +1202,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_locator *locator;
 	uint16_t mask = 0;
         struct hip_peer_addr_list_item *list_item;
+        u32 spi_in;
         
 	HIP_DEBUG("\n");
        
@@ -1220,8 +1221,16 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
             goto out_err;
         ipv6_addr_copy(&list_item->address, &entry->preferred_address);
         HIP_DEBUG_HIT("Checking if preferred address was in locator", &list_item->address);
-        if (hip_update_locator_contains_item(locator, list_item)) {
-            HIP_DEBUG("Preferred address was not in locator, so preferred");
+        if (!hip_update_locator_contains_item(locator, list_item)) {
+            HIP_DEBUG("Preferred address was not in locator, so changing it"
+                      " and removing SAs\n");
+            spi_in = hip_hadb_get_latest_inbound_spi(entry);
+            hip_delete_sa(spi_in, &entry->local_address, 
+                          &entry->preferred_address, AF_INET6,0,
+                          (int)entry->peer_udp_port);
+            hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
+                          &entry->local_address, AF_INET6,0,
+                          (int)entry->peer_udp_port);
             ipv6_addr_copy(&entry->preferred_address, src_ip); 
         }
 
@@ -2239,8 +2248,12 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	   as peer's preferred address (intrafamily handover). */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
 
-	HIP_IFEL(!addr_list, 0, "No address list\n");
-
+        /* dont go to out_err but to ... */
+        if(!addr_list) {
+            HIP_DEBUG("No address list\n");
+            goto skip_pref_update;
+        }
+        
 	/* spi_in->spi is equal to esp_info_old_spi. In the loop below, we make
 	 * sure that the source and destination address families match
 	 */
@@ -2524,10 +2537,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 
         if (!is_add && (was_bex_addr == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
-            hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
+            hip_delete_sa(esp_info_old_spi, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
                           (int)entry->peer_udp_port);
-            hip_delete_sa(esp_info_old_spi, &entry->preferred_address, 
+            hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
                           hip_cast_sa_addr(addr), AF_INET6,0,
                           (int)entry->peer_udp_port);
      
