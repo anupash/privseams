@@ -306,13 +306,16 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
     int err = 0;
     uint32_t spi_in;
     struct hip_locator *locator = (void *) _locator;
-
+ 
     if (hip_update_locator_contains_item(locator, list_item))
         goto out_err;
 
-    HIP_DEBUG_HIT("deprecating address", &list_item->address);
+    if (!ipv6_addr_cmp(&list_item->address, &entry->preferred_address)) {
+        HIP_DEBUG_HIT("Deprecating preferred address", &list_item->address); 
+    } else {
+        HIP_DEBUG_HIT("Deprecating address", &list_item->address);
+    }
     list_item->address_state = PEER_ADDR_STATE_DEPRECATED;
-
     spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
     
     hip_delete_sa(entry->default_spi_out, &list_item->address, &entry->local_address, 
@@ -378,7 +381,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 #endif            
         HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
                                                entry, spi_out, locator), -1,
-                 "Depracating a peer address failed\n");
+                 "Depracating a peer address failed\n"); 
 
         /* checking did the locator have any address with the same family as
            entry->local_address, if not change local address to address that
@@ -1201,9 +1204,10 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	struct hip_seq *seq;
 	struct hip_locator *locator;
 	uint16_t mask = 0;
-
+        struct hip_peer_addr_list_item *list_item;
+        
 	HIP_DEBUG("\n");
-
+       
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	HIP_IFEL(locator == NULL, -1, "No locator!\n");
 	HIP_IFEL(esp_info == NULL, -1, "No esp_info!\n");
@@ -1213,8 +1217,17 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	if (entry->nat_mode)
 		hip_update_check_simple_nat(src_ip, locator);
 
+        /* remove unused addresses from peer addr list */
+        list_item = malloc(sizeof(struct hip_peer_addr_list_item));
+        if (!list_item) 
+            goto out_err;
+        ipv6_addr_copy(&list_item->address, &entry->preferred_address);
+        HIP_DEBUG_HIT("Checking if preferred address was in locator", &list_item->address);
+        if (!hip_update_locator_contains_item(locator, list_item))
+            ipv6_addr_copy(&entry->preferred_address, src_ip); 
+
 	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
-		 -1, "hip_update_handle_locator_parameter failed\n")
+		 -1, "hip_update_handle_locator_parameter failed\n");
 	
  out_err:
 	if (update_packet)
@@ -1361,7 +1374,7 @@ int hip_handle_update_seq(hip_ha_t *entry,
 	/* 
 	 * 3. The system MUST verify the HMAC in the UPDATE packet.
 	 * If the verification fails, the packet MUST be dropped. 
-	 * **Moved to receive_updae due to commonality with ack processing**
+	 * **Moved to receive_update due to commonality with ack processing**
 	 *
 	 *
 	 * 4. The system MAY verify the SIGNATURE in the UPDATE
