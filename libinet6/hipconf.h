@@ -105,8 +105,7 @@
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
 #define ACTION_INTERFAMILY 19
-#define TYPE_RELAY_UDP_HIP             21
-#define ACTION_MAX 22 /* exclusive */
+#define ACTION_MAX 20 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -130,7 +129,8 @@
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
 #define TYPE_INTERFAMILY 21
-#define TYPE_MAX    	22 /* exclusive */
+#define TYPE_RELAY_UDP_HIP             22
+#define TYPE_MAX    	23 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
