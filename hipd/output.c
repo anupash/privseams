@@ -1020,7 +1020,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	ID id;
 	cl_buf *clb;
   	u16 csum;	
-	int err, msg_len, hdr_dst_len, hdr_src_len;
+	int err = 0, msg_len, hdr_dst_len, hdr_src_len;
 	struct sockaddr_in6 src, dst;
 	struct hi3_ipv6_addr hdr_src, hdr_dst;
 	char *buf;
@@ -1062,6 +1062,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	msg->checksum = hip_checksum_packet((char *)msg, 
 					(struct sockaddr *)&hdr_src, 
 					(struct sockaddr *)&hdr_dst);
+	clb->data_len = hdr_src_len + hdr_dst_len + msg_len;
 
 	buf = clb->data;
 	memcpy(buf, &hdr_src, hdr_src_len);
@@ -1074,7 +1075,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
 	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	cl_set_private_id(&id);
+	//cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */
 	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);

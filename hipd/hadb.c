@@ -1969,6 +1969,12 @@ void hip_init_hadb(void)
 	/* xmit function set */
 	/** @todo Add support for i3. */
 	default_xmit_func_set.hip_send_pkt = hip_send_raw;
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		default_xmit_func_set.hip_send_pkt = hip_send_i3;
+	}
+#endif
 	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
 	/* filter function sets */

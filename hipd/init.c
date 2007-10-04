@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include "debug.h"
 #include <pwd.h>
+#include "hi3.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -128,6 +129,7 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
+	hip_hit_t peer_hit;
 	int err = 0, fd;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
@@ -199,9 +201,6 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
-#endif
-#ifdef CONFIG_HIP_HI3
-	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -307,6 +306,15 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
+
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_get_default_hit(&peer_hit);
+		hip_i3_init(&peer_hit);
+		//cl_init(i3_config_file);
+	}
+#endif
 
 out_err:
 	return err;
