@@ -1231,7 +1231,9 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 	
  out_err:
 	if (update_packet)
-		HIP_FREE(update_packet);
+            HIP_FREE(update_packet);
+        if (list_item)
+            HIP_FREE(list_item);   
 	HIP_DEBUG("end, err=%d\n", err);
 	return err;
 }
