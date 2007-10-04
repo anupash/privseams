@@ -564,6 +564,7 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
     int err = 0;
     char dht_response[1024];
     struct in_addr addr4;
+
     memset(dht_response, '\0', sizeof(dht_response));
     HIP_IFEL(opendht_get_key(opendht_serving_gateway, node_hit, dht_response), -1, 
              "Opendht get in opendht_get_endpoint failed!\n"); 
@@ -580,10 +581,50 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
 }
 #endif /* CONFIG_HIP_OPENDHT */
 
+int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
+	char peer_hit[INET6_ADDRSTRLEN];	
+	int err = -1; /* Assume that resolving fails */
+
+	/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
+	   then resolve the hostname to an IP. The natural place to
+	   handle this is either in the getaddrinfo or
+	   getendpointinfo function with AI_NUMERICHOST flag set.
+	   We can fallback to e.g. DHT search if the mapping is not
+	   found from local files.*/
+	
+	_HIP_DEBUG("I am here just before getendpointinfo() \n");
+	
+	hip_in6_ntop(dst_hit, peer_hit);
+	
+	/* book keeping stuff */
+	memset(dst_addr,0,sizeof(dst_addr));
+	
+	/* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts' 
+	 * and '/etc/hosts' files 	
+	 */
+	HIP_IFEL(!get_peer_endpointinfo2((const char *) peer_hit,
+					    dst_addr),
+		 0, "hip_get_peer_endpointinfo succeeded\n");
+	
+	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
+#ifdef CONFIG_HIP_OPENDHT
+	err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
+	if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
+#endif
+
+out_err:
+	return err;
+	
+}
+
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
-	int err = 0, if_index = 0;
+	int err = 0, if_index = 0, is_ipv4_locator,
+		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
+                old_global_nat_mode = hip_nat_status;
+        in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
+
 	struct xfrm_user_acquire *acq;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
