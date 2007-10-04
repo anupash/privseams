@@ -358,10 +358,10 @@ struct hip_unit_test {
  * @todo Maybe fix this in some better way?
  */
 struct hip_locator_info_addr_item {
-	uint8_t traffic_type;
-	uint8_t locator_type;
-	uint8_t locator_length;
-	uint8_t reserved;
+        uint8_t traffic_type;
+        uint8_t locator_type;
+        uint8_t locator_length;
+        uint8_t reserved;  /* last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 

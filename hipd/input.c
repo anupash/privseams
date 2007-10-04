@@ -491,9 +491,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
-	  err = ((hip_rcv_func_set_t *)
-		 hip_get_rcv_default_func_set())->
-		  hip_receive_i1(msg, src_addr, dst_addr, entry, msg_info);
+	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
+								 dst_addr,
+								 entry,
+								 msg_info);
 	  break;
 		
 	case HIP_I2:
@@ -688,6 +689,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
+	/********* LOCATOR PARAMETER ************/
+        /** Type 193 **/ 
+        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+            HIP_DEBUG("Building LOCATOR parameter\n");
+            if ((err = hip_build_locators(i2)) < 0) 
+                HIP_DEBUG("LOCATOR parameter building failed\n");
+        }
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -978,6 +986,7 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0;
+        int n_addrs = 0, loc_size = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
 	struct hip_context *ctx = NULL;
@@ -985,6 +994,7 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
 	struct hip_dh_public_value *dhpv = NULL;
+        struct hip_locator *locator;
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1026,6 +1036,22 @@ int hip_handle_r1(struct hip_common *r1,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
+
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
+        if (locator)
+            {
+                /* Lets save the LOCATOR to the entry 'till we
+                   get the esp_info in r2 then handle it */
+                n_addrs = hip_get_locator_addr_item_count(locator);
+                loc_size = sizeof(struct hip_locator) +
+                    (n_addrs * sizeof(struct hip_locator_info_addr_item));
+                HIP_IFEL(!(entry->locator = malloc(loc_size)), 
+                       -1, "Malloc for entry->locators failed\n");             
+                memcpy(entry->locator, locator, loc_size);
+             }
+        else
+            HIP_DEBUG("R1 did not have locator\n");
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
@@ -1213,7 +1239,13 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 {
 	int state, mask = HIP_PACKET_CTRL_ANON, err = 0;
 
-	_HIP_DEBUG("hip_receive_r1() invoked.\n");
+	HIP_DEBUG("hip_receive_r1() invoked.\n");
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_oppipdb_delentry(&(entry->preferred_address));
+#endif
+
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
 	  mask |= HIP_PACKET_CTRL_BLIND;
@@ -1266,9 +1298,6 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-		hip_receive_opp_r1_in_established(r1, r1_saddr, r1_daddr, entry, r1_info);
-#endif
 		break;
 	case HIP_STATE_NONE:
 	case HIP_STATE_UNASSOCIATED:
@@ -1280,12 +1309,22 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	}
 
 	hip_put_ha(entry);
+
  out_err:
 	return err;
 }
 
-int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
-		  struct in6_addr *i2_daddr, hip_ha_t *entry,
+/**
+ * hip_create_r2 - Creates and transmits R2 packet.
+ * @param ctx Context of processed I2 packet.
+ * @param entry HA
+ *
+ * @return 0 on success, < 0 on error.
+ */
+int hip_create_r2(struct hip_context *ctx,
+		  struct in6_addr *i2_saddr,
+		  struct in6_addr *i2_daddr,
+		  hip_ha_t *entry,
 		  hip_portpair_t *i2_info)
 {
 	struct hip_reg_request *reg_request = NULL;
@@ -1379,8 +1418,30 @@ int hip_create_r2(struct hip_context *ctx, struct in6_addr *i2_saddr,
 	return err;
 }
 
-int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		  hip_ha_t *ha, hip_portpair_t *i2_info)
+/**
+ * Handles an incoming I2 packet.
+ *
+ * This function is the actual point from where the processing of I2 is started
+ * and corresponding R2 is created. This function also creates a new host
+ * association in the host association database if no previous association
+ * matching the search key (source HIT XOR destination HIT) was found.
+ *
+ * @param i2       a pointer to the I2 HIP packet common header with source and
+ *                 destination HITs.
+ * @param i2_saddr a pointer to the source address from where the I2 packet was
+ *                 received.
+ * @param i2_daddr a pointer to the destination address where the I2 packet was
+ *                 sent to (own address).
+ * @param ha       host association corresponding to the peer.
+ * @param i2_info  a pointer to the source and destination ports (when NAT is
+ *                 in use).
+ * @return         zero on success, or negative error value on error. Success
+ *                 indicates that I2 payloads are checked and R2 is created and
+ *                 sent.
+ */
+int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
+	 	  struct in6_addr *i2_daddr, hip_ha_t *ha,
+		  hip_portpair_t *i2_info)
 {
 	struct hip_context *ctx = NULL;
  	struct hip_tlv_common *param = NULL;
@@ -1398,6 +1459,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint32_t spi_in, spi_out;
 	uint16_t crypto_len, nonce;
 	int err = 0, retransmission = 0, replay = 0;
+        struct hip_locator *locator;
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
@@ -1583,43 +1645,34 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_init_us(entry, plain_local_hit);
 		}
 		else {
-		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		  hip_init_us(entry, &i2->hitr);
+			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+			hip_init_us(entry, &i2->hitr);
 		}
-
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
-		HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
-			 "if_index NOT determined\n");
-
-		memset(addr, 0, sizeof(struct sockaddr_storage));
-		addr->sa_family = AF_INET6;
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
-		add_address_to_list(addr, if_index);
-                /* if_index = addr2ifindx(entry->local_address); */
-
-		/* If the incoming I2 packet has 50500 as destination port, NAT
-		   mode is set on for the host association, I2 source port is
-		   stored as the peer UDP port and send function is set to
-		   "hip_send_udp()". Note that we must store the port not until
-		   here, since the source port can be different for I1 and I2. */
-		if(i2_info->dst_port == HIP_NAT_UDP_PORT)
-		{
-			entry->nat_mode = 1;
-			entry->peer_udp_port = i2_info->src_port;
-			HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-			HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-				  entry);
-			hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-			//entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
-		}
-		entry->hip_transform = hip_tfm;
 
 		hip_hadb_insert_state(entry);
 		hip_hold_ha(entry);
 
 		_HIP_DEBUG("HA entry created.");
 	}
+
+	ipv6_addr_copy(&entry->local_address, i2_daddr);
+
+	/* If the incoming I2 packet has 50500 as destination port, NAT
+	   mode is set on for the host association, I2 source port is
+	   stored as the peer UDP port and send function is set to
+	   "hip_send_udp()". Note that we must store the port not until
+	   here, since the source port can be different for I1 and I2. */
+	if(i2_info->dst_port == HIP_NAT_UDP_PORT) {
+		  entry->nat_mode = 1;
+		  entry->peer_udp_port = i2_info->src_port;
+		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
+		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+		      entry);
+		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+		  //entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	}
 	entry->hip_transform = hip_tfm;
+
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -1827,7 +1880,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   of cycles */
 
 	HIP_DEBUG("state is %d\n", entry->state);
-	
+
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
 
@@ -1882,6 +1935,17 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	     }
 #endif /* CONFIG_HIP_RVS */
 	}
+
+        /***** LOCATOR PARAMETER ******/
+        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator && esp_info)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                                                             locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+            }
+        else
+            HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 
@@ -1979,6 +2043,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	  HIP_UNLOCK_HA(entry);
 	  hip_put_ha(entry);
      }
+
  out_err:
      if (err)
      {
@@ -2119,6 +2184,21 @@ int hip_handle_r2(struct hip_common *r2,
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = 0;
+
+        /***** LOCATOR PARAMETER ******/
+        if (entry->locator)
+            {
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                         entry->locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+            }
+        else
+            HIP_DEBUG("entry->locator did not have locators from r1\n");
+
+	/*
+	  HIP_DEBUG("clearing the address used during the bex\n");
+	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
+	*/
         
 	/* Registration of additional services. Check if we should expect
 	   REG_RESPONSE or REG_FAILED parameter */
@@ -2138,6 +2218,11 @@ int hip_handle_r2(struct hip_common *r2,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	/* Check and remove the IP of the peer from the opp non-HIP database */
+	hip_oppipdb_delentry(&(entry->preferred_address));
+#endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:

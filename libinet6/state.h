@@ -310,6 +310,11 @@ struct hip_hadb_state
      hip_hit_t            hit_peer_blind; /* Peer's HIT */
      uint16_t             blind_nonce_i;
 
+     /* LOCATOR PARAMETER just tmp save if sent in R1 no 
+	esp_info so keeping it here 'till the 
+	hip_update_locator_parameter can be done*/
+     struct hip_locator *locator;
+ 
      /** For retransmission. */
      uint64_t puzzle_i;
      /** For base exchange or CLOSE. @b Not for UPDATE. */
@@ -350,6 +355,8 @@ struct hip_hadb_user_info_state
 {
 	hip_hit_t            hit_our;
 	hip_hit_t            hit_peer;
+	struct in6_addr      ip_our;
+	struct in6_addr      ip_peer;
 	int                  state;
 };
 

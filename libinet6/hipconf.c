@@ -52,7 +52,9 @@ const char *hipconf_usage =
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 #endif
+"locator on|off\n"
 "debug all|medium|none\n"
+"restart daemon\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -61,28 +63,30 @@ const char *hipconf_usage =
  */
 int (*action_handler[])(struct hip_common *, int action,const char *opt[], int optc) = 
 {
-     NULL, /* reserved */
-     hip_conf_handle_hi,
-     hip_conf_handle_map,
-     hip_conf_handle_rst,
-     hip_conf_handle_rvs,
-     hip_conf_handle_bos,
-     hip_conf_handle_puzzle,
-     hip_conf_handle_nat,
-     hip_conf_handle_opp,
-     hip_conf_handle_escrow,
-     hip_conf_handle_service,
-     hip_conf_handle_load,
-     hip_conf_handle_run_normal, /* run */
-     hip_conf_handle_ttl,
-     hip_conf_handle_gw,
-     hip_conf_handle_get,
-     hip_conf_handle_blind,
-     hip_conf_handle_ha,
-     hip_conf_handle_handoff,
-     hip_conf_handle_debug,
-     hip_conf_handle_hipudprelay,
-     NULL /* run */
+	NULL, /* reserved */
+	hip_conf_handle_hi,
+	hip_conf_handle_map,
+	hip_conf_handle_rst,
+	hip_conf_handle_rvs,
+	hip_conf_handle_bos,
+	hip_conf_handle_puzzle,
+	hip_conf_handle_nat,
+	hip_conf_handle_opp,
+	hip_conf_handle_escrow,
+	hip_conf_handle_service,
+	hip_conf_handle_load,
+	hip_conf_handle_run_normal, /* run */
+	hip_conf_handle_ttl,
+	hip_conf_handle_gw,
+	hip_conf_handle_get,
+	hip_conf_handle_blind,
+	hip_conf_handle_ha,
+	hip_conf_handle_handoff,
+	hip_conf_handle_debug,
+	hip_conf_handle_restart,
+        hip_conf_handle_interfamily,
+        hip_conf_handle_hipudprelay,
+	NULL, /* run */
 };
 
 /**
@@ -94,40 +98,44 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
  */
 int hip_conf_get_action(char *text)
 {
-     int ret = -1;
+        int ret = -1;
 
-     if (!strcmp("add", text))
-	  ret = ACTION_ADD;
-     else if (!strcmp("del", text))
-	  ret = ACTION_DEL;
-     else if (!strcmp("new", text))
-	  ret = ACTION_NEW;
-     else if (!strcmp("get", text))
-	  ret = ACTION_GET;
-     else if (!strcmp("set", text))
-	  ret = ACTION_SET;
-     else if (!strcmp("inc", text))
-	  ret = ACTION_INC;
-     else if (!strcmp("dec", text))
-	  ret = ACTION_DEC;
-     else if (!strcmp("nat", text))
-	  ret = ACTION_NAT;
-     else if (!strcmp("bos", text))
-	  ret = ACTION_BOS;
-     else if (!strcmp("rst", text))
-	  ret = ACTION_RST;
-     else if (!strcmp("run", text))
-	  ret = ACTION_RUN;
-     else if (!strcmp("load", text))
-	  ret = ACTION_LOAD;
-     else if (!strcmp("dht", text))
-	  ret = ACTION_DHT;
-     else if (!strcmp("debug", text))
-	  ret = ACTION_DEBUG;
-     else if (!strcmp("handoff", text))
-	  ret = ACTION_HANDOFF;
+	if (!strcmp("add", text))
+		ret = ACTION_ADD;
+	else if (!strcmp("del", text))
+		ret = ACTION_DEL;
+	else if (!strcmp("new", text))
+		ret = ACTION_NEW;
+	else if (!strcmp("get", text))
+		ret = ACTION_GET;
+	else if (!strcmp("set", text))
+		ret = ACTION_SET;
+	else if (!strcmp("inc", text))
+		ret = ACTION_INC;
+	else if (!strcmp("dec", text))
+		ret = ACTION_DEC;
+	else if (!strcmp("nat", text))
+		ret = ACTION_NAT;
+	else if (!strcmp("bos", text))
+		ret = ACTION_BOS;
+	else if (!strcmp("rst", text))
+		ret = ACTION_RST;
+	else if (!strcmp("run", text))
+		ret = ACTION_RUN;
+	else if (!strcmp("load", text))
+		ret = ACTION_LOAD;
+	else if (!strcmp("dht", text))
+		ret = ACTION_DHT;
+        else if (!strcmp("locator", text))
+                ret = ACTION_INTERFAMILY; 
+	else if (!strcmp("debug", text))
+		ret = ACTION_DEBUG;
+	else if (!strcmp("handoff", text))
+		ret = ACTION_HANDOFF;
+	else if (!strcmp("restart", text))
+		ret = ACTION_RESTART;
 
-     return ret;
+        return ret;
 }
 
 /**
@@ -136,62 +144,64 @@ int hip_conf_get_action(char *text)
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
-int hip_conf_check_action_argc(int action)
-{
-     int count = 0;
+int hip_conf_check_action_argc(int action) {
+	int count = -1;
 
-     switch (action)
-     {
-     case ACTION_ADD:
-	  count = 2;
-	  break;
-     case ACTION_DEL:
-	  count = 2;
-	  break;
-     case ACTION_NEW:
-	  count = 2;
-	  break;
-     case ACTION_NAT:
-	  count = 1;
-	  break;
-     case ACTION_SET:
-	  count = 2;
-	  break;
-     case ACTION_INC:
-	  count = 2;
-	  break;
-     case ACTION_DEC:
-	  count = 2;
-	  break;
-     case ACTION_GET:
-	  count = 2;
-	  break;
-     case ACTION_RUN:
-	  count = 2;
-	  break;
-     case ACTION_LOAD:
-	  count=2;
-	  break;
-     case ACTION_DHT:
-	  count=2;
-	  break;
-     case ACTION_RST:
-	  count = 1;
-	  break;
-     case ACTION_BOS:
-	  count = 1;
-	  break;
-     case ACTION_HANDOFF:
-	  count = 2;
-	  break;
-     case ACTION_DEBUG:
-	  count = 1;
-	  break;
-     default:
-	  break;
-     }
+	switch (action) {
+	case ACTION_ADD:
+		count = 2;
+		break;
+	case ACTION_DEL:
+		count = 2;
+		break;
+	case ACTION_NEW:
+		break;
+	case ACTION_NAT:
+		break;
+	case ACTION_SET:
+		count = 2;
+		break;
+	case ACTION_INC:
+		count = 2;
+		break;
+	case ACTION_DEC:
+		break;
+	case ACTION_GET:
+		count = 2;
+		break;
+	case ACTION_RUN:
+		count = 2;
+		break;
+	case ACTION_LOAD:
+		count=2;
+		break;
+	case ACTION_DHT:
+		count=2;
+		break;
+	case ACTION_RST:
+		break;
+	case ACTION_BOS:
+		break;
+	case ACTION_HA:
+		count=2;
+		break;
+	case ACTION_HANDOFF:
+		count = 2;
+		break;
+	case ACTION_DEBUG:
+		count = 1;
+		break;
+	case ACTION_RESTART:
+		count = 1;
+		break;
+        case ACTION_INTERFAMILY:
+                break;
 
-     return count;
+	default:
+	        break;
+	}
+
+	return count;
 }
 
 /**
@@ -200,8 +210,7 @@ int hip_conf_check_action_argc(int action)
  * @param  text the type as a string.
  * @return the numeric type id correspoding to the symbolic text.
  */
-int hip_conf_get_type(char *text,char *argv[])
-{
+int hip_conf_get_type(char *text,char *argv[]) {
      int ret = -1;
 
      if (!strcmp("hi", text))
@@ -229,11 +238,13 @@ int hip_conf_get_type(char *text,char *argv[])
      else if	(strcmp("nat",argv[1])==0) 
 	  ret = TYPE_NAT;
      else if ( (strcmp("all", text) == 0) && (strcmp("bos",argv[1]) == 0))
-     {
 	  ret = TYPE_BOS;
-     }
+     else if (strcmp("locator", argv[1])==0)
+                ret = TYPE_INTERFAMILY;
      else if (!strcmp("debug", text))
 	  ret = TYPE_DEBUG;
+     else if (!strcmp("daemon", text))
+	  ret = TYPE_DAEMON;
      else if (!strcmp("mode", text))
 	  ret = TYPE_MODE;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -264,34 +275,38 @@ int hip_conf_get_type(char *text,char *argv[])
 
 int hip_conf_get_type_arg(int action)
 {
-     int type_arg = -1;
-
-     switch (action)
-     {
-     case ACTION_ADD:
-     case ACTION_DEL:
-     case ACTION_NEW:
-     case ACTION_NAT:
-     case ACTION_INC:
-     case ACTION_DEC:
-     case ACTION_SET:
-     case ACTION_GET:
-     case ACTION_RUN:
-     case ACTION_LOAD:
-     case ACTION_DHT:
-     case ACTION_RST:
-     case ACTION_BOS:
-     case ACTION_HANDOFF:
-	  type_arg = 2;
-	  break;
-     case ACTION_DEBUG:
-	  type_arg = 1;
-	  break;
-     default:
-	  break;
-     }
-
-     return type_arg;
+	int type_arg = -1;
+	
+	switch (action)
+	{
+	case ACTION_ADD:
+	case ACTION_DEL:
+	case ACTION_NEW:
+	case ACTION_NAT:
+	case ACTION_INC:
+	case ACTION_DEC:
+	case ACTION_SET:
+	case ACTION_GET:
+	case ACTION_RUN:
+	case ACTION_LOAD:
+	case ACTION_DHT:
+        case ACTION_INTERFAMILY:
+	case ACTION_RST:
+	case ACTION_BOS:
+	case ACTION_HANDOFF:
+	case ACTION_RESTART:
+		type_arg = 2;
+		break;
+	
+	case ACTION_DEBUG:
+		type_arg = 1;
+		break;
+	
+	default:
+		break;
+	}
+	
+	return type_arg;
 }
 
 /**
@@ -775,6 +790,35 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 }
 
 /**
+ * Handles the hipconf commands where the type is @c interfamily.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_interfamily(struct hip_common *msg, int action,
+		   const char *opt[], int optc)
+{
+    int err = 0, status = 0;
+    
+    if (!strcmp("on",opt[0])) {
+        status = SO_HIP_SET_INTERFAMILY_ON; 
+    } else if (!strcmp("off",opt[0])) {
+        status = SO_HIP_SET_INTERFAMILY_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+    
+ out_err:
+    return err;
+}
+
+/**
  * Handles the hipconf commands where the type is @c puzzle.
  *
  * @param msg    a pointer to the buffer where the message for kernel will
@@ -890,45 +934,37 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
      unsigned int oppmode = 0;
      int err = 0;
 
-     if (action == ACTION_RUN)
-	  return hip_handle_exec_application(0, EXEC_LOADLIB_OPP,
-					     (char **) &opt[0],
-					     optc);
-     if (optc != 1)
-     {
-	  HIP_ERROR("Incorrect number of arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
+	if (action == ACTION_RUN)
+		return hip_handle_exec_application(0, EXEC_LOADLIB_OPP, optc, (char **) &opt[0]);
+	if (optc != 1) {
+		HIP_ERROR("Incorrect number of arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
 
-     if (!strcmp("on",opt[0]))
-     {
-	  oppmode = 1;
-     } else if (!strcmp("off", opt[0]))
-     {
-	  oppmode = 0;
-     } else
-     {
-	  HIP_ERROR("Invalid argument\n");
-	  err = -EINVAL;
-	  goto out;
-     }
+	if (!strcmp("on",opt[0])) {
+		oppmode = 1;
+	} else if (!strcmp("off", opt[0])){
+		oppmode = 0;
+	} else {
+		HIP_ERROR("Invalid argument\n");
+		err = -EINVAL;
+		goto out;
+	}
 
-     err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
-				    sizeof(unsigned int));
-     if (err)
-     {
-	  HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
-	  goto out;
-     }
+	err = hip_build_param_contents(msg, (void *) &oppmode, HIP_PARAM_UINT,
+				       sizeof(unsigned int));
+	if (err) {
+		HIP_ERROR("build param oppmode failed: %s\n", strerror(err));
+		goto out;
+	}
 
-     /* Build the message header */
-     err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
-     if (err)
-     {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
-	  goto out;
-     }
+	/* Build the message header */
+	err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
+	if (err) {
+		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		goto out;
+	}
 
  out:
      return err;
@@ -1016,8 +1052,6 @@ int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[]
      return err;
 	
 }
-
-/* ================================================================================== */
 
 int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
 {
@@ -1203,8 +1237,7 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc)
 {
-     return hip_handle_exec_application(0, EXEC_LOADLIB_HIP,
-					(char **) &opt[0], optc);
+	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc, (char **) &opt[0]);
 }
 
 int hip_do_hipconf(int argc, char *argv[], int send_only)
@@ -1317,8 +1350,49 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
 	  HIP_DEBUG("\n");
      }
 
- out_err:
-     return err;
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+                 "Building of daemon header failed\n");
+
+        HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+                 "send recv daemon info\n");
+
+        while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+                struct hip_hadb_user_info_state *ha =
+                        hip_get_param_contents_direct(current_param);
+
+                if (!strcmp("all", opt[0])) {
+                        HIP_DEBUG("HA is %s\n", hip_state_str(ha->state));
+                        HIP_DEBUG_HIT("local hit is", &ha->hit_our);
+                        HIP_DEBUG_HIT("peer  hit is", &ha->hit_peer);
+                        HIP_DEBUG_IN6ADDR("local ip is", &ha->ip_our);
+                        HIP_DEBUG_IN6ADDR("peer  ip is", &ha->ip_peer);
+
+                }
+
+                if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
+                    (strcmp("all",opt[0]) !=0))
+                {
+                        ret = inet_pton(AF_INET6,opt[0], &arg1);
+                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+
+                        ret = inet_pton(AF_INET6,opt[1], &hit1);
+                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+
+                        if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
+                        {
+                                HIP_DEBUG("HA is in %s state\n", hip_state_str(ha->state));
+                                HIP_DEBUG_HIT("hit is", &ha->hit_our);
+                        }
+
+                }
+
+                HIP_DEBUG("\n");
+        }
+
+   out_err:
+        return err;
 }
 
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
@@ -1473,72 +1547,95 @@ int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length)
  *
  * @param do_fork Whether to fork or not.
  * @param type   the numeric action identifier for the action to be performed.
+ * @param argc   the number of elements in the array.
  * @param argv   an array of pointers to the command line arguments after
  *               the action and type.
- * @param argc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_handle_exec_application(int do_fork, int type, char *argv[], int argc)
-{	
-     /* Variables. */
-     char lib_all[LIB_LENGTH];
-     va_list args;
-     int err = 0;
-     char *libs[5];
+int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
+{
+	/* Variables. */
+	char *path = "/usr/lib:/lib:/usr/local/lib";
+	char lib_all[LIB_LENGTH];
+	va_list args;
+	int err = 0;
+	char *libs[5];
 
 
-     if (do_fork)
-	  err = fork();
-     if (err < 0)
-     {
-	  HIP_ERROR("Failed to exec new application.\n");
-     }
-     else if (err > 0)
-     {
-	  err = 0;
-     }
-     else if(err == 0)
-     {
-	  HIP_DEBUG("Exec new application.\n");
-	  if (type == EXEC_LOADLIB_HIP)
-	  {
-	       libs[0] = "libinet6.so";
-	       libs[1] = "libhiptool.so";
-	       libs[3] = NULL;
-	       libs[4] = NULL;
+	if (do_fork)
+		err = fork();
+	if (err < 0)
+	{
+		HIP_ERROR("Failed to exec new application.\n");
+	}
+	else if (err > 0)
+	{
+		err = 0;
+	}
+	else if(err == 0)
+	{
+		HIP_DEBUG("Exec new application.\n");
+		if (type == EXEC_LOADLIB_HIP)
+		{
+		      libs[0] = "libinet6.so";
+		      libs[1] = "libhiptool.so";
+		      libs[3] = NULL;
+		      libs[4] = NULL;
 		  
 #ifdef CONFIG_HIP_OPENDHT
-	       libs[2] = "libhipopendht.so";
+		      libs[2] = "libhipopendht.so";
 #else
-	       libs[2] = NULL;
+		      libs[2] = NULL;
 #endif
-	  }
-	  else
-	  {
-	       libs[0] = "libopphip.so";
-	       libs[1] = "libinet6.so";
-	       libs[2] = "libhiptool.so";
-	       libs[4] = NULL;
+		}
+		else if (type == EXEC_LOADLIB_OPP)
+		{
+		      libs[0] = "libopphip.so";
+		      libs[1] = "libinet6.so";
+		      libs[2] = "libhiptool.so";
+		      libs[4] = NULL;
 
 #ifdef CONFIG_HIP_OPENDHT
-	       libs[3] = "libhipopendht.so";
+		      libs[3] = "libhipopendht.so";
 #else
-	       libs[3] = NULL;
+		      libs[3] = NULL;
 #endif
-	  }
+		}
 
-	  hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
-	  setenv("LD_PRELOAD", lib_all, 1);
-	  HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
-	  err = execvp(argv[0], argv);
+#if 0
+		if (type != EXEC_LOADLIB_NONE)
+		{
+			setenv("LD_PRELOAD", libs, 1);
+			HIP_DEBUG("LD_PRELOADing\n");
+		}
+#endif
 
-	  if (err != 0)
-	  {
-	       HIP_DEBUG("Executing new application failed!\n");
-	       exit(1);
-	  }
-     }
+		hip_append_pathtolib(libs, lib_all, LIB_LENGTH);
+		setenv("LD_PRELOAD", lib_all, 1);
+		HIP_DEBUG("LD_PRELOADing: %s\n", lib_all);
+		err = execvp(argv[0], argv);
 
- out_err:
-     return (err);
+		if (err != 0)
+		{
+			HIP_DEBUG("Executing new application failed!\n");
+			exit(1);
+		}
+	}
+
+out_err:
+	return (err);
+}
+
+
+/**
+ * Send restart request to HIP daemon.
+ */
+int hip_conf_handle_restart(struct hip_common *msg, int type, const char *opt[], int optc)
+{
+	int err = 0;
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART, 0), -1, "hip_build_user_hdr() failed!");
+
+out_err:
+	return err;
 }

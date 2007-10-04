@@ -5,8 +5,15 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "init.h"
+#include <linux/capability.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include "debug.h"
+#include <pwd.h>
+#include "hi3.h"
 
 extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
 
@@ -88,6 +95,7 @@ void hip_set_os_dep_variables()
 	  - crypto algo names changed
 	*/
 
+#ifndef CONFIG_HIP_PFKEY
 	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
 		hip_xfrm_set_beet(2);
 		hip_xfrm_set_algo_names(0);
@@ -95,12 +103,15 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(4);
 		hip_xfrm_set_algo_names(1);
 	}
+#endif
 
+#ifndef CONFIG_HIP_PFKEY
 #ifdef CONFIG_HIP_BUGGYIPSEC
         hip_xfrm_set_default_sa_prefix_len(0);
 #else
 	/* This requires new kernel versions (the 2.6.18 patch) - jk */
         hip_xfrm_set_default_sa_prefix_len(128);
+#endif
 #endif
 }
 
@@ -110,14 +121,11 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
+	hip_hit_t peer_hit;
 	int err = 0, fd;
-	uid_t euid;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
-
-	euid = geteuid();
-	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -160,8 +168,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
-	HIP_IFEL(hip_ipdb_clear(), -1,
-	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
+	HIP_IFEL(hip_init_oppip_db(), -1,
+	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -189,9 +197,6 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
-#endif
-#ifdef CONFIG_HIP_HI3
-	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -298,6 +303,15 @@ int hipd_init(int flush_ipsec, int killold)
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_get_default_hit(&peer_hit);
+		hip_i3_init(&peer_hit);
+		//cl_init(i3_config_file);
+	}
+#endif
+
 out_err:
 	return err;
 }
@@ -382,7 +396,7 @@ int hip_init_host_ids()
 		
 	/* Create default keys if necessary. */
 
-	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT)
+	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT)
 	{
 		hip_msg_init(user_msg);
 		err = hip_serialize_host_id_action(user_msg,
@@ -396,7 +410,7 @@ int hip_init_host_ids()
 			goto out_err;
 		}
 	}
-	
+
         /* Retrieve the keys to hipd */
 	hip_msg_init(user_msg);
 	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);
@@ -556,6 +570,8 @@ void hip_exit(int signal)
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
+        if (hipd_msg_v4)
+            HIP_FREE(hipd_msg_v4);
 	
 	hip_delete_all_sp();
 

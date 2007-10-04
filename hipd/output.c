@@ -1,3 +1,5 @@
+
+
 /** @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
@@ -144,16 +146,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
  	struct hip_locator_info_addr_item *locators = NULL;
-	struct netdev_address *n;
+	struct netdev_address *n = NULL;
+ 	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
+ 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 	hip_ha_t *entry = NULL;
-	hip_list_t *item, *tmp;
-	int *service_list = NULL;
-	int *list;
-	u8 *dh_data1 = NULL, *dh_data2 = NULL;
-	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-	int mask = 0, addr_count = 0, service_count = 0, count = 0, i = 0;
+       	uint32_t spi = 0;
+	int * service_list = NULL;
+	int service_count = 0;
+	int *list = NULL;
 	int  l = 0, is_add = 0, ii = 0;
-	uint32_t spi = 0;
+	hip_list_t *item, *tmp;
 
 	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
@@ -197,6 +199,14 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** R1_COUNTER (OPTIONAL) *********/
 
+	/********* LOCATOR PARAMETER ************/
+        /** Type 193 **/ 
+        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+            HIP_DEBUG("Building LOCATOR parameter\n");
+            if ((err = hip_build_locators(msg)) < 0) 
+                HIP_DEBUG("LOCATOR parameter building failed\n");
+            _HIP_DUMP_MSG(msg);
+        }
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
@@ -268,24 +278,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** ECHO_REQUEST (OPTIONAL) *********/
 	
-	/************LOCATOR PARAMETER **********************/
-	if (locators)
-	{				
-	     list_for_each_safe(item, tmp, addresses, ii)
-			{
-				n = list_entry(item);
-				memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-				hip_print_hit("LOCATOR is\n",&locators[i].address);
-					i++;
-			}
-		_HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
-		HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
-			 "Building LOCATOR failed\n");			
-	}
-	
-	/********************LOCATOR PARAMETER******************************/
-	
 	/* Fill puzzle parameters */
 	{
 		struct hip_puzzle *pz;
@@ -332,50 +324,95 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
   	return NULL;
 }
 
-
-int hip_for_each_locator_addr_list(hip_ha_t *entry, struct hip_locator *locator,
-                                   void *opaque)
+/**
+ * Builds locator list to msg
+ *
+ * @param msg          a pointer to hip_common to append the LOCATORS
+ * @return             len of LOCATOR on success, or negative error value on error
+ */
+int hip_build_locators(struct hip_common *msg) 
 {
-     int i = 0, err = 0;
-     struct hip_common *msg;
-     struct hip_locator_info_addr_item *locators;
-     hip_list_t *item, *tmp;
-     struct netdev_address *n;
-     int l, is_add, ii;
+    int err = 0, i = 0, ii = 0;
+    struct netdev_address *n;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_locator_info_addr_item *locs = NULL;
+    int addr_count = 0;
 
-     if (locators)
-     {
-				
-	  list_for_each_safe(item, tmp, addresses, ii)
-	       {
-		    n = list_entry(item);
-		    memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-			   hip_sa_addr_len(&n->addr));
-		    hip_print_hit("the hits are\n",&locators[i].address);
-		    i++;
-	       }
-	  HIP_DEBUG("LOCATOR to be sent contains %i addr(s)\n", i);
-     }
-
-     memset(n,0,sizeof(n));
-	
-     //HIP_IFEL(hip_build_param_locator_list(msg,locators,1), -1,
-     //	 "Building LOCATOR failed\n");
+    if (address_count > 1) {
+        HIP_IFEL(!(locs = malloc(address_count * 
+                                 sizeof(struct hip_locator_info_addr_item))), 
+                 -1, "Malloc for LOCATORS failed\n");
+        memset(locs,0,(address_count * 
+                       sizeof(struct hip_locator_info_addr_item)));
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs[ii].reserved = 0;
+                ii++;
+            }
+        }
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs[ii].reserved = 0;
+                ii++;
+            }
+        }
+        err = hip_build_param_locator(msg, locs, address_count);
+    }
+    else
+        HIP_DEBUG("Host has only one or no addresses no point "
+                  "in building LOCATOR parameters\n");
  out_err:
 
-     return err;
+    if (locs) free(locs);
+    return err;
 }
 
-/* really ugly hack ripped from rea.c, must convert to list_head asap */
-struct hip_update_kludge {
-	hip_ha_t **array;
-	int count;
-	int length;
-};
-
+/**
+ * Transmits an R1 packet to the network.
+ *
+ * Sends an R1 packet to the peer and stores the cookie information that was
+ * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
+ * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
+ * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
+ * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
+ * have the address of that middlebox.
+ *
+ * @param i1_saddr      a pointer to the source address from where the I1 packet
+ *                      was received.
+ * @param i1_daddr      a pointer to the destination address where to the I1
+ *                      packet was sent to (own address).
+ * @param src_hit       a pointer to the source HIT i.e. responder HIT
+ *                      (own HIT). 
+ * @param dst_ip        a pointer to the destination IPv6 address where the R1
+ *                      should be sent (peer ip).
+ * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
+ *                      (peer HIT).
+ * @param i1_info       a pointer to the source and destination ports
+ *                      (when NAT is in use).
+ * @param traversed_rvs a pointer to the rvs addresses to be inserted into the
+ *                      @c VIA_RVS parameter.
+ * @param rvs_count     number of addresses in @c traversed_rvs.
+ * @return              zero on success, or negative error value on error.
+ */
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
-		in6_addr_t *dst_ip, const in_port_t dst_port,
-		hip_portpair_t *i1_info, uint16_t *nonce) 
+                in6_addr_t *dst_ip, const in_port_t dst_port,
+                hip_portpair_t *i1_info, uint16_t *nonce) 
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
@@ -593,9 +630,9 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	   different length */
 	if (!entry)
 		goto out_err;
-	else if (entry->hip_msg_retrans.buf) {
-		HIP_FREE(entry->hip_msg_retrans.buf);
-		entry->hip_msg_retrans.buf= NULL;
+	else if (entry->hip_msg_retrans.buf) { 
+            HIP_FREE(entry->hip_msg_retrans.buf);
+            entry->hip_msg_retrans.buf= NULL;
 	}
 
 	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -ENOMEM);
@@ -988,7 +1025,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	ID id;
 	cl_buf *clb;
   	u16 csum;	
-	int err, msg_len, hdr_dst_len, hdr_src_len;
+	int err = 0, msg_len, hdr_dst_len, hdr_src_len;
 	struct sockaddr_in6 src, dst;
 	struct hi3_ipv6_addr hdr_src, hdr_dst;
 	char *buf;
@@ -1011,9 +1048,12 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	hdr_src.sin6_family = AF_INET6;
 	hdr_src_len = sizeof(struct hi3_ipv6_addr);
 	memcpy(&hdr_src.sin6_addr, src_addr, sizeof(struct in6_addr));
+	memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
+
 	hdr_dst.sin6_family = AF_INET6;
 	hdr_dst_len = sizeof(struct hi3_ipv6_addr);
 	memcpy(&hdr_dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
+	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
 	/* IPv6 specific code ends */
 
 	msg_len = hip_get_msg_total_len(msg);
@@ -1025,8 +1065,9 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 	hip_zero_msg_checksum(msg);
 	msg->checksum = hip_checksum_packet((char *)msg, 
-					(struct sockaddr *)&src, 
-					(struct sockaddr *)&dst);
+					(struct sockaddr *)&hdr_src, 
+					(struct sockaddr *)&hdr_dst);
+	clb->data_len = hdr_src_len + hdr_dst_len + msg_len;
 
 	buf = clb->data;
 	memcpy(buf, &hdr_src, hdr_src_len);
@@ -1039,7 +1080,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
 	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	cl_set_private_id(&id);
+	//cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */
 	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);

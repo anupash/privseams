@@ -46,18 +46,17 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
 		if ((entry->hip_msg_retrans.count > 0) &&
-		    (entry->state != HIP_STATE_ESTABLISHED || entry->update_state != 0) &&
-		    (entry->retrans_state == entry->state || entry->retrans_state == entry->update_state)) {
+		    (entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
+		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
-			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
-					     entry, 0);
+					     entry, 0);  
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
@@ -75,14 +74,15 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
+
+			if (entry->state == HIP_STATE_ESTABLISHED)
+				entry->retrans_state = entry->update_state;
+			else
+				entry->retrans_state = entry->state;
 		}
 	}
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
-		entry->retrans_state = entry->update_state;
-	else
-		entry->retrans_state = entry->state;
 	
 	return err;
 }
@@ -133,6 +133,7 @@ int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 out_err:
 	return (err);
 }
+
 
 /**
  * Send local HITs to agent.
@@ -346,6 +347,20 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 
 out_err:
 	return err;
+}
+
+
+/**
+ * Update different items status to agent.
+ */
+int hip_agent_update(void)
+{
+	hip_agent_add_lhits();
+	
+	if (hip_nat_is())
+		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+	else
+		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
 }
 
 

@@ -45,20 +45,10 @@ copy_binpkg_files()
 
 	cp -d $ROOT/agent/hipagent $PKGDIR/usr/sbin/
 
-	cp -d $ROOT/libhipgui/exec.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/newgroup.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/newhit.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/run.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/stock_id_24.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/stock_id_48.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/stock_keyring_24.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/stock_keyring_48.png $PKGDIR/usr/share/hipl/libhipgui/
-	cp -d $ROOT/libhipgui/swtool.png $PKGDIR/usr/share/hipl/libhipgui/
-
-	cp -d $ROOT/libhipgui/hipgconf.desktop $PKGDIR/etc/xdg/autostart/hipgconf.desktop
-	cp -d $ROOT/libhipgui/hipgconf.app.desktop $PKGDIR/usr/share/applications/hipgconf.desktop
-	cp -d $ROOT/libhipgui/hipgconf.menu $PKGDIR/usr/share/menu/hipgconf
-	cp -d $ROOT/libhipgui/logo32.png $PKGDIR/usr/share/pixmaps/hipgconf.png
+	cp -d $ROOT/libhipgui/hipmanager.desktop $PKGDIR/etc/xdg/autostart/hipmanager.desktop
+	cp -d $ROOT/libhipgui/hipmanager.app.desktop $PKGDIR/usr/share/applications/hipmanager.app.desktop
+	cp -d $ROOT/libhipgui/hipmanager.menu $PKGDIR/usr/share/menu/hipmanager
+	cp -d $ROOT/libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
 
 	set +e
 }

@@ -30,7 +30,24 @@
 #define HIP_DAEMON_LOCK_FILE	"/var/lock/hipd.lock"
 #define USER_NOBODY "nobody"
 
+#include <sys/types.h>
+#include <sys/stat.h> 
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <sys/utsname.h>
+
+#include "xfrmapi.h"
+#include "hipconf.h"
+#include "oppipdb.h"
+#include "hi3.h"
+
+#define USER_NOBODY "nobody"
+
 extern char *i3_config_file;
+extern char *hip_i3_config_file;
+extern int hip_use_i3;
 
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();

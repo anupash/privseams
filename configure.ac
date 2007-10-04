@@ -235,6 +235,17 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
+AC_ARG_ENABLE(interfamily,
+             AC_HELP_STRING([--enable-interfamily],
+                            [Interfamily handover support (default is NO)]),
+             [ac_cv_use_interfamily=$enableval], [ac_cv_use_interfamily=no])
+AC_CACHE_CHECK([whether to use interfamily],
+               [ac_cv_use_interfamily], [ac_cv_use_interfamily=no])
+if test x"$ac_cv_use_interfamily" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_INTERFAMILY, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_INTERFAMILY, test x"$ac_cv_use_interfamily" = x"yes")
+ 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
                             [HIP BLIND extensions (default is NO)]),
@@ -289,12 +300,8 @@ AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 
-AC_SUBST(HIPL_DEFAULT_PREFIX, "/usr/local")
-AC_PREFIX_DEFAULT("/usr/local")
-
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
 AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
-AC_SUBST(hipl_default_prefix, "$HIPL_DEFAULT_PREFIX")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile

@@ -22,6 +22,7 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
+#include <netinet/ip.h>
 
 #ifdef CONFIG_HIP_HI3
 //#include "i3_id.h"
@@ -30,6 +31,7 @@
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
 extern int hip_nat_status;
+extern int hip_interfamily_status;
 
 enum number_dh_keys_t { ONE, TWO };
 
@@ -44,7 +46,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 struct hip_host_id *host_id_priv,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k);
-
 /**
  * Transmits an R1 packet to the network.
  *
@@ -72,23 +73,20 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @return              zero on success, or negative error value on error.
  */
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
-		in6_addr_t *dst_ip, const in_port_t dst_port,
-		hip_portpair_t *i1_info, uint16_t *nonce);
+                in6_addr_t *dst_ip, const in_port_t dst_port,
+                hip_portpair_t *i1_info, uint16_t *nonce);
+int hip_build_locators(struct hip_common *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
-int hip_update_add_peer_addr_list(hip_ha_t *entry,
-		       struct hip_locator_info_addr_item *locator_address_item,
-		       void *_spi);
-
-int hip_for_each_locator_addr_list(hip_ha_t *entry, struct hip_locator *locator,void *opaque);
-
-
 
 #ifdef CONFIG_HIP_HI3
 static void no_matching_trigger(void *, void *, void *);
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
+
+int hip_build_locators(struct hip_common *);
+
 #endif /* CONFIG_HIP_HI3 */
 
 #endif /* HIP_OUTPUT_H */
