@@ -54,6 +54,7 @@ const char *hipconf_usage =
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 #endif
+"locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
 ;
@@ -85,6 +86,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
+        hip_conf_handle_interfamily,
 	NULL, /* run */
 };
 
@@ -124,6 +126,8 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
+        else if (!strcmp("locator", text))
+                ret = ACTION_INTERFAMILY; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
@@ -190,6 +194,8 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_RESTART:
 		count = 1;
 		break;
+        case ACTION_INTERFAMILY:
+                break;
 
 	default:
 	        break;
@@ -230,6 +236,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RST;
 	else if	(strcmp("nat",argv[1])==0) 
 		ret = TYPE_NAT;
+        else if (strcmp("locator", argv[1])==0)
+                ret = TYPE_INTERFAMILY;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
@@ -284,6 +292,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
+        case ACTION_INTERFAMILY:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
@@ -712,6 +721,35 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
  out_err:
 	return err;
 
+}
+
+/**
+ * Handles the hipconf commands where the type is @c interfamily.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_interfamily(struct hip_common *msg, int action,
+		   const char *opt[], int optc)
+{
+    int err = 0, status = 0;
+    
+    if (!strcmp("on",opt[0])) {
+        status = SO_HIP_SET_INTERFAMILY_ON; 
+    } else if (!strcmp("off",opt[0])) {
+        status = SO_HIP_SET_INTERFAMILY_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+    
+ out_err:
+    return err;
 }
 
 /**
@@ -1439,7 +1477,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[3] = NULL;
 #endif
 		}
-		
+
 #if 0
 		if (type != EXEC_LOADLIB_NONE)
 		{

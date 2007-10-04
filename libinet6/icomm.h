@@ -85,7 +85,9 @@
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
 /* Restart daemon. */
-#define SO_HIP_RESTART							151
+#define SO_HIP_RESTART		      		151
+#define SO_HIP_SET_INTERFAMILY_ON               152
+#define SO_HIP_SET_INTERFAMILY_OFF              153
 
 /** @} */
 

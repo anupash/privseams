@@ -22,10 +22,13 @@
 
 static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
+        return (mkstemp(fname));
+        /*
 	if (mktemp(fname) == NULL)
 		return -1;
 	else
 		return 0;
+        */
 } 
 
 /*

@@ -683,3 +683,30 @@ void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_le
 	strncpy(dst, key->key, key_len);
 	HIP_DEBUG("%s: %s\n", str, dst);
 }
+
+void hip_print_locator_addresses(struct hip_common * in_msg) {
+    struct hip_locator *locator;
+    int n_addrs = 0, i = 0;
+    struct hip_locator_info_addr_item *locator_address_item = NULL;
+
+    locator = hip_get_param((struct hip_common *)in_msg,
+                            HIP_PARAM_LOCATOR);
+    if (locator) {
+        n_addrs = hip_get_locator_addr_item_count(locator);
+        locator_address_item = hip_get_locator_first_addr_item(locator);
+                       
+        for (i = 0; i < n_addrs; i++) {
+            _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
+                                       sizeof(struct hip_locator_info_addr_item));
+            if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                
+                hip_print_hit("LOCATOR has address ",
+                              (struct in6_addr *)&locator_address_item[i].address);
+                _HIP_HEXDUMP("Should be in6_addr", 
+                             &locator_address_item[i].address,
+                             sizeof(struct in6_addr));
+                
+            }
+        }
+    }
+}

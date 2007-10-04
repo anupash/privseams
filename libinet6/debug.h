@@ -133,6 +133,8 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
 
+void hip_print_locator_addresses(struct hip_common *);
+
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /**

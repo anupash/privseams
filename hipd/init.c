@@ -20,6 +20,7 @@
 #include "hi3.h"
 
 extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
 
@@ -573,6 +574,8 @@ void hip_exit(int signal)
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
+        if (hipd_msg_v4)
+            HIP_FREE(hipd_msg_v4);
 	
 	hip_delete_all_sp();
 
