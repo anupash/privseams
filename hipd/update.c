@@ -2527,7 +2527,7 @@ int hip_send_update(struct hip_hadb_state *entry,
             hip_delete_sa(entry->default_spi_out, hip_cast_sa_addr(addr), 
                           &entry->preferred_address, AF_INET6,0,
                           (int)entry->peer_udp_port);
-            hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
+            hip_delete_sa(esp_info_old_spi, &entry->preferred_address, 
                           hip_cast_sa_addr(addr), AF_INET6,0,
                           (int)entry->peer_udp_port);
      
