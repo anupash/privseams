@@ -73,7 +73,8 @@ HIP_HASHTABLE *addresses;
 time_t load_time;
 
 #ifdef CONFIG_HIP_HI3
-char *i3_config_file = NULL;
+char *hip_i3_config_file = NULL;
+int hip_use_i3 = 0; // false
 #endif
 
 void usage() {
@@ -261,10 +262,7 @@ int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
 	char buff[HIP_MAX_NETLINK_PACKET];
-#if 0 
-	//#ifdef CONFIG_HIP_HI3 - ERROR redefinition of i3_config_file??? - Andrey
-	char *i3_config_file = NULL;
-#endif
+
 	fd_set read_fdset;
 
 #ifdef CONFIG_HIP_OPENDHT
@@ -296,7 +294,8 @@ int hipd_main(int argc, char *argv[])
 #ifdef CONFIG_HIP_HI3
 		case '3':
 		  HIP_INFO("hipd is stared with i3 config file: %s", optarg);
-			i3_config_file = strdup(optarg);
+			hip_i3_config_file = strdup(optarg);
+			hip_use_i3 = 1; // true;
 			break;
 #endif
 		case 'N':
@@ -311,9 +310,10 @@ int hipd_main(int argc, char *argv[])
 	}
 
 #ifdef CONFIG_HIP_HI3
-	/* Note that for now the Hi3 host identities are not loaded in. */
-	HIP_IFEL(!i3_config_file, 1,
-		 "Please do pass a valid i3 configuration file.\n");
+        /* Note that for now the Hi3 host identities are not loaded in. */
+	if( hip_use_i3 )
+		HIP_IFEL(!hip_i3_config_file, 1,
+		"Please do pass a valid i3 configuration file.\n");
 #endif
 	
 	hip_set_logfmt(LOGFMT_LONG);
