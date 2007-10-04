@@ -929,7 +929,7 @@ int hip_get_default_hit(struct in6_addr *hit)
 	int err = 0;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	hip_hit_t hit_tmpl;
 	
