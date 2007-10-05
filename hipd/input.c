@@ -779,13 +779,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
-	/********* LOCATOR PARAMETER ************/
-        /** Type 193 **/ 
-        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
-            if ((err = hip_build_locators(i2)) < 0) 
-                HIP_DEBUG("LOCATOR parameter building failed\n");
-        }
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -1098,7 +1091,6 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0;
-        int n_addrs = 0, loc_size = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
 	struct hip_context *ctx = NULL;
@@ -1106,7 +1098,6 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
 	struct hip_dh_public_value *dhpv = NULL;
-        struct hip_locator *locator;
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1149,22 +1140,6 @@ int hip_handle_r1(struct hip_common *r1,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
-
-        /***** LOCATOR PARAMETER ******/
-        locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
-        if (locator)
-            {
-                /* Lets save the LOCATOR to the entry 'till we
-                   get the esp_info in r2 then handle it */
-                n_addrs = hip_get_locator_addr_item_count(locator);
-                loc_size = sizeof(struct hip_locator) +
-                    (n_addrs * sizeof(struct hip_locator_info_addr_item));
-                HIP_IFEL(!(entry->locator = malloc(loc_size)), 
-                       -1, "Malloc for entry->locators failed\n");             
-                memcpy(entry->locator, locator, loc_size);
-             }
-        else
-            HIP_DEBUG("R1 did not have locator\n");
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
@@ -1442,7 +1417,6 @@ int hip_receive_r1(struct hip_common *r1,
  *
  * @return 0 on success, < 0 on error.
  */
-
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
@@ -1590,7 +1564,7 @@ int hip_create_r2(struct hip_context *ctx,
  *                 sent.
  */
 int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
-	 	  struct in6_addr *i2_daddr, hip_ha_t *ha,
+		  struct in6_addr *i2_daddr, hip_ha_t *ha,
 		  hip_portpair_t *i2_info)
 {
 	int err = 0, retransmission = 0, replay = 0;
@@ -1610,7 +1584,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	struct in6_addr *plain_peer_hit = NULL, *plain_local_hit = NULL;
 	uint16_t nonce;
 	struct hip_dh_public_value *dhpv = NULL;
-        struct hip_locator *locator;
 
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
@@ -2031,7 +2004,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	   of cycles */
 
 	HIP_DEBUG("state is %d\n", entry->state);
-
+	
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
 #ifdef CONFIG_HIP_RVS
@@ -2052,17 +2025,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		}
 #endif /* CONFIG_HIP_RVS */
 	}
-
-        /***** LOCATOR PARAMETER ******/
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator && esp_info)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                                                             locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 
@@ -2329,16 +2291,6 @@ int hip_handle_r2(struct hip_common *r2,
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = 0;
-
-        /***** LOCATOR PARAMETER ******/
-        if (entry->locator)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         entry->locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("entry->locator did not have locators from r1\n");
 
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");

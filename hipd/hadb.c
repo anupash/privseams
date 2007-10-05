@@ -1,7 +1,7 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
 #include "hadb.h"
- 
+
 HIP_HASHTABLE *hadb_hit;
 //HIP_HASHTABLE *hadb_spi_list;
 
@@ -71,7 +71,6 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 	hip_ha_t *ha = (hip_ha_t *)entry;
 	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
-        if (ha->locator) free(ha->locator);
 	hip_ht_delete(hadb_hit, entry);
 }
 
@@ -1460,10 +1459,8 @@ int hip_update_send_echo(hip_ha_t *entry,
 			 uint32_t spi_out,
 			 struct hip_peer_addr_list_item *addr){
 	
-	int err = 0, i = 0;
+	int err = 0;
 	struct hip_common *update_packet = NULL;
-        hip_list_t *item = NULL, *tmp = NULL;
-        struct netdev_address *n;
 
 	HIP_DEBUG_HIT("new addr to check", &addr->address);
 	
@@ -1474,31 +1471,13 @@ int hip_update_send_echo(hip_ha_t *entry,
 					    &entry->hit_peer, &entry->hit_our),
 		 -1, "Building Echo Packet failed\n");
 
-        /* Have to take care of UPDATE echos to opposite family */
-        if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&addr->address)
-            == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
-            HIP_IFEL(entry->hadb_xmit_func->
-                     hip_send_pkt(&entry->local_address, &addr->address,
-                                  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
-                                  update_packet, entry, 1),
-                     -ECOMM, "Sending UPDATE packet with echo data failed.\n");
-	} else {
-            /* UPDATE echo is meant for opposite family of local_address*/
-            /* check if we have one, otherwise let fail */
-            list_for_each_safe(item, tmp, addresses, i) {
-                n = list_entry(item);
-                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
-                    != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
-                    HIP_IFEL(entry->hadb_xmit_func->
-                             hip_send_pkt(hip_cast_sa_addr(&n->addr), 
-                                          (struct in6_addr*)&addr->address,
-                                          (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
-                                          update_packet, entry, 1),
-                             -ECOMM, "Sending UPDATE packet with echo data failed.\n"); 
-                }
-            }
-        }
-
+	HIP_IFEL(entry->hadb_xmit_func->
+		 hip_send_pkt(&entry->local_address, &addr->address,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      entry->peer_udp_port,
+			      update_packet, entry, 1),
+		 -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+	
  out_err:
 	return err;
 
@@ -1636,31 +1615,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	   for the program to run corrctly. This purely optimization part can be changed
 	   latter. - Andrey.
 	*/
-#if 0
-	if (!new)
-	{
-		switch (new_addr->address_state)
-		{
-		case PEER_ADDR_STATE_DEPRECATED:
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			HIP_DEBUG("updated address state DEPRECATED->UNVERIFIED\n");
-			break;
- 		case PEER_ADDR_STATE_ACTIVE:
-			HIP_DEBUG("address state stays in ACTIVE\n");
-			break;
-		default:
-			// Does this mean that unverified cant be here? Why?
-			HIP_ERROR("state is UNVERIFIED, shouldn't even be here ?\n");
-			break;
-		}
-	}
-	else
-	{
-#endif
-             if (is_bex_address)
+		if (is_bex_address)
 		{
 			/* workaround for special case */
- 			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
+			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
 			HIP_DEBUG("setting bex addr as preferred address\n");
 			ipv6_addr_copy(&entry->preferred_address, addr);
@@ -1669,7 +1627,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
- 
+
 			// @todo: check! If not acctually a problem (during Handover). Andrey.
 			if( err==-ECOMM ) err = 0;
 		}
@@ -1678,9 +1636,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-            //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-              ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+		HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+		ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
+
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);

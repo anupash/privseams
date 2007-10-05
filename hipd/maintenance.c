@@ -50,13 +50,14 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
+			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
-					     entry, 0);  
+					     entry, 0);
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
