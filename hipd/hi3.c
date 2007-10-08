@@ -54,6 +54,7 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 
 	/* First check the hi3 address header */
 
+	buf += sizeof(struct ip);
 	/* Source and destination address */
 	l = hip_addr_parse(buf, &src, len, &family);
 	if (family == 0) goto out_err;
