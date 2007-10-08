@@ -54,15 +54,17 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
      if(rec == NULL)
 	  return 0;
 
-     return hip_hash_hit(&(rec->hit_r));
+     uint8_t hash[HIP_AH_SHA_LEN];
+     hip_build_digest(HIP_DIGEST_SHA1, &(rec->hit_r), sizeof(rec->hit_r), hash);
+     return *((unsigned long *)hash);
 }
 
 int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
      if(rec1 == NULL || rec2 == NULL)
 	  return 1;
-     
-     return hip_match_hit(&(rec1->hit_r), &(rec2->hit_r));
+
+     return (hip_relht_hash(rec1) != hip_relht_hash(rec2));
 }
 
 void hip_relht_put(hip_relrec_t *rec)
@@ -250,9 +252,9 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
      HIP_DEBUG("hip_relay_rvs() invoked.\n");
      HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 source address", i1_saddr);
      HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 destination address", i1_daddr);
-     HIP_DEBUG_HIT("hip_relay_rvs(): Rendezvous association hit",
+     HIP_DEBUG_HIT("hip_relay_rvs(): Relay record hit",
 		   &rec->hit_r);
-     HIP_DEBUG("Rendezvous association port: %d.\n", rec->udp_port_r);
+     HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
      HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 	       i1_info->src_port, i1_info->dst_port);
 		
@@ -340,7 +342,11 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
      HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
 			   rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 	      -ECOMM, "Relaying I1 failed.\n");
-	
+
+     /* Once we have relayed the I1 packet successfully, we update the time of
+	last contact. */
+     rec->last_contact = time(NULL);
+
      HIP_DEBUG_HIT("hip_relay_rvs(): Relayed I1 to", &(rec->ip_r));
 
  out_err:
@@ -352,7 +358,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 }
 
 int hip_relay_handle_from(hip_common_t *source_msg,
-			  in6_addr_t *rvs_ip, in_port_t *rvs_port,
+			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port)
 {
      struct hip_relay_from *relay_from = NULL;
@@ -397,7 +403,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	  HIP_DEBUG("The I1 packet was received from RVS, but the host "\
 		    "association created during registration is not found. "
 		    "RVS_HMAC cannot be verified.\n");
-	  return 0;
+	  return -1;
      }
 
      HIP_DEBUG("RVS host association found.\n");
@@ -406,16 +412,11 @@ int hip_relay_handle_from(hip_common_t *source_msg,
      if(hip_verify_packet_rvs_hmac(source_msg, &rvs_ha_entry->hip_hmac_out)
 	!= 0)
      {
-	  HIP_DEBUG("RVS_HMAC verification failed.\n");
+	  HIP_INFO("RVS_HMAC verification failed.\n");
+	  return -1;
      }
      
      HIP_DEBUG("RVS_HMAC verified.\n");
 
-     /* Should we build a VIA_RVS or VIA_RVS_NAT parameter? If the relayed I1
-	was destined to UDP port 50500, we know that there's NAT between R
-	and RVS, and a VIA_RVS_NAT parameter is build. Else we build a VIA_RVS
-	parameter. We do not do the parameter building yet, but just get the
-	information to target buffers dest_ip and dest_port. */
-
-     return 1;
+     return 0;
 }

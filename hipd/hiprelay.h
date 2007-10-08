@@ -75,7 +75,6 @@
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
-#include "hashtable.h" /* For hip hashtable commons. */
 #include "misc.h" /* For hip_hash_hit and hip_match_hit. */
 
 /** Default relay record life time in seconds. After this time, the record is
@@ -91,7 +90,7 @@ typedef struct{
      /** Time when this record was last used, seconds since epoch. */
      time_t last_contact;
      /** HIT of Responder (Relay Client) */
-     in6_addr_t hit_r;
+     hip_hit_t hit_r;
      /** IP address of Responder (Relay Client) */
      in6_addr_t ip_r;
      /** Client UDP port received in I2 packet of registration. */
@@ -302,8 +301,27 @@ int hip_relay_rvs(const hip_common_t *i1,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info);
 
+/**
+ * Handles a FROM/RELAY_FROM parameter.
+ *
+ * Checks if the parameter @c source_msg message has a FROM/RELAY_FROM
+ * parameter. If a parameter is found, the values are copied to target buffers
+ * @c dest_ip and @c dest_port. Next the hmac in RVS_HMAC is verified using
+ * the host association created during registration. This host association
+ * is searched using hitr from @c source_msg and @c rvs_ip as search keys. 
+ *
+ * @param  source_msg a pointer to the I1 HIP packet common header with source
+ *                    and destination HITs.
+ * @param rvs_ip      a pointer to the source address from where the I1 packet
+ *                    was received.
+ * @param dest_ip     a target buffer for the IP address in the FROM/RELAY_FROM
+ *                    parameter.
+ * @param dest_port   a target buffer for the port number in RELAY_FROM
+ *                    parameter.
+ * @return            zero 
+ */ 
 int hip_relay_handle_from(hip_common_t *source_msg,
-			  in6_addr_t *rvs_ip, in_port_t *rvs_port,
+			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
 
 #endif /* HIP_HIPRELAY_H */

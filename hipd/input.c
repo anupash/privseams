@@ -435,6 +435,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 		   where hostname maps to HIT and IP in hosts files.
 		   Why the heck the receive function points here to
 		   receive_opp_r1 even though we have a regular entry? */
+
+	     /* What is the point of having receive function pointer anyways?
+		Not to mention a SET of them... */
 		if (entry)
 			entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	}
@@ -501,9 +504,11 @@ int hip_receive_control_packet(struct hip_common *msg,
 		/* Possibly state. */
 		if(entry){
 		     HIP_DEBUG("Lauri: I2 with an entry.\n");
-			err = entry->hadb_rcv_func->
-				hip_receive_i2(msg, src_addr, dst_addr, entry,
-					       msg_info);
+		     HIP_DEBUG_HIT("HIT our", &entry->hit_our);
+		     HIP_DEBUG_HIT("HIT peer (XOR?)", &entry->hit_peer);
+		     err = entry->hadb_rcv_func->
+			  hip_receive_i2(msg, src_addr, dst_addr, entry,
+					 msg_info);
 		} else {
 		     HIP_DEBUG("Lauri: I2 withOUT an entry.\n");
 			err = ((hip_rcv_func_set_t *)
@@ -1627,52 +1632,70 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	/* Create host association state (if not previously done). */
 	if (!entry) {
-		int if_index;
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr;
-		addr = (struct sockaddr*) &ss_addr;
-		/* We have no previous infomation on the peer, create a new HIP
-		   HA. */
-		HIP_DEBUG("No entry, creating new\n");
-		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
-			 "Failed to create or find entry\n");
-
-		/* The rest of the code assume already locked entry, so lock the
-		   newly created entry as well. */
-		HIP_LOCK_HA(entry);
-		if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
+	     int if_index;
+	     struct sockaddr_storage ss_addr;
+	     struct sockaddr *addr;
+	     addr = (struct sockaddr*) &ss_addr;
+	     /* We have no previous infomation on the peer, create a new HIP
+		HA. */
+	     HIP_DEBUG("No entry, creating new\n");
+	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
+		      "Failed to create or find entry\n");
+	     
+	     /* The rest of the code assume already locked entry, so lock the
+		newly created entry as well. */
+	     HIP_LOCK_HA(entry);
+	     if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
-		}
-		else {
-			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-			hip_init_us(entry, &i2->hitr);
-		}
-
-		hip_hadb_insert_state(entry);
-		hip_hold_ha(entry);
-
-		_HIP_DEBUG("HA entry created.");
-	}
-
-	ipv6_addr_copy(&entry->local_address, i2_daddr);
-
-	/* If the incoming I2 packet has 50500 as destination port, NAT
-	   mode is set on for the host association, I2 source port is
-	   stored as the peer UDP port and send function is set to
-	   "hip_send_udp()". Note that we must store the port not until
-	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == HIP_NAT_UDP_PORT) {
+	     }
+	     else {
+		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		  hip_init_us(entry, &i2->hitr);
+	     }
+		
+	     hip_hadb_insert_state(entry);
+	     hip_hold_ha(entry);
+	     
+	     _HIP_DEBUG("HA entry created.");
+	     
+	     ipv6_addr_copy(&entry->local_address, i2_daddr);
+	
+	     HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
+		      "if_index NOT determined\n");
+	   
+	     memset(addr, 0, sizeof(struct sockaddr_storage));
+	     addr->sa_family = AF_INET6;
+	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
+	     add_address_to_list(addr, if_index);
+	
+	     /* If the incoming I2 packet has 50500 as destination port, NAT
+		mode is set on for the host association, I2 source port is
+		stored as the peer UDP port and send function is set to
+		"hip_send_udp()". Note that we must store the port not until
+		here, since the source port can be different for I1 and I2. */
+	     if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	     {
 		  entry->nat_mode = 1;
 		  entry->peer_udp_port = i2_info->src_port;
 		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
 		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-		      entry);
+			    entry);
 		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		  //entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	     }
 	}
 	entry->hip_transform = hip_tfm;
+	
 
+	HIP_DEBUG("Lauri: Inserting a new HA 1.\n");
+	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
+	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
+	hip_hadb_insert_state(entry);
+	hip_hold_ha(entry);
+	
+	_HIP_DEBUG("HA entry created.");
+	
+	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -1865,6 +1888,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
+	HIP_DEBUG("Lauri: Inserting a new HA 2.\n");
+	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
+	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(entry->hadb_misc_func->
@@ -2217,6 +2243,9 @@ int hip_handle_r2(struct hip_common *r2,
 	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	entry->state = HIP_STATE_ESTABLISHED;
+	HIP_DEBUG("Lauri: Inserting a new HA 3.\n");
+	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
+	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
 	hip_hadb_insert_state(entry);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -2239,8 +2268,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 {
      int err = 0;
      uint16_t nonce = 0;
-     in6_addr_t dest; // For the IP address in FROM/FROM_NAT
-     in_port_t  dest_port = 0; // For the port in FROM_NAT
+     in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
+     in_port_t  dest_port = 0; // For the port in RELAY_FROM
 
      HIP_DEBUG("hip_handle_i1() invoked.\n");
 
@@ -2255,8 +2284,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	     parameters.
 	     2) The source address and source port of the I1 packet to build the
 	     VIA_RVS/RELAY_TO parameter. */
-	  hip_relay_handle_from(i1, i1_saddr, &(i1_info->src_port), &dest,
-				&dest_port);
+	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
+		   -1, "Handling of relayed I1 packet failed.\n");
      }
 #endif /* CONFIG_HIP_RVS */
 
@@ -2304,7 +2333,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 				 "Could not find source address\n");
 	}
 
-	/* we support checking whether we are rvs capable even with RVS support not enabled */
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 
@@ -2314,28 +2342,31 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 	else {
 
-/* This code is executed at the rendezvous server. */ 
 #ifdef CONFIG_HIP_RVS
-	     hip_relrec_t *rec = NULL, dummy;
-
-	     /* Check if we have a relay record in our database matching the
-		Responder's HIT. We should find one, if the Responder is
-		registered to relay.*/
-	     HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
-	     memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
-	     rec = hip_relht_get(&dummy);
-	     if(rec == NULL)
-		  HIP_INFO("No matching relay record found.\n");
-	     else if(rec->type != HIP_RVSRELAY)
-		  HIP_INFO("Matching relay record found, but it is of "\
-			   "wrong type.\n");
-	     else
+	     if(hip_we_are_relay())
 	     {
-		  /* @todo What to do with the original I1 here, once the
-		     relayed I1 is sent. -Lauri 25.09.2007 15:46 */
-		  hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
-		  /*err = -ENONET;
-		    goto out_err;*/
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     Responder's HIT. We should find one, if the Responder is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
+		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+		       HIP_INFO("No matching relay record found.\n");
+		  else if(rec->type != HIP_RVSRELAY)
+		       HIP_INFO("Matching relay record found, but it is of the"\
+				"wrong type.\n");
+		  else
+		  {
+		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
+		       /* We created a new I1 from scratch in the relay function.
+			  The original I1 packet is now redundant. */
+		       state = HIP_STATE_NONE;
+		       err = -ECANCELED;
+		       goto out_err;
+		  }
 	     }
 #endif
 		state = HIP_STATE_NONE;
@@ -2387,7 +2418,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 	int err = 0, state;
 	uint16_t mask = 0;
 
-	_HIP_DEBUG("hip_receive_i2() invoked.\n");
+	_HIP_DEBUG("hip_receive_r2() invoked.\n");
 
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");

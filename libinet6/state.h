@@ -235,8 +235,8 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
-     hip_hit_t            hit_our; /**< Peer's HIT. */
-     hip_hit_t            hit_peer; /**< @c hit_our XOR @c hit_peer. */
+     hip_hit_t            hit_our; /**< Our HIT. */
+     hip_hit_t            hit_peer;  /**< Peer HIT. */
      hip_hastate_t        hastate;
      int                  state;
      int                  retrans_state; /**< This guarantees that

@@ -204,10 +204,10 @@ unsigned long hip_hash_hit(const void *ptr)
 {
       uint8_t hash[HIP_AH_SHA_LEN];
       
-      /* All HITs start with the constan 0x2001, there's no has value in
-	 that so we skip it. */
       hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
-		       7 * sizeof(uint16_t), hash);
+	7 * sizeof(uint16_t), hash);
+      //hip_build_digest(HIP_DIGEST_SHA1, ptr, sizeof(hip_hit_t), hash);
+
       return *((unsigned long *)hash);
 }
 

@@ -433,11 +433,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	HIP_ASSERT(!hit_is_opportunistic_hashed_hit(&i1->hitr));
 #endif
 	
-	HIP_DEBUG_HIT("hip_xmit_r1(): R1 destination address", r1_dst_addr);
-	HIP_DEBUG("hip_xmit_r1(): R1 destination port %u.\n", r1_dst_port);
-	HIP_DEBUG("hip_xmit_r1(): param port %u.\n", dst_port);
-	HIP_DEBUG("hip_xmit_r1(): ANY? %d.\n", ipv6_addr_any(dst_ip));
-			
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
 	{

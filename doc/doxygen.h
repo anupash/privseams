@@ -579,9 +579,9 @@
  * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
- * |||+---------------- 0x1000 We are capable of offering HIPUDPRELAY service.
- * ||+----------------- 0x2000 We have requested HIPUDPRELAY service.
- * |+------------------ 0x4000 We are capable of offering RVS service.
+ * |||+---------------- 0x1000 - free -
+ * ||+----------------- 0x2000 - free -
+ * |+------------------ 0x4000 We have requested HIPUDPRELAY service.
  * +------------------- 0x8000 We have requested RVS service.
  * </pre>
  * Bitmask for peer controls:
@@ -599,10 +599,10 @@
  * |||| ||+------------ 0x0200 - free -
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
- * |||+---------------- 0x1000 Peer has acknowledged our HIPUDPRELAY capability.
- * ||+----------------- 0x2000 Peer has been informed that we offer HIPUDPRELAY service.
- * |+------------------ 0x4000 Peer has acknowledged our RVS capability
- * +------------------- 0x8000 Peer has been informed that we offer RVS service
+ * |||+---------------- 0x1000 - free -
+ * ||+----------------- 0x2000 - free -
+ * |+------------------ 0x4000 Peer offers HIPUDPRELAY service.
+ * +------------------- 0x8000 Peer offers RVS service.
  * </pre>
  *
  * @note There has been some confusion about which bit does what, and which of

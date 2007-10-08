@@ -389,10 +389,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 		      -1, "internal error: no hadb entry found\n");
 		
-	     HIP_DEBUG("Lauri: DO THE HIPUDPRELAY related stuff now.\n");
-	     
 	     /* Set a hipudprelay request flag. */
 	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
+
+	     HIP_DEBUG("Setting NAT mode on for this host association.\n");
+	     hip_nat_on_for_ha(entry, NULL);
+	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
 
 	     /* Send a I1 packet to relay. */
 	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
