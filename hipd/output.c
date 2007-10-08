@@ -1071,35 +1071,36 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
         /* IPv6 specific code ends */
 
 	msg_len = hip_get_msg_total_len(msg);
-	clb = cl_alloc_buf(msg_len + hdr_dst_len + hdr_src_len + sizeof(struct ip));
+	clb = cl_alloc_buf(msg_len + hdr_dst_len + hdr_src_len /*+ sizeof(struct ip)*/);
 	if (!clb) {
 		HIP_ERROR("Out of memory\n.");
 		return -1;
 	}
 
 	buf = clb->data;
-	iph = (struct ip*)buf;
-        /* create IP header for tunneling HIP packet through i3 */                   
+/*	iph = (struct ip*)buf;
+
 	iph->ip_v = 6;
 	iph->ip_hl = sizeof(struct ip) >> 2;
 	iph->ip_tos = 0;
-	iph->ip_len = htons(msg_len+sizeof(struct ip));    /* network byte order */
-	iph->ip_id = 0;                  /* let IP set this */
-	iph->ip_off = 0;                 /* frag offset, MF and DF flags */
+	iph->ip_len = htons(msg_len+sizeof(struct ip));    
+	iph->ip_id = 0;            
+	iph->ip_off = 0;           
 	iph->ip_ttl = 200;
 	iph->ip_p = 99;
 	//iph->ip_src = ((struct sockaddr_in *)src)->sin_addr;
 	//iph->ip_dst = ((struct sockaddr_in *)dst)->sin_addr;
 	//iph->ip_sum = in_cksum((unsigned short *)iph, sizeof (struct ip));
-	
+	*/
+
 	hip_zero_msg_checksum(msg);
 	msg->checksum = hip_checksum_packet((char *)msg, 
 					    (struct sockaddr *)&src, 
 					    (struct sockaddr *)&dst);
 
-	clb->data_len = hdr_src_len + hdr_dst_len + msg_len + sizeof(struct ip);
+	clb->data_len = hdr_src_len + hdr_dst_len + msg_len/* + sizeof(struct ip)*/;
 
-	buf += sizeof(struct ip);
+//	buf += sizeof(struct ip);
 	memcpy(buf, &hdr_src, hdr_src_len);
 	buf += hdr_src_len;
 	memcpy(buf, &hdr_dst, hdr_dst_len);
