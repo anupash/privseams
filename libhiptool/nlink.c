@@ -42,8 +42,8 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                 NULL,   0,
                 0
         };
-	int msg_len, status;
-	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
+	int msg_len = 0, status = 0;
+	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET*2)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
 			   MSG_PEEK, NULL, NULL);
@@ -58,15 +58,17 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         nladdr.nl_pid = 0;
         nladdr.nl_groups = 0;
 	iov.iov_base = buf;
-
+ 
 	while (1) {
                 iov.iov_len = sizeof(buf);
+                status = 0;
                 status = recvmsg(nl->fd, &msg, 0);
 
                 if (status < 0) {
                         if (errno == EINTR)
                                 continue;
 			HIP_ERROR("Netlink overrun.\n");
+                        return -1;
                         continue;
                 }
                 if (status == 0) {
