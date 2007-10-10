@@ -93,7 +93,7 @@ int hip_services_add(int service_type)
 	  }
 	  else
 	  {
-	       HIP_DEBUG("Lauri: HIP UDP RELAY INITIATED.\n");
+	       HIP_DEBUG("HIP UDP RELAY service initiated.\n");
 	  }
      } else {
 	  HIP_ERROR("Unknown service type.\n");

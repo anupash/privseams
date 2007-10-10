@@ -3,9 +3,11 @@
 #include "hadb.h"
  
 HIP_HASHTABLE *hadb_hit;
-//HIP_HASHTABLE *hadb_spi_list;
 
-//static hip_list_t hadb_byhit[HIP_HADB_SIZE];
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_hash_ha, const hip_ha_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -1929,72 +1931,112 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 
 /* ----------------- */
 
+unsigned long hip_hash_ha(const hip_ha_t *ha)
+{
+     if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
+     {
+	  return 0;
+     }
+     
+     /* The HIT fields of an host association struct cannot be assumed to be
+	alligned consecutively. Therefore, we must copy them to a temporary
+	array. */
+     hip_hit_t hitpair[2];
+     memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+     memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+     
+     uint8_t hash[HIP_AH_SHA_LEN];
+     hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
+     
+     return *((unsigned long *)hash);
+}
+
+int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
+{
+     if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
+	ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
+     {
+	  return 1;
+     }
+
+     return (hip_hash_ha(ha1) != hip_hash_ha(ha2));
+}
+
+
 void hip_init_hadb(void)
 {
-	/** @todo Check for errors. */
-	hadb_hit = hip_ht_init(hip_hash_hit, hip_match_hit);
-
-	/* initialize default function pointer sets for receiving messages*/
-	default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
-	default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
-	default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
-	default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
-	default_rcv_func_set.hip_receive_update    = hip_receive_update;
-	default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
-	default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
-	default_rcv_func_set.hip_receive_close     = hip_receive_close;
-	default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
+     /** @todo Check for errors. */
+     
+     /* The next line initializes the hash table for host associations. Note
+	that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
+	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
+	provide automagic variable casts, so that all elements stored in the
+	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
+     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_hash_ha),
+			    LHASH_COMP_FN(hip_compare_ha));
+     
+     /* initialize default function pointer sets for receiving messages*/
+     default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
+     default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
+     default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
+     default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
+     default_rcv_func_set.hip_receive_update    = hip_receive_update;
+     default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
+     default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
+     default_rcv_func_set.hip_receive_close     = hip_receive_close;
+     default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
 	
-	/* initialize alternative function pointer sets for receiving messages*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for receiving messages*/
+     /* insert your alternative function sets here!*/ 
 
-	/* initialize default function pointer sets for handling messages*/
-	default_handle_func_set.hip_handle_i1  = hip_handle_i1;
-	default_handle_func_set.hip_handle_r1  = hip_handle_r1;
-	default_handle_func_set.hip_handle_i2  = hip_handle_i2;
-	default_handle_func_set.hip_handle_r2  = hip_handle_r2;
-	default_handle_func_set.hip_handle_bos = hip_handle_bos;
-	default_handle_func_set.hip_handle_close     = hip_handle_close;
-	default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
+     /* initialize default function pointer sets for handling messages*/
+     default_handle_func_set.hip_handle_i1        = hip_handle_i1;
+     default_handle_func_set.hip_handle_r1        = hip_handle_r1;
+     default_handle_func_set.hip_handle_i2        = hip_handle_i2;
+     default_handle_func_set.hip_handle_r2        = hip_handle_r2;
+     default_handle_func_set.hip_handle_bos       = hip_handle_bos;
+     default_handle_func_set.hip_handle_close     = hip_handle_close;
+     default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
 	
-	/* initialize alternative function pointer sets for handling messages*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for handling messages*/
+     /* insert your alternative function sets here!*/ 
 	
-	/* initialize default function pointer sets for misc functions*/
-	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
-	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
-	default_misc_func_set.hip_create_i2		   = hip_create_i2;
-	default_misc_func_set.hip_create_r2		   = hip_create_r2;
-	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
+     /* initialize default function pointer sets for misc functions*/
+     default_misc_func_set.hip_solve_puzzle  	       = hip_solve_puzzle;
+     default_misc_func_set.hip_produce_keying_material = hip_produce_keying_material;
+     default_misc_func_set.hip_create_i2	       = hip_create_i2;
+     default_misc_func_set.hip_create_r2	       = hip_create_r2;
+     default_misc_func_set.hip_build_network_hdr       = hip_build_network_hdr;
 
-	/* initialize alternative function pointer sets for misc functions*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for misc functions*/
+     /* insert your alternative function sets here!*/ 
 	
-	/* initialize default function pointer sets for update functions*/
-	default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
-	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
-	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
-	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
-	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
-	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
-	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
+     /* initialize default function pointer sets for update functions*/
+     default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
+     default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify;
+     default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack;
+     default_update_func_set.hip_handle_update_established   = hip_handle_update_established;
+     default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying;
+     default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify;
+     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
-	/* xmit function set */
-	/** @todo Add support for i3. */
-	default_xmit_func_set.hip_send_pkt = hip_send_raw;
+     /* xmit function set */
+     /** @todo Add support for i3. */
+     default_xmit_func_set.hip_send_pkt = hip_send_raw;
 #ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) 
-	{
-		default_xmit_func_set.hip_send_pkt = hip_send_i3;
-	}
+     if( hip_use_i3 ) 
+     {
+	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
+     }
 #endif
-	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
+     nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
-	/* filter function sets */
-        /* Compiler warning: assignment from incompatible pointer type.
-	   -Lauri 25.09.2007 15:11. */
-	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
-	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+     /* filter function sets */
+     /* Compiler warning: assignment from incompatible pointer type.
+	Please fix this, if you know what is the correct value.
+	-Lauri 25.09.2007 15:11. */
+     default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
+     default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 }
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {

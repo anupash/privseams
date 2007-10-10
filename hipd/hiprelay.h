@@ -123,11 +123,11 @@ LHASH *hip_relht_init();
 void hip_relht_uninit();
 
 /**
- * The hash function of the hashtable. Calculates a has from parameter relay record
+ * The hash function of the hashtable. Calculates a hash from parameter relay record
  * HIT.
  * 
  * @param rec a pointer to a relay record.
- * @return    the calculated hash.
+ * @return    the calculated hash or zero if @c rec or hit_r is NULL.
  */
 unsigned long hip_relht_hash(const hip_relrec_t *rec);
 

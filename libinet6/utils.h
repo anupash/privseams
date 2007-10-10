@@ -25,8 +25,8 @@
  * 
  * warning: the use of `mktemp' is dangerous, better use `mkstemp' or `mkdtemp'
  *
- * Fix it, if you know it is safe to do so. I don't know, if we can use mkstemp
- * here. -Lauri 26.09.2007 14:43
+ * Please fix it if you know it is safe to do so.
+ * -Lauri 26.09.2007 14:43
  */
 static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);

@@ -33,7 +33,7 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
-	/*
+	/**
 	  @todo: Here we have wrong checking, because function  
 	  hip_get_locator_addr_item_count(locator) has already
 	  divided the length on sizeof(struct hip_locator_info_addr_item)
@@ -2730,8 +2730,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		 "for_each_ha err.\n");
 	for (i = 0; i < rk.count; i++) {
 		struct in6_addr *local_addr = &((rk.array[i])->local_address);
-		     /* warning: passing argument 7 of 'hip_send_update'
-			from incompatible pointer type. -Lauri 25.09.2007 15:03 */
 		if (rk.array[i] != NULL) { 
 
 #if 0
@@ -2740,6 +2738,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 				ipv6_addr_copy(local_addr, &addr_sin6);
 			}
 #endif
+			/* warning: passing argument 7 of 'hip_send_update'
+			   from incompatible pointer type.
+			   -Lauri 25.09.2007 15:03 */
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add, &addr_sin6);
 

@@ -24,11 +24,9 @@
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
  * </ul>
  *
- * @date   04.09.2007
+ * @date   10.10.2007
  */ 
 
-
- 
 /**
  * Error handling macros used for checking errors. To use these macros, define a
  * label named @c out_err at the end of the function. For example, memory
@@ -617,7 +615,8 @@
  *
  * These are the values that are used in the HIP message Controls field. More
  * importantantly, these are <span style="color:#f00;">the only values allowed
- * in that field.</span> Do not put any other bits on wire.
+ * in that field.</span> Do not put any other bits on wire in the Controls
+ * field.
  */
 
 #endif /* _DOXYGEN_H */

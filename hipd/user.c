@@ -392,8 +392,14 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     /* Set a hipudprelay request flag. */
 	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
 
-	     HIP_DEBUG("Setting NAT mode on for this host association.\n");
-	     hip_nat_on_for_ha(entry, NULL);
+	     /* Since we are requesting UDP relay, we assume that we are behind
+		a NAT. Therefore we set the NAT status on. This is needed only
+		for the current host association, but since keep-alives are sent
+		currently only if the global NAT status is on, we must call
+		hip_nat_on() (which in turn sets the NAT status on for all host
+		associations). */
+	     HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
+		      "to \"on\"\n");
 	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
 
 	     /* Send a I1 packet to relay. */

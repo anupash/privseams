@@ -51,7 +51,7 @@ void hip_relht_uninit()
 
 unsigned long hip_relht_hash(const hip_relrec_t *rec)
 {
-     if(rec == NULL)
+     if(rec == NULL || &(rec->hit_r) == NULL)
 	  return 0;
 
      uint8_t hash[HIP_AH_SHA_LEN];
@@ -61,7 +61,8 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 
 int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 {
-     if(rec1 == NULL || rec2 == NULL)
+     if(rec1 == NULL || &(rec1->hit_r) == NULL ||
+	rec2 == NULL || &(rec2->hit_r) == NULL)
 	  return 1;
 
      return (hip_relht_hash(rec1) != hip_relht_hash(rec2));

@@ -74,9 +74,6 @@ int hip_services_is_active(int service_type);
  * @date             26.09.2007
  * @note             This function replaces the old registration handlers.
  * @note             Registration cancellation has not been tested.
- * @todo             This is a monster function measure in length. It could be
- *                   divided to smaller subfunctions or function pointers could
- *                   also be used.
  */
 int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			  hip_common_t *target_msg);

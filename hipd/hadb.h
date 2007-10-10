@@ -136,6 +136,25 @@ static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
 
+/**
+ * The hash function of the hashtable. Calculates a hash from parameter host
+ * assosiation HITs (hit_our and hit_peer).
+ * 
+ * @param rec a pointer to a host assosiation.
+ * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
+ */
+unsigned long hip_hash_ha(const hip_ha_t *ha);
+
+/**
+ * The compare function of the hashtable. Compares the hash values calculated from
+ * parameter @c ha1 and @c ha2.
+ * 
+ * @param rec1 a pointer to a host assosiation.
+ * @param rec2 a pointer to a host assosiation.
+ * @return     0 if keys are equal, non-zero otherwise.
+ */
+int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2);
+
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
 

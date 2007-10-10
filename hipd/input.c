@@ -503,14 +503,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_I2:
 		/* Possibly state. */
 		if(entry){
-		     HIP_DEBUG("Lauri: I2 with an entry.\n");
-		     HIP_DEBUG_HIT("HIT our", &entry->hit_our);
-		     HIP_DEBUG_HIT("HIT peer (XOR?)", &entry->hit_peer);
 		     err = entry->hadb_rcv_func->
 			  hip_receive_i2(msg, src_addr, dst_addr, entry,
 					 msg_info);
 		} else {
-		     HIP_DEBUG("Lauri: I2 withOUT an entry.\n");
 			err = ((hip_rcv_func_set_t *)
 			       hip_get_rcv_default_func_set())->
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
@@ -1216,10 +1212,6 @@ int hip_handle_r1(struct hip_common *r1,
 	  }
 	}
 
-	/* Now, why is this here? And why is the operation = not =| ?
-	   Removing this since it messes registration Lauri 19.09.2007 18:56 */ 
-	//entry->peer_controls = ntohs(r1->control);
-
  	err = entry->hadb_misc_func->
 	     hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry,
 			   r1_info, dhpv);
@@ -1388,10 +1380,7 @@ int hip_create_r2(struct hip_context *ctx,
 	   (hip_we_are_relay() || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
-	HIP_DEBUG("Lauri: HITTING OUR BRAVE NEW HANDLER.\n");
 	hip_handle_regrequest(entry, i2, r2);
-	HIP_DEBUG("Lauri: EXITING OUR BRAVE NEW HANDLER.\n");
 #endif	
  	/* HMAC2 */
 	{
@@ -1685,11 +1674,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     }
 	}
 	entry->hip_transform = hip_tfm;
-	
 
-	HIP_DEBUG("Lauri: Inserting a new HA 1.\n");
-	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
-	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry);
 	
@@ -1888,9 +1873,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 
-	HIP_DEBUG("Lauri: Inserting a new HA 2.\n");
-	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
-	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
 	HIP_IFEL(entry->hadb_misc_func->
@@ -2243,9 +2225,6 @@ int hip_handle_r2(struct hip_common *r2,
 	//hip_finalize_sa(&entry->hit_our, spi_in);
 
 	entry->state = HIP_STATE_ESTABLISHED;
-	HIP_DEBUG("Lauri: Inserting a new HA 3.\n");
-	HIP_DEBUG_HIT("HA->hit_our", &entry->hit_our);
-	HIP_DEBUG_HIT("HA->hit_peer", &entry->hit_peer);
 	hip_hadb_insert_state(entry);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
