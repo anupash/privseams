@@ -81,7 +81,20 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
 		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
 		break;
-
+        case SO_HIP_SET_INTERFAMILY_ON:
+                HIP_DEBUG("Setting INTERFAMILY ON\n");
+                hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
+                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_ON);
+                HIP_DEBUG("Recreate all R1s\n");
+                hip_recreate_all_precreated_r1_packets();
+                break;
+        case SO_HIP_SET_INTERFAMILY_OFF:
+                HIP_DEBUG("Setting INTERFAMILY OFF\n");
+                hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
+                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
+                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_OFF);
+                break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
 		HIP_DEBUG("Handling DEBUG ALL user message.\n");
@@ -185,6 +198,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
            
 
             IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+	    /** 
+	     * @todo this gives a compiler warning! warning: assignment from
+	     * incompatible pointer type
+	     */
             pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
             HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
                       tmp_ip_str, tmp_port, tmp_ttl);
@@ -277,11 +294,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
-		HIP_IFEL(hip_services_add(HIP_ESCROW_SERVICE), -1, 
+		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1, 
                         "Error while adding service\n");
 	
-		hip_services_set_active(HIP_ESCROW_SERVICE);
-		if (hip_services_is_active(HIP_ESCROW_SERVICE))
+		hip_services_set_active(HIP_SERVICE_ESCROW);
+		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
                         "Failed to recreate R1-packets\n"); 
@@ -306,63 +323,124 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 				"Failed to recreate R1-packets\n"); 
 		
 		break;
-
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-		
 	case SO_HIP_ADD_RENDEZVOUS:
-		/* draft-ietf-hip-registration-02 RVS registration. Responder
-		   (of I,RVS,R hierarchy) handles this message. Message
-		   indicates that the current machine wants to register to a rvs
-		   server. This message is received from hipconf. */
-		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+	     /* draft-ietf-hip-registration-02 RVS registration. Responder
+		(of I,RVS,R hierarchy) handles this message. Message
+		indicates that the current machine wants to register to a rvs
+		server. This message is received from hipconf. */
+	     HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
-		/* Get rvs ip and hit given as commandline parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(
-				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-		/* Add HIT to IP mapping of rvs to hadb. */ 
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
+	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
+	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
+			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
+			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+	     /* Add HIT to IP mapping of rvs to hadb. */ 
+	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+	     /* Fetch the hadb entry just created. */
+	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+		      -1, "internal error: no hadb entry found\n");
 		
-		/* Set a rvs request flag. */
-		HIP_IFEL(hip_rvs_set_request_flag(&entry->hit_our, dst_hit),
-			 -1, "setting of rvs request flag failed\n");
+	     /* Set a rvs request flag. */
+	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 
-		/* Send a I1 packet to rvs. */
-		/** @todo Not filtering I1, when handling rvs message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-		break;
+	     /* Send a I1 packet to rvs. */
+	     /** @todo Not filtering I1, when handling rvs message! */
+	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		      -1, "sending i1 failed\n");
+	     break;
 	
 	case SO_HIP_OFFER_RENDEZVOUS:
-		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
-		   server handles this message. Message indicates that the
-		   current machine is willing to offer rendezvous service. This
-		   message is received from hipconf. */
-		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
+	     /* draft-ietf-hip-registration-02 RVS registration. Rendezvous
+		server handles this message. Message indicates that the
+		current machine is willing to offer rendezvous service. This
+		message is received from hipconf. */
+	     HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_RENDEZVOUS_SERVICE), -1);
-		hip_services_set_active(HIP_RENDEZVOUS_SERVICE);
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
+	     hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
-		if (hip_services_is_active(HIP_RENDEZVOUS_SERVICE)){
-			HIP_DEBUG("Rendezvous service is now active.\n");
-		}
-		
-		err = hip_recreate_all_precreated_r1_packets();
-		break;
+	     if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
+		  HIP_DEBUG("Rendezvous service is now active.\n");
+		  we_are_relay = 1;
+	     }
+	     
+	     err = hip_recreate_all_precreated_r1_packets();
+	     break;
 	
+
+	case SO_HIP_ADD_RELAY_UDP_HIP:
+	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
+		Responder (of I,Relay,R hierarchy) handles this message. Message
+		indicates that the current machine wants to register to a rvs
+		server. This message is received from hipconf. */
+	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
+		
+	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
+	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
+			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
+			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+	     /* Add HIT to IP mapping of relay to hadb. */ 
+	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+	     /* Fetch the hadb entry just created. */
+	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+		      -1, "internal error: no hadb entry found\n");
+		
+	     /* Set a hipudprelay request flag. */
+	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
+
+	     /* Since we are requesting UDP relay, we assume that we are behind
+		a NAT. Therefore we set the NAT status on. This is needed only
+		for the current host association, but since keep-alives are sent
+		currently only if the global NAT status is on, we must call
+		hip_nat_on() (which in turn sets the NAT status on for all host
+		associations). */
+	     HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
+		      "to \"on\"\n");
+	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+
+	     /* Send a I1 packet to relay. */
+	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+		      -1, "sending i1 failed\n");
+	     break;
+	     
+	case SO_HIP_OFFER_HIPUDPRELAY:
+	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
+		server handles this message. Message indicates that the
+		current machine is willing to offer relay service. This
+		message is received from hipconf. */
+	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
+		
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
+	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
+		
+	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
+		  HIP_DEBUG("UDP relay service for HIP packets"\
+			    "is now active.\n");
+		  we_are_relay = 1;
+	     }
+		
+	     err = hip_recreate_all_precreated_r1_packets();
+	     break;
 #endif
 	case SO_HIP_GET_HITS:		
+	     /** 
+	      * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+	      * pointer type
+	      */
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;	
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
+		/** 
+		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+		 * pointer type
+		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:

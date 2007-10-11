@@ -849,9 +849,11 @@
    interface. When the responder registers to the rendezvous server, it can
    choose any one four HITs. Please make sure that you use the same HIT here as
    &lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
-   check which HIT is used from the messages the responders's hipdaemon prints;
-   there should be a line saying: "HIT being registered to rvs: &lt;HIT&gt;"
-  </para> 
+   check which HIT is used with the hipconf tool. To do this, start HIP daemon
+   at the Responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
+   the Responder and the default HIT is printed on screen. This is also the
+   HIT that is registered to the RVS.</para>
+ 
   <para>
    RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
    are left blank ("/etc/hosts" can of course contain the non-hiprelated

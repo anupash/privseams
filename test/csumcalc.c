@@ -141,7 +141,7 @@ int main(int argc,char **argv) {
  }
   /*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
   hip_build_network_hdr((struct hip_common* ) &i1, HIP_I1,
-                        HIP_CONTROL_NONE, &hits, &hitd);
+                        HIP_HA_CTRL_NONE, &hits, &hitd);
   i1.payload_len = len = (sizeof(struct hip_i1) >> 3) - 1;
   if (len > HIP_MAX_PACKET) {
    printf("too long a packet\n");
