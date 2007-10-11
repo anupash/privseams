@@ -4,6 +4,7 @@
  * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
+ 
 #include "init.h"
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -233,12 +234,26 @@ int hipd_init(int flush_ipsec, int killold)
 
 #if 0
 	{
-		const int ipsec_buf_size = 200000;
-		socklen_t ipsec_buf_sizeof = sizeof(int);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                int ret_sockopt = 0, value = 0;
+                socklen_t value_len = sizeof(value);
+		int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
+                ret_sockopt = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                         &value, &value_len);
+                if (ret_sockopt != 0)
+                    HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ipsec_buf_size = value * 2;
+                HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
+                          "Setting it to %d.\n", value, ipsec_buf_size);
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ret_sockopt = 0;
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
 

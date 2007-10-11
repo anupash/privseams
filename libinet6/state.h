@@ -88,6 +88,9 @@ typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
+#ifdef CONFIG_HIP_HI3
+	int hi3_in_use; // varibale says is the received message sent through i3 or not
+#endif
 } hip_portpair_t;
 
 /**
