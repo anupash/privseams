@@ -40,15 +40,42 @@ int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
+
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
-				 struct hip_host_id *src_privkey,
-				 const struct hip_host_id *src_pubkey,
-				 int cookie);
+				 struct hip_host_id *host_id_priv,
+				 const struct hip_host_id *host_id_pub,
+				 int cookie_k);
+/**
+ * Transmits an R1 packet to the network.
+ *
+ * Sends an R1 packet to the peer and stores the cookie information that was
+ * sent. The packet is sent either to @c i1_saddr or  @c dst_ip depending on the
+ * value of @c dst_ip. If @c dst_ip is all zeroes (::/128) or NULL, R1 is sent
+ * to @c i1_saddr; otherwise it is sent to @c dst_ip. In case the incoming I1
+ * was relayed through a middlebox (e.g. rendezvous server) @c i1_saddr should
+ * have the address of that middlebox.
+ *
+ * @param i1_saddr      a pointer to the source address from where the I1 packet
+ *                      was received.
+ * @param i1_daddr      a pointer to the destination address where to the I1
+ *                      packet was sent to (own address).
+ * @param src_hit       a pointer to the source HIT i.e. responder HIT
+ *                      (own HIT). 
+ * @param dst_ip        a pointer to the destination IPv6 address where the R1
+ *                      should be sent (peer ip).
+ * @param dst_port      Destination port for R1. If zero, I1 source port is
+ *                      used.
+ * @param dst_hit       a pointer to the destination HIT i.e. initiator HIT
+ *                      (peer HIT).
+ * @param i1_info       a pointer to the source and destination ports
+ *                      (when NAT is in use).
+ * @return              zero on success, or negative error value on error.
+ */
+int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
+                in6_addr_t *dst_ip, const in_port_t dst_port,
+                hip_portpair_t *i1_info, uint16_t *nonce);
 int hip_build_locators(struct hip_common *);
-int hip_xmit_r1(struct in6_addr *, struct in6_addr *, struct in6_addr *,
-		struct in6_addr *, const in_port_t, struct in6_addr *,
-		hip_portpair_t *, const void *, const int, uint16_t *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);

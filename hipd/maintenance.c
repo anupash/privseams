@@ -633,6 +633,12 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
+//#ifdef CONFIG_HIP_UDPRELAY
+	/* Clear expired records from the relay hashtable. */
+	hip_relht_maintenance();
+//#endif
+
+
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),

@@ -3,9 +3,11 @@
 #include "hadb.h"
  
 HIP_HASHTABLE *hadb_hit;
-//HIP_HASHTABLE *hadb_spi_list;
 
-//static hip_list_t hadb_byhit[HIP_HADB_SIZE];
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_hash_ha, const hip_ha_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
 
 /* default set of miscellaneous function pointers. This has to be in the global
    scope. */
@@ -163,15 +165,28 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	hip_hit_t our_hit;
 	int i;
 
+	memset(&our_hit, 0, sizeof(our_hit));
+
+	/* Let's try with the default HIT first */
+	hip_get_default_hit(&our_hit);
+
+	if (entry = hip_hadb_find_byhits(hit, &our_hit)) {
+		_HIP_DEBUG_HIT("Returning default HIT", our_hit);
+		return entry;
+	}
+
+	/* and then with rest (actually default HIT is here redundantly) */
 	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
 	{
 		e = list_entry(item);
-		ipv6_addr_copy(&our_hit,&e->lhi.hit);
+		ipv6_addr_copy(&our_hit, &e->lhi.hit);
 		_HIP_DEBUG_HIT("try_to_find_by_peer_hit:", &our_hit);
 		_HIP_DEBUG_HIT("hit:", hit);
 		entry = hip_hadb_find_byhits(hit, &our_hit);
-		if (!entry) continue;
-		else return entry;
+		if (!entry)
+			continue;
+		else
+			return entry;
 	}
 	return NULL;
 }
@@ -1916,70 +1931,112 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 
 /* ----------------- */
 
+unsigned long hip_hash_ha(const hip_ha_t *ha)
+{
+     if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
+     {
+	  return 0;
+     }
+     
+     /* The HIT fields of an host association struct cannot be assumed to be
+	alligned consecutively. Therefore, we must copy them to a temporary
+	array. */
+     hip_hit_t hitpair[2];
+     memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+     memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+     
+     uint8_t hash[HIP_AH_SHA_LEN];
+     hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
+     
+     return *((unsigned long *)hash);
+}
+
+int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
+{
+     if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
+	ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
+     {
+	  return 1;
+     }
+
+     return (hip_hash_ha(ha1) != hip_hash_ha(ha2));
+}
+
+
 void hip_init_hadb(void)
 {
-	/** @todo Check for errors. */
-	hadb_hit = hip_ht_init(hip_hash_hit, hip_match_hit);
-
-	/* initialize default function pointer sets for receiving messages*/
-	default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
-	default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
-	default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
-	default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
-	default_rcv_func_set.hip_receive_update    = hip_receive_update;
-	default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
-	default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
-	default_rcv_func_set.hip_receive_close     = hip_receive_close;
-	default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
+     /** @todo Check for errors. */
+     
+     /* The next line initializes the hash table for host associations. Note
+	that we are using callback wrappers IMPLEMENT_LHASH_HASH_FN and
+	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
+	provide automagic variable casts, so that all elements stored in the
+	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
+     hadb_hit = hip_ht_init(LHASH_HASH_FN(hip_hash_ha),
+			    LHASH_COMP_FN(hip_compare_ha));
+     
+     /* initialize default function pointer sets for receiving messages*/
+     default_rcv_func_set.hip_receive_i1        = hip_receive_i1;
+     default_rcv_func_set.hip_receive_r1        = hip_receive_r1;
+     default_rcv_func_set.hip_receive_i2        = hip_receive_i2;
+     default_rcv_func_set.hip_receive_r2        = hip_receive_r2;
+     default_rcv_func_set.hip_receive_update    = hip_receive_update;
+     default_rcv_func_set.hip_receive_notify    = hip_receive_notify;
+     default_rcv_func_set.hip_receive_bos       = hip_receive_bos;
+     default_rcv_func_set.hip_receive_close     = hip_receive_close;
+     default_rcv_func_set.hip_receive_close_ack = hip_receive_close_ack;
 	
-	/* initialize alternative function pointer sets for receiving messages*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for receiving messages*/
+     /* insert your alternative function sets here!*/ 
 
-	/* initialize default function pointer sets for handling messages*/
-	default_handle_func_set.hip_handle_i1  = hip_handle_i1;
-	default_handle_func_set.hip_handle_r1  = hip_handle_r1;
-	default_handle_func_set.hip_handle_i2  = hip_handle_i2;
-	default_handle_func_set.hip_handle_r2  = hip_handle_r2;
-	default_handle_func_set.hip_handle_bos = hip_handle_bos;
-	default_handle_func_set.hip_handle_close     = hip_handle_close;
-	default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
+     /* initialize default function pointer sets for handling messages*/
+     default_handle_func_set.hip_handle_i1        = hip_handle_i1;
+     default_handle_func_set.hip_handle_r1        = hip_handle_r1;
+     default_handle_func_set.hip_handle_i2        = hip_handle_i2;
+     default_handle_func_set.hip_handle_r2        = hip_handle_r2;
+     default_handle_func_set.hip_handle_bos       = hip_handle_bos;
+     default_handle_func_set.hip_handle_close     = hip_handle_close;
+     default_handle_func_set.hip_handle_close_ack = hip_handle_close_ack;
 	
-	/* initialize alternative function pointer sets for handling messages*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for handling messages*/
+     /* insert your alternative function sets here!*/ 
 	
-	/* initialize default function pointer sets for misc functions*/
-	default_misc_func_set.hip_solve_puzzle  	   = hip_solve_puzzle;
-	default_misc_func_set.hip_produce_keying_material  = hip_produce_keying_material;
-	default_misc_func_set.hip_create_i2		   = hip_create_i2;
-	default_misc_func_set.hip_create_r2		   = hip_create_r2;
-	default_misc_func_set.hip_build_network_hdr	   = hip_build_network_hdr;
+     /* initialize default function pointer sets for misc functions*/
+     default_misc_func_set.hip_solve_puzzle  	       = hip_solve_puzzle;
+     default_misc_func_set.hip_produce_keying_material = hip_produce_keying_material;
+     default_misc_func_set.hip_create_i2	       = hip_create_i2;
+     default_misc_func_set.hip_create_r2	       = hip_create_r2;
+     default_misc_func_set.hip_build_network_hdr       = hip_build_network_hdr;
 
-	/* initialize alternative function pointer sets for misc functions*/
-	/* insert your alternative function sets here!*/ 
+     /* initialize alternative function pointer sets for misc functions*/
+     /* insert your alternative function sets here!*/ 
 	
-	/* initialize default function pointer sets for update functions*/
-	default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
-	default_update_func_set.hip_handle_update_addr_verify = hip_handle_update_addr_verify;
-	default_update_func_set.hip_update_handle_ack	      = hip_update_handle_ack;
-	default_update_func_set.hip_handle_update_established = hip_handle_update_established;
-	default_update_func_set.hip_handle_update_rekeying    = hip_handle_update_rekeying;
-	default_update_func_set.hip_update_send_addr_verify   = hip_update_send_addr_verify;
-	default_update_func_set.hip_update_send_echo	      = hip_update_send_echo;
+     /* initialize default function pointer sets for update functions*/
+     default_update_func_set.hip_handle_update_plain_locator = hip_handle_update_plain_locator;
+     default_update_func_set.hip_handle_update_addr_verify   = hip_handle_update_addr_verify;
+     default_update_func_set.hip_update_handle_ack	     = hip_update_handle_ack;
+     default_update_func_set.hip_handle_update_established   = hip_handle_update_established;
+     default_update_func_set.hip_handle_update_rekeying      = hip_handle_update_rekeying;
+     default_update_func_set.hip_update_send_addr_verify     = hip_update_send_addr_verify;
+     default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
-	/* xmit function set */
-	/** @todo Add support for i3. */
-	default_xmit_func_set.hip_send_pkt = hip_send_raw;
+     /* xmit function set */
+     /** @todo Add support for i3. */
+     default_xmit_func_set.hip_send_pkt = hip_send_raw;
 #ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) 
-	{
-		default_xmit_func_set.hip_send_pkt = hip_send_i3;
-	}
+     if( hip_use_i3 ) 
+     {
+	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
+     }
 #endif
-	nat_xmit_func_set.hip_send_pkt = hip_send_udp;
+     nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 	
-	/* filter function sets */
-	default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
-	default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+     /* filter function sets */
+     /* Compiler warning: assignment from incompatible pointer type.
+	Please fix this, if you know what is the correct value.
+	-Lauri 25.09.2007 15:11. */
+     default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
+     default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 }
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
@@ -2103,13 +2160,71 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
 				     hip_update_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
+     /** @todo add check whether all function pointers are set */
 	if( entry ){
 		entry->hadb_update_func = new_func_set;
 		return 0;
 	}
 	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
 	return -1;
+}
+
+/* NOTE! When modifying this function, remember that some control values may
+   not be allowed to co-exist. Therefore the logical OR might not be enough
+   for all controls. */
+void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  switch(mask)
+	  {
+	  case HIP_HA_CTRL_NONE:
+	       entry->local_controls &= mask;
+	  case HIP_HA_CTRL_LOCAL_REQ_HIPUDP:
+	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
+	       entry->local_controls |= mask;
+	       break;
+	  default:
+	       HIP_ERROR("Unknown local controls given.\n");
+	  }
+     }
+}
+
+/* NOTE! When modifying this function, remember that some control values may
+   not be allowed to co-exist. Therefore the logical OR might not be enough
+   for all controls. */
+void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  switch(mask)
+	  {
+	  case HIP_HA_CTRL_NONE:
+	       entry->peer_controls &= mask;
+	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
+	  case HIP_HA_CTRL_PEER_HIPUDP_CAPABLE:
+	       entry->peer_controls |= mask;
+	       break;
+	  default:
+	       HIP_ERROR("Unknown peer controls given.\n");
+	  }
+     }
+}
+
+void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  entry->local_controls &= (~mask);
+     }
+}
+
+void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
+{
+     if(entry != NULL)
+     {
+	  entry->peer_controls &= (~mask);
+     }
 }
 
 void hip_uninit_hadb()
@@ -2447,31 +2562,12 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 }
 
 #ifdef CONFIG_HIP_RVS
-
-/**
- * Finds a rendezvous server candidate host association entry.
- *
- * Finds a rendezvous server candidate host association entry matching the
- * parameter @c local_hit and @c rvs_ip. When a relayed I1 packet arrives to the
- * responder, the packet has the initiators HIT as the source HIT, and the
- * responder HIT as the destination HIT. The responder needs the host
- * assosiation having RVS's HIT and the responder's HIT. This function gets that
- * host assosiation without using the RVS's HIT as searching key.
- *
- * @param  local_hit a pointer to rendezvous server HIT used as searching key.
- * @param  rvs_ip    a pointer to rendezvous server IPv6 or IPv4-in-IPv6 format
- *                   IPv4 address  used as searching key.
- * @return           a pointer to a matching host association or NULL if
- *                   a matching host association was not found.
- * @author           Miika Komu
- * @date             31.08.2006
- */ 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 					    hip_hit_t *rvs_ip)
 {
-	int err = 0, i;
-	hip_ha_t *this;
-	hip_list_t *item, *tmp, *result = NULL;
+	int err = 0, i = 0;
+	hip_ha_t *this = NULL, *result = NULL;
+	hip_list_t *item = NULL, *tmp = NULL; //
 
 	HIP_LOCK_HT(&hadb_hit);
 	list_for_each_safe(item, tmp, hadb_hit, i)

@@ -47,12 +47,12 @@
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
  */
+
 /**
  * @addtogroup exec_app_types
  * @{
  */
- 
-/**
+ /**
  * Execute application with opportunistic library preloaded.
  * @see handle_exec_application()
  */
@@ -76,11 +76,15 @@
  * @see handle_exec_application()
  */
 #define LIB_LENGTH	200
-
-
-
 /** @} addtogroup exec_app_types */
 
+/* hipconf tool actions. These are numerical values for the first commandline
+   argument. For example in "tools/hipconf get hi default" -command "get"
+   is the action. */
+
+
+/* Important! These values are used as array indexes, so keep in this order.
+   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -101,7 +105,7 @@
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
 #define ACTION_INTERFAMILY 19
-#define ACTION_MAX 22 /* exclusive */
+#define ACTION_MAX 20 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -125,7 +129,8 @@
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
 #define TYPE_INTERFAMILY 21
-#define TYPE_MAX    	22 /* exclusive */
+#define TYPE_RELAY_UDP_HIP             22
+#define TYPE_MAX    	23 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -157,6 +162,7 @@ int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_interfamily(struct hip_common *, int type, const char *opt[], int optc);
@@ -177,6 +183,5 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
 
 #endif /* HIPCONF */

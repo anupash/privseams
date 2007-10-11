@@ -1,16 +1,10 @@
-  
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/** @file
+ * This file defines initialization functions for the HIP daemon.
+ * 
+ * @date    1.1.2007
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
+ 
 #include "init.h"
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -23,7 +17,6 @@ extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
-
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -190,8 +183,12 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_init_rvadb();
-#endif	
+	HIP_INFO("Initializing HIP UDP relay database.\n");
+	if(hip_relht_init() == NULL)
+	{
+	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
+	}
+#endif
 #ifdef CONFIG_HIP_OPENDHT
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 
@@ -597,7 +594,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow is in use. */
+	/* This is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -609,7 +606,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_uninit_rvadb();
+	HIP_INFO("Uninitializing HIP UDP relay database.\n");
+	hip_relht_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();

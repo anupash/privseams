@@ -11,6 +11,8 @@
  * @author  Tobias Heer
  * @author  Laura Takkinen //blind code
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Doxygen comments for functions are now in the header file.
+ *          Lauri 19.09.2007 16:43
  */
 #include "input.h"
 
@@ -23,18 +25,8 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 extern int hip_build_param_esp_info(struct hip_common *msg,
 				    uint16_t keymat_index, uint32_t old_spi,
 				    uint32_t new_spi);
-/**
- * hip_verify_hmac - verify HMAC
- * @param buffer the packet data used in HMAC calculation
- * @param hmac the HMAC to be verified
- * @param hmac_key integrity key used with HMAC
- * @param hmac_type type of the HMAC digest algorithm.
- *
- * @return 0 if calculated HMAC is same as @hmac, otherwise < 0. On
- * error < 0 is returned.
- *
- * FIX THE PACKET LEN BEFORE CALLING THIS FUNCTION
- */
+
+/* Fix the packet len before calling this function! */
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 			   void *hmac_key, int hmac_type)
 {
@@ -60,14 +52,6 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 	return err;
 }
 
-/**
- * hip_verify_packet_hmac - verify packet HMAC
- * @param msg HIP packet
- * @param entry HA
- *
- * @return 0 if HMAC was validated successfully, < 0 if HMAC could
- * not be validated.
- */
 int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
@@ -109,14 +93,6 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	return err;
 }
 
-/**
- * Verifies packet RVS_HMAC
- * @param msg HIP packet
- * @param entry HA
- *
- * @return 0 if HMAC was validated successfully, < 0 if HMAC could
- * not be validated.
- */
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
@@ -159,15 +135,6 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 	return err;
 }
 
-/**
- * hip_verify_packet_hmac2 - verify packet HMAC
- * @param msg HIP packet
- * @param entry HA
- *
- * @return 0 if HMAC was validated successfully, < 0 if HMAC could
- * not be validated. Assumes that the hmac includes only the header
- * and host id.
- */
 int hip_verify_packet_hmac2(struct hip_common *msg,
 			    struct hip_crypto_key *crypto_key,
 			    struct hip_host_id *host_id)
@@ -203,17 +170,6 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	return err;
 }
 
-/**
- * hip_produce_keying_material - Create shared secret and produce keying material 
- * @param msg the HIP packet received from the peer
- * @param ctx context
- * @param dhpv pointer to the DH public value choosen
- *
- * The initial ESP keys are drawn out of the keying material.
- *
- *
- * Returns zero on success, or negative on error.
- */
 int hip_produce_keying_material(struct hip_common *msg,
 				struct hip_context *ctx,
 				uint64_t I,
@@ -433,19 +389,6 @@ int hip_produce_keying_material(struct hip_common *msg,
 	return err;
 }
 
-/**
- * Decides what action to take for an incoming HIP control packet.
- *
- * @param msg   a pointer to the received HIP control packet common header with
- *              source and destination HITs.
- * @param saddr a pointer to the source address from where the packet was
- *              received.
- * @param daddr a pointer to the destination address where to the packet was
- *              sent to (own address).
- * @param info  a pointer to the source and destination ports.
- * @param filter Whether to filter trough agent or not.
- * @return      zero on success, or negative error value on error.
- */
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -492,6 +435,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 		   where hostname maps to HIT and IP in hosts files.
 		   Why the heck the receive function points here to
 		   receive_opp_r1 even though we have a regular entry? */
+
+	     /* What is the point of having receive function pointer anyways?
+		Not to mention a SET of them... */
 		if (entry)
 			entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	}
@@ -512,7 +458,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 #ifdef CONFIG_HIP_BLIND
 	HIP_DEBUG("Blind block\n");
 	// Packet that was received is blinded
-	if (ntohs(msg->control) & HIP_CONTROL_BLIND) {
+	if (ntohs(msg->control) & HIP_PACKET_CTRL_BLIND) {
 	  HIP_DEBUG("Message is blinded\n");
 	  if(type == HIP_I1) { //Responder receives
 	    HIP_DEBUG("set_blind_on\n");
@@ -540,7 +486,7 @@ int hip_receive_control_packet(struct hip_common *msg,
         }	  
 	/* fetch the state from the hadb database to be able to choose the
 	   appropriate message handling functions */
-	if (!(ntohs(msg->control) & HIP_CONTROL_BLIND)) { // Normal packet received
+	if (!(ntohs(msg->control) & HIP_PACKET_CTRL_BLIND)) { // Normal packet received
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #endif
@@ -557,9 +503,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	case HIP_I2:
 		/* Possibly state. */
 		if(entry){
-			err = entry->hadb_rcv_func->
-				hip_receive_i2(msg, src_addr, dst_addr, entry,
-					       msg_info);
+		     err = entry->hadb_rcv_func->
+			  hip_receive_i2(msg, src_addr, dst_addr, entry,
+					 msg_info);
 		} else {
 			err = ((hip_rcv_func_set_t *)
 			       hip_get_rcv_default_func_set())->
@@ -595,18 +541,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_BOS:
-		HIP_IFCS(entry, err = entry->hadb_rcv_func->
-			 hip_receive_bos(msg, src_addr, dst_addr, entry,
-					 msg_info));
-		/*In case of BOS the msg->hitr is null, therefore it is replaced
-		  with our own HIT, so that the beet state can also be
-		  synchronized. */
-		ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
-		hip_init_us(&tmp, NULL);
-		ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
-		skip_sync = 0;
-		break;
-		
+	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
+		      hip_receive_bos(msg, src_addr, dst_addr, entry,
+				      msg_info));
+	     
+	     /*In case of BOS the msg->hitr is null, therefore it is replaced
+	       with our own HIT, so that the beet state can also be
+	       synchronized. */
+
+	     ipv6_addr_copy(&tmp.hit_peer, &msg->hits);
+	     hip_init_us(&tmp, NULL);
+	     ipv6_addr_copy(&msg->hitr, &tmp.hit_our);
+	     skip_sync = 0;
+	     break;
 	case HIP_CLOSE:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close(msg, entry));
@@ -632,31 +579,6 @@ out_err:
 	return err;
 }
 
-/**
- * Logic specific to HIP control packets received on UDP.
- *
- * Does the logic specific to HIP control packets received on UDP and calls
- * hip_receive_control_packet() after the UDP specific logic.
- * hip_receive_control_packet() is called with different IP source address
- * depending on whether the current machine is a rendezvous server or not:
- * 
- * <ol>
- * <li>If the current machine is @b NOT a rendezvous server the source address
- * of hip_receive_control_packet() is the @c preferred_address of the matching
- * host association.</li> 
- * <li>If the current machine @b IS a rendezvous server the source address
- * of hip_receive_control_packet() is the @c saddr of this function.</li>
- * </ol>
- *
- * @param msg   a pointer to the received HIP control packet common header with
- *              source and destination HITs.
- * @param saddr a pointer to the source address from where the packet was
- *              received.
- * @param daddr a pointer to the destination address where to the packet was
- *              sent to (own address).
- * @param info  a pointer to the source and destination ports.
- * @return      zero on success, or negative error value on error.
- */
 int hip_receive_udp_control_packet(struct hip_common *msg,
 				   struct in6_addr *saddr,
 				   struct in6_addr *daddr,
@@ -694,15 +616,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 	return err;
 }
 
-/**
- * hip_create_i2 - Create I2 packet and send it
- * @param ctx Context that includes the incoming R1 packet
- * @param solved_puzzle Value that solves the puzzle
- * @param entry HA
- * @param dhpv the DH public value choosen 
- *
- * @return zero on success, non-negative on error.
- */
 int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
@@ -743,29 +656,27 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_DEBUG("Build blinded I2\n");
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 	  // Build network header by using blinded HITs
-	  entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
-						       &entry->hit_our_blind,
-						       &entry->hit_peer_blind);
+	  entry->hadb_misc_func->
+	       hip_build_network_hdr(i2, HIP_I2, mask, &entry->hit_our_blind,
+				     &entry->hit_peer_blind);
 	}
 #endif
 
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("Build normal I2\n");
 	  /* create I2 */
-	  entry->hadb_misc_func->hip_build_network_hdr(i2, HIP_I2, mask,
-						       &(ctx->input->hitr),
-						       &(ctx->input->hits));
+	  entry->hadb_misc_func->
+	       hip_build_network_hdr(i2, HIP_I2, mask, &(ctx->input->hitr),
+				     &(ctx->input->hits));
 	}
 
 	/********** ESP_INFO **********/
 	/* SPI is set below */
-	HIP_IFEL(hip_build_param_esp_info(i2,
-					  ctx->esp_keymat_index,
-					  0, 0),
+	HIP_IFEL(hip_build_param_esp_info(i2, ctx->esp_keymat_index, 0, 0),
 		 -1, "building of ESP_INFO failed.\n");
-
+	
 	/********** R1 COUNTER (OPTIONAL) ********/
 	/* we build this, if we have recorded some value (from previous R1s) */
 	{
@@ -797,7 +708,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	/********** Diffie-Hellman *********/
-	HIP_IFEL(!(dh_req = hip_get_param(ctx->input, HIP_PARAM_DIFFIE_HELLMAN)), -ENOENT, "Internal error\n");
+	HIP_IFEL(!(dh_req = hip_get_param(ctx->input, HIP_PARAM_DIFFIE_HELLMAN)),
+		 -ENOENT, "Internal error\n");
 	HIP_IFEL((written = hip_insert_dh(dhpv->public_value, 
 		 ntohs(dhpv->pub_len), dhpv->group_id)) < 0,
 		 -1, "Could not extract the DH public key\n");
@@ -806,8 +718,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 dhpv->group_id, dhpv->public_value, written, 
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
-
-
 
         /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
@@ -918,7 +828,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("******** Blind is ON\n");
+	  HIP_DEBUG("Blind is ON\n");
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
 			      &spi_in, transform_esp_suite, 
@@ -930,7 +840,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #endif
 
 	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("******** Blind is OFF\n");
+	  HIP_DEBUG("Blind is OFF\n");
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	  /* let the setup routine give us a SPI. */
@@ -973,26 +883,29 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         HIP_DEBUG("Could not deliver escrow data to server\n");
     }             
 #endif //CONFIG_HIP_ESCROW
-				      
-	/* Check if the incoming R1 has a REG_REQUEST parameter. */
+    
+    /* Check if the incoming R1 has a REG_REQUEST parameter. */
 
-	/* Add service types to which the current machine wishes to
-	   register into the outgoing I2 packet. Each service type
-	   should check here if the current machines hadb is in correct
-	   state regarding to registering. This state is set before
-	   sending the I1 packet to peer (registrar). */
+    /* Add service types to which the current machine wishes to
+       register into the outgoing I2 packet. Each service type
+       should check here if the current machines hadb is in correct
+       state regarding to registering. This state is set before
+       sending the I1 packet to peer (registrar). */
 
-        // TODO: check also unregistrations   
-        type_count = hip_get_incomplete_registrations(&reg_type, entry, 1); 
-	
-	if (type_count > 0) {
-		HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-		/* TODO: Lifetime value usage. Now requesting maximum lifetime (255 ~= 178 days) always */
-                HIP_IFEL(hip_build_param_reg_request(i2, 255, reg_type, 
-                type_count, 1), -1, "Could not build REG_REQUEST parameter\n");
-	}
-		
-	/******** NONCE *************************/
+    // TODO: check also unregistrations
+    uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+    
+    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
+    
+    if (type_count > 0) {
+	 HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
+	 /** @todo Service lifetime value usage. Now requesting maximum lifetime
+	     (255 ~= 178 days) always */
+	 HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count, 1),
+		  -1, "Could not build REG_REQUEST parameter\n");
+    }
+    
+    /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	  HIP_DEBUG("add nonce to the message\n");
@@ -1026,13 +939,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
 	{
-		struct hip_echo_request *ping;
-
-		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST);
-		if (ping) {
-			int ln = hip_get_param_contents_len(ping);
-			HIP_IFEL(hip_build_param_echo(i2, (ping + 1), ln, 0, 0), -1, "Error while creating echo reply parameter\n");
-		}
+	     struct hip_echo_request *ping;
+	     
+	     ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST);
+	     if (ping) {
+		  int ln = hip_get_param_contents_len(ping);
+		  HIP_IFEL(hip_build_param_echo(i2, (ping + 1), ln, 0, 0), -1,
+			   "Error while creating echo reply parameter\n");
+	     }
 	}
 	
       	/********** I2 packet complete **********/
@@ -1053,44 +967,19 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
-	err = entry->hadb_xmit_func->hip_send_pkt(r1_daddr, &daddr,
-						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-						  r1_info->src_port, i2, entry, 1);
+	err = entry->hadb_xmit_func->
+	     hip_send_pkt(r1_daddr, &daddr,
+			  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
  out_err:
 	if (i2)
 		HIP_FREE(i2);
-	if (reg_type)
-		HIP_FREE(reg_type);
 
 	return err;
 }
 
-/**
- * Handles an incoming R1 packet.
- *
- * Handles an incoming R1 packet and calls hip_create_i2() if the R1 packet
- * passes all tests.
- *
- * @param r1       a pointer to the received R1 HIP packet common header with
- *                 source and destination HITs.
- * @param r1_saddr a pointer to the source address from where the R1 packet was
- *                 received.
- * @param r1_daddr a pointer to the destination address where to the R1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param r1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- * @todo           When rendezvous service is used, the I1 packet is relayed
- *                 to the responder via the rendezvous server. Responder then
- *                 replies directly to the initiator with an R1 packet that has
- *                 a @c VIA_RVS parameter. This parameter contains the IP
- *                 addresses of the travesed RVSes (usually just one). The
- *                 initiator should store these addresses to cope with the
- *                 double jump problem.
- */
 int hip_handle_r1(struct hip_common *r1,
 		  struct in6_addr *r1_saddr,
 		  struct in6_addr *r1_daddr,
@@ -1126,8 +1015,7 @@ int hip_handle_r1(struct hip_common *r1,
 	   signature. */
 	
 	/* Blinded R1 packets do not contain HOST ID parameters,
-	 * so the verification must be delayd to the R2
-	 */
+	 * so the verification must be delayd to the R2 */
 	if (!hip_blind_get_status()) {
 		/* Store the peer's public key to HA and validate it */
 		/** @todo Do not store the key if the verification fails. */
@@ -1142,7 +1030,7 @@ int hip_handle_r1(struct hip_common *r1,
 	/* R1 packet had destination port 50500, which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
-	   of R2 packet. Don't know if the entry is allready locked... */
+	   of R2 packet. Don't know if the entry is already locked... */
 	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
 		HIP_LOCK_HA(entry);
 		entry->nat_mode = 1;
@@ -1196,41 +1084,61 @@ int hip_handle_r1(struct hip_common *r1,
 
 		/* Loop through all the registration types found in REG_INFO parameter. */ 
 		for(i = 0; i < typecount; i++){
-			current_reg_type = reg_types[i];
-			
-			switch(current_reg_type){
+		     current_reg_type = reg_types[i];
+		     
+		     switch(current_reg_type){
 #ifdef CONFIG_HIP_ESCROW
-			case HIP_ESCROW_SERVICE:
-				HIP_INFO("Responder offers escrow service.\n");
+		     case HIP_SERVICE_ESCROW:
+			  HIP_INFO("Responder offers escrow service.\n");
 						
-				HIP_KEA *kea;
-				kea = hip_kea_find(&entry->hit_our);
-				if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-					HIP_DEBUG("Registering to escrow service.\n");
-					hip_keadb_put_entry(kea);
-				} 
-				else if(kea){
-					kea->keastate = HIP_KEASTATE_INVALID;
-					HIP_DEBUG("Not doing escrow registration, "\
-						  "invalid kea state.\n");
-					hip_keadb_put_entry(kea);	  
-				}
-				else{
-					HIP_DEBUG("Not doing escrow registration.\n");
-				}
+			  HIP_KEA *kea;
+			  kea = hip_kea_find(&entry->hit_our);
+			  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+			       HIP_DEBUG("Registering to escrow service.\n");
+			       hip_keadb_put_entry(kea);
+			  } 
+			  else if(kea){
+			       kea->keastate = HIP_KEASTATE_INVALID;
+			       HIP_DEBUG("Not doing escrow registration, "\
+					 "invalid kea state.\n");
+			       hip_keadb_put_entry(kea);	  
+			  }
+			  else{
+			       HIP_DEBUG("Not doing escrow registration.\n");
+			  }
 
-				break;
+			  break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-			case HIP_RENDEZVOUS_SERVICE:
-				HIP_INFO("Responder offers rendezvous service.\n");
-				/** @todo Check if we have requested for
-				    rendezvous service in I1 packet. */
-				break;
+		     case HIP_SERVICE_RENDEZVOUS:
+			  HIP_INFO("Responder offers rendezvous service.\n");
+			  
+			  /* If we have requested for RVS service in I1, we
+			     store the info of responder's capability here. */
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
+			  {
+			       hip_hadb_set_peer_controls(
+				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+			  }
+			  break;
+		     case HIP_SERVICE_RELAY_UDP_HIP:
+			  HIP_INFO("Responder offers UDP relay service for "\
+				   "HIP packets.\n");
+			  
+			  /* If we have requested for HIP UDP Relay service in
+			     I1, we store the info of responder's capability
+			     here. */
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
+			  {
+			       hip_hadb_set_peer_controls(
+				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+
+			  }
+			  break;
 #endif /* CONFIG_HIP_RVS */
-			default:
-				HIP_INFO("Responder offers unsupported service.\n");
-			}
+		     default:
+			  HIP_INFO("Responder offers unsupported service.\n");
+		     }
 		}
 	}
 #ifdef CONFIG_HIP_ESCROW
@@ -1289,7 +1197,7 @@ int hip_handle_r1(struct hip_common *r1,
 							 solved_puzzle, &dhpv),
 			 -EINVAL, "Could not produce keying material\n");
 	
-	/* TODO BLIND: What is this?*/
+	/** @todo BLIND: What is this? */
 	/* Blinded R1 packets do not contain HOST ID parameters,
 	 * so the saving peer's HOST ID mus be delayd to the R2
 	 */
@@ -1304,9 +1212,10 @@ int hip_handle_r1(struct hip_common *r1,
 	  }
 	}
 
-	entry->peer_controls = ntohs(r1->control);
-
- 	err = entry->hadb_misc_func->hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry, r1_info, dhpv);
+ 	err = entry->hadb_misc_func->
+	     hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry,
+			   r1_info, dhpv);
+	
 	HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
 	if (entry->state == HIP_STATE_I1_SENT)
@@ -1322,34 +1231,10 @@ out_err:
 	return err;
 }
 
-/**
- * Determines the action to be executed for an incoming R1 packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * a R1 packet. First it is checked, if the corresponding I1 packet has
- * been sent. If yes, then the received R1 packet is handled in
- * hip_handle_r1(). The R1 packet is handled also in @c HIP_STATE_ESTABLISHED.
- * Otherwise the packet is dropped and not handled in any way.
- * 
- * @param r1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param r1_saddr a pointer to the source address from where the R1 packet
- *                 was received.
- * @param i1_daddr a pointer to the destination address where to the R1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param r1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- */
-int hip_receive_r1(struct hip_common *r1,
-		   struct in6_addr *r1_saddr,
-		   struct in6_addr *r1_daddr,
-		   hip_ha_t *entry,
-		   hip_portpair_t *r1_info)
+int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
+		   hip_ha_t *entry, hip_portpair_t *r1_info)
 {
-	int state, mask = HIP_CONTROL_HIT_ANON, err = 0;
+	int state, mask = HIP_PACKET_CTRL_ANON, err = 0;
 
 	HIP_DEBUG("hip_receive_r1() invoked.\n");
 
@@ -1358,13 +1243,9 @@ int hip_receive_r1(struct hip_common *r1,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 
-#ifdef CONFIG_HIP_RVS
-	/** @todo: Should RVS capability be stored somehow else? */
-	mask |= HIP_CONTROL_RVS_CAPABLE;
-#endif
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 #endif
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
@@ -1394,13 +1275,7 @@ int hip_receive_r1(struct hip_common *r1,
 					       PEER_ADDR_STATE_ACTIVE);
 		}
 	}
-
-	/* Since the entry is in the hit-list and since the previous function
-	   increments by one, we must have at least 2 references. */
-	//HIP_ASSERT(atomic_read(&entry->refcnt) >= 2);
 	
-	/* I hope wmb() takes care of the locking needs */
-	//wmb();
 	state = entry->state;
 	
 	HIP_DEBUG("Received R1 in state %s\n", hip_state_str(state));
@@ -1409,13 +1284,14 @@ int hip_receive_r1(struct hip_common *r1,
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_CLOSING:
 	case HIP_STATE_CLOSED:
-		/* E1. The normal case. Process, send I2, goto E2. */
-		err = entry->hadb_handle_func->hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
-		HIP_LOCK_HA(entry);
-		if (err)
-			HIP_ERROR("Handling of R1 failed\n");
-		HIP_UNLOCK_HA(entry);
-		break;
+	     /* E1. The normal case. Process, send I2, goto E2. */
+	     err = entry->hadb_handle_func->
+		  hip_handle_r1(r1, r1_saddr, r1_daddr, entry, r1_info);
+	     HIP_LOCK_HA(entry);
+	     if (err < 0)
+		  HIP_ERROR("Handling of R1 failed\n");
+	     HIP_UNLOCK_HA(entry);
+	     break;
 	case HIP_STATE_R2_SENT:
 		break;
 	case HIP_STATE_ESTABLISHED:
@@ -1442,7 +1318,6 @@ int hip_receive_r1(struct hip_common *r1,
  *
  * @return 0 on success, < 0 on error.
  */
-
 int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
@@ -1455,10 +1330,6 @@ int hip_create_r2(struct hip_context *ctx,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
-	hip_rva_t *rva = NULL;
-#ifdef CONFIG_HIP_RVS
-	int create_rva = 0;
-#endif
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1471,8 +1342,8 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Set HIP_CONTROL_BLIND for R2\n");
-	  mask |= HIP_CONTROL_BLIND;
+	  HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
+	  mask |= HIP_PACKET_CTRL_BLIND;
 	  
 	  // Build network header by using blinded HITs
 	  entry->hadb_misc_func->
@@ -1480,7 +1351,6 @@ int hip_create_r2(struct hip_context *ctx,
 				  &entry->hit_peer_blind);
 	}
 #endif
-	
 	/* Just swap the addresses to use the I2's destination HIT as
 	 * the R2's source HIT */
 	if (!hip_blind_get_status()) {
@@ -1502,37 +1372,26 @@ int hip_create_r2(struct hip_context *ctx,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
-	/* Check if the incoming I2 has a REG_REQUEST parameter. */
 
-	HIP_DEBUG("Checking I2 for REG_REQUEST parameter.\n");
-
-	reg_request = hip_get_param(i2, HIP_PARAM_REG_REQUEST);
-				
-	if (reg_request) {
-                uint8_t *types = (uint8_t *)(hip_get_param_contents(i2, HIP_PARAM_REG_REQUEST));
-                int type_count = hip_get_param_contents_len(reg_request)
-                        - sizeof(reg_request->lifetime); // leave out lifetime field
-                /* Check service requests and build reg_response and/or reg_failed */
-                hip_handle_registration_attempt(entry, r2, reg_request, 
-                        (types + sizeof(reg_request->lifetime)), type_count);
-	}
-	else {
-		HIP_DEBUG("No REG_REQUEST found in I2.\n");
-	}
-	
-
-	
-
+#if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
+	/********** REG_REQUEST **********/
+	/* This part should only be executed in HIP relay or in the host
+	   offering escrow service.
+	   (hip_we_are_relay() || we_are_escrow_server()).
+	   But since I don't have a way to detect if we are an escrow server
+	   this part is executed on I and R also. -Lauri 27.09.2007*/
+	hip_handle_regrequest(entry, i2, r2);
+#endif	
  	/* HMAC2 */
 	{
-		struct hip_crypto_key hmac;
-		if (entry->our_pub == NULL) HIP_DEBUG("entry->our_pub is null\n");
-		else HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
-			    hip_get_param_total_len(entry->our_pub));
+	     struct hip_crypto_key hmac;
+	     if (entry->our_pub == NULL) HIP_DEBUG("entry->our_pub is null\n");
+	     else HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
+			      hip_get_param_total_len(entry->our_pub));
 
-		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
-			 "Building of hmac failed\n");
+	     memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+	     HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
+		      "Building of hmac failed\n");
 	}
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
@@ -1542,21 +1401,6 @@ int hip_create_r2(struct hip_context *ctx,
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
-
-#ifdef CONFIG_HIP_RVS
-	/* Insert rendezvous association with appropriate xmit-function to
-	   rendezvous database. */
-	/** @todo Insert only if REG_REQUEST parameter with Reg Type
-	    RENDEZVOUS was received. */
-	HIP_IFEL(!(rva = hip_rvs_ha2rva(
-			   entry, entry->hadb_xmit_func->hip_send_pkt)),
-		 0, "Inserting rendezvous association failed\n");
-
-	if (hip_rvs_put_rva(rva))
-		hip_put_rva(rva);
-#endif /* CONFIG_HIP_RVS */
-
-	hip_hold_rva(rva);
 
  out_err:
 	if (r2)
@@ -1593,26 +1437,25 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	 	  struct in6_addr *i2_daddr, hip_ha_t *ha,
 		  hip_portpair_t *i2_info)
 {
-	int err = 0, retransmission = 0, replay = 0;
 	struct hip_context *ctx = NULL;
- 	struct hip_tlv_common *param;
-	char *tmp_enc = NULL, *enc = NULL;
-	unsigned char *iv;
+ 	struct hip_tlv_common *param = NULL;
 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr;
 	struct hip_esp_info *esp_info = NULL;
-	hip_ha_t *entry = ha;
-	hip_transform_suite_t esp_tfm, hip_tfm;
-	uint32_t spi_in, spi_out;
-	uint16_t crypto_len;
 	struct hip_spi_in_item spi_in_data;
-	uint64_t I, J;
 	struct in6_addr *plain_peer_hit = NULL, *plain_local_hit = NULL;
-	uint16_t nonce;
 	struct hip_dh_public_value *dhpv = NULL;
+	hip_transform_suite_t esp_tfm, hip_tfm;
+	hip_ha_t *entry = ha;
+	char *tmp_enc = NULL, *enc = NULL;
+	unsigned char *iv;
+	uint64_t I, J;	
+	uint32_t spi_in, spi_out;
+	uint16_t crypto_len, nonce;
+	int err = 0, retransmission = 0, replay = 0;
         struct hip_locator *locator;
-
-	_HIP_DEBUG("hip_handle_i2() invoked.\n");
+	
+	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
@@ -1778,52 +1621,66 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	/* Create host association state (if not previously done). */
 	if (!entry) {
-		int if_index;
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr;
-		addr = (struct sockaddr*) &ss_addr;
-		/* We have no previous infomation on the peer, create a new HIP
-		   HA. */
-		HIP_DEBUG("No entry, creating new\n");
-		HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
-			 "Failed to create or find entry\n");
-
-		/* The rest of the code assume already locked entry, so lock the
-		   newly created entry as well. */
-		HIP_LOCK_HA(entry);
-		if (ntohs(i2->control) & HIP_CONTROL_BLIND && hip_blind_get_status()) {
-			ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
-			hip_init_us(entry, plain_local_hit);
-		}
-		else {
-			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-			hip_init_us(entry, &i2->hitr);
-		}
-
-		hip_hadb_insert_state(entry);
-		hip_hold_ha(entry);
-
-		_HIP_DEBUG("HA entry created.");
-	}
-
-	ipv6_addr_copy(&entry->local_address, i2_daddr);
-
-	/* If the incoming I2 packet has 50500 as destination port, NAT
-	   mode is set on for the host association, I2 source port is
-	   stored as the peer UDP port and send function is set to
-	   "hip_send_udp()". Note that we must store the port not until
-	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == HIP_NAT_UDP_PORT) {
+	     int if_index;
+	     struct sockaddr_storage ss_addr;
+	     struct sockaddr *addr;
+	     addr = (struct sockaddr*) &ss_addr;
+	     /* We have no previous infomation on the peer, create a new HIP
+		HA. */
+	     HIP_DEBUG("No entry, creating new\n");
+	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
+		      "Failed to create or find entry\n");
+	     
+	     /* The rest of the code assume already locked entry, so lock the
+		newly created entry as well. */
+	     HIP_LOCK_HA(entry);
+	     if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
+		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
+		  hip_init_us(entry, plain_local_hit);
+	     }
+	     else {
+		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		  hip_init_us(entry, &i2->hitr);
+	     }
+		
+	     hip_hadb_insert_state(entry);
+	     hip_hold_ha(entry);
+	     
+	     _HIP_DEBUG("HA entry created.");
+	     
+	     ipv6_addr_copy(&entry->local_address, i2_daddr);
+	
+	     HIP_IFEL(!(if_index = hip_devaddr2ifindex(&entry->local_address)), -1, 
+		      "if_index NOT determined\n");
+	   
+	     memset(addr, 0, sizeof(struct sockaddr_storage));
+	     addr->sa_family = AF_INET6;
+	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
+	     add_address_to_list(addr, if_index);
+	
+	     /* If the incoming I2 packet has 50500 as destination port, NAT
+		mode is set on for the host association, I2 source port is
+		stored as the peer UDP port and send function is set to
+		"hip_send_udp()". Note that we must store the port not until
+		here, since the source port can be different for I1 and I2. */
+	     if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	     {
 		  entry->nat_mode = 1;
 		  entry->peer_udp_port = i2_info->src_port;
 		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
 		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-		      entry);
+			    entry);
 		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		  //entry->hadb_xmit_func->hip_send_pkt = hip_send_udp;
+	     }
 	}
 	entry->hip_transform = hip_tfm;
 
+	hip_hadb_insert_state(entry);
+	hip_hold_ha(entry);
+	
+	_HIP_DEBUG("HA entry created.");
+	
+	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -1925,7 +1782,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         HIP_DEBUG("Could not deliver escrow data to server\n");
     }
 #endif //CONFIG_HIP_ESCROW
-                          
 
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
@@ -2019,7 +1875,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
-	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
+	HIP_IFEL(entry->hadb_misc_func->
+		 hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
 		 "Creation of R2 failed\n");
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
@@ -2034,22 +1891,56 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	if (entry && entry->state != HIP_STATE_FILTERING_R2)
 	{
+
+/* Hmmm... Now that the RVS is compiled as a default value, we take the first
+   path always. Now, is this how it is meant to be? Notice, that currently
+   CONFIG_HIP_RVS does not mean that we are the RVS, but rather that the
+   extension is in use. Thus we can be I, RVS or R, and as long as the
+   RVS options are compiled, we always take the first path.
+   
+   It might be wise to create compile options for each service, and one compile
+   option to indicate whether we want use the registration extension. This way
+   we would get rid of the stupid dummy hip_we_are_relay(). Also, the #ifdef
+   #else, #endif below would be clarified.
+
+   -Lauri 27.09.2007 18:41.*/
 #ifdef CONFIG_HIP_RVS
-		/** @todo this should be dynamic (the rvs information should
-		   be stored in the HADB) instead of static */
-		entry->state = HIP_STATE_ESTABLISHED;
+	     if(hip_we_are_relay())
+	     {
+		  entry->state = HIP_STATE_ESTABLISHED;
+	     }
+	     else
+	     {
+		  if (entry->state == HIP_STATE_UNASSOCIATED)
+		  {
+		       HIP_DEBUG("TODO: should wait for ESP here or "
+				 "wait for implementation specific time, "
+				 "moving to ESTABLISHED\n");
+		       entry->state = HIP_STATE_ESTABLISHED;
+		  } else if (entry->state == HIP_STATE_ESTABLISHED)
+		  {
+		       HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+		       HIP_DEBUG("Staying in ESTABLISHED.\n");
+		  } else
+		  {
+		       entry->state = HIP_STATE_R2_SENT;
+		  }
+	     }
 #else
-		if (entry->state == HIP_STATE_UNASSOCIATED) {
-			HIP_DEBUG("TODO: should wait for ESP here or "
-				  "wait for implementation specific time, "
-				  "moving to ESTABLISHED\n");
-			entry->state = HIP_STATE_ESTABLISHED;
-		} else if (entry->state == HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
-			HIP_DEBUG("Staying in ESTABLISHED.\n");
-		} else {
-			entry->state = HIP_STATE_R2_SENT;
-		}
+	     if (entry->state == HIP_STATE_UNASSOCIATED)
+	     {
+		  HIP_DEBUG("TODO: should wait for ESP here or "
+			    "wait for implementation specific time, "
+			    "moving to ESTABLISHED\n");
+		  entry->state = HIP_STATE_ESTABLISHED;
+	     } else if (entry->state == HIP_STATE_ESTABLISHED)
+	     {
+		  HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
+		  HIP_DEBUG("Staying in ESTABLISHED.\n");
+	     } else
+	     {
+		  entry->state = HIP_STATE_R2_SENT;
+	     }
 #endif /* CONFIG_HIP_RVS */
 	}
 
@@ -2091,113 +1982,85 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	return err;
 }
 
-/**
- * Receive I2 packet.
- *
- * This is the initial function which is called when an I2 packet is received.
- * If we are in correct state, the packet is handled to hip_handle_i2() for
- * further processing.
- *
- * @param i2       a pointer to...
- * @param i2_saddr a pointer to...
- * @param i2_daddr a pointer to...
- * @param entry    a pointer to...
- * @param i2_info  a pointer to...
- * @return         always zero
- * @todo   Check if it is correct to return always 0 
- */
-int hip_receive_i2(struct hip_common *i2,
-		   struct in6_addr *i2_saddr,
-		   struct in6_addr *i2_daddr,
-		   hip_ha_t *entry,
-		   hip_portpair_t *i2_info)
+int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
+		   hip_ha_t *entry, hip_portpair_t *i2_info)
 {
-	int state = 0, err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
-	_HIP_DEBUG("hip_receive_i2() invoked.\n");
-
-	HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
-		 "Received NULL receiver HIT in I2. Dropping\n");
-
-	HIP_IFEL(!hip_controls_sane(ntohs(i2->control), mask), 0, 
-		 "Received illegal controls in I2: 0x%x. Dropping\n",
-		 ntohs(i2->control));
-
-	if (!entry) {
-		state = HIP_STATE_UNASSOCIATED;
-	} else {
-		HIP_LOCK_HA(entry);
-		state = entry->state;
-	}
-
-	HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
+     int state = 0, err = 0;
+     uint16_t mask = HIP_PACKET_CTRL_ANON;
+     _HIP_DEBUG("hip_receive_i2() invoked.\n");
 	
- 	switch(state) {
- 	case HIP_STATE_UNASSOCIATED:
-		/* possibly no state created yet, entry == NULL */
-		/* as there is no state established function pointers can't be
-		   used here */
-	  err = (hip_get_handle_default_func_set())->hip_handle_i2(i2,
-								   i2_saddr,
-								   i2_daddr,
-								   entry,
-								   i2_info);
-		break;
-	case HIP_STATE_I2_SENT:
-		/* WTF */
-		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
-			HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,
-						i2_info), -ENOSYS,
-				 "Dropping HIP packet\n");
-		} else if (entry->is_loopback) {
-			hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
-		}
-		break;
-	case HIP_STATE_I1_SENT:
-	case HIP_STATE_R2_SENT:
-		err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
- 		break;
- 	case HIP_STATE_ESTABLISHED:
- 		HIP_DEBUG("Received I2 in state ESTABLISHED\n");
-		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry, i2_info);
+     HIP_IFEL(ipv6_addr_any(&i2->hitr), 0,
+	      "Received NULL receiver HIT in I2. Dropping\n");
 
- 		break;
- 	case HIP_STATE_CLOSING:
- 	case HIP_STATE_CLOSED:
-		HIP_DEBUG("Received I2 in state CLOSED/CLOSING\n");
-		err = entry->hadb_handle_func->hip_handle_i2(i2, i2_saddr,
-							     i2_daddr, entry, i2_info);
-		break;
-	default:
-		HIP_ERROR("Internal state (%d) is incorrect\n", state);
-		break;
-	}
+     HIP_IFEL(!hip_controls_sane(ntohs(i2->control), mask), 0, 
+	      "Received illegal controls in I2: 0x%x. Dropping\n",
+	      ntohs(i2->control));
 
-	if (entry) {
-		HIP_UNLOCK_HA(entry);
-		hip_put_ha(entry);
-	}
+     if (!entry)
+     {
+	  state = HIP_STATE_UNASSOCIATED;
+     } else 
+     {
+	  HIP_LOCK_HA(entry);
+	  state = entry->state;
+     }
+
+     HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
+	
+     switch(state) {
+     case HIP_STATE_UNASSOCIATED:
+	  /* Possibly no state created yet (entry == NULL), 
+	     thus function pointers can't be used here. */
+	  err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->
+	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+		
+	  break;
+     case HIP_STATE_I2_SENT:
+	  /* WTF */
+	  if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer))
+	  {
+	       HIP_IFEL(hip_receive_i2(i2,i2_saddr,i2_daddr,entry,
+				       i2_info), -ENOSYS,
+			"Dropping HIP packet\n");
+	  } else if (entry->is_loopback)
+	  {
+	       hip_handle_i2(i2,i2_saddr,i2_daddr,entry,i2_info);
+	  }
+	  break;
+     case HIP_STATE_I1_SENT:
+     case HIP_STATE_R2_SENT:
+	  err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+	  break;
+     case HIP_STATE_ESTABLISHED:
+	  err = entry->hadb_handle_func->
+	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+	     
+	  break;
+     case HIP_STATE_CLOSING:
+     case HIP_STATE_CLOSED:
+	  err = entry->hadb_handle_func->
+	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+	  break;
+     default:
+	  HIP_ERROR("Internal state (%d) is incorrect\n", state);
+	  break;
+     }
+	
+     if (entry)
+     {
+	  HIP_UNLOCK_HA(entry);
+	  hip_put_ha(entry);
+     }
+
  out_err:
-	if (err) {
-		HIP_ERROR("error (%d) occurred\n", err);
-	}
-
-	return err;
+     if (err)
+     {
+	  HIP_ERROR("error (%d) occurred\n", err);
+     }
+	
+     return err;
 }
 
-
-/**
- * hip_handle_r2 - handle incoming R2 packet
- * @param skb sk_buff where the HIP packet is in
- * @param entry HA
- *
- * This function is the actual point from where the processing of R2
- * is started.
- *
- * On success (payloads are created and IPsec is set up) 0 is
- * returned, otherwise < 0.
- */
 int hip_handle_r2(struct hip_common *r2,
 		  struct in6_addr *r2_saddr,
 		  struct in6_addr *r2_daddr,
@@ -2310,7 +2173,7 @@ int hip_handle_r2(struct hip_common *r2,
     }
 #endif //CONFIG_HIP_ESCROW                          
 
-	/* source IPv6 address is implicitly the preferred
+        /* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
 				       1, 0, 1);
@@ -2322,9 +2185,9 @@ int hip_handle_r2(struct hip_common *r2,
 	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
 	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
 	//else
-		err = hip_devaddr2ifindex(r2_daddr);
+	err = hip_devaddr2ifindex(r2_daddr);
 	if (err != 0) {
-		HIP_DEBUG("ifindex=%d\n", err);
+	     HIP_DEBUG("ifindex=%d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
 	} else
 		HIP_ERROR("Couldn't get device ifindex of address\n");
@@ -2345,8 +2208,12 @@ int hip_handle_r2(struct hip_common *r2,
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 	*/
         
-        /* Check if we should expect REG_RESPONSE or REG_FAILED parameter */
-        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1); 
+	/* Registration of additional services. Check if we should expect
+	   REG_RESPONSE or REG_FAILED parameter */
+	
+	uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+	
+        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
         if (type_count > 0) {
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
                         "Error handling reg_response\n"); 
@@ -2374,227 +2241,59 @@ int hip_handle_r2(struct hip_common *r2,
         return err;
 }
 
-/**
- * Handles an incoming I1 packet.
- *
- * Handles an incoming I1 packet and parses @c FROM or @c FROM_NAT parameter
- * from the packet. If a @c FROM or a @c FROM_NAT parameter is found, there must
- * also be a @c RVS_HMAC parameter present. This hmac is first verified. If the
- * verification fails, a negative error value is returned and hip_xmit_r1() is
- * not invoked. If verification succeeds,
- * <ol>
- * <li>and a @c FROM parameter is found, the IP address obtained from the
- * parameter is passed to hip_xmit_r1() as the destination IP address. The
- * source IP address of the received I1 packet is passed to hip_xmit_r1() as
- * the IP of RVS.</li>
- * <li>and a @c FROM_NAT parameter is found, the IP address and
- * port number obtained from the parameter is passed to hip_xmit_r1() as the
- * destination IP address and destination port. The source IP address and source
- * port of the received I1 packet is passed to hip_xmit_r1() as the IP and port
- * of RVS.</li>
- * <li>If no @c FROM or @c FROM_NAT parameters are found, this function does
- * nothing else but calls hip_xmit_r1().</li>
- * </ol>
- *
- * @param i1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param i1_saddr a pointer to the source address from where the I1 packet was
- *                 received.
- * @param i1_daddr a pointer to the destination address where to the I1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param i1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- * @warning        This code only handles a single @c FROM or @c FROM_NAT
- *                 parameter. If there is a mix of @c FROM and @c FROM_NAT
- *                 parameters, only the first @c FROM parameter is parsed. Also,
- *                 if there are multiple @c FROM or @c FROM_NAT parameters
- *                 present in the incoming I1 packet, only the first of a kind
- *                 is parsed.
- */
 int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
-	int err = 0, is_via_rvs_nat = 0;
-	struct in6_addr *dst_ip = NULL;
-	in_port_t dst_port = 0;
-	void *rvs_address = NULL;
-	hip_tlv_type_t param_type = 0;
-	hip_ha_t *rvs_ha_entry = NULL;
-	struct hip_from_nat *from_nat;
-	struct hip_from *from;
-	uint16_t nonce = 0;
-		
-	_HIP_DEBUG("hip_handle_i1() invoked.\n");
-		
+     int err = 0;
+     uint16_t nonce = 0;
+     in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
+     in_port_t  dest_port = 0; // For the port in RELAY_FROM
+
+     HIP_DEBUG("hip_handle_i1() invoked.\n");
+
+     ipv6_addr_copy(&dest, &in6addr_any);
+     
 #ifdef CONFIG_HIP_RVS
-	/* Note that this code effectively takes place at the responder of
-	   I->RVS->R hierachy, not at the RVS itself. 
-	   
-	   We have five cases:
-	   1. I1 was received on UDP and a FROM parameter was found.
-	   2. I1 was received on raw HIP and a FROM parameter was found.
-	   3. I1 was received on UDP and a FROM_NAT parameter was found.
-	   4. I1 was received on raw HIP and a FROM_NAT parameter was found.
-	   5. Neither FROM nor FROM_NAT parameter was not found. */
-	
-	/* Check if the incoming I1 packet has a FROM or FROM_NAT parameters at
-	   all. */
-	from_nat = (struct hip_from_nat *) hip_get_param(i1, HIP_PARAM_FROM_NAT);
-	from = (struct hip_from *) hip_get_param(i1, HIP_PARAM_FROM);
-	
-	if (!(from || from_nat)) {
-		/* Case 5. */
-		HIP_DEBUG("Didn't find FROM parameter in I1.\n");
-		goto skip_nat;
-	}
-	
-	/* @todo: how to the handle the blind code with RVS?? */
+     if(!hip_we_are_relay())
+     {
+	  /* This is where the Responder handles the incoming relayed I1 packet.
+	     We need two things from the relayed packet:
+	     1) The destination IP address and port from the FROM/RELAY_FROM
+	     parameters.
+	     2) The source address and source port of the I1 packet to build the
+	     VIA_RVS/RELAY_TO parameter. */
+	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
+		   -1, "Handling of relayed I1 packet failed.\n");
+     }
+#endif /* CONFIG_HIP_RVS */
+
+     /* @todo: how to the handle the blind code with RVS?? */
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-		HIP_DEBUG("Blind is on\n");
-		// We need for R2 transmission: see hip_xmit_r1 below
-		HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
-			 -1, "hip_blind_get_nonce failed\n");
-		goto skip_nat;
-	}
+     if (hip_blind_get_status()) {
+	  HIP_DEBUG("Blind is on\n");
+	  // We need for R2 transmission: see hip_xmit_r1 below
+	  HIP_IFEL(hip_blind_get_nonce(i1, &nonce), 
+		   -1, "hip_blind_get_nonce failed\n");
+     }
 #endif
-
-	HIP_DEBUG("Found %s parameter in I1.\n",
-		  from ? "FROM" : "FROM_NAT");
-	
-	if(from) {
-		/* Cases 1. & 2. */
-		param_type = HIP_PARAM_FROM;
-		dst_ip = (struct in6_addr *)&from->address;
-	}
-	else {
-		/* Cases 3. & 4. */
-		param_type = HIP_PARAM_FROM_NAT;
-		dst_ip = (struct in6_addr *)&from_nat->address;
-		dst_port = ntohs(from_nat->port);
-	}
-
-	/* Case 1. */
-	HIP_DEBUG("Found FROM parameter in I1.\n");
-	
-	/* The relayed I1 packet has the initiator's HIT as source HIT,
-	   and the responder HIT as destination HIT. We would like to
-	   verify the HMAC against the host association that was created
-	   when the responder registered to the rvs. That particular
-	   host association has the responders HIT as source HIT and the
-	   rvs' HIT as destination HIT. Let's get that host association
-	   using the responder's HIT and the IP address of the RVS as
-	   search keys. */
-	HIP_IFEL(((rvs_ha_entry =
-		   hip_hadb_find_rvs_candidate_entry(&i1->hitr, i1_saddr)) == NULL),
-		 -1, "A matching host association was not found for "\
-		 "responder HIT / RVS IP.");
-	
-	HIP_DEBUG("RVS host association entry found: %p.\n", rvs_ha_entry);
-	
-	/* Verify the RVS hmac. */
-	HIP_IFEL(hip_verify_packet_rvs_hmac(i1, &rvs_ha_entry->hip_hmac_out),
-		 -1, "RVS_HMAC verification on the relayed i1 failed.\n");
-	
-	/* I1 packet was received on UDP destined to port 50500.
-	   R1 packet will have a VIA_RVS_NAT parameter.
-	   Cases 1. & 3. */
-	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
-		
-		struct hip_in6_addr_port our_addr_port;
-		is_via_rvs_nat = 1;
-		
-		HIP_IFEL(!(rvs_address = 
-			   HIP_MALLOC(sizeof(struct hip_in6_addr_port),
-				      0)),
-			 -ENOMEM, "Not enough memory to rvs_address.");
-		
-		/* Insert source IP address and source port from the
-		   received I1 packet to "rvs_address". For this purpose
-		   a temporary hip_in6_addr_port struct is needed. */
-		memcpy(&our_addr_port.sin6_addr, i1_saddr,
-		       sizeof(struct in6_addr));
-		our_addr_port.sin6_port = htons(i1_info->src_port);
-		
-		memcpy(rvs_address, &our_addr_port,
-		       sizeof(struct hip_in6_addr_port));
-	} else {
-		/* I1 packet was received on raw IP/HIP.
-		   Cases 2. & 4. */
-		HIP_IFEL(!(rvs_address = 
-			   HIP_MALLOC(sizeof(struct in6_addr), 0)),
-			 -ENOMEM, "Not enough memory to rvs_address.");
-		
-		/* Insert source IP address from the received I1 packet
-		   to "rvs_address". */
-		memcpy(rvs_address, i1_saddr, sizeof(struct in6_addr));
-	}
- skip_nat:
-#endif
-	err = hip_xmit_r1(i1_saddr, i1_daddr, &i1->hitr, dst_ip, dst_port,
-			  &i1->hits, i1_info, rvs_address, is_via_rvs_nat, &nonce);
-	
+     err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
+		       &nonce);
  out_err:
-	if (rvs_address) {
-		HIP_FREE(rvs_address);
-	}
-	
-	return err;
+     return err;
 }
 
-/**
- * Determines the action to be executed for an incoming I1 packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * an I1 packet. The operation of this function depends on whether the current
- * machine is a rendezvous server or not.
- * 
- * <ol>
- * <li>If the current machine is @b NOT a rendezvous server:</li> 
- * <ul>
- * <li>hip_handle_i1() is invoked.</li>
- * </ul>
- * <li>If the current machine @b IS a rendezvous server:</li>
- * <ul>
- * <li>if a valid rendezvous association is found from the server's rva table,
- * the I1 packet is relayed by invoking hip_rvs_relay_i1().</li> 
- * <li>If no valid valid rendezvous association is found, hip_handle_i1() is
- * invoked.</li>
- * </ul>
- * </ol>
- *
- * @param i1       a pointer to the received I1 HIP packet common header with
- *                 source and destination HITs.
- * @param i1_saddr a pointer to the source address from where the I1 packet was
- *                 received.
- * @param i1_daddr a pointer to the destination address where to the I1 packet
- *                 was sent to (own address).
- * @param entry    a pointer to the current host association database state.
- * @param i1_info  a pointer to the source and destination ports (when NAT is
- *                 in use).
- * @return         zero on success, or negative error value on error.
- */
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
 	int err = 0, state, mask = 0,cmphits=0;
-	HIP_DEBUG("\n");
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
-#ifdef CONFIG_HIP_RVS
- 	hip_rva_t *rva;
-	mask |= HIP_CONTROL_RVS_CAPABLE;
-#endif
-
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status())
-	  mask |= HIP_CONTROL_BLIND;
+	  mask |= HIP_PACKET_CTRL_BLIND;
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
@@ -2613,7 +2312,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 				 "Could not find source address\n");
 	}
 
-	/* we support checking whether we are rvs capable even with RVS support not enabled */
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 
@@ -2623,53 +2321,32 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	}
 	else {
 
-/* Note that this code effectively takes place at the rendezvous server of
-   I->RVS->R hierachy. */ 
 #ifdef CONFIG_HIP_RVS
-		HIP_DEBUG_HIT("Searching rendezvous association on HIT ",
-			      &i1->hitr);
-		/* Try to find a rendezvous association matching Responder's
-		   HIT. */
- 		rva = hip_rvs_get_valid(&i1->hitr);
-		HIP_DEBUG("Valid rendezvous association found: %s \n",
-			  (rva != NULL ? "yes" : "no"));
-		
-		/* If a matching rendezvous association is found, we have three
-		   cases:
-		   1. Only the Initiator is behind a NAT.
-		   2. Both the Initiator and Responder are behind a NAT.
-		   3. Only the Responder is behind a NAT or neither the
-		      Initiator nor Responder is behind a NAT. */
- 		if (rva != NULL) {
-			/* Case 1. */
-			if(rva->client_udp_port == 0 &&
-			   i1_info->dst_port == HIP_NAT_UDP_PORT) {
-				HIP_IFE(hip_rvs_reply_with_notify(
-						i1, i1_saddr, rva, i1_info,
-						HIP_PARAM_VIA_RVS_NAT),
-					-ECOMM);
-			}
-			/* Case 2. */
-			else if(rva->client_udp_port == HIP_NAT_UDP_PORT &&
-				i1_info->dst_port == HIP_NAT_UDP_PORT) {
-				HIP_IFE(hip_rvs_relay_i1(
-						i1, i1_saddr, i1_daddr, rva,
-						i1_info),
-					-ECOMM);
-				HIP_IFE(hip_rvs_reply_with_notify(
-						i1, i1_saddr, rva, i1_info,
-						HIP_PARAM_FROM_NAT),
-					-ECOMM);
-			}
-			/* Case 3. */
-			else {
-				HIP_IFE(hip_rvs_relay_i1(
-						i1, i1_saddr, i1_daddr, rva,
-						i1_info),
-					-ECOMM);
-				
-			}
- 		}
+	     if(hip_we_are_relay())
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     Responder's HIT. We should find one, if the Responder is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
+		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+		       HIP_INFO("No matching relay record found.\n");
+		  else if(rec->type != HIP_RVSRELAY)
+		       HIP_INFO("Matching relay record found, but it is of the"\
+				"wrong type.\n");
+		  else
+		  {
+		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
+		       /* We created a new I1 from scratch in the relay function.
+			  The original I1 packet is now redundant. */
+		       state = HIP_STATE_NONE;
+		       err = -ECANCELED;
+		       goto out_err;
+		  }
+	     }
 #endif
 		state = HIP_STATE_NONE;
 	}
@@ -2678,47 +2355,39 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 	switch(state) {
 	case HIP_STATE_NONE:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
-		break;
+	     err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())
+		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+	     break;
 	case HIP_STATE_I1_SENT:
-		cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-               	if (cmphits == 1) {
-			HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info), -ENOSYS,
-				"Dropping HIP packet\n");
+	     cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+	     if (cmphits == 1) {
+		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
+			   -ENOSYS, "Dropping HIP packet\n");
+		  
+	     } else if (cmphits == 0) {
+		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
-		} else if (cmphits == 0) {
-			hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-		
-		} 
+	     } 
 
-		break;
+	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
 	case HIP_STATE_R2_SENT:
 	case HIP_STATE_ESTABLISHED:
 	case HIP_STATE_CLOSED:
 	case HIP_STATE_CLOSING:
-		err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
-		break;
+	     err = ((hip_handle_func_set_t *)hip_get_handle_default_func_set())
+		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
+	     break;
 	default:
-		/* should not happen */
-		HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
+	     /* should not happen */
+	     HIP_IFEL(1, -EINVAL, "DEFAULT CASE, UNIMPLEMENTED STATE HANDLING OR A BUG\n");
 	}
 
  out_err:
 	return err;
 }
 
-/**
- * hip_receive_r2 - receive R2 packet
- * @param skb sk_buff where the HIP packet is in
- *
- * This is the initial function which is called when an R1 packet is
- * received. If we are in correct state, the packet is handled to
- * hip_handle_r2() for further processing.
- *
- * @return 0 if R2 was processed succesfully, < 0 otherwise.
- */
 int hip_receive_r2(struct hip_common *hip_common,
 		   struct in6_addr *r2_saddr,
 		   struct in6_addr *r2_daddr,
@@ -2728,7 +2397,7 @@ int hip_receive_r2(struct hip_common *hip_common,
 	int err = 0, state;
 	uint16_t mask = 0;
 
-	_HIP_DEBUG("hip_receive_i2() invoked.\n");
+	_HIP_DEBUG("hip_receive_r2() invoked.\n");
 
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1, 
 		 "Received NULL receiver HIT in R2. Dropping\n");
@@ -2783,28 +2452,13 @@ int hip_receive_r2(struct hip_common *hip_common,
 	return err;
 }
 
-/**
- * Determines the action to be executed for an incoming NOTIFY packet.
- *
- * This function is called when a HIP control packet is received by
- * hip_receive_control_packet()-function and the packet is detected to be
- * a NOTIFY packet.
- *
- * @param notify       a pointer to the received NOTIFY HIP packet common header
- *                     with source and destination HITs.
- * @param notify_saddr a pointer to the source address from where the NOTIFY
- *                     packet was received.
- * @param notify_daddr a pointer to the destination address where to the NOTIFY
- *                     packet was sent to (own address).
- * @param entry        a pointer to the current host association database state.
- */
 int hip_receive_notify(const struct hip_common *notify,
 		       const struct in6_addr *notify_saddr,
 		       const struct in6_addr *notify_daddr, hip_ha_t* entry)
 {
 	int err = 0;
 	struct hip_notification *notify_param;
-	uint16_t mask = HIP_CONTROL_HIT_ANON, notify_controls = 0;
+	uint16_t mask = HIP_PACKET_CTRL_ANON, notify_controls = 0;
 	
 	_HIP_DEBUG("hip_receive_notify() invoked.\n");
 	
@@ -2827,20 +2481,6 @@ int hip_receive_notify(const struct hip_common *notify,
 	return err;
 }
 
-/**
- * Handles an incoming NOTIFY packet.
- *
- * Handles an incoming NOTIFY packet and parses @c NOTIFICATION parameters and
- * @c VIA_RVS parameter from the packet.
- * 
- * @param notify       a pointer to the received NOTIFY HIP packet common header
- *                     with source and destination HITs.
- * @param notify_saddr a pointer to the source address from where the NOTIFY
- *                     packet was received.
- * @param notify_daddr a pointer to the destination address where to the NOTIFY
- *                     packet was sent to (own address).
- * @param entry        a pointer to the current host association database state.
- */
 int hip_handle_notify(const struct hip_common *notify,
 		      const struct in6_addr *notify_saddr,
 		      const struct in6_addr *notify_daddr, hip_ha_t* entry)
@@ -2933,9 +2573,9 @@ int hip_handle_notify(const struct hip_common *notify,
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "I2_ACKNOWLEDGEMENT.\n");
 				break;
-			case HIP_PARAM_VIA_RVS_NAT:
-			case HIP_PARAM_FROM_NAT:
-				response = ((msgtype == HIP_PARAM_VIA_RVS_NAT) ? HIP_I1 : HIP_NOTIFY);
+			case HIP_PARAM_RELAY_TO:
+			case HIP_PARAM_RELAY_FROM:
+				response = ((msgtype == HIP_PARAM_RELAY_TO) ? HIP_I1 : HIP_NOTIFY);
 				HIP_INFO("NOTIFICATION parameter type is "\
 					 "RVS_NAT.\n");
 				
@@ -3004,20 +2644,6 @@ int hip_handle_notify(const struct hip_common *notify,
 	return err;
 }
 
-/**
- * Receive BOS packet.
- * 
- * This function is called when a BOS packet is received. We add the
- * received HIT and HOST_ID to the database.
- * 
- * @param bos       a pointer to...
- * @param bos_saddr a pointer to...
- * @param bos_daddr a pointer to...
- * @param entry     a pointer to...
- * @param bos_info  a pointer to...
- * @return          always zero.
- * @todo Check if it is correct to return always zero.
- */
 int hip_receive_bos(struct hip_common *bos,
 		    struct in6_addr *bos_saddr,
 		    struct in6_addr *bos_daddr,

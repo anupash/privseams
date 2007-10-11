@@ -33,7 +33,7 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
-	/*
+	/**
 	  @todo: Here we have wrong checking, because function  
 	  hip_get_locator_addr_item_count(locator) has already
 	  divided the length on sizeof(struct hip_locator_info_addr_item)
@@ -1503,9 +1503,9 @@ out_err:
 	return err;
 }
 
-int hip_create_reg_response(hip_ha_t * entry, 
-        struct hip_tlv_common * reg, uint8_t *requests, 
-        int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
+			    uint8_t *requests, int request_count,
+			    in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
         int err = 0;
         uint16_t mask = 0;
@@ -1545,8 +1545,11 @@ int hip_create_reg_response(hip_ha_t * entry,
         }
         /********** REG_RESPONSE/REG_FAILED **********/        
         /* Check service requests and build reg_response and/or reg_failed */
-        hip_handle_registration_attempt(entry, update_packet, reg_request, 
-               requests, request_count);
+	/** @todo change to use hip_handle_regrequest(). For that we need
+	    entry, source message and destination message. We don't have the
+	    source message here... */
+	hip_handle_registration_attempt(entry, update_packet, reg_request, 
+					requests, request_count);
         
         
         /********** HMAC **********/
@@ -1896,15 +1899,13 @@ out_err:
  * validated, and the rest of the packet is handled if current state
  * allows it), otherwise < 0.
  */
-int hip_receive_update(struct hip_common *msg,
-		       struct in6_addr *update_saddr,
-		       struct in6_addr *update_daddr,
-		       hip_ha_t *entry,
+int hip_receive_update(struct hip_common *msg, struct in6_addr *update_saddr,
+		       struct in6_addr *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
 {
 	int err = 0, state = 0, has_esp_info = 0;
 	int updating_addresses = 0;
-	struct in6_addr *hits;
+	struct in6_addr *hits = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
@@ -1915,7 +1916,7 @@ int hip_receive_update(struct hip_common *msg,
         struct hip_tlv_common *reg_response = NULL;
         struct hip_tlv_common *reg_failed = NULL;
         struct hip_tlv_common *reg_info = NULL;
-	struct in6_addr *src_ip, *dst_ip;
+	struct in6_addr *src_ip = NULL , *dst_ip = NULL;
 	struct hip_tlv_common *encrypted = NULL;
 	
 	HIP_DEBUG("enter\n");
@@ -2737,7 +2738,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 				ipv6_addr_copy(local_addr, &addr_sin6);
 			}
 #endif
-
+			/* warning: passing argument 7 of 'hip_send_update'
+			   from incompatible pointer type.
+			   -Lauri 25.09.2007 15:03 */
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add, &addr_sin6);
 
@@ -2848,10 +2851,11 @@ int hip_update_send_registration_request(hip_ha_t *entry,
         HIP_IFEL(!update_id_out, -EINVAL,
                 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
         HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
-                "Building of SEQ param failed\n");
+		 "Building of SEQ param failed\n");
         
-        HIP_IFEL(hip_build_param_reg_request(update_packet, lifetime, types, 
-                type_count, 1), -1, "Building of REG_REQUEST failed\n");
+        HIP_IFEL(hip_build_param_reg_request(
+		      update_packet, lifetime, (uint8_t *)types, type_count, 1),
+		 -1, "Building of REG_REQUEST failed\n");
 
         /* Add HMAC */
         HIP_IFEL(hip_build_param_hmac_contents(update_packet,
