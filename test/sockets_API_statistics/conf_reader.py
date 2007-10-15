@@ -14,11 +14,13 @@ class ConfReader:
 		conf_filename = os.path.join(os.environ['PWD'], config_file)
 	#conf_filename = os.path.join(os.environ['HOME'], config_file)
 		
-		self.config = ConfigParser()
+		self.config = ConfigParser()		
 		self.config.add_section("functions")
 		self.config.add_section("structures")
 		#fname = open(conf_filename,"r")
 		self.config.read([conf_filename])
+		#Container for keeping all configuration file data.  
+		self.dicContainer = {}
 		#self.config.readfp(fname)
 		
 	
@@ -43,3 +45,23 @@ class ConfReader:
 	def getItems(self, section):
 		items = self.config.items(section)
 		return items
+
+#parse config file based on the section, save the items into dictionary
+	def saveItemsToHashTable(self, section):
+		items = self.getItems(section)
+		try:
+			for item in items:
+				self.dicContainer[item[0]] = item[1]
+				"""
+				print item[0]
+				print item[1]
+				"""
+		except:
+			print "Could get items based on section"
+		#return self.dicContainer
+
+# get the container which keeps all configuration file data.
+	def getDicContainer(self):
+		return self.dicContainer
+
+
