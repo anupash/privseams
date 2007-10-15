@@ -474,6 +474,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto skip_entry_creation;
 	}
 
+#ifdef CONFIG_HIP_HI3
+	if(hip_use_i3) {
+	}
+#endif
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
 

@@ -1036,74 +1036,26 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	ID id;
 	cl_buf *clb;
   	u16 csum;	
-	int err = 0, msg_len, hdr_dst_len, hdr_src_len;
-	struct sockaddr_in6 src, dst;
-	struct hi3_ipv6_addr hdr_src, hdr_dst;
-	struct ip *iph;
+	int err = 0, msg_len;
 	char *buf;
 
-	/* This code is outdated. Synchronize to the non-hi3 version */
-	if (!src_addr) {
-		/** @todo Obtain the preferred address. */
-		HIP_ERROR("No source address.\n");
-		return -1;
-	}
-
-	if (!peer_addr) {
-		/** @todo Just ignore? */
-		HIP_ERROR("No destination address.\n");
-		return -1;
-	}		
-
-
-	/* Construct the Hi3 header, for now IPv6 only */
-	hdr_src.sin6_family = AF_INET6;
-	hdr_src_len = sizeof(struct hi3_ipv6_addr);
-	memcpy(&hdr_src.sin6_addr, src_addr, sizeof(struct in6_addr));
-	memcpy(&src.sin6_addr, src_addr, sizeof(struct in6_addr));
-
-	hdr_dst.sin6_family = AF_INET6;
-	hdr_dst_len = sizeof(struct hi3_ipv6_addr);
-	memcpy(&hdr_dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
-	memcpy(&dst.sin6_addr, peer_addr, sizeof(struct in6_addr));
-        /* IPv6 specific code ends */
 
 	msg_len = hip_get_msg_total_len(msg);
-	clb = cl_alloc_buf(msg_len + hdr_dst_len + hdr_src_len /*+ sizeof(struct ip)*/);
+	clb = cl_alloc_buf(msg_len);
 	if (!clb) {
 		HIP_ERROR("Out of memory\n.");
 		return -1;
 	}
 
 	buf = clb->data;
-/*	iph = (struct ip*)buf;
-
-	iph->ip_v = 6;
-	iph->ip_hl = sizeof(struct ip) >> 2;
-	iph->ip_tos = 0;
-	iph->ip_len = htons(msg_len+sizeof(struct ip));    
-	iph->ip_id = 0;            
-	iph->ip_off = 0;           
-	iph->ip_ttl = 200;
-	iph->ip_p = 99;
-	//iph->ip_src = ((struct sockaddr_in *)src)->sin_addr;
-	//iph->ip_dst = ((struct sockaddr_in *)dst)->sin_addr;
-	//iph->ip_sum = in_cksum((unsigned short *)iph, sizeof (struct ip));
-	*/
 
 	hip_zero_msg_checksum(msg);
-	msg->checksum = hip_checksum_packet((char *)msg, 
-					    (struct sockaddr *)&src, 
-					    (struct sockaddr *)&dst);
+//	msg->checksum = hip_checksum_packet((char *)msg, 
+//					    (struct sockaddr *)&src, 
+//					    (struct sockaddr *)&dst);
 
-	clb->data_len = hdr_src_len + hdr_dst_len + msg_len/* + sizeof(struct ip)*/;
+	clb->data_len = msg_len;
 
-//	buf += sizeof(struct ip);
-	memcpy(buf, &hdr_src, hdr_src_len);
-	buf += hdr_src_len;
-	memcpy(buf, &hdr_dst, hdr_dst_len);
-	buf += hdr_dst_len;
-  
 	memcpy(buf, msg, msg_len);
 
 	/* Send over i3 */
