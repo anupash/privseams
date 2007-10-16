@@ -79,7 +79,8 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 	memset(&msg_info, 0, sizeof(msg_info));
 	msg_info.hi3_in_use = 1;
 
-	if (hip_receive_control_packet(hip_common, NULL, NULL, //hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
+	struct in6_addr lpback = { IN6ADDR_LOOPBACK_INIT };
+	if (hip_receive_control_packet(hip_common, &lpback , &lpback, //hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
 				       &msg_info, 0)) {
 		HIP_ERROR("HIP packet processsing failed\n");
 		goto out_err;

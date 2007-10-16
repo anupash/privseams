@@ -474,14 +474,23 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 		goto skip_entry_creation;
 	}
 
-#ifdef CONFIG_HIP_HI3
-	if(hip_use_i3) {
-	}
-#endif
+
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
 
+#ifdef CONFIG_HIP_HI3
+	if(hip_use_i3) {
+		struct in_addr lpback = { INADDR_LOOPBACK };
+		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		err = 0;
+	}
+	else {
+		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+	}
+#else
 	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+#endif // CONFIG_HIP_HI3
+
 	if (err) {
 		/* Search HADB for existing entries */
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);

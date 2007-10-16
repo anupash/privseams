@@ -2364,7 +2364,8 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   found from local files.*/
 	
 	_HIP_DEBUG("I am here just before getendpointinfo() \n");
-	
+
+
 	hip_in6_ntop(dst_hit, peer_hit);
 	
 	/* book keeping stuff */
