@@ -19,8 +19,9 @@ class ConfReader:
 		self.config.add_section("structures")
 		#fname = open(conf_filename,"r")
 		self.config.read([conf_filename])
-		#Container for keeping all configuration file data.  
+		#Container for keeping all configuration file data. Initial value is empty   
 		self.dicContainer = {}
+		
 		#self.config.readfp(fname)
 		
 	
@@ -36,7 +37,7 @@ class ConfReader:
 		print self.config.get("functions","socket")
 
 
-#get key value under the section
+	#get key value under the section
 	def getValue(self, section, key):
 		value = self.config.get(section, key)
 		return value
@@ -46,11 +47,14 @@ class ConfReader:
 		items = self.config.items(section)
 		return items
 
+	
+
 #parse config file based on the section, save the items into dictionary
-	def saveItemsToHashTable(self, section):
+	def saveItemsDic(self, section):
 		items = self.getItems(section)
 		try:
 			for item in items:
+				#item[0] is key, item[1] is value
 				self.dicContainer[item[0]] = item[1]
 				"""
 				print item[0]
