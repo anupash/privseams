@@ -44,7 +44,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         };
 	int msg_len = 0, status = 0;
 	/* increase netlink size to four to support x64 bit platform */
-	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET*4)];
+	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
 			   MSG_PEEK, NULL, NULL);
