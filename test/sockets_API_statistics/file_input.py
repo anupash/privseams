@@ -2,6 +2,8 @@
 import sys, re
 
 
+
+
 #This is just an example about how to do regular express 
 for line in sys.stdin.readlines():
 	#if line == '\n':
@@ -10,5 +12,6 @@ for line in sys.stdin.readlines():
 		continue
 	print line
 
+         
 
-
+      
