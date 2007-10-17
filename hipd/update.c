@@ -2522,7 +2522,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr)) {
 	    ipv6_addr_copy(&entry->local_address, hip_cast_sa_addr(addr));
-            err = hip_update_src_address_list(entry, addr_list, &daddr,
+             err = hip_update_src_address_list(entry, addr_list, &daddr,
                                               addr_count, esp_info_old_spi, is_add, addr);
            if(err == GOTO_OUT)
 		goto out;
