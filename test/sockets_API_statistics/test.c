@@ -4,17 +4,17 @@
 extern int sos;
 
 
-/*  soso
- *  socket
- *  socket()
- */ int socket();
+socket(3); /* soso
+ 	*  socket
+ 	*  socket()
+ 	*/  socket();
 
 // I love socket, do you like socket()
 
-/* I love socket, but I do not know how to do it :-) */ int socket(int tag, char *p)
+/* I love socket, but I do not know how to do it :-) */ socket(int tag, char *p);
 
 /* testing socket() */
-int socket(); int i; int socket(float tag);
+socket(); int i; bind(float tag); // This is a testing about 
 
 extern int socket(int love)
  

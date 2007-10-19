@@ -14,7 +14,8 @@ class SearchEngine:
 
 		for pair in list_conf:
 			print pair
-			self.function_call_counters[pair[0]] = 0
+                        #initialize each counter of different function calls to be zero 
+                        self.function_call_counters[pair[0]] = 0
 
 	
 	def print_counts(self):
