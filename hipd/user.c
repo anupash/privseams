@@ -105,7 +105,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		/* Removes debugging messages. */
 		HIP_DEBUG("Handling DEBUG MEDIUM user message.\n");
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_MEDIUM), -1,
-			 "Error when setting daemon DEBUG status to MED\n");
+			 "Error when setting daemon DEBUG status to MEDIUM\n");
 		break;
 	case SO_HIP_SET_DEBUG_NONE:
 		/* Removes debugging messages. */
