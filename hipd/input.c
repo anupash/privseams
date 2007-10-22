@@ -996,6 +996,12 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_reg_info *reg_info;
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator;
+#ifdef CONFIG_HIP_HI3
+	struct hip_locator_info_addr_item* first;
+	struct netdev_address *n;
+	hip_list_t *item, *tmp;
+	int ii = 0;
+#endif
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1050,7 +1056,22 @@ int hip_handle_r1(struct hip_common *r1,
                 HIP_IFEL(!(entry->locator = malloc(loc_size)), 
                        -1, "Malloc for entry->locators failed\n");             
                 memcpy(entry->locator, locator, loc_size);
-             }
+
+#ifdef CONFIG_HIP_HI3
+		if( r1_info->hi3_in_use && n_addrs > 0 ) 
+		{
+			first = (char*)locator+sizeof(struct hip_locator);
+			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+			list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					break;
+				}
+		}
+#endif
+	    }
         else
             HIP_DEBUG("R1 did not have locator\n");
 
@@ -1454,6 +1475,13 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint16_t crypto_len, nonce;
 	int err = 0, retransmission = 0, replay = 0;
         struct hip_locator *locator;
+#ifdef CONFIG_HIP_HI3
+	int n_addrs = 0;
+	struct hip_locator_info_addr_item* first;
+	struct netdev_address *n;
+	hip_list_t *item, *tmp;
+	int ii = 0;
+#endif
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
 	
@@ -1479,6 +1507,31 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
 			 -ENOMSG, "Cookie solution rejected\n");
 	}
+
+#ifdef CONFIG_HIP_HI3
+        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        if (locator)
+	{
+                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                                                             locator, esp_info),
+                         -1, "hip_update_handle_locator_parameter failed\n");
+	}
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	
+	if( i2_info->hi3_in_use && n_addrs > 0 ) 
+	{
+		first = (char*)locator+sizeof(struct hip_locator);
+		memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
+		list_for_each_safe(item, tmp, addresses, ii)
+			{
+				n = list_entry(item);
+				memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+				       hip_sa_addr_len(&n->addr));
+				break;
+			}
+	}
+
+#endif
 
  	HIP_DEBUG("Cookie accepted\n");
 
@@ -1946,7 +1999,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator && esp_info)
+        if (locator || esp_info)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),

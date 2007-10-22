@@ -336,7 +336,11 @@ int hip_build_locators(struct hip_common *msg)
     struct hip_locator_info_addr_item *locs = NULL;
     int addr_count = 0;
 
+#ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
+    if (address_count > 0) {
+#else
     if (address_count > 1) {
+#endif
         HIP_IFEL(!(locs = malloc(address_count * 
                                  sizeof(struct hip_locator_info_addr_item))), 
                  -1, "Malloc for LOCATORS failed\n");

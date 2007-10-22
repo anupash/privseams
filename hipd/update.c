@@ -376,7 +376,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
         HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
                                               entry, spi_out, &zero), -1);
 #endif            
-        HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
+	if(locator)        
+		HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
                                                entry, spi_out, locator), -1,
                  "Depracating a peer address failed\n"); 
 
@@ -425,9 +426,10 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
             }
         }
  out_of_loop:
-	HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-                                                entry, locator, &spi), -1,
-		 "Locator handling failed\n"); 
+	if(locator)
+		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
+							entry, locator, &spi), -1,
+			 "Locator handling failed\n"); 
 
 #if 0 /* Let's see if this is really needed -miika */
 	if (n_addrs == 0) /* our own extension, use some other SPI */
@@ -2522,7 +2524,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr)) {
 	    ipv6_addr_copy(&entry->local_address, hip_cast_sa_addr(addr));
-            err = hip_update_src_address_list(entry, addr_list, &daddr,
+             err = hip_update_src_address_list(entry, addr_list, &daddr,
                                               addr_count, esp_info_old_spi, is_add, addr);
            if(err == GOTO_OUT)
 		goto out;

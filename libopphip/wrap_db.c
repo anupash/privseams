@@ -67,10 +67,11 @@ void hip_init_socket_db()
 //void hip_hadb_delete_hs(struct hip_hit_spi *hs)
 void hip_socketdb_del_entry_by_entry(hip_opp_socket_t *entry)
 {
-	_HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
+	HIP_DEBUG("entry=0x%p pid=%d, orig_socket=%d\n", entry,
 		  entry->pid, entry->orig_socket);
-	hip_ht_delete(socketdb, entry);
-	HIP_FREE(entry);
+	if (!hip_ht_delete(socketdb, entry))
+	  HIP_DEBUG("No entry was found to delete.\n");
+	//HIP_FREE(entry);
 }
 void hip_uninit_socket_db()
 {
@@ -126,10 +127,11 @@ void hip_socketdb_dump()
 	list_for_each_safe(item, tmp, socketdb, i)
 	{
 		entry = list_entry(item);
-		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_local_id), src_ip);
+	/*	hip_in6_ntop(hip_cast_sa_addr(&entry->orig_local_id), src_ip);
 		hip_in6_ntop(hip_cast_sa_addr(&entry->orig_peer_id), dst_ip);
 		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_local_id), src_hit);
 		hip_in6_ntop(hip_cast_sa_addr(&entry->translated_peer_id), dst_hit);
+
 
 		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d"
 		          " domain=%d type=%d protocol=%d"
@@ -140,6 +142,13 @@ void hip_socketdb_dump()
 		          entry->domain,
 		          entry->type, entry->protocol,
 		          src_ip, dst_ip, src_hit, dst_hit);
+	*/
+
+		HIP_DEBUG("pid=%d orig_socket=%d new_socket=%d domain=%d\n",
+		          entry->pid, entry->orig_socket,
+		          entry->translated_socket,
+		          entry->domain);
+
 	}
 	
 	//HIP_UNLOCK_HT(&socketdb);
@@ -189,7 +198,7 @@ int hip_socketdb_add_entry(int pid, int socket)
 	err = hip_ht_add(socketdb, new_item);
 	HIP_DEBUG("pid %d, orig_sock %d are added to HT socketdb, entry=%p\n",
 		  new_item->pid, new_item->orig_socket,  new_item); 
-	//hip_socketdb_dump();
+	hip_socketdb_dump();
 	
 	return err;
 }
