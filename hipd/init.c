@@ -323,7 +323,7 @@ int hipd_init(int flush_ipsec, int killold)
 	{
 		hip_get_default_hit(&peer_hit);
 		hip_i3_init(&peer_hit);
-		//cl_init(i3_config_file);
+		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
 	}
 #endif
 

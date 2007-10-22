@@ -19,6 +19,9 @@
 #include <errno.h>
 #include <netinet/tcp.h>
 #include <dlfcn.h>
+#include <linux/futex.h>
+#include <sys/time.h>
+
 #include "debug.h"
 #include "hadb.h"
 #include "hashtable.h"
@@ -411,13 +414,17 @@ int hip_set_translation(hip_opp_socket_t *entry,
 	
 	if (!entry->translated_socket) {
 		int new_socket = hip_create_new_hit_socket(entry);
-		_HIP_DEBUG("Created new translatable socket %d\n", new_socket);
+		HIP_DEBUG("Created new translatable socket %d\n", new_socket);
 		if (new_socket <= 0) {
 			err = -1;
 			HIP_ERROR("socket allocation failed\n");
 			goto out_err;
 		}
 		entry->translated_socket = new_socket;
+		HIP_DEBUG("Inserted translated socket in: pid=%d orig_socket=%d new_socket=%d domain=%d\n",
+		          entry->pid, entry->orig_socket,
+		          entry->translated_socket,
+		          entry->domain);
 	}
 	
 	if (is_peer) {
@@ -696,7 +703,12 @@ int hip_translate_socket(const int *orig_socket,
 {
 	int err = 0, pid = getpid(), is_translated, wrap_applicable;
 	hip_opp_socket_t * entry;
-	
+	int fu = 0;
+
+	//GLOBAL LOCK: BIG LOCK
+	//int sys_futex1(void *futex, int op, int val, const struct timespec *timeout);
+	//do_futex(&fu, FUTEX_WAIT, 0, NULL);
+
 	hip_initialize_db_when_not_exist();
 
 	HIP_ASSERT(orig_socket);
@@ -779,6 +791,7 @@ int hip_translate_socket(const int *orig_socket,
 	_HIP_DEBUG("orig fd %d, translated fd %d\n", entry->orig_socket,
 		  entry->translated_socket);
 	
+	//do_futex(&fu, FUTEX_WAKE, 1, NULL);
 	return err;
 }
 
@@ -838,15 +851,20 @@ int close(int orig_fd)
 	   entry->orig_socket != entry->translated_socket) {
 		err = dl_function_ptr.close_dlsym(entry->translated_socket);
 		hip_socketdb_del_entry_by_entry(entry);
-		_HIP_DEBUG("old_socket %d new_socket %d\n", 
+		HIP_DEBUG("old_socket %d new_socket %d  DELETED1!\n", 
+			  entry->orig_socket,
+			  entry->translated_socket);	  
+	}else{
+	  hip_socketdb_del_entry_by_entry(entry);
+	  HIP_DEBUG("old_socket %d new_socket %d  DELETED2!\n",
 			  entry->orig_socket,
 			  entry->translated_socket);	  
 	}
 	if (err)
 		HIP_ERROR("Err %d close trans socket\n", err);
-	
+	hip_socketdb_dump();
  out_err:
-	_HIP_DEBUG("close_dlsym called with err %d\n", err);
+	HIP_DEBUG("close_dlsym called with err %d\n", err);
 	
   return err;
 }
@@ -1191,7 +1209,7 @@ ssize_t read(int orig_socket, void *b, size_t c)
 	
 	/* This functions is almost identical with recv() */
 
-	_HIP_DEBUG("read: orig_socket %d\n", orig_socket);
+	HIP_DEBUG("read: orig_socket %d\n", orig_socket);
 
 	err = hip_translate_socket(&orig_socket,
 				   NULL,
@@ -1205,10 +1223,14 @@ ssize_t read(int orig_socket, void *b, size_t c)
 		goto out_err;
 	}
 	
-	chars = dl_function_ptr.read_dlsym(*translated_socket, b, c);
-	
-	_HIP_DEBUG("Called read_dlsym with number of returned char=%d\n",
-		   chars);
+	if(translated_socket)
+	  HIP_DEBUG("read: translated_socket %d\n", *translated_socket);
+	  //HIP_DEBUG("HELLO\n");
+	  chars = dl_function_ptr.read_dlsym(*translated_socket, b, c);
+	  //	}else{
+	  _HIP_DEBUG("read: no translated_socket found!\n");
+	  //}
+	_HIP_DEBUG("Called read_dlsym with number of returned char=%d\n", chars);
 	
  out_err:
 	
