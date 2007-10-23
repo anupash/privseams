@@ -9,8 +9,8 @@ string_temp = ""
 file = open("test.c")
 
 #This is just an example about how to do regular express 
-#for line in sys.stdin.readlines():
-for line in file:
+for line in sys.stdin.readlines():
+#for line in file:
 	#if line == '\n':
 	#if re.match("^( |\t)*\n$", line):
 		#print "STRING \"%s\" matches."%line
@@ -28,9 +28,12 @@ for line in file:
 	elif re.match("^ *extern ", line):
 		continue
 	else:
-		print line
+		# print line
 		string_temp = string_temp + line
 	
+#print string_temp
+
+
 #record comments "//" times 
 double_slash_commens = 0
 
@@ -49,6 +52,8 @@ while i < len(string_temp):
 	if end_str and string_temp.startswith(end_str, i):
 		i = i + len(end_str)
 		end_str = ""
+	elif end_str:
+		i = i + 1
 	elif string_temp[i : i + 2] == '//':
 		end_str = '\n'
 		i = i + 2
@@ -59,8 +64,10 @@ while i < len(string_temp):
 		result.append(string_temp[i])
 		i = i + 1
 		
-for i in result:
-	print i,
+string_temp = ""
+
+#for i in result:
+#	string_temp = string_temp + i,
 	
 	
 		
