@@ -1070,6 +1070,16 @@ int hip_handle_r1(struct hip_common *r1,
 					break;
 				}
 		}
+
+		{
+			struct in6_addr daddr;
+			
+			hip_hadb_get_peer_addr(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
+					       PEER_ADDR_STATE_ACTIVE);
+		}
+
 #endif
 	    }
         else
@@ -1530,7 +1540,15 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 				break;
 			}
 	}
-
+	
+	{
+		struct in6_addr daddr;
+		
+		hip_hadb_get_peer_addr(entry, &daddr);
+		hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+		hip_hadb_add_peer_addr(entry, i2_saddr, 0, 0,
+				       PEER_ADDR_STATE_ACTIVE);
+	}
 #endif
 
  	HIP_DEBUG("Cookie accepted\n");
