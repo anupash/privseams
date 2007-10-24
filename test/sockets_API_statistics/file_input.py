@@ -1,4 +1,4 @@
-#!/usr/bin/python
+	#!/usr/bin/python
 import sys, re
 import shlex
 
@@ -64,11 +64,18 @@ while i < len(string_temp):
 		result.append(string_temp[i])
 		i = i + 1
 		
-string_temp = ""
+string_temp = "".join(result)
+
+
+#print string_temp
+
+
 
 #for i in result:
-#	string_temp = string_temp + i,
-	
+	#print type (i)
+	#string_temp = string_temp.join(i),
+
+#print result
 	
 		
 #for char in string_temp:
@@ -77,7 +84,8 @@ string_temp = ""
 #		
 
 
-"""
+
+
 list_string = string_temp.split('\n')
 
 #print list_string
@@ -95,11 +103,13 @@ string_temp = ""
 for item in list_string:
 	string_temp = string_temp + item
 
-#print string_temp
+print string_temp
+
 
 #empty_char
 
-for char in string_temp:
-	print char
-"""
+
+#for char in string_temp:
+#	print char
+
    
