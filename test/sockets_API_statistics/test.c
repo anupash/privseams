@@ -16,8 +16,10 @@ socket(3); /* soso
 /* testing socket() */
 socket(); int i; bind(float tag); // This is a testing about 
 
-extern int socket(int love)
+extern int socket(int love);
  
+
+struct sockaddr_in multicastAddr; 
 
 
 

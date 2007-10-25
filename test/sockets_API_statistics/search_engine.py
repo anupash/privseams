@@ -18,6 +18,13 @@ class SearchEngine:
                         self.function_call_counters[pair[0]] = 0
 
 	
+	#update counter numbers according to keyword
+	def update_function_call_counters(self, keyword, num):
+		if (keyword in self.function_call_counters):
+			self.function_call_counters[keyword] =  self.function_call_counters[keyword] + num
+	
+			
+	
 	def print_counts(self):
 		print self.function_call_counters
 

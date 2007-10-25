@@ -17,6 +17,7 @@ class ConfReader:
 		self.config = ConfigParser()		
 		self.config.add_section("functions")
 		self.config.add_section("structures")
+		self.config.add_section("applications")
 		#fname = open(conf_filename,"r")
 		self.config.read([conf_filename])
 		#Container for keeping all configuration file data. Initial value is empty   

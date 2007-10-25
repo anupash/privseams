@@ -1,8 +1,13 @@
+
+#Licence: GNU/GPL
+#Authors: 
+#Tao Wan<twan@cc.hut.fi>
+
+
 #!/usr/bin/python
 import sys, re
 import shlex
-
-
+from string_token import *
 
 
 
@@ -109,21 +114,30 @@ for item in list_string:
 print string_temp
 
 
-lexer = shlex.shlex(string_temp)
+#lexer = shlex.shlex(string_temp)
+
+lexer = string_lexical(string_temp)
 
 
+
+"""
 temp = []
 
+
 for token in lexer:
-	temp.append(repr(token))
-	#temp.append(token)		
+	#temp.append(repr(token))
+	temp.append(token)		
 print temp
+"""
+#print str(temp[0])
 
-print str(temp[0])
+#print (temp[0] == repr('socket'))
+#print (temp[0]  == 'socket')
 
-print (temp[0] == repr('socket'))
-print (temp[0]  == 'socket')
+print simple_api_function_counter('bind', lexer)
+print simple_api_function_counter('socket', lexer)
 
+print simple_api_structure_counter('sockaddr_in', lexer)
 #empty_char
 
 
