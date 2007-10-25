@@ -94,6 +94,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
                 HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
                           hip_interfamily_status, SO_HIP_SET_INTERFAMILY_OFF);
+                hip_recreate_all_precreated_r1_packets();
                 break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
