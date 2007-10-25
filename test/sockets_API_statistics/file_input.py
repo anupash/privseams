@@ -1,12 +1,15 @@
-	#!/usr/bin/python
+#!/usr/bin/python
 import sys, re
 import shlex
+
+
+
 
 
 string_temp = ""
 
 
-file = open("test.c")
+#file = open("test.c")
 
 #This is just an example about how to do regular express 
 for line in sys.stdin.readlines():
@@ -105,6 +108,21 @@ for item in list_string:
 
 print string_temp
 
+
+lexer = shlex.shlex(string_temp)
+
+
+temp = []
+
+for token in lexer:
+	temp.append(repr(token))
+	#temp.append(token)		
+print temp
+
+print str(temp[0])
+
+print (temp[0] == repr('socket'))
+print (temp[0]  == 'socket')
 
 #empty_char
 
