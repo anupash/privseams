@@ -1520,26 +1520,28 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+
         if (locator)
 	{
+#if 0
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
-	}
-	n_addrs = hip_get_locator_addr_item_count(locator);
+#endif
+		n_addrs = hip_get_locator_addr_item_count(locator);
 	
-	if( i2_info->hi3_in_use && n_addrs > 0 ) 
-	{
-		first = (char*)locator+sizeof(struct hip_locator);
-		memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
-		list_for_each_safe(item, tmp, addresses, ii)
-			{
-				n = list_entry(item);
-				memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-				       hip_sa_addr_len(&n->addr));
-				break;
-			}
-	}
+		if( i2_info->hi3_in_use && n_addrs > 0 ) 
+		{
+			first = (char*)locator+sizeof(struct hip_locator);
+			memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
+			list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					break;
+				}
+		}	}
 	
 	{
 		struct in6_addr daddr;
@@ -2017,7 +2019,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator || esp_info)
+        if (locator && esp_info)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
