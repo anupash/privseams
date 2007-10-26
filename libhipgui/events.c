@@ -1,9 +1,9 @@
 /*
-    HIP Agent
-
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+ * HIPL GTK GUI
+ *
+ * License: GNU/GPL
+ * Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
 /******************************************************************************/
 /* INCLUDES */
@@ -15,56 +15,169 @@
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the application?
-
-	@return TRUE if don't close or FALSE if close.
-*/
-gboolean main_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+ * Default window close event. This occurs when user presses that cross
+ * usually placed in right top corner of windows.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
+gboolean e_delete(GtkWidget *w, GdkEvent *event, gpointer data)
 {
-	return (FALSE);
+	gtk_widget_hide(GTK_WIDGET(w));
+	return (TRUE);
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
 /**
-	What to do when user example tries to close the tool window?
-
-	@return TRUE if don't close or FALSE if close.
-*/
-gboolean tw_delete_event(GtkWidget *w, GdkEvent *event, gpointer data)
+ * When closing the main application window.
+ *
+ * @return TRUE if don't close or FALSE if close.
+ */
+gboolean e_delete_main(GtkWidget *w, GdkEvent *event, gpointer data)
 {
-	gtk_toggle_button_set_active(widget(ID_TB_TW), FALSE);
-	gtk_widget_hide(w);
-	return (TRUE);
+#if (GTK_MAJOR_VERSION >= 2) && (GTK_MINOR_VERSION >= 10)
+	gtk_widget_hide(GTK_WIDGET(w));
+	return TRUE;
+#else
+	return FALSE;
+#endif
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** On window destroy. */
-void main_destroy(GtkWidget *w, gpointer data)
+/** When main window is destroyed. */
+void e_destroy_main(GtkWidget *w, gpointer data)
 {
 	connhipd_quit();
 	gtk_main_quit();
 }
-/* END OF FUNCTION */
-
 
 /******************************************************************************/
-/** On tool window destroy. */
-void tw_destroy(GtkWidget *widget, gpointer data)
+/** When button is pressed. */
+void e_button(GtkWidget *warg, gpointer data)
 {
-	gtk_widget_hide(widget);
+	GtkWidget *w;
+	HIT_Group *g;
+	HIT_Remote *r;
+	int id = (int)data, i, err;
+	char *ps;
+	
+	switch (id)
+	{
+	case IDB_TW_RGROUPS:
+	case IDB_NH_RGROUPS:
+		ps = (char *)gtk_combo_box_get_active_text(GTK_COMBO_BOX(warg));
+		g = hit_db_find_rgroup(ps);
+		if (g)
+		{
+			if (id == IDB_TW_RGROUPS) edit_set_remote_group(g);
+			if (id == IDB_NH_RGROUPS) hit_dlg_set_remote_group(g);
+		}
+		else if (strcmp(lang_get("combo-newgroup"), ps) == 0)
+		{
+			if (id == IDB_TW_RGROUPS)
+			{
+				w = widget(ID_TWR_RGROUP);
+				r = pointer(ID_EDIT_REMOTE);
+				ps = r->g->name;
+			}
+			if (id == IDB_NH_RGROUPS)
+			{
+				w = widget(ID_NH_RGROUP);
+				ps = lang_get("default-group-name");
+			}
+			err = group_remote_create("");
+			if (!err) i = 0;
+			else i = combo_box_find(ps, w);
+			gtk_combo_box_set_active(GTK_COMBO_BOX(w), i);
+		}
+		break;
+
+	case IDB_TW_APPLY:
+		edit_apply();
+		break;
+
+	case IDB_TW_DELETE:
+ 		edit_delete();
+		break;
+		
+	case IDM_TRAY_SHOW:
+		gtk_widget_show(GTK_WIDGET(widget(ID_MAINWND)));
+		break;
+		break;
+
+	case IDM_TRAY_ABOUT:
+	case IDM_ABOUT:
+		about();
+		break;
+
+	case IDM_TRAY_EXIT:
+		gtk_main_quit();
+		break;
+		
+	case IDM_RLIST_DELETE:
+		HIP_DEBUG("Delete\n");
+		break;
+	
+	case IDM_TRAY_EXEC:
+	case IDM_RUNAPP:
+		exec_application();
+		break;
+	
+	case IDM_NEWHIT:
+		gui_hit_remote_ask(NULL, 2);
+		break;
+	
+	case IDM_NEWGROUP:
+		group_remote_create("");
+		break;
+		
+	case IDB_NH_EXPANDER:
+		break;
+	
+	case IDB_OPT_NAT:
+	case IDB_DBG_RSTALL:
+	case IDB_DBG_RESTART:
+// 		opt_handle_action(warg, id);
+		break;
+	}
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** On HIT list click. */
-gboolean list_click(GtkTreeView *tree, gpointer data)
+/**
+ * Tell HIT list cell renderer which icon to show where.
+ */
+void e_cell_data_func(GtkTreeViewColumn *tree_column, GtkCellRenderer *cell,
+                      GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
 {
-	/* Variables. */
+	GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(model), iter);
+	int depth = gtk_tree_path_get_depth(path);
+	char *stock_id = GTK_STOCK_ABOUT;
+	char *value;
+	HIT_Group *g;
+
+	gtk_tree_model_get(GTK_TREE_MODEL(model), iter, 0, &value, -1);
+	if (depth == 1)
+	{
+		g = hit_db_find_rgroup(value);
+		if (!g);
+		else if (g->remotec > 0) stock_id = GTK_STOCK_OPEN;
+		else stock_id = GTK_STOCK_DIRECTORY;
+	}
+	else if (strcmp(value, lang_get("hits-group-emptyitem")) == 0) stock_id = GTK_STOCK_STOP;
+	else stock_id = GTK_STOCK_ORIENTATION_PORTRAIT;
+	g_object_set(cell, "stock-id", stock_id, NULL);
+	g_free(value);
+}
+
+
+/******************************************************************************/
+/**
+ * When user selects item on list (with mouse or keyboard).
+ */
+gboolean e_cursor_changed(GtkTreeView *tree, gpointer data)
+{
 	GtkTreeIter iter;
 	GtkTreeModel *model;
 	GtkTreePath *path;
@@ -72,60 +185,42 @@ gboolean list_click(GtkTreeView *tree, gpointer data)
 	char *str;
 	int depth, *indices;
 
-	selection = gtk_tree_view_get_selection(tree);
+	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 
 	if (gtk_tree_selection_get_selected(selection, &model, &iter))
 	{
-		/* Get values for the path. */
 		path = gtk_tree_model_get_path(model, &iter);
 		depth = gtk_tree_path_get_depth(path);
 		indices = gtk_tree_path_get_indices(path);
 		gtk_tree_model_get(model, &iter, 0, &str, -1);
 
-		if (depth == 1)
+		if (data == NULL);
+		else if (strcmp(data, "remote-hit-list") == 0)
 		{
-			if (indices[0] == 0)
-			{
-				tw_set_mode(TWMODE_NONE);
-			}
-			if (indices[0] == 1)
-			{
-				tw_set_mode(TWMODE_NONE);
-			}
+			edit_reset();
+			if (str[0] == ' ');
+			else if (depth == 1)
+				edit_group_remote(str);
+			else if (depth == 2)
+				edit_hit_remote(str);
 		}
-		else if (depth == 2)
-		{
-			if (indices[0] == 0)
-			{
-				tw_set_mode(TWMODE_LOCAL);
-				tw_set_local_info(str);
-			}
-			if (indices[0] == 1)
-			{
-				tw_set_mode(TWMODE_RGROUP);
-				tw_set_rgroup_info(str);
-			}
-		}
-		else if (depth == 3 && indices[0] == 1)
-		{
-			tw_set_mode(TWMODE_REMOTE);
-			tw_set_remote_info(str);
-		}
-
+		
 		gtk_tree_path_free(path);
 		g_free(str);
 	}
 
-	return (TRUE);
+	return TRUE;
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** On HIT list click. */
-gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
+/**
+ * Aquire information about example right mouse button (button->button == 3)
+ * click over list item.
+ */
+gboolean e_button_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 {
-	/* Variables. */
+/*
 	GtkTreeIter iter;
 	GtkTreeModel *model;
 	GtkTreePath *path;
@@ -135,11 +230,10 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 
 	if (button->type == GDK_BUTTON_PRESS && button->button == 3)
 	{
-		selection = gtk_tree_view_get_selection(tree);
+		selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 
 		if (gtk_tree_selection_get_selected(selection, &model, &iter))
 		{
-			/* Get values for the path. */
 			path = gtk_tree_model_get_path(model, &iter);
 			depth = gtk_tree_path_get_depth(path);
 			indices = gtk_tree_path_get_indices(path);
@@ -153,202 +247,78 @@ gboolean list_press(GtkTreeView *tree, GdkEventButton *button, gpointer data)
 			}
 			else if (depth == 3 && indices[0] == 1)
 			{
-				gtk_menu_popup(widget(ID_RLISTMENU), NULL, NULL, NULL, NULL,
+				gtk_menu_popup(GTK_MENU(widget(ID_RLISTMENU)), NULL, NULL, NULL, NULL,
 				               button->button, button->time);
-				return (TRUE);
+				return TRUE;
 			}
 	
 			gtk_tree_path_free(path);
 			g_free(str);
 		}
 	}
+*/
 	
-	return (FALSE);
+	return FALSE;
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** On HIT list double click. */
-gboolean list_double_click(GtkTreeSelection *selection, GtkTreePath *path,
-						   GtkTreeViewColumn *column, gpointer data)
+/**
+ * Usually occurs when user double clicks list item.
+ */
+gboolean e_row_activated(GtkTreeSelection *selection, GtkTreePath *path,
+                         GtkTreeViewColumn *column, gpointer data)
 {
-	gtk_widget_show(widget(ID_TOOLWND));
-	gtk_toggle_button_set_active(widget(ID_TB_TW), TRUE);
+	/* ... */
+	
+	return FALSE;
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** When button is pressed. */
-void button_event(GtkWidget *warg, gpointer data)
+/**
+ * When systray is activated.
+ */
+void e_menu_status_icon(void *warg, guint bid, guint atime, gpointer data)
 {
-	/* Variables. */
-	HIT_Group *g;
-	int id = (int)data, i;
-	char *ps;
-	static str[1024];
-	time_t rawtime;
-	struct tm *tinfo;
-	pthread_t pt;
-	
-	switch (id)
-	{
-	case IDB_SEND:
-		ps = gtk_entry_get_text(widget(ID_TERMINPUT));
-		if (strlen(ps) < 1) break;
-		if (strlen(ps) > (1024 - 128)) ps[1024 - 128] = '\0';
-
-		if (ps[0] == '/' && strlen(ps) < 2);
-		else if (ps[0] == '/') term_exec_command(&ps[1]);
-		else
-		{
-			HIP_DEBUG("nick is: %s\n", get_nick());
-			time(&rawtime);
-			tinfo = localtime(&rawtime);
-			sprintf(str, "%0.2d:%0.2d <%s> %s\n", tinfo->tm_hour,
-			        tinfo->tm_min, get_nick(), ps);
-			if (term_get_mode() == TERM_MODE_CLIENT)
-			{
-				pthread_create(&pt, NULL, term_client_send_string, str);
-			}
-			if (term_get_mode() == TERM_MODE_SERVER)
-			{
-				pthread_create(&pt, NULL, term_server_send_string, str);
-			}
-		}
-		gtk_entry_set_text(widget(ID_TERMINPUT), "");
-		gtk_widget_grab_default(widget(ID_TERMSEND));
-		gtk_entry_set_activates_default(widget(ID_TERMINPUT), TRUE);
-		gtk_widget_grab_focus(widget(ID_TERMINPUT));
-		break;
-
-	case IDB_TW_RGROUPS:
-		ps = gtk_combo_box_get_active_text(warg);
-		g = hit_db_find_rgroup(ps);
-		if (g)
-		{
-			tw_set_remote_rgroup_info(g);
-		}
-		else if (strcmp("<create new...>", ps) == 0)
-		{
-			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group();
-			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
-			else gtk_combo_box_set_active(warg, 0);
-		}
-		break;
-
-	case IDB_NH_RGROUPS:
-		ps = gtk_combo_box_get_active_text(warg);
-		g = hit_db_find_rgroup(ps);
-		if (g)
-		{
-			nh_set_remote_rgroup_info(g);
-		}
-		else if (strcmp("<create new...>", ps) == 0)
-		{
-			HIP_DEBUG("Create new group.\n");
-			ps = create_remote_group();
-			if (ps == NULL) gtk_combo_box_set_active(warg, 0);
-			else gtk_combo_box_set_active(warg, 0);
-		}
-		break;
-
-	case IDB_TW_APPLY:
-		tw_apply();
-		break;
-
-	case IDB_TW_CANCEL:
-		tw_cancel();
-		break;
-
-	case IDB_TW_DELETE:
-		tw_delete();
-		break;
-		
-	case IDB_SYSTRAY:
-		g_object_get(widget(ID_MAINWND), "visible", &i, NULL);
-		if (i == TRUE)
-		{
-			gtk_widget_hide(widget(ID_MAINWND));
-		}
-		else
-		{
-			gtk_widget_show(widget(ID_MAINWND));
-		}
-		break;
-		
-	case IDM_TRAY_SHOW:
-		gtk_widget_show(widget(ID_MAINWND));
-		break;
-	
-	case IDM_TRAY_HIDE:
-		gtk_widget_hide(widget(ID_MAINWND));
-		break;
-	
-	case IDM_TRAY_EXIT:
-		gui_terminate();
-		break;
-		
-	case IDM_RLIST_DELETE:
-		HIP_DEBUG("Delete\n");
-		break;
-	}
+	gtk_menu_popup(GTK_MENU(widget(ID_SYSTRAYMENU)), NULL, NULL, NULL, NULL, 0, atime);
 }
-/* END OF FUNCTION */
 
 
 /******************************************************************************/
-/** When toolbar button is pressed. */
-void toolbar_event(GtkWidget *warg, gpointer data)
+/**
+ * Set local HIT info to local hit edit dialog.
+ *
+ * @param hit_name Name of remote HIT.
+ */
+void e_local_edit(GtkWidget *warg, char *hit_name)
 {
 	/* Variables. */
-	static HIT_Remote hit;
-	GtkWidget *dialog;
-	int id = (int)data;
-	pthread_t pt;
-	int err;
-	char *ps;
+	GtkWidget *w, *dialog = widget(ID_LOCALDLG);
+	HIT_Local *hit;
+	char str[320];
+	int i, err;
 
-	switch (id)
+	hit = hit_db_find_local(hit_name, NULL);
+
+	if (hit)
 	{
-	case ID_TOOLBAR_RUN:
-		HIP_DEBUG("Toolbar: Run application.\n");
-		exec_application();
-		break;
-
-	case ID_TOOLBAR_NEWHIT:
-		HIP_DEBUG("Toolbar: Fake popup for new HIT.\n");
-		memset(&hit, 0, sizeof(HIT_Remote));
-		NAMECPY(hit.name, "Fake hit popup");
-		pthread_create(&pt, NULL, gui_ask_new_hit, &hit);
-		break;
-
-	case ID_TOOLBAR_TOGGLETOOLWINDOW:
-		HIP_DEBUG("Toolbar: Toggle toolwindow visibility.\n");
-		if (GTK_TOGGLE_BUTTON(warg)->active) gtk_widget_show(widget(ID_TOOLWND));
-		else gtk_widget_hide(widget(ID_TOOLWND));
-		break;
-
-	case ID_TOOLBAR_NEWGROUP:
-		HIP_DEBUG("Toolbar: Create remote group.\n");
-		create_remote_group();
-		break;
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWL_NAME)), hit->name);
+		print_hit_to_buffer(str, &hit->lhit);
+		gtk_entry_set_text(GTK_ENTRY(widget(ID_TWL_LOCAL)), str);
+		pointer_set(ID_EDIT_LOCAL, hit);
+		gtk_widget_grab_focus(GTK_WIDGET(widget(ID_TWL_NAME)));
+		
+		gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
+		gtk_window_set_keep_above(GTK_WINDOW(dialog), TRUE);
+		gtk_widget_show(GTK_WIDGET(dialog));
+		do
+		{
+			err = gtk_dialog_run(GTK_DIALOG(dialog));
+			if (err != GTK_RESPONSE_YES) break;
+		} while (!check_apply_local_edit());
+		gtk_widget_hide(GTK_WIDGET(dialog));
 	}
 }
-/* END OF FUNCTION */
 
-
-/******************************************************************************/
-/** When systray is activated. */
-void systray_event(void *warg, guint bid, guint atime, gpointer data)
-{
-	gtk_menu_popup(widget(ID_SYSTRAYMENU), NULL, NULL, NULL, NULL, 0, atime);
-}
-/* END OF FUNCTION */
-
-
-/* END OF SOURCE FILE */
-/******************************************************************************/
 

@@ -3,7 +3,7 @@
  *  
  * Licence: GNU/GPL
  * Authors:
- * - Mika Kousa <mkousa@cc.hut.fi>
+ * - Mika Kousa <mkousa@iki.fi>
  * - Kristian Slavov <ksl@iki.fi>
  * - Tobias Heer <heer@tobibox.de>
  *
@@ -47,7 +47,7 @@ u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len,
 	*(cur) = 1;
 	cur += sizeof(u8);
 
-	HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
+	_HIP_HEXDUMP("beginning of keymat", buffer, cur - buffer);
 
 	return buffer;
 }

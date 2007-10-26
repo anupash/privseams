@@ -5,7 +5,28 @@
  * This is only for defining doxygen related things, such as
  * groups and lists.
  */
- 
+
+/** @mainpage
+ * Welcome to Host Identity Protocol for Linux (HIPL) Doxygen page.
+ *
+ * @section sec_doc Project Documents
+ * <ul>
+ * <li>doc/HACKING. This file contains developer information on policies in the HIPL project.</li>
+ * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in project root directory.</li> 
+ * <!--<li><a href=""></a>.</li>-->
+ * </ul>
+ * 
+ * @section sec_links Links
+ * <ul>
+ * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
+ * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3 for C-library functions.</li>
+ * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
+ * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
+ * </ul>
+ *
+ * @date   10.10.2007
+ */ 
+
 /**
  * Error handling macros used for checking errors. To use these macros, define a
  * label named @c out_err at the end of the function. For example, memory
@@ -16,8 +37,9 @@
  *     HIP_IFEL(!(mem = HIP_ALLOC(256, 0)), -1, "alloc\n");
  * 
  *   out_err:
- *     if (mem)
+ *     if (mem != NULL) {
  *       free(mem);
+ *     }
  *     return err;
  * }
  * </pre>
@@ -167,8 +189,61 @@
 
 /**
  * @defgroup hip_msg HIP daemon message types
- * @note DONT MAKE THESE VALUES HIGHER THAN 255.
+ * @note <span style="color:#f00">Don't make these values higher than 255.</span>
  *       The variable, which stores this type, is 8 bits.
+ */
+
+/**
+ * @file libinet6/protodefs.h
+ * @def HIP_I1
+ * @def HIP_R1
+ * @def HIP_I2
+ * @def HIP_R2
+ * @def HIP_CER
+ * @def HIP_BOS
+ * @note removed from ietf-hip-base-01.
+ * @def HIP_UPDATE
+ * @def HIP_NOTIFY
+ * @def HIP_CLOSE
+ * @def HIP_CLOSE_ACK
+ * @def HIP_PSIG
+ *      Lightweight HIP pre signature.
+ * @def HIP_TRIG
+ *      Lightweight HIP signature trigger.
+ * @def HIP_PAYLOAD
+ * @def HIP_AGENT_PING
+ *      Agent can ping daemon with this message.
+ * @def HIP_AGENT_PING_REPLY
+ *      Daemon should reply to @c HIP_AGENT_PING with this one.
+ * @def HIP_AGENT_QUIT
+ *      Agent send this one to daemon when exiting.
+ * @def HIP_ADD_DB_HI
+ *      Daemon sends local HITs to agent with this message.
+ * @def HIP_I1_REJECT
+ *      Agent informs daemon about I1 rejection with this message.
+ * @def HIP_UPDATE_HIU
+ *      Daemon sends remote HITs in use with this message to agent.
+ * @def HIP_FIREWALL_PING
+ *      Firewall can ping daemon with this message.
+ * @def HIP_FIREWALL_PING_REPLY
+ *      Daemon should reply to @c HIP_FIREWALL_PING with this one.
+ * @def HIP_FIREWALL_QUIT
+ *      Firewall sends this one to daemon when exiting.
+ * @def HIP_ADD_ESCROW_DATA
+ *      Daemon sends escrow data to firewall with this message.
+ * @def HIP_DELETE_ESCROW_DATA
+ *      Daemon tells firewall to remove escrow data with this message.
+ * @def HIP_SET_ESCROW_ACTIVE
+ *      Daemon tells firewall that escrow is active with this message.
+ * @def HIP_SET_ESCROW_INACTIVE
+ *      Daemon tells firewall that escrow is inactive with this message.
+ * @def HIP_NAT_ON
+ *      Daemon tells, that nat extension status changed.
+ * @def HIP_NAT_OFF
+ *      Daemon tells, that nat extension status changed.
+ * @def HIP_DAEMON_QUIT
+ *      Daemon should send this message to other processes, when quiting.
+ *      Currently sending to: agent.
  */
 
 /** @defgroup hip_so HIP socket options */
@@ -203,12 +278,94 @@
  * <li>64512-65535 are reserved.</li>
  * </ul>
  * 
- * @defgroup hip_param_type_numbers HIP Parameter Type Values
+ * @defgroup hip_param_type_numbers HIP parameter type values
  * @see      hip_tlv
+ * @see      hip_param_func
  * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
  * @note     The order of the parameters is strictly enforced. The parameters
  *           @b must be in order from lowest to highest.
+ */
+
+/**
+ * @file libinet6/protodefs.h
+ * @def HIP_PARAM_MIN
+ *      Defines the minimum parameter type value.
+ * @note exclusive
+ * @def HIP_PARAM_ESP_INFO
+ * @def HIP_PARAM_R1_COUNTER
+ * @def HIP_PARAM_LOCATOR
+ * @def HIP_PARAM_HASH_CHAIN_VALUE
+ *      lhip hash chain. 221 is is temporary.
+ * @def HIP_PARAM_HASH_CHAIN_ANCHORS
+ *      lhip hash chain anchors. 222 is temporary.
+ * @def HIP_PARAM_HASH_CHAIN_PSIG
+ *      lhip hash chain signature. 223 is temporary.
+ * @def HIP_PARAM_PUZZLE
+ * @def HIP_PARAM_SOLUTION
+ * @def HIP_PARAM_SEQ
+ * @def HIP_PARAM_ACK
+ * @def HIP_PARAM_DIFFIE_HELLMAN
+ * @def HIP_PARAM_HIP_TRANSFORM
+ * @def HIP_PARAM_ENCRYPTED
+ * @def HIP_PARAM_HOST_ID
+ * @def HIP_PARAM_CERT
+ * @def HIP_PARAM_NOTIFICATION
+ * @def HIP_PARAM_ECHO_REQUEST_SIGN
+ * @def HIP_PARAM_ECHO_RESPONSE_SIGN
+ * @def HIP_PARAM_ESP_TRANSFORM
+ * @def HIP_PARAM_HIT
+ * @def HIP_PARAM_IPV6_ADDR
+ * @def HIP_PARAM_DSA_SIGN_DATA
+ * @todo change to digest
+ * @def HIP_PARAM_HI
+ * @def HIP_PARAM_DH_SHARED_KEY
+ * @def HIP_PARAM_UNIT_TEST
+ * @def HIP_PARAM_EID_SOCKADDR
+ * @def HIP_PARAM_EID_ENDPOINT
+ *      Pass endpoint_hip structures into kernel.
+ * @def HIP_PARAM_EID_IFACE
+ * @def HIP_PARAM_EID_ADDR
+ * @def HIP_PARAM_UINT
+ *      Unsigned integer.
+ * @def HIP_PARAM_KEYS
+ * @def HIP_PSEUDO_HIT
+ * @def HIP_PARAM_REG_INFO
+ * @def HIP_PARAM_REG_REQUEST
+ * @def HIP_PARAM_REG_RESPONSE
+ * @def HIP_PARAM_REG_FAILED
+ * @def HIP_PARAM_BLIND_NONCE
+ *      Pass blind nonce
+ * @def HIP_PARAM_OPENDHT_GW_INFO
+ * @def HIP_PARAM_ENCAPS_MSG
+ * @def HIP_PARAM_PORTPAIR
+ * @def HIP_PARAM_SRC_ADDR
+ * @def HIP_PARAM_DST_ADDR
+ * @def HIP_PARAM_AGENT_REJECT
+ * @def HIP_PARAM_HA_INFO
+ * @def HIP_PARAM_HMAC
+ * @def HIP_PARAM_HMAC2
+ * @def HIP_PARAM_HIP_SIGNATURE2
+ * @def HIP_PARAM_HIP_SIGNATURE
+ * @def HIP_PARAM_ECHO_RESPONSE
+ * @def HIP_PARAM_ECHO_REQUEST
+ * @def HIP_PARAM_RELAY_FROM
+ *      HIP relay related parameter.
+ * @note Former FROM_NAT.
+ * @def HIP_PARAM_RELAY_TO
+ *      HIP relay related parameter.
+ * @note Former VIA_RVS_NAT
+ * @def HIP_PARAM_FROM_PEER
+ * @def HIP_PARAM_TO_PEER
+ * @def HIP_PARAM_REG_FROM
+ * @def HIP_PARAM_FROM
+ * @def HIP_PARAM_RVS_HMAC
+ * @def HIP_PARAM_VIA_RVS
+ * @def HIP_PARAM_RELAY_HMAC
+ *      HIP relay related parameter.
+ * @def HIP_PARAM_MAX
+ *      Defines the maximum parameter type value.
+ * @note exclusive
  */
 
 /** 
@@ -216,6 +373,7 @@
  * 
  * @defgroup hip_tlv HIP TLV data structures
  * @see      hip_param_type_numbers
+ * @see      hip_param_func
  * @see      <a href="http://hip4inter.net/documentation/drafts/draft-ietf-hip-base-06-pre180506.txt">
  *           draft-ietf-hip-base-06-pre180506</a> section 5.2.
  * @note     The order of the parameters is strictly enforced. The parameters
@@ -229,6 +387,236 @@
  * sending, receiving and handling data and modifying host assosiation state.
  * 
  * @defgroup hadb_func HIP host assosiation function sets
+ */
+
+/** 
+ * Functions for receiving HIP control packets.
+ * 
+ * These functions are called after a HIP control packet is received by
+ * hip_receive_control_packet()-function and the packet is detected to be a HIP
+ * control packet. The purpose of these functions is to decide whether to
+ * handle the packet at all. This decision is based first and foremost on the
+ * state of the current host association. If the packet is to be handled, all
+ * handling should be done in respective handle-function.
+ * 
+ * @defgroup receive_functions HIP receive functions
+ * @see      handle_functions
+ */
+
+/** 
+ * Functions for handling HIP control packets.
+ *
+ * These functions do the actual handling of the packet. These functions are
+ * called from the corresponding receive functions. 
+ * 
+ * @defgroup handle_functions HIP handle functions
+ * @see      receive_functions
+ */
+
+/** 
+ * Functions for creating HIP parameters.
+ * 
+ * @defgroup hip_param_func HIP parameter functions
+ * @see      hip_param_type_numbers
+ * @see      hip_tlv
+ */
+
+/** 
+ * HIP NOTIFICATION parameter values.
+ *
+ * NOTIFICATION parameter error types used in the "Notify Message Type"-field of
+ * NOTIFICATION parameter as specified in section 5.2.16. of
+ * draft-ietf-hip-base-06.
+ * 
+ * @defgroup notification NOTIFICATION parameter values
+ * @see      hip_notification 
+ */
+
+/**
+ * @file libinet6/protodefs.h
+ * @def  HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE
+ *       Sent if the parameter type has the "critical" bit set and the
+ *       parameter type is not recognized.  Notification Data contains the two
+ *       octet parameter type.
+ * @def  HIP_NTF_INVALID_SYNTAX
+ *       Indicates that the HIP message received was invalid because
+ *       some type, length, or value was out of range or because the
+ *       request was rejected for policy reasons.  To avoid a denial of
+ *       service attack using forged messages, this status may only be
+ *       returned for packets whose HMAC (if present) and SIGNATURE have
+ *       been verified.  This status MUST be sent in response to any
+ *       error not covered by one of the other status types, and should
+ *       not contain details to avoid leaking information to someone
+ *       probing a node.  To aid debugging, more detailed error
+ *       information SHOULD be written to a console or log.
+ * @def  HIP_NTF_NO_DH_PROPOSAL_CHOSEN
+ *       None of the proposed group IDs was acceptable.
+ * @def  HIP_NTF_INVALID_DH_CHOSEN
+ *       The D-H Group ID field does not correspond to one offered
+ *       by the Responder.
+ * @def  HIP_NTF_NO_HIP_PROPOSAL_CHOSEN
+ *       None of the proposed HIP Transform crypto suites was
+ *       acceptable.
+ * @def  HIP_NTF_INVALID_HIP_TRANSFORM_CHOSEN
+ *       The HIP Transform crypto suite does not correspond to
+ *       one offered by the Responder.
+ * @def  HIP_NTF_AUTHENTICATION_FAILED
+ *       Sent in response to a HIP signature failure, except when
+ *       the signature verification fails in a NOTIFY message.
+ * @def  HIP_NTF_CHECKSUM_FAILED
+ *       Sent in response to a HIP checksum failure.
+ * @def  HIP_NTF_HMAC_FAILED
+ *       Sent in response to a HIP HMAC failure.
+ * @def  HIP_NTF_ENCRYPTION_FAILED
+ *       The Responder could not successfully decrypt the
+ *       ENCRYPTED parameter.
+ * @def  HIP_NTF_INVALID_HIT
+ *       Sent in response to a failure to validate the peer's
+ *       HIT from the corresponding HI.
+ * @def  HIP_NTF_BLOCKED_BY_POLICY
+ *       The Responder is unwilling to set up an association
+ *       for some policy reason (e.g.\ received HIT is NULL
+ *       and policy does not allow opportunistic mode).
+ * @def  HIP_NTF_SERVER_BUSY_PLEASE_RETRY
+ *       The Responder is unwilling to set up an association
+ *       as it is suffering under some kind of overload and
+ *       has chosen to shed load by rejecting your request.
+ *       You may retry if you wish, however you MUST find
+ *       another (different) puzzle solution for any such
+ *       retries.  Note that you may need to obtain a new
+ *       puzzle with a new I1/R1 exchange.
+ * @def  HIP_NTF_I2_ACKNOWLEDGEMENT
+ *       The Responder has received your I2 but had to queue
+ *       the I2 for processing.  The puzzle was correctly solved
+ *       and the Responder is willing to set up an association
+ *       but has currently a number of I2s in processing queue.
+ *       R2 will be sent after the I2 has been processed.
+ * @def  HIP_NTF_RVS_NAT
+ *       Sent in response by a Rendezvous Server to a Initiator behind a NAT.
+ *       An extension value introduced in draft-schmitt-hip-nat-traversal-03.
+ *       In the scenario where a NATted HIP node uses rendezvous service to
+ *       contact another HIP node in a publicly addressable network, the
+ *       Rendezvous Server replies to the Initiator with a NOTIFY message
+ *       having a NOTIFICATION parameter of this type.
+ */
+
+/**
+ * @defgroup hip_services Additional HIP services. 
+ *
+ * Registration types for registering to a service as specified in
+ * draft-ietf-hip-registration-02. These are the registrationion types used in
+ * @c REG_INFO, @c REG_REQUEST, @c REG_RESPONSE and @c REG_FAILED parameters.
+ * Numbers 0-200 are reserved by IANA.
+ * Numbers 201 - 255 are reserved by IANA for private use.
+ */
+ 
+ /** 
+ * @file libinet6/protodefs.h
+ * @def HIP_SERVICE_RENDEZVOUS
+ *      Rendezvous service for relaying I1 packets.
+ * @def HIP_SERVICE_ESCROW
+ *      Escrow services for some key exchange.
+ * @def HIP_SERVICE_RELAY_UDP_HIP
+ *      UDP encapsulated relay service for HIP packets.
+ * @def HIP_SERVICE_RELAY_UDP_ESP
+ *      UDP encapsulated relay service for ESP packets.
+ * @def HIP_NUMBER_OF_EXISTING_SERVICES
+ *      Total number of services, which must equal the sum of all existing
+ *      services.
+ */
+
+/**
+ * @file   libinet6/protodefs.h
+ * @struct hip_rvs_hmac
+ *         Rendezvous server hmac. A non-critical parameter whose only difference with
+ *         the @c HMAC parameter defined in [I-D.ietf-hip-base] is its @c type code.
+ *         This change causes it to be located after the @c FROM parameter (as
+ *         opposed to the @c HMAC)
+ *
+ * @struct hip_from
+ *         Parameter containing the original source IP address of a HIP packet.
+ * @struct hip_via_rvs
+ *         Parameter containing the IP addresses of traversed rendezvous servers.
+ * @struct hip_relay_from
+ *         Parameter containing the original source IP address and port number
+ *         of a HIP packet.
+ * @struct hip_relay_to
+ *         Parameter containing the IP addresses and source ports of traversed
+ *         rendezvous servers.
+ * @struct hip_eid_endpoint
+ *         This structure is used by the native API to carry local and peer
+ *         identities from libc (setmyeid and setpeereid calls) to the HIP
+ *         socket handler (setsockopt). It is almost the same as endpoint_hip,
+ *         but it is length-padded like HIP parameters to make it usable with
+ *         the builder interface.
+ */
+
+/**
+ * @defgroup hip_ha_controls HIP host association controls.
+ *
+ * These are bitmasks used in the @c hip_hadb_state stucture fields
+ * @c local_controls and @c peer_controls.
+ *
+ * @local_controls defines the flags of the current host, while peer_controls
+ * define the flags of the peer. The flags are used to indicate the state or
+ * status of the host. A status can be, for example, that we have requested
+ * for a service or that we are capable of offering a service.
+ * 
+ * Bitmask for local controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 - free -
+ * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |+--- 0x0004 - free -
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 - free -
+ * |||| |||| |+-------- 0x0040 - free -
+ * |||| |||| +--------- 0x0080 - free -
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 - free -
+ * |||| +-------------- 0x0800 - free -
+ * |||+---------------- 0x1000 - free -
+ * ||+----------------- 0x2000 - free -
+ * |+------------------ 0x4000 We have requested HIPUDPRELAY service.
+ * +------------------- 0x8000 We have requested RVS service.
+ * </pre>
+ * Bitmask for peer controls:
+ * <pre>
+ * 0000 0000 0000 0000
+ * |||| |||| |||| |||+- 0x0001 - free -
+ * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |+--- 0x0004 - free -
+ * |||| |||| |||| +---- 0x0008 - free -
+ * |||| |||| |||+------ 0x0010 - free -
+ * |||| |||| ||+------- 0x0020 - free -
+ * |||| |||| |+-------- 0x0040 - free -
+ * |||| |||| +--------- 0x0080 - free -
+ * |||| |||+----------- 0x0100 - free -
+ * |||| ||+------------ 0x0200 - free -
+ * |||| |+------------- 0x0400 - free -
+ * |||| +-------------- 0x0800 - free -
+ * |||+---------------- 0x1000 - free -
+ * ||+----------------- 0x2000 - free -
+ * |+------------------ 0x4000 Peer offers HIPUDPRELAY service.
+ * +------------------- 0x8000 Peer offers RVS service.
+ * </pre>
+ *
+ * @note There has been some confusion about which bit does what, and which of
+ * the control fields to alter. To avoid this confusion, please do not alter
+ * the @c local_controls and @c peer_controls fields directly. Instead use
+ * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
+ * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ */
+
+/**
+ * @defgroup hip_packet_controls HIP packet Controls field values.
+ *
+ * These are the values that are used in the HIP message Controls field. More
+ * importantantly, these are <span style="color:#f00;">the only values allowed
+ * in that field.</span> Do not put any other bits on wire in the Controls
+ * field.
  */
 
 #endif /* _DOXYGEN_H */

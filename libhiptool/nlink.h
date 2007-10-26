@@ -1,4 +1,4 @@
-#ifndef _HIP_NLINK_H
+ #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
 #include <stdio.h>
@@ -6,12 +6,16 @@
 
 #include "builder.h"
 #include "debug.h"
-#include "hipd.h"
+#include "xfrm.h"
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
 
+/* New one to prevent netlink overrun */
+#if 0
 #define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
 
 #ifndef  SOL_NETLINK
 #  define  SOL_NETLINK 270
@@ -24,6 +28,8 @@
 #ifndef  NETLINK_DROP_MEMBERSHIP
 #  define  NETLINK_DROP_MEMBERSHIP 2
 #endif
+
+#define PREFIXLEN_SPECIFIED 1
 
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
@@ -39,14 +45,16 @@ struct hip_work_order {
 	struct hip_work_order_hdr hdr;
 	struct hip_common *msg; /* NOTE: reference only with &hwo->msg ! */
 	uint32_t seq;
-	struct list_head queue;
+	hip_list_t queue;
 	void (*destructor)(struct hip_work_order *hwo);
 };
 
 struct netdev_address {
-	struct list_head next;
+  //hip_list_t next;
 	struct sockaddr_storage addr;
 	int if_index;
+        unsigned char secret[40];
+        time_t timestamp;
 };
 
 struct idxmap

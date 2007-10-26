@@ -41,7 +41,7 @@ int hip_create_bos_signature(struct hip_host_id *priv, int algo, struct hip_comm
  */
 int hip_send_bos(const struct hip_common *msg)
 {
-	int err = 0; //i = 0;
+	int err = 0, i;
 	struct hip_common *bos = NULL;
 	struct in6_addr hit_our;
 	struct in6_addr daddr;
@@ -54,11 +54,13 @@ int hip_send_bos(const struct hip_common *msg)
 	//struct inet6_ifaddr *ifa = NULL;
 	//struct hip_xfrm_t *x;
 	struct netdev_address *n;
+	hip_list_t *item, *tmp;
 	
 	HIP_DEBUG("\n");
 	
 	/* Extra consistency test */
-	if (hip_get_msg_type(msg) != SO_HIP_BOS) {
+	if (hip_get_msg_type(msg) != SO_HIP_BOS)
+	{
 		err = -EINVAL;
 		HIP_ERROR("Bad message type\n");
 		goto out_err;
@@ -66,14 +68,16 @@ int hip_send_bos(const struct hip_common *msg)
 	
 	/* allocate space for new BOS */
 	bos = hip_msg_alloc();
-	if (!bos) {
+	if (!bos)
+	{
 		HIP_ERROR("Allocation of BOS failed\n");
 		err = -ENOMEM;
 		goto out_err;
 	}
 
 	/* Determine our HIT */
-	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, -1) < 0) {
+	if (hip_get_any_localhost_hit(&hit_our, HIP_HI_DEFAULT_ALGO, 0) < 0)
+	{
 		HIP_ERROR("Our HIT not found\n");
 		err = -EINVAL;
 		goto out_err;
@@ -81,14 +85,16 @@ int hip_send_bos(const struct hip_common *msg)
 	HIP_DEBUG_IN6ADDR("hit_our = ", &hit_our);
 	/* Determine our HOST ID public key */
 	host_id_pub = hip_get_any_localhost_public_key(HIP_HI_DEFAULT_ALGO);
-	if (!host_id_pub) {
+	if (!host_id_pub)
+	{
 		HIP_ERROR("Could not acquire localhost public key\n");
 		goto out_err;
 	}
 
 	/* Determine our HOST ID private key */
 	host_id_private = hip_get_host_id(HIP_DB_LOCAL_HID, NULL, HIP_HI_DEFAULT_ALGO);
-	if (!host_id_private) {
+	if (!host_id_private)
+	{
 		err = -EINVAL;
 		HIP_ERROR("No localhost private key found\n");
 		goto out_err;
@@ -96,13 +102,14 @@ int hip_send_bos(const struct hip_common *msg)
 
  	/* Ready to begin building the BOS packet */
 	/*! \todo TH: hip_build_network_hdr has to be replaced with an appropriate function pointer */
- 	hip_build_network_hdr(bos, HIP_BOS, HIP_CONTROL_NONE, &hit_our, NULL);
+ 	hip_build_network_hdr(bos, HIP_BOS, HIP_HA_CTRL_NONE, &hit_our, NULL);
 
 	/********** HOST_ID *********/
 	_HIP_DEBUG("This HOST ID belongs to: %s\n",
 		   hip_get_param_host_id_hostname(host_id_pub));
 	err = hip_build_param(bos, host_id_pub);
- 	if (err) {
+ 	if (err)
+ 	{
  		HIP_ERROR("Building of host id failed\n");
  		goto out_err;
  	}
@@ -114,7 +121,8 @@ int hip_send_bos(const struct hip_common *msg)
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
 
-	if (hip_create_bos_signature(host_id_private, HIP_HI_DEFAULT_ALGO, bos)) {
+	if (hip_create_bos_signature(host_id_private, HIP_HI_DEFAULT_ALGO, bos))
+	{
 		HIP_ERROR("Could not create signature\n");
 		err = -EINVAL;
 		goto out_err;
@@ -130,11 +138,13 @@ int hip_send_bos(const struct hip_common *msg)
 	daddr.s6_addr32[3] = htonl(0x1);
 	HIP_HEXDUMP("dst addr:", &daddr, 16);
 
-	list_for_each_entry(n, &addresses, next) {
-		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		n = list_entry(item);
+		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
 		/* Packet is send on raw HIP no matter what is the global NAT
 		   status, because NAT travelsal is not supported for IPv6. */
-		err = hip_send_raw(SA2IP(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
+		err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr, 0 ,0, bos, NULL, 0);
 		if (err)
 		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
@@ -151,19 +161,18 @@ int hip_send_bos(const struct hip_common *msg)
 	daddr.s6_addr32[3] = htonl(0xffffffff);
 	HIP_HEXDUMP("dst addr:", &daddr, 16);
 
-	list_for_each_entry(n, &addresses, next) {
-		HIP_HEXDUMP("BOS src address:", SA2IP(&n->addr), SAIPLEN(&n->addr));
+	list_for_each_safe(item, tmp, addresses, i)
+	{
+		n = list_entry(item);
+		HIP_HEXDUMP("BOS src address:", hip_cast_sa_addr(&n->addr), hip_sa_addr_len(&n->addr));
 		/* If global NAT status is "on", the packet is send on UDP. */
 		if(hip_nat_status) {
-			err = hip_send_udp(SA2IP(&n->addr), &daddr,
+			err = hip_send_udp(hip_cast_sa_addr(&n->addr), &daddr,
 					   HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT,
 					   bos, NULL, 0);
 		}
-		else {
-			err = hip_send_raw(SA2IP(&n->addr), &daddr,0,0, bos, NULL, 0);
-		}
-		if (err)
-		        HIP_ERROR("sending of BOS failed, err=%d\n", err);
+		else err = hip_send_raw(hip_cast_sa_addr(&n->addr), &daddr,0,0, bos, NULL, 0);
+		if (err) HIP_ERROR("sending of BOS failed, err=%d\n", err);
 	}
 	err = 0;
 
@@ -218,7 +227,7 @@ int hip_handle_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
 		   hip_ha_t *entry,
-		   struct hip_stateless_info *stateless_info)
+		   hip_portpair_t *stateless_info)
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;

@@ -50,7 +50,7 @@ int send_bos()
 	hip_msg_init(msg);
 
 	printf("Sending BOS... ");
-	err = handle_bos(msg, 0, (const char **) NULL, 0);
+	err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
 	if (err) {
 		HIP_ERROR("\nfailed to handle msg\n");
 		goto out_err;
@@ -61,7 +61,7 @@ int send_bos()
 		goto out_err;
 	}
 	
-	err = hip_send_daemon_info(msg);
+	err = hip_send_recv_daemon_info(msg);
 	if (err) {
 		HIP_ERROR("\nsending msg failed\n");
 		goto out_err;

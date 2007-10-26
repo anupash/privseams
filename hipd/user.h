@@ -16,5 +16,14 @@
 #include "timer.h"
 #include "bos.h"
 #include "close.h"
+#include "accessor.h"
+
+extern struct addrinfo * opendht_serving_gateway;
+extern int opendht_serving_gateway_port;
+extern int opendht_serving_gateway_ttl;
+extern int hip_opendht_fqdn_sent;
+extern int hip_opendht_hit_sent;
+extern int we_are_relay;
+extern int hip_interfamily_status;
 
 #endif /* HIP_WORKQUEUE */

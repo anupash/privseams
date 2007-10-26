@@ -61,13 +61,13 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	HIP_IFEL(hip_build_param_hmac_contents(close,
 					       &entry->hip_hmac_out),
 		 -1, "Building of HMAC failed.\n");
-
 	/********** Signature **********/
 	HIP_IFEL(entry->sign(entry->our_priv, close), -EINVAL,
 		 "Could not create signature.\n");
 
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->preferred_address, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &entry->preferred_address,
+			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, close, entry, 0),
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
@@ -88,8 +88,13 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 	int echo_len;
 
 	/* verify HMAC */
-	HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
-		 -ENOENT, "HMAC validation on close failed.\n");
+        if (entry->is_loopback) {
+		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_out),
+			 -ENOENT, "HMAC validation on close failed.\n");
+        } else {
+		HIP_IFEL(hip_verify_packet_hmac(close, &entry->hip_hmac_in),
+			 -ENOENT, "HMAC validation on close failed.\n");
+	}
 
 	/* verify signature */
 	HIP_IFEL(entry->verify(entry->peer_pub, close), -EINVAL,
@@ -129,14 +134,26 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED.\n");
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
-				  &entry->preferred_address), -1,
+/* If this host has a relay hashtable, i.e. the host is a HIP UDP relay or RVS,
+   then we need to delete the relay record matching the sender's HIT. */
+#ifdef CONFIG_HIP_RVS
+	if(hip_we_are_relay())
+	{
+	     hip_relrec_t *rec = NULL, dummy;
+	     memcpy(&(dummy.hit_r), &(close->hits),
+		    sizeof(close->hits));
+	     hip_relht_rec_free(&dummy);
+	     /* Check that the element really got deleted. */
+	     if(hip_relht_get(&dummy) == NULL)
+	     {
+		  HIP_DEBUG_HIT("Deleted relay record for HIT",
+				&(close->hits));
+	     }
+	}
+#endif
+	
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
 				   "Deleting peer info failed.\n");
-
-	/* by now, if everything is according to plans, the refcnt should
-	   be 1 */
-	//hip_put_ha(entry);
-
  out_err:
 
 	if (close_ack)
@@ -150,7 +167,7 @@ int hip_receive_close(struct hip_common *close,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX: CHECK THE SIGNATURE */
 
@@ -168,7 +185,6 @@ int hip_receive_close(struct hip_common *close,
 		HIP_DEBUG("No HA for the received close\n");
 		goto out_err;
 	} else {
-		barrier();
 		HIP_LOCK_HA(entry);
 		state = entry->state;
 	}
@@ -206,9 +222,15 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 		 "Echo response did not match request\n");
 
 	/* verify HMAC */
-	HIP_IFEL(hip_verify_packet_hmac(close_ack, &entry->hip_hmac_in),
-		 -ENOENT, "HMAC validation on close ack failed\n");
-
+        if (entry->is_loopback) {
+		HIP_IFEL(hip_verify_packet_hmac(close_ack,
+						&entry->hip_hmac_out),
+			 -ENOENT, "HMAC validation on close ack failed\n");
+	} else {
+		HIP_IFEL(hip_verify_packet_hmac(close_ack,
+						&entry->hip_hmac_in),
+			 -ENOENT, "HMAC validation on close ack failed\n");
+	}
 	/* verify signature */
 	HIP_IFEL(entry->verify(entry->peer_pub, close_ack), -EINVAL,
 		 "Verification of close ack signature failed\n");
@@ -217,8 +239,7 @@ int hip_handle_close_ack(struct hip_common *close_ack, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED\n");
 
-	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer,
-	         &entry->preferred_address), -1,
+	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
 	         "Deleting peer info failed\n");
 
 	//hip_hadb_remove_state(entry);
@@ -239,7 +260,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX:  */
 
@@ -249,8 +270,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
 	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-		       //HIP_CONTROL_RVS_CAPABLE
+		       //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
 		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
 		               )) {
 		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",

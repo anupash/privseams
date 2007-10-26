@@ -6,7 +6,6 @@
 
 #include "nlink.h"
 #include "debug.h"
-#include "beet.h"
 #include "hidb.h"
 #include "hadb.h"
 #include "list.h"
@@ -20,7 +19,7 @@ int hip_verify_packet_signature(struct hip_common *bos, struct hip_host_id *peer
 int hip_handle_bos(struct hip_common *bos,
 		   struct in6_addr *bos_saddr,
 		   struct in6_addr *bos_daddr,
-		   hip_ha_t *entry, struct hip_stateless_info *);
+		   hip_ha_t *entry, hip_portpair_t *);
 
 
 #endif /* HIP_BOS_NEW_H */
