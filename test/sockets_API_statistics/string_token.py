@@ -9,8 +9,6 @@ import shlex
 
 
 
-
-
 """
 Take the whole string as a parameter, return a token strings
 """
@@ -42,7 +40,8 @@ def simple_api_function_counter(api_name, token_list):
 	
 	temp = token_list
 	for strings in temp:
-		
+		if (strings == api_name):	
+			print strings
 		if (i == 0):
 			if (strings == api_name) and (temp[i+1] == '('):
 				counter = counter + 1
@@ -51,7 +50,7 @@ def simple_api_function_counter(api_name, token_list):
 			continue		
     		else:
 			if ((strings == api_name) and \
-			(temp[i - 1] == ';' or (temp[i - 1] == '=')   or  temp[i - 1] == ','  or (temp[i - 1] == '}')) \
+			(temp[i - 1] == ';' or (temp[i - 1] == '=') or (temp[i - 1] == '(')  or  temp[i - 1] == ','  or (temp[i - 1] == '}')) \
 			and (temp[i+1] == '(')):
 				counter = counter + 1
 		i = i + 1
@@ -71,16 +70,11 @@ def simple_api_structure_counter(api_name, token_list):
 	temp = token_list
 	
 	for strings in temp:
-		if ((strings == api_name) and (temp[i - 1] == 'struct')):
+		if ((strings == api_name) and (temp[i - 1] == 'struct') and (temp[i + 1] != '*')):
 			counter = counter + 1
 		i = i + 1
 	return counter
 	
-
-
-
-
-
 """
 Complicated counter for socket API, for a function call like 
 function socket call and also structure declare.  Function calls its previous chars should be ";"," = " , "nothing" or 
@@ -89,37 +83,28 @@ function socket call and also structure declare.  Function calls its previous ch
 input: para@api_funtion_call name lists, @api_structure_declarations, file token list, dictionary of whole api call
 output: all different counters based on api names, updated dicionary of whole api call
 """
-"""
+
 def api_counter(api_function_calls, api_structure_declarations, file_token, dic_whole_api):
-	i = 0
-	counter = 0
+	
+	string_temp = string_lexical(file_token)	
 
-	length_list = len(file_token)
+	#print string_temp
 
-
-	#print length_list
-
-	temp = file_token
-	for strings in temp:
-
+	for api_function_call in api_function_calls:
+		temp = simple_api_function_counter(api_function_call[0], string_temp)
 		
-		if (i == 0):
-			if (temp[i] == api_name) and (temp[i+1] == '('):
-				counter = counter + 1
+		print api_function_call[0], temp
+		
+		dic_whole_api.update_function_call_counters(api_function_call[0], temp)
+        
+	for api_structure_declaration in api_structure_declarations:
+		temp = simple_api_structure_counter(api_structure_declaration[0], string_temp)
+		print  api_structure_declaration[0], temp
+		dic_whole_api.update_function_call_counters(api_structure_declaration[0], temp)
+	#print dic_whole_api.print_counts()
 
-		elif (i == (length_list - 1)):
-			continue
-		else:
- 			if ((temp[i] == api_name) and \
-			(temp[i - 1] == ';' or (temp[i - 1] == '=')   or  temp[i - 1] == ','  or (temp[i - 1] == '}')) \
-			and (temp[i+1] == '(')):
-			counter = counter + 1
-		i = i + 1
+         
 
-	return counter
-
-
-"""
 
 
 
