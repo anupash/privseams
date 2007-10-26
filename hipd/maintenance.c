@@ -391,8 +391,9 @@ void register_to_dht ()
 		time_diff = difftime(opendht_n->timestamp, time(0));
 		if (time_diff < 10)
 		{
-			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-			{
+                    //if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0)
+                        if (hip_get_default_hit(&tmp_hit)) 
+                        {
 				HIP_ERROR("No HIT found\n");
 				return;
 			}

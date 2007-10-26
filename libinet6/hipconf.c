@@ -1068,7 +1068,7 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      int ret;
      struct in_addr ip_gw;
      struct in6_addr ip_gw_mapped;
-     struct addrinfo new_gateway;
+     struct addrinfo *new_gateway;
      struct hip_opendht_gw_info *gw_info;
 	
      HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
@@ -1080,7 +1080,9 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 	  goto out_err;
      }
 
-     memset(&new_gateway, '0', sizeof(new_gateway));
+     if ((new_gateway = malloc(sizeof(struct addrinfo))) == 0)
+         goto out_err;
+     memset(&new_gateway, 0, sizeof(new_gateway));
      ret = 0;   
      /* resolve the new gateway */
 #ifdef CONFIG_HIP_OPENDHT
@@ -1092,11 +1094,10 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      if (ret < 0)
 	  goto out_err;
 
-     struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
-        
+     struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
      HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
 	       inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
-          
+    
      ret = 0;
      ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
      IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -1128,6 +1129,8 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      }
        
  out_err:
+     if (new_gateway)
+         free(new_gateway);
      return err;
 }
 

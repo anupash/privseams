@@ -1514,20 +1514,14 @@ combo-newgroup=&lt;create new...&gt;
     <title>Hi3 Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           unpack <ulink url="http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz" /> in the top directory (hipl--main--2.6)
+          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
     </para></listitem>
     <listitem><para>
-           make sure that the link "hipl--main--2.6/i3" points to
-    the unpacked i3_0.3/i3 directory
+          Start the daemon: hipd -3 i3-cfg-PL.xml
     </para></listitem>
     <listitem><para>
-          Compile hipl--main--2.6 with ./configure --enable-hi3
-    </para></listitem>
-    <listitem><para>
-           Not tested for a long time. To work, needs to use some set of
-	i3 servers started locally from i3 distro or running on 
-        PlanetLab. See e.g. <ulink url="http://hipl.infrahip.net/i3_status.html or" /> 
-	http://rose.cs.berkeley.edu:8080/i3_status.html
+          Wait until the trigger is inserted (see log file) and continue with e.g.
+          ping6 or conntest-client-gai with testing.
     </para></listitem>
 	</itemizedlist>
 
