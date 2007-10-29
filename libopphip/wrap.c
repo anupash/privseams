@@ -20,6 +20,7 @@
 #include <netinet/tcp.h>
 #include <dlfcn.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "debug.h"
 #include "hadb.h"
@@ -32,7 +33,7 @@
 int hip_db_exist = 0;
 
 // used for dlsym_util
-#define NUMBER_OF_DLSYM_FUNCTIONS 16
+#define NUMBER_OF_DLSYM_FUNCTIONS 17
 
 /* open() has varying number of args, so it is not in the list. fopen(),
    fdopen and create() are not in the list because they operate only on
@@ -59,6 +60,8 @@ struct {
 	int (*listen_dlsym)(int sockfd, int backlog);
 	ssize_t (*readv_dlsym)(int fd, const struct iovec *vector, int count);
 	ssize_t (*writev_dlsym)(int fd, const struct iovec *vector, int count);
+        int (*poll_dlsym)(struct pollfd *fds, nfds_t nfds, int timeout);
+        
 } dl_function_ptr;
 /* XX TODO: ADD: clone() dup(), dup2(), fclose(), select ? */
 
@@ -67,7 +70,7 @@ void *dl_function_name[] =
 {"socket", "bind", "connect", "send", "sendto",
  "sendmsg", "recv", "recvfrom", "recvmsg", "accept",
  "write", "read", "close", "listen", "readv",
- "writev"};
+ "writev", "poll"};
 
 void hip_init_dlsym_functions()
 {
@@ -851,15 +854,15 @@ int close(int orig_fd)
 	   entry->orig_socket != entry->translated_socket) {
 		err = dl_function_ptr.close_dlsym(entry->translated_socket);
 		hip_socketdb_del_entry_by_entry(entry);
-		HIP_DEBUG("old_socket %d new_socket %d  deleted!\n", 
+		_HIP_DEBUG("old_socket %d new_socket %d  deleted!\n", 
 			  entry->orig_socket,
 			  entry->translated_socket);	  
 	}else{
-	  /*hip_socketdb_del_entry_by_entry(entry);
-	  HIP_DEBUG("old_socket %d new_socket %d  DELETED2!\n",
+	        hip_socketdb_del_entry_by_entry(entry);
+	        _HIP_DEBUG("old_socket %d new_socket %d  DELETED2!\n",
 			  entry->orig_socket,
 			  entry->translated_socket);	  
-	  */}
+	  }
 	if (err)
 		HIP_ERROR("Err %d close trans socket\n", err);
 	//hip_socketdb_dump();
@@ -1313,6 +1316,54 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
  out_err:
 	return chars;
 }
+
+#if 0
+/* poll (and maybe ppoll) should be wrapped conveniently for 
+   applications such as ssh.*/
+int poll(struct pollfd *orig_fds, nfds_t nfds, int timeout)
+{
+        int n, err = 0, zero = 0;
+	int *translated_socket;
+	struct pollfd *translated_fds;
+	socklen_t *translated_id_len;
+	struct sockaddr *translated_id;
+	pthread_t tid = pthread_self();
+	pid_t pid = getpid();
+
+	for (n = 0; n < nfds; n++){
+	      HIP_DEBUG("poll: orig_socket=%d\n", orig_fds[n].fd);
+	      HIP_DEBUG("poll: events=%d\n", orig_fds[n].events);
+	      HIP_DEBUG("poll: revents=%d\n", orig_fds[n].revents);
+	      HIP_DEBUG("poll:  nfds=%d\n", nfds);
+	      hip_socketdb_dump();
+
+	      if(hip_exists_translation(pid, orig_fds[n].fd, tid)){
+		     err = hip_translate_socket(&orig_fds[n].fd, NULL, &zero,
+					 &translated_socket, &translated_id,
+					 &translated_id_len, 1, 0, 0);
+		    orig_fds[n].fd = *translated_socket;
+		    HIP_DEBUG("poll: translation happened\n");
+	      }
+	      HIP_DEBUG("poll: translated_socket=%d\n", orig_fds[n].fd);
+	      _HIP_DEBUG("poll: events=%d\n", translated_fds[n].events);
+	      _HIP_DEBUG("poll: revents=%d\n", translated_fds[n].revents);
+	      if (err) {
+		     HIP_ERROR("Translation failure\n");
+		     goto out_err;
+	      }
+	}
+	HIP_DEBUG("calling poll: timeout=%d\n",timeout);
+	err = dl_function_ptr.poll_dlsym(orig_fds, nfds, timeout);
+	HIP_DEBUG("coming back from  poll: err=%d\n",err);
+	if (err) {
+		HIP_PERROR("connect error\n");
+	}
+
+ out_err:
+	return err;
+}
+#endif
+
 
 ssize_t recvmsg(int s, struct msghdr *msg, int flags)
 {
