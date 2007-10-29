@@ -15,9 +15,12 @@ Take the whole string as a parameter, return a token strings
 def string_lexical(string_needs_parse):
 	lexer = shlex.shlex(string_needs_parse)
 	temp = []
-	for token in lexer:
-                temp.append(token)
-		
+	#do not know what to do when shlex raises exception 
+	try:
+		for token in lexer:
+                	temp.append(token)
+	except:
+		return temp	
 	return temp
 
 
@@ -93,13 +96,14 @@ def api_counter(api_function_calls, api_structure_declarations, file_token, dic_
 	for api_function_call in api_function_calls:
 		temp = simple_api_function_counter(api_function_call[0], string_temp)
 		
-		print api_function_call[0], temp
+		#print api_function_call[0], temp
 		
 		dic_whole_api.update_function_call_counters(api_function_call[0], temp)
         
 	for api_structure_declaration in api_structure_declarations:
 		temp = simple_api_structure_counter(api_structure_declaration[0], string_temp)
-		print  api_structure_declaration[0], temp
+		#print  api_structure_declaration[0], temp
+		
 		dic_whole_api.update_function_call_counters(api_structure_declaration[0], temp)
 	#print dic_whole_api.print_counts()
 
