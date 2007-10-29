@@ -39,7 +39,8 @@ int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
-
+int hip_send(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
+		 struct hip_common*, hip_ha_t *, int);
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
@@ -74,7 +75,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  */
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t *nonce);
+                hip_portpair_t *i1_info, uint16_t *nonce, hip_tlv_type_t *param_type);
 int hip_build_locators(struct hip_common *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);

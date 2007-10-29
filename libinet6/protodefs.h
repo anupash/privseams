@@ -629,6 +629,14 @@ struct hip_relay_to {
 } __attribute__ ((packed));
 
 /** draft-ietf-hip-nat-traversal-02 */
+struct hip_send_to {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
+/** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_via {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */

@@ -300,7 +300,26 @@ int hip_relay_rvs(const hip_common_t *i1,
 		  const in6_addr_t *i1_saddr,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info);
+/****
+ * it is a copy of hip_relay_rvs, minor changed, for testing
+ *
+ */
 
+int hip_relay_full(const hip_common_t *i1,
+		  const in6_addr_t *i1_saddr,
+		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+		  const hip_portpair_t *i1_info,
+		  const uint8_t);
+		  
+		  
+		  
+int hip_relay_response(const hip_common_t *r,
+		  const	uint8_t type_hdr, 
+		  const in6_addr_t *r_saddr,
+		  const in6_addr_t *r_daddr , 
+		  const hip_portpair_t *r_info , 
+		  const in6_addr_t *relay_to_addr,
+		  const in_port_t relay_to_port);
 /**
  * Handles a FROM/RELAY_FROM parameter.
  *
@@ -318,10 +337,12 @@ int hip_relay_rvs(const hip_common_t *i1,
  *                    parameter.
  * @param dest_port   a target buffer for the port number in RELAY_FROM
  *                    parameter.
+ * @param param_type  a target buffer for 
+ *                    parameter type.
  * @return            zero 
  */ 
 int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *rvs_ip,
-			  in6_addr_t *dest_ip, in_port_t *dest_port);
+			  in6_addr_t *dest_ip, in_port_t *dest_port, hip_tlv_type_t *param_type);
 
 #endif /* HIP_HIPRELAY_H */

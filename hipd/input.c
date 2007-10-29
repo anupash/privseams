@@ -1,3 +1,13 @@
+/**
+ * .
+ *
+ * .
+ *
+ * @param  
+ * @return 
+ * @author Lauri Silvennoinen
+ * @date   29.10.2007
+ */ 
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
@@ -104,6 +114,49 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 	_HIP_DEBUG("hip_verify_packet_rvs_hmac() invoked.\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RVS_HMAC)),
+		 -ENOMSG, "No HMAC parameter\n");
+
+	/* hmac verification modifies the msg length temporarily, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
+
+	len = (u8 *) hmac - (u8*) msg;
+	hip_set_msg_total_len(msg, len);
+
+	HIP_HEXDUMP("HMAC key", crypto_key->key,
+		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+
+	HIP_HEXDUMP("HMACced data", msg, len);
+	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC), 
+		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
+	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
+
+ out_err:
+	return err;
+}
+
+
+int hip_verify_packet_full_relay_hmac(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key)
+{
+	int err = 0, len, orig_len;
+	u8 orig_checksum;
+	struct hip_crypto_key tmpkey;
+	struct hip_hmac *hmac;
+
+	_HIP_DEBUG("hip_verify_packet_full_relay_hmac() invoked.\n");
+
+	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_RELAY_HMAC)),
 		 -ENOMSG, "No HMAC parameter\n");
 
 	/* hmac verification modifies the msg length temporarily, so we have
@@ -397,7 +450,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
-
+	struct hip_relay_to *relay_to = NULL;
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
 	   printing packet data here works for all packets. To avoid excessive
@@ -516,6 +569,43 @@ int hip_receive_control_packet(struct hip_common *msg,
 		
 	case HIP_R1:
 	  	/* State. */
+	  	
+	  	
+#ifdef CONFIG_HIP_RVS
+	     if(hip_we_are_relay() && (!entry))
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     I's HIT. We should find one, if the I is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT in r1 ", &msg->hits);
+		  memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+		       HIP_INFO("r1 relay: No matching relay record found.\n");
+		  else if(rec->type == HIP_FULLRELAY)
+		  {
+		       HIP_INFO("r1 relay: Matching relay record found:Full-Relay.\n");
+		       //check if there is send_to parameter
+		       relay_to = (struct hip_relay_to *)
+	  				hip_get_param(msg, HIP_PARAM_RELAY_TO);
+	  				
+	  		   HIP_IFEL(!relay_to, -1, "No relay_to  when receiving R1\n");
+		       HIP_DEBUG_IN6ADDR("the relay to address: " , &relay_to->address);
+		       HIP_DEBUG("the relay to port: %d" , relay_to->port);
+		       HIP_DEBUG("the relay to ntohs(port): %d" , ntohs(relay_to->port));
+			   hip_relay_response(msg, HIP_R1,src_addr, dst_addr, msg_info,(in6_addr_t *) &relay_to->address, ntohs(relay_to->port));
+			 //  state = HIP_STATE_NONE;
+			   err = -ECANCELED;
+			   goto out_err;
+		   
+
+		  }
+
+		  
+	     }
+#endif	  	
 	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
@@ -523,6 +613,43 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_R2:
+	
+	
+#ifdef CONFIG_HIP_RVS
+	     if(hip_we_are_relay() && (!entry))
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     I's HIT. We should find one, if the I is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT in r2 ", &msg->hits);
+		  memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+		       HIP_INFO("r2 relay: No matching relay record found.\n");
+		  else if(rec->type == HIP_FULLRELAY)
+		  {
+		       HIP_INFO("r2 relay: Matching relay record found:Full-Relay.\n");
+		       //check if there is send_to parameter
+		       relay_to = (struct hip_relay_to *)
+	  				hip_get_param(msg, HIP_PARAM_RELAY_TO);
+	  				
+	  		   HIP_IFEL(!relay_to, -1, "No relay_to  when receiving R2\n");
+		       HIP_DEBUG_IN6ADDR("the relay to address: " , &relay_to->address);
+		       HIP_DEBUG("the relay to port: %d" , relay_to->port);
+		       HIP_DEBUG("the relay to ntohs(port): %d" , ntohs(relay_to->port));
+			   hip_relay_response(msg, HIP_R2,src_addr, dst_addr, msg_info,(in6_addr_t *) &relay_to->address, ntohs(relay_to->port));
+			 //  state = HIP_STATE_NONE;
+			   err = -ECANCELED;
+			   goto out_err;
+		   
+
+		  }
+
+		  
+	     }
+#endif	  	
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
@@ -1257,6 +1384,8 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 {
 	int state, mask = HIP_PACKET_CTRL_ANON, err = 0;
 
+	
+	
 	HIP_DEBUG("hip_receive_r1() invoked.\n");
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -1268,6 +1397,10 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	if (hip_blind_get_status())
 	  mask |= HIP_PACKET_CTRL_BLIND;
 #endif
+
+
+
+
 	if (ipv6_addr_any(&r1->hitr)) {
 		HIP_DEBUG("Received NULL receiver HIT in R1. Not dropping\n");
 	}
@@ -1343,8 +1476,11 @@ int hip_create_r2(struct hip_context *ctx,
 		  struct in6_addr *i2_saddr,
 		  struct in6_addr *i2_daddr,
 		  hip_ha_t *entry,
-		  hip_portpair_t *i2_info)
-{
+		  hip_portpair_t *i2_info,
+		  in6_addr_t *dest,
+		  in_port_t  dest_port,
+		  hip_tlv_type_t param_type)
+{	
 	struct hip_reg_request *reg_request = NULL;
  	struct hip_common *r2 = NULL, *i2;
  	int err = 0, clear = 0;
@@ -1417,6 +1553,17 @@ int hip_create_r2(struct hip_context *ctx,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
+
+
+
+#ifdef CONFIG_HIP_RVS
+	if(param_type == HIP_PARAM_RELAY_FROM)
+	 {  	   
+	      HIP_INFO("create replay_to parameter in R2");
+		  hip_build_param_relay_to(
+		       r2, dest, dest_port);
+	  }
+#endif
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
@@ -1482,8 +1629,32 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	hip_list_t *item, *tmp;
 	int ii = 0;
 #endif
+
+	 in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
+     in_port_t  dest_port = 0; // For the port in RELAY_FROM
+     hip_tlv_type_t param_type = 0; // for 
+	
+	
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
+	
+#ifdef CONFIG_HIP_RVS
+     if(!hip_we_are_relay())
+     {
+	  /* This is where the Responder handles the incoming relayed I1 packet.
+	     We need two things from the relayed packet:
+	     1) The destination IP address and port from the FROM/RELAY_FROM
+	     parameters.
+	     2) The source address and source port of the I1 packet to build the
+	     VIA_RVS/RELAY_TO parameter. */
+	     
+	  
+	  HIP_IFEL(hip_relay_handle_from(i2, i2_saddr, &dest, &dest_port, &param_type),
+		   -1, "Handling of relayed I1 packet failed.\n");
+     }
+#endif /* CONFIG_HIP_RVS */	
+	
+	
 	
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
@@ -1928,9 +2099,13 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	hip_hadb_insert_state(entry);
 	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
+	
+
 	HIP_IFEL(entry->hadb_misc_func->
-		 hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
-		 "Creation of R2 failed\n");
+	 hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info,
+	 &dest, dest_port, param_type), -1, 
+	 "Creation of R2 failed\n");
+
 
 	/* change SA state from ACQ -> VALID, and wake up sleepers */
 	//hip_finalize_sa(&entry->hit_peer, spi_out);
@@ -2057,6 +2232,33 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	  HIP_LOCK_HA(entry);
 	  state = entry->state;
      }
+     
+#ifdef CONFIG_HIP_RVS
+	     if(hip_we_are_relay())
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     Responder's HIT. We should find one, if the Responder is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT I2", &i2->hitr);
+		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+		       HIP_INFO("No matching relay record found.\n");
+		  else if(rec->type == HIP_FULLRELAY)
+		  {
+		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+		       hip_relay_full(i2, i2_saddr, i2_daddr, rec, i2_info,HIP_I2);
+		       state = HIP_STATE_NONE;
+		       err = -ECANCELED;
+		       goto out_err;
+
+		  }
+
+		 
+	     }
+#endif
 
      HIP_DEBUG("Received I2 in state %s\n", hip_state_str(state));
 	
@@ -2302,7 +2504,10 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      uint16_t nonce = 0;
      in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
      in_port_t  dest_port = 0; // For the port in RELAY_FROM
+     hip_tlv_type_t param_type = 0; // for 
 
+     
+     
      HIP_DEBUG("hip_handle_i1() invoked.\n");
 
      ipv6_addr_copy(&dest, &in6addr_any);
@@ -2316,7 +2521,9 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	     parameters.
 	     2) The source address and source port of the I1 packet to build the
 	     VIA_RVS/RELAY_TO parameter. */
-	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
+	     
+	  
+	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port, &param_type),
 		   -1, "Handling of relayed I1 packet failed.\n");
      }
 #endif /* CONFIG_HIP_RVS */
@@ -2331,7 +2538,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      }
 #endif
      err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
-		       &nonce);
+		       &nonce, &param_type);
  out_err:
      return err;
 }
@@ -2387,10 +2594,17 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
 		       HIP_INFO("No matching relay record found.\n");
-		  else if(rec->type != HIP_RVSRELAY)
-		       HIP_INFO("Matching relay record found, but it is of the"\
-				"wrong type.\n");
-		  else
+		  else if(rec->type == HIP_FULLRELAY)
+		  {
+		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+		       hip_relay_full(i1, i1_saddr, i1_daddr, rec, i1_info,HIP_I1);
+		       state = HIP_STATE_NONE;
+		       err = -ECANCELED;
+		       goto out_err;
+
+		  }
+
+		  else if(rec->type == HIP_RVSRELAY)
 		  {
 		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
 		       /* We created a new I1 from scratch in the relay function.

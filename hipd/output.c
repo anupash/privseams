@@ -414,7 +414,7 @@ int hip_build_locators(struct hip_common *msg)
  */
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t *nonce) 
+                hip_portpair_t *i1_info, uint16_t *nonce, hip_tlv_type_t *param_type) 
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
@@ -422,12 +422,22 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	int err = 0;
 	
 	_HIP_DEBUG("hip_xmit_r1() invoked.\n");
-	
+	HIP_DEBUG_IN6ADDR("hip_xmit_r1:  R1 destination address dst_ip", dst_ip);
+	HIP_DEBUG_IN6ADDR("hip_xmit_r1:  R1 destination address i1_saddr", i1_saddr);
 	/* Get the final destination address and port for the outgoing R1.
 	   dst_ip and dst_port have values only if the incoming I1 had
 	   FROM/FROM_NAT parameter. */
-	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
-	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
+	HIP_DEBUG("parameter type: %d \n", *param_type);
+	HIP_DEBUG("destination port : %d \n", dst_port);
+	
+	if(*param_type == HIP_PARAM_RELAY_FROM){
+		r1_dst_addr = i1_saddr;
+		r1_dst_port = i1_info->src_port;
+	}
+	else{
+		r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
+		r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
+	}
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* It should not be null hit, null hit has been replaced by real local
@@ -472,10 +482,12 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   parameter. */
 	if(!ipv6_addr_any(dst_ip))
 	{    // dst_port has the value of RELAY_FROM port.
-	     if(dst_port == HIP_NAT_UDP_PORT)
+	    // if(dst_port == HIP_NAT_UDP_PORT)
+	      if(*param_type == HIP_PARAM_RELAY_FROM)
 	     {
+	      HIP_INFO("hip_xmit_r1: add relay to parameter\n");
 		  hip_build_param_relay_to(
-		       r1pkt, i1_saddr, i1_info->src_port);
+		       r1pkt, dst_ip, dst_port);
 	     }
 	     else
 	     {
@@ -660,6 +672,21 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	time(&entry->hip_msg_retrans.last_transmit);
 out_err:
 	return err;
+}
+
+
+
+int hip_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
+{
+	if(dst_port != HIP_RAW_PORT){
+		hip_send_udp(local_addr,peer_addr,src_port,dst_port,msg,entry,retransmit);
+	}
+	else{
+		hip_send_raw(local_addr,peer_addr,src_port,dst_port,msg,entry,retransmit);
+	}
+	
 }
 
 /**

@@ -171,6 +171,16 @@ int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
  */
 int hip_verify_packet_rvs_hmac(struct hip_common *, struct hip_crypto_key *);
 
+
+/**
+ * Verifies packet Full Relay_HMAC
+ * @param msg HIP packet
+ * @param entry HA
+ *
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated.
+ */
+int hip_verify_packet_full_relay_hmac(struct hip_common *, struct hip_crypto_key *);
 /**
  * Decides what action to take for an incoming HIP control packet.
  *
@@ -512,7 +522,12 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
  * @return 0 on success, < 0 on error.
  */
 int hip_create_r2(struct hip_context *, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+		  struct in6_addr *, 
+		  hip_ha_t *, 
+		  hip_portpair_t *,	  
+		  in6_addr_t *dest,
+		  in_port_t  dest_port,
+		  hip_tlv_type_t param_type);
 
 // 2007-02-26 oleg
 // prototype

@@ -102,6 +102,8 @@ int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 int hip_build_param_reg_request(struct hip_common *, uint8_t, uint8_t[], int, int);
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
+int hip_build_param_full_relay_hmac_contents(struct hip_common *,
+                                      struct hip_crypto_key *);
 int hip_build_param_seq(struct hip_common *, uint32_t);
 int hip_build_param_signature2_contents(struct hip_common *, const void *,
                                         hip_tlv_len_t, uint8_t);
