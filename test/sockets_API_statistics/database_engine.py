@@ -1,6 +1,7 @@
 import os, sys
 import apsw
 import shutil
+from conf_reader import ConfReader
 #from pysqlite2 import dbapi2 as sqlite
 
 #reference: http://www.initd.org/pub/software/pysqlite/apsw/3.3.13-r1/apsw.html
@@ -10,29 +11,62 @@ import shutil
 ### Check we have the expected version of apsw and sqlite
 ###
 
-print "Using APSW file",apsw.__file__     # from the extension module
-print "APSW version",apsw.apswversion()  # from the extension module
-print "SQLite version",apsw.sqlitelibversion()  # from the sqlite library code
+class dbHandle:
+
+	def __init__(self):
+
+		print "Using APSW file",apsw.__file__     # from the extension module
+		print "APSW version",apsw.apswversion()  # from the extension module
+		print "SQLite version",apsw.sqlitelibversion()  # from the sqlite library code
 
 
 
 ###
 ### Opening/creating database, initialize database
 ###
+		self.db_path = os.path.join(os.environ['PWD'],'db')
+		self.confReader = ConfReader('sockets_analysis.conf')
 
-db_path = os.path.join(os.environ['PWD'],'db')
+		self.functions = self.confReader.getItems('functions')
+		self.structures = self.confReader.getItems('structures')
+		
+		function_temp = ""
+		
+		structure_temp = ""
+
+	
+		
+		for function in self.functions:
+			function_temp = function_temp + function[0] + " int,"
+
+		
+		for structure in self.structures:
+			structure_temp = structure_temp + structure[0] + " int,"
 
 
-if os.path.exists(db_path): 
-	print "delete the exsting", db_path
-	shutil.rmtree(db_path) #Removes directories recursively
+		creat_table = "CREATE TABLE socket_statistic ("  + function_temp  + structure_temp + ")"
+
+		print creat_table		
+		
+		
+
+		if os.path.exists(self.db_path): 
+			print "delete the exsting", self.db_path
+			shutil.rmtree(self.db_path) #Removes directories recursively
+			#pass
+		
+		
+		print "create the db directory"
+		os.mkdir('db')
+		database_file =  os.path.join(self.db_path, 'socket_analysis_data_sos.db')
+		self.connection=apsw.Connection(database_file)
+		self.cursor=self.connection.cursor()
+		self.cursor.execute(creat_table)		
+		
+		#Create table
 
 
-print "create the db directory"
-os.mkdir('db')
-database_file =  os.path.join(db_path, 'socket_analysis_data_sos.db')
-connection=apsw.Connection(database_file)
-cursor=connection.cursor()
+testing = dbHandle()
 
 ###
 ### Cleanup
