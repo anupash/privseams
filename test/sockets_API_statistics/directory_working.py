@@ -51,6 +51,11 @@ def walk_tree_print_c_files(d, functions, structures, dic_whole_api):
 
 
 
+# return all dirs name under the "applications" directory which save all network (internet) application
+def dirs_under_applications():
+	pass
+
+
 
 #walk_tree_print_c_files(os.path.join(os.environ['PWD'],'applications'))
 

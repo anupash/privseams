@@ -39,12 +39,17 @@ class dbHandle:
 		for function in self.functions:
 			function_temp = function_temp + function[0] + " int,"
 
-		
+		i = 0
+		len_item = len(self.structures) # length of items 
 		for structure in self.structures:
-			structure_temp = structure_temp + structure[0] + " int,"
+			if i < len_item - 1:
+				structure_temp = structure_temp + structure[0] + " int,"
+			else:
+				structure_temp = structure_temp + structure[0] + " int"
 
-
-		creat_table = "CREATE TABLE socket_statistic ("  + function_temp  + structure_temp + ")"
+			i = i + 1
+		
+		creat_table = "CREATE TABLE socket_statistic (name varchar PRIMARY KEY, " + function_temp  + structure_temp + ")"
 
 		print creat_table		
 		
@@ -66,7 +71,6 @@ class dbHandle:
 		#Create table
 
 
-testing = dbHandle()
 
 ###
 ### Cleanup
@@ -75,9 +79,18 @@ testing = dbHandle()
 
 #work only with apsw version 3.3.13-r1 
 # We must close connections
-#connection.close(True)  # force it since we want to exit
+#	def close(self):
+#		self.connection.close(True)  # force it since we want to exit
 
 
+#insert analysis data based on each application
+
+	def insert_analysis_data(self): 
+		pass
+
+testing = dbHandle()
+
+#testing.close()
 
 ###
 ### simple statement
