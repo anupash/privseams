@@ -315,39 +315,59 @@ TEST MATRIX
 
 * platform: 32-bit bit, 64-bit, mixed (32-bit Initiator, 64-bit Resp,
   or reversed)
+  * 64-bit AMD vs. Intel
 * OS: Fedora, Ubuntu
-* memory leaks
+* memory leaks; run hipd through valgrind in all tests
 
 1. Compilation
 --------------
 
-1.1. Compilation on Ubuntu
-1.2. Compilation on Fedora
+* Compilation on Ubuntu
+* Compilation on Fedora
 
 2. Applications
 ---------------
 
-2.1   conntest-client-gai peer_host_name_that_maps_to_hit
-2.2.  conntest-client-gai peer_hostname_without_hit_map
-2.3.  conntest-client hip_host_name
-2.4   conntest-client non_hip_host_name
-2.5   conntest-client peer_hit
-2.6   conntest-client ip_of_non_hip_host
-2.7   hipconf run normal firefox
-2.8   hipconf run opp firefox
+Test with conntest-server BOTH tcp and udp:
 
-TBD: iperf normal + opp
+* conntest-client-gai peer_host_name_that_maps_to_hit_in_hosts
+* conntest-client-gai peer_host_name_that_maps_to_hit_in_opendht
+* conntest-client-gai peer_hostname_without_hit_map
+* conntest-client-gai hit-in-hosts
+* conntest-client-gai hit-in-broadcast
+* conntest-client-gai hit-in-opendht
+* conntest-client-gai ipv6-addr
+* conntest-client ipv4-addr
+* conntest-client ipv6-addr
+* conntest-client ipv4_of_non_hip_host
+* conntest-client ipv6_of_non_hip_host
+* conntest-client peer_hit
 
+Applications:
+
+* ping6 HIT
+* hipconf run normal firefox
+* hipconf run normal firefox + use www proxy
+* hipconf run normal ssh peer_host_name_that_maps_to_hit
+* hipconf run opp firefox
+* hipconf run normal iperf -V hit
+* hipconf run opp iperf ipv4-addr
+* hipconf run opp iperf -V ipv6-addr
 
 3. Base Exchange
 ----------------
 
-TBD: base exchanges with different options
+* hipconf nat on
+* hipconf nat off
+* hipconf locator on
+* hipconf locator off
+* retransmissions
 
 4. Mobility Management
 ----------------------
 
-4.1 Soft IPv4-Only Handover, no locators in base exchange
+Soft IPv4-Only Handover, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -355,7 +375,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.2. Soft IPv6-Only Handover, no locators in base exchange
+Soft IPv6-Only Handover, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -363,7 +384,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.3 Hard IPv4-Only Handover, no locators in base exchange
+Hard IPv4-Only Handover, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -371,7 +393,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.4 Hard IPv6-Only Handover, no locators in base exchange
+Hard IPv6-Only Handover, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -379,7 +402,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.5 Soft Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+Soft Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -387,7 +411,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.6 Soft Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+Soft Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -395,7 +420,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.7 Hard Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+Hard Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -403,7 +429,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.8 Hard Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+Hard Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+
 * hipconf locator off
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -411,7 +438,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.9 Soft IPv4-Only Handover, locators present in base exchange
+Soft IPv4-Only Handover, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -419,7 +447,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.10 Soft IPv6-Only Handover, locators present in base exchange
+Soft IPv6-Only Handover, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -427,7 +456,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.11 Hard IPv4-Only Handover, locators present in base exchange
+Hard IPv4-Only Handover, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -435,7 +465,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.12 Hard IPv6-Only Handover, locators present in base exchange
+Hard IPv6-Only Handover, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -443,7 +474,8 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.13 Soft Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+Soft Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -451,7 +483,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV4
 * ping6 PEER_HIT
 
-4.14 Soft Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+Soft Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
@@ -459,7 +492,8 @@ TBD: base exchanges with different options
 * ip addr del OLD_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.15 Hard Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+Hard Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV4
 * ping6 PEER_HIT
@@ -467,28 +501,49 @@ TBD: base exchanges with different options
 * ip addr add NEW_LOCAL_IPV6
 * ping6 PEER_HIT
 
-4.16 Hard Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+Hard Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+
 * hipconf locator on
 * hipconf add map PEER_HIT PEER_IPV6
 * ping6 PEER_HIT
 * ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Retransmissions in hard IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* kill hipd from the other side
+* ip addr add NEW_LOCAL_IPV4
+* does it retransmit?
+
+NAT handover in hard IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf nat on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
 * ip addr add NEW_LOCAL_IPV4
 * ping6 PEER_HIT
 
 5. Rendezvous
 -------------
 
-TBD
+* test rendezvous as instructed in the manual
 
 6. NAT Relay
 ------------
 
-TBD
+* TBD
 
 6. Closing of connections
 ----------------------
 
-TBD
+* tools/hipconf rst all
 
 
 CREATING A TARBALL OF THE SOURCE CODE
