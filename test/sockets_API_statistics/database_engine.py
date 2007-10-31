@@ -79,8 +79,8 @@ class dbHandle:
 
 #work only with apsw version 3.3.13-r1 
 # We must close connections
-#	def close(self):
-#		self.connection.close(True)  # force it since we want to exit
+	def close(self):
+		self.connection.close(True)  # force it since we want to exit
 
 
 #insert analysis data based on each application
@@ -90,7 +90,7 @@ class dbHandle:
 
 testing = dbHandle()
 
-#testing.close()
+testing.close()
 
 ###
 ### simple statement

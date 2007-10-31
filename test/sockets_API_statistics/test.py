@@ -14,9 +14,14 @@ reader = ConfReader('sockets_analysis.conf')
 
 functions = reader.getItems('functions')
 structures = reader.getItems('structures')
+applications = reader.getItems('applications')
+
+print applications
 
 #all = reader.getItems('functions') + reader.getItems('structures')
 all = functions + structures
+
+
 
 
 reader.saveItemsDic('functions')
