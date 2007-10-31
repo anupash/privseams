@@ -304,11 +304,181 @@ SUBMITTING PATCHES
 
 HIPL is still work in progress. The code is being constantly developed
 and it may be difficult to merge your contribution to the HIPL code.
+If you still want to submit patches to the HIPL project, build your
+patches against the main branch.  Please try the test matrix below at
+least partially before you contribute.
 
-If you still want to submit patches to the HIPL project, see that the
-patch follows the CVS POLICY (see above). Build your patches against
-the HEAD branch in CVS.  It would be nice if you would build one (or
-multiple) unit test case to validate your patch.
+
+CREATING A TARBALL OF THE SOURCE CODE
+=====================================
+
+There is a "make dist" target which builds a tarball of the hipl source   
+code. It includes only the files which are necessary. The included files  
+are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
+possible to force some extra files in top most Makefile.am.
+
+
+PREBUILT BINARY PACKAGES
+========================
+
+Redhat
+------
+
+Note well: Currently the status of the packaging scripts is in very initial
+phase. They are not tested throughly.
+
+Two separate packages are planned to be provided by HIPL: one for user
+space software and the other for kernel and kernel modules. Currently only
+scripts for building user space packages exist.
+
+
+There are scripts in directory test/packaging that can be used to create
+binary packages. The aim for these packages is for easier testing of HIPL
+software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
+packages can be created. 
+
+To create the RPM package, type: "./autogen && ./configure && make rpm".
+This will create a source package (in tar.gz form in the same
+directory) which will be used when building the RPM file. After the
+script has run successfully, follow the instructions given by the
+script. That is, login as root and copy the source package (e.g.
+hipl-userspace-1.0-1.tgz) to directory /usr/src/redhat/SOURCES. Then
+issue the command "rpmbuild -ba
+<hiplroot>/test/packaging/hiplx.spec".  When everyting
+is finished successfully, there will be a binary RPM package
+"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
+can then be installed with rpm -i.
+
+For more info about rpm packaging, please see:
+
+http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
+http://fedoranews.org/tchung/htmldoc/htmldoc.spec
+
+Debian
+------
+
+DEB package is created similarly: "./autogen && ./configure && make
+deb".
+The result is both binary and source debian packages:
+- Binary
+Binary Debian package can be found in test/packaging/ directory
+with the following name: hipl-1.0-1_i386.deb.
+The package can be installed using dpkg, e.g. "dpkg -i
+hipl-1.0-1_i386.deb".
+- Source
+Debian source package is made of three files which are:
+
+	hipl-1.0.diff.gz
+	hipl-1.0.dsc
+	hipl-1.0.orig.tar.gz
+
+and can be found under directory test/packaging/hipl-1.0-deb-src/
+
+
+HOW TO CREATE KERNEL PACKAGES
+=============================
+
+Debian/Ubuntu
+-------------
+
+To create the package from vanilla sources for Debian distribution
+or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
+follow the following instructions.
+
+* Download and extract the vanilla kernel source (I got it from
+(ftp://ftp.funet.fi/pub/linux/kernel/v2.6)
+I extract it to /usr/src and I added my username to src group
+by typing adduser my_username src
+* cd linux-2.6.xx
+* Patch the kernel with the hip patches you can find under hipl/patches directory
+* cp /boot/config-something .config
+
+In order to build the binary package type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
+
+Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
+* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
+
+After the kernel has been successfully compiled, you will find the
+debian packages in the top directory.
+
+To install it type:
+dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
+and reboot. The debian package should already include the new 
+installed kernel for grub.
+If you need grub check this:
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
+
+Main reference (.)
+http://newbiedoc.sourceforge.net/system/kernel-pkg.html
+
+
+Redhat notes
+------------
+
+The instructions below did not work anymore. Instead, I followed these
+instructions:
+
+http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
+see: test/packaging/kernel-2.6.17.14.spec 
+
+To create the package from vanilla sources (preferred method) for
+Fedora, follow the instructions of this document:
+
+http://www.openvps.org/Plone/docs/developer/kernelrpm
+http://www.fedoraforum.org/forum/archive/index.php/t-28290.html
+
+In short:
+* download and extract kernel sources
+* cd linux-2.6.xx
+* apply hip patches
+* cp /boot/config-something .config
+* make rpm # or bin-rpm??
+
+To install, do this:
+* rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
+* /sbin/new-kernel-pkg --mkinitrd --depmod --install --make-default 2.6.xx
+
+NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
+THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
+
+That will create and install vanilla rpm. However, if you want to use
+the Fedora/Redhat patches to improve e.g. hardware support, use the
+instructions below.
+
+To create rpm for Fedora patched kernel, you need to download the
+kernel from somewhere from here:
+
+  http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
+
+For RH/Enterprise, you need to have an account on rhn.redhat.com to
+get the latest packages. Browse/and search the channels list.
+
+I basically followed these instructions:
+
+  http://tqmcube.com/fc3_custom_kernel.htm
+
+This is what I did:
+
+  * rpm -ivh kernel-2.6.10-1.760_FC3.src.rpm
+  * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
+    patches:
+
+     %define rhbsys .beet
+
+     # HIPL patches
+     Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
+     Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
+     Patch192: policy-sleep-2.6.16.5-v2.patch
+     Patch193: hipmod-2.6.16.5-v1.patch 
+     # HIP patches
+     %patch190 -p1
+     %patch191 -p1
+     %patch192 -p1
+     %patch193 -p1
+
+   * copied the patches to /usr/src/redhat/SOURCES
+   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 TEST MATRIX
 ===========
@@ -536,186 +706,24 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 * test rendezvous as instructed in the manual
 
 6. NAT Relay
-------------
+----------------
 
-* TBD
+* not supported officially yet
 
-6. Closing of connections
+7. Firewall
+-----------
+
+8. Agent
+--------
+
+9. Blind support
+----------------
+
+10. Closing of connections
 ----------------------
 
 * tools/hipconf rst all
 
-
-CREATING A TARBALL OF THE SOURCE CODE
-=====================================
-
-There is a "make dist" target which builds a tarball of the hipl source   
-code. It includes only the files which are necessary. The included files  
-are specified in SOURCES and HEADER rules in */Makefile.am, but it is also
-possible to force some extra files in top most Makefile.am.
-
-
-PREBUILT BINARY PACKAGES
-========================
-
-Redhat
-------
-
-Note well: Currently the status of the packaging scripts is in very initial
-phase. They are not tested throughly.
-
-Two separate packages are planned to be provided by HIPL: one for user
-space software and the other for kernel and kernel modules. Currently only
-scripts for building user space packages exist.
-
-
-There are scripts in directory test/packaging that can be used to create
-binary packages. The aim for these packages is for easier testing of HIPL
-software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
-packages can be created. 
-
-To create the RPM package, type: "./autogen && ./configure && make rpm".
-This will create a source package (in tar.gz form in the same
-directory) which will be used when building the RPM file. After the
-script has run successfully, follow the instructions given by the
-script. That is, login as root and copy the source package (e.g.
-hipl-userspace-1.0-1.tgz) to directory /usr/src/redhat/SOURCES. Then
-issue the command "rpmbuild -ba
-<hiplroot>/test/packaging/hiplx.spec".  When everyting
-is finished successfully, there will be a binary RPM package
-"/usr/src/rpm/RPMS/i386/hipl-userspace-1.0-1.i386.rpm". The package
-can then be installed with rpm -i.
-
-For more info about rpm packaging, please see:
-
-http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
-http://fedoranews.org/tchung/htmldoc/htmldoc.spec
-
-Debian
-------
-
-DEB package is created similarly: "./autogen && ./configure && make
-deb".
-The result is both binary and source debian packages:
-- Binary
-Binary Debian package can be found in test/packaging/ directory
-with the following name: hipl-1.0-1_i386.deb.
-The package can be installed using dpkg, e.g. "dpkg -i
-hipl-1.0-1_i386.deb".
-- Source
-Debian source package is made of three files which are:
-
-	hipl-1.0.diff.gz
-	hipl-1.0.dsc
-	hipl-1.0.orig.tar.gz
-
-and can be found under directory test/packaging/hipl-1.0-deb-src/
-
-
-HOW TO CREATE KERNEL PACKAGES
-=============================
-
-Debian/Ubuntu
--------------
-
-To create the package from vanilla sources for Debian distribution
-or any distributions based on Debian (e.g. Ubuntu Dapper Drake),
-follow the following instructions.
-
-* Download and extract the vanilla kernel source (I got it from
-(ftp://ftp.funet.fi/pub/linux/kernel/v2.6)
-I extract it to /usr/src and I added my username to src group
-by typing adduser my_username src
-* cd linux-2.6.xx
-* Patch the kernel with the hip patches you can find under hipl/patches directory
-* cp /boot/config-something .config
-
-In order to build the binary package type the following:
-* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_image
-
-Instead, if you would like to produces  a  debianised  package  of  the  Linux kernel sources type the following:
-* fakeroot make-kpkg --initrd --append-to-version=.hipl --revision=custom.1.0 kernel_source kernel_headers
-
-After the kernel has been successfully compiled, you will find the
-debian packages in the top directory.
-
-To install it type:
-dpkg -i kernel-image-2.6.16.5.hipl_1.0_i386.deb
-and reboot. The debian package should already include the new 
-installed kernel for grub.
-If you need grub check this:
-http://newbiedoc.sourceforge.net/system/kernel-pkg.html#GRUB-KERNEL-PKG
-
-Main reference (.)
-http://newbiedoc.sourceforge.net/system/kernel-pkg.html
-
-
-Redhat notes
-------------
-
-The instructions below did not work anymore. Instead, I followed these
-instructions:
-
-http://grid-it.cnaf.infn.it/index.php?rpmbuild&type=1
-see: test/packaging/kernel-2.6.17.14.spec 
-
-To create the package from vanilla sources (preferred method) for
-Fedora, follow the instructions of this document:
-
-http://www.openvps.org/Plone/docs/developer/kernelrpm
-http://www.fedoraforum.org/forum/archive/index.php/t-28290.html
-
-In short:
-* download and extract kernel sources
-* cd linux-2.6.xx
-* apply hip patches
-* cp /boot/config-something .config
-* make rpm # or bin-rpm??
-
-To install, do this:
-* rpm -i /usr/src/redhat/RPMS/i386/kernel-2.6.xx.rpm
-* /sbin/new-kernel-pkg --mkinitrd --depmod --install --make-default 2.6.xx
-
-NEW-KERNEL-PKG IS NECESSARY AS THE RPM DOES NOT INCLUDE INITRD AND
-THE KERNEL IS NOT INCLUDED IN GRUB CONFIGURATION.
-
-That will create and install vanilla rpm. However, if you want to use
-the Fedora/Redhat patches to improve e.g. hardware support, use the
-instructions below.
-
-To create rpm for Fedora patched kernel, you need to download the
-kernel from somewhere from here:
-
-  http://download.fedora.redhat.com/pub/fedora/linux/core/updates/
-
-For RH/Enterprise, you need to have an account on rhn.redhat.com to
-get the latest packages. Browse/and search the channels list.
-
-I basically followed these instructions:
-
-  http://tqmcube.com/fc3_custom_kernel.htm
-
-This is what I did:
-
-  * rpm -ivh kernel-2.6.10-1.760_FC3.src.rpm
-  * I modified /usr/src/redhat/SPECS/kernel-2.6.spec to include the HIP
-    patches:
-
-     %define rhbsys .beet
-
-     # HIPL patches
-     Patch190: simple-beet-ph-patch-v1.0-2.6.16.5
-     Patch191: interfamily-beet-ph-patch-v1.0-2.6.16.5
-     Patch192: policy-sleep-2.6.16.5-v2.patch
-     Patch193: hipmod-2.6.16.5-v1.patch 
-     # HIP patches
-     %patch190 -p1
-     %patch191 -p1
-     %patch192 -p1
-     %patch193 -p1
-
-   * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 UPGRADING THE KERNEL - DEPRACATED
 =================================
