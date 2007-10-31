@@ -1,49 +1,74 @@
 /*
-    DNET - Duge's Networking Library
+ * HIPL GTK GUI
+ *
+ * License: GNU/GPL
+ * Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-#ifndef TOOLS_H
-#define TOOLS_H
+#ifndef _TOOLS_H
+#define _TOOLS_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <stdlib.h>
 #include <gtk/gtk.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "debug.h"
-#include "hit_db.h"
 #include "widgets.h"
+#include "hitdb.h"
+#include "events.h"
+#include "hipconf.h"
 
 
 /******************************************************************************/
 /* DEFINES */
 #define NAME_INVALID_CHARS		"<>\""
 
+/** Structure for tree update function. */
+struct tree_update_data
+{
+	char old_name[MAX_NAME_LEN + 1];
+	char new_name[MAX_NAME_LEN + 1];
+	int depth;
+	int indices_first;
+};
 
-/*!
-	\addtogroup libhipgui
-	@{
-*/
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-char *get_nick(void);
-void set_nick(char *);
-int find_from_cb(char *, GtkWidget *);
-void delete_all_items_from_cb(GtkWidget *);
-int check_group_name(char *, HIT_Group *);
-int check_hit_name(char *, HIT_Remote *);
-int check_lhit_name(char *, HIT_Local *);
+void info_set(const char *string, ...);
+int message_dialog(const char *, ...);
+void about(void);
 
-int check_apply_group(char *, HIT_Group *);
-int check_apply_hit(char *, HIT_Remote *);
-int check_apply_hit_move(char *, HIT_Remote *);
+gboolean update_tree_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+gboolean update_list_value(GtkTreeModel *, GtkTreePath *, GtkTreeIter *, gpointer);
+int local_add(HIT_Local *, void *);
+void local_update(char *, char *);
 
+int combo_box_find(const char *, GtkWidget *);
 
-/*! @} addtogroup libhipgui */
+void hit_remote_add(const char *, const char *);
+int group_remote_create(const char *);
+
+int check_name_group(const char *, HIT_Group *);
+int check_name_hit(const char *, HIT_Remote *);
+int check_name_local(const char *, HIT_Local *);
+int check_apply_group(const char *, HIT_Group *);
+int check_apply_hit(const char *, HIT_Remote *);
+int check_apply_hit_move(const char *, HIT_Remote *);
+int check_apply_local_edit(void);
+
+void edit_reset(void);
+void edit_group_remote(char *);
+
+void edit_apply(void);
+void edit_delete(void);
+
+void edit_set_remote_group(HIT_Group *);
+void hit_dlg_set_remote_group(HIT_Group *);
+
+void exec_application(void);
+
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

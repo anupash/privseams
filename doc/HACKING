@@ -310,16 +310,241 @@ patch follows the CVS POLICY (see above). Build your patches against
 the HEAD branch in CVS.  It would be nice if you would build one (or
 multiple) unit test case to validate your patch.
 
-TESTING
-=======
+TEST MATRIX
+===========
 
-The project has a tailored unit testing environment which makes it
-possible to run tests in the HIP kernel module and userspace. It is
-recommended that the developer builds a new test case when creating
-new functionality or repairing old functionality. Still, there are
-some tangled functionality, especially in the kernel, that is
-very difficult to test with unit testing. Manual black box testing
-should be used to cover changes in the code in such cases.
+* platform: 32-bit bit, 64-bit, mixed (32-bit Initiator, 64-bit Resp,
+  or reversed)
+  * 64-bit AMD vs. Intel
+* OS: Fedora, Ubuntu
+* memory leaks; run hipd through valgrind in all tests
+
+1. Compilation
+--------------
+
+* Compilation on Ubuntu
+* Compilation on Fedora
+
+2. Applications
+---------------
+
+Test with conntest-server BOTH tcp and udp:
+
+* conntest-client-gai peer_host_name_that_maps_to_hit_in_hosts
+* conntest-client-gai peer_host_name_that_maps_to_hit_in_opendht
+* conntest-client-gai peer_hostname_without_hit_map
+* conntest-client-gai hit-in-hosts
+* conntest-client-gai hit-in-broadcast
+* conntest-client-gai hit-in-opendht
+* conntest-client-gai ipv6-addr
+* conntest-client ipv4-addr
+* conntest-client ipv6-addr
+* conntest-client ipv4_of_non_hip_host
+* conntest-client ipv6_of_non_hip_host
+* conntest-client peer_hit
+
+Applications:
+
+* ping6 HIT
+* hipconf run normal firefox
+* hipconf run normal firefox + use www proxy
+* hipconf run normal ssh peer_host_name_that_maps_to_hit
+* hipconf run opp firefox
+* hipconf run normal iperf -V hit
+* hipconf run opp iperf ipv4-addr
+* hipconf run opp iperf -V ipv6-addr
+
+3. Base Exchange
+----------------
+
+* hipconf nat on
+* hipconf nat off
+* hipconf locator on
+* hipconf locator off
+* retransmissions
+
+4. Mobility Management
+----------------------
+
+Soft IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Soft IPv6-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Hard IPv6-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Soft Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Soft Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard Interfamily Handover From IPv4 to IPv6, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard Interfamily Handover From IPv6 to IPv4, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Soft IPv4-Only Handover, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Soft IPv6-Only Handover, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard IPv4-Only Handover, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Hard IPv6-Only Handover, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Soft Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV6
+* ip addr del OLD_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Soft Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr add NEW_LOCAL_IPV4
+* ip addr del OLD_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard Interfamily Handover From IPv4 to IPv6, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV6
+* ping6 PEER_HIT
+
+Hard Interfamily Handover From IPv6 to IPv4, locators present in base exchange
+
+* hipconf locator on
+* hipconf add map PEER_HIT PEER_IPV6
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV6
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+Retransmissions in hard IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* kill hipd from the other side
+* ip addr add NEW_LOCAL_IPV4
+* does it retransmit?
+
+NAT handover in hard IPv4-Only Handover, no locators in base exchange
+
+* hipconf locator off
+* hipconf nat on
+* hipconf add map PEER_HIT PEER_IPV4
+* ping6 PEER_HIT
+* ip addr del OLD_LOCAL_IPV4
+* ip addr add NEW_LOCAL_IPV4
+* ping6 PEER_HIT
+
+5. Rendezvous
+-------------
+
+* test rendezvous as instructed in the manual
+
+6. NAT Relay
+------------
+
+* TBD
+
+6. Closing of connections
+----------------------
+
+* tools/hipconf rst all
+
 
 CREATING A TARBALL OF THE SOURCE CODE
 =====================================

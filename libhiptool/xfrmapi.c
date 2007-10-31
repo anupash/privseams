@@ -133,10 +133,14 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	if (req.xpinfo.sel.family == AF_UNSPEC)
 		req.xpinfo.sel.family = AF_INET6;
 
-	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
-		 "netlink_talk failed\n");
+	{
+		void *x = malloc(sizeof(req.n) * 10);
+		memcpy(x, &req.n, sizeof(req.n));
+		HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+			 "netlink_talk failed\n");
+	}
 
- out_err:
+out_err:
 
 	return err;
 }
@@ -407,7 +411,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
         /** @todo Fill in information for UDP-NAT SAs. */
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
-		HIP_DEBUG("FILLING UP Port info while deleting\n");
+		HIP_DEBUG("FILLING UDP Port info while deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,

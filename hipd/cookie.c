@@ -94,7 +94,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)), 
 		 NULL, "Requested source HIT no more available.\n");
-	HIP_DEBUG("!!!!!!!!! Is Requested source HIT available?");
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -143,8 +142,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 #endif
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
-	/* Replaced memory allocation, Lauri Silvennoinen 02.08.2006 */
-        //r1 = HIP_MALLOC(len, GFP_KERNEL);
 	r1 = hip_msg_alloc();
 	memcpy(r1, hip_r1table[idx].r1, len);
 	err = r1;
