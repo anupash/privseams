@@ -27,11 +27,18 @@ class fetchNetApps:
 
 
 	def download_apps(self):
-		for down_link in self.net_apps_list:
-			print "Downloading", down_link[0], "from ", down_link[1]
-			wget_command = "wget --directory-prefix=applications -c " +  \
-							down_link[1]
-			os.system(wget_command)
-
+		#check what OS is, linux , unix, windows or Mac
+		uname = os.uname()
+		#if it is Linux system, wget shell command is needed 
+		if "Linux" in uname:
+			download_command = "wget --directory-prefix=applications -c "
+			for down_link in self.net_apps_list:
+				print "Downloading", down_link[0], "from ", down_link[1]
+			
+				download_command = download_command  +  \
+									down_link[1]
+				os.system(download_command)
+	
+	
 	def decompress_apps(self):
 		pass
