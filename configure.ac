@@ -1,4 +1,4 @@
-#                                               -*- Autoconf -*-
+r#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
 # Generated with autoscan and manually edited -Miika
@@ -126,6 +126,17 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
 
+AC_ARG_ENABLE(opptcp,
+             AC_HELP_STRING([--enable-opptcp],
+                            [Opportunistic TCP extensions support (default is NO)]),
+             [ac_cv_use_opptcp=$enableval], [ac_cv_use_opptcp=no])
+AC_CACHE_CHECK([whether to use opptcp],
+               [ac_cv_use_opptcp], [ac_cv_use_opptcp=no])
+if test x"$ac_cv_use_opptcp" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPPTCP, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_OPPTCP, test x"$ac_cv_use_opptcp" = x"yes")
+
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
                             [HIP cookie extensions (default is NO)]),
@@ -235,17 +246,6 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
-AC_ARG_ENABLE(interfamily,
-             AC_HELP_STRING([--enable-interfamily],
-                            [Interfamily handover support (default is NO)]),
-             [ac_cv_use_interfamily=$enableval], [ac_cv_use_interfamily=no])
-AC_CACHE_CHECK([whether to use interfamily],
-               [ac_cv_use_interfamily], [ac_cv_use_interfamily=no])
-if test x"$ac_cv_use_interfamily" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_INTERFAMILY, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_INTERFAMILY, test x"$ac_cv_use_interfamily" = x"yes")
- 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
                             [HIP BLIND extensions (default is NO)]),

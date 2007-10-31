@@ -819,7 +819,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
             HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
@@ -1196,7 +1196,15 @@ int hip_handle_r1(struct hip_common *r1,
 					       hip_sa_addr_len(&n->addr));
 					break;
 				}
+
+			struct in6_addr daddr;
+			
+			hip_hadb_get_peer_addr(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
+					       PEER_ADDR_STATE_ACTIVE);
 		}
+
 #endif
 	    }
         else
@@ -1681,27 +1689,24 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+
         if (locator)
 	{
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                                                             locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-	}
-	n_addrs = hip_get_locator_addr_item_count(locator);
+		n_addrs = hip_get_locator_addr_item_count(locator);
 	
-	if( i2_info->hi3_in_use && n_addrs > 0 ) 
-	{
-		first = (char*)locator+sizeof(struct hip_locator);
-		memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
-		list_for_each_safe(item, tmp, addresses, ii)
-			{
-				n = list_entry(item);
-				memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-				       hip_sa_addr_len(&n->addr));
-				break;
-			}
-	}
-
+		if( i2_info->hi3_in_use && n_addrs > 0 ) 
+		{
+			first = (char*)locator+sizeof(struct hip_locator);
+			memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
+			list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					break;
+				}
+		}	}
+	
 #endif
 
  	HIP_DEBUG("Cookie accepted\n");
@@ -2174,7 +2179,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator || esp_info)
+        if (locator && esp_info)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
@@ -2331,6 +2336,16 @@ int hip_handle_r2(struct hip_common *r2,
         int * reg_types = NULL;
         int type_count = 0;
         
+
+#ifdef CONFIG_HIP_HI3
+	if( r2_info->hi3_in_use ) 
+	{
+		// In hi3 real addresses should already be in entry, received on r1 phase. 
+		// 
+		memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
+		memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+	}
+#endif
 
 	_HIP_DEBUG("hip_handle_r2() invoked.\n");
 	if (entry->state == HIP_STATE_ESTABLISHED) {

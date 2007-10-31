@@ -84,7 +84,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
-        hip_conf_handle_interfamily,
+        hip_conf_handle_locator,
         hip_conf_handle_hipudprelay,
 	NULL, /* run */
 };
@@ -127,7 +127,7 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
         else if (!strcmp("locator", text))
-                ret = ACTION_INTERFAMILY; 
+                ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
@@ -194,7 +194,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_RESTART:
 		count = 1;
 		break;
-        case ACTION_INTERFAMILY:
+        case ACTION_LOCATOR:
                 break;
 
 	default:
@@ -240,7 +240,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
      else if ( (strcmp("all", text) == 0) && (strcmp("bos",argv[1]) == 0))
 	  ret = TYPE_BOS;
      else if (strcmp("locator", argv[1])==0)
-                ret = TYPE_INTERFAMILY;
+                ret = TYPE_LOCATOR;
      else if (!strcmp("debug", text))
 	  ret = TYPE_DEBUG;
      else if (!strcmp("daemon", text))
@@ -290,7 +290,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
-        case ACTION_INTERFAMILY:
+        case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
@@ -790,7 +790,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 }
 
 /**
- * Handles the hipconf commands where the type is @c interfamily.
+ * Handles the hipconf commands where the type is @c locator.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
@@ -800,15 +800,15 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_interfamily(struct hip_common *msg, int action,
+int hip_conf_handle_locator(struct hip_common *msg, int action,
 		   const char *opt[], int optc)
 {
     int err = 0, status = 0;
     
     if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_INTERFAMILY_ON; 
+        status = SO_HIP_SET_LOCATOR_ON; 
     } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_INTERFAMILY_OFF;
+        status = SO_HIP_SET_LOCATOR_OFF;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
@@ -1068,7 +1068,7 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      int ret;
      struct in_addr ip_gw;
      struct in6_addr ip_gw_mapped;
-     struct addrinfo new_gateway;
+     struct addrinfo *new_gateway;
      struct hip_opendht_gw_info *gw_info;
 	
      HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
@@ -1080,7 +1080,9 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 	  goto out_err;
      }
 
-     memset(&new_gateway, '0', sizeof(new_gateway));
+     if ((new_gateway = malloc(sizeof(struct addrinfo))) == 0)
+         goto out_err;
+     memset(&new_gateway, 0, sizeof(new_gateway));
      ret = 0;   
      /* resolve the new gateway */
 #ifdef CONFIG_HIP_OPENDHT
@@ -1092,11 +1094,10 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      if (ret < 0)
 	  goto out_err;
 
-     struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
-        
+     struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
      HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
 	       inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
-          
+    
      ret = 0;
      ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
      IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -1128,6 +1129,8 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
      }
        
  out_err:
+     if (new_gateway)
+         free(new_gateway);
      return err;
 }
 

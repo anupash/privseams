@@ -223,7 +223,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
         /*
           Clear the timestamp, initially 0 so everything will be sent
         */
-        memset(&n->timestamp, '0', sizeof(time_t));
+        memset(&n->timestamp, 0, sizeof(time_t));
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);

@@ -279,6 +279,13 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+	}
+#endif
+
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -323,7 +330,6 @@ int hipd_init(int flush_ipsec, int killold)
 	{
 		hip_get_default_hit(&peer_hit);
 		hip_i3_init(&peer_hit);
-		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
 	}
 #endif
 
