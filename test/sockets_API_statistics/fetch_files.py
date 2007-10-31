@@ -11,7 +11,7 @@ import shutil
 
 #!/usr/bin/python
 
-class fetchNetApp:
+class fetchNetApps:
 	def __init__(self, apps_list):
 		self.net_apps_list = apps_list
 		self.apps_path = os.path.join(os.environ['PWD'],'applications')
@@ -19,4 +19,19 @@ class fetchNetApp:
 		#Check whether it already exists network applications directory,
 		#delete if existed, if not it will create new one
 		if os.path.exists(self.apps_path):
-				print "delete the existing apps directory", self.apps_path
+			print "delete the existing apps directory", self.apps_path
+			#delete dirs recursively
+			shutil.rmtree(self.apps_path)
+		print "create the applications directory"
+		os.mkdir('applications')
+
+
+	def download_apps(self):
+		for down_link in self.net_apps_list:
+			print "Downloading", down_link[0], "from ", down_link[1]
+			wget_command = "wget --directory-prefix=applications -c " +  \
+							down_link[1]
+			os.system(wget_command)
+
+	def decompress_apps(self):
+		pass

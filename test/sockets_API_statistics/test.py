@@ -2,6 +2,7 @@ from conf_reader import ConfReader
 from search_engine import SearchEngine
 from file_input import *
 from directory_working import *
+from fetch_files import fetchNetApps
 
 #reader = ConfReader('sockets_API.conf')
 reader = ConfReader('sockets_analysis.conf')
@@ -21,6 +22,10 @@ print applications
 #all = reader.getItems('functions') + reader.getItems('structures')
 all = functions + structures
 
+
+fetchnetapps = fetchNetApps(applications)
+
+fetchnetapps.download_apps()
 
 
 
