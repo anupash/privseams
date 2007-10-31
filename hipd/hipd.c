@@ -77,6 +77,13 @@ char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
 #endif
 
+/*Define hip_use_userspace_ipsec variable to indicate whether use 
+ * userspace ipsec or not. If it is 1, hip uses the user space ipesec.
+ * It will not use if hip_use_userspace_ipsec = 0
+ */
+int hip_use_userspace_ipsec = 1
+
+
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
