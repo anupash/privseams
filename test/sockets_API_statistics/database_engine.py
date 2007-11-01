@@ -13,7 +13,7 @@ from conf_reader import ConfReader
 
 class dbHandle:
 
-	def __init__(self):
+	def __init__(self, func_list, struc_list, apps_list):
 
 		print "Using APSW file",apsw.__file__     # from the extension module
 		print "APSW version",apsw.apswversion()  # from the extension module
@@ -23,13 +23,18 @@ class dbHandle:
 
 ###
 ### Opening/creating database, initialize database
-###
-		self.db_path = os.path.join(os.environ['PWD'],'db')
-		self.confReader = ConfReader('sockets_analysis.conf')
-
-		self.functions = self.confReader.getItems('functions')
-		self.structures = self.confReader.getItems('structures')
+###             
+		self.apsw_version = apsw.apswversion()
+		self.release_number = self.apsw_version[4:6]
 		
+		self.db_path = os.path.join(os.environ['PWD'],'db')
+		#self.confReader = ConfReader('sockets_analysis.conf')
+
+		#self.functions = self.confReader.getItems('functions')
+		#self.structures = self.confReader.getItems('structures')
+		
+		self.functions = func_list
+		self.structures = struc_list
 		function_temp = ""
 		
 		structure_temp = ""
@@ -80,17 +85,26 @@ class dbHandle:
 #work only with apsw version 3.3.13-r1 
 # We must close connections
 	def close(self):
-		self.connection.close(True)  # force it since we want to exit
+		
+		try:
+			release_number = int(self.release_number)		
+		except:
+			return 
+		
+		if release_number >= 13 : # check the version number
+			self.connection.close()  # force it since we want to exit
 
 
-#insert analysis data based on each application
+#insert analysis data based on each application.
+#SQL insert syntax:INSERT INTO table_name (column1, column2,...) VALUES (value1, value2,....)
+	def insert_analysis_data(self, app_name, apps_api_counter_dic): 
+		#for items in apps_api_counter_dic:
+		apps_api_counter_dic.update({'name':app_name})
+		self.cursor.execute("insert into socket_statistic(:name, :connect, :recvfrom, :socket, :in_addr, :sockaddr, :bind, :sockaddr_in, :sockaddr_in6, :accept, :write, :send, :sendto, :sockadd_storage, :close, :recv, :in6_addr, :listen)", apps_api_counter_dic)
+		
 
-	def insert_analysis_data(self): 
-		pass
 
-testing = dbHandle()
 
-testing.close()
 
 ###
 ### simple statement

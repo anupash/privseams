@@ -44,7 +44,8 @@ def simple_api_function_counter(api_name, token_list):
 	temp = token_list
 	for strings in temp:
 		if (strings == api_name):	
-			print strings
+			#print strings, "matched"
+			pass
 		if (i == 0):
 			if (strings == api_name) and (temp[i+1] == '('):
 				counter = counter + 1

@@ -28,6 +28,9 @@ class SearchEngine:
 	def print_counts(self):
 		print self.function_call_counters
 
+	def get_counts(self):
+		return self.function_call_counters
+	
 	def getCodeLine(self, counts_list, dic_conf, line):
 		pass
 		

@@ -45,7 +45,7 @@ def walk_tree_print_c_files(d, functions, structures, dic_whole_api):
 			walk_tree_print_c_files(path, functions, structures, dic_whole_api)
 		elif (name.endswith('.c') or name.endswith('.cpp') or  name.endswith('.c++') or \
 		  	name.endswith('.cc') or name.endswith('.cpp') or name.endswith('.h')):
-			print path
+			#print path
 			file_token = readFile(path)
 			api_counter(functions, structures, file_token, dic_whole_api)
 

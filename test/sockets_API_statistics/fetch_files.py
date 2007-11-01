@@ -34,11 +34,28 @@ class fetchNetApps:
 			download_command = "wget --directory-prefix=applications -c "
 			for down_link in self.net_apps_list:
 				print "Downloading", down_link[0], "from ", down_link[1]
-			
-				download_command = download_command  +  \
-									down_link[1]
-				os.system(download_command)
+				os.system(download_command + down_link[1])
 	
 	
 	def decompress_apps(self):
-		pass
+		dirs = " --directory ./applications " #define where to decompress
+		tar_command_1 = "tar jxf " 
+		tar_command_2 = "tar xfz "
+		if os.path.exists(self.apps_path):
+			for name in os.listdir(self.apps_path):
+				#print name.endswith('bz2')
+				#print name.endswith('gz')
+				
+				if name.endswith('bz2'):
+					full_name = os.path.join(self.apps_path, name)
+					print tar_command_1 + full_name + dirs
+					os.system(tar_command_1 + full_name + dirs)
+					os.remove(full_name)
+				if name.endswith('gz') or name.endswith('tgz'):
+					full_name = os.path.join(self.apps_path, name)
+					print tar_command_2 + full_name + dirs
+					os.system(tar_command_2 + full_name + dirs)
+					os.remove(full_name)
+
+
+		
