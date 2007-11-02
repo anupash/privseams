@@ -19,7 +19,7 @@ functions = reader.getItems('functions')
 structures = reader.getItems('structures')
 applications = reader.getItems('applications')
 
-print applications
+#print applications
 
 #all = reader.getItems('functions') + reader.getItems('structures')
 all = functions + structures
@@ -27,16 +27,14 @@ all = functions + structures
 
 
 
-
-"""
 fetchnetapps = fetchNetApps(applications)
 fetchnetapps.download_apps()
 fetchnetapps.decompress_apps()
-"""
+
 
 dbhandle = dbHandle(functions, structures, applications)
 
-
+"""
 reader.saveItemsDic('functions')
 reader.saveItemsDic('structures')
 dic = reader.getDicContainer()
@@ -44,6 +42,7 @@ dic = reader.getDicContainer()
 #print dic['bind']
 
 print all
+"""
 
 search_engine = SearchEngine(all)
 #search_engine.update_function_call_counters('socket', 4)
@@ -64,6 +63,7 @@ search_engine = SearchEngine(all)
 #print simple_api_function_counter('sendto', temp)
 
 #api_counter(functions, structures, string_temp, search_engine)
+
 
 
 #count all socket APIs under applications directory
@@ -87,7 +87,8 @@ for name in os.listdir(apps_dir):
 
 	del search_engine
 	search_engine = SearchEngine(all)
-	
+
+
 #walk_tree_print_c_files(apps_dir, functions, structures,search_engine)
 
 #search_engine.print_counts()

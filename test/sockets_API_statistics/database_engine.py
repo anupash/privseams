@@ -100,8 +100,32 @@ class dbHandle:
 	def insert_analysis_data(self, app_name, apps_api_counter_dic): 
 		#for items in apps_api_counter_dic:
 		apps_api_counter_dic.update({'name':app_name})
-		self.cursor.execute("insert into socket_statistic(:name, :connect, :recvfrom, :socket, :in_addr, :sockaddr, :bind, :sockaddr_in, :sockaddr_in6, :accept, :write, :send, :sendto, :sockadd_storage, :close, :recv, :in6_addr, :listen)", apps_api_counter_dic)
+		print apps_api_counter_dic
+		#self.cursor.execute("insert into socket_statistic(:name, :connect, :recvfrom, :socket, :in_addr, :sockaddr, :bind, :sockaddr_in, :sockaddr_in6, :accept, :write, :send, :sendto, :sockadd_storage, :close, :recv, :in6_addr, :listen)", apps_api_counter_dic)
+		insert_sql = "insert into socket_statistic("
+
+		column_name = ""
+		values = ""
+		for item in apps_api_counter_dic:
+			column_name = column_name + item + ", "
+			if isinstance(apps_api_counter_dic[item], (int)):#is int or not
+				temp_string = str(apps_api_counter_dic[item])
+			else:
+				temp_string = "'" + apps_api_counter_dic[item] + "'"
+			values = values + temp_string  + ", "
 		
+		len_table = len(column_name)
+		len_values = len(values)
+
+		column_name = column_name[0:len_table - 2]
+		values = values[0:len_values - 2]
+		
+		insert_sql = insert_sql + column_name + ") VALUES (" + values + ")"
+		print insert_sql
+
+
+		self.cursor.execute(insert_sql)
+
 
 
 
