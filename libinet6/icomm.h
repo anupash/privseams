@@ -88,8 +88,8 @@
 #define SO_HIP_ADD_RELAY_UDP_HIP                152
 /* Restart daemon. */
 #define SO_HIP_RESTART		      		153
-#define SO_HIP_SET_INTERFAMILY_ON               154
-#define SO_HIP_SET_INTERFAMILY_OFF              155
+#define SO_HIP_SET_LOCATOR_ON                   154
+#define SO_HIP_SET_LOCATOR_OFF                  155
 
 /** @} */
 

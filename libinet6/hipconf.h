@@ -104,7 +104,7 @@
 #define ACTION_DEBUG 16
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
-#define ACTION_INTERFAMILY 19
+#define ACTION_LOCATOR 19
 #define ACTION_MAX 20 /* exclusive */
 
 /* 0 is reserved */
@@ -128,7 +128,7 @@
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
-#define TYPE_INTERFAMILY 21
+#define TYPE_LOCATOR 21
 #define TYPE_RELAY_UDP_HIP             22
 #define TYPE_MAX    	23 /* exclusive */
 
@@ -165,7 +165,7 @@ int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], i
 int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_interfamily(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);

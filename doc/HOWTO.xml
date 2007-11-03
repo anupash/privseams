@@ -114,6 +114,13 @@
               or you can try enabling the NAT mode at the end-host.
     </para></listitem>
     </itemizedlist>
+    <para>
+       As an example, this was what was required to type in Ubuntu Gutsy
+       Gibbon for compiling the kernel and userspace software:
+    </para>
+    <para>
+       aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6
+    </para>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
@@ -798,6 +805,56 @@
       <ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
     </para>
   </section>
+  </chapter>
+  <chapter>
+    <title> Using HIP Enabled Proxy Server</title>
+    <para>
+      In the deployment phase, it is interesting to set-up a proxy server that 
+      translates the TCP/IP traffic into HIP. For instance, this is convenient 
+      in http proxy servers. Thus all http traffic between our host and the proxy 
+      server will benefit from the usage of HIP. 
+    </para>
+    <para>
+      First of all, you should have installed and configured properly your proxy
+      server to employ HIP. This includes alowing HITs to connect the server 
+      (settings in the httpd.conf file) and restarting httpd using HIP.
+    </para>
+    <para>
+      You have several options to enable the HIP proxy within Firefox. In the menu 
+      Edit/Preferences/Advanced/Connection Settings, you can choose:
+    </para>
+    <para>
+      Direct connection to the internet: To disable the usage of any proxy.
+    </para>
+    <para>
+      Auto-detect proxy settings for this network: To enable the auto-detection
+      feature, you should configure the wpad.dat file that it is served by
+      your proxy in the URL http://wpad.mynetwork.com/wpad.dat (or a similar one).
+      The wpad.dat file should return the information of your HIP enabled 
+      proxy server at the end of the function FindProxyForURL(url, host). 
+    </para>
+    <para> 
+      Manual proxy configuration: To manually introduce the information about 
+      your HIP enabled proxy server. You should also identify the port number.  
+    </para>
+    <para> 
+      Automatic proxy configuration URL: To use a wpad.dat file that is not 
+      located in the default URL http://wpad.mynetwork.com/wpad.dat. With this 
+      feature, you can store a wpad.dat file in some other location of your 
+      server and Firefox will fetch it from this URL.    
+    </para>
+    <para>
+      Once you have the proxy server and Firefox ready, you can restart Firefox 
+      under HIP with (please make sure that no other instances of Firefox are being 
+      run at that time):
+    </para>
+    <para>
+      hipconf run normal|opp firefox 
+    </para>
+    <para>
+      Now your Firefox should be connected by HIP to your proxy server, 
+      enabling mobility and enhancing security from your proxy to your host. 
+    </para>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
