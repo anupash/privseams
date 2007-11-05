@@ -1,7 +1,7 @@
 from conf_reader import ConfReader
 from search_engine import SearchEngine
 from file_input import *
-from directory_working import *
+from directory_walking import *
 from fetch_files import fetchNetApps
 from database_engine import dbHandle
 
@@ -26,11 +26,9 @@ all = functions + structures
 
 
 
-
 fetchnetapps = fetchNetApps(applications)
 fetchnetapps.download_apps()
 fetchnetapps.decompress_apps()
-
 
 dbhandle = dbHandle(functions, structures, applications)
 
@@ -56,8 +54,6 @@ search_engine = SearchEngine(all)
 #search_engine.print_counts()
 
 
-#string_temp = readFile('/home/twan/hipl--beet--2.6/test/sockets_API_statistics/applications/MPlayer-1.0rc2/libmpcodecs/vf_2xsai.c')
-#print "-------------------------------------"
 
 #temp = string_lexical(string_temp) 
 #print simple_api_function_counter('sendto', temp)

@@ -74,7 +74,9 @@ def simple_api_structure_counter(api_name, token_list):
 	temp = token_list
 	
 	for strings in temp:
-		if ((strings == api_name) and (temp[i - 1] == 'struct') and (temp[i + 1] != '*')):
+		#BUGGY here? how to make strong the "if" condition for getting
+		# the correct "struct" declaration.
+		if ((strings == api_name) and (temp[i - 1] == 'struct') and (temp[i + 1] != '*') and (temp[i - 2] != ',') and temp[i - 2] != '('):
 			counter = counter + 1
 		i = i + 1
 	return counter
