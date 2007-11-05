@@ -73,6 +73,7 @@ rm -rf %{buildroot}
 %defattr (-, root, root)
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
+%{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
 %{prefix}/bin/conntest-client
