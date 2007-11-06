@@ -814,6 +814,8 @@
   </section>
   </chapter>
   <chapter>
+    <title>Tips for Using HIP with Some Applications</title>
+    <section>
     <title> Using HIP Enabled Proxy Server</title>
     <para>
       In the deployment phase, it is interesting to set-up a proxy server that 
@@ -862,6 +864,17 @@
       Now your Firefox should be connected by HIP to your proxy server, 
       enabling mobility and enhancing security from your proxy to your host. 
     </para>
+  </section>
+  <section>
+  <title>Sendmail and Spamassassin</title>
+  <para>
+  Sendmail works fine with HIP after you enable IPv6 in sendmail. We
+  did some experimentation with spamassassin to integrate it with HIP
+  puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
+  README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
+  examples of configuration changes and instructions.
+  </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
