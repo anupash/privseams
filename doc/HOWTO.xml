@@ -121,6 +121,13 @@
     <para>
        aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6
     </para>
+    <para>
+    Note: Some people reported this error:
+  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
+  file or directory.  This seems to be a bug in the latest libc6-dev
+  package itself. It is just missing a header file. As a workaround,
+  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
@@ -807,6 +814,8 @@
   </section>
   </chapter>
   <chapter>
+    <title>Tips for Using HIP with Some Applications</title>
+    <section>
     <title> Using HIP Enabled Proxy Server</title>
     <para>
       In the deployment phase, it is interesting to set-up a proxy server that 
@@ -855,6 +864,17 @@
       Now your Firefox should be connected by HIP to your proxy server, 
       enabling mobility and enhancing security from your proxy to your host. 
     </para>
+  </section>
+  <section>
+  <title>Sendmail and Spamassassin</title>
+  <para>
+  Sendmail works fine with HIP after you enable IPv6 in sendmail. We
+  did some experimentation with spamassassin to integrate it with HIP
+  puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
+  README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
+  examples of configuration changes and instructions.
+  </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>

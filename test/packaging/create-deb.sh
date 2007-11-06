@@ -95,6 +95,8 @@ copy_files ()
     
     cp hipd/hipd $PKGDIR/usr/sbin/
 
+    cp firewall/firewall $PKGDIR/usr/sbin/
+
     cp tools/hipconf $PKGDIR/usr/sbin/
 #    cp agent/hipagent $PKGDIR/usr/sbin/
 

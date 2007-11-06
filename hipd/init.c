@@ -703,7 +703,8 @@ void hip_probe_kernel_modules()
 		"xfrm6_tunnel", "xfrm4_tunnel",
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
-		"ipv6", "aes", "crypto_null", "des",
+		"ipv6", "crypto_null", "cbc",
+		"blkcipher", "des", "aes",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
 		"capability"
 	};
