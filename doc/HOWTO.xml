@@ -121,6 +121,13 @@
     <para>
        aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6
     </para>
+    <para>
+    Note: Some people reported this error:
+  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
+  file or directory.  This seems to be a bug in the latest libc6-dev
+  package itself. It is just missing a header file. As a workaround,
+  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
