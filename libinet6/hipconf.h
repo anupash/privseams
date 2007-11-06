@@ -97,15 +97,21 @@
 #define ACTION_GET 9
 #define ACTION_RUN 10
 #define ACTION_LOAD 11
-#define ACTION_DHT 12
-#define ACTION_HA  13
-#define ACTION_RST 14
-#define ACTION_BOS 15
-#define ACTION_DEBUG 16
-#define ACTION_HANDOFF 17
-#define ACTION_RESTART 18
+#define ACTION_DHT  12
+#define ACTION_HA   13
+#define ACTION_RST  14
+#define ACTION_BOS  15
+#define ACTION_DEBUG       16
+#define ACTION_HANDOFF     17
+#define ACTION_RESTART     18
 #define ACTION_INTERFAMILY 19
-#define ACTION_MAX 20 /* exclusive */
+#ifdef CONFIG_HIP_OPPTCP
+    #define ACTION_OPPTCP  20
+    #define ACTION_MAX	   21 /* exclusive */
+#else
+    #define ACTION_MAX	   20 /* exclusive */
+#endif
+
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -128,9 +134,16 @@
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
-#define TYPE_INTERFAMILY 21
-#define TYPE_RELAY_UDP_HIP             22
-#define TYPE_MAX    	23 /* exclusive */
+#define TYPE_INTERFAMILY 	21
+#define TYPE_RELAY_UDP_HIP	22
+#ifdef CONFIG_HIP_OPPTCP
+    #define TYPE_OPPTCP		23
+    #define TYPE_MAX		24 /* exclusive */
+#else
+    #define TYPE_MAX            23 /* exclusive */
+#endif
+
+
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -183,5 +196,7 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
+#ifdef CONFIG_HIP_OPPTCP
+	int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+#endif /*OPPTCP*/
 #endif /* HIPCONF */

@@ -451,8 +451,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_HANDOFF_ACTIVE:
 		//hip_msg_init(msg);
 		is_active_handover=1;
-		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);
-		
+		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);	
 		break;
 
 	case SO_HIP_HANDOFF_LAZY:
@@ -466,6 +465,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+
+#ifdef CONFIG_HIP_OPPTCP
+        case SO_HIP_SET_OPPTCP_ON:
+                HIP_DEBUG("Setting opptcp on!!\n");
+                hip_set_opportunistic_tcp_status(1);
+		break;
+        case SO_HIP_SET_OPPTCP_OFF:
+                HIP_DEBUG("Setting opptcp off!!\n");
+                hip_set_opportunistic_tcp_status(0);
+		break;
+#endif
 	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

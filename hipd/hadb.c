@@ -336,6 +336,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->is_loopback = 1;
 	}
 
+#ifdef CONFIG_HIP_OPPTCP
+     	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+#endif
+
+
 	hip_hadb_insert_state(entry);
 	/* Released at the end */
 	hip_hold_ha(entry);

@@ -353,6 +353,9 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HI3
 	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
 #endif
+#ifdef CONFIG_HIP_OPPTCP
+	int hip_is_opptcp_on;
+#endif
 };
 
 /** A data structure defining host association information that is sent
