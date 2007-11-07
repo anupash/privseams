@@ -18,23 +18,36 @@ class fetchNetApps:
 		
 		#Check whether it already exists network applications directory,
 		#delete if existed, if not it will create new one
-		if os.path.exists(self.apps_path):
+		if not os.path.exists(self.apps_path):
+			
+			#do we really delete the existing apps directory from here?
+			"""
 			print "delete the existing apps directory", self.apps_path
 			#delete dirs recursively
 			shutil.rmtree(self.apps_path)
-		print "create the applications directory"
-		os.mkdir('applications')
+			"""
+
+		
+		
+			print "create the applications directory"
+			os.mkdir('applications')
 
 
 	def download_apps(self):
 		#check what OS is, linux , unix, windows or Mac
 		uname = os.uname()
+		download_command = "wget --directory-prefix=applications -c "
 		#if it is Linux system, wget shell command is needed 
 		if "Linux" in uname:
-			download_command = "wget --directory-prefix=applications -c "
-			for down_link in self.net_apps_list:
-				print "Downloading", down_link[0], "from ", down_link[1]
-				os.system(download_command + down_link[1])
+			if os.path.exists(self.apps_path):
+				for net_app_dir in os.listdir(self.apps_path):
+					for down_link in self.net_apps_list:
+						#if applicaton is alreay there, do not need download again.
+						if down_link[0] in net_app_dir:
+							print "Application ", down_link[0], " exsits, do not need download."
+						else:
+							print "Downloading", down_link[0], "from ", down_link[1]
+							os.system(download_command + down_link[1])
 	
 	
 	def decompress_apps(self):
