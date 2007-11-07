@@ -718,6 +718,12 @@ NAT handover in hard IPv4-Only Handover, no locators in base exchange
 8. Agent
 --------
 
+* prompting
+* reject
+  * normal mode
+  * opp mode
+* test configuration gui
+
 9. Blind support
 ----------------
 
