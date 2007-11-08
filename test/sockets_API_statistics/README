@@ -7,8 +7,7 @@
 sockets API statistics is for counting how many socket API used in legacy applications.  
 The application uses sockets_analysis.conf file to keep the socket API (function calls
 and strutures) which needs to be counted and where to download applications. The applications are
-downloaded understand applications directory, the sockets analysis data (times of socket API call) is kept
-into database which is under the db directory. 
+downloaded understand applications directory, the sockets analysis data (times of socket API call) is kept into database which is under the db directory. 
 
 
 2. Running Requirment
@@ -56,7 +55,35 @@ Notice: when to add application to download in the applications section from the
 file, the application name should be unique, and application name should be part of download file name.
    
 
-5. what should be improved in next release
+5.How to open database file and dump analysis database 
+
+It is easy to open database files with GUI applcaition called SQLITE Studio (check from 
+http://sqlitestudio.one.pl/)
+
+Converting An Entire Database To An ASCII Text File
+
+Use the ".dump" command to convert the entire contents of a database into a single ASCII text file. 
+This file can be converted back into a database by piping it back into sqlite3.
+
+A good way to make an archival copy of a database is this in our case:
+
+    $ echo '.dump' | sqlite3 socket_analysis_data_sos.db | gzip -c >socket_analysis_data_sos.db.dump.gz 
+
+This generates a file named ex1.dump.gz that contains everything you need to reconstruct the database 
+at a later time, or on another machine. To reconstruct the database, just type:
+
+    $ zcat socket_analysis_data_sos.db.dump.gz | sqlite3 socket_analysis_data_sos.db 
+
+The text format is pure SQL so you can also use the .dump command to export an SQLite database into 
+other popular SQL database engines. Like this:
+
+    $ createdb ex2
+    $ sqlite3 socket_analysis_data_sos.db .dump | psql ex2 
+
+
+
+
+6. what should be improved in next release
 1) Do not need delete all applications to download again when running application everytime
 2) how to update table efficiently, not to delete database and recreate it.
 

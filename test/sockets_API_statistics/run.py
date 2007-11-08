@@ -19,7 +19,11 @@ fetchnetapps = fetchNetApps(applications)
 fetchnetapps.download_apps()
 fetchnetapps.decompress_apps()
 
+
+
 dbhandle = dbHandle(functions, structures, applications)
+
+dbhandle.apps_analysis_is_done()
 
 
 search_engine = SearchEngine(all_socket_api)

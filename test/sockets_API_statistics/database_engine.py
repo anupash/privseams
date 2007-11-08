@@ -56,25 +56,32 @@ class dbHandle:
 		
 		creat_table = "CREATE TABLE socket_statistic (name varchar PRIMARY KEY, " + function_temp  + structure_temp + ")"
 
-		print creat_table		
+		#print creat_table		
 		
 		
 
 		if os.path.exists(self.db_path): 
-			print "delete the exsting", self.db_path
-			shutil.rmtree(self.db_path) #Removes directories recursively
+			print "database path existing......" 
+			#print "delete the existing", self.db_path
+			#shutil.rmtree(self.db_path) #Removes directories recursively
 			#pass
 		
-		
-		print "create the db directory"
-		os.mkdir('db')
+		else:
+			print "create the db directory"
+			os.mkdir('db')
 		database_file =  os.path.join(self.db_path, 'socket_analysis_data_sos.db')
 		self.connection=apsw.Connection(database_file)
 		self.cursor=self.connection.cursor()
-		self.cursor.execute(creat_table)		
 		
+		try:
+			self.cursor.execute(creat_table)		
+		except:
+			print "socket_statistic table is already there!!!"
 		#Create table
 
+
+
+		
 
 
 ###
@@ -93,6 +100,15 @@ class dbHandle:
 		
 		if release_number >= 13 : # check the version number
 			self.connection.close()  # force it since we want to exit
+
+#get all application whose socket API analysis is done or not according to database
+
+	def apps_analysis_is_done(self):
+		apps_analysis_is_done = [] 
+		for app_name in self.cursor.execute("select name from socket_statistic"):
+   			print app_name
+			apps_analysis_is_done.append(app_name)
+		print apps_analysis_is_done
 
 
 #insert analysis data based on each application.
@@ -125,6 +141,7 @@ class dbHandle:
 
 
 		self.cursor.execute(insert_sql)
+
 
 
 

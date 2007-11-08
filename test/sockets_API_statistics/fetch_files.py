@@ -31,6 +31,13 @@ class fetchNetApps:
 		
 			print "create the applications directory"
 			os.mkdir('applications')
+	
+	#private method for checking whether application is downloaded or not!
+	def __isDownloaded(self,app_name, app_list):
+		for name in app_list:
+			if app_name.lower() in name.lower():
+				return True
+		return False
 
 
 	def download_apps(self):
@@ -40,14 +47,18 @@ class fetchNetApps:
 		#if it is Linux system, wget shell command is needed 
 		if "Linux" in uname:
 			if os.path.exists(self.apps_path):
-				for net_app_dir in os.listdir(self.apps_path):
-					for down_link in self.net_apps_list:
-						#if applicaton is alreay there, do not need download again.
-						if down_link[0] in net_app_dir:
-							print "Application ", down_link[0], " exsits, do not need download."
-						else:
-							print "Downloading", down_link[0], "from ", down_link[1]
-							os.system(download_command + down_link[1])
+				net_app_dir = os.listdir(self.apps_path)
+				print net_app_dir
+				for down_link in self.net_apps_list:
+					#if applicaton is alreay there, do not need download again.
+					#if down_link[0] in net_app_dir:
+					if self.__isDownloaded(down_link[0], net_app_dir):
+						print "Application ", down_link[0], " exsits, do not need download."					
+							
+					else:
+						print "Downloading", down_link[0], "from ", down_link[1]
+						os.system(download_command + down_link[1])
+							
 	
 	
 	def decompress_apps(self):
@@ -71,4 +82,3 @@ class fetchNetApps:
 					os.remove(full_name)
 
 
-		
