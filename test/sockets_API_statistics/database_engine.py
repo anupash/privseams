@@ -105,10 +105,20 @@ class dbHandle:
 
 	def apps_analysis_is_done(self):
 		apps_analysis_is_done = [] 
-		for app_name in self.cursor.execute("select name from socket_statistic"):
-   			print app_name
-			apps_analysis_is_done.append(app_name)
-		print apps_analysis_is_done
+		for app_names in self.cursor.execute("select name from socket_statistic"):
+   			print app_names
+			for app_name in app_names:
+				apps_analysis_is_done.append(app_name)
+		#print apps_analysis_is_done
+		return apps_analysis_is_done
+
+
+#check application is already ananlysed or not? reutrn True or false
+	def is_analysis(self, app, apps_in_db):
+		for apps_list in apps_in_db:
+			if app in apps_list:
+				return True
+		return False 
 
 
 #insert analysis data based on each application.
