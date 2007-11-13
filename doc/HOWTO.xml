@@ -1741,5 +1741,28 @@ combo-newgroup=&lt;create new...&gt;
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
   </chapter>
+  <chapter>
+    <title>DNS data manipulation</title>
+    <para>
+      Tools contains the script parse-key-3.py which converts public
+      key file contents to different DNS zone file formats. To convert
+      to unpatched BIND9 format, use command:
+      <programlisting>
+# ./parse-key-3.py &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+      </programlisting>
+      This outputs a line which can be inserted to a zone
+      file. Similarly, with sed command:
+      <programlisting>
+.... | sed -n -e '/^HIPBIND */s///p'
+      </programlisting>
+      an HIP RR entry suitable for OpenDHT version of BIND9 is output
+      and with
+      <programlisting>
+.... | sed -n -e '/^DJBDNS */s///p'
+      </programlisting>
+      a line for Dan Bernstein's tinydns is output. For further
+      information, please refer to parse-key-3.py and myasn.py.
+    </para>
+  </chapter>
 </book>    
 
