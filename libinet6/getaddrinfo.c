@@ -515,12 +515,12 @@ gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
   ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
   ret_hit = opendht_read_response(s, dht_response_hit);
   if (ret_hit == 0)
-    HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
+    HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit); 
   close(s);
   if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
   {
     s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway, 1);
+    error = connect_dht_gateway(s, serving_gateway, 1);
     if (error < 0)
     {
       HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");

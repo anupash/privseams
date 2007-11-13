@@ -50,14 +50,13 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
-			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
-					     entry, 0);
+					     entry, 0);  
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
@@ -392,8 +391,9 @@ void register_to_dht ()
 		time_diff = difftime(opendht_n->timestamp, time(0));
 		if (time_diff < 10)
 		{
-			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-			{
+                    //if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0)
+                        if (hip_get_default_hit(&tmp_hit)) 
+                        {
 				HIP_ERROR("No HIT found\n");
 				return;
 			}
@@ -634,6 +634,12 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
+//#ifdef CONFIG_HIP_UDPRELAY
+	/* Clear expired records from the relay hashtable. */
+	hip_relht_maintenance();
+//#endif
+
+
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),

@@ -1,4 +1,4 @@
-#ifndef _HIP_NLINK_H
+ #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
 #include <stdio.h>
@@ -11,7 +11,11 @@
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
 
+/* New one to prevent netlink overrun */
+#if 0
 #define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
 
 #ifndef  SOL_NETLINK
 #  define  SOL_NETLINK 270

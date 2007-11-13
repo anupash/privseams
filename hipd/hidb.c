@@ -82,14 +82,14 @@ void hip_uninit_hostid_db(hip_db_struct_t *db)
 }
 
 /**
- * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
- * @param db Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
- * @param lhi the local host id to be searched 
- * @param anon -1 if you don't care, 1 if anon, 0 if public
+ * Finds the host id corresponding to the given @c hit.
  *
- * If lhi is null, finds the first used host id. 
+ * If @c hit is null, finds the first used host id. 
  * If algo is HIP_ANY_ALGO, ignore algore comparison.
  *
+ * @param db Database to be searched. Usually either HIP_DB_PEER_HID or HIP_DB_LOCAL_HID
+ * @param hit the local host id to be searched 
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  * @return %NULL, if failed or non-NULL if succeeded.
  */
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
@@ -111,7 +111,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
-	HIP_DEBUG("***************RETURNING NULL***************\n");
+	HIP_DEBUG("Failed to find host id entry, RETURNING NULL\n");
 	return NULL;
 
 }

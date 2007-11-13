@@ -20,12 +20,45 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
+/* mktemp results to a compiler warning - or actually in a host of warnings
+ * since this function is called from tens of places.
+ * 
+ * warning: the use of `mktemp' is dangerous, better use `mkstemp' or `mkdtemp'
+ *
+ * Please fix it if you know it is safe to do so.
+ * -Lauri 26.09.2007 14:43
+ */
 static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
+	return (mkstemp(fname));
+	/*
 	if (mktemp(fname) == NULL)
 		return -1;
 	else
 		return 0;
+	*/
+} 
+
+/**
+ * hip_tmpname_gui: 
+ * Similar function to hip_tmpname, but it returns 0. This is needed in the
+ * connhipd_init() function of the GUI.
+ *
+ * @param fname: pointer to the buffer to store the filename.
+ *
+ * @return 0 if the unique filename is correctly assigned; -1 on error.
+ *
+ * -Alberto
+ */
+static int hip_tmpname_gui(char *fname) {
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
+	//return (mkstemp(fname));
+        
+	if (mktemp(fname) == NULL)
+		return -1;
+	else
+		return 0;
+        
 } 
 
 /*

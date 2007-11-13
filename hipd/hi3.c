@@ -10,14 +10,6 @@ int hip_i3_init(hip_hit_t *peer_hit)
 	return 0;
 }
 
-//static int hi3_hi_initializer(void **arg) {
-//	insert_trigger(&rsa_lhi.hit, (struct hip_host_id_entry *)
-		       //	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &rsa_lhi.hit));
-	//	insert_trigger(&dsa_lhi.hit, (struct hip_host_id_entry *)
-	//	       hip_get_hostid_entry_by_lhi(&hip_local_hostid_db, &dsa_lhi.hit));
-//	return 0;
-//}
-
 int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
 	if (len < (h4->sin_family == AF_INET ? sizeof(struct hi3_ipv4_addr) : 
@@ -37,7 +29,7 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 		in6->sin6_addr = ((struct hi3_ipv6_addr *)buf)->sin6_addr;
 		in6->sin6_family = AF_INET6;
 		*res = AF_INET6;
-		return sizeof(struct hi3_ipv4_addr);
+		return sizeof(struct hi3_ipv6_addr);
 	} 
 
 	HIP_ERROR("Illegal family. Dropping\n");
@@ -50,30 +42,15 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
 {
 	struct hip_common *hip_common;
-	struct hip_work_order *hwo;
-	struct sockaddr_in6 src, dst;
-	struct hi3_ipv4_addr *h4;
-	struct hi3_ipv6_addr *h6;
-	int family, l, type;
+	//	struct hip_work_order *hwo;
+	//	struct sockaddr_in6 src, dst;
+	//	struct hi3_ipv4_addr *h4;
+	//	struct hi3_ipv6_addr *h6;
+	//	int family, l, type;
 	cl_buf* clb = (cl_buf *)data;
 	char *buf = clb->data;
 	int len = clb->data_len;
 	hip_portpair_t msg_info;
-
-	/* First check the hi3 address header */
-
-	/* Source and destination address */
-	l = hip_addr_parse(buf, &src, len, &family);
-	if (family == 0) goto out_err;
-	len -= l;
-	buf += l;
-
-	l = hip_addr_parse(buf, &dst, len, &family);
-	if (family == 0) goto out_err;
-	len -= l;
-	buf += l;
-
-	HIP_ASSERT(src.sin6_family == dst.sin6_family);
 
 	/* See if there is at least the HIP header in the packet */
         if (len < sizeof(struct hip_common)) {
@@ -86,13 +63,13 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 	_HIP_HEXDUMP("HIP PACKET", hip_common,
 		     hip_get_msg_total_len(hip_common));
 
-        if (hip_verify_network_header(hip_common, 
+	/*        if (hip_verify_network_header(hip_common, 
 				      (struct sockaddr *)&src, 
 				      (struct sockaddr *)&dst,
 				      len)) {
 		HIP_ERROR("Verifying of the network header failed\n");
 		goto out_err;
-	}
+		}*/
 
 	if (hip_check_network_msg(hip_common)) {
 		HIP_ERROR("HIP packet is invalid\n");
@@ -100,15 +77,20 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 	}
 	
 	memset(&msg_info, 0, sizeof(msg_info));
+	msg_info.hi3_in_use = 1;
 
-	if (hip_receive_control_packet(hip_common, hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
+	struct in6_addr lpback1 = { IN6ADDR_LOOPBACK_INIT };
+	struct in6_addr lpback2 = { IN6ADDR_LOOPBACK_INIT };
+
+	if (hip_receive_control_packet(hip_common, &lpback1 , &lpback2, //hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
 				       &msg_info, 0)) {
 		HIP_ERROR("HIP packet processsing failed\n");
 		goto out_err;
-	}
+		}
 
  out_err:
-	cl_free_buf(clb);
+	//cl_free_buf(clb);
+	;
 }
 
 /* 
@@ -150,7 +132,7 @@ int hip_hi3_insert_trigger(hip_hit_t *hit
 
 //#if 0
 // FIXME: should these be here or not...
-	cl_set_private_id(&id);
+//	cl_set_private_id(&id);
 	cl_set_private_id(&ida);
 //#endif 
 

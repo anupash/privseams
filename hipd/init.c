@@ -1,16 +1,10 @@
-
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/** @file
+ * This file defines initialization functions for the HIP daemon.
+ * 
+ * @date    1.1.2007
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
+ 
 #include "init.h"
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -20,9 +14,9 @@
 #include "hi3.h"
 
 extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
-
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -189,8 +183,12 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_init_rvadb();
-#endif	
+	HIP_INFO("Initializing HIP UDP relay database.\n");
+	if(hip_relht_init() == NULL)
+	{
+	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
+	}
+#endif
 #ifdef CONFIG_HIP_OPENDHT
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 
@@ -236,12 +234,26 @@ int hipd_init(int flush_ipsec, int killold)
 
 #if 0
 	{
-		const int ipsec_buf_size = 200000;
-		socklen_t ipsec_buf_sizeof = sizeof(int);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                int ret_sockopt = 0, value = 0;
+                socklen_t value_len = sizeof(value);
+		int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
+                ret_sockopt = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                         &value, &value_len);
+                if (ret_sockopt != 0)
+                    HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ipsec_buf_size = value * 2;
+                HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
+                          "Setting it to %d.\n", value, ipsec_buf_size);
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ret_sockopt = 0;
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
 
@@ -266,6 +278,13 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+	}
+#endif
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
@@ -311,7 +330,6 @@ int hipd_init(int flush_ipsec, int killold)
 	{
 		hip_get_default_hit(&peer_hit);
 		hip_i3_init(&peer_hit);
-		//cl_init(i3_config_file);
 	}
 #endif
 
@@ -573,6 +591,8 @@ void hip_exit(int signal)
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
+        if (hipd_msg_v4)
+            HIP_FREE(hipd_msg_v4);
 	
 	hip_delete_all_sp();
 
@@ -580,7 +600,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow is in use. */
+	/* This is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -592,7 +612,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_uninit_rvadb();
+	HIP_INFO("Uninitializing HIP UDP relay database.\n");
+	hip_relht_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
@@ -682,7 +703,8 @@ void hip_probe_kernel_modules()
 		"xfrm6_tunnel", "xfrm4_tunnel",
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
-		"ipv6", "aes", "crypto_null", "des",
+		"ipv6", "crypto_null", "cbc",
+		"blkcipher", "des", "aes",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
 		"capability"
 	};

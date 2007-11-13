@@ -52,7 +52,7 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
 # HIP additions to the flags.
-INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses

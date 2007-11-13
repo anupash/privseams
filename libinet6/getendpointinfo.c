@@ -2332,19 +2332,22 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
                 return(err);
             }
         HIP_DEBUG("Value received from DHT: %s\n",dht_response);
-	if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1){
+	if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1)
+            {
 		HIP_DEBUG("Got the peer address successfully\n");
 		return(0);
-                if(inet_aton(dht_response, &tmp_v4))
-                    {
-                        IPV4_TO_IPV6_MAP(&tmp_v4, res);
-                        HIP_DEBUG("Got the peer address succesfully\n");
-                        return(0);
-                    }
-	} else {
+            }
+        if (inet_aton(dht_response, &tmp_v4)) 
+            {
+                IPV4_TO_IPV6_MAP(&tmp_v4, res);
+                HIP_DEBUG("Got the peer address successfully\n");
+                return(0);
+            }
+        else 
+            {
 		HIP_DEBUG("failed to get the peer address successfully\n");
 		return -1;
-	}
+            }
 
 }
 #endif /* CONFIG_HIP_OPENDHT */
@@ -2361,7 +2364,8 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   found from local files.*/
 	
 	_HIP_DEBUG("I am here just before getendpointinfo() \n");
-	
+
+
 	hip_in6_ntop(dst_hit, peer_hit);
 	
 	/* book keeping stuff */

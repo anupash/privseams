@@ -10,6 +10,8 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
+EXTRA_DIST = myasn.py parse-key-3.py
+
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
 if HIP_OPENDHT
