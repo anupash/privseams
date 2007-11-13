@@ -336,7 +336,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 
   //if dynamically changing rules possible 
   //int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
-  //+ filter_state k‰sittelem‰‰n myˆs esp paketit
+  //+ filter_state k√§sittelem√§√§n my√∂s esp paketit
   _HIP_DEBUG("filter_hip: \n");
   while (list != NULL)
     {
@@ -544,16 +544,17 @@ int main(int argc, char **argv)
         if (!src_addr || !dst_addr)
                 goto out_err;
   
-  h = ipq_create_handle(0, protocol_family);
-  if (!h)
-    die(h);
-  
-  status = ipq_set_mode(h, IPQ_COPY_PACKET, BUFSIZE);
-  if (status < 0)
-    die(h);
+  	h = ipq_create_handle(0, protocol_family);
+  	if (!h)
+    		die(h);
 
-        firewall_init();
-        
+  	firewall_probe_kernel_modules();
+  	status = ipq_set_mode(h, IPQ_COPY_PACKET, BUFSIZE);
+  	if (status < 0)
+    		die(h);
+
+  	firewall_init();
+
 #ifdef G_THREADS_IMPL_POSIX
       HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
 #endif //G_THREADS_IMPL_POSIX
@@ -736,4 +737,36 @@ out_err:
   ipq_destroy_handle(h);
   firewall_exit();
   return 0;
+}
+
+void firewall_probe_kernel_modules()
+{
+	int count, err, status;
+	char cmd[40];
+	int mod_total;
+	char *mod_name[] =
+	{
+		"ip_queue", "ip6_queue",
+		"iptable_filter", "ip6table_filter"
+	};
+
+	mod_total = sizeof(mod_name) / sizeof(char *);
+
+	HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);	
+
+	for (count = 0; count < mod_total; count++)
+	{
+		snprintf(cmd, sizeof(cmd), "%s %s", "/sbin/modprobe", mod_name[count]);
+		HIP_DEBUG("%s\n", cmd);
+		err = fork();
+		if (err < 0) HIP_ERROR("Failed to fork() for modprobe!\n");
+		else if (err == 0)
+		{
+			/* Redirect stderr, so few non fatal errors wont show up. */
+			stderr = freopen("/dev/null", "w", stderr);
+			execlp("/sbin/modprobe", "/sbin/modprobe", mod_name[count], (char *)NULL);
+		}
+		else waitpid(err, &status, 0);
+	}
+	HIP_DEBUG("Probing completed\n");
 }
