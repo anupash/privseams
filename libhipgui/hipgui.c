@@ -500,12 +500,16 @@ void gui_set_info(const char *string, ...)
  */
 void gui_update_nat(int status)
 {
+#if 0
 	GtkWidget *w = widget(ID_OPT_NAT);
 	if (status) status = TRUE;
 	else status = FALSE;
 	gdk_threads_enter();
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), status);
 	gdk_threads_leave();
+#else
+	HIP_ERROR("NAT setting currently does not work (bug id 423)\n");
+#endif
 }
 
 
