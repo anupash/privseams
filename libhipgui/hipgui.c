@@ -506,6 +506,7 @@ void gui_update_nat(int status)
 	gdk_threads_enter();
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w), status);
 	gdk_threads_leave();
+	/* @todo: this does not really work */
 }
 
 

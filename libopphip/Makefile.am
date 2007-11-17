@@ -9,4 +9,4 @@ include_HEADERS=wrap_db.h
 
 # HIP additions to the flags.
 INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc
-CFLAGS = $(hipl_common_cflags)
+CFLAGS = $(hipl_common_cflags) -pthread
