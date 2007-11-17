@@ -91,6 +91,10 @@
 #define SO_HIP_SET_LOCATOR_ON                   154
 #define SO_HIP_SET_LOCATOR_OFF                  155
 
+#ifdef CONFIG_HIP_OPPTCP
+	#define SO_HIP_SET_OPPTCP_ON            156
+	#define SO_HIP_SET_OPPTCP_OFF           157
+#endif
 /** @} */
 
 #endif /* _HIP_ICOMM */

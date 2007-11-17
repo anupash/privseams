@@ -81,6 +81,23 @@ char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
 #endif
 
+#ifdef CONFIG_HIP_OPPTCP
+int hip_use_opptcp = 0; // false
+
+void hip_set_opportunistic_tcp_status(int newVal)
+{
+        if((newVal == 0) || (newVal == 1))
+                hip_use_opptcp = newVal;
+	else	
+        	hip_use_opptcp = 0; /*default to 0 in case of error*/
+}
+
+int hip_get_opportunistic_tcp_status()
+{
+        return hip_use_opptcp;
+}
+#endif
+
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
