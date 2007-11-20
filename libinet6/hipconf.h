@@ -145,7 +145,9 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # nat on            # the host is behind a NAT\n\
-# debug none        # no debugging messages will be displayed\n"
+# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
+# locator on # host sends all of its locators in base exchange \n\
+debug medium        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HOSTS_FILE "/etc/hosts"
