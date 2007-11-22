@@ -2505,8 +2505,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		} else {
 			HIP_DEBUG("!makenewsa\n");
 			esp_info_old_spi = mapped_spi;
-			//esp_info_new_spi = mapped_spi; //new_spi_in
-			esp_info_new_spi = new_spi_in;
+			esp_info_new_spi = mapped_spi; //new_spi_in
 		}
 	} else {
 		HIP_DEBUG("adding ESP_INFO, Old SPI <> New SPI\n");
