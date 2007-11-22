@@ -1466,7 +1466,7 @@ int hip_handle_esp_info(struct hip_common *msg,
  
 	switch(keying_state){
 		case HIP_UPDATE_STATE_REKEYING:
-			//rekeying stuff goes here
+			/* @todo: rekeying stuff goes here */
 			break;
 		case HIP_UPDATE_STATE_DEPRECATING:
 			break;
@@ -2451,7 +2451,6 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else {
 		/* base draft UPDATE, create a new SA anyway */
 		_HIP_DEBUG("base draft UPDATE, create a new SA\n");
-		make_new_sa = 1;
 	}
 
 	/* If this is mm-UPDATE (ifindex should be then != 0) avoid
@@ -2488,6 +2487,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		}
 	} else {
 		HIP_DEBUG("not creating a new SA\n");
+		new_spi_in = mapped_spi;
 	}
 
 	_HIP_DEBUG("entry->current_keymat_index=%u\n",
@@ -2499,13 +2499,13 @@ int hip_send_update(struct hip_hadb_state *entry,
 			/* mm02 Host multihoming */
 			HIP_DEBUG("adding ESP_INFO, Old SPI == New SPI\n");
 			/* notify the peer about new interface */
-			esp_info_old_spi = new_spi_in;
+			esp_info_old_spi = 0;
 			esp_info_new_spi = new_spi_in;
 			
 		} else {
 			HIP_DEBUG("!makenewsa\n");
 			esp_info_old_spi = mapped_spi;
-			esp_info_new_spi = mapped_spi; //new_spi_in
+			esp_info_new_spi = mapped_spi;
 		}
 	} else {
 		HIP_DEBUG("adding ESP_INFO, Old SPI <> New SPI\n");
