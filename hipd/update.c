@@ -4,6 +4,7 @@
  * - Mika Kousa <mkousa@iki.fi>
  * - Tobias Heer <tobi@tobibox.de>
  * - Abhijit Bagri <abagri@gmail.com>
+ * - Miika Komu <miika@iki.fi>
  *
  * @note Based on <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
@@ -2496,14 +2497,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 	
 	if (addr_list) {
 		if (make_new_sa) {
-			/* mm02 Host multihoming */
-			HIP_DEBUG("adding ESP_INFO, Old SPI == New SPI\n");
-			/* notify the peer about new interface */
-			esp_info_old_spi = 0;
+			/* mm02 Host multihoming - currently simultaneous SAs are not supported */
+			esp_info_old_spi = mapped_spi;
 			esp_info_new_spi = new_spi_in;
-			
+			HIP_DEBUG("Multihoming, new SA: old=%d new=%d\n", esp_info_old_spi, esp_info_new_spi);
 		} else {
-			HIP_DEBUG("!makenewsa\n");
+			HIP_DEBUG("Reusing old SPI\n");
 			esp_info_old_spi = mapped_spi;
 			esp_info_new_spi = mapped_spi;
 		}
