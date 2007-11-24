@@ -1276,7 +1276,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 		list_for_each_safe(item, tmp, entry->spis_in, i)
 		{
 			spi_item = list_entry(item);
-			HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
+			_HIP_DEBUG("test item: spi_in=0x%x new_spi=0x%x\n",
 				   spi_item->spi, spi_item->new_spi);
 			if ( (spi_item->spi == spi && !test_new_spi) ||
 			     (spi_item->new_spi == spi && test_new_spi) )
@@ -1288,7 +1288,7 @@ int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 		list_for_each_safe(item, tmp, entry->spis_out, i)
 		{
 			spi_item = list_entry(item);
-			HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
+			_HIP_DEBUG("test item: spi_out=0x%x new_spi=0x%x\n",
 				   spi_item->spi, spi_item->new_spi);
 			if ( (spi_item->spi == spi && !test_new_spi) ||
 			     (spi_item->new_spi == spi && test_new_spi) )

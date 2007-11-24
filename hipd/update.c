@@ -1196,16 +1196,17 @@ out_err:
 int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
 				    struct in6_addr *src_ip,
 				    struct in6_addr *dst_ip,
-				    struct hip_esp_info *esp_info)
+				    struct hip_esp_info *esp_info,
+				    struct hip_seq *seq)
 {
 	int err = 0;
 	struct in6_addr *hits = &msg->hits, *hitr = &msg->hitr;
 	struct hip_common *update_packet = NULL;
-	struct hip_seq *seq;
 	struct hip_locator *locator;
 	uint16_t mask = 0;
         struct hip_peer_addr_list_item *list_item;
         u32 spi_in;
+        u32 spi_out = ntohl(esp_info->new_spi);
         
 	HIP_DEBUG("\n");
        
@@ -1237,9 +1238,22 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
             ipv6_addr_copy(&entry->preferred_address, src_ip); 
         }
 
+        if (!hip_hadb_get_spi_list(entry, spi_out)) {
+		struct hip_spi_out_item spi_out_data;
+
+		HIP_DEBUG("peer has a new SA, create a new outbound SA\n");
+		memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
+		spi_out_data.spi = spi_out;
+		spi_out_data.seq_update_id = ntohl(seq->update_id);
+		HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT,
+					 &spi_out_data), -1); 
+		HIP_DEBUG("added SPI=0x%x to list of outbound SAs (SA not created yet)\n",
+			spi_out);
+	}
+
 	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
 		 -1, "hip_update_handle_locator_parameter failed\n");
-	
+
  out_err:
 	if (update_packet)
             HIP_FREE(update_packet);
@@ -2035,7 +2049,7 @@ int hip_receive_update(struct hip_common *msg, struct in6_addr *update_saddr,
 	//mm stuff after this
 	if (locator)
 		//handle locator parameter
-		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info);
+		err = entry->hadb_update_func->hip_handle_update_plain_locator(entry, msg, src_ip, dst_ip, esp_info, seq);
 	else if (echo) {
 		//handle echo_request
 		err = entry->hadb_update_func->hip_handle_update_addr_verify(entry, msg, src_ip, dst_ip);
