@@ -2512,7 +2512,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	if (addr_list) {
 		if (make_new_sa) {
 			/* mm02 Host multihoming - currently simultaneous SAs are not supported */
-			esp_info_old_spi = mapped_spi;
+			esp_info_old_spi = hip_hadb_get_spi(entry, -1);
 			esp_info_new_spi = new_spi_in;
 			HIP_DEBUG("Multihoming, new SA: old=%d new=%d\n", esp_info_old_spi, esp_info_new_spi);
 		} else {
@@ -2538,7 +2538,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr)) {
 	    ipv6_addr_copy(&entry->local_address, hip_cast_sa_addr(addr));
              err = hip_update_src_address_list(entry, addr_list, &daddr,
-                                              addr_count, esp_info_old_spi, is_add, addr);
+                                              addr_count, esp_info_new_spi, is_add, addr);
            if(err == GOTO_OUT)
 		goto out;
             else if(err)
@@ -2546,7 +2546,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	   HIP_IFEL(err = hip_update_preferred_address(entry, hip_cast_sa_addr(addr),
 						       &entry->preferred_address,
-						       &esp_info_old_spi), -1,
+						       &esp_info_new_spi), -1,
 		    "Updating peer preferred address failed\n");
            
 	}
