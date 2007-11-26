@@ -418,8 +418,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
                                sizeof(struct in6_addr));
                         memcpy(&addr.address, &locator_address_item->address,
                                sizeof(struct in6_addr));
-                       HIP_IFEL(hip_update_peer_preferred_address(entry, &addr),-1,
-                                 "Setting peer preferred address failed\n");
+			HIP_IFEL(hip_update_peer_preferred_address(entry, &addr, spi),-1,
+				 "Setting peer preferred address failed\n");
                         
                         goto out_of_loop;
                     }
@@ -1443,7 +1443,7 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 		if(old_spi == new_spi)
 			/* mm-04 5.3 1. old SPI is equal to new SPI
 			 */
-			entry->update_state = 0 ; //no rekeying
+			entry->update_state = 0; //no rekeying
 			//FFT: Do we need a sanity check that both old_spi and new_spi cant be zero
 		else if(new_spi != 0){
 			/* mm-04 5.3 2. Old SPI is existing SPI and new SPI is non-zero
@@ -1459,7 +1459,6 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 
 	
 	}
-
  	return entry->update_state;		
 		
 }	
@@ -1753,10 +1752,10 @@ out_err:
 	return err;
 }
 
-int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr){
+int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr, uint32_t spi_in){
 
 	int err = 0, i = 0;
-	uint32_t spi_in;
+	//uint32_t spi_in;
 	struct hip_spi_in_item *item, *tmp;
         hip_list_t *item_nd = NULL, *tmp_nd = NULL;
         struct netdev_address *n;
@@ -1769,7 +1768,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	HIP_DEBUG_IN6ADDR("local", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("peer", &addr->address);
         
-	spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
+	//spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
 	HIP_IFEL(spi_in == 0, -1, "No inbound SPI found for daddr\n");
 
         if (IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
@@ -1884,9 +1883,10 @@ int hip_update_handle_echo_response(hip_ha_t *entry, struct hip_echo_response *e
 				HIP_DEBUG("Changing Security Associations for the new peer address\n");
                                 /* if bex address then otherwise no */
                                 if (ipv6_addr_cmp(&entry->preferred_address, &addr->address)==0) {
-                                    HIP_DEBUG("Setting SA for bex locator\n");
-                                    HIP_IFEL(hip_update_peer_preferred_address(entry, addr), -1, 
-                                             "Error while changing SAs for mobility\n");
+					uint32_t spi = hip_hadb_get_spi(entry, -1);
+					HIP_DEBUG("Setting SA for bex locator\n");
+					HIP_IFEL(hip_update_peer_preferred_address(entry, addr, spi), -1, 
+						 "Error while changing SAs for mobility\n");
                                 }
 				do_gettimeofday(&addr->modified_time);
 				if (addr->is_preferred)
