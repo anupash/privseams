@@ -363,8 +363,8 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
         /* If following does not exit, its a bug: outbound SPI must have been
            already created by the corresponding ESP_INFO in the same UPDATE
            packet */
-        HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, old_spi)), -1,
-                 "Bug: outbound SPI 0x%x does not exist\n", old_spi);
+        HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, new_spi)), -1,
+                 "Bug: outbound SPI 0x%x does not exist\n", new_spi);
         
         /* Set all peer addresses to unpreferred */
         /* TODO: Compiler warning;
@@ -435,7 +435,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 			memcpy(&addr.address,
 			       &locator_address_item->address,
 			       sizeof(struct in6_addr));
-			HIP_IFEL(hip_update_peer_preferred_address(entry, &addr, old_spi),-1,
+			HIP_IFEL(hip_update_peer_preferred_address(entry, &addr, new_spi),-1,
 				 "Setting peer preferred address failed\n");
 			
 			goto out_of_loop;
@@ -445,7 +445,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
  out_of_loop:
 	if(locator)
 		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-							entry, locator, &old_spi), -1,
+							entry, locator, &new_spi), -1,
 			 "Locator handling failed\n"); 
 
 #if 0 /* Let's see if this is really needed -miika */
@@ -2531,7 +2531,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		if (make_new_sa) {
 			/* mm02 Host multihoming - currently simultaneous SAs are not supported */
 			esp_info_old_spi = old_spi;
-			esp_info_new_spi = new_spi_in;
+			esp_info_new_spi = old_spi; //new_spi_in;
 			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n", esp_info_old_spi, esp_info_new_spi);
 		} else {
 			HIP_DEBUG("Reusing old SPI\n");
