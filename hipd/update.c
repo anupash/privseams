@@ -2418,7 +2418,7 @@ int hip_send_update(struct hip_hadb_state *entry,
         int i = 0;
 	uint32_t update_id_out = 0;
 	uint32_t mapped_spi = 0; /* SPI of the SA mapped to the ifindex */
-	uint32_t new_spi_in = 0;
+	uint32_t new_spi_in = 0, old_spi;
 	struct hip_common *update_packet = NULL;
 	struct in6_addr saddr = { 0 }, daddr = { 0 };
 	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
@@ -2429,6 +2429,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct in6_addr zero_addr = IN6ADDR_ANY_INIT;
 
 	HIP_DEBUG("\n");
+	
+        old_spi = hip_hadb_get_spi(entry, -1);
 	
 	add_locator = flags & SEND_UPDATE_LOCATOR;
 	HIP_DEBUG("addr_list=0x%p addr_count=%d ifindex=%d flags=0x%x\n",
@@ -2508,13 +2510,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 	_HIP_DEBUG("entry->current_keymat_index=%u\n",
 		   entry->current_keymat_index);
 
-	
 	if (addr_list) {
 		if (make_new_sa) {
 			/* mm02 Host multihoming - currently simultaneous SAs are not supported */
-			esp_info_old_spi = hip_hadb_get_spi(entry, -1);
+			esp_info_old_spi = old_spi;
 			esp_info_new_spi = new_spi_in;
-			HIP_DEBUG("Multihoming, new SA: old=%d new=%d\n", esp_info_old_spi, esp_info_new_spi);
+			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n", esp_info_old_spi, esp_info_new_spi);
 		} else {
 			HIP_DEBUG("Reusing old SPI\n");
 			esp_info_old_spi = mapped_spi;
@@ -2531,7 +2532,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 		hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 		esp_info_new_spi = new_spi_in;
 	}
-
+	
         /* if del then we have to remove SAs for that address */
         was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr), &entry->local_address);
 
