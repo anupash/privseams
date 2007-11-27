@@ -316,9 +316,9 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
     spi_in = hip_get_spi_to_update_in_established(entry, &entry->local_address);
     
     hip_delete_sa(entry->default_spi_out, &list_item->address, &entry->local_address, 
-                  AF_INET6, 0, (int)entry->peer_udp_port);
+                  AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), (int)entry->peer_udp_port);
     hip_delete_sa(spi_in, &entry->local_address, &list_item->address, 
-                  AF_INET6, (int)entry->peer_udp_port, 0);
+                  AF_INET6, (int)entry->peer_udp_port, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
     
     list_del(list_item, entry->spis_out);
  out_err:
@@ -757,8 +757,8 @@ int hip_update_finish_rekeying(struct hip_common *msg, hip_ha_t *entry,
 	/* XFRM API doesn't support multiple SA for one SP */
 	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
-	hip_delete_sa(prev_spi_out, &entry->preferred_address, &entry->local_address, AF_INET6, 0, entry->peer_udp_port);
-	hip_delete_sa(prev_spi_in, &entry->local_address, &entry->preferred_address, AF_INET6, entry->peer_udp_port,0);
+	hip_delete_sa(prev_spi_out, &entry->preferred_address, &entry->local_address, AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port);
+	hip_delete_sa(prev_spi_in, &entry->local_address, &entry->preferred_address, AF_INET6, entry->peer_udp_port, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
@@ -1246,10 +1246,10 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, struct hip_common *msg,
                       " and removing SAs\n");
             spi_in = hip_hadb_get_latest_inbound_spi(entry);
             hip_delete_sa(spi_in, &entry->local_address, 
-                          &entry->preferred_address, AF_INET6,0,
+                          &entry->preferred_address, AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                           (int)entry->peer_udp_port);
             hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
-                          &entry->local_address, AF_INET6,0,
+                          &entry->local_address, AF_INET6,(entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                           (int)entry->peer_udp_port);
             ipv6_addr_copy(&entry->preferred_address, src_ip); 
         }
@@ -1813,7 +1813,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
 	hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr, 
-		      AF_INET6, 0, (int)entry->peer_udp_port);
+		      AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), (int)entry->peer_udp_port);
 #endif
 
 #if 1
@@ -1821,7 +1821,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 #endif 
 
 	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+		      (int)entry->peer_udp_port, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       &local_addr, &addr->address,
@@ -2189,14 +2189,14 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
-	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6,0,
+	hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address, AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      (int)entry->peer_udp_port);
 #if 1
 	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
 	/* @todo: check that this works with the pfkey api */
 	hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
-			      (int)entry->peer_udp_port, 0);
+		      (int)entry->peer_udp_port, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       new_pref_addr, daddr,
@@ -2573,10 +2573,10 @@ int hip_send_update(struct hip_hadb_state *entry,
         if (!is_add && (was_bex_addr == 0)) {
             HIP_DEBUG("Netlink event was del, removing SAs for the address for this entry\n");
             hip_delete_sa(esp_info_old_spi, hip_cast_sa_addr(addr), 
-                          &entry->preferred_address, AF_INET6,0,
+                          &entry->preferred_address, AF_INET6,(entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                           (int)entry->peer_udp_port);
             hip_delete_sa(entry->default_spi_out, &entry->preferred_address, 
-                          hip_cast_sa_addr(addr), AF_INET6,0,
+                          hip_cast_sa_addr(addr), AF_INET6,(entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
                           (int)entry->peer_udp_port);
      
             /* and we have to do it before this changes the local_address */
