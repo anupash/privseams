@@ -2753,11 +2753,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 				ipv6_addr_copy(local_addr, &addr_sin6);
 			}
 #endif
-			/* warning: passing argument 7 of 'hip_send_update'
-			   from incompatible pointer type.
-			   -Lauri 25.09.2007 15:03 */
 			hip_send_update(rk.array[i], addr_list, addr_count,
-					ifindex, flags, is_add, &addr_sin6);
+					ifindex, flags, is_add, (struct sockaddr *) &addr_sin6);
 
 #if 0
 			if (!is_add && addr_count == 0) {
