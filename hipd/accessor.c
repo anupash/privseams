@@ -14,7 +14,7 @@
 #include "accessor.h"
 
 
-int hipd_state = HIPD_STATE_CLOSED;
+unsigned int hipd_state = HIPD_STATE_CLOSED;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 unsigned int opportunistic_mode = 1;
 #endif // CONFIG_HIP_OPPORTUNISTIC
@@ -24,9 +24,40 @@ unsigned int opportunistic_mode = 1;
  * Set global daemon state.
  * @param state @see daemon_states
  */
-void hipd_set_state(int state)
+void hipd_set_state(unsigned int state)
 {
-	hipd_state = state;
+	hipd_state = (state & HIPD_STATE_MASK) | (hipd_state & ~HIPD_STATE_MASK);
+}
+
+
+/**
+ * Get global daemon flag status.
+ * @param state @see daemon_states
+ * @return 1 if flag is on, 0 if not.
+ */
+int hipd_get_flag(unsigned int flag)
+{
+	return (hipd_state & flag) ? 1 : 0;
+}
+
+
+/**
+ * Set global daemon flag.
+ * @param state @see daemon_states
+ */
+void hipd_set_flag(unsigned int flag)
+{
+	hipd_state = hipd_state | flag;
+}
+
+
+/**
+ * Clear global daemon flag.
+ * @param state @see daemon_states
+ */
+void hipd_clear_flag(unsigned int flag)
+{
+	hipd_state = hipd_state & ~flag;
 }
 
 
@@ -34,9 +65,9 @@ void hipd_set_state(int state)
  * Get global daemon state.
  * @return @see daemon_states
  */
-int hipd_get_state(void)
+unsigned int hipd_get_state(void)
 {
-	return (hipd_state);
+	return (hipd_state & HIPD_STATE_MASK);
 }
 
 

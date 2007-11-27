@@ -1,7 +1,7 @@
 # HIP additions.
 AUTOMAKE_OPTIONS = foreign
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-CFLAGS = $(hipl_common_cflags)
+CFLAGS = $(hipl_common_cflags) # -DHAVE_NETINET6_IPSEC
 
 #bin_PROGRAMS = test-policy test-policy-priority
 lib_LTLIBRARIES = libipsec.la

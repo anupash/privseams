@@ -1,27 +1,22 @@
-
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/** @file
+ * This file defines initialization functions for the HIP daemon.
+ * 
+ * @date    1.1.2007
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
+ 
 #include "init.h"
 #include <linux/capability.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include "debug.h"
 #include <pwd.h>
+#include "hi3.h"
 
 extern struct hip_common *hipd_msg;
+extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
-
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -101,6 +96,7 @@ void hip_set_os_dep_variables()
 	  - crypto algo names changed
 	*/
 
+#ifndef CONFIG_HIP_PFKEY
 	if (rel[0] <= 2 && rel[1] <= 6 && rel[2] < 19) {
 		hip_xfrm_set_beet(2);
 		hip_xfrm_set_algo_names(0);
@@ -108,12 +104,15 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(4);
 		hip_xfrm_set_algo_names(1);
 	}
+#endif
 
+#ifndef CONFIG_HIP_PFKEY
 #ifdef CONFIG_HIP_BUGGYIPSEC
         hip_xfrm_set_default_sa_prefix_len(0);
 #else
 	/* This requires new kernel versions (the 2.6.18 patch) - jk */
         hip_xfrm_set_default_sa_prefix_len(128);
+#endif
 #endif
 }
 
@@ -123,14 +122,11 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
+	hip_hit_t peer_hit;
 	int err = 0, fd;
-	uid_t euid;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
-
-	euid = geteuid();
-	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -173,8 +169,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
-	HIP_IFEL(hip_ipdb_clear(), -1,
-	         "Cannot clear opportunistic mode IP database for non HIP capable hosts!\n");
+	HIP_IFEL(hip_init_oppip_db(), -1,
+	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -187,8 +183,12 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_init_rvadb();
-#endif	
+	HIP_INFO("Initializing HIP UDP relay database.\n");
+	if(hip_relht_init() == NULL)
+	{
+	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
+	}
+#endif
 #ifdef CONFIG_HIP_OPENDHT
         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
         if (err < 0) 
@@ -198,9 +198,6 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
-#endif
-#ifdef CONFIG_HIP_HI3
-	cl_init(i3_config_file);
 #endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -237,12 +234,26 @@ int hipd_init(int flush_ipsec, int killold)
 
 #if 0
 	{
-		const int ipsec_buf_size = 200000;
-		socklen_t ipsec_buf_sizeof = sizeof(int);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                int ret_sockopt = 0, value = 0;
+                socklen_t value_len = sizeof(value);
+		int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
+                ret_sockopt = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                         &value, &value_len);
+                if (ret_sockopt != 0)
+                    HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ipsec_buf_size = value * 2;
+                HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
+                          "Setting it to %d.\n", value, ipsec_buf_size);
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ret_sockopt = 0;
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
 
@@ -267,6 +278,13 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+	}
+#endif
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
@@ -306,6 +324,14 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
+
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) 
+	{
+		hip_get_default_hit(&peer_hit);
+		hip_i3_init(&peer_hit);
+	}
+#endif
 
 out_err:
 	return err;
@@ -391,7 +417,7 @@ int hip_init_host_ids()
 		
 	/* Create default keys if necessary. */
 
-	if (stat(DEFAULT_CONFIG_DIR, &status) && errno == ENOENT)
+	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT)
 	{
 		hip_msg_init(user_msg);
 		err = hip_serialize_host_id_action(user_msg,
@@ -405,7 +431,7 @@ int hip_init_host_ids()
 			goto out_err;
 		}
 	}
-	
+
         /* Retrieve the keys to hipd */
 	hip_msg_init(user_msg);
 	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);
@@ -565,6 +591,8 @@ void hip_exit(int signal)
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
+        if (hipd_msg_v4)
+            HIP_FREE(hipd_msg_v4);
 	
 	hip_delete_all_sp();
 
@@ -572,7 +600,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow is in use. */
+	/* This is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -584,7 +612,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_uninit_rvadb();
+	HIP_INFO("Uninitializing HIP UDP relay database.\n");
+	hip_relht_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
@@ -674,7 +703,8 @@ void hip_probe_kernel_modules()
 		"xfrm6_tunnel", "xfrm4_tunnel",
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
-		"ipv6", "aes", "crypto_null", "des",
+		"ipv6", "crypto_null", "cbc",
+		"blkcipher", "des", "aes",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
 		"capability"
 	};

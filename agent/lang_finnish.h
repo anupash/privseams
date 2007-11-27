@@ -125,6 +125,7 @@ char *lang_finnish[] =
 	"opt-info",					"HUOM: Muutokset tapahtuvat välittömästi",
 	"dbg-title",				"Debug asetukset:",
 	"dbg-rstall",				"Nollaa kaikki SA:t (hipconf rst all)",
+	"dbg-restart-daemon",		"Käynnistä HIP daemon uudelleen",
 
 	/* Local HIT handling. */
 	"lhdlg-button-apply",		"Hyväksy",

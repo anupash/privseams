@@ -16,7 +16,7 @@
   * Only debug messages with level less than or equal to this value will
   * be printed.
   */
-#define I3_CURRENT_DEBUG_LEVEL 70
+#define I3_CURRENT_DEBUG_LEVEL 100
 
 /**
   * The current info level. This is used to restrict the amount of
@@ -24,7 +24,7 @@
   * Only those messages whose level is less than or equal to the
   * CURRENT_INFO_LEVEL will be displayed.
   */
-#define I3_CURRENT_INFO_LEVEL  60
+#define I3_CURRENT_INFO_LEVEL  100
 
 
 /**

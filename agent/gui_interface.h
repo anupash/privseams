@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hit_db.h"
+#include "hitdb.h"
 
 
 /******************************************************************************/

@@ -105,7 +105,7 @@ void hip_hadb_put_entry(void *entry);
 	/* assume already locked entry */                                    \
 	ipv6_addr_copy(&hit_p, hit_peer);                                    \
 	ipv6_addr_copy(&hit_o, hit_our);                                     \
-	tmp = hip_ht_find(hashtable, (void *)spi);                           \
+	tmp = hip_ht_find(hashtable, (void *) &spi);                         \
 	if (tmp) {                                                           \
 		put_hs(tmp);                                                 \
 		HIP_ERROR("BUG, SPI already inserted\n");                    \
@@ -133,8 +133,27 @@ void hip_hadb_put_entry(void *entry);
 /* Matching */
 static inline int hip_hadb_match_spi(const void *key_1, const void *key_2)
 {
-	return (uint32_t) key_1 == (uint32_t) key_2;
+	return (* (const u32 *) key_1 == * (const u32 *) key_2);
 }
+
+/**
+ * The hash function of the hashtable. Calculates a hash from parameter host
+ * assosiation HITs (hit_our and hit_peer).
+ * 
+ * @param rec a pointer to a host assosiation.
+ * @return    the calculated hash or zero if ha, hit_our or hit_peer is NULL.
+ */
+unsigned long hip_hash_ha(const hip_ha_t *ha);
+
+/**
+ * The compare function of the hashtable. Compares the hash values calculated from
+ * parameter @c ha1 and @c ha2.
+ * 
+ * @param rec1 a pointer to a host assosiation.
+ * @param rec2 a pointer to a host assosiation.
+ * @return     0 if keys are equal, non-zero otherwise.
+ */
+int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2);
 
 void hip_init_hadb(void);
 void hip_uninit_hadb(void);
@@ -164,6 +183,8 @@ void hip_hadb_dump_spis(void);
 /*************** CONSTRUCTS ********************/
 int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
 
+int hip_hadb_compare_peer_addr(hip_ha_t *entry, struct in6_addr *addr);
+
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr, 
 				uint32_t *spi, uint32_t *lifetime,
 				struct timeval *modified_time);
@@ -178,7 +199,7 @@ int hip_add_peer_map(const struct hip_common *input);
 
 int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
 
-int hip_del_peer_info(hip_hit_t *, hip_hit_t *, struct in6_addr *);
+int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
 int hip_hadb_add_spi(hip_ha_t *entry, int direction, void *data);
 
@@ -271,13 +292,67 @@ int hip_hadb_set_rcv_function_set(hip_ha_t *entry,
 int hip_hadb_set_handle_function_set(hip_ha_t *entry,
 				   hip_handle_func_set_t *new_func_set);
 
+/**
+ * Switches on a local control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask.
+ */
+void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask);
+/**
+ * Switches on a peer control bit for a host assosiation entry.
+ * 
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask is a single mask, not a logical AND or OR mask.
+ */
+void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask);
+
+/**
+ * Switches off a local control bit for a host assosiation entry.
+ *
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask can be a logical AND or OR mask.
+ */
+void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask);
+
+/**
+ * Switches off a peer control bit for a host assosiation entry.
+ *
+ * @param entry a pointer to a host assosiation.
+ * @param mask  a bit mask representing the control value.
+ * @note  mask can be a logical AND or OR mask.
+ */
+void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask);
+
 int hip_count_one_entry(hip_ha_t *entry, void *counter);
 int hip_count_open_connections(void);
+/**
+ * Finds a rendezvous server candidate host association entry.
+ *
+ * Finds a rendezvous server candidate host association entry matching the
+ * parameter @c local_hit and @c rvs_ip. When a relayed I1 packet arrives to the
+ * responder, the packet has the initiators HIT as the source HIT, and the
+ * responder HIT as the destination HIT. The responder needs the host
+ * assosiation having RVS's HIT and the responder's HIT. This function gets that
+ * host assosiation without using the RVS's HIT as searching key.
+ *
+ * @param  local_hit a pointer to rendezvous server HIT used as searching key.
+ * @param  rvs_ip    a pointer to rendezvous server IPv6 or IPv4-in-IPv6 format
+ *                   IPv4 address  used as searching key.
+ * @return           a pointer to a matching host association or NULL if
+ *                   a matching host association was not found.
+ * @author           Miika Komu
+ * @date             31.08.2006
+ */ 
 hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit);
 
 int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
+int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 #endif /* HIP_HADB_H */

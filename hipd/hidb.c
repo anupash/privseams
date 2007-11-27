@@ -82,14 +82,14 @@ void hip_uninit_hostid_db(hip_db_struct_t *db)
 }
 
 /**
- * hip_get_hostid_entry_by_lhi - finds the host id corresponding to the given @lhi
- * @param db Database to be searched. Usually either %HIP_DB_PEER_HID or %HIP_DB_LOCAL_HID
- * @param lhi the local host id to be searched 
- * @param anon -1 if you don't care, 1 if anon, 0 if public
+ * Finds the host id corresponding to the given @c hit.
  *
- * If lhi is null, finds the first used host id. 
+ * If @c hit is null, finds the first used host id. 
  * If algo is HIP_ANY_ALGO, ignore algore comparison.
  *
+ * @param db Database to be searched. Usually either HIP_DB_PEER_HID or HIP_DB_LOCAL_HID
+ * @param hit the local host id to be searched 
+ * @param anon -1 if you don't care, 1 if anon, 0 if public
  * @return %NULL, if failed or non-NULL if succeeded.
  */
 struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *db,
@@ -111,7 +111,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
-	HIP_DEBUG("***************RETURNING NULL***************\n");
+	HIP_DEBUG("Failed to find host id entry, RETURNING NULL\n");
 	return NULL;
 
 }
@@ -119,8 +119,8 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(hip_db_struct_t *
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
 	/* FIXME: This full scan is stupid, but we have no hashtables
 	   anyway... tkoponen */
-	return (int) hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
-							   our, HIP_ANY_ALGO, -1);
+	return (hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db, our,
+						     HIP_ANY_ALGO, -1) != NULL);
 	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
@@ -751,14 +751,13 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 		/*HIP_DEBUG_HIT("ALL HITS", &tmp->lhi.hit);*/
 
 		err = func(tmp, opaque);
-		if (err) break;
+		if (err)
+		  goto out_err;
 	}
 
+out_err:
 	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 
-	return (err);
-
-out_err:
 	return (err);
 }
 

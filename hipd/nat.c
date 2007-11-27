@@ -91,6 +91,16 @@ int hip_nat_off()
 	return err;
 }
 
+
+/**
+ * Get HIP NAT status.
+ */
+int hip_nat_is()
+{
+	return hip_nat_status;
+}
+
+
 /**
  * Sets NAT status "on" for a single host association.
  *
@@ -207,6 +217,11 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 
 	if (!(entry->nat_mode)) {
 		HIP_DEBUG("No nat between the localhost and the peer\n");
+		goto out_err;
+	}
+
+	if (!IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+		HIP_DEBUG("Not IPv4 address, skip NAT keepalive\n");
 		goto out_err;
 	}
 

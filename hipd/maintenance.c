@@ -46,18 +46,17 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
 		if ((entry->hip_msg_retrans.count > 0) &&
-		    (entry->state != HIP_STATE_ESTABLISHED || entry->update_state != 0) &&
-		    (entry->retrans_state == entry->state || entry->retrans_state == entry->update_state)) {
+		    (entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
+		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
 
 			/* @todo: verify that this works over slow ADSL line */
-			
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
 					     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
-					     entry, 0);
+					     entry, 0);  
 			
 			/* Set entry state, if previous state was unassosiated
 			   and type is I1. */
@@ -75,14 +74,15 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
+
+			if (entry->state == HIP_STATE_ESTABLISHED)
+				entry->retrans_state = entry->update_state;
+			else
+				entry->retrans_state = entry->state;
 		}
 	}
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
-		entry->retrans_state = entry->update_state;
-	else
-		entry->retrans_state = entry->state;
 	
 	return err;
 }
@@ -133,6 +133,7 @@ int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 out_err:
 	return (err);
 }
+
 
 /**
  * Send local HITs to agent.
@@ -350,6 +351,20 @@ out_err:
 
 
 /**
+ * Update different items status to agent.
+ */
+int hip_agent_update(void)
+{
+	hip_agent_add_lhits();
+	
+	if (hip_nat_is())
+		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+	else
+		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+}
+
+
+/**
  * Insert mapping for local host IP addresses to HITs to DHT.
  */
 void register_to_dht ()
@@ -376,8 +391,9 @@ void register_to_dht ()
 		time_diff = difftime(opendht_n->timestamp, time(0));
 		if (time_diff < 10)
 		{
-			if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0) 
-			{
+                    //if (hip_get_any_localhost_hit(&tmp_hit, HIP_HI_DEFAULT_ALGO, 0) < 0)
+                        if (hip_get_default_hit(&tmp_hit)) 
+                        {
 				HIP_ERROR("No HIT found\n");
 				return;
 			}
@@ -618,6 +634,12 @@ int periodic_maintenance()
                 opendht_counter--;
         }
 #endif
+//#ifdef CONFIG_HIP_UDPRELAY
+	/* Clear expired records from the relay hashtable. */
+	hip_relht_maintenance();
+//#endif
+
+
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),
