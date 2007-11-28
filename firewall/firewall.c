@@ -56,6 +56,8 @@ int is_escrow_active()
 
 int firewall_init()
 {
+  	firewall_probe_kernel_modules();
+
         HIP_DEBUG("Initializing firewall\n");
         /* Register signal handlers */
         signal(SIGINT, firewall_close);
@@ -548,7 +550,6 @@ int main(int argc, char **argv)
   	if (!h)
     		die(h);
 
-  	firewall_probe_kernel_modules();
   	status = ipq_set_mode(h, IPQ_COPY_PACKET, BUFSIZE);
   	if (status < 0)
     		die(h);
