@@ -88,6 +88,7 @@
 #define SO_HIP_RESTART		      		151
 #define SO_HIP_SET_INTERFAMILY_ON               152
 #define SO_HIP_SET_INTERFAMILY_OFF              153
+#define SO_HIP_DHT_SET                      154
 
 /** @} */
 

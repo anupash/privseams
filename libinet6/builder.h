@@ -117,6 +117,7 @@ int hip_build_param_via_rvs_nat(struct hip_common *,
                                 const struct hip_in6_addr_port[], const int);
 int hip_build_param_via_rvs(struct hip_common *, const struct in6_addr[],
                             const int);
+int hip_build_param_opendht_set(struct hip_common *, char *);
 /** @} */
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);

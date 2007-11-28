@@ -61,6 +61,7 @@ char opendht_response[1024];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
+char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 #ifdef CONFIG_HIP_INTERFAMILY

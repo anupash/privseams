@@ -3067,6 +3067,21 @@ int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 	return err;
 }
 
+int hip_build_param_opendht_set(struct hip_common *msg,
+                                char *name)
+{
+    int err = 0;
+    struct hip_opendht_set name_info;
+    hip_set_param_type(&name_info, HIP_PARAM_OPENDHT_SET);
+    hip_calc_param_len(&name_info,
+                       sizeof(struct hip_opendht_set) -
+                       sizeof(struct hip_tlv_common));
+    strcpy(&name_info.name, name);
+    err = hip_build_param(msg, &name_info);
+ out_err:
+    return err;
+}
+
 int hip_build_param_opendht_gw_info(struct hip_common *msg,
 				    struct in6_addr *addr,
 				    uint32_t ttl,

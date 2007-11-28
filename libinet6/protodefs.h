@@ -140,6 +140,7 @@
 
 #define HIP_PARAM_AGENT_REJECT	        32791
 #define HIP_PARAM_HA_INFO               32792
+#define HIP_PARAM_OPENDHT_SET           32792
 
 /* End of HIPL private parameters. */
 
@@ -778,6 +779,12 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
+} __attribute__ ((packed));
+
+struct hip_opendht_set {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        char name[256];
 } __attribute__ ((packed));
 
 /* @} */

@@ -238,10 +238,23 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
               {
                 HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
               }
-            
+            HIP_DEBUG("Building gw_info complete\n");
           }
           break;
 #endif
+        case SO_HIP_DHT_SET:
+            {
+                extern char opendht_name_mapping;
+                err = 0;
+                struct hip_opendht_set *name_info; 
+                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
+                         "no name struct found\n");
+                _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
+                memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+                HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
+            }
+            break;
+
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
 		HIP_DEBUG("handling escrow user message (add).\n");

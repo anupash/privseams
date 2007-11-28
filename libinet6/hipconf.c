@@ -53,6 +53,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPENDHT
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
+"dht set <name>\n"
 #endif
 "locator on|off\n"
 "debug all|medium|none\n"
@@ -87,6 +88,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
         hip_conf_handle_interfamily,
+        hip_conf_handle_set,
 	NULL, /* run */
 };
 
@@ -246,9 +248,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_MODE;
 	else if (!strcmp("daemon", text))
 		ret = TYPE_DAEMON;
-
-
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
@@ -268,6 +267,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GW;
 	else if (!strcmp("get", text))
 		ret = TYPE_GET;
+        else if (!strcmp("set", text))
+                ret = TYPE_SET;
 #endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
@@ -979,9 +980,36 @@ out_err:
 int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
 {
     int ret = 0;
-    printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+    printf("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET AND NEVER WILL HAVE\n");
     /* useless function remove */
     return(ret);
+}
+
+/**
+ * Function that is used to set the name sent to DHT in name/fqdn -> HIT -> IP mappings
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_set(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int err = 0;
+    int len_name = 0;
+    len_name = strlen(opt[0]);
+    HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
+    HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
+    err = hip_build_param_opendht_set(msg, opt[0]);
+    if (err) {
+        HIP_ERROR("build param hit failed: %s\n", strerror(err));
+        goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
+    if (err) {
+        HIP_ERROR("build hdr failed: %s\n", strerror(err));
+        goto out_err;
+    }
+ out_err:
+    return(err);
 }
 
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)

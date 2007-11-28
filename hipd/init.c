@@ -134,6 +134,7 @@ int hipd_init(int flush_ipsec, int killold)
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 	extern struct addrinfo * opendht_serving_gateway;
+        extern char opendht_name_mapping;
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -302,7 +303,11 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 
-	register_to_dht();
+        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+            HIP_DEBUG("gethostname failed\n");
+
+        register_to_dht(); 
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");

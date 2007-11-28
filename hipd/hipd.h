@@ -67,7 +67,7 @@
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using without locator 1*/
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using 1 with sockaddrs */
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 

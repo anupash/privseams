@@ -125,7 +125,8 @@
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
 #define TYPE_INTERFAMILY 21
-#define TYPE_MAX    	22 /* exclusive */
+#define TYPE_SET        22 /* DHT set <name> */
+#define TYPE_MAX    	23 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -169,6 +170,7 @@ int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int o
 int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_all_hits(struct hip_common *msg,char *argv[]);

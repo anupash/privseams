@@ -569,14 +569,18 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
     HIP_IFEL(opendht_get_key(opendht_serving_gateway, node_hit, dht_response), -1, 
              "Opendht get in opendht_get_endpoint failed!\n"); 
     HIP_DEBUG("Value received from DHT: %s\n",dht_response);
-    err = inet_pton(AF_INET6,(const char *)dht_response, (void *) res);
+    err = ((inet_pton(AF_INET6,(const char *)dht_response, (void *) res)==1) ? 0 : -1);
     if (err) {
-        HIP_IFEL(inet_aton((const char *)dht_response, &addr4),
-                 -1, "Failed to get the peer address successfully\n");
-        IPV4_TO_IPV6_MAP(&addr4, res);
+        err =  inet_aton((const char *)dht_response, &addr4); 
+        if (err) {
+            IPV4_TO_IPV6_MAP(&addr4, res);
+            goto out_err;
+        }
+        HIP_DEBUG("Failed to get the peer address successfully\n");
+        return(-1);
     }
-    HIP_DEBUG("Got the peer address successfully\n");
  out_err:
+    HIP_DEBUG("Got the peer address successfully\n");
     return(err);
 }
 #endif /* CONFIG_HIP_OPENDHT */
