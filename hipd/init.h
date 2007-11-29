@@ -40,6 +40,7 @@ void hip_close(int signal);
 void hip_exit(int signal);
 int init_random_seed();
 void hip_probe_kernel_modules();
+int hip_init_dht();
 
 #endif /* _HIP_INIT */
 

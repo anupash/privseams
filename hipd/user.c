@@ -180,7 +180,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
-#ifdef CONFIG_HIP_OPENDHT
         case SO_HIP_DHT_GW:
           {
             char tmp_ip_str[20];
@@ -213,9 +212,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
               HIP_DEBUG("Error in changing the serving gateway!");
             }
           }
-          break;
-#endif 
-#ifdef CONFIG_HIP_OPENDHT
+          break; 
         case SO_HIP_DHT_SERVING_GW:
           {
             
@@ -225,9 +222,14 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
             struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
             rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
             IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-            errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
-                                                   opendht_serving_gateway_port,
-                                                   opendht_serving_gateway_ttl);
+            if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                    errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
+                                                           opendht_serving_gateway_ttl,
+                                                           opendht_serving_gateway_port);
+            } else { /* not in use mark port and ttl to 0 */
+                    errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
+            }
+            
             if (errr)
               {
                 HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
@@ -241,7 +243,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
             HIP_DEBUG("Building gw_info complete\n");
           }
           break;
-#endif
+
         case SO_HIP_DHT_SET:
             {
                 extern char opendht_name_mapping;
@@ -254,6 +256,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
             }
             break;
+
+        case SO_HIP_DHT_ON:
+                HIP_DEBUG("Setting DHT ON\n");
+                hip_opendht_inuse = SO_HIP_DHT_ON;
+                HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
+                          hip_opendht_inuse, SO_HIP_DHT_ON);
+                break;
+        case SO_HIP_DHT_OFF:
+                HIP_DEBUG("Setting DHT OFF\n");
+                hip_opendht_inuse = SO_HIP_DHT_OFF;
+                HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
+                          hip_opendht_inuse, SO_HIP_DHT_OFF);
+                break;
 
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:

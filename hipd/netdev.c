@@ -559,35 +559,39 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
 
 }
 
-#ifdef CONFIG_HIP_OPENDHT
-int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res){
-    int err = 0;
-    char dht_response[1024];
-    struct in_addr addr4;
-
-    memset(dht_response, '\0', sizeof(dht_response));
-    HIP_IFEL(opendht_get_key(opendht_serving_gateway, node_hit, dht_response), -1, 
-             "Opendht get in opendht_get_endpoint failed!\n"); 
-    HIP_DEBUG("Value received from DHT: %s\n",dht_response);
-    err = ((inet_pton(AF_INET6,(const char *)dht_response, (void *) res)==1) ? 0 : -1);
-    if (err) {
-        err =  inet_aton((const char *)dht_response, &addr4); 
-        if (err) {
-            IPV4_TO_IPV6_MAP(&addr4, res);
-            goto out_err;
+int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res)
+{
+        int err = 0;
+        char dht_response[1024];
+        struct in_addr tmp_v4;
+        extern int hip_opendht_inuse;
+        
+        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                memset(dht_response, '\0', sizeof(dht_response));
+                HIP_IFEL(opendht_get_key(opendht_serving_gateway, node_hit, dht_response), -1, 
+                         "DHT get in opendht_get_endpoint failed!\n"); 
+                HIP_DEBUG("Value received from DHT: %s\n",dht_response);
+                if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1) {
+                        HIP_DEBUG("Got the peer address successfully\n");
+                        err = 0;
+                }
+                if (inet_aton(dht_response, &tmp_v4)) {
+                        IPV4_TO_IPV6_MAP(&tmp_v4, res);
+                        HIP_DEBUG("Got the peer address successfully\n");
+                        err = 0;
+                } else {
+                        HIP_DEBUG("failed to get the peer address successfully\n");
+                        err = -1;
+                }
         }
-        HIP_DEBUG("Failed to get the peer address successfully\n");
-        return(-1);
-    }
  out_err:
-    HIP_DEBUG("Got the peer address successfully\n");
-    return(err);
+        return(err);
 }
-#endif /* CONFIG_HIP_OPENDHT */
 
 int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	char peer_hit[INET6_ADDRSTRLEN];	
 	int err = -1; /* Assume that resolving fails */
+        extern int hip_opendht_inuse;
 
 	/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
 	   then resolve the hostname to an IP. The natural place to
@@ -611,10 +615,10 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 		 0, "hip_get_peer_endpointinfo succeeded\n");
 	
 	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-#ifdef CONFIG_HIP_OPENDHT
-	err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
-	if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
-#endif
+        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
+                if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
+        }
 
 out_err:
 	return err;

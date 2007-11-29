@@ -130,11 +130,9 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, fd;
+	int err = 0, fd, dhterr;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
-	extern struct addrinfo * opendht_serving_gateway;
-        extern char opendht_name_mapping;
 
 	/* Open daemon lock file and read pid from it. */
 //	unlink(HIP_DAEMON_LOCK_FILE);
@@ -193,12 +191,6 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_RVS
         hip_rvs_init_rvadb();
 #endif	
-#ifdef CONFIG_HIP_OPENDHT
-        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-        if (err < 0) 
-          HIP_DEBUG("Error resolving openDHT gateway!\n");
-        err = 0;
-#endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
 	hip_init_kea_endpoints();
@@ -303,11 +295,9 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 
-        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
-            HIP_DEBUG("gethostname failed\n");
-
-        register_to_dht(); 
+        dhterr = 0;
+        hip_init_dht();
+        if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
@@ -325,6 +315,65 @@ out_err:
 	return err;
 }
 
+/**
+ * Function initializes needed variables for the OpenDHT
+ *
+ * Returns positive on success negative otherwise
+ */
+int hip_init_dht() 
+{
+        int err = 0, lineno = 0, i = 0, randomno = 0;
+        extern struct addrinfo * opendht_serving_gateway;
+        extern char opendht_name_mapping;
+        extern int hip_opendht_inuse;
+        char *serveraddr_str;
+        char *servername_str;
+        FILE *fp = NULL; 
+        char line[500]; 
+        List list;
+        
+        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                fp = fopen(OPENDHT_SERVERS_FILE, "r");
+                if (fp == NULL) {
+                        HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
+                        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
+                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        err = 0;
+                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+                                HIP_DEBUG("gethostname failed\n");
+                        register_to_dht(); 
+                } else {
+                        /* dhtservers exists */ 
+                        while (fp && getwithoutnewline(line, 500, fp) != NULL) {
+                                lineno++;
+                        }
+                        fclose(fp);
+                        srand(time(NULL));
+                        randomno = rand() % lineno;
+                        fp = fopen(OPENDHT_SERVERS_FILE, "r");
+                        for (i = 0; i <= randomno; i++)
+                                getwithoutnewline(line, 500, fp);
+                        initlist(&list);
+                        extractsubstrings(line, &list);
+                        servername_str = getitem(&list,0);
+                        serveraddr_str = getitem(&list,1);
+                        HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
+                                  servername_str, serveraddr_str);
+                        /* resolve it */
+                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
+                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        destroy(&list);
+                        register_to_dht(); 
+                }
+        } else {
+                HIP_DEBUG("DHT is not in use");
+        }
+ out_err:
+        if (fp) 
+                fclose(fp);
+        return (err);
+}
 
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
@@ -642,11 +691,9 @@ void hip_exit(int signal)
 		free(msg);
 	
 	unlink(HIP_DAEMON_LOCK_FILE);
-
-#ifdef CONFIG_HIP_OPENDHT
+        
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
-#endif
 
 	return;
 }

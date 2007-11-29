@@ -101,6 +101,7 @@
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
 #define ACTION_INTERFAMILY 19
+#define ACTION_OPENDHT 20
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -126,7 +127,8 @@
 #define TYPE_DAEMON     20
 #define TYPE_INTERFAMILY 21
 #define TYPE_SET        22 /* DHT set <name> */
-#define TYPE_MAX    	23 /* exclusive */
+#define TYPE_DHT        23
+#define TYPE_MAX    	24 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -171,6 +173,7 @@ int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_all_hits(struct hip_common *msg,char *argv[]);

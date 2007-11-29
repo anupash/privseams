@@ -455,14 +455,13 @@ int read_packet_content(char * in_buffer, char * out_value)
              {         
                xml_node_value = xml_node->children->children;
                xml_data = xmlNodeGetContent(xml_node_value);
-               _HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, 
-                         strlen((char *)xml_data));
+               _HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, strlen((char *)xml_data));
                evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
                                         strlen((char *)xml_data));
                _HIP_HEXDUMP("LOC from DHT", out_value, evpret);
-               out_value[evpret] = '\0';
+               out_value[evpret] = '\0'; 
                memcpy(answers.addrs, out_value, strlen(out_value));
-               HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
+               _HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
                if (evpret > 1) 
                    hip_print_locator_addresses((struct hip_common *)out_value);

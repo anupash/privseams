@@ -1501,11 +1501,20 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     </itemizedlist>
 
-    <para> May need a change of contact OpenDHT server, currently 
-	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
-	For documentation, please also check 
-        <ulink url="http://kom.aau.dk/group/05gr680/" />
+    <para>
+    By default OpenDHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a new stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random. currently running list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
+
   </chapter>
 
   <chapter>

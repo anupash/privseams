@@ -384,24 +384,25 @@ int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned cha
     locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
     if (locator) {
         locator_address_item = hip_get_locator_first_addr_item(locator);
-        memcpy(&addr6, (struct in6_addr*)&locator_address_item->address, 
-               sizeof(struct in6_addr));
-        if (IN6_IS_ADDR_V4MAPPED(&addr6.s6_addr)) {
+        //memcpy(&addr6, (struct in6_addr*)&locator_address_item->address, sizeof(struct in6_addr));
+        memcpy(&addr6, (struct in6_addr*)&locator_address_item[0].address, sizeof(struct in6_addr));
+        if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
                 IPV6_TO_IPV4_MAP(&addr6, &addr4);
                 sprintf(value, "%s", inet_ntoa(addr4));
         } else {
-            inet_ntop(AF_INET6, &addr6, value, sizeof(struct in6_addr));
+            hip_in6_ntop(&addr6, value);
+            HIP_DEBUG("Value: %s\n", value);
         }
-        } else {
-            memcpy(value, dht_response, strlen(dht_response));
-        }
+    } else {
+        memcpy(value, dht_response, strlen(dht_response));
+    }
  out_err:
     if (sfd) close(sfd); 
     return(err);
 }
 
 /**
- * opendht_handle_key Modifies the key to suitable for OpenDHT
+ * opendht_handle_key Modifies the key to suitable format for OpenDHT
  *
  * @param key Key to be handled
  * @param out_key Where the key will be saved

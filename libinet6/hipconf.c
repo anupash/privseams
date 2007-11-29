@@ -50,11 +50,10 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
-#ifdef CONFIG_HIP_OPENDHT
+"opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 "dht set <name>\n"
-#endif
 "locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
@@ -89,6 +88,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_restart,
         hip_conf_handle_interfamily,
         hip_conf_handle_set,
+        hip_conf_handle_dht_toggle,
 	NULL, /* run */
 };
 
@@ -128,6 +128,8 @@ int hip_conf_get_action(char *text) {
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
+        else if (!strcmp("opendht", text))
+                ret = ACTION_OPENDHT;
         else if (!strcmp("locator", text))
                 ret = ACTION_INTERFAMILY; 
 	else if (!strcmp("debug", text))
@@ -198,7 +200,8 @@ int hip_conf_check_action_argc(int action) {
 		break;
         case ACTION_INTERFAMILY:
                 break;
-
+        case ACTION_OPENDHT:
+                break;
 	default:
 	        break;
 
@@ -260,7 +263,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-#ifdef CONFIG_HIP_OPENDHT
+        else if (strcmp("opendht", argv[1])==0)
+                ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
 	else if (!strcmp("gw", text))
@@ -269,7 +273,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GET;
         else if (!strcmp("set", text))
                 ret = TYPE_SET;
-#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 	
@@ -294,6 +297,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOAD:
 	case ACTION_DHT:
         case ACTION_INTERFAMILY:
+        case ACTION_OPENDHT:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
@@ -975,8 +979,6 @@ out_err:
 	
 }
 
-/* ================================================================================== */
-
 int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
 {
     int ret = 0;
@@ -1012,6 +1014,11 @@ int hip_conf_handle_set(struct hip_common *msg, int action, const char *opt[], i
     return(err);
 }
 
+/**
+ * Function that is used to set the used gateway addr port and ttl with DHT
+ *
+ * @return       zero on success, or negative error value on error.
+ */
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
 {
 	int err,out_err;
@@ -1029,22 +1036,17 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 		err = -EINVAL;
 		goto out_err;
 	}
-
+        
         memset(&new_gateway, '0', sizeof(new_gateway));
         ret = 0;   
         /* resolve the new gateway */
-#ifdef CONFIG_HIP_OPENDHT
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
-#else
-	HIP_ERROR("OpenDHT support not compiled in\n");
-	goto out_err;
-#endif /* CONFIG_HIP_OPENDHT */
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
         
         HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
                   inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
-          
+        
         ret = 0;
 	ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
         IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
@@ -1075,25 +1077,50 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
 	return err;
 }
 
+/**
+ * Function that gets data from DHT
+ *
+ * @return       zero on success, or negative error value on error.
+ */
 int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-    int err = 0;
-#ifdef CONFIG_HIP_OPENDHT
-    char dht_response[1024];
-    char opendht[] = "opendht.nyuld.net";
-    struct addrinfo * serving_gateway;
-
-    HIP_IFEL(resolve_dht_gateway_info(opendht, &serving_gateway),0,
-             "Resolve error!\n");
-    HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
-             "Get error!\n");
-    HIP_DEBUG("Value received from the DHT %s\n",dht_response);
-#endif 
+        int err = 0;
+        char dht_response[1024];
+        char opendht[] = "opendht.nyuld.net";
+        struct addrinfo * serving_gateway;
+        
+        HIP_DEBUG("Using opendht.nyuld.net\n");
+        HIP_IFEL(resolve_dht_gateway_info(opendht, &serving_gateway),0,
+                 "Resolve error!\n");
+        HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+                 "Get error!\n");
+        HIP_DEBUG("Value received from the DHT %s\n",dht_response);
  out_err:
-    return(err);
+        return(err);
 }
 
-/* ================================================================================== */
+/**
+ * Function that is used to set DHT on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_dht_toggle(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+        
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_DHT_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_DHT_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "build hdr failed: %s\n", strerror(err));        
+        
+ out_err:
+        return(err);
+}
 
 /**
  * Handles @c service commands received from @c hipconf.
@@ -1454,12 +1481,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[1] = "libhiptool.so";
 		      libs[3] = NULL;
 		      libs[4] = NULL;
-		  
-#ifdef CONFIG_HIP_OPENDHT
 		      libs[2] = "libhipopendht.so";
-#else
-		      libs[2] = NULL;
-#endif
 		}
 		else if (type == EXEC_LOADLIB_OPP)
 		{
@@ -1467,12 +1489,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[1] = "libinet6.so";
 		      libs[2] = "libhiptool.so";
 		      libs[4] = NULL;
-
-#ifdef CONFIG_HIP_OPENDHT
 		      libs[3] = "libhipopendht.so";
-#else
-		      libs[3] = NULL;
-#endif
 		}
 
 #if 0
