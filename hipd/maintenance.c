@@ -379,6 +379,8 @@ void register_to_dht ()
         char *tmp_hit_str = NULL, *tmp_addr_str = NULL;
         
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                HIP_DEBUG("DHT error count now %d/%d.\n", 
+                          hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
                 if (hip_opendht_error_count == OPENDHT_ERROR_COUNT_MAX) {
                         HIP_DEBUG("DHT error count reached resolving trying to change gateway\n");
                         hip_init_dht();
