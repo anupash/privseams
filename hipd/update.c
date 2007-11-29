@@ -2529,7 +2529,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 	if (addr_list) {
 		if (make_new_sa) {
-			/* mm02 Host multihoming - currently simultaneous SAs are not supported */
+			/* mm Host multihoming. Currently simultaneous
+			   SAs are not supported. Neither is changing of 
+			   SPI (see bug id 434) */
 			esp_info_old_spi = old_spi;
 			esp_info_new_spi = old_spi; // new_spi_in;
 			HIP_DEBUG("Multihoming, new SA: old=%x new=%x\n", esp_info_old_spi, esp_info_new_spi);
@@ -2547,7 +2549,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 			 "Could not find SPI to use in Old SPI\n");
 		/* here or later ? */
 		hip_set_spi_update_status(entry, esp_info_old_spi, 1);
-		//esp_info_new_spi = new_spi_in;
+		//esp_info_new_spi = new_spi_in; /* see bug id 434 */
 		esp_info_new_spi = esp_info_old_spi;
 	}
 	
