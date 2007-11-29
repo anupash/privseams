@@ -11,6 +11,7 @@
 #define STATE_OPENDHT_WAITING_CONNECT 2
 #define STATE_OPENDHT_START_SEND 3
 #define OPENDHT_SERVERS_FILE "/etc/hip/dhtservers"
+#define OPENDHT_ERROR_COUNT_MAX 3
 
 int init_dht_gateway_socket(int);
 

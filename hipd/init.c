@@ -326,6 +326,7 @@ int hip_init_dht()
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
+        extern int hip_opendht_error_count;
         char *serveraddr_str;
         char *servername_str;
         FILE *fp = NULL; 
@@ -333,6 +334,7 @@ int hip_init_dht()
         List list;
         
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                hip_opendht_error_count = 0;
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");
                 if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);

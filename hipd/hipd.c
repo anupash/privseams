@@ -48,10 +48,7 @@ struct sockaddr_un hip_agent_addr;
 int hip_firewall_sock = 0;
 struct sockaddr_un hip_firewall_addr;
 
-/* 
-For uploading and downloading openDHT mappings 
-Used also from maintenance.c register_to_dht()
-*/
+/* OpenDHT related variables */
 int hip_opendht_sock_fqdn = 0; /* FQDN->HIT mapping */
 int hip_opendht_sock_hit = 0; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
@@ -67,6 +64,7 @@ int hip_opendht_inuse = SO_HIP_DHT_ON;
 #else
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
 #endif
+int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 #ifdef CONFIG_HIP_INTERFAMILY
@@ -551,8 +549,10 @@ int hipd_main(int argc, char *argv[])
 				memset(opendht_response, '\0', sizeof(opendht_response));
 				opendht_error = opendht_read_response(hip_opendht_sock_fqdn, 
                                                                       opendht_response); 
-				if (opendht_error == -1)
+				if (opendht_error == -1) {
                                         HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
+                                        hip_opendht_error_count++;
+                                }
 				else 
                                         HIP_DEBUG("Put was success (FQDN->HIT)\n");
                                 
@@ -578,8 +578,10 @@ int hipd_main(int argc, char *argv[])
 				memset(opendht_response, '\0', sizeof(opendht_response));
 				opendht_error = opendht_read_response(hip_opendht_sock_hit, 
                                                                       opendht_response); 
-				if (opendht_error == -1)
+				if (opendht_error == -1) {
                                         HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
+                                        hip_opendht_error_count++;
+                                }
 				else 
                                         HIP_DEBUG("Put was success (HIT->IP)\n");
 				close(hip_opendht_sock_hit);
