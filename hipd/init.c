@@ -327,6 +327,8 @@ int hip_init_dht()
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
         extern int hip_opendht_error_count;
+        extern int hip_opendht_sock_fqdn;  
+        extern int hip_opendht_sock_hit;  
         char *serveraddr_str;
         char *servername_str;
         FILE *fp = NULL; 
@@ -335,6 +337,18 @@ int hip_init_dht()
         
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                 hip_opendht_error_count = 0;
+                /* check the condition of the sockets, we may have come here in middle
+                 of something so re-initializing might be needed */
+                if (hip_opendht_sock_fqdn > 0) {
+                        close(hip_opendht_sock_fqdn);
+                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                }
+                 
+                if (hip_opendht_sock_hit > 0) {
+                        close(hip_opendht_sock_hit);
+                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                }
+
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");
                 if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
@@ -344,7 +358,6 @@ int hip_init_dht()
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-                        register_to_dht(); 
                 } else {
                         /* dhtservers exists */ 
                         while (fp && getwithoutnewline(line, 500, fp) != NULL) {
@@ -366,8 +379,11 @@ int hip_init_dht()
                         err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
                         if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
                         destroy(&list);
-                        register_to_dht(); 
                 }
+                memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+                        HIP_DEBUG("gethostname failed\n");
+                register_to_dht(); 
         } else {
                 HIP_DEBUG("DHT is not in use");
         }

@@ -375,7 +375,7 @@ int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned cha
     HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
              ,-1,"OpenDHT connect error\n");  
     memset(dht_response, '\0', sizeof(dht_response));
-    HIP_IFEL((err =opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
+    HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
              -1, "Opendht_get error");
     HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
     _HIP_DUMP_MSG((struct hip_common *)dht_response);

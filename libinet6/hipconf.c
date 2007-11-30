@@ -1086,11 +1086,37 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
 {
         int err = 0;
         char dht_response[1024];
-        char opendht[] = "opendht.nyuld.net";
         struct addrinfo * serving_gateway;
+        struct hip_common *msgdaemon;
+        struct hip_opendht_gw_info *gw_info;
+        struct in_addr tmp_v4;
+        char tmp_ip_str[21];
+        int tmp_ttl, tmp_port;
+        int *pret;
+
+        /* ASK THIS INFO FROM DAEMON */
+        HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+        HIP_IFEL(!(msgdaemon = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+        HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1, 
+                 "Building daemon header failed\n"); 
+        HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(!(gw_info = hip_get_param(msgdaemon, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
+                 "No gw struct found\n");
         
-        HIP_DEBUG("Using opendht.nyuld.net\n");
-        HIP_IFEL(resolve_dht_gateway_info(opendht, &serving_gateway),0,
+        /* Check if DHT was on */
+        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
+                HIP_DEBUG("DHT is not in use\n");
+                goto out_err;
+        }        
+        memset(&tmp_ip_str,'\0',20);
+        tmp_ttl = gw_info->ttl;
+        tmp_port = htons(gw_info->port);
+        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+                  tmp_ip_str, tmp_port, tmp_ttl);
+
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
                  "Resolve error!\n");
         HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
                  "Get error!\n");
