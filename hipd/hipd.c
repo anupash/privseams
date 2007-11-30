@@ -63,11 +63,7 @@ int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
-#ifdef CONFIG_HIP_INTERFAMILY
-int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
-#else
-int hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
-#endif 
+int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
@@ -83,6 +79,23 @@ time_t load_time;
 #ifdef CONFIG_HIP_HI3
 char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
+#endif
+
+#ifdef CONFIG_HIP_OPPTCP
+int hip_use_opptcp = 0; // false
+
+void hip_set_opportunistic_tcp_status(int newVal)
+{
+        if((newVal == 0) || (newVal == 1))
+                hip_use_opptcp = newVal;
+	else	
+        	hip_use_opptcp = 0; /*default to 0 in case of error*/
+}
+
+int hip_get_opportunistic_tcp_status()
+{
+        return hip_use_opptcp;
+}
 #endif
 
 void usage() {

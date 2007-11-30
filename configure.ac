@@ -246,17 +246,6 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
-AC_ARG_ENABLE(interfamily,
-             AC_HELP_STRING([--enable-interfamily],
-                            [Interfamily handover support (default is NO)]),
-             [ac_cv_use_interfamily=$enableval], [ac_cv_use_interfamily=no])
-AC_CACHE_CHECK([whether to use interfamily],
-               [ac_cv_use_interfamily], [ac_cv_use_interfamily=no])
-if test x"$ac_cv_use_interfamily" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_INTERFAMILY, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_INTERFAMILY, test x"$ac_cv_use_interfamily" = x"yes")
- 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
                             [HIP BLIND extensions (default is NO)]),
@@ -279,6 +268,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
+
+AC_PREFIX_DEFAULT("/usr/local")
 
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
@@ -334,5 +325,6 @@ AC_CONFIG_FILES([ Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile])
+		  libipsec/Makefile
+                  dnsmasq/Makefile])
 AC_OUTPUT

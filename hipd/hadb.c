@@ -336,6 +336,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->is_loopback = 1;
 	}
 
+#ifdef CONFIG_HIP_OPPTCP
+     	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+#endif
+
+
 	hip_hadb_insert_state(entry);
 	/* Released at the end */
 	hip_hold_ha(entry);
@@ -970,7 +975,7 @@ uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 	{
 		spi_item = list_entry(item);
 		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", spi_item->ifindex, spi_item->spi);
-		if (spi_item->ifindex == ifindex)
+		if (spi_item->ifindex == ifindex || ifindex == -1)
 		{
 			HIP_DEBUG("found SPI 0x%x\n", spi_item->spi);
 			return spi_item->spi;

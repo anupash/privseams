@@ -55,6 +55,9 @@ const char *hipconf_usage =
 "locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
+#ifdef CONFIG_HIP_OPPTCP
+"opptcp on|off\n"
+#endif
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -84,8 +87,11 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
-        hip_conf_handle_interfamily,
+        hip_conf_handle_locator,
         hip_conf_handle_hipudprelay,
+#ifdef CONFIG_HIP_OPPTCP	
+	hip_conf_handle_opptcp,
+#endif
 	NULL, /* run */
 };
 
@@ -127,14 +133,17 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
         else if (!strcmp("locator", text))
-                ret = ACTION_INTERFAMILY; 
+                ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
-
+#ifdef CONFIG_HIP_OPPTCP
+	else if (!strcmp("opptcp", text))
+                ret = ACTION_OPPTCP;
+#endif
         return ret;
 }
 
@@ -194,9 +203,12 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_RESTART:
 		count = 1;
 		break;
-        case ACTION_INTERFAMILY:
+        case ACTION_LOCATOR:
                 break;
-
+#ifdef CONFIG_HIP_OPPTCP	
+	case ACTION_OPPTCP:
+                break;
+#endif
 	default:
 	        break;
 	}
@@ -240,7 +252,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
      else if ( (strcmp("all", text) == 0) && (strcmp("bos",argv[1]) == 0))
 	  ret = TYPE_BOS;
      else if (strcmp("locator", argv[1])==0)
-                ret = TYPE_INTERFAMILY;
+                ret = TYPE_LOCATOR;
      else if (!strcmp("debug", text))
 	  ret = TYPE_DEBUG;
      else if (!strcmp("daemon", text))
@@ -269,7 +281,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
      else if (!strcmp("config", text))
 	  ret = TYPE_CONFIG;
-	
+#ifdef CONFIG_HIP_OPPTCP
+     else if (strcmp("opptcp", argv[1])==0)
+          ret = TYPE_OPPTCP;
+#endif
      return ret;
 }
 
@@ -290,10 +305,13 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
-        case ACTION_INTERFAMILY:
+        case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
+#ifdef CONFIG_HIP_OPPTCP
+        case ACTION_OPPTCP:
+#endif
 	case ACTION_RESTART:
 		type_arg = 2;
 		break;
@@ -790,7 +808,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
 }
 
 /**
- * Handles the hipconf commands where the type is @c interfamily.
+ * Handles the hipconf commands where the type is @c locator.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
@@ -800,15 +818,15 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_interfamily(struct hip_common *msg, int action,
+int hip_conf_handle_locator(struct hip_common *msg, int action,
 		   const char *opt[], int optc)
 {
     int err = 0, status = 0;
     
     if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_INTERFAMILY_ON; 
+        status = SO_HIP_SET_LOCATOR_ON; 
     } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_INTERFAMILY_OFF;
+        status = SO_HIP_SET_LOCATOR_OFF;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
@@ -1642,3 +1660,27 @@ int hip_conf_handle_restart(struct hip_common *msg, int type, const char *opt[],
 out_err:
 	return err;
 }
+
+#ifdef CONFIG_HIP_OPPTCP
+int hip_conf_handle_opptcp(struct hip_common *msg, int action,
+			  const char *opt[], int optc)
+{
+    int err = 0, status = 0;
+    
+    if (!strcmp("on",opt[0])) {
+        status = SO_HIP_SET_OPPTCP_ON; 
+    } else if (!strcmp("off",opt[0])) {
+        status = SO_HIP_SET_OPPTCP_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+    
+ out_err:
+    return err;
+
+
+/*	hip_set_opportunistic_tcp_status(1);*/
+/*	hip_set_opportunistic_tcp_status(0);*/
+}
+#endif

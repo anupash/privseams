@@ -9,7 +9,7 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=2
+RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
@@ -94,6 +94,8 @@ copy_files ()
     cd "$HIPL"
     
     cp hipd/hipd $PKGDIR/usr/sbin/
+
+    cp firewall/firewall $PKGDIR/usr/sbin/
 
     cp tools/hipconf $PKGDIR/usr/sbin/
 #    cp agent/hipagent $PKGDIR/usr/sbin/

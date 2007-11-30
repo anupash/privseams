@@ -199,7 +199,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if (hip_interfamily_status == SO_HIP_SET_INTERFAMILY_ON) {
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
             HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(msg)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");

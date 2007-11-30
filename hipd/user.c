@@ -81,19 +81,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
 		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
 		break;
-        case SO_HIP_SET_INTERFAMILY_ON:
-                HIP_DEBUG("Setting INTERFAMILY ON\n");
-                hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
-                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
-                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_ON);
+        case SO_HIP_SET_LOCATOR_ON:
+                HIP_DEBUG("Setting LOCATOR ON\n");
+                hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+                HIP_DEBUG("hip_locator status =  %d (should be %d)\n", 
+                          hip_locator_status, SO_HIP_SET_LOCATOR_ON);
                 HIP_DEBUG("Recreate all R1s\n");
                 hip_recreate_all_precreated_r1_packets();
                 break;
-        case SO_HIP_SET_INTERFAMILY_OFF:
-                HIP_DEBUG("Setting INTERFAMILY OFF\n");
-                hip_interfamily_status = SO_HIP_SET_INTERFAMILY_OFF;
-                HIP_DEBUG("hip_interfamily status =  %d (should be %d)\n", 
-                          hip_interfamily_status, SO_HIP_SET_INTERFAMILY_OFF);
+        case SO_HIP_SET_LOCATOR_OFF:
+                HIP_DEBUG("Setting LOCATOR OFF\n");
+                hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
+                HIP_DEBUG("hip_locator status =  %d (should be %d)\n", 
+                          hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
 	case SO_HIP_SET_DEBUG_ALL:
@@ -451,8 +451,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_HANDOFF_ACTIVE:
 		//hip_msg_init(msg);
 		is_active_handover=1;
-		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);
-		
+		//hip_build_user_hdr(msg, SO_HIP_HANDOFF_ACTIVE, 0);	
 		break;
 
 	case SO_HIP_HANDOFF_LAZY:
@@ -466,6 +465,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
+
+#ifdef CONFIG_HIP_OPPTCP
+        case SO_HIP_SET_OPPTCP_ON:
+                HIP_DEBUG("Setting opptcp on!!\n");
+                hip_set_opportunistic_tcp_status(1);
+		break;
+        case SO_HIP_SET_OPPTCP_OFF:
+                HIP_DEBUG("Setting opptcp off!!\n");
+                hip_set_opportunistic_tcp_status(0);
+		break;
+#endif
 	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
