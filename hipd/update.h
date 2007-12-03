@@ -73,5 +73,9 @@ int hip_update_send_registration_request(hip_ha_t *entry,
 int hip_create_reg_response(hip_ha_t * entry, struct hip_tlv_common * reg,
 			    uint8_t *requests, int request_count,
 			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
+			    
+int parse_locator(struct hip_locator * locator_income, 
+				struct hip_locator * locator_type1, 
+  				struct hip_locator * locator_type2 );
 
 #endif /* HIP_UPDATE_H */

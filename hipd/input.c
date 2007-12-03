@@ -1114,7 +1114,7 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0;
-        int n_addrs = 0, loc_size = 0;
+    int n_addrs1 = 0, n_addrs2 = 0, loc_size1 = 0, loc_size2 = 0, i = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
 	struct hip_context *ctx = NULL;
@@ -1122,7 +1122,10 @@ int hip_handle_r1(struct hip_common *r1,
 	struct hip_r1_counter *r1cntr;
 	struct hip_reg_info *reg_info;
 	struct hip_dh_public_value *dhpv = NULL;
-        struct hip_locator *locator;
+    struct hip_locator *locator = NULL;
+    char  *locator_address = NULL;
+    struct hip_locator_info_addr_item *address1 = NULL; 
+    struct hip_locator_info_addr_item2 *address2 = NULL;
 #ifdef CONFIG_HIP_HI3
 	struct hip_locator_info_addr_item* first;
 	struct netdev_address *n;
@@ -1177,12 +1180,61 @@ int hip_handle_r1(struct hip_common *r1,
             {
                 /* Lets save the LOCATOR to the entry 'till we
                    get the esp_info in r2 then handle it */
-                n_addrs = hip_get_locator_addr_item_count(locator);
-                loc_size = sizeof(struct hip_locator) +
-                    (n_addrs * sizeof(struct hip_locator_info_addr_item));
-                HIP_IFEL(!(entry->locator = malloc(loc_size)), 
-                       -1, "Malloc for entry->locators failed\n");             
-                memcpy(entry->locator, locator, loc_size);
+              	n_addrs1 = hip_get_locator_addr_item1_count(locator);
+              	_HIP_DEBUG("hip_handle_r1() count type1 locators &d.\n" , n_addrs1);
+                n_addrs2 = hip_get_locator_addr_item2_count(locator);
+                _HIP_DEBUG("hip_handle_r1() count type2 locators &d.\n" , n_addrs2);
+             //   loc_size= hip_get_param_contents_len(locator);
+                loc_size1 = sizeof(struct hip_locator) +
+                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item));
+                    
+                
+                loc_size2 = sizeof(struct hip_locator) +
+                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item2));
+                //reserve space for raw addresses
+                if(n_addrs1){
+	                HIP_IFEL(!(entry->locator = malloc(loc_size1)), 
+	                       -1, "Malloc for entry->locators failed\n");  
+	                //copy the header       
+	                memcpy(entry->locator, locator, sizeof(struct hip_locator)); 
+	                //modify the length
+	                hip_set_locator_addr_length(entry->locator, loc_size1);
+	                // save the starting address for the first locator address.
+	                address1= (struct hip_locator_info_addr_item*) (entry->locator + 1);
+                } 
+                //reserve space for transport addresses
+                if(n_addrs2){
+		            HIP_IFEL(!(entry->locator2 = malloc(loc_size2)), 
+		                   -1, "Malloc for entry->locator2s failed\n");
+		            memcpy(entry->locator2, locator, sizeof(struct hip_locator)); 
+                	hip_set_locator_addr_length(entry->locator2, loc_size2);
+                	address2 = (struct hip_locator_info_addr_item2* ) (entry->locator2 + 1);
+                }
+                
+                //set the first locator address pointer.
+                locator_address = (( char*)locator) + sizeof(struct hip_locator);
+                
+                //copy type 1 locator into entry->locator
+                //copy type2 into entry->locator2
+                for(;locator_address <((char*)locator) + hip_get_param_contents_len(locator);){
+                	if(((struct hip_locator_info_addr_item*)locator_address) == 1){
+                		memcpy(address1, locator_address, sizeof(struct hip_locator_info_addr_item));
+                		locator_address += sizeof(struct hip_locator_info_addr_item);
+                		address1 += 1;
+                	}
+                	else if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 2){
+                		memcpy(address2, locator_address, sizeof(struct hip_locator_info_addr_item2));
+                		locator_address += sizeof(struct hip_locator_info_addr_item2);
+                		address2 += 1;
+                	}else 
+                	//unknow address type
+                	locator_address += sizeof(struct hip_locator_info_addr_item);
+                	
+                }
+            
+                                   
+              //  memcpy(entry->locator, locator, loc_size);
+                
 
 #ifdef CONFIG_HIP_HI3
 		if( r1_info->hi3_in_use && n_addrs > 0 ) 
@@ -1545,7 +1597,8 @@ int hip_create_r2(struct hip_context *ctx,
 	   (hip_we_are_relay() || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	hip_handle_regrequest(entry, i2, r2);
+	if(hip_handle_regrequest(entry, i2, r2) == 0)
+		hip_build_param_reg_from(r2,hip_build_param_reg_from, i2_info->src_port);
 #endif	
  	/* HMAC2 */
 	{
@@ -2333,8 +2386,8 @@ int hip_handle_r2(struct hip_common *r2,
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
 	int retransmission = 0;
-        int * reg_types = NULL;
-        int type_count = 0;
+    int * reg_types = NULL;
+    int type_count = 0;
         
 
 #ifdef CONFIG_HIP_HI3

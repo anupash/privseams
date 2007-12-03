@@ -442,6 +442,9 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 }
 
 
+
+
+
 /**
  * Handles an incoming UPDATE packet received in ESTABLISHED state.
  * 
@@ -2875,4 +2878,121 @@ out_err:
                 HIP_FREE(update_packet);
         return err;
 }
+
+int parse_locator(struct hip_locator * locator_income, struct hip_locator * locator_type1, 
+				  struct hip_locator * locator_type2 )
+{
+  		int n_addrs1 = 0, n_addrs2 = 0, loc_size1= 0, loc_size2= 0;
+  		char *locator_address = NULL;
+  		struct hip_locator_info_addr_item *address1 = NULL; 
+    	struct hip_locator_info_addr_item2 *address2 = NULL;
+  		int err = 0;
+  		
+  		if (locator_income)
+            {
+                /* Lets save the LOCATOR to the entry 'till we
+                   get the esp_info in r2 then handle it */
+              	n_addrs1 = hip_get_locator_addr_item1_count(locator_income);
+              	_HIP_DEBUG("parse_locator count type1 locators &d.\n" , n_addrs1);
+                n_addrs2 = hip_get_locator_addr_item2_count(locator_income);
+                _HIP_DEBUG("parse_locator count type2 locators &d.\n" , n_addrs2);
+             //   loc_size= hip_get_param_contents_len(locator);
+                loc_size1 = sizeof(struct hip_locator) +
+                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item));
+                    
+                
+                loc_size2 = sizeof(struct hip_locator) +
+                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item2));
+                //reserve space for raw addresses
+                if(n_addrs1){
+	                HIP_IFEL(!(locator_type1 = malloc(loc_size1)), 
+	                       -1, "Malloc for entry->locators failed\n");  
+	                //copy the header       
+	                memcpy(locator_type1, locator_income, sizeof(struct hip_locator)); 
+	                //modify the length
+	                hip_set_locator_addr_length(locator_type1, loc_size1);
+	                // save the starting address for the first locator address.
+	                address1= (struct hip_locator_info_addr_item*) (locator_type1 + 1);
+                } 
+                //reserve space for transport addresses
+                if(n_addrs2){
+		            HIP_IFEL(!(locator_type2 = malloc(loc_size2)), 
+		                   -1, "Malloc for entry->locator2s failed\n");
+		            memcpy(locator_type2, locator_income, sizeof(struct hip_locator)); 
+                	hip_set_locator_addr_length(locator_type2, loc_size2);
+                	address2 = (struct hip_locator_info_addr_item2* ) (locator_type2 + 1);
+                }
+                
+                //set the first locator address pointer.
+                locator_address = (( char*)locator_income) + sizeof(struct hip_locator);
+                
+                //copy type 1 locator into entry->locator
+                //copy type2 into entry->locator2
+                for(;locator_address <((char*)locator_income) + hip_get_param_contents_len(locator_income);){
+                	if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 1){
+                		memcpy(address1, locator_address, sizeof(struct hip_locator_info_addr_item));
+                		locator_address += sizeof(struct hip_locator_info_addr_item);
+                		address1 += 1;
+                	}
+                	else if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 2){
+                		memcpy(address2, locator_address, sizeof(struct hip_locator_info_addr_item2));
+                		locator_address += sizeof(struct hip_locator_info_addr_item2);
+                		address2 += 1;
+                	}else 
+                	//unknow address type
+                	locator_address += sizeof(struct hip_locator_info_addr_item);
+                	
+                }
+            }
+            
+
+out_err:
+        if (locator_type1)
+                HIP_FREE(locator_type1);
+        if (locator_type2)
+                HIP_FREE(locator_type2);
+        return err;
+
+}
+
+char* get_locator_item(void* first_item, int index){
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char *result = (char*) first_item;
+	for(;i<index;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == 1)
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		else 
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		
+	}
+	return result ;
+	
+} 
+
+struct in6_addr* get_locator_item_address(void* first_item, int index){
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char *result = (char*) first_item;
+	for(;i<index;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == 1){
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		}
+		else {
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		}
+		
+	}
+	
+	temp = (struct hip_locator_info_addr_item*) result;
+	if (temp->locator_type == 1){
+		return &temp->address;
+	}
+	else {
+		return &((struct hip_locator_info_addr_item2 *)temp)->address;
+	}
+	
+} 
 

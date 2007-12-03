@@ -165,6 +165,12 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+	
+	uint8_t  		transport_protocol; /*value 1 for UDP*/
+	
+	uint16_t 		port /*port number for transport protocol*/;
+    
+    
 };
 
 /* for HIT-SPI hashtable only */
@@ -255,6 +261,8 @@ struct hip_hadb_state
      struct in6_addr      preferred_address; /**< Preferred peer address to use
 						when sending data to peer. */
      struct  in6_addr     local_address; /**< Our IP address. */
+     struct  in6_addr     local_reflective_address; /**< Our IP reflective address,
+						       the Nat public IP */
      hip_lsi_t            lsi_peer;
      hip_lsi_t            lsi_our;
      int                  esp_transform;
@@ -267,6 +275,8 @@ struct hip_hadb_state
 				       host and the peer. */
      in_port_t	          peer_udp_port; /**< NAT mangled port (source port of
 					    I2 packet). */
+     in_port_t	          local_reflective_udp_port; /*port number
+						       of the nat box to the public*/
      int                  escrow_used;
      struct in6_addr	  escrow_server_hit;
      /* The initiator computes the keys when it receives R1.
@@ -316,7 +326,7 @@ struct hip_hadb_state
      /* LOCATOR PARAMETER just tmp save if sent in R1 no 
 	esp_info so keeping it here 'till the 
 	hip_update_locator_parameter can be done*/
-     struct hip_locator *locator;
+     struct hip_locator *locator, *locator2;
  
      /** For retransmission. */
      uint64_t puzzle_i;

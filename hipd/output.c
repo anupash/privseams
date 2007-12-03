@@ -26,7 +26,7 @@ enum number_dh_keys_t number_dh_keys = TWO;
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
-        struct hip_common *i1 = 0;
+    struct hip_common *i1 = 0;
 	struct in6_addr daddr;
 	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
@@ -202,8 +202,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
             HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(msg)) < 0) 
-                HIP_DEBUG("LOCATOR parameter building failed\n");
-            _HIP_DUMP_MSG(msg);
+            HIP_DEBUG("LOCATOR2 parameter building failed\n");
+       		_HIP_DUMP_MSG(msg);
         }
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
@@ -328,6 +328,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR on success, or negative error value on error
  */
+ 
+ /*
 int hip_build_locators(struct hip_common *msg) 
 {
     int err = 0, i = 0, ii = 0;
@@ -346,7 +348,7 @@ int hip_build_locators(struct hip_common *msg)
                  -1, "Malloc for LOCATORS failed\n");
         memset(locs,0,(address_count * 
                        sizeof(struct hip_locator_info_addr_item)));
-        list_for_each_safe(item, tmp, addresses, i) {
+       	 list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
                 continue;
@@ -382,6 +384,134 @@ int hip_build_locators(struct hip_common *msg)
  out_err:
 
     if (locs) free(locs);
+    return err;
+}
+*/
+/**
+ * Builds locator2 list to msg
+ *
+ * @param msg          a pointer to hip_common to append the LOCATORS
+ * @return             len of LOCATOR2 on success, or negative error value on error
+ */
+int hip_build_locators(struct hip_common *msg) 
+{
+    int err = 0, i = 0, ii = 0;
+    struct netdev_address *n;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_locator_info_addr_item2 *locs2 = NULL;
+    struct hip_locator_info_addr_item *locs1 = NULL;
+    int addr_count1 = 0,addr_count2 = 0 ;
+    int UDP_relay_count = 0;
+    
+    //TODO count the number of UDP relay servers.
+    // check the control state of every hatb_state. 
+
+#ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
+    if (address_count > 0) {
+#else
+    if (address_count > 1) {
+#endif
+
+		//TODO check out the count for UDP and hip raw.
+		addr_count1 = address_count;
+		addr_count2 = address_count;
+		
+		
+        HIP_IFEL(!(locs1 = malloc(addr_count1 * 
+                                 sizeof(struct hip_locator_info_addr_item))), 
+                 -1, "Malloc for LOCATORS type1 failed\n");
+        HIP_IFEL(!(locs2 = malloc(addr_count2 * 
+                                 sizeof(struct hip_locator_info_addr_item2))), 
+                 -1, "Malloc for LOCATORS type2 failed\n");
+                 
+                 
+        memset(locs1,0,(addr_count1 * 
+                       sizeof(struct hip_locator_info_addr_item)));
+                       
+        memset(locs2,0,(addr_count2 * 
+                       sizeof(struct hip_locator_info_addr_item2)));              
+        //starting
+         list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs1[ii].reserved = 0;
+                ii++;
+            }
+        }
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs1[ii].reserved = 0;
+                ii++;
+            }
+        }
+        
+        //ending
+        ii = 0;             
+        i = 0;  
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs2[ii].reserved = 0;
+                 // for IPv6 we add UDP information, maybe we do not need this in IPv6
+                locs2[ii].port = HIP_NAT_UDP_PORT;
+                locs2[ii].transport_protocol = 0;
+                locs2[ii].kind = 0;
+                locs2[ii].priority = 126,
+                locs2[ii].spi = 1;
+                ii++;
+            }
+        }
+        list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                continue;
+            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr), 
+                       sizeof(struct in6_addr));
+                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs2[ii].reserved = 0;
+                // for IPv4 we add UDP information
+                locs2[ii].port = HIP_NAT_UDP_PORT;
+                locs2[ii].transport_protocol = 0;
+                locs2[ii].kind = 0;
+                locs2[ii].priority = 126,
+                locs2[ii].spi = 1;
+                ii++;
+            }
+        }
+        err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
+    }
+    else
+        HIP_DEBUG("Host has only one or no addresses no point "
+                  "in building LOCATOR2 parameters\n");
+ out_err:
+
+    if (locs1) free(locs1);
+    if (locs2) free(locs2);
     return err;
 }
 

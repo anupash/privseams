@@ -77,6 +77,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
                 hip_portpair_t *i1_info, uint16_t *nonce, hip_tlv_type_t *param_type);
 int hip_build_locators(struct hip_common *);
+int hip_build_locators2(struct hip_common *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
