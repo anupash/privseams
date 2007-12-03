@@ -378,12 +378,13 @@ int hip_init_dht()
                         /* resolve it */
                         err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
                         if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        err = 0;
+                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+                                HIP_DEBUG("gethostname failed\n");
+                        register_to_dht(); 
                         destroy(&list);
                 }
-                memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-                if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
-                        HIP_DEBUG("gethostname failed\n");
-                register_to_dht(); 
         } else {
                 HIP_DEBUG("DHT is not in use");
         }
