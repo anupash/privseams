@@ -296,7 +296,7 @@ int hipd_init(int flush_ipsec, int killold)
 	chmod(HIP_FIREWALLADDR_PATH, 0777);
 
         dhterr = 0;
-        hip_init_dht();
+        dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	hip_load_configuration();
 	
