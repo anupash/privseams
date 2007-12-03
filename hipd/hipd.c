@@ -85,7 +85,7 @@ int hip_use_i3 = 0; // false
  * userspace ipsec or not. If it is 1, hip uses the user space ipesec.
  * It will not use if hip_use_userspace_ipsec = 0
  */
-int hip_use_userspace_ipsec = 1
+int hip_use_userspace_ipsec = 1;
 
 
 #ifdef CONFIG_HIP_OPPTCP
@@ -237,7 +237,7 @@ int hip_sock_recv_firewall(void)
 		memset(hipd_msg, 0, sizeof(struct hip_common));
 		hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
 		alen = sizeof(hip_firewall_addr);                    
-		n = hip_sendto(hipd_msg, &hip_firewall_addr);
+		n = hip_sendto(hipd_msg, (struct sockaddr_in6 *) &hip_firewall_addr);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
 		if (err == 0)
