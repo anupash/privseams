@@ -25,5 +25,6 @@ extern int hip_opendht_fqdn_sent;
 extern int hip_opendht_hit_sent;
 extern int hip_interfamily_status;
 extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
 
 #endif /* HIP_WORKQUEUE */

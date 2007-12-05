@@ -206,6 +206,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
               HIP_DEBUG("Serving gateway changed\n");
               hip_opendht_fqdn_sent = 0;
               hip_opendht_hit_sent = 0;
+              hip_opendht_error_count = 0;
             }
             else
             {
