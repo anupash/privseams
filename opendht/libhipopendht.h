@@ -3,7 +3,7 @@
 #define lib_opendht
 
 /* Resolve the gateway address using opendht.nyuld.net */
-#define OPENDHT_GATEWAY  "opendht.nyuld.net"
+#define OPENDHT_GATEWAY "opendht.nyuld.net"
 #define OPENDHT_PORT 5851
 #define OPENDHT_TTL 120
 #define STATE_OPENDHT_IDLE 0
