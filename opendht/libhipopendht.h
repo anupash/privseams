@@ -34,6 +34,8 @@ int opendht_get_key(struct addrinfo *, unsigned char *, unsigned char *);
 
 int opendht_handle_key(char *, char *);
 
+int opendht_handle_value(char *, char *); 
+
 int opendht_read_response(int, char *);
 
 #endif /* lib_opendht */
