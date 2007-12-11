@@ -325,6 +325,5 @@ AC_CONFIG_FILES([ Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile
-                  dnsmasq/Makefile])
+		  libipsec/Makefile])
 AC_OUTPUT
