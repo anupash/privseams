@@ -590,6 +590,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_REG_INFO,
                         HIP_PARAM_REG_REQUEST,
                         HIP_PARAM_REG_RESPONSE,
+            HIP_PARAM_REG_FROM,
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
                         HIP_PARAM_VIA_RVS,
@@ -1057,6 +1058,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
 	case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
 	case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
+	case HIP_PARAM_REG_FROM: return "HIP_PARAM_REG_FROM";
 	case HIP_PARAM_RVS_HMAC: return "HIP_PARAM_RVS_HMAC";
 	case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
 	case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";

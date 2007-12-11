@@ -261,7 +261,7 @@ struct hip_hadb_state
      struct in6_addr      preferred_address; /**< Preferred peer address to use
 						when sending data to peer. */
      struct  in6_addr     local_address; /**< Our IP address. */
-     struct  in6_addr     local_reflective_address; /**< Our IP reflective address,
+     struct  in6_addr     local_reflexive_address; /**< Our IP reflective address,
 						       the Nat public IP */
      hip_lsi_t            lsi_peer;
      hip_lsi_t            lsi_our;
@@ -275,7 +275,7 @@ struct hip_hadb_state
 				       host and the peer. */
      in_port_t	          peer_udp_port; /**< NAT mangled port (source port of
 					    I2 packet). */
-     in_port_t	          local_reflective_udp_port; /*port number
+     in_port_t	          local_reflexive_udp_port; /*port number
 						       of the nat box to the public*/
      int                  escrow_used;
      struct in6_addr	  escrow_server_hit;

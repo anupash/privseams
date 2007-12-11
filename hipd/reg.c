@@ -940,3 +940,35 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
      return err;
 }
 
+int handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
+	 int err = 0;
+     uint8_t lifetime = 0;
+     struct hip_reg_from *rfrom = NULL;
+
+	 
+        
+     HIP_DEBUG("Checking msg for REG_FROM parameter.\n");
+     rfrom = hip_get_param(msg, HIP_PARAM_REG_FROM);
+     if(rfrom){
+		HIP_DEBUG("received a for REG_FROM parameter \n");
+		//check if it is a local address
+		if(ipv6_addr_cmp((struct in6_addr *)rfrom->address,&entry->local_address) ){	
+			
+			HIP_DEBUG("the host is not behind nat \n");
+		}
+		else{
+			HIP_DEBUG("found a nat");
+			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct  in6_addr) );
+			entry->local_reflexive_udp_port = rfrom->port;
+		}
+			
+     }
+		
+	 else err = 1;
+		
+ out_err:
+     return err;
+     
+}
+
+

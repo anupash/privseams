@@ -1543,7 +1543,7 @@ int hip_create_r2(struct hip_context *ctx,
 {	
 	struct hip_reg_request *reg_request = NULL;
  	struct hip_common *r2 = NULL, *i2;
- 	int err = 0, clear = 0;
+ 	int err = 0, clear = 0, send_reg_from = 0;
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
@@ -1598,7 +1598,8 @@ int hip_create_r2(struct hip_context *ctx,
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	if(hip_handle_regrequest(entry, i2, r2) == 0)
-		hip_build_param_reg_from(r2,hip_build_param_reg_from, i2_info->src_port);
+		send_reg_from = 1;
+		;
 #endif	
  	/* HMAC2 */
 	{
@@ -1624,6 +1625,8 @@ int hip_create_r2(struct hip_context *ctx,
 		  hip_build_param_relay_to(
 		       r2, dest, dest_port);
 	  }
+	  if(send_reg_from)
+	 		hip_build_param_reg_from(r2,hip_build_param_reg_from, i2_info->src_port);
 #endif
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -2540,6 +2543,9 @@ int hip_handle_r2(struct hip_common *r2,
         if (type_count > 0) {
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
                         "Error handling reg_response\n"); 
+                        /**change to HIP_IFEL in later*/
+                if(handle_reg_from(entry, r2))
+                HIP_DEBUG("reg_from not found");
         }
 
 	/* these will change SAs' state from ACQUIRE to VALID, and
