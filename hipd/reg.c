@@ -940,7 +940,7 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
      return err;
 }
 
-int handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
+int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	 int err = 0;
      uint8_t lifetime = 0;
      struct hip_reg_from *rfrom = NULL;
@@ -959,7 +959,7 @@ int handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 		else{
 			HIP_DEBUG("found a nat");
 			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct  in6_addr) );
-			entry->local_reflexive_udp_port = rfrom->port;
+			entry->local_reflexive_udp_port = nyohs(rfrom->port);
 		}
 			
      }
