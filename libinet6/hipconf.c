@@ -1705,12 +1705,12 @@ out_err:
 	return err;
 }
 
-#ifdef CONFIG_HIP_OPPTCP
 int hip_conf_handle_opptcp(struct hip_common *msg, int action,
 			  const char *opt[], int optc)
 {
     int err = 0, status = 0;
     
+#ifdef CONFIG_HIP_OPPTCP
     if (!strcmp("on",opt[0])) {
         status = SO_HIP_SET_OPPTCP_ON; 
     } else if (!strcmp("off",opt[0])) {
@@ -1719,6 +1719,7 @@ int hip_conf_handle_opptcp(struct hip_common *msg, int action,
         HIP_IFEL(1, -1, "bad args\n");
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+#endif
     
  out_err:
     return err;
@@ -1727,4 +1728,3 @@ int hip_conf_handle_opptcp(struct hip_common *msg, int action,
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
-#endif

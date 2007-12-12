@@ -192,7 +192,5 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-#ifdef CONFIG_HIP_OPPTCP
-	int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
-#endif /*OPPTCP*/
+int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 #endif /* HIPCONF */
