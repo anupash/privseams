@@ -40,7 +40,7 @@ int connhipd_init(void)
 	socklen_t alen;
 
 	/* Allocate message. */
-	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
+	HIP_IFEL(((msg = hip_msg_alloc()) == NULL), -1,  "Failed to Allocate message.\n");
 
 	/* Create and bind daemon socket. */
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
@@ -48,7 +48,7 @@ int connhipd_init(void)
 
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
-	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
+	HIP_IFEL((hip_tmpname_gui(agent_addr.sun_path)), -1,  "Failed hip_tmpname_gui.\n");
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
 	chmod(agent_addr.sun_path, 0777);
@@ -63,9 +63,9 @@ int connhipd_init(void)
 /*	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);*/
 
+	hip_agent_thread_started = 0;
 	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
-	hip_agent_thread_started = 0;
 	while (hip_agent_thread_started == 0) usleep(100 * 1000);
 	usleep(100 * 1000);
 
@@ -327,7 +327,7 @@ void *connhipd_thread(void *data)
 		if (!hip_agent_thread_started) continue;
 		if (!FD_ISSET(hip_agent_sock, &read_fdset)) continue;
 
-		bzero(&agent_addr, sizeof(agent_addr));
+		memset(&agent_addr, 0, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
 		             (struct sockaddr *)&agent_addr, &alen);

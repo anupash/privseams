@@ -47,12 +47,12 @@
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
  */
+
 /**
  * @addtogroup exec_app_types
  * @{
  */
- 
-/**
+ /**
  * Execute application with opportunistic library preloaded.
  * @see handle_exec_application()
  */
@@ -76,11 +76,15 @@
  * @see handle_exec_application()
  */
 #define LIB_LENGTH	200
-
-
-
 /** @} addtogroup exec_app_types */
 
+/* hipconf tool actions. These are numerical values for the first commandline
+   argument. For example in "tools/hipconf get hi default" -command "get"
+   is the action. */
+
+
+/* Important! These values are used as array indexes, so keep in this order.
+   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -100,8 +104,9 @@
 #define ACTION_DEBUG 16
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
-#define ACTION_INTERFAMILY 19
+#define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
+#define ACTION_OPPTCP  21
 #define ACTION_MAX 22 /* exclusive */
 
 /* 0 is reserved */
@@ -125,10 +130,12 @@
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
-#define TYPE_INTERFAMILY 21
-#define TYPE_SET        22 /* DHT set <name> */
-#define TYPE_DHT        23
-#define TYPE_MAX    	24 /* exclusive */
+#define TYPE_LOCATOR    21
+#define TYPE_RELAY_UDP_HIP 22
+#define TYPE_SET        23 /* DHT set <name> */
+#define TYPE_DHT        24
+#define TYPE_OPPTCP		25
+#define TYPE_MAX    	26 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -141,7 +148,9 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # nat on            # the host is behind a NAT\n\
-# debug none        # no debugging messages will be displayed\n"
+# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
+# locator on # host sends all of its locators in base exchange \n\
+debug medium        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HOSTS_FILE "/etc/hosts"
@@ -160,9 +169,10 @@ int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_interfamily(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);
@@ -182,6 +192,7 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
-
+#ifdef CONFIG_HIP_OPPTCP
+	int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+#endif /*OPPTCP*/
 #endif /* HIPCONF */

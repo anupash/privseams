@@ -1,4 +1,4 @@
-#ifndef _HIP_NLINK_H
+ #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
 #include <stdio.h>

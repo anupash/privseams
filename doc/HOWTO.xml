@@ -114,6 +114,20 @@
               or you can try enabling the NAT mode at the end-host.
     </para></listitem>
     </itemizedlist>
+    <para>
+       As an example, this was what was required to type in Ubuntu Gutsy
+       Gibbon for compiling the kernel and userspace software:
+    </para>
+    <para>
+       aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6
+    </para>
+    <para>
+    Note: Some people reported this error:
+  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
+  file or directory.  This seems to be a bug in the latest libc6-dev
+  package itself. It is just missing a header file. As a workaround,
+  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
@@ -452,20 +466,13 @@
     <table frame="all"><title>Test Servers</title>
           <tgroup cols="1">
             <thead>
-              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
             </thead>
             <tbody>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
-              <!--
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              -->
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
             </tbody>
           </tgroup>
     </table>
@@ -800,6 +807,69 @@
   </section>
   </chapter>
   <chapter>
+    <title>Tips for Using HIP with Some Applications</title>
+    <section>
+    <title> Using HIP Enabled Proxy Server</title>
+    <para>
+      In the deployment phase, it is interesting to set-up a proxy server that 
+      translates the TCP/IP traffic into HIP. For instance, this is convenient 
+      in http proxy servers. Thus all http traffic between our host and the proxy 
+      server will benefit from the usage of HIP. 
+    </para>
+    <para>
+      First of all, you should have installed and configured properly your proxy
+      server to employ HIP. This includes alowing HITs to connect the server 
+      (settings in the httpd.conf file) and restarting httpd using HIP.
+    </para>
+    <para>
+      You have several options to enable the HIP proxy within Firefox. In the menu 
+      Edit/Preferences/Advanced/Connection Settings, you can choose:
+    </para>
+    <para>
+      Direct connection to the internet: To disable the usage of any proxy.
+    </para>
+    <para>
+      Auto-detect proxy settings for this network: To enable the auto-detection
+      feature, you should configure the wpad.dat file that it is served by
+      your proxy in the URL http://wpad.mynetwork.com/wpad.dat (or a similar one).
+      The wpad.dat file should return the information of your HIP enabled 
+      proxy server at the end of the function FindProxyForURL(url, host). 
+    </para>
+    <para> 
+      Manual proxy configuration: To manually introduce the information about 
+      your HIP enabled proxy server. You should also identify the port number.  
+    </para>
+    <para> 
+      Automatic proxy configuration URL: To use a wpad.dat file that is not 
+      located in the default URL http://wpad.mynetwork.com/wpad.dat. With this 
+      feature, you can store a wpad.dat file in some other location of your 
+      server and Firefox will fetch it from this URL.    
+    </para>
+    <para>
+      Once you have the proxy server and Firefox ready, you can restart Firefox 
+      under HIP with (please make sure that no other instances of Firefox are being 
+      run at that time):
+    </para>
+    <para>
+      hipconf run normal|opp firefox 
+    </para>
+    <para>
+      Now your Firefox should be connected by HIP to your proxy server, 
+      enabling mobility and enhancing security from your proxy to your host. 
+    </para>
+  </section>
+  <section>
+  <title>Sendmail and Spamassassin</title>
+  <para>
+  Sendmail works fine with HIP after you enable IPv6 in sendmail. We
+  did some experimentation with spamassassin to integrate it with HIP
+  puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
+  README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
+  examples of configuration changes and instructions.
+  </para>
+  </section>
+  </chapter>
+  <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
   <para>
    The rendezvous extension extends HIP and the HIP registration extension for
@@ -849,9 +919,11 @@
    interface. When the responder registers to the rendezvous server, it can
    choose any one four HITs. Please make sure that you use the same HIT here as
    &lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
-   check which HIT is used from the messages the responders's hipdaemon prints;
-   there should be a line saying: "HIT being registered to rvs: &lt;HIT&gt;"
-  </para> 
+   check which HIT is used with the hipconf tool. To do this, start HIP daemon
+   at the Responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
+   the Responder and the default HIT is printed on screen. This is also the
+   HIT that is registered to the RVS.</para>
+ 
   <para>
    RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
    are left blank ("/etc/hosts" can of course contain the non-hiprelated
@@ -1555,20 +1627,14 @@ combo-newgroup=&lt;create new...&gt;
     <title>Hi3 Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           unpack <ulink url="http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz" /> in the top directory (hipl--main--2.6)
+          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
     </para></listitem>
     <listitem><para>
-           make sure that the link "hipl--main--2.6/i3" points to
-    the unpacked i3_0.3/i3 directory
+          Start the daemon: hipd -3 i3-cfg-PL.xml
     </para></listitem>
     <listitem><para>
-          Compile hipl--main--2.6 with ./configure --enable-hi3
-    </para></listitem>
-    <listitem><para>
-           Not tested for a long time. To work, needs to use some set of
-	i3 servers started locally from i3 distro or running on 
-        PlanetLab. See e.g. <ulink url="http://hipl.infrahip.net/i3_status.html or" /> 
-	http://rose.cs.berkeley.edu:8080/i3_status.html
+          Wait until the trigger is inserted (see log file) and continue with e.g.
+          ping6 or conntest-client-gai with testing.
     </para></listitem>
 	</itemizedlist>
 
@@ -1710,6 +1776,29 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
+  </chapter>
+  <chapter>
+    <title>DNS data manipulation</title>
+    <para>
+      Tools contains the script parse-key-3.py which converts public
+      key file contents to different DNS zone file formats. To convert
+      to unpatched BIND9 format, use command:
+      <programlisting>
+# ./parse-key-3.py &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+      </programlisting>
+      This outputs a line which can be inserted to a zone
+      file. Similarly, with sed command:
+      <programlisting>
+.... | sed -n -e '/^HIPBIND */s///p'
+      </programlisting>
+      an HIP RR entry suitable for OpenDHT version of BIND9 is output
+      and with
+      <programlisting>
+.... | sed -n -e '/^DJBDNS */s///p'
+      </programlisting>
+      a line for Dan Bernstein's tinydns is output. For further
+      information, please refer to parse-key-3.py and myasn.py.
+    </para>
   </chapter>
 </book>    
 

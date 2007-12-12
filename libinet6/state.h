@@ -88,6 +88,9 @@ typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
+#ifdef CONFIG_HIP_HI3
+	int hi3_in_use; // varibale says is the received message sent through i3 or not
+#endif
 } hip_portpair_t;
 
 /**
@@ -104,10 +107,11 @@ typedef struct hip_msg_retrans{
 
 /** 
  * A binder structure for storing an IPv6 address and transport layer port
- * number. This structure is used in hip_build_param_via_rvs_nat().
+ * number. This structure is used in hip_build_param_relay_to_old().
  * 
- * @note This has to be packed since it is used in building @c FROM_NAT and
- *       @c VIA_RVS_NAT parameters.
+ * @note This has to be packed since it is used in building @c RELAY_FROM and
+ *       @c RELAY_TO parameters.
+ * @note obsolete
  */
 struct hip_in6_addr_port
 {
@@ -234,131 +238,124 @@ struct hip_host_id_entry {
 /** A data structure defining host association database state. */
 struct hip_hadb_state
 {
-	hip_hit_t            hit_our;
-	/** Peer's HIT. */
-	hip_hit_t            hit_peer;
-	/** @c hit_our XOR @c hit_peer. */
-	//unsigned long        hashkey;
+     hip_hit_t            hit_our; /**< Our HIT. */
+     hip_hit_t            hit_peer;  /**< Peer HIT. */
+     hip_hastate_t        hastate;
+     int                  state;
+     int                  retrans_state; /**< This guarantees that
+					    retransmissions work properly
+					    also in non-established state.*/
+     int                  update_state;
+     hip_controls_t       local_controls; /**< @see hip_ha_controls */
+     hip_controls_t       peer_controls; /**< @see hip_ha_controls */
+     int                  is_loopback;
+     HIP_HASHTABLE        *spis_in; /**< SPIs for inbound SAs, hip_spi_in_item. */
+     HIP_HASHTABLE        *spis_out; /**< SPIs for outbound SAs, hip_spi_out_item */
+     uint32_t             default_spi_out;
+     struct in6_addr      preferred_address; /**< Preferred peer address to use
+						when sending data to peer. */
+     struct  in6_addr     local_address; /**< Our IP address. */
+     hip_lsi_t            lsi_peer;
+     hip_lsi_t            lsi_our;
+     int                  esp_transform;
+     int                  hip_transform;
+     uint64_t             birthday;
+     char                 *dh_shared_key;
+     size_t               dh_shared_key_len;
+     uint8_t	          nat_mode; /**< A boolean value indicating whether
+				       there is a NAT between this
+				       host and the peer. */
+     in_port_t	          peer_udp_port; /**< NAT mangled port (source port of
+					    I2 packet). */
+     int                  escrow_used;
+     struct in6_addr	  escrow_server_hit;
+     /* The initiator computes the keys when it receives R1.
+      * The keys are needed only when R2 is received. We store them
+      * here in the mean time. */
+     /** Outgoing HIP packets. */
+     struct hip_crypto_key hip_enc_out;
+     struct hip_crypto_key hip_hmac_out;
+     /** Outgoing ESP packets. */
+     struct hip_crypto_key esp_out;
+     struct hip_crypto_key auth_out;
+     /** Incoming HIP packets. */
+     struct hip_crypto_key hip_enc_in;
+     struct hip_crypto_key hip_hmac_in;
+     /** Incoming ESP packets. */
+     struct hip_crypto_key esp_in;
+     struct hip_crypto_key auth_in;
+     /** The byte offset index in draft chapter HIP KEYMAT. */
+     uint16_t current_keymat_index;
+     /** The one byte index number used during the keymat calculation. */
+     uint8_t keymat_calc_index;
+     /** For @c esp_info. */
+     uint16_t esp_keymat_index;
+     /* Last Kn, where n is @c keymat_calc_index. */
+     unsigned char current_keymat_K[HIP_AH_SHA_LEN];
+     /** Stored outgoing UPDATE ID counter. */
+     uint32_t update_id_out;
+     /** Stored incoming UPDATE ID counter. */
+     uint32_t update_id_in;
 
-//	hip_list_t    next_hit;
-//	spinlock_t           lock;
-//	atomic_t             refcnt;
-	hip_hastate_t        hastate;
-	int                  state;
-	/** This guarantees that retransmissions work properly also in
-	    non-established state.*/
-	int                  retrans_state;
-	int                  update_state;
-	uint16_t             local_controls;
-	uint16_t             peer_controls;
-	int                  is_loopback;
-	/** The HIT we use with this host. */
-	/** SPIs for inbound SAs, hip_spi_in_item. */
-	HIP_HASHTABLE     *spis_in;
-	/** SPIs for outbound SAs, hip_spi_out_item */
-	HIP_HASHTABLE     *spis_out;
-	uint32_t             default_spi_out;
-	/** Preferred peer address to use when sending data to peer. */
-	struct in6_addr      preferred_address;
-	/** Our IP address. */
-        struct  in6_addr     local_address;
-	hip_lsi_t            lsi_peer;
-	hip_lsi_t            lsi_our;
-	int                  esp_transform;
-	int                  hip_transform;
-	uint64_t             birthday;
-	char                 *dh_shared_key;
-	size_t               dh_shared_key_len;
+     /* Our host identity functions */
+     struct hip_host_id *our_pub;
+     struct hip_host_id *our_priv;
+     int (*sign)(struct hip_host_id *, struct hip_common *);
+     /* Peer host identity functions */
+     struct hip_host_id *peer_pub;
+     int (*verify)(struct hip_host_id *, struct hip_common *);
+     /** For retransmission. */
+     uint64_t puzzle_solution;
 
- 	/** A boolean value indicating whether there is a NAT between this
- 	    host and the peer. */
- 	uint8_t	             nat_mode;
-         /** NAT mangled port (source port of I2 packet). */
- 	in_port_t	     peer_udp_port;
-        int                  escrow_used;
-	struct in6_addr	     escrow_server_hit;
-	/* The initiator computes the keys when it receives R1.
-	 * The keys are needed only when R2 is received. We store them
-	 * here in the mean time.
-	 */
- 	/** Outgoing HIP packets. */
- 	struct hip_crypto_key hip_enc_out;
-  	struct hip_crypto_key hip_hmac_out;
- 	/** Outgoing ESP packets. */
- 	struct hip_crypto_key esp_out;
-  	struct hip_crypto_key auth_out;
- 	/** Incoming HIP packets. */
- 	struct hip_crypto_key hip_enc_in;
-  	struct hip_crypto_key hip_hmac_in;
- 	/** Incoming ESP packets. */
- 	struct hip_crypto_key esp_in;
- 	struct hip_crypto_key auth_in;
- 	/** The byte offset index in draft chapter HIP KEYMAT. */
- 	uint16_t current_keymat_index;
- 	/** The one byte index number used during the keymat calculation. */
- 	uint8_t keymat_calc_index;
- 	/** For @c esp_info. */
- 	uint16_t esp_keymat_index;
- 	/* Last Kn, where n is @c keymat_calc_index. */
- 	unsigned char current_keymat_K[HIP_AH_SHA_LEN];
- 	/** Stored outgoing UPDATE ID counter. */
- 	uint32_t update_id_out;
- 	/** Stored incoming UPDATE ID counter. */
- 	uint32_t update_id_in;
+     /* Blind */           
+     uint16_t	     blind;  /* 1, if hadb_state uses blind protocol*/
+     hip_hit_t            hit_our_blind; /* The HIT we use with this host */
+     hip_hit_t            hit_peer_blind; /* Peer's HIT */
+     uint16_t             blind_nonce_i;
 
-	/* Our host identity functions */
-	struct hip_host_id *our_pub;
-	struct hip_host_id *our_priv;
-	int (*sign)(struct hip_host_id *, struct hip_common *);
-        /* Peer host identity functions */
-        struct hip_host_id *peer_pub;
- 	int (*verify)(struct hip_host_id *, struct hip_common *);
- 	/** For retransmission. */
-        uint64_t puzzle_solution;
-
-       /* Blind */           
-        uint16_t	     blind;  /* 1, if hadb_state uses blind protocol*/
-        hip_hit_t            hit_our_blind; /* The HIT we use with this host */
-        hip_hit_t            hit_peer_blind; /* Peer's HIT */
-        uint16_t             blind_nonce_i;
-
-        /* LOCATOR PARAMETER just tmp save if sent in R1 no 
-        esp_info so keeping it here 'till the 
-        hip_update_locator_parameter can be done*/
-        struct hip_locator *locator;
+     /* LOCATOR PARAMETER just tmp save if sent in R1 no 
+	esp_info so keeping it here 'till the 
+	hip_update_locator_parameter can be done*/
+     struct hip_locator *locator;
  
-	/** For retransmission. */
-	uint64_t puzzle_i;
-	/** For base exchange or CLOSE. @b Not for UPDATE. */
-	char echo_data[4];
-	/** For storing retransmission related data. */
-	hip_msg_retrans_t hip_msg_retrans;
+     /** For retransmission. */
+     uint64_t puzzle_i;
+     /** For base exchange or CLOSE. @b Not for UPDATE. */
+     char echo_data[4];
+     /** For storing retransmission related data. */
+     hip_msg_retrans_t hip_msg_retrans;
 
-	/* receive func set. Do not modify these values directly.
-	   Use hip_hadb_set_rcv_function_set instead */
-	hip_rcv_func_set_t *hadb_rcv_func;
+     /* receive func set. Do not modify these values directly.
+	Use hip_hadb_set_rcv_function_set instead */
+     hip_rcv_func_set_t *hadb_rcv_func;
 	
-	/* handle func set. Do not modify these values directly. 
+     /* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-	hip_handle_func_set_t *hadb_handle_func;
+     hip_handle_func_set_t *hadb_handle_func;
 
-	/* handle func set. Do not modify these values directly. 
+     /* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-	hip_misc_func_set_t *hadb_misc_func;	
+     hip_misc_func_set_t *hadb_misc_func;	
 
-	/* handle func set. Do not modify these values directly. 
+     /* handle func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-	hip_update_func_set_t *hadb_update_func;	
+     hip_update_func_set_t *hadb_update_func;	
 
-	/* transmission func set. Do not modify these values directly. 
+     /* transmission func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-	hip_xmit_func_set_t *hadb_xmit_func;
+     hip_xmit_func_set_t *hadb_xmit_func;
 
-	/* For e.g. GUI agent */
-	hip_input_filter_func_set_t *hadb_input_filter_func;
-	hip_output_filter_func_set_t *hadb_output_filter_func;
-        /* true when agent is prompting user and fallback is disabled */
-	int hip_opp_fallback_disable; 
+     /* For e.g. GUI agent */
+     hip_input_filter_func_set_t *hadb_input_filter_func;
+     hip_output_filter_func_set_t *hadb_output_filter_func;
+     /* true when agent is prompting user and fallback is disabled */
+     int hip_opp_fallback_disable; 
+#ifdef CONFIG_HIP_HI3
+	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
+#endif
+#ifdef CONFIG_HIP_OPPTCP
+	int hip_is_opptcp_on;
+#endif
 };
 
 /** A data structure defining host association information that is sent
@@ -471,7 +468,8 @@ struct hip_hadb_update_func_set{
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
-					       struct hip_esp_info *esp_info);
+					       struct hip_esp_info *esp_info,
+					       struct hip_seq *seq);
 
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
 					     struct hip_common *msg,

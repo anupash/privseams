@@ -223,7 +223,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
         /*
           Clear the timestamp, initially 0 so everything will be sent
         */
-        memset(&n->timestamp, '0', sizeof(time_t));
+        memset(&n->timestamp, 0, sizeof(time_t));
 
         n->if_index = ifindex;
 	//INIT_LIST_HEAD(&n->next);
@@ -660,10 +660,23 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		goto skip_entry_creation;
 	}
 
+
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
 
+#ifdef CONFIG_HIP_HI3
+	if(hip_use_i3) {
+		struct in_addr lpback = { INADDR_LOOPBACK };
+		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		err = 0;
+	}
+	else {
+		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+	}
+#else
 	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+#endif // CONFIG_HIP_HI3
+
 	if (err) {
 		/* Search HADB for existing entries */
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
@@ -1115,7 +1128,7 @@ int hip_get_default_hit(struct in6_addr *hit)
 	int err = 0;
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { "0",};
+	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	hip_hit_t hit_tmpl;
 	

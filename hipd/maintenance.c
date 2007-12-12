@@ -405,7 +405,6 @@ void register_to_dht ()
         if (tmp_hit_str) free(tmp_hit_str);
         if (tmp_addr_str) free(tmp_addr_str);
         return;
-
 }
 
 /**
@@ -610,6 +609,12 @@ int periodic_maintenance()
                         opendht_counter--;
                 }
         }
+
+//#ifdef CONFIG_HIP_UDPRELAY
+	/* Clear expired records from the relay hashtable. */
+	hip_relht_maintenance();
+//#endif
+
 
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){

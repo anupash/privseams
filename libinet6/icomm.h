@@ -84,15 +84,17 @@
 #define SO_HIP_DHT_SERVING_GW                   148
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
+#define SO_HIP_OFFER_HIPUDPRELAY                151
+#define SO_HIP_ADD_RELAY_UDP_HIP                152
 /* Restart daemon. */
-#define SO_HIP_RESTART		      		151
-#define SO_HIP_SET_INTERFAMILY_ON               152
-#define SO_HIP_SET_INTERFAMILY_OFF              153
-#define SO_HIP_DHT_SET                          154
-#define SO_HIP_DHT_ON                           155
-#define SO_HIP_DHT_OFF                          156
-
-
+#define SO_HIP_RESTART		      		153
+#define SO_HIP_SET_LOCATOR_ON                   154
+#define SO_HIP_SET_LOCATOR_OFF                  155
+#define SO_HIP_DHT_SET                          156
+#define SO_HIP_DHT_ON                           157
+#define SO_HIP_DHT_OFF                          158
+#define SO_HIP_SET_OPPTCP_ON                    159
+#define SO_HIP_SET_OPPTCP_OFF                   160
 /** @} */
 
 #endif /* _HIP_ICOMM */
