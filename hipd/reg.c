@@ -959,7 +959,7 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 		else{
 			HIP_DEBUG("found a nat");
 			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct  in6_addr) );
-			entry->local_reflexive_udp_port = nyohs(rfrom->port);
+			entry->local_reflexive_udp_port = ntohs(rfrom->port);
 		}
 			
      }
