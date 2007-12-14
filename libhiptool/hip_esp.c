@@ -21,8 +21,6 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
-#if 1
-
 #include <stdio.h>		/* printf() */
 #ifdef __WIN32__
 #include <win32/types.h>
@@ -2063,5 +2061,3 @@ __u64 get_eth_addr(int family, __u8 *addr)
 	
 	return(r);
 }
-
-#endif /* 0 */

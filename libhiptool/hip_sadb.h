@@ -71,6 +71,9 @@ typedef struct _udphdr {
 #define HIP_ESP_UDP_PORT 50500
 #define HIP_KEEPALIVE_TIMEOUT 20
 
+#define FALSE 0
+#define TRUE  1
+
 /**** end of definitions from hip_types.h ****/
 
 
