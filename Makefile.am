@@ -16,7 +16,7 @@ EXTRA_DIST += i3-cfg-PL.xml
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent dnsmasq
+SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent
 
 showip:
 	cd showip && sh create.sh
