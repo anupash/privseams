@@ -34,14 +34,14 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-libhiptool_la_SOURCES = crypto.c pk.c nlink.c hip_esp.c
+libhiptool_la_SOURCES = crypto.c pk.c nlink.c hip_esp.c hip_sadb.c
 
 if HIP_PFKEY
 else
 libhiptool_la_SOURCES += xfrmapi.c
 endif
 
-CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL 
+CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
 include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h
 

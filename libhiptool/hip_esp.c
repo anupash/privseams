@@ -21,7 +21,7 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
-#if 0
+#if 1
 
 #include <stdio.h>		/* printf() */
 #ifdef __WIN32__
@@ -53,15 +53,15 @@
 #include <openssl/sha.h>	/* SHA1 algorithms */
 #include <openssl/des.h>	/* 3DES algorithms */
 #include <openssl/rand.h>	/* RAND_bytes() */
-#include <win32/pfkeyv2.h>
-#include <hip/hip_types.h>
-#include <hip/hip_funcs.h>
-#include <hip/hip_usermode.h>
-#include <hip/hip_sadb.h>
+#include "win32-pfkeyv2.h"
+//#include <hip/hip_types.h>
+//#include <hip/hip_funcs.h>
+#include "hip_usermode.h"
+#include "hip_sadb.h"
 #if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
 #include <mac/checksum_mac.h>
 #else
-#include <win32/checksum.h>
+#include "win32-checksum.h"
 #endif
 /* 
  * Globals
