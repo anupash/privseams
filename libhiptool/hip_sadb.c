@@ -45,7 +45,7 @@
 #endif
 //#include <hip/hip_service.h>
 //#include <hip/hip_types.h>
-#include <hip/hip_sadb.h>
+#include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
 
