@@ -46,7 +46,8 @@ int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
 int hip_firewall_sock = 0;
-struct sockaddr_un hip_firewall_addr;
+struct sockaddr_in6 hip_firewall_addr;
+
 
 /* OpenDHT related variables */
 int hip_opendht_sock_fqdn = 0; /* FQDN->HIT mapping */
