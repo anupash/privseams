@@ -466,20 +466,13 @@
     <table frame="all"><title>Test Servers</title>
           <tgroup cols="1">
             <thead>
-              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
             </thead>
             <tbody>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
-              <!--
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              -->
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
             </tbody>
           </tgroup>
     </table>
@@ -1580,11 +1573,54 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     </itemizedlist>
 
-    <para> May need a change of contact OpenDHT server, currently 
-	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
-	For documentation, please also check 
-        <ulink url="http://kom.aau.dk/group/05gr680/" />
+    <para>
+    By default OpenDHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After a few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random. currently running servers list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. 
     </para>
+
+    <para>
+    There is multiple OpenDHT related hipconf commands that you can
+    use to affect the behaviour of the OpenDHT code of HIPL. 
+    </para> 
+
+    <itemizedlist>
+      <listitem><para>
+        hipconf opendht on|off
+      </para></listitem>
+      <listitem><para>
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (OpenDHT default = 5851)&gt; &lt;TTL&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht get &lt;fqdn/hit&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht set &lt;name&gt;
+      </para></listitem>
+    </itemizedlist>
+
+    <para>
+    First one of these commands toggles the on/off status of the
+    code. Second one forces the OpenDHT code to change current serving
+    gateway eith a new one. This command allows to change port and TTL
+    definitions of OpenDHT code on the fly. Third command is a simple
+    get of value under a key. Fourth command lets you set a
+    userdefined name to be sent to the OpenDHT. By default result of
+    "uname -n" is sent to the OpenDHT. 
+    </para>
+
+    <para>
+    For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+    </para>
+
   </chapter>
 
   <chapter>

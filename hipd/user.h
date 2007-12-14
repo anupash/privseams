@@ -23,7 +23,9 @@ extern int opendht_serving_gateway_port;
 extern int opendht_serving_gateway_ttl;
 extern int hip_opendht_fqdn_sent;
 extern int hip_opendht_hit_sent;
-extern int we_are_relay;
 extern int hip_locator_status;
+extern int hip_opendht_inuse;
+extern int hip_opendht_error_count;
+extern int we_are_relay;
 
 #endif /* HIP_WORKQUEUE */
