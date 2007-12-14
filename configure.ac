@@ -269,6 +269,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
+AC_PREFIX_DEFAULT("/usr/local")
+
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
 AC_SUBST(HIPL_TOOLS, "$HIPL/tools")

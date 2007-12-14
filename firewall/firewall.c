@@ -18,14 +18,15 @@ int statefulFiltering = 1;
 int escrow_active = 0;
 int use_ipv4 = 0;
 int use_ipv6 = 0;
+int accept_normal_traffic = 0;
 pthread_t ipv4Thread, ipv6Thread;
 
 
 void print_usage()
 {
         printf("HIP Firewall\n");
-        printf("Usage: firewall -p <protocol> -f <file_name> <timeout> [-d|-v]\n");
-        printf("      - protocol is either \"ipv4\" or \"ipv6\"\n");
+        printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]\n");
+	printf("      - traffic_other_than_hip, can take the value drop or accept\n");
         printf("      - file_name is a path to a file containing firewall filtering rules\n");
         printf("      - timeout is connection timeout value in seconds\n");
         printf("      - d = debugging output\n");
@@ -64,28 +65,22 @@ int firewall_init()
         signal(SIGTERM, firewall_close);
         if (use_ipv4) {
                 system("iptables -I FORWARD -p 253 -j QUEUE");
-                system("iptables -I FORWARD -p 50  -j QUEUE");
                 system("iptables -I FORWARD -p 17  -j QUEUE");
 
                 system("iptables -I INPUT -p 253 -j QUEUE");
-                system("iptables -I INPUT -p 50  -j QUEUE");
                 system("iptables -I INPUT -p 17  -j QUEUE");
 
                 system("iptables -I OUTPUT -p 253 -j QUEUE");
-                system("iptables -I OUTPUT -p 50  -j QUEUE");
                 system("iptables -I OUTPUT -p 17  -j QUEUE");
         }
         if (use_ipv6) {
                 system("ip6tables -I FORWARD -p 253 -j QUEUE");
-                system("ip6tables -I FORWARD -p 50  -j QUEUE");
                 system("ip6tables -I FORWARD -p 17  -j QUEUE");
 
                 system("ip6tables -I INPUT -p 253 -j QUEUE");
-                system("ip6tables -I INPUT -p 50  -j QUEUE");
                 system("ip6tables -I INPUT -p 17  -j QUEUE");
 
                 system("ip6tables -I OUTPUT -p 253 -j QUEUE");
-                system("ip6tables -I OUTPUT -p 50  -j QUEUE");
                 system("ip6tables -I OUTPUT -p 17  -j QUEUE");
         }
         return 0;
@@ -103,28 +98,22 @@ void firewall_exit()
         HIP_DEBUG("Firewall exit\n");
         if (use_ipv4) {
                 system("iptables -D FORWARD -p 253 -j QUEUE");
-                system("iptables -D FORWARD -p 50  -j QUEUE");
                 system("iptables -D FORWARD -p 17  -j QUEUE");
 
                 system("iptables -D INPUT -p 253 -j QUEUE");
-                system("iptables -D INPUT -p 50  -j QUEUE");
                 system("iptables -D INPUT -p 17  -j QUEUE");
 
                 system("iptables -D OUTPUT -p 253 -j QUEUE");
-                system("iptables -D OUTPUT -p 50  -j QUEUE");
                 system("iptables -D OUTPUT -p 17  -j QUEUE");
         }
         if (use_ipv6) {
                 system("ip6tables -D FORWARD -p 253 -j QUEUE");
-                system("ip6tables -D FORWARD -p 50  -j QUEUE");
                 system("ip6tables -D FORWARD -p 17  -j QUEUE");
 
                 system("ip6tables -D INPUT -p 253 -j QUEUE");
-                system("ip6tables -D INPUT -p 50  -j QUEUE");
                 system("ip6tables -D INPUT -p 17  -j QUEUE");
 
                 system("ip6tables -D OUTPUT -p 253 -j QUEUE");
-                system("ip6tables -D OUTPUT -p 50  -j QUEUE");
                 system("ip6tables -D OUTPUT -p 17  -j QUEUE");
         }
 }
@@ -192,114 +181,49 @@ static void die(struct ipq_handle *h)
 
 int is_hip_packet(void * hdr, int trafficType)
 {
-        if(trafficType == 4){
-                struct ip * iphdr = (struct ip *)hdr;        
-                if(iphdr->ip_p == IPPROTO_HIP)
-                        return 1;
-     		else{
-			struct udphdr *udphdr;
-			int hdr_size;
-			
-			//the case of not udp inside ip
-			if(iphdr->ip_p != IPPROTO_UDP)
-				return 0;
+	struct udphdr *udphdr;
+        int hdr_size;
 
-			//the udp src and dest ports are analysed
-			hdr_size = (iphdr->ip_hl * 4);
-			udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
-			if((udphdr->source == 50500) && (udphdr->dest == 50500))
-				return 1;
-			else
-				return 0;
-		}
-        }
+	if(trafficType == 4){
+                struct ip * iphdr = (struct ip *)hdr;        
+
+		if(iphdr->ip_p == IPPROTO_HIP) 
+			return 1;
+
+		if(iphdr->ip_p != IPPROTO_UDP)
+			return 0;
+
+		//the udp src and dest ports are analysed
+		hdr_size = (iphdr->ip_hl * 4);
+		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
+		if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
+			return 1;
+		else
+			return 0;
+
+	}
         if(trafficType == 6){
                 struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+
                 if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
-                        return 1;
-		else{
-			struct udphdr *udphdr;
-			int hdr_size;
-			
-			//the case of not udp inside ip
-			if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
-				return 0;
+                       return 1;
 
-			//the udp src and dest ports are analysed
-			hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-			udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
-			if((udphdr->source == 50500) && (udphdr->dest == 50500))
-				return 1;
-			else
-				return 0;
-		}
+		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
+			return 0;
+
+		//the udp src and dest ports are analysed		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
+
+		if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))		
+			return 1;
+		else
+			return 0;
         }
 }
 
-int is_esp_packet(void * hdr, int trafficType)
-{
-        if(trafficType == 4){
-                struct ip * iphdr = (struct ip *)hdr;        
-                if(iphdr->ip_p == 50)
-                        return 1;
-     		else{
-			struct udphdr *udphdr;
-			int hdr_size;
-			
-			//the case of not udp inside ip
-			if(iphdr->ip_p != IPPROTO_UDP)
-				return 0;
-
-			//the udp src and dest ports are analysed
-			hdr_size = (iphdr->ip_hl * 4);
-			udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
-			if((udphdr->source == 500) && (udphdr->dest == 500))
-				return 1;
-			else
-				return 0;
-		}
-        }
-        if(trafficType == 6){
-                struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
-                if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == 50)
-                        return 1;
-		else{
-			struct udphdr *udphdr;
-			int hdr_size;
-			
-			//the case of not udp inside ip
-			if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
-				return 0;
-
-			//the udp src and dest ports are analysed
-			hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-			udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
-			if((udphdr->source == 500) && (udphdr->dest == 500))
-				return 1;
-			else
-				return 0;
-		}
-        }
-}
-
-
-int is_esp_packet_ip6(const struct ip6_hdr * ip6_hdr)
-{
-
- if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == 50)
-    return 1;
-  else
-    return 0;
-}
-
-
-int is_hip_packet_ip6(const struct ip6_hdr * ip6_hdr)
-{
-  if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
-    return 1;
-  else
-    return 0;
-}
 
 /* filter hip packet according to rules.
  * return verdict
@@ -604,6 +528,8 @@ static void *handle_ip_traffic(void *ptr) {
       				HIP_DEBUG("****** Received HIP packet ******\n");
 	
 				int packet_length = 0;
+				struct hip_sig * sig = NULL;
+
 				if (m->data_len <= (BUFSIZE - hdr_size)){
 	  				packet_length = m->data_len - hdr_size; 	
 	  				_HIP_DEBUG("HIP packet size smaller than buffer size\n");
@@ -618,12 +544,13 @@ static void *handle_ip_traffic(void *ptr) {
 
 				memcpy(hip_common, m->payload + hdr_size, packet_length);		
 			
-				struct hip_sig * sig = NULL;
+
 				sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
 				if(sig == NULL)
 	  				_HIP_DEBUG("no signature\n");
 				else
 	  				_HIP_DEBUG("signature exists\n");
+
 
 				if(filter_hip(src_addr, 
                       		  		dst_addr, 
@@ -635,7 +562,7 @@ static void *handle_ip_traffic(void *ptr) {
 	    				status = ipq_set_verdict(hndl, m->packet_id,
 					     			NF_ACCEPT, 0, NULL);
 	    				HIP_DEBUG("Packet accepted\n\n");
-	  			}
+				}
 				else
 	  			{
 	    				status = ipq_set_verdict(hndl, m->packet_id,
@@ -643,68 +570,19 @@ static void *handle_ip_traffic(void *ptr) {
 	    				HIP_DEBUG("Packet dropped\n\n");
 	  			}
       			} 
-      			else if (is_esp_packet(packet_hdr, type))
-			{
-	  			HIP_DEBUG("****** Received ESP packet ******\n");
-	  			uint32_t spi_temp;
-	  			uint32_t spi_val;
-	  
-	  			esp = (struct hip_esp_packet *)malloc(sizeof(struct hip_esp_packet));
-	  			esp->packet_length = 0;
-	  			esp->esp_data = NULL;
-	  			if (m->data_len <= (BUFSIZE - hdr_size)){
-	  				esp->packet_length = m->data_len - hdr_size; 	
-	  				_HIP_DEBUG("Packet size smaller than buffer size\n");
-	  			}
-	  			else { 
-	  				esp->packet_length = BUFSIZE - hdr_size;	
-	 
-	  				_HIP_DEBUG("Packet size greater than buffer size\n");
-	  			}
-	  			esp_data = (struct hip_esp *)malloc(esp->packet_length);
-	  			memcpy(esp_data, m->payload + hdr_size, esp->packet_length);
-	  			esp->esp_data = esp_data;
-	  			//esp->esp_data = m->payload + sizeof (struct ip6_hdr);
-	  			//esp->esp_tail = NULL;
-	  			memcpy(&spi_temp, 
-		 			(m->payload + hdr_size), 
-		 			sizeof(__u32));
-	  			spi_val = ntohl(spi_temp);	 
-	  
-	  			spi_temp = esp->esp_data->esp_spi;
-	   
-	  			_HIP_DEBUG("spi_temp %d, spi_val %d, spi_val2 %d\n", spi_temp, spi_val, ntohl(spi_temp));
-	 			_HIP_HEXDUMP("ESP packet data: \n", esp->esp_data, esp->packet_length);
-	  			if(filter_esp(dst_addr, 
-						esp,
-						m->hook,
-						m->indev_name,
-						m->outdev_name))
-	    			{
-	      				status = ipq_set_verdict(hndl, m->packet_id,
-					       			NF_ACCEPT, 0, NULL);
-	      				HIP_DEBUG("ESP packet accepted \n\n"); 
-	    			}
-	  			else
-	    			{
-	      				status = ipq_set_verdict(hndl, m->packet_id,
-					       			NF_DROP, 0, NULL);
-	      				HIP_DEBUG("ESP packet dropped \n\n"); 
-	    			}
-	    			if (esp) {
-	    				if (esp_data) {
-	    					esp->esp_data = NULL;
-	    					free(esp_data);
-	    				}
-	    				free(esp);
-	    			}
-			}
       			else{
 				HIP_DEBUG("****** Received Unknown packet ******\n");
-      				status = ipq_set_verdict(hndl, m->packet_id,
+				if(accept_normal_traffic){
+      					status = ipq_set_verdict(hndl, m->packet_id,
+				 			NF_ACCEPT, 0, NULL);
+					HIP_DEBUG("Packet accepted \n\n");
+				}
+				else{
+      					status = ipq_set_verdict(hndl, m->packet_id,
 				 			NF_DROP, 0, NULL);
-				HIP_DEBUG("Packet dropped \n\n");	
-      			}
+					HIP_DEBUG("Packet dropped \n\n");
+				}
+			}
       			if (status < 0)
 				die(hndl);
       		break;
@@ -750,14 +628,14 @@ int main(int argc, char **argv)
         
         int ch;        
         char *rule_file;
-        char *protocol;
+        char *traffic;
         extern char *optarg;
         extern int optind, optopt;
         int errflg = 0;
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-        while ((ch = getopt(argc, argv, ":p:f:vd")) != -1) {
+        while ((ch = getopt(argc, argv, ":t:f:vd")) != -1) {
              switch(ch) {
 	     case 'v':
 		     hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -765,8 +643,8 @@ int main(int argc, char **argv)
 	     case 'd':
 		     hip_set_logdebug(LOGDEBUG_ALL);
 	     break;
-             case 'p':
-		 protocol = optarg;
+	     case 't':
+		 traffic = optarg;
 	     break;
              case 'f':
                  rule_file = optarg;
@@ -784,28 +662,33 @@ int main(int argc, char **argv)
                 timeout = atol(argv[optind]);
         else 
                 errflg++;       
-  
-        if (strncmp(protocol, "ipv4", 4) == 0) {
-                HIP_DEBUG("Using ipv4\n");
-                use_ipv4 = 1;
+
+
+        if (strncmp(traffic, "drop", 4) == 0) {
+                HIP_DEBUG("Dropping normal traffic\n");
+                accept_normal_traffic = 0;
         }
-        else if (strncmp(protocol, "ipv6", 4) == 0) {
-		HIP_DEBUG("Using ipv6\n");
-                use_ipv6 = 1;
-        }
-	else if (strncmp(protocol, "both", 4) == 0) {
-		HIP_DEBUG("Using ipv4 and ipv6\n");
-                use_ipv4 = 1;
-                use_ipv6 = 1;
+        else if (strncmp(traffic, "accept", 6) == 0) {
+		HIP_DEBUG("Accepting normal traffic\n");
+                accept_normal_traffic = 1;
         }
 	else{
                 errflg++;
 	}
+
+
         if (errflg) {
                 print_usage();
                 printf("Invalid argument. Closing. \n\n");                
                 exit(2);
         }    
+
+
+	//use by default both ipv4 and ipv6
+        HIP_DEBUG("Using ipv4 and ipv6\n");
+        use_ipv4 = 1;
+        use_ipv6 = 1;
+
 
         read_file(rule_file);
         HIP_DEBUG("Firewall rule table: \n");

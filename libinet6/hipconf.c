@@ -48,10 +48,10 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
-#ifdef CONFIG_HIP_OPENDHT
+"opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
-#endif
+"dht set <name>\n"
 "locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
@@ -89,9 +89,9 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_restart,
         hip_conf_handle_locator,
         hip_conf_handle_hipudprelay,
-#ifdef CONFIG_HIP_OPPTCP	
+        hip_conf_handle_set,
+        hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
-#endif
 	NULL, /* run */
 };
 
@@ -132,6 +132,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
+        else if (!strcmp("opendht", text))
+                ret = ACTION_OPENDHT;
         else if (!strcmp("locator", text))
                 ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
@@ -205,6 +207,8 @@ int hip_conf_check_action_argc(int action) {
 		break;
         case ACTION_LOCATOR:
                 break;
+        case ACTION_OPENDHT:
+                break;
 #ifdef CONFIG_HIP_OPPTCP	
 	case ACTION_OPPTCP:
                 break;
@@ -223,67 +227,72 @@ int hip_conf_check_action_argc(int action) {
  * @return the numeric type id correspoding to the symbolic text.
  */
 int hip_conf_get_type(char *text,char *argv[]) {
-     int ret = -1;
+	int ret = -1;
 
-     if (!strcmp("hi", text))
-	  ret = TYPE_HI;
-     else if (!strcmp("map", text))
-	  ret = TYPE_MAP;
-     else if (!strcmp("rst", text))
-	  ret = TYPE_RST;
-     else if (!strcmp("rvs", text))
-	  ret = TYPE_RVS;
-     else if (!strcmp("hipudprelay", text))
-	  ret = TYPE_RELAY_UDP_HIP;
-     else if (!strcmp("puzzle", text))
-	  ret = TYPE_PUZZLE;	
-     else if (!strcmp("service", text))
-	  ret = TYPE_SERVICE;	
-     else if (!strcmp("normal", text))
-	  ret = TYPE_RUN;
-     else if (!strcmp("ha", text))
-	  ret = TYPE_HA;
-     else if ((!strcmp("all", text)) && (strcmp("rst",argv[1])==0))
-	  ret = TYPE_RST;
-     else if ((!strcmp("peer_hit", text)) && (strcmp("rst",argv[1])==0))
-	  ret = TYPE_RST;
-     else if	(strcmp("nat",argv[1])==0) 
-	  ret = TYPE_NAT;
-     else if ( (strcmp("all", text) == 0) && (strcmp("bos",argv[1]) == 0))
-	  ret = TYPE_BOS;
-     else if (strcmp("locator", argv[1])==0)
+	if (!strcmp("hi", text))
+		ret = TYPE_HI;
+	else if (!strcmp("map", text))
+		ret = TYPE_MAP;
+	else if (!strcmp("rst", text))
+		ret = TYPE_RST;
+	else if (!strcmp("rvs", text))
+		ret = TYPE_RVS;
+	else if (!strcmp("puzzle", text))
+		ret = TYPE_PUZZLE;	
+	else if (!strcmp("service", text))
+		ret = TYPE_SERVICE;	
+	else if (!strcmp("normal", text))
+		ret = TYPE_RUN;
+	else if (!strcmp("ha", text))
+		ret = TYPE_HA;
+	else if ((!strcmp("all", text)) && (strcmp("rst",argv[1])==0))
+		ret = TYPE_RST;
+	else if ((!strcmp("peer_hit", text)) && (strcmp("rst",argv[1])==0))
+		ret = TYPE_RST;
+	else if	(strcmp("nat",argv[1])==0) 
+		ret = TYPE_NAT;
+        else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_LOCATOR;
-     else if (!strcmp("debug", text))
-	  ret = TYPE_DEBUG;
-     else if (!strcmp("daemon", text))
-	  ret = TYPE_DAEMON;
-     else if (!strcmp("mode", text))
-	  ret = TYPE_MODE;
+	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
+		ret = TYPE_BOS;
+	else if (!strcmp("debug", text))
+		ret = TYPE_DEBUG;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
+	else if (!strcmp("daemon", text))
+		ret = TYPE_DAEMON;
+	else if (!strcmp("mode", text))
+		ret = TYPE_MODE;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-     else if (!strcmp("opp", text))
-	  ret = TYPE_OPP; 
+	else if (!strcmp("opp", text))
+		ret = TYPE_OPP; 
 #endif
 #ifdef CONFIG_HIP_BLIND
-     else if (!strcmp("blind", text))
-	  ret = TYPE_BLIND;
+	else if (!strcmp("blind", text))
+		ret = TYPE_BLIND;
 #endif
 #ifdef CONFIG_HIP_ESCROW
-     else if (!strcmp("escrow", text))
-	  ret = TYPE_ESCROW;
+	else if (!strcmp("escrow", text))
+		ret = TYPE_ESCROW;
 #endif		
+
 #ifdef CONFIG_HIP_OPENDHT
-     else if (!strcmp("ttl", text))
-	  ret = TYPE_TTL;
-     else if (!strcmp("gw", text))
-	  ret = TYPE_GW;
-     else if (!strcmp("get", text))
-	  ret = TYPE_GET;
+	else if (strcmp("opendht", argv[1])==0)
+                ret = TYPE_DHT;
+	else if (!strcmp("ttl", text))
+		ret = TYPE_TTL;
+	else if (!strcmp("gw", text))
+		ret = TYPE_GW;
+	else if (!strcmp("get", text))
+		ret = TYPE_GET;
+	else if (!strcmp("set", text))
+                ret = TYPE_SET;
 #endif
-     else if (!strcmp("config", text))
-	  ret = TYPE_CONFIG;
+	else if (!strcmp("config", text))
+		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_OPPTCP
-     else if (strcmp("opptcp", argv[1])==0)
-          ret = TYPE_OPPTCP;
+	else if (strcmp("opptcp", argv[1])==0)
+		ret = TYPE_OPPTCP;
 #endif
      return ret;
 }
@@ -305,6 +314,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
+        case ACTION_OPENDHT:
         case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
@@ -1073,130 +1083,174 @@ int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[]
 
 int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-     int ret = 0;
-     HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
-     /* useless function remove */
-     return(ret);
+	int ret = 0;
+	HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
+	/* useless function remove */
+	return(ret);
 }
 
+
+/**
+ * Function that is used to set the name sent to DHT in name/fqdn -> HIT -> IP mappings
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_set(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+    int err = 0;
+    int len_name = 0;
+    len_name = strlen(opt[0]);
+    HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
+    HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
+    err = hip_build_param_opendht_set(msg, opt[0]);
+    if (err) {
+        HIP_ERROR("build param hit failed: %s\n", strerror(err));
+        goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
+    if (err) {
+        HIP_ERROR("build hdr failed: %s\n", strerror(err));
+        goto out_err;
+    }
+ out_err:
+    return(err);
+}
+
+/**
+ * Function that is used to set the used gateway addr port and ttl with DHT
+ *
+ * @return       zero on success, or negative error value on error.
+ */
 int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-     int err,out_err;
-     int status = 0;
-     int ret;
-     struct in_addr ip_gw;
-     struct in6_addr ip_gw_mapped;
-     struct addrinfo *new_gateway;
-     struct hip_opendht_gw_info *gw_info;
-	
-     HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
-        
-     if (optc != 3)
-     {
-	  HIP_ERROR("Missing arguments\n");
-	  err = -EINVAL;
-	  goto out_err;
-     }
+        int err,out_err;
+        int status = 0;
+        int ret;
+        struct in_addr ip_gw;
+        struct in6_addr ip_gw_mapped;
+        struct addrinfo new_gateway;
+        struct hip_opendht_gw_info *gw_info;
 
-     if ((new_gateway = malloc(sizeof(struct addrinfo))) == 0)
-         goto out_err;
-     memset(&new_gateway, 0, sizeof(new_gateway));
-     ret = 0;   
-     /* resolve the new gateway */
-#ifdef CONFIG_HIP_OPENDHT
-     ret = resolve_dht_gateway_info(opt[0], &new_gateway);
-#else
-     HIP_ERROR("OpenDHT support not compiled in\n");
-     goto out_err;
-#endif /* CONFIG_HIP_OPENDHT */
-     if (ret < 0)
-	  goto out_err;
+        HIP_DEBUG("Resolving new gateway for openDHT %s\n", opt[0]);
 
-     struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
-     HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n", 
-	       inet_ntoa(sa->sin_addr), opt[1], opt[2]);      
-    
-     ret = 0;
-     ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-     IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-     if (ret < 0 && errno == EAFNOSUPPORT)
-     {
-	  HIP_PERROR("inet_pton: not a valid address family\n");
-	  err = -EAFNOSUPPORT;
-	  goto out_err;
-     } else if (ret == 0)
-     {
-	  HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-	  err = -EINVAL;
-	  goto out_err;
-     }
-         
-     err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        if (optc != 3) {
+                HIP_ERROR("Missing arguments\n");
+                err = -EINVAL;
+                goto out_err;
+        }
 
-     if (err)
-     {
-	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	  goto out_err;
-     }
+        memset(&new_gateway, '0', sizeof(new_gateway));
+        ret = 0;
+        /* resolve the new gateway */
+        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+        if (ret < 0) goto out_err;
+        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
 
-     err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
-     if (err)
-     {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
-	  goto out_err;
-     }
-       
+        HIP_DEBUG("Gateway addr %s, port %s, TTL %s\n",
+                  inet_ntoa(sa->sin_addr), opt[1], opt[2]);
+
+        ret = 0;
+        ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+        if (ret < 0 && errno == EAFNOSUPPORT) {
+                HIP_PERROR("inet_pton: not a valid address family\n");
+                err = -EAFNOSUPPORT;
+                goto out_err;
+        } else if (ret == 0) {
+                HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+                err = -EINVAL;
+                goto out_err;
+        }
+
+
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        if (err) {
+                HIP_ERROR("build param hit failed: %s\n", strerror(err));
+                goto out_err;
+        }
+
+        err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
+        if (err) {
+                HIP_ERROR("build hdr failed: %s\n", strerror(err));
+                goto out_err;
+        }
+
  out_err:
-     if (new_gateway)
-         free(new_gateway);
-     return err;
+        return err;
 }
 
-int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[],
-			int optc)
+
+/**
+ * Function that gets data from DHT
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
 {
-     int ret = 0;
-#ifdef CONFIG_HIP_OPENDHT
-     int s, error;
-     char dht_response[1024];
-     char opendht[] = "opendht.nyuld.net";
-     char host_addr[] = "127.0.0.1"; /* TODO change this to something smarter :) */
-     struct addrinfo * serving_gateway;
+        int err = 0;
+        char dht_response[1024];
+        struct addrinfo * serving_gateway;
+        struct hip_common *msgdaemon;
+        struct hip_opendht_gw_info *gw_info;
+        struct in_addr tmp_v4;
+        char tmp_ip_str[21];
+        int tmp_ttl, tmp_port;
+        int *pret;
 
-     s = init_dht_gateway_socket(s);
-     if (s < 0) 
-     {
-	  HIP_DEBUG("Socket creation failed!\n");
-	  exit(-1);
-     }
-     error = 0;
-     error = resolve_dht_gateway_info (opendht, &serving_gateway);
-     if (error < 0) 
-     {
-	  HIP_DEBUG("Resolve error!\n");
-	  exit(-1);
-     }
-     error = 0;
-     error = connect_dht_gateway(s, serving_gateway, 1);
-     if (error < 0) 
-     {
-	  HIP_DEBUG("Connect error!\n");
-	  exit(-1);
-     }
+        /* ASK THIS INFO FROM DAEMON */
+        HIP_DEBUG("Asking serving gateway info from daemon...\n");
+        HIP_IFEL(!(msgdaemon = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+        HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1,
+                 "Building daemon header failed\n");
+        HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(!(gw_info = hip_get_param(msgdaemon, HIP_PARAM_OPENDHT_GW_INFO)),-1,
+                 "No gw struct found\n");
 
-     memset(dht_response, '\0', sizeof(dht_response));
-     ret = opendht_get(s, (unsigned char *)opt[0], (unsigned char *)host_addr, 5851);
-     ret = opendht_read_response(s, dht_response); 
-     close(s);
-     if (ret == -1) 
-     {
-	  HIP_DEBUG("Get error!\n");
-	  exit (-1);
-     }
-     if (ret == 0)
-	  HIP_DEBUG("Value received from the DHT %s\n",dht_response);
-#endif 
-     return(ret);
+        /* Check if DHT was on */
+        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
+                HIP_DEBUG("DHT is not in use\n");
+                goto out_err;
+        }
+        memset(&tmp_ip_str,'\0',20);
+        tmp_ttl = gw_info->ttl;
+        tmp_port = htons(gw_info->port);
+        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+                  tmp_ip_str, tmp_port, tmp_ttl);
+
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
+                 "Resolve error!\n");
+        HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+                 "Get error!\n");
+        HIP_DEBUG("Value received from the DHT %s\n",dht_response);
+ out_err:
+        return(err);
+}
+
+
+/**
+ * Function that is used to set DHT on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_dht_toggle(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+        
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_DHT_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_DHT_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "build hdr failed: %s\n", strerror(err));        
+        
+ out_err:
+        return(err);
 }
 
 /**
@@ -1602,12 +1656,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[1] = "libhiptool.so";
 		      libs[3] = NULL;
 		      libs[4] = NULL;
-		  
-#ifdef CONFIG_HIP_OPENDHT
 		      libs[2] = "libhipopendht.so";
-#else
-		      libs[2] = NULL;
-#endif
 		}
 		else if (type == EXEC_LOADLIB_OPP)
 		{
@@ -1615,12 +1664,7 @@ int hip_handle_exec_application(int do_fork, int type, int argc, char *argv[])
 		      libs[1] = "libinet6.so";
 		      libs[2] = "libhiptool.so";
 		      libs[4] = NULL;
-
-#ifdef CONFIG_HIP_OPENDHT
 		      libs[3] = "libhipopendht.so";
-#else
-		      libs[3] = NULL;
-#endif
 		}
 
 #if 0
@@ -1661,12 +1705,12 @@ out_err:
 	return err;
 }
 
-#ifdef CONFIG_HIP_OPPTCP
 int hip_conf_handle_opptcp(struct hip_common *msg, int action,
 			  const char *opt[], int optc)
 {
     int err = 0, status = 0;
     
+#ifdef CONFIG_HIP_OPPTCP
     if (!strcmp("on",opt[0])) {
         status = SO_HIP_SET_OPPTCP_ON; 
     } else if (!strcmp("off",opt[0])) {
@@ -1675,6 +1719,7 @@ int hip_conf_handle_opptcp(struct hip_common *msg, int action,
         HIP_IFEL(1, -1, "bad args\n");
     }
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+#endif
     
  out_err:
     return err;
@@ -1683,4 +1728,3 @@ int hip_conf_handle_opptcp(struct hip_common *msg, int action,
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
-#endif

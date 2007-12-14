@@ -468,7 +468,8 @@ struct hip_hadb_update_func_set{
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
-					       struct hip_esp_info *esp_info);
+					       struct hip_esp_info *esp_info,
+					       struct hip_seq *seq);
 
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
 					     struct hip_common *msg,
