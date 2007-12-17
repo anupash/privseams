@@ -9,6 +9,8 @@
  */
 
 #include "firewall.h"
+#include <sys/types.h>
+#include <libiptc/libiptc.h>
 
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
@@ -21,114 +23,139 @@ int use_ipv6 = 0;
 int accept_normal_traffic = 0;
 pthread_t ipv4Thread, ipv6Thread;
 
+int counter = 0;
+
+struct pseudo_hdr{
+	u32 s_addr;
+	u32 d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
+
+struct pseudo6_hdr{
+	struct in6_addr s_addr;
+	struct in6_addr d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
 
 void print_usage()
 {
-        printf("HIP Firewall\n");
-        printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]\n");
+	printf("HIP Firewall\n");
+	printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]\n");
 	printf("      - traffic_other_than_hip, can take the value drop or accept\n");
-        printf("      - file_name is a path to a file containing firewall filtering rules\n");
-        printf("      - timeout is connection timeout value in seconds\n");
-        printf("      - d = debugging output\n");
-        printf("      - v = verbose output\n\n");
+	printf("      - file_name is a path to a file containing firewall filtering rules\n");
+	printf("      - timeout is connection timeout value in seconds\n");
+	printf("      - d = debugging output\n");
+	printf("      - v = verbose output\n\n");
 }
 
 //currently done at all times, rule_management 
 //delete rule needs checking for state options in 
 //all chains
-void set_stateful_filtering(int v)
-{
-  statefulFiltering = 1;
-}
-int get_stateful_filtering()
-{
-  return statefulFiltering;
+void set_stateful_filtering(int v){
+	statefulFiltering = 1;
 }
 
-void set_escrow_active(int active)
-{
-        escrow_active = active;
+int get_stateful_filtering(){
+	return statefulFiltering;
 }
 
-int is_escrow_active()
-{
-        return escrow_active;
+void set_escrow_active(int active){
+	escrow_active = active;
+}
+
+int is_escrow_active(){
+	return escrow_active;
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
-int firewall_init()
-{
-        HIP_DEBUG("Initializing firewall\n");
-        /* Register signal handlers */
-        signal(SIGINT, firewall_close);
-        signal(SIGTERM, firewall_close);
-        if (use_ipv4) {
-                system("iptables -I FORWARD -p 253 -j QUEUE");
-                system("iptables -I FORWARD -p 17  -j QUEUE");
+int firewall_init(){
+	HIP_DEBUG("Initializing firewall\n");
+	/* Register signal handlers */
+	signal(SIGINT, firewall_close);
+	signal(SIGTERM, firewall_close);
+	if (use_ipv4) {
+		system("iptables -I FORWARD -p 253 -j QUEUE");
+		system("iptables -I FORWARD -p 17  -j QUEUE");
+		system("iptables -I FORWARD -p 6  -j QUEUE");
 
-                system("iptables -I INPUT -p 253 -j QUEUE");
-                system("iptables -I INPUT -p 17  -j QUEUE");
+		system("iptables -I INPUT -p 253 -j QUEUE");
+		system("iptables -I INPUT -p 17  -j QUEUE");
+		system("iptables -I INPUT -p 6  -j QUEUE");
 
-                system("iptables -I OUTPUT -p 253 -j QUEUE");
-                system("iptables -I OUTPUT -p 17  -j QUEUE");
-        }
-        if (use_ipv6) {
-                system("ip6tables -I FORWARD -p 253 -j QUEUE");
-                system("ip6tables -I FORWARD -p 17  -j QUEUE");
+		system("iptables -I OUTPUT -p 253 -j QUEUE");
+		system("iptables -I OUTPUT -p 17  -j QUEUE");
+		system("iptables -I OUTPUT -p 6  -j QUEUE");
+	}
+	if (use_ipv6) {
+		system("ip6tables -I FORWARD -p 253 -j QUEUE");
+		system("ip6tables -I FORWARD -p 17  -j QUEUE");
+		system("ip6tables -I FORWARD -p 6  -j QUEUE");
 
-                system("ip6tables -I INPUT -p 253 -j QUEUE");
-                system("ip6tables -I INPUT -p 17  -j QUEUE");
+		system("ip6tables -I INPUT -p 253 -j QUEUE");
+		system("ip6tables -I INPUT -p 17  -j QUEUE");
+		system("ip6tables -I INPUT -p 6  -j QUEUE");
 
-                system("ip6tables -I OUTPUT -p 253 -j QUEUE");
-                system("ip6tables -I OUTPUT -p 17  -j QUEUE");
-        }
-        return 0;
+		system("ip6tables -I OUTPUT -p 253 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 17  -j QUEUE");
+		system("ip6tables -I OUTPUT -p 6  -j QUEUE");
+	}
+	return 0;
 }
 
-void firewall_close(int signal)
-{
-        HIP_DEBUG("Closing firewall...\n");
-        firewall_exit();
-        exit(signal);
+void firewall_close(int signal){
+	HIP_DEBUG("Closing firewall...\n");
+	firewall_exit();
+	exit(signal);
 }
 
-void firewall_exit()
-{
-        HIP_DEBUG("Firewall exit\n");
-        if (use_ipv4) {
-                system("iptables -D FORWARD -p 253 -j QUEUE");
-                system("iptables -D FORWARD -p 17  -j QUEUE");
+void firewall_exit(){
+	HIP_DEBUG("Firewall exit\n");
+	if (use_ipv4) {
+		system("iptables -D FORWARD -p 253 -j QUEUE");
+		system("iptables -D FORWARD -p 17  -j QUEUE");
+		system("iptables -D FORWARD -p 6  -j QUEUE");
 
-                system("iptables -D INPUT -p 253 -j QUEUE");
-                system("iptables -D INPUT -p 17  -j QUEUE");
+		system("iptables -D INPUT -p 253 -j QUEUE");
+		system("iptables -D INPUT -p 17  -j QUEUE");
+		system("iptables -D INPUT -p 6  -j QUEUE");
 
-                system("iptables -D OUTPUT -p 253 -j QUEUE");
-                system("iptables -D OUTPUT -p 17  -j QUEUE");
-        }
-        if (use_ipv6) {
-                system("ip6tables -D FORWARD -p 253 -j QUEUE");
-                system("ip6tables -D FORWARD -p 17  -j QUEUE");
+		system("iptables -D OUTPUT -p 253 -j QUEUE");
+		system("iptables -D OUTPUT -p 17  -j QUEUE");
+ 		system("iptables -D OUTPUT -p 6  -j QUEUE");
+	}
+	if (use_ipv6) {
+		system("ip6tables -D FORWARD -p 253 -j QUEUE");
+		system("ip6tables -D FORWARD -p 17  -j QUEUE");
+		system("ip6tables -D FORWARD -p 6  -j QUEUE");
 
-                system("ip6tables -D INPUT -p 253 -j QUEUE");
-                system("ip6tables -D INPUT -p 17  -j QUEUE");
+		system("ip6tables -D INPUT -p 253 -j QUEUE");
+		system("ip6tables -D INPUT -p 17  -j QUEUE");
+		system("ip6tables -D INPUT -p 6  -j QUEUE");
 
-                system("ip6tables -D OUTPUT -p 253 -j QUEUE");
-                system("ip6tables -D OUTPUT -p 17  -j QUEUE");
-        }
+		system("ip6tables -D OUTPUT -p 253 -j QUEUE");
+		system("ip6tables -D OUTPUT -p 17  -j QUEUE");
+		system("ip6tables -D OUTPUT -p 6  -j QUEUE");
+	}
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
 int match_hit(struct in6_addr match_hit, 
-	      struct in6_addr packet_hit, 
-	      int boolean){
-   int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
-  HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
+			struct in6_addr packet_hit, 
+			int boolean){
+   	int i = IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
+  	HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
 	    addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit), boolean, i);
-  if(boolean)
-    return i;
-  else 
-    return !i;
+  	if(boolean)
+    	return i;
+  	else 
+    	return !i;
 }
 
 /**
@@ -136,93 +163,484 @@ int match_hit(struct in6_addr match_hit,
  * returns 1 if verified succesfully otherwise 0
  */
 int match_hi(struct hip_host_id * hi, 
-	     struct hip_common * packet){
-  int value = 0;
-  
-  if(packet->type_hdr == HIP_I1)
+	     	struct hip_common * packet){
+	int value = 0;  
+	if(packet->type_hdr == HIP_I1)
     {
-      _HIP_DEBUG("match_hi: I1\n");
-    return 1;
+      	_HIP_DEBUG("match_hi: I1\n");
+    	return 1;
     }
-  value = verify_packet_signature(hi, packet);
-  if(value == 0)
-    _HIP_DEBUG("match_hi: verify ok\n");
-  else
-    _HIP_DEBUG("match_hi: verify failed\n");
-  if(value == 0)
-    return 1;
-  return 0;
+  	value = verify_packet_signature(hi, packet);
+  	if(value == 0)
+    	_HIP_DEBUG("match_hi: verify ok\n");
+  	else
+    	_HIP_DEBUG("match_hi: verify failed\n");
+  	if(value == 0)
+    	return 1;
+  	return 0;
 }
 
-int match_int(int match, int packet, int boolean)
-{
-  if(boolean)
-    return match == packet;
-  else
-    return !(match == packet);
+int match_int(int match, int packet, int boolean){
+  	if(boolean)
+    	return match == packet;
+  	else
+    	return !(match == packet);
 }
 
 int match_string(const char * match, const char * packet, int boolean){
-  if(boolean)
-    return !strcmp(match, packet);
-  else
-    return strcmp(match, packet);
+  	if(boolean)
+    	return !strcmp(match, packet);
+  	else
+    	return strcmp(match, packet);
 }
 
 /*------------------------------------------------*/
 
-static void die(struct ipq_handle *h)
-{
-  HIP_DEBUG("dying\n");
-  ipq_perror("passer");
-  ipq_destroy_handle(h);
-  firewall_close(1);
+static void die(struct ipq_handle *h){
+  	HIP_DEBUG("dying\n");
+  	ipq_perror("passer");
+  	ipq_destroy_handle(h);
+  	firewall_close(1);
 }
 
-int is_hip_packet(void * hdr, int trafficType)
-{
+int is_hip_packet(void * hdr, int trafficType){
 	struct udphdr *udphdr;
-        int hdr_size;
+	int hdr_size;
 
 	if(trafficType == 4){
-                struct ip * iphdr = (struct ip *)hdr;        
-
+		struct ip * iphdr = (struct ip *)hdr;
 		if(iphdr->ip_p == IPPROTO_HIP) 
 			return 1;
-
 		if(iphdr->ip_p != IPPROTO_UDP)
 			return 0;
 
 		//the udp src and dest ports are analysed
 		hdr_size = (iphdr->ip_hl * 4);
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
-		if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
-			return 1;
-		else
-			return 0;
-
 	}
-        if(trafficType == 6){
-                struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
-
-                if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
-                       return 1;
-
+	if(trafficType == 6){
+		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
+			return 1;
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 			return 0;
 
 		//the udp src and dest ports are analysed		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
+	}
 
-		if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))		
-			return 1;
-		else
-			return 0;
-        }
+	if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+	   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
+		return 1;
+	else
+		return 0;
 }
+
+
+/**
+*
+*/
+void allow_packet(struct ipq_handle *handle, unsigned long packetId){
+	ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
+	HIP_DEBUG("Packet accepted \n\n");
+}
+
+
+/**
+*
+*/
+void drop_packet(struct ipq_handle *handle, unsigned long packetId){
+	ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
+	HIP_DEBUG("Packet dropped \n\n");
+}
+
+
+#ifdef CONFIG_HIP_OPPTCP
+
+/**
+* Standard BSD internet checksum routine from nmap
+*/
+unsigned short in_cksum(u16 *ptr,int nbytes){
+	register u32 sum;
+	u16 oddbyte;
+	register u16 answer;
+
+	/*
+	 * Our algorithm is simple, using a 32-bit accumulator (sum),
+	 * we add sequential 16-bit words to it, and at the end, fold back
+	 * all the carry bits from the top 16 bits into the lower 16 bits.
+	 */
+
+	sum = 0;
+	while (nbytes > 1){
+		sum += *ptr++;
+		nbytes -= 2;
+	}
+
+	/* mop up an odd byte, if necessary */
+	if (nbytes == 1) {
+		oddbyte = 0;            /* make sure top half is zero */
+		*((u_char *) &oddbyte) = *(u_char *)ptr;   /* one byte only */
+		sum += oddbyte;
+	}
+
+	/*
+	 * Add back carry outs from top 16 bits to low 16 bits.
+	 */
+
+	sum  = (sum >> 16) + (sum & 0xffff);    /* add high-16 to low-16 */
+	sum += (sum >> 16);                     /* add carry */
+	answer = ~sum;          /* ones-complement, then truncate to 16 bits */
+	return(answer);
+}
+
+
+/**
+*
+*/
+int is_incoming_packet(unsigned int theHook){
+	if(theHook == NF_IP_LOCAL_IN)
+		return 1;
+	return 0;
+}
+
+
+/**
+*
+*/
+int is_outgoing_packet(unsigned int theHook){
+	if(theHook == NF_IP_LOCAL_OUT)
+		return 1;
+	return 0;
+}
+
+
+/**
+* checks for the i1 option in a packet
+*/
+int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
+	int i = 20, foundHipOpp = 0, len = 0;
+	char *bytes =(char*)tcphdrBytes;
+	//HIP_OPTION_KIND
+
+	while((i < hdrLen) && (foundHipOpp == 0)){
+		switch (bytes[i]) {
+		//options with one-byte length
+		case 0:
+			break;
+		break;
+		case 1: i++; break;
+		case 11: i++; break;
+		case 12: i++; break;
+		case 13: i++; break;
+		case 16: i++; break;
+		case 17: i++; break;
+		case 20: i++; break;
+		case 21: i++; break;
+		case 22: i++; break;
+		case 23: i++; break;
+		case 24: i++; break;
+		//case 25: i++; break;  //unassigned
+		case 26: i++; break;
+		case 2:	len = bytes[i+1]; i += len; break;
+		case 3:	len = bytes[i+1]; i += len; break;
+		case 4:	len = bytes[i+1]; i += len; break;
+		case 5:	len = bytes[i+1]; i += len; break;
+		case 6:	len = bytes[i+1]; i += len; break;
+		case 7:	len = bytes[i+1]; i += len; break;
+		case 8:	len = bytes[i+1]; i += len; break;
+		case 9:	len = bytes[i+1]; i += len; break;
+		case 10: len = bytes[i+1]; i += len; break;
+		case 14: len = bytes[i+1]; i += len; break;
+		case 15: len = bytes[i+1]; i += len; break;
+		case 18: len = bytes[i+1]; i += len; break;
+		case 19: len = bytes[i+1]; i += len; break;
+		case 27: len = bytes[i+1]; i += len; break;
+		case 253: len = bytes[i+1]; i += len; break;
+		case 254: len = bytes[i+1]; i += len; break;
+		case HIP_OPTION_KIND:	//hip option
+			return 1;
+		break;
+		}
+		//i++;
+	}
+	return foundHipOpp;
+}
+
+
+/**
+* adds the i1 option to a packet and sends it off
+*/
+void send_i1_packet(void * hdr,	int newSize, int trafficType){
+	int   sockfd, socketFamily;
+	int   on = 1, i;
+	int   hdr_size, newHdr_size, twoHdrsSize;
+	char  *packet;
+	char  *bytes =(char*)hdr;
+	struct sockaddr_in  sock_raw;
+	struct sockaddr_in6 sock6_raw;
+	struct in_addr  dstAddr;
+	struct in6_addr dst6Addr;
+	struct tcphdr *tcphdr;
+	struct tcphdr *newTcphdr;
+	struct ip * iphdr;
+	struct ip * newIphdr;
+	struct ip6_hdr * ip6_hdr;
+	struct ip6_hdr * newIp6_hdr;
+	struct pseudo_hdr  *pseudo;
+	struct pseudo6_hdr *pseudo6;
+	void *pointer;
+	char newHdr [newSize];
+
+
+	//initializing the raw socket
+	if(trafficType == 4)
+		socketFamily = AF_INET;
+	else if(trafficType == 6)
+		socketFamily = AF_INET6;
+
+	if((sockfd = socket(socketFamily, SOCK_RAW, IPPROTO_RAW)) < 0 ){
+			HIP_DEBUG("Error creating raw socket\n");
+			return;
+	}
+	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+		HIP_DEBUG("Error setting an option to raw socket\n"); 
+		return;
+	}
+
+	//initializing the headers and setting socket settings
+	if(trafficType == 4){
+		//get the ip header
+		iphdr = (struct ip *)hdr;
+		//get the tcp header
+		hdr_size = (iphdr->ip_hl * 4);
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		//socket settings
+		sock_raw.sin_family = AF_INET;
+		sock_raw.sin_port = htons(tcphdr->dest);
+		sock_raw.sin_addr = iphdr->ip_dst;
+	}
+	else if(trafficType == 6){
+		//get the ip header
+		ip6_hdr = (struct ip6_hdr *)hdr;
+		//get the tcp header		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		//socket settings
+		sock6_raw.sin6_family = AF_INET6;
+		sock6_raw.sin6_port = htons(tcphdr->dest);
+		sock6_raw.sin6_addr = ip6_hdr->ip6_dst;
+	}
+
+	//measuring the size of ip and tcp headers
+	twoHdrsSize = hdr_size + 4*5;
+
+	//copy the ip header and the tcp header without the options
+	i = 0;
+	while(i < twoHdrsSize){
+		newHdr[i] = bytes[i];
+		i++;
+	}
+
+	//copy the old options and add the new i1 one
+	if(tcphdr->doff == 5){//there are no previous options
+		newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+		newHdr[twoHdrsSize + 1] = '0';
+		newHdr[twoHdrsSize + 2] = '0';
+		newHdr[twoHdrsSize + 3] = '0';
+	}
+	else {//there are previous options
+		newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+		newHdr[twoHdrsSize + 1] = (char)2;
+		newHdr[twoHdrsSize + 2] = (char)1;
+		newHdr[twoHdrsSize + 3] = (char)1;
+
+		i = 0;
+		while(i < 4*(tcphdr->doff-5)){
+			newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
+			i++;
+		}
+	}
+
+	pointer = &newHdr[0];
+	//get pointers to the new packet
+	if(trafficType == 4){
+		//get the ip header
+		newIphdr = (struct ip *)pointer;
+		//get the tcp header
+		newHdr_size = (iphdr->ip_hl * 4);
+		newTcphdr = ((struct tcphdr *) (((char *) newIphdr) + newHdr_size));
+	}
+	else if(trafficType == 6){
+		//get the ip header
+		newIp6_hdr = (struct ip6_hdr *)pointer;
+		//get the tcp header		
+		newHdr_size = (newIp6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		newTcphdr = ((struct tcphdr *) (((char *) newIp6_hdr) + newHdr_size));
+	}
+
+	//change the values of the checksum and the tcp header length(+1) 
+	newTcphdr->check = 0;
+	newTcphdr->doff = newTcphdr->doff + 1;
+
+	//the checksum
+	if(trafficType == 4){
+		pseudo = (struct pseudo_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo_hdr));
+
+		pseudo->s_addr = newIphdr->ip_src.s_addr;
+		pseudo->d_addr = newIphdr->ip_dst.s_addr;
+		pseudo->zer0    = 0;
+		pseudo->protocol = IPPROTO_TCP;
+		pseudo->length  = htons(sizeof(struct tcphdr) + 4*(newTcphdr->doff-5) + 0);
+
+		newTcphdr->check = in_cksum((unsigned short *)pseudo, sizeof(struct tcphdr) + 
+							4*(newTcphdr->doff-5) + sizeof(struct pseudo_hdr) + 0);
+	}
+	else if(trafficType == 6){
+		pseudo6 = (struct pseudo6_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo6_hdr));
+
+		pseudo6->s_addr = newIp6_hdr->ip6_src;
+		pseudo6->d_addr = newIp6_hdr->ip6_dst;
+		pseudo6->zer0    = 0;
+		pseudo6->protocol = IPPROTO_TCP;
+		pseudo6->length  = htons(sizeof(struct tcphdr) + 4*(newTcphdr->doff-5) + 0);
+
+		newTcphdr->check = in_cksum((unsigned short *)pseudo6, sizeof(struct tcphdr) +
+							4*(newTcphdr->doff-5) + sizeof(struct pseudo6_hdr) + 0);
+	}
+
+	//replace the pseudo header bytes with the correct ones
+	i = 0;
+	while(i < hdr_size){
+		newHdr[i] = bytes[i];
+		i++;
+	}
+
+	//change the src and dst ip if it was an incoming packet******
+
+
+	//finally send through the socket
+	sendto(sockfd, &newHdr[0], newSize, 0, 
+			(struct sockaddr *)&sock_raw, sizeof(sock_raw));
+}
+
+
+/**
+*
+*/
+void examine_incoming_packet(struct ipq_handle *handle,
+			     			 unsigned long      packetId,
+			     			 void              *hdr,
+			     			 int 				trafficType){
+    int   i, optLen;
+	int   hdr_size;
+	int   optionsLen;
+	char *hdrBytes = NULL;
+	struct tcphdr *tcphdr;
+
+	if(trafficType == 4){
+		struct ip * iphdr = (struct ip *)hdr;
+		//get the tcp header
+		hdr_size = (iphdr->ip_hl * 4);
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		hdrBytes = ((char *) iphdr) + hdr_size;
+	}
+	if(trafficType == 6){
+		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+		//get the tcp header		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		hdrBytes = ((char *) ip6_hdr) + hdr_size;
+	}
+
+	//check if SYN field is 1
+	if(tcphdr->syn == 0){
+		allow_packet(handle, packetId);
+		return;
+	}
+
+	//check that there are options
+	if(tcphdr->doff == 5){
+		allow_packet(handle, packetId);
+		return;
+	}
+
+	//at this point we have SYN or SYN_ACK packets
+	int thereIsI1Option = tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff);
+	//incoming, syn=1 and ack=0
+	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+
+		}
+		else{
+			allow_packet(handle, packetId);
+			return;
+		}
+	}
+	//incoming, syn=1 and ack=1
+	else if((tcphdr->syn == 1) && (tcphdr->ack == 1)){
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+
+		}
+		else{
+			allow_packet(handle, packetId);
+			return;
+		}
+	}
+	//allow all the rest
+	allow_packet(handle, packetId);
+}
+
+
+void examine_outgoing_packet(struct ipq_handle *handle,
+			     			 unsigned long      packetId,
+			     			 void              *hdr,
+			     			 int 				trafficType){
+    int   i, optLen;
+	int   hdr_size;
+	int   optionsLen;
+	char *hdrBytes = NULL;
+	struct tcphdr *tcphdr;
+
+	if(trafficType == 4){
+		struct ip * iphdr = (struct ip *)hdr;
+		//get the tcp header
+		hdr_size = (iphdr->ip_hl * 4);
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		hdrBytes = ((char *) iphdr) + hdr_size;
+	}
+	if(trafficType == 6){
+		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+		//get the tcp header		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		hdrBytes = ((char *) ip6_hdr) + hdr_size;
+	}
+
+	//check if SYN field is 0
+	if(tcphdr->syn == 0){
+		allow_packet(handle, packetId);
+		return;
+	}
+
+	//at this point we have SYN or SYN_ACK packets
+	if(((tcphdr->syn == 1) && (tcphdr->ack == 0)) ||	//outgoing, syn=1 and ack=0
+	   ((tcphdr->syn == 1) && (tcphdr->ack == 1))){		//outgoing, syn=1 and ack=1
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+			allow_packet(handle, packetId);
+			return;
+		}
+		//add the option to the packet and send it
+		drop_packet(handle, packetId);
+		send_i1_packet(hdr, hdr_size + 4*tcphdr->doff + 4, trafficType);
+		return;
+	}
+
+	//allow all the rest
+	allow_packet(handle, packetId);
+}
+#endif
 
 
 /* filter hip packet according to rules.
@@ -234,88 +652,87 @@ int filter_esp(const struct in6_addr * dst_addr,
 	       const char * in_if, 
 	       const char * out_if)
 {
-  struct _GList * list = (struct _GList *) read_rules(hook);
-  struct rule * rule = NULL;
-  int match = 1; // is the packet still a potential match to current rule
-  int ret_val = 0;
-  uint32_t spi = esp->esp_data->esp_spi;	
+  	struct _GList * list = (struct _GList *) read_rules(hook);
+  	struct rule * rule = NULL;
+  	int match = 1; // is the packet still a potential match to current rule
+  	int ret_val = 0;
+  	uint32_t spi = esp->esp_data->esp_spi;	
 
-  _HIP_DEBUG("filter_esp:\n");
-  while (list != NULL)
+  	_HIP_DEBUG("filter_esp:\n");
+  	while (list != NULL)
     {
-      match = 1;
-      rule = (struct rule *) list->data;
-      _HIP_DEBUG("   filter_esp: checking for:\n");     
-      //print_rule(rule);
-       HIP_DEBUG_HIT("dst addr: ", dst_addr);
-       HIP_DEBUG("SPI: %d\n", ntohl(spi)); 
+      	match = 1;
+      	rule = (struct rule *) list->data;
+      	_HIP_DEBUG("   filter_esp: checking for:\n");     
+      	//print_rule(rule);
+       	HIP_DEBUG_HIT("dst addr: ", dst_addr);
+       	HIP_DEBUG("SPI: %d\n", ntohl(spi)); 
         
-      //type not valid with ESP packets
-      if(rule->type)
-	  {
-	    //not valid with ESP packet
-	    _HIP_DEBUG("filter_esp: type option not valid for esp\n");
-	      match = 0;	
-	  }      
-      //src and dst hits are matched with state option
-      if((rule->src_hit || rule->dst_hit) && !rule->state)
-	  {
-	    //not valid with ESP packet
-	    _HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
-	      match = 0;	
-	  }      
-      if(match && rule->in_if)
-	  {
-	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
-	      match = 0;
-	    _HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-		      rule->in_if->value, 
-		      in_if, rule->in_if->boolean, match);
-	  }
-	if(match && rule->out_if)
-	  {
-	    if(!match_string(rule->out_if->value, 
-			     out_if, 
-			     rule->out_if->boolean))
-	      match = 0;
-	    _HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-		      rule->out_if->value, out_if, rule->out_if->boolean, match);
-	  }	
-	//must be last, so match and verdict known here
-	if(match && rule->state)
-	  {
-	    //the entire rule os passed as argument as hits can only be 
-	    //filtered whit the state information
-	    if(!filter_esp_state(dst_addr, esp, rule)) {//rule->state, rule->accept))
-	      match = 0;
-	    _HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n", 
-		      rule->state->int_opt.value,
-		      rule->state->int_opt.boolean, 
-		      match);
+      	//type not valid with ESP packets
+      	if(rule->type)
+	  	{
+	    	//not valid with ESP packet
+	    	_HIP_DEBUG("filter_esp: type option not valid for esp\n");
+	      	match = 0;	
+	  	}      
+      	//src and dst hits are matched with state option
+      	if((rule->src_hit || rule->dst_hit) && !rule->state)
+	  	{
+	    	//not valid with ESP packet
+	    	_HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
+	     	match = 0;	
+	  	}      
+      	if(match && rule->in_if)
+	  	{
+	    	if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
+	      	match = 0;
+	    	_HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+		      			rule->in_if->value, 
+		      			in_if, rule->in_if->boolean, match);
+	  	}
+		if(match && rule->out_if)
+	  	{
+	    	if(!match_string(rule->out_if->value, 
+			     			out_if, 
+			     			rule->out_if->boolean))
+	      		match = 0;
+	    	_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+		      			rule->out_if->value, out_if, rule->out_if->boolean, match);
+	  	}	
+		//must be last, so match and verdict known here
+		if(match && rule->state)
+	 	{
+	    	//the entire rule os passed as argument as hits can only be 
+	    	//filtered whit the state information
+	    	if(!filter_esp_state(dst_addr, esp, rule)) {//rule->state, rule->accept))
+	      		match = 0;
+	    		_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n", 
+		      	rule->state->int_opt.value,
+		      	rule->state->int_opt.boolean, 
+		      	match);
                 break;
             }
-	  }
-	// if a match, no need to check further rules
-	if(match){
-	  _HIP_DEBUG("filter_esp: match found\n");
-	  break;
- 	}
-      list = list->next;
+	  	}
+		// if a match, no need to check further rules
+		if(match){
+	  		_HIP_DEBUG("filter_esp: match found\n");
+	  		break;
+ 		}
+      	list = list->next;
     }
-  //was there a rule matching the packet
-  if(rule && match)
+  	//was there a rule matching the packet
+  	if(rule && match)
     {
-      _HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
-      ret_val = rule->accept; 
+      	_HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
+      	ret_val = rule->accept; 
     }
-  else
+  	else
     ret_val = 0; 
-  //release rule list
-  read_rules_exit(0);
-  //return the target of the the matched rule or true if no rule matched
-  return ret_val; 
+  	//release rule list
+  	read_rules_exit(0);
+  	//return the target of the the matched rule or true if no rule matched
+  	return ret_val; 
 }
-
 
 
 /* filter hip packet according to rules.
@@ -328,148 +745,149 @@ int filter_hip(const struct in6_addr * ip6_src,
 	       const char * in_if, 
 	       const char * out_if)
 {
-  struct _GList * list = (struct _GList *) read_rules(hook);
-  struct rule * rule = NULL;
-  int match = 1; // is the packet still a potential match to current rule
-  int conntracked = 0;
-  int ret_val = 0;
+  	struct _GList * list = (struct _GList *) read_rules(hook);
+  	struct rule * rule = NULL;
+  	int match = 1; // is the packet still a potential match to current rule
+  	int conntracked = 0;
+  	int ret_val = 0;
 
-  //if dynamically changing rules possible 
-  //int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
-  //+ filter_state käsittelemään myös esp paketit
-  _HIP_DEBUG("filter_hip: \n");
-  while (list != NULL)
+  	//if dynamically changing rules possible 
+  	//int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
+  	//+ filter_state käsittelemään myös esp paketit
+  	_HIP_DEBUG("filter_hip: \n");
+  	while (list != NULL)
     {
-      match = 1;
-      rule = (struct rule *) list->data;
-      _HIP_DEBUG("   filter_hip: checking for \n");     
-      //print_rule(rule);
+      	match = 1;
+      	rule = (struct rule *) list->data;
+      	_HIP_DEBUG("   filter_hip: checking for \n");     
+      	//print_rule(rule);
         if (buf->type_hdr == HIP_I1)
-                HIP_DEBUG("packet type: I1\n");
+			HIP_DEBUG("packet type: I1\n");
         else if (buf->type_hdr == HIP_R1)
-                HIP_DEBUG("packet type: R1\n");
+			HIP_DEBUG("packet type: R1\n");
         else if (buf->type_hdr == HIP_I2)
-                HIP_DEBUG("packet type: I2\n");
+			HIP_DEBUG("packet type: I2\n");
         else if (buf->type_hdr == HIP_R2)
-                HIP_DEBUG("packet type: R2\n");
+			HIP_DEBUG("packet type: R2\n");
         else if (buf->type_hdr == HIP_UPDATE)
-                HIP_DEBUG("packet type: UPDATE\n");
+			HIP_DEBUG("packet type: UPDATE\n");
 
                           
         HIP_DEBUG_HIT("src hit: ", &buf->hits);
         HIP_DEBUG_HIT("dst hit: ", &buf->hitr);
 
-      if(match && rule->src_hit)
-	  {
-	    HIP_DEBUG("filter_hip: src_hit ");
-	    if(!match_hit(rule->src_hit->value, 
-			  buf->hits, 
-			  rule->src_hit->boolean))
-	      match = 0;	
-	    //if HIT has matched and HI defined, verify signature 
-	    if(match && rule->src_hi)
-	      {
-		_HIP_DEBUG("filter_hip: src_hi \n");
-		if(!match_hi(rule->src_hi, buf))
-		  match = 0;	
-	      }
-	  }
-      if(match && rule->dst_hit)
-	{
-                HIP_DEBUG("filter_hip: dst_hit \n");
-	    if(!match_hit(rule->dst_hit->value, 
-			  buf->hitr, 
-			  rule->dst_hit->boolean))
-	      match = 0;	
-	  }
-      if(match && rule->type)
-	  {
-	    HIP_DEBUG("filter_hip: type ");
-	    if(!match_int(rule->type->value, 
-			  buf->type_hdr, 
-			  rule->type->boolean))
-	      match = 0;	
-	    HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
-		      rule->type->value, 
-		      buf->type_hdr,
-		      rule->type->boolean,
-		      match);
-	    
-	  }      
-      if(match && rule->in_if)
-	  {
-	    if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
-	      match = 0;
-	    HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-		      rule->in_if->value, 
-		      in_if, rule->in_if->boolean, match);
-	  }
-      if(match && rule->out_if)
-	  {
-	    if(!match_string(rule->out_if->value, 
-			     out_if, 
-			     rule->out_if->boolean))
-	      match = 0;
-	    HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-		      rule->out_if->value, out_if, rule->out_if->boolean, match);
-	  }
+      	if(match && rule->src_hit)
+	  	{
+	    	HIP_DEBUG("filter_hip: src_hit ");
+	    	if(!match_hit(rule->src_hit->value, 
+			  				buf->hits, 
+			  				rule->src_hit->boolean))
+	      		match = 0;	
+	    	//if HIT has matched and HI defined, verify signature 
+	    	if(match && rule->src_hi)
+	      	{
+				_HIP_DEBUG("filter_hip: src_hi \n");
+				if(!match_hi(rule->src_hi, buf))
+		  			match = 0;	
+	      	}
+	  	}
+      	if(match && rule->dst_hit)
+		{
+        	HIP_DEBUG("filter_hip: dst_hit \n");
+	    	if(!match_hit(rule->dst_hit->value, 
+			  				buf->hitr, 
+			  				rule->dst_hit->boolean))
+	    		match = 0;	
+	  	}
+      	if(match && rule->type)
+	  	{
+	    	HIP_DEBUG("filter_hip: type ");
+	    	if(!match_int(rule->type->value, 
+			  				buf->type_hdr, 
+			  				rule->type->boolean))
+	     		match = 0;	
+	    		HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
+		      				rule->type->value, 
+		      				buf->type_hdr,
+		      				rule->type->boolean,
+		      				match);
+	  	}      
+      	if(match && rule->in_if)
+	  	{
+	    	if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
+	      		match = 0;
+	    	HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+		      			rule->in_if->value, 
+		      			in_if, rule->in_if->boolean, match);
+	  	}
+      	if(match && rule->out_if)
+	  	{
+	    	if(!match_string(rule->out_if->value, 
+			     				out_if, 
+			     				rule->out_if->boolean))
+	      		match = 0;
+	    	HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+		      				rule->out_if->value, out_if, rule->out_if->boolean, match);
+	  	}
 	
-	//must be last, so not called if packet is going to be dropped
-      if(match && rule->state)
-	  {
-	    if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
-	      match = 0;
-	    else
-	      conntracked = 1;
-	    HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
-		      rule->state->int_opt.value,
-		      rule->state->int_opt.boolean, 
-		      match);
-	  }
-	// if a match, no need to check further rules
-	if(match){
-	  HIP_DEBUG("filter_hip: match found\n");
-	  break;
- 	}
-      list = list->next;
+			//must be last, so not called if packet is going to be dropped
+      	if(match && rule->state)
+	  	{
+	    	if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
+	    		match = 0;
+	    	else
+	    		conntracked = 1;
+	    		HIP_DEBUG("filter_hip: state, rule %d, boolean %d match %d\n", 
+		      				rule->state->int_opt.value,
+		      				rule->state->int_opt.boolean, 
+		      				match);
+		}
+		// if a match, no need to check further rules
+		if(match){
+			HIP_DEBUG("filter_hip: match found\n");
+			break;
+ 		}
+    	list = list->next;
     }
-  //was there a rule matching the packet
-  if(rule && match)
+  	//was there a rule matching the packet
+  	if(rule && match)
     {
-      HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
-      ret_val = rule->accept; 
+    	HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
+    	ret_val = rule->accept; 
     }
-  else
-    ret_val = 0; 
-  //release rule list
-  read_rules_exit(0);
-  // if packet will be accepted and connection tracking is used
-  // but the packet has not been analysed by the conntrack module
-  // show the packet to conntracking
-  if(statefulFiltering && ret_val && !conntracked){
-    conntrack(ip6_src, ip6_dst, buf);
-  }
-  //return the target of the the matched rule
-  return ret_val; 
+ 	else
+    	ret_val = 0; 
+  	//release rule list
+  	read_rules_exit(0);
+  	// if packet will be accepted and connection tracking is used
+  	// but the packet has not been analysed by the conntrack module
+  	// show the packet to conntracking
+  	if(statefulFiltering && ret_val && !conntracked){
+    	conntrack(ip6_src, ip6_dst, buf);
+  	}
+  	//return the target of the the matched rule
+  	return ret_val; 
 }
 
 
-/*function called by a thread that
-loops through either ipv4 or ipv6 packets*/
+/**
+* function called by a thread that loops
+* through either ipv4 or ipv6 packets
+*/
 static void *handle_ip_traffic(void *ptr) {
-        int status;
+	int status;
 	unsigned char buf[BUFSIZE];
-        struct hip_esp * esp_data = NULL;
-        struct hip_esp_packet * esp = NULL;
-        struct hip_common * hip_common = NULL;
+	struct hip_esp * esp_data = NULL;
+	struct hip_esp_packet * esp = NULL;
+	struct hip_common * hip_common = NULL;
 	struct in6_addr * src_addr = NULL;
 	struct in6_addr * dst_addr = NULL;
-
 
 	struct ipq_handle *hndl;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int *trafficType = (int *) ptr;
 	int type = trafficType;
+	unsigned int packetHook;
 
 	if(type == 4){
 		ipv4Traffic = 1;
@@ -477,56 +895,54 @@ static void *handle_ip_traffic(void *ptr) {
 	}
 	else if(type == 6){
 		ipv6Traffic = 1;
-                hndl = h6;
+		hndl = h6;
 	}
 
 	src_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-        dst_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-        if (!src_addr || !dst_addr)
-                goto out_err;
+	dst_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	if (!src_addr || !dst_addr)
+		goto out_err;
 
-
-  	do{
-    		status = ipq_read(hndl, buf, BUFSIZE, 0);
-    		if (status < 0)
-      			die(hndl);
+	do{
+		status = ipq_read(hndl, buf, BUFSIZE, 0);
+		if (status < 0)
+			die(hndl);
     
-    		switch (ipq_message_type(buf)) {
-    		case NLMSG_ERROR:
-      			fprintf(stderr, "Received error message %d\n", ipq_get_msgerr(buf));
-      		break;
+		switch (ipq_message_type(buf)) {
+		case NLMSG_ERROR:
+			fprintf(stderr, "Received error message %d\n", ipq_get_msgerr(buf));
+		break;
       
-        	case IPQM_PACKET: {
+		case IPQM_PACKET: {
+			struct ip6_hdr * ip6_hdr = NULL;
+			struct ip * iphdr = NULL;
+			void * packet_hdr = NULL;
+			int hdr_size = 0;
       
-        		struct ip6_hdr * ip6_hdr = NULL;
-        		struct ip * iphdr = NULL;
-        		void * packet_hdr = NULL;
-        		int hdr_size = 0;
-      
-        		ipq_packet_msg_t *m = ipq_get_packet(buf);
-        		if(ipv4Traffic){
+			ipq_packet_msg_t *m = ipq_get_packet(buf);
+			packetHook = m->hook;
 
-                		_HIP_DEBUG("ipv4\n");
-                		iphdr = (struct ip *) m->payload; 
-                		packet_hdr = (void *)iphdr;
-                		hdr_size = (iphdr->ip_hl * 4);
-                		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
-        		}
-        		else if(ipv6Traffic){
-                		_HIP_DEBUG("ipv6\n");
-                		ip6_hdr = (struct ip6_hdr *) m->payload;   
-                		packet_hdr = (void *)ip6_hdr;
-               		 	hdr_size = sizeof(struct ip6_hdr);
-               		 	_HIP_DEBUG("header size: %d\n", hdr_size);
-                		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
-                		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
-        		}
-      
-      			if(is_hip_packet(packet_hdr, type)){
-      				HIP_DEBUG("****** Received HIP packet ******\n");
-	
+			if(ipv4Traffic){
+				_HIP_DEBUG("ipv4\n");
+				iphdr = (struct ip *) m->payload; 
+				packet_hdr = (void *)iphdr;
+				hdr_size = (iphdr->ip_hl * 4);
+				_HIP_DEBUG("header size: %d\n", hdr_size);
+				IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
+				IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
+			}
+			else if(ipv6Traffic){
+				_HIP_DEBUG("ipv6\n");
+				ip6_hdr = (struct ip6_hdr *) m->payload;   
+				packet_hdr = (void *)ip6_hdr;
+				hdr_size = sizeof(struct ip6_hdr);
+				_HIP_DEBUG("header size: %d\n", hdr_size);
+				ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
+				ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
+			}
+
+			if(is_hip_packet(packet_hdr, type)){
+      			HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
 
@@ -553,46 +969,54 @@ static void *handle_ip_traffic(void *ptr) {
 
 
 				if(filter_hip(src_addr, 
-                      		  		dst_addr, 
-		     	 			hip_common, 
-		      				m->hook,
-		      				m->indev_name,
-		      				m->outdev_name))
+                      		  dst_addr, 
+		     	 			  hip_common, 
+		      				  m->hook,
+		      				  m->indev_name,
+		      				  m->outdev_name))
 	  			{
-	    				status = ipq_set_verdict(hndl, m->packet_id,
-					     			NF_ACCEPT, 0, NULL);
-	    				HIP_DEBUG("Packet accepted\n\n");
+					allow_packet(hndl, m->packet_id);
 				}
 				else
 	  			{
-	    				status = ipq_set_verdict(hndl, m->packet_id,
-					     			NF_DROP, 0, NULL);
-	    				HIP_DEBUG("Packet dropped\n\n");
+					drop_packet(hndl, m->packet_id);
 	  			}
-      			} 
-      			else{
+      		} 
+      		else{
 				HIP_DEBUG("****** Received Unknown packet ******\n");
-				if(accept_normal_traffic){
-      					status = ipq_set_verdict(hndl, m->packet_id,
-				 			NF_ACCEPT, 0, NULL);
-					HIP_DEBUG("Packet accepted \n\n");
+#ifdef CONFIG_HIP_OPPTCP
+				if(iphdr->ip_p != IPPROTO_TCP){
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
 				}
+				else if(is_incoming_packet(packetHook))
+					allow_packet(hndl, m->packet_id);
+					////examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
+				else if(is_outgoing_packet(packetHook))
+					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
 				else{
-      					status = ipq_set_verdict(hndl, m->packet_id,
-				 			NF_DROP, 0, NULL);
-					HIP_DEBUG("Packet dropped \n\n");
+#endif
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
+#ifdef CONFIG_HIP_OPPTCP
 				}
+#endif
 			}
-      			if (status < 0)
+
+      		if (status < 0)
 				die(hndl);
-      		break;
+		break;
     		}
-    		default:
-      			HIP_DEBUG("unknown msg\n");
-      			fprintf(stderr, "Unknown message type!\n");
-      		break;
-    		}
-  	} while (1);
+		default:
+			HIP_DEBUG("unknown msg\n");
+			fprintf(stderr, "Unknown message type!\n");
+		break;
+    	}
+	}while (1);
 
 out_err:  
 	//if (hip_common)
@@ -614,114 +1038,114 @@ out_err:
 
 int main(int argc, char **argv)
 {
-        int err = 0;
-        int status;
-        long int timeout;
-        //unsigned char buf[BUFSIZE];
-        struct rule * rule = NULL;
-        struct _GList * temp_list = NULL;
-        //struct hip_common * hip_common = NULL;
-        //struct hip_esp * esp_data = NULL;
-        //struct hip_esp_packet * esp = NULL;
-        int escrow_active = 0;
-        int protocol_family;
+	int err = 0;
+	int status;
+	long int timeout;
+	//unsigned char buf[BUFSIZE];
+	struct rule * rule = NULL;
+	struct _GList * temp_list = NULL;
+	//struct hip_common * hip_common = NULL;
+	//struct hip_esp * esp_data = NULL;
+	//struct hip_esp_packet * esp = NULL;
+	int escrow_active = 0;
+	int protocol_family;
         
-        int ch;        
-        char *rule_file;
-        char *traffic;
-        extern char *optarg;
-        extern int optind, optopt;
-        int errflg = 0;
+	int ch;        
+	char *rule_file;
+	char *traffic;
+	extern char *optarg;
+	extern int optind, optopt;
+	int errflg = 0;
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-        while ((ch = getopt(argc, argv, ":t:f:vd")) != -1) {
-             switch(ch) {
-	     case 'v':
-		     hip_set_logdebug(LOGDEBUG_MEDIUM);
-	     break;
-	     case 'd':
-		     hip_set_logdebug(LOGDEBUG_ALL);
-	     break;
-	     case 't':
-		 traffic = optarg;
-	     break;
-             case 'f':
-                 rule_file = optarg;
-                 break;
-             case ':':   /* -f or -p without operand */
-                 printf("Option -%c requires an operand\n", optopt);
-                 errflg++;
-                 break;
-             case '?':
-                 printf("Unrecognized option: -%c\n", optopt);
-                 errflg++;
-             }
-        }
-        if (optind < argc)
-                timeout = atol(argv[optind]);
-        else 
-                errflg++;       
+	while ((ch = getopt(argc, argv, ":t:f:vd")) != -1) {
+		switch(ch) {
+		case 'v':
+			hip_set_logdebug(LOGDEBUG_MEDIUM);
+		break;
+		case 'd':
+			hip_set_logdebug(LOGDEBUG_ALL);
+		break;
+		case 't':
+			traffic = optarg;
+		break;
+		case 'f':
+			rule_file = optarg;
+		break;
+		case ':':   /* -f or -p without operand */
+			printf("Option -%c requires an operand\n", optopt);
+			errflg++;
+		break;
+		case '?':
+			printf("Unrecognized option: -%c\n", optopt);
+			errflg++;
+		}
+	}
+	if (optind < argc)
+		timeout = atol(argv[optind]);
+	else 
+		errflg++;       
 
 
-        if (strncmp(traffic, "drop", 4) == 0) {
-                HIP_DEBUG("Dropping normal traffic\n");
-                accept_normal_traffic = 0;
-        }
-        else if (strncmp(traffic, "accept", 6) == 0) {
+	if (strncmp(traffic, "drop", 4) == 0) {
+		HIP_DEBUG("Dropping normal traffic\n");
+		accept_normal_traffic = 0;
+	}
+	else if (strncmp(traffic, "accept", 6) == 0) {
 		HIP_DEBUG("Accepting normal traffic\n");
-                accept_normal_traffic = 1;
-        }
+		accept_normal_traffic = 1;
+	}
 	else{
-                errflg++;
+		errflg++;
 	}
 
 
-        if (errflg) {
-                print_usage();
-                printf("Invalid argument. Closing. \n\n");                
-                exit(2);
-        }    
+	if (errflg) {
+		print_usage();
+		printf("Invalid argument. Closing. \n\n");                
+		exit(2);
+	}    
 
 
 	//use by default both ipv4 and ipv6
-        HIP_DEBUG("Using ipv4 and ipv6\n");
-        use_ipv4 = 1;
-        use_ipv6 = 1;
+	HIP_DEBUG("Using ipv4 and ipv6\n");
+	use_ipv4 = 1;
+	use_ipv6 = 1;
 
 
-        read_file(rule_file);
-        HIP_DEBUG("Firewall rule table: \n");
-        print_rule_tables();
-        //running test functions for rule handling
-        //  test_parse_copy();
-        //  test_rule_management();
+	read_file(rule_file);
+	HIP_DEBUG("Firewall rule table: \n");
+	print_rule_tables();
+	//running test functions for rule handling
+	//  test_parse_copy();
+	//  test_rule_management();
 
-        timeout = atol(argv[2]);
-        HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
+	timeout = atol(argv[2]);
+	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
                 rule_file, timeout);
 
-        firewall_probe_kernel_modules();
+	firewall_probe_kernel_modules();
 
 	if (use_ipv4) {
-                h4 = ipq_create_handle(0, PF_INET);
-                if (!h4)
-                        die(h4);
-                status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-                if (status < 0)
-                        die(h4);
-        }
+		h4 = ipq_create_handle(0, PF_INET);
+		if (!h4)
+  			die(h4);
+		status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+		if (status < 0)
+			die(h4);
+	}
 
-        if (use_ipv6) {
-                h6 = ipq_create_handle(0, PF_INET6);
-                if (!h6)
-                        die(h6);
-                status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
-                if (status < 0)
-                        die(h6);
-        }
+	if (use_ipv6) {
+		h6 = ipq_create_handle(0, PF_INET6);
+		if (!h6)
+			die(h6);
+		status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
+		if (status < 0)
+			die(h6);
+	}
 
-        firewall_init();
+	firewall_init();
 
 #ifdef G_THREADS_IMPL_POSIX
       	HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
@@ -740,15 +1164,15 @@ int main(int argc, char **argv)
 
 
 	if (use_ipv4) {
-                int *i, j = 4;
-                i = &j;
-                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) j);
-        }
+		int *i, j = 4;
+		i = &j;
+		pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) j);
+	}
 	if (use_ipv6) {
-                int *i, j = 6;
-                i = &j;
-                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) j);
-        }
+ 		int *i, j = 6;
+		i = &j;
+		pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) j);
+	}
 
 	if (use_ipv4)
 		pthread_join(ipv4Thread, NULL);
