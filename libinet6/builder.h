@@ -113,14 +113,15 @@ int hip_build_param(struct hip_common *, const void *);
 int hip_build_param_transform(struct hip_common *, const hip_tlv_type_t,
                               const hip_transform_suite_t[], const uint16_t);
 int hip_build_param_unit_test(struct hip_common *, uint16_t, uint16_t);
-
-
+int hip_build_param_via_rvs_nat(struct hip_common *,
+                                const struct hip_in6_addr_port[], const int);
 int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *rvs_addr,
 			     const in_port_t port);
 int hip_build_param_via_rvs(struct hip_common *msg,
 			    const struct in6_addr rvs_addresses[]);
 
+int hip_build_param_opendht_set(struct hip_common *, char *);
 /** @} */
 
 int hip_build_user_hdr(struct hip_common *, hip_hdr_type_t, hip_hdr_err_t);
@@ -185,7 +186,5 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
-
-
 
 #endif /* HIP_BUILDER */
