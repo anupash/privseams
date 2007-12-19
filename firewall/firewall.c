@@ -370,9 +370,10 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 
 
 /**
-* adds the i1 option to a packet and sends it off
-*/
-void send_i1_packet(void * hdr,	int newSize, int trafficType){
+ * adds the i1 option to a packet if required
+ * and sends it off with the correct checksum
+ */
+void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
 	int   sockfd, socketFamily;
 	int   on = 1, i;
 	int   hdr_size, newHdr_size, twoHdrsSize;
@@ -391,8 +392,10 @@ void send_i1_packet(void * hdr,	int newSize, int trafficType){
 	struct pseudo_hdr  *pseudo;
 	struct pseudo6_hdr *pseudo6;
 	void *pointer;
-	char newHdr [newSize];
+	char newHdr [newSize + 4*addOption];
 
+	if(addOption)
+		newSize = newSize + 4;
 
 	//initializing the raw socket
 	if(trafficType == 4)
@@ -445,21 +448,32 @@ void send_i1_packet(void * hdr,	int newSize, int trafficType){
 
 	//copy the old options and add the new i1 one
 	if(tcphdr->doff == 5){//there are no previous options
-		newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
-		newHdr[twoHdrsSize + 1] = '0';
-		newHdr[twoHdrsSize + 2] = '0';
-		newHdr[twoHdrsSize + 3] = '0';
+		if(addOption){
+			newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+			newHdr[twoHdrsSize + 1] = '0';
+			newHdr[twoHdrsSize + 2] = '0';
+			newHdr[twoHdrsSize + 3] = '0';
+		}
 	}
 	else {//there are previous options
-		newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
-		newHdr[twoHdrsSize + 1] = (char)2;
-		newHdr[twoHdrsSize + 2] = (char)1;
-		newHdr[twoHdrsSize + 3] = (char)1;
+		if(addOption){
+			newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+			newHdr[twoHdrsSize + 1] = (char)2;
+			newHdr[twoHdrsSize + 2] = (char)1;
+			newHdr[twoHdrsSize + 3] = (char)1;
 
-		i = 0;
-		while(i < 4*(tcphdr->doff-5)){
-			newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
-			i++;
+			i = 0;
+			while(i < 4*(tcphdr->doff-5)){
+				newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
+				i++;
+			}
+		}
+		else{
+			i = 0;
+			while(i < 4*(tcphdr->doff-5)){
+				newHdr[i + twoHdrsSize] = bytes[i + twoHdrsSize];
+				i++;
+			}
 		}
 	}
 
@@ -482,7 +496,8 @@ void send_i1_packet(void * hdr,	int newSize, int trafficType){
 
 	//change the values of the checksum and the tcp header length(+1) 
 	newTcphdr->check = 0;
-	newTcphdr->doff = newTcphdr->doff + 1;
+	if(addOption)
+		newTcphdr->doff = newTcphdr->doff + 1;
 
 	//the checksum
 	if(trafficType == 4){
@@ -538,61 +553,86 @@ void examine_incoming_packet(struct ipq_handle *handle,
 	int   optionsLen;
 	char *hdrBytes = NULL;
 	struct tcphdr *tcphdr;
+	struct ip      *iphdr;
+	struct ip6_hdr *ip6_hdr;
+	//fields for temporary values
+	u_int16_t portTemp;
+	struct in_addr  addrTemp;
+	struct in6_addr addr6Temp;
 
 	if(trafficType == 4){
-		struct ip * iphdr = (struct ip *)hdr;
+		iphdr = (struct ip *)hdr;
 		//get the tcp header
 		hdr_size = (iphdr->ip_hl * 4);
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		hdrBytes = ((char *) iphdr) + hdr_size;
 	}
-	if(trafficType == 6){
-		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+	else if(trafficType == 6){
+		ip6_hdr = (struct ip6_hdr *)hdr;
 		//get the tcp header		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		hdrBytes = ((char *) ip6_hdr) + hdr_size;
 	}
 
-	//check if SYN field is 1
+	//check if SYN field is 0
 	if(tcphdr->syn == 0){
 		allow_packet(handle, packetId);
 		return;
 	}
 
 	//check that there are options
-	if(tcphdr->doff == 5){
+	if(tcphdr->doff == 5){	//no options
 		allow_packet(handle, packetId);
 		return;
 	}
 
-	//at this point we have SYN or SYN_ACK packets
-	int thereIsI1Option = tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff);
-	//incoming, syn=1 and ack=0
-	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){
+	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+			//swap the ports
+			portTemp = tcphdr->source;
+			tcphdr->source = tcphdr->dest;
+			tcphdr->dest = portTemp;
+			//swap the ip addresses
+			if(trafficType == 4){
+				addrTemp = iphdr->ip_src;
+				iphdr->ip_src = iphdr->ip_dst;
+				iphdr->ip_dst = addrTemp;
+			}
+			else if(trafficType == 6){
+				addr6Temp = ip6_hdr->ip6_src;
+				ip6_hdr->ip6_src = ip6_hdr->ip6_dst;
+				ip6_hdr->ip6_dst = addr6Temp;
+			}
+			//set ack field
+			tcphdr->ack_seq = tcphdr->seq + 1;
+			//acknowledge the captured packet
+			tcphdr->seq = htonl(0);
+			//set flags
+			tcphdr->syn = 1;
+			tcphdr->ack = 1;
 
+			//send packet out
+			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 0);
+			//drop original packet
+			drop_packet(handle, packetId);
+			return;
 		}
 		else{
 			allow_packet(handle, packetId);
 			return;
 		}
 	}
-	//incoming, syn=1 and ack=1
-	else if((tcphdr->syn == 1) && (tcphdr->ack == 1)){
-		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-
-		}
-		else{
-			allow_packet(handle, packetId);
-			return;
-		}
+	else if((tcphdr->syn == 1) && (tcphdr->ack == 1)){	//incoming, syn=1 and ack=1
+		allow_packet(handle, packetId);
+		return;
 	}
 	//allow all the rest
 	allow_packet(handle, packetId);
 }
 
 
+//###########################################################
 void examine_outgoing_packet(struct ipq_handle *handle,
 			     			 unsigned long      packetId,
 			     			 void              *hdr,
@@ -633,7 +673,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 		}
 		//add the option to the packet and send it
 		drop_packet(handle, packetId);
-		send_i1_packet(hdr, hdr_size + 4*tcphdr->doff + 4, trafficType);
+		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1);
 		return;
 	}
 
@@ -992,8 +1032,7 @@ static void *handle_ip_traffic(void *ptr) {
 						drop_packet(hndl, m->packet_id);
 				}
 				else if(is_incoming_packet(packetHook))
-					allow_packet(hndl, m->packet_id);
-					////examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
+					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
 					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
 				else{
