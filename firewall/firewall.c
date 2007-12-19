@@ -645,7 +645,7 @@ int main(int argc, char **argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-        while ((ch = getopt(argc, argv, ":t:f:vd")) != -1) {
+        while ((ch = getopt(argc, argv, ":t:f:vdm")) != -1) {
              switch(ch) {
 	     case 'v':
 		     hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -653,11 +653,6 @@ int main(int argc, char **argv)
 	     case 'd':
 		     hip_set_logdebug(LOGDEBUG_ALL);
 	     break;
-#ifdef CONFIG_HIP_MIDAUTH
-	     case 'm':
-	         use_midauth = 1;
-	     break;
-#endif
 	     case 't':
 		 traffic = optarg;
 	     break;
@@ -668,6 +663,11 @@ int main(int argc, char **argv)
                  printf("Option -%c requires an operand\n", optopt);
                  errflg++;
                  break;
+	     case 'm':
+#ifdef CONFIG_HIP_MIDAUTH
+	         use_midauth = 1;
+	     break;
+#endif
              case '?':
                  printf("Unrecognized option: -%c\n", optopt);
                  errflg++;
