@@ -243,6 +243,7 @@ if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
         #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
+AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 

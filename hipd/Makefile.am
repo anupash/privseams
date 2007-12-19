@@ -36,9 +36,7 @@ if HIP_HI3
  hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
 endif
 
-#if HIP_OPENDHT
- hipd_LDADD += ../opendht/.libs/libhipopendht.a
-#endif
+hipd_LDADD += ../opendht/.libs/libhipopendht.a
 
 if HIP_PFKEY
 hipd_LDADD += ../libipsec/.libs/libipsec.a

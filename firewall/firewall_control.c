@@ -21,7 +21,9 @@ gpointer run_control_thread(gpointer data)
 	int len;
 	int ret;
 	int max_fd;
-	struct sockaddr_un sock_addr;
+    struct sockaddr_in6 sock_addr;
+
+    
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
 	fd_set read_fdset;
@@ -106,7 +108,7 @@ out_err:
 	
 }
 
-int handle_msg(struct hip_common * msg, struct sockaddr_un * sock_addr)
+int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
@@ -219,12 +221,15 @@ out_err:
 int sendto_hipd(void *msg, size_t len)
 {
 	/* Variables. */
-	struct sockaddr_un sock_addr;
+    struct sockaddr_in6 sock_addr;
+  
 	int n, alen;
 	
 	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sun_family = AF_LOCAL;
-	strcpy(sock_addr.sun_path, HIP_FIREWALLADDR_PATH);
+    sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+    
 	alen = sizeof(sock_addr);
 	n = sendto(hip_firewall_sock, msg, len, 0, (struct sockaddr *)&sock_addr, alen);
 
@@ -237,7 +242,8 @@ int control_thread_init(void)
    int err = 0;
 	int n;
 	int len;
-	struct sockaddr_un sock_addr;
+    struct sockaddr_in6 sock_addr;
+    
 	struct hip_common *msg = NULL;
 	socklen_t alen;
 
@@ -248,45 +254,16 @@ int control_thread_init(void)
 		return err;
 	}
 
-	/* Create and bind daemon socket. */
-	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	if (hip_firewall_sock < 0) {
-		err = -1;
-		HIP_ERROR("Failed to create socket.\n");
-		return err;
-	}
-	
+    /*New UDP socket for communication with HIPD*/
+    hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
 	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sun_family = AF_LOCAL;
-	if ((hip_tmpname(sock_addr.sun_path)))
-		return -1;
-	err = bind(hip_firewall_sock, (struct sockaddr *) &sock_addr,
-		   sizeof(sock_addr));
-	if (err != 0) {
-	     err = -1;
-	     HIP_ERROR("Bind failed.\n");
-	     return err;
-	}
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
+		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
-	/* Test connection. */
-	hip_build_user_hdr(msg, HIP_FIREWALL_PING, 0);
-	n = sendto_hipd(msg, sizeof(struct hip_common));
-	if (n < 0) {
-		err =  -1;
-		HIP_ERROR("Could not send ping to daemon.\n");
-		return err;
-	}
-
-	bzero(&sock_addr, sizeof(sock_addr));
-	alen = sizeof(sock_addr);
-	n = recvfrom(hip_firewall_sock, msg, sizeof(struct hip_common), 0,
-	             (struct sockaddr *)&sock_addr, &alen);
-	HIP_IFEL(n < 0, -1,  "Did not receive ping reply from daemon.\n");
-	
-	/* Start thread for connection handling. */
-	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
-	          "Starting thread for HIP daemon connection handling\n", n);
-    	
     	if( !g_thread_supported() )
   		{
      		g_thread_init(NULL);
