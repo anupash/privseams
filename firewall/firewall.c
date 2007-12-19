@@ -21,15 +21,25 @@ int use_ipv6 = 0;
 int accept_normal_traffic = 0;
 pthread_t ipv4Thread, ipv6Thread;
 
+#ifdef CONFIG_HIP_MIDAUTH
+int use_midauth = 0;
+#endif
 
 void print_usage()
 {
         printf("HIP Firewall\n");
-        printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]\n");
-	printf("      - traffic_other_than_hip, can take the value drop or accept\n");
+        printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]");
+#ifdef CONFIG_HIP_MIDAUTH
+        printf(" [-m]");
+#endif
+        printf("\n");
+        printf("      - traffic_other_than_hip, can take the value drop or accept\n");
         printf("      - file_name is a path to a file containing firewall filtering rules\n");
         printf("      - timeout is connection timeout value in seconds\n");
         printf("      - d = debugging output\n");
+#ifdef CONFIG_HIP_MIDAUTH
+        printf("      - m = middlebox authentification\n");
+#endif
         printf("      - v = verbose output\n\n");
 }
 
@@ -643,6 +653,11 @@ int main(int argc, char **argv)
 	     case 'd':
 		     hip_set_logdebug(LOGDEBUG_ALL);
 	     break;
+#ifdef CONFIG_HIP_MIDAUTH
+	     case 'm':
+	         use_midauth = 1;
+	     break;
+#endif
 	     case 't':
 		 traffic = optarg;
 	     break;

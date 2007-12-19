@@ -14,9 +14,9 @@ EXTRA_DIST = myasn.py parse-key-3.py
 
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
-if HIP_OPENDHT
+#if HIP_OPENDHT
   INCLUDES += -I../opendht
-endif
+#endif
 
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
@@ -34,9 +34,9 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_OPENDHT
+#if HIP_OPENDHT
   LDADD += ../opendht/.libs/libhipopendht.a
-endif
+#endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 
