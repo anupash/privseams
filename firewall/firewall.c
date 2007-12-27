@@ -569,8 +569,20 @@ static void *handle_ip_traffic(void *ptr) {
 		      				m->indev_name,
 		      				m->outdev_name))
 	  			{
+					int size = 0, verdict = NF_ACCEPT;
+					unsigned char *ptr = NULL;
+#ifdef CONFIG_HIP_MIDAUTH
+					struct midauth_packet p;
+
+					if (use_midauth) {
+					    verdict = filter_midauth(m, &p);
+					    size = p.size;
+					    ptr = size ? p.buffer : NULL;
+					}
+#endif
+
 	    				status = ipq_set_verdict(hndl, m->packet_id,
-					     			NF_ACCEPT, 0, NULL);
+					     			verdict, size, ptr);
 	    				HIP_DEBUG("Packet accepted\n\n");
 				}
 				else

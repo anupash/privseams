@@ -25,6 +25,7 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
+#include "midauth.h"
 
 
 //made public for filter_esp_state function

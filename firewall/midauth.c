@@ -32,5 +32,8 @@ static void update_ipv4_header (void *data, int len) {
     ip->check = ~checksum;
 }
 
+int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
+    p->size = 0;
 
-
+    return NF_ACCEPT;
+}
