@@ -14,7 +14,7 @@ if HIP_FIREWALL
 
 sbin_PROGRAMS = firewall
 
-firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c
+firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c midauth.c
 
 firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
