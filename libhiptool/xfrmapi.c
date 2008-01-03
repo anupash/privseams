@@ -5,7 +5,29 @@
 /* For receiving netlink IPsec events (acquire, expire, etc);
    thread unfriendly! */
 struct rtnl_handle *hip_xfrmapi_nl_ipsec;
-int hip_xfrmapi_beet = 4; /* 2.6.19 and above */
+
+int hip_xfrmapi_beet;
+int hip_xfrmapi_sa_default_prefix;
+
+char **e_algo_names; 
+char **a_algo_names;
+
+/* Mappings from HIP to XFRM algo names < 2.6.19 */
+char *e_algo_names_old[] =
+  {"reserved", "aes", "des3_ede", "des3_ede",
+   "blowfish", "cipher_null", "cipher_null"};
+char *a_algo_names_old[] =
+  {"reserved", "sha1", "sha1", "md5",
+   "sha1", "sha1", "md5"};
+
+/* Mappings from HIP to XFRM algo names >= 2.6.19 */
+char *e_algo_names_new[] =
+  {"reserved", "cbc(aes)", "cbc(des3_ede)", "cbc(des3_ede)",
+   "cbc(blowfish)", "ecb(cipher_null)", "ecb(cipher_null)"};
+char *a_algo_names_new[] =
+  {"reserved", "hmac(sha1)", "hmac(sha1)", "hmac(md5)",
+   "hmac(sha1)", "hmac(sha1)", "hmac(md5)"};
+
 
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec) {
 	hip_xfrmapi_nl_ipsec = nl_ipsec;
@@ -15,8 +37,17 @@ void hip_xfrm_set_beet(int beet) {
 	hip_xfrmapi_beet = beet;
 }
 
+void hip_xfrm_set_default_sa_prefix_len(int len) {
+	hip_xfrmapi_sa_default_prefix = len;
+}
+
 int hip_xfrm_get_beet(void) {
 	return hip_xfrmapi_beet;
+}
+
+void hip_xfrm_set_algo_names(int new_algo_names) {
+	e_algo_names = (new_algo_names ? e_algo_names_new : e_algo_names_old);
+	a_algo_names = (new_algo_names ? a_algo_names_new : a_algo_names_old);
 }
 
 /**
@@ -102,10 +133,14 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	if (req.xpinfo.sel.family == AF_UNSPEC)
 		req.xpinfo.sel.family = AF_INET6;
 
-	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
-		 "netlink_talk failed\n");
+	{
+		void *x = malloc(sizeof(req.n) * 10);
+		memcpy(x, &req.n, sizeof(req.n));
+		HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+			 "netlink_talk failed\n");
+	}
 
- out_err:
+out_err:
 
 	return err;
 }
@@ -276,7 +311,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 
 	/* Selector */
 	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
-			   0, 0, 0,0, AF_INET6), -1);
+			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
@@ -290,14 +325,6 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			struct xfrm_algo algo;
 			char buf[XFRM_ALGO_KEY_BUF_SIZE];
 		} alg;
-		/* Mappings from HIP to XFRM algo names */
-		char *e_algo_names[] =
-			{"reserved", "aes", "des3_ede", "des3_ede",
-			 "blowfish", "cipher_null", "cipher_null"};
-		char *a_algo_names[] =
-			{"reserved", "sha1", "sha1", "md5",
-			 //  "sha1", /*"sha1", "md5"*/ "digest_null", "digest_null"};
-			 "sha1", "sha1", "md5"};
 		char *e_name = e_algo_names[ealg];
 		char *a_name = a_algo_names[aalg];
 		int len;
@@ -384,7 +411,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
         /** @todo Fill in information for UDP-NAT SAs. */
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
-		HIP_DEBUG("FILLING UP Port info while deleting\n");
+		HIP_DEBUG("FILLING UDP Port info while deleting\n");
 		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
@@ -454,7 +481,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
-	HIP_IFEL((enckey < 0 || authkey_len < 0), 1,
+	HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
 		 "Bad enc or auth key len\n");
 
 	/* XX CHECK: is there some kind of range for the SPIs ? */
@@ -522,9 +549,10 @@ void hip_delete_default_prefix_sp_pair() {
 
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
+#ifndef CONFIG_HIP_BUGGYIPSEC
 	hip_hit_t src_hit, dst_hit;
 	struct in6_addr ip;
-#if 0
+
 	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));

@@ -14,6 +14,7 @@
 #  define IPV6_ADDR_SITELOCAL     0x0040U
 
 extern int hip_nat_status;
+extern int is_active_handover;
 
 int hip_receive_update(struct 	hip_common *msg,
 		       struct 	in6_addr *update_saddr,
@@ -22,18 +23,21 @@ int hip_receive_update(struct 	hip_common *msg,
 		       
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
-		    int addr_count, int ifindex, int flags);
+		    int addr_count, int ifindex, int flags,
+		    int is_add, struct sockaddr* addr);
 		    
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count,
 			 int ifindex, 
-			 int flags);
+			 int flags,
+			 int is_add, struct sockaddr* addr);
 			 
 int hip_handle_update_plain_locator(hip_ha_t *entry, 
 				struct hip_common *msg,
 				struct in6_addr *src_ip,
 				struct in6_addr *dst_ip,
-				struct hip_esp_info *esp_info);
+				struct hip_esp_info *esp_info,
+				struct hip_seq *seq);
 				
 int hip_handle_update_addr_verify(hip_ha_t *entry,
 					struct hip_common *msg,
@@ -67,8 +71,8 @@ int hip_update_send_registration_request(hip_ha_t *entry,
                                         int type_count, 
                                         int op);
 
-int hip_create_reg_response(hip_ha_t * entry, 
-        struct hip_tlv_common * reg, uint8_t *requests, 
-        int request_count, struct in6_addr *src_ip, struct in6_addr *dst_ip);
+int hip_create_reg_response(hip_ha_t * entry, struct hip_tlv_common * reg,
+			    uint8_t *requests, int request_count,
+			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
 #endif /* HIP_UPDATE_H */

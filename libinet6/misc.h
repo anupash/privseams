@@ -22,8 +22,6 @@
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {
-	HIP_HEXDUMP("a1: ", a1, sizeof(struct in6_addr));
-	HIP_HEXDUMP("a2: ", a2, sizeof(struct in6_addr));
 	return memcmp((const void *) a1, (const void *) a2,
 		      sizeof(struct in6_addr));
 }
@@ -93,6 +91,5 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
-
 
 #endif /* HIP_MISC_H */

@@ -236,7 +236,7 @@ struct hip_common *hip_blind_build_i1(hip_ha_t *entry, int *mask)
     HIP_ERROR("Out of memory\n");
     return NULL;
   }
-  *mask |= HIP_CONTROL_BLIND;
+  *mask |= HIP_PACKET_CTRL_BLIND;
   
   if(entry->blind)
     HIP_DEBUG("Blind flag is on\n");
@@ -272,7 +272,7 @@ int hip_blind_build_r2(struct hip_common *i2, struct hip_common *r2, hip_ha_t *e
   HIP_DEBUG("/n");
 
   /*
-  *mask |= HIP_CONTROL_BLIND;
+  *mask |= HIP_PACKET_CTRL_BLIND;
     
   // Build network header by using blinded HITs
   entry->hadb_misc_func->
@@ -446,8 +446,8 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
 	struct hip_common *msg;
- 	int err = 0, dh_size, written, mask;
- 	u8 *dh_data = NULL;
+	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
+ 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 
  	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
@@ -464,21 +464,26 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 
- 	/* Allocate memory for writing Diffie-Hellman shared secret */
-	HIP_IFEL((dh_size = hip_get_dh_size(HIP_DEFAULT_DH_GROUP_ID)) == 0, 
-		 -1, "Could not get dh size\n");
-	HIP_IFEL(!(dh_data = HIP_MALLOC(dh_size, GFP_ATOMIC)), 
-		 -1, "Failed to alloc memory for dh_data\n");
-	memset(dh_data, 0, dh_size);
+ 	/* Allocate memory for writing the first Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size1 = hip_get_dh_size(HIP_FIRST_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size1\n");
+	HIP_IFEL(!(dh_data1 = HIP_MALLOC(dh_size1, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data1\n");
+	memset(dh_data1, 0, dh_size1);
 
-	_HIP_DEBUG("dh_size=%d\n", dh_size);
+	_HIP_DEBUG("dh_size=%d\n", dh_size1);
+
+ 	/* Allocate memory for writing the second Diffie-Hellman shared secret */
+	HIP_IFEL((dh_size2 = hip_get_dh_size(HIP_SECOND_DH_GROUP_ID)) == 0, 
+		 -1, "Could not get dh_size2\n");
+	HIP_IFEL(!(dh_data2 = HIP_MALLOC(dh_size2, GFP_ATOMIC)), 
+		 -1, "Failed to alloc memory for dh_data2\n");
+	memset(dh_data2, 0, dh_size2);
+
+	_HIP_DEBUG("dh_size=%d\n", dh_size2);
 	
  	/* Ready to begin building of the R1 packet */
-#ifdef CONFIG_HIP_RVS
-	mask |= HIP_CONTROL_RVS_CAPABLE; //XX: FIXME
-#endif
-
-	mask |= HIP_CONTROL_BLIND;
+	mask |= HIP_PACKET_CTRL_BLIND;
 
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/*! \todo TH: hip_build_network_hdr has to be replaced with an apprporiate function pointer */
@@ -494,14 +499,18 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 		 "Cookies were burned. Bummer!\n");
 
  	/********** Diffie-Hellman **********/
-	HIP_IFEL((written = hip_insert_dh(dh_data, dh_size,
-					  HIP_DEFAULT_DH_GROUP_ID)) < 0,
-		 -1, "Could not extract DH public key\n");
-	
+	HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
+					  HIP_FIRST_DH_GROUP_ID)) < 0,
+		 -1, "Could not extract the first DH public key\n");
+	HIP_IFEL((written2 = hip_insert_dh(dh_data2, dh_size2,
+					  HIP_SECOND_DH_GROUP_ID)) < 0,
+		 -1, "Could not extract the second DH public key\n");
+
 	HIP_IFEL(hip_build_param_diffie_hellman_contents(msg,
-							 HIP_DEFAULT_DH_GROUP_ID,
-							 dh_data, written), -1,
+		 HIP_FIRST_DH_GROUP_ID, dh_data1, written1, 
+		 HIP_SECOND_DH_GROUP_ID, dh_data2, written2), -1,
 		 "Building of DH failed.\n");
+
 
  	/********** HIP transform. **********/
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
@@ -576,8 +585,10 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 
  	/************** Packet ready ***************/
 
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
 	return msg;
 
@@ -586,8 +597,10 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 	//	HIP_FREE(host_id_pub);
  	if (msg)
  		HIP_FREE(msg);
- 	if (dh_data)
- 		HIP_FREE(dh_data);
+ 	if (dh_data1)
+ 		HIP_FREE(dh_data1);
+ 	if (dh_data2)
+ 		HIP_FREE(dh_data2);
 
   	return NULL;
 }

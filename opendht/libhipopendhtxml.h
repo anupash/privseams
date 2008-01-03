@@ -1,10 +1,15 @@
-/* All XML RPC packet creation functions */
+/* All XML RPC packet creation and reading functions */
 
-#define TTL "120"
+int build_packet_put_rm(unsigned char *, int, unsigned char *, 
+                     int, unsigned char *, int, int, unsigned char*, char *, int);
 
-int build_packet_put(unsigned char *, int, unsigned char *, int, int, unsigned char*, char *);
+int build_packet_put(unsigned char *, int, unsigned char *, 
+                     int, int, unsigned char*, char *, int);
 
 int build_packet_get(unsigned char *, int, int, unsigned char*, char *);
+
+int build_packet_rm(unsigned char *, int, unsigned char *,
+                    int, unsigned char *, int, int, unsigned char *, char *, int); 
 
 int read_packet_content(char *, char *);
 
@@ -14,3 +19,7 @@ unsigned char * base64_encode(unsigned char *, unsigned int);
 
 unsigned char * base64_decode(unsigned char *, unsigned int *);
 
+struct opendht_answers {
+  int count;
+  char addrs[440];
+};

@@ -21,13 +21,13 @@ enum WIDGET_IDS
 {
 	/* Windows. */
 	ID_MAINWND = 0,
-	ID_TOOLWND,
-	ID_LTOOLWND,
 	ID_NHDLG,
 	ID_EXECDLG,
 	ID_NGDLG,
 	ID_MSGDLG,
-
+	ID_ABOUTDLG,
+	ID_LOCALDLG,
+ 
 	/* Main window IDs. */
 	ID_RLISTMODEL,
 	ID_RLISTVIEW,
@@ -66,12 +66,14 @@ enum WIDGET_IDS
 	ID_TWG_TYPE1,
 	ID_TWG_TYPE2,
 	ID_TWG_LW,
-	ID_TWL_CONTAINER,
 	ID_TWL_NAME,
 	ID_TWL_LOCAL,
 	ID_TW_APPLY,
 	ID_TW_CANCEL,
 	ID_TW_DELETE,
+
+	/* Options. */
+	ID_OPT_NAT,
 
 	/* New hit dialog IDs. */
 	ID_NH_HIT,
@@ -109,6 +111,11 @@ enum WIDGET_IDS
 	ID_HS_EXECSERVER,
 	ID_HS_CLEARDB,
 
+	/* Pointers. */
+	ID_EDIT_LOCAL,
+	ID_EDIT_GROUP,
+	ID_EDIT_REMOTE,
+
 	WIDGET_IDS_N
 };
 
@@ -127,6 +134,9 @@ int widget_init(void);
 void widget_quit(void);
 void widget_set(int, void *);
 void *widget(int);
+
+#define pointer(i) widget(i)
+#define pointer_set(i, p) widget_set(i, p)
 
 
 /*! @} addtogroup libhipgui */

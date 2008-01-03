@@ -118,7 +118,7 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
+                int reg_types[1] = { HIP_SERVICE_ESCROW }; 
                 /* Sending registration in update packet. TODO: maybe this
                  * should be done somewhere else */
                 HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
@@ -155,7 +155,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
                         -1, "sending i1 failed\n");
         }
         else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
+                int reg_types[1] = { HIP_SERVICE_ESCROW }; 
                 /* Sending registration in update packet. TODO: maybe this
                  * should be done somewhere else */
                 HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
@@ -659,7 +659,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 
 	/** @todo Functionality on UDP has not been tested. */
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(&saddr, &daddr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(&saddr, &daddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			      entry->peer_udp_port, update_packet,
 			      entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
@@ -793,7 +793,7 @@ int hip_cancel_escrow_service(void)
 	HIP_KEA *kea = NULL;
 	hip_ha_t *entry = NULL;
 	struct in6_addr saddr = { 0 }, daddr = { 0 };
-	uint8_t services[1] = { HIP_ESCROW_SERVICE };
+	uint8_t services[1] = { HIP_SERVICE_ESCROW };
 	int i = 0;
 	hip_list_t *item, *tmp;
 

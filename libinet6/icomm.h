@@ -13,7 +13,9 @@
 #   include "i3_client_api.h" 
 #endif
 
-#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+//#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+#define HIP_FIREWALL_PORT                      60600
+#define HIP_DAEMON_LOCAL_PORT                  40400
 #define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 #define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 #define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"
@@ -71,11 +73,29 @@
 #define SO_HIP_CANCEL_ESCROW                    138
 #define SO_HIP_CANCEL_RENDEZVOUS                139
 #define SO_HIP_GET_LOCAL_HI                     140
-/* Socket option for hipconf to change the used gateway with openDHT */
+/* Socket option for hipconf to change the used gateway with OpenDHT */
 #define SO_HIP_DHT_GW                           141
 #define SO_HIP_GET_HITS                         142
 #define SO_HIP_GET_HA_INFO			143
 #define SO_HIP_DEFAULT_HIT			144
+#define SO_HIP_SET_DEBUG_ALL			145
+#define SO_HIP_SET_DEBUG_MEDIUM			146
+#define SO_HIP_SET_DEBUG_NONE			147
+/* Socket option for hipconf to ask about the used gateway with OpenDHT*/
+#define SO_HIP_DHT_SERVING_GW                   148
+#define SO_HIP_HANDOFF_ACTIVE			149
+#define SO_HIP_HANDOFF_LAZY			150
+#define SO_HIP_OFFER_HIPUDPRELAY                151
+#define SO_HIP_ADD_RELAY_UDP_HIP                152
+/* Restart daemon. */
+#define SO_HIP_RESTART		      		153
+#define SO_HIP_SET_LOCATOR_ON                   154
+#define SO_HIP_SET_LOCATOR_OFF                  155
+#define SO_HIP_DHT_SET                          156
+#define SO_HIP_DHT_ON                           157
+#define SO_HIP_DHT_OFF                          158
+#define SO_HIP_SET_OPPTCP_ON                    159
+#define SO_HIP_SET_OPPTCP_OFF                   160
 /** @} */
 
 #endif /* _HIP_ICOMM */

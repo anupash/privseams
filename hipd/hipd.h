@@ -29,13 +29,6 @@
 #include "i3_client_api.h"
 #endif
 
-/*
-#ifdef CONFIG_HIP_OPENDHT
-#include "tracker.h"
-#include "dhtresolver.h"
-#endif
-*/
-
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
@@ -51,9 +44,9 @@
 #endif
 
 #define HIP_SELECT_TIMEOUT        1
-#define HIP_RETRANSMIT_MAX        10
+#define HIP_RETRANSMIT_MAX        5
 #define HIP_RETRANSMIT_INTERVAL   1 /* seconds */
-#define HIP_OPP_WAIT              2 /* seconds */
+#define HIP_OPP_WAIT              5 /* seconds */
 #define HIP_OPP_FALLBACK_INTERVAL 1 /* seconds */
 #define HIP_OPP_FALLBACK_INIT \
            (HIP_OPP_FALLBACK_INTERVAL / HIP_SELECT_TIMEOUT)
@@ -62,20 +55,21 @@
            (HIP_RETRANSMIT_INTERVAL / HIP_SELECT_TIMEOUT)
 /* wait about n seconds before retransmitting.
    the actual time is between n and n + RETRANSMIT_INIT seconds */
-#define HIP_RETRANSMIT_WAIT 5 
+#define HIP_RETRANSMIT_WAIT 10
+ 
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 60 /* seconds */
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using 1 with sockaddrs */
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
 /* Set to 1 if you want to simulate lost output packet */
-#define HIP_SIMULATE_PACKET_LOSS             0
+#define HIP_SIMULATE_PACKET_LOSS             1
  /* Packet loss probability in percents */
-#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 30
+#define HIP_SIMULATE_PACKET_LOSS_PROBABILITY 0
 #define HIP_SIMULATE_PACKET_IS_LOST() (random() < ((uint64_t) HIP_SIMULATE_PACKET_LOSS_PROBABILITY * RAND_MAX) / 100)
 
 #define HIP_NETLINK_TALK_ACK 0 /* see netlink_talk */
@@ -94,8 +88,10 @@ extern int hip_agent_sock, hip_agent_status;
 extern struct sockaddr_un hip_agent_addr;
 
 extern int hip_firewall_sock, hip_firewall_status;
-extern struct sockaddr_un hip_firewall_addr;
+extern struct sockaddr_in6 hip_firewall_addr;
 
+
+extern int is_active_handover;
 
 int hip_agent_is_alive();
 

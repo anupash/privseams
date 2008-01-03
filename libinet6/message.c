@@ -35,6 +35,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 	
  out_err:
+	HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
 	if (err)
 		bytes = -1;
 	if (msg)
@@ -43,25 +44,16 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 }
 
 int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
-	int err = 0, n, len, app_fd = 0;
+	int err = 0, n, len; // app_fd = 0;
 	int hip_agent_sock = 0;
-	socklen_t alen = 0;
-	struct sockaddr_un app_addr, daemon_addr;
+	//socklen_t alen = 0;
+	//struct sockaddr_un app_addr, daemon_addr;
+	struct sockaddr_in6 daemon_addr;
 
-	bzero(&app_addr, sizeof(app_addr));
-	HIP_IFEL(hip_tmpname(app_addr.sun_path), -1,
-		 "app_name\n");
-	app_addr.sun_family = AF_UNIX;
-
-	/* Without bind, the daemon won't see the sun_path of this process */
-	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *) &app_addr, 
-		      sizeof(app_addr)),
-		 -1, "app_addr bind failed\n");
-
-	bzero(&daemon_addr, sizeof(daemon_addr));
-	daemon_addr.sun_family = AF_UNIX;
-	strcpy(daemon_addr.sun_path, HIP_DAEMONADDR_PATH);
-	_HIP_HEXDUMP("daemon_addr", &daemon_addr,  sizeof(daemon_addr));
+        bzero(&daemon_addr, sizeof(daemon_addr));
+        daemon_addr.sin6_family = AF_INET6;
+        daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+        daemon_addr.sin6_addr = in6addr_loopback;
 
 	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
 			 sizeof(daemon_addr)), -1,
@@ -74,10 +66,8 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 
 int hip_send_recv_daemon_info(struct hip_common *msg) {
 	int hip_user_sock = 0, err = 0, n, len;
-	struct in6_addr hits;  
-	
-	hits=msg->hitr;
-	HIP_IFE(((hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0), -1);
+
+	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
@@ -121,7 +111,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	if (!send_only)
 		return hip_send_recv_daemon_info(msg);
 	
-	HIP_IFE(((hip_user_sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0), -1);
+	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
@@ -149,7 +139,7 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
-			      struct sockaddr_un *saddr)
+			      struct sockaddr_in6 *saddr)
 {
 	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
 	socklen_t len;
@@ -157,7 +147,6 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	memset(saddr, 0, sizeof(*saddr));
 
 	len = sizeof(*saddr);
-	_HIP_HEXDUMP("original saddr ", saddr, sizeof(struct sockaddr_un));
 
 	HIP_IFEL(((total = hip_peek_recv_total_len(socket, 0)) <= 0), -1,
 		 "recv peek failed\n");
@@ -171,8 +160,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
 
-	HIP_DEBUG("received user msg: family=%d sender=%s\n",
-		  saddr->sun_family, &saddr->sun_path);
+	HIP_DEBUG("received user message from local port %d\n", saddr->sin6_port);
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);

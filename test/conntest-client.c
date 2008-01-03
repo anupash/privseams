@@ -21,16 +21,20 @@
 #include <sys/time.h>
 #include <time.h>
 #include "debug.h"
+#include "ife.h"
 
 #include "conntest.h"
 
 int main(int argc,char *argv[]) {
 	
-	int socktype, i;
+	int socktype, i, err = 0;
 	char *type_name, *peer_port_name, *peer_name;
+	const char *cfile = "default";
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_LONG);
+	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+	  "Error: Cannot set the debugging parameter.\n");
 
 	argc--;
 	if (argc % 3 || argc < 3) {
@@ -55,6 +59,11 @@ int main(int argc,char *argv[]) {
 			exit(1);
 		}
 		
-		main_client_gai(socktype, peer_name, peer_port_name, 0);
+		HIP_IFEL(main_client_gai(socktype, peer_name, peer_port_name,
+			 0), -2,"Error: Cannot set the client.\n");
 	}
+
+ out_err:
+	return err;
+
 }

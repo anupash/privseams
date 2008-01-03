@@ -40,7 +40,7 @@ int connhipd_init(void)
 	socklen_t alen;
 
 	/* Allocate message. */
-	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
+	HIP_IFEL(((msg = hip_msg_alloc()) == NULL), -1,  "Failed to Allocate message.\n");
 
 	/* Create and bind daemon socket. */
 	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
@@ -48,9 +48,10 @@ int connhipd_init(void)
 
 	bzero(&agent_addr, sizeof(agent_addr));
 	agent_addr.sun_family = AF_LOCAL;
-	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
+	HIP_IFEL((hip_tmpname_gui(agent_addr.sun_path)), -1,  "Failed hip_tmpname_gui.\n");
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
+	chmod(agent_addr.sun_path, 0777);
 
 /*	bzero(&agent_addr, sizeof(agent_addr));
 	alen = sizeof(agent_addr);
@@ -62,9 +63,9 @@ int connhipd_init(void)
 /*	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);*/
 
+	hip_agent_thread_started = 0;
 	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
-	hip_agent_thread_started = 0;
 	while (hip_agent_thread_started == 0) usleep(100 * 1000);
 	usleep(100 * 1000);
 
@@ -122,13 +123,23 @@ int connhipd_handle_msg(struct hip_common *msg,
 
 	if (type == HIP_AGENT_PING_REPLY)
 	{
-		term_print("Received ping reply from daemon. Connection to daemon established.\n");
+		HIP_DEBUG("Received ping reply from daemon. Connection to daemon established.\n");
 		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
+	else if (type == HIP_NAT_ON)
+	{
+		gui_update_nat(1);
+		HIP_DEBUG("NAT extensions on.\n");
+	}
+	else if (type == HIP_NAT_OFF)
+	{
+		gui_update_nat(0);
+		HIP_DEBUG("NAT extensions off.\n");
+	}
 	else if (type == HIP_DAEMON_QUIT)
 	{
-		term_print("Daemon quit. Waiting daemon to wake up again...\n");
+		HIP_DEBUG("Daemon quit. Waiting daemon to wake up again...\n");
 		gui_set_info(lang_get("gui-info-001"));
 		hip_agent_connected = 0;
 	}
@@ -154,7 +165,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 	{
 		n = 0;
 		
-		gui_clear_hiu();
+		gui_hiu_clear();
 		
 		while((param = hip_get_next_param(msg, param)))
 		{
@@ -169,13 +180,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 				r = hit_db_find(NULL, rhit);
 				if (r)
 				{
-					gui_add_hiu(r);
+					gui_hiu_add(r);
 					n++;
 				}
 			}
 		}
 		
-		gui_set_nof_hiu(n);
+		gui_hiu_count(n);
 	}
 	else if (type == HIP_I1 || type == HIP_R1)
 	{
@@ -316,7 +327,7 @@ void *connhipd_thread(void *data)
 		if (!hip_agent_thread_started) continue;
 		if (!FD_ISSET(hip_agent_sock, &read_fdset)) continue;
 
-		bzero(&agent_addr, sizeof(agent_addr));
+		memset(&agent_addr, 0, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
 		             (struct sockaddr *)&agent_addr, &alen);

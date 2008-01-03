@@ -28,8 +28,8 @@
 
 #include "agent.h"
 #include "debug.h"
-#include "agent_tools.h"
-#include "hit_db.h"
+#include "tools.h"
+#include "hitdb.h"
 #include "gui_interface.h"
 
 
