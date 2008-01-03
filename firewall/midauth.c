@@ -33,7 +33,27 @@ static void update_ipv4_header (void *data, int len) {
 }
 
 int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    p->size = 0;
+    int verdict = NF_ACCEPT;
 
-    return NF_ACCEPT;
+    p->size = 0; /* do not change packet */
+
+    switch (p->hip_common->type_hdr) {
+	case HIP_I1:
+	    HIP_DEBUG("filtering I1\n");
+	    break;
+	case HIP_R1:
+	    HIP_DEBUG("filtering R1\n");
+	    break;
+	case HIP_I2:
+	    HIP_DEBUG("filtering I2\n");
+	    break;
+	case HIP_R2:
+	    HIP_DEBUG("filtering R2\n");
+	    break;
+	default:
+	    HIP_DEBUG("filtering default message type\n");
+	    break;
+    }
+
+    return verdict;
 }

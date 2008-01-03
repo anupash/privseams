@@ -4,12 +4,15 @@
 #include <netinet/ip.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
+#include "protodefs.h"
+#include "debug.h"
 
-#define MIDAUTH_PACKET_SIZE	
+#define MIDAUTH_PACKET_SIZE 10240
 
 struct midauth_packet {
     int size;
     unsigned char buffer[MIDAUTH_PACKET_SIZE];
+    struct hip_common *hip_common;
 };
 
 /* public functions for midauth */

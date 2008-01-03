@@ -575,6 +575,7 @@ static void *handle_ip_traffic(void *ptr) {
 					struct midauth_packet p;
 
 					if (use_midauth) {
+					    p.hip_common = hip_common;
 					    verdict = filter_midauth(m, &p);
 					    size = p.size;
 					    ptr = size ? p.buffer : NULL;
@@ -678,7 +679,7 @@ int main(int argc, char **argv)
 	     case 'm':
 #ifdef CONFIG_HIP_MIDAUTH
 	         use_midauth = 1;
-	     break;
+		 break;
 #endif
              case '?':
                  printf("Unrecognized option: -%c\n", optopt);
