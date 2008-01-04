@@ -953,7 +953,8 @@
   <listitem><para>
       At the responder we have to register to the rendezvous server:
    "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
-   a HIP SA between the rendezvous server and the responder.
+   a HIP SA between the rendezvous server and the responder. Please use the
+   default HIT of the rendezvous server ("hipconf get hi default").
   </para></listitem>
   <listitem><para>
       At the responder start a server listening for incoming connections:
@@ -1573,11 +1574,55 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     </itemizedlist>
 
-    <para> May need a change of contact OpenDHT server, currently 
-	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
-	For documentation, please also check 
-        <ulink url="http://kom.aau.dk/group/05gr680/" />
+    <para>
+    By default OpenDHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After a few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random. currently running servers list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
     </para>
+
+    <para>
+    There is multiple OpenDHT related hipconf commands that you can
+    use to affect the behaviour of the OpenDHT code of HIPL. 
+    </para> 
+
+    <itemizedlist>
+      <listitem><para>
+        hipconf opendht on|off
+      </para></listitem>
+      <listitem><para>
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (OpenDHT default = 5851)&gt; &lt;TTL&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht get &lt;fqdn/hit&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht set &lt;name&gt;
+      </para></listitem>
+    </itemizedlist>
+
+    <para>
+    First one of these commands toggles the on/off status of the
+    code. Second one forces the OpenDHT code to change current serving
+    gateway eith a new one. This command allows to change port and TTL
+    definitions of OpenDHT code on the fly. Third command is a simple
+    get of value under a key. Fourth command lets you set a
+    userdefined name to be sent to the OpenDHT. By default result of
+    "uname -n" is sent to the OpenDHT. 
+    </para>
+
+    <para>
+    For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+    </para>
+
   </chapter>
 
   <chapter>

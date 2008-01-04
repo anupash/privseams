@@ -92,5 +92,4 @@ void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 
-
 #endif /* HIP_MISC_H */

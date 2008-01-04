@@ -64,17 +64,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 
 #include <ctype.h>
+#include <signal.h>
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-
-/*
-#ifdef CONFIG_HIP_OPENDHT
-#include "dhtresolver.h"
-#endif
-*/
 
 #include "bos.h"
 
@@ -427,213 +422,185 @@ gethosts(const char *name, int _family,
   return no_data;
  }
 
-int 
-gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
- {									
-  struct in6_addr hit;							
-  FILE *fp = NULL;							
-  char *fqdn_str;                                                       
-  char *hit_str;                                                        
-  int lineno = 0, i=0;                                                  
-  char line[500];							
-  List list;
-  int found_hits = 0;
-  struct gaih_addrtuple *aux = NULL;
+static void 
+connect_alarm(int signo)
+{
+  return; /* for interrupting the connect in gethosts_hit */
+}
 
-#ifdef CONFIG_HIP_OPENDHT
- 
-  int s, error, ret_hit, ret_addr;
-  char dht_response_hit[1024];
-  char dht_response_addr[1024];
-  struct in6_addr tmp_hit, tmp_addr;
-  struct addrinfo * serving_gateway;
-  char ownaddr[] = "127.0.0.1";
-
-  /*
-  struct hip_common *msg;
-  struct hip_opendht_gw_info *gw_info;
-  struct in_addr tmp_v4;
-  char tmp_ip_str[21];
-  int tmp_ttl, tmp_port;
-  int *pret;
-  int err;
-  */
-
-  if (flags & AI_NODHT)
-    goto skip_dht;
-
-  memset(dht_response_hit, '\0', sizeof(dht_response_hit));
-  memset(dht_response_addr, '\0', sizeof(dht_response_addr));
-
-  ret_hit = -1;  
-  ret_addr = -1;
-
-  /* ask about the serving gateway from the daemon */
-  
-  //  HIP_DEBUG("Asking serving gateway info from daemon...\n");
-  /*
-  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
-  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
-           "Building daemon header failed\n"); 
-  HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
-  HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
-           "No gw struct found\n");
-  memset(&tmp_ip_str,'\0',20);
-  tmp_ttl = gw_info->ttl;
-  tmp_port = htons(gw_info->port);
-  IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-  pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-  HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
-            tmp_ip_str, tmp_port, tmp_ttl);
-
- out_err:
-  HIP_DEBUG("OUT ERROROROROROR\n");      
-  */
-
-  s = init_dht_gateway_socket(s);
-  if (s < 0) 
-  {
-    HIP_DEBUG("Socket creation for openDHT failed skipping openDHT\n");
-    goto skip_dht;
-  }
-  error = 0;
-  error = resolve_dht_gateway_info ("opendht.nyuld.net", &serving_gateway);
-  if (error < 0)
-  {
-    HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
-    close(s);
-    goto skip_dht;
-  }
-  error = 0;
-  error = connect_dht_gateway(s, serving_gateway, 1);
-  if (error < 0)
-  {
-    HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
-    close(s);
-    goto skip_dht;
-  }
-  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
-  ret_hit = opendht_read_response(s, dht_response_hit);
-  if (ret_hit == 0)
-    HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit); 
-  close(s);
-  if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
-  {
-    s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, serving_gateway, 1);
-    if (error < 0)
-    {
-      HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
-      goto skip_dht;
-    }
-    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr, 5851);
-    ret_addr = opendht_read_response(s, dht_response_addr);
-    if (ret_addr == 0)
-      HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
-    close(s);
-  }
-  if ((ret_hit == 0) && (ret_addr == 0) && 
-      (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) 
-    { 
-
-      if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-          inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
-
-	if (**pat == NULL) {						
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
-	  }	  
-	  (**pat)->scopeid = 0;				
-	}
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-	*pat = &((**pat)->next);				     	
-	
-	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	  HIP_ERROR("Memory allocation error\n");
-	  exit(-EAI_MEMORY);
-	}	  
-
-	(**pat)->scopeid = 0;				
-	(**pat)->next = NULL;						
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
-	*pat = &((**pat)->next);
-        /* dump_pai(*pat); */
-	return 1;
-      }
-    } 
-  /* CONFIG_HIP_OPENDHT */
+int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
+{	 								
+        struct in6_addr hit;							
+        FILE *fp = NULL;							
+        char *fqdn_str;                                                       
+        char *hit_str;                                                        
+        int lineno = 0, i=0;                                                  
+        char line[500];							
+        List list;
+        int found_hits = 0;
+        struct gaih_addrtuple *aux = NULL;
+        
+        int s, error, ret_hit, ret_addr;
+        char dht_response_hit[1024];
+        char dht_response_addr[1024];
+        struct in6_addr tmp_hit, tmp_addr;
+        struct addrinfo * serving_gateway;
+        char ownaddr[] = "127.0.0.1";
+        
+        struct hip_common *msg;
+        struct hip_opendht_gw_info *gw_info;
+        struct in_addr tmp_v4;
+        char tmp_ip_str[21];
+        int tmp_ttl, tmp_port;
+        int *pret;
+        int err;
+        
+        if (flags & AI_NODHT)
+                goto skip_dht;
+        
+        memset(dht_response_hit, '\0', sizeof(dht_response_hit));
+        memset(dht_response_addr, '\0', sizeof(dht_response_addr));
+        
+        ret_hit = -1;  
+        ret_addr = -1;
+        
+        HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
+                 "Building daemon header failed\n"); 
+        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
+                 "No gw struct found\n");
+        
+        /* Check if DHT was on */
+        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
+                HIP_DEBUG("DHT is not in use\n");
+                goto skip_dht;
+        }        
+        memset(&tmp_ip_str,'\0',20);
+        tmp_ttl = gw_info->ttl;
+        tmp_port = htons(gw_info->port);
+        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+                  tmp_ip_str, tmp_port, tmp_ttl);
+        /* THIS MIGHT CAUSE PROBLEMS LATER */
+ out_err: 
+        error = 0;
+        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
+        if (error < 0) {
+                        HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT\n");
+                        close(s);
+                        goto skip_dht;
+        }
+        ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
+        if (ret_hit == 0)
+                HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
+        close(s);
+        if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
+                ret_addr = opendht_get_key(serving_gateway, 
+                                           dht_response_hit, dht_response_addr);
+                if (ret_addr == 0)
+                        HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
+                close(s);
+        }
+        if ((ret_hit == 0) && (ret_addr == 0) && 
+            (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
+                if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
+                    inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
+                        if (**pat == NULL) {						
+                                if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                        HIP_ERROR("Memory allocation error\n");
+                                        exit(-EAI_MEMORY);
+                                }	  
+                                (**pat)->scopeid = 0;				
+                        }
+                        (**pat)->family = AF_INET6;					
+                        memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+                        *pat = &((**pat)->next);				     	
+                        
+                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                HIP_ERROR("Memory allocation error\n");
+                                exit(-EAI_MEMORY);
+                        }	  
+                        
+                        (**pat)->scopeid = 0;				
+                        (**pat)->next = NULL;						
+                        (**pat)->family = AF_INET6;					
+                        memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
+                        *pat = &((**pat)->next);
+                        /* dump_pai(*pat); */
+                        return 1;
+                }
+        } 
  skip_dht:
-#endif
 									
-  /*! \todo check return values */
-  _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
-  fp = fopen(_PATH_HIP_HOSTS, "r");		
-								
-  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-    int c;								
-    int ret;
-                                                            
-    lineno++;								
-    if(strlen(line)<=1) continue;                                       
-    initlist(&list);                                                    
-    extractsubstrings(line,&list);                                      
-    for(i=0;i<length(&list);i++) {                                      
-      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		
-	fqdn_str = getitem(&list,i);	               		        
-      }                                                                 
-    }									
-    if ((strlen(name) == strlen(fqdn_str)) &&		         	
-      strcmp(name, fqdn_str) == 0) {				        
-      HIP_DEBUG("** match on line %d **\n", lineno);			
-      found_hits = 1; 
-                                                                        
-      /* add every HIT to linked list */				
-      for(i=0;i<length(&list);i++) {                                    
-	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
-	struct gaih_addrtuple *prev_pat = NULL;	
-	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
-	_HIP_DEBUG("hit: %x\n", hit);              
-        if (ret < 1) continue;         
- 
-	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	  HIP_ERROR("Memory allocation error\n");
-	  exit(-EAI_MEMORY);
-	}
-
-	//Placing the node at the beginning of the list
-	aux->next = (**pat);
-	(**pat) = aux;
-	aux->scopeid = 0;				
-	aux->family = AF_INET6;
-	memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-
+        /*! \todo check return values */
+        _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
+        fp = fopen(_PATH_HIP_HOSTS, "r");		
+        
+        while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
+                int c;								
+                int ret;
+                
+                lineno++;								
+                if(strlen(line)<=1) continue;                                       
+                initlist(&list);                                                    
+                extractsubstrings(line,&list);                                      
+                for(i=0;i<length(&list);i++) {                                      
+                        if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		
+                                fqdn_str = getitem(&list,i);	               		        
+                        }                                                                 
+                }									
+                if ((strlen(name) == strlen(fqdn_str)) &&		         	
+                    strcmp(name, fqdn_str) == 0) {				        
+                        HIP_DEBUG("** match on line %d **\n", lineno);			
+                        found_hits = 1; 
+                        
+                        /* add every HIT to linked list */				
+                        for(i=0;i<length(&list);i++) {                                    
+                                uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
+                                struct gaih_addrtuple *prev_pat = NULL;	
+                                _HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
+                                ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
+                                _HIP_DEBUG("hit: %x\n", hit);              
+                                if (ret < 1) continue;         
+                                
+                                if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                        HIP_ERROR("Memory allocation error\n");
+                                        exit(-EAI_MEMORY);
+                                }
+                                
+                                //Placing the node at the beginning of the list
+                                aux->next = (**pat);
+                                (**pat) = aux;
+                                aux->scopeid = 0;				
+                                aux->family = AF_INET6;
+                                memcpy(aux->addr, &hit, sizeof(struct in6_addr));
+                                
 #if 0 /* Disabled as this is not support by the daemon yet -miika*/
-	/* AG: add LSI as well */					
-        if (**pat == NULL) {
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
-	  }
-
-	  (**pat)->scopeid = 0;				
-        }								
-        (**pat)->next = NULL;						
-        (**pat)->family = AF_INET;					
-        memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
-        *pat = &((**pat)->next);					      
+                                /* AG: add LSI as well */					
+                                if (**pat == NULL) {
+                                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                                HIP_ERROR("Memory allocation error\n");
+                                                exit(-EAI_MEMORY);
+                                        }
+                                        
+                                        (**pat)->scopeid = 0;				
+                                }								
+                                (**pat)->next = NULL;						
+                                (**pat)->family = AF_INET;					
+                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
+                                *pat = &((**pat)->next);					      
 #endif
-      }									
-    } // end of if 
-
-    destroy(&list);                                                     
-  } // end of while	              							
-  if (fp)                                                               
-    fclose(fp);		
-  return found_hits;	        				
+                        }									
+                } // end of if 
+                
+                destroy(&list);                                                     
+        } // end of while	              							
+        if (fp)                                                               
+                fclose(fp);		
+        return found_hits;	        				
 }
 
 

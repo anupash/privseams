@@ -29,13 +29,6 @@
 #include "i3_client_api.h"
 #endif
 
-/*
-#ifdef CONFIG_HIP_OPENDHT
-#include "tracker.h"
-#include "dhtresolver.h"
-#endif
-*/
-
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
 #endif
@@ -67,7 +60,7 @@
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 1 /* seconds Original 60*/
+#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using 1 with sockaddrs */
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
 
@@ -95,7 +88,8 @@ extern int hip_agent_sock, hip_agent_status;
 extern struct sockaddr_un hip_agent_addr;
 
 extern int hip_firewall_sock, hip_firewall_status;
-extern struct sockaddr_un hip_firewall_addr;
+extern struct sockaddr_in6 hip_firewall_addr;
+
 
 extern int is_active_handover;
 
