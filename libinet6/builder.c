@@ -2620,9 +2620,9 @@ int hip_build_param_locator(struct hip_common *msg,
 {
 	int err = 0;
 	struct hip_locator *locator_info = NULL;
-	int addrs_len = address_count *
-		(sizeof(struct hip_locator_info_addr_item));
-
+	/*int addrs_len = address_count *
+		(sizeof(struct hip_locator_info_addr_item));*/
+	int addrs_len = hip_get_locator_item_list_length(addresses, address_count);
 	HIP_IFE(!(locator_info =
 		  malloc(sizeof(struct hip_locator) + addrs_len)), -1);
 
@@ -3499,3 +3499,54 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit) {
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
+
+
+
+char* hip_get_locator_item(void* first_item, int index){
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char *result = (char*) first_item;
+	for(;i<index;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == 1)
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		else 
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		
+	}
+	return result ;
+	
+} 
+
+struct in6_addr* hip_get_locator_item_address(void* first_item){
+
+	struct hip_locator_info_addr_item *temp;
+	
+	
+	temp = (struct hip_locator_info_addr_item*) first_item;
+	if (temp->locator_type == 1){
+		return &temp->address;
+	}
+	else {
+		return &((struct hip_locator_info_addr_item2 *)temp)->address;
+	}
+	
+} 
+
+int hip_get_locator_item_list_length(void* first_item, int amount){
+
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char * result = (char*) first_item;
+	
+	for(;i<amount+1;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == 1)
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		else 
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		
+	}
+	return result - (char*) first_item;
+	
+} 

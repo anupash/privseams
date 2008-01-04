@@ -9,7 +9,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "output.h"
-
+extern HIP_HASHTABLE *hadb_hit;
 enum number_dh_keys_t number_dh_keys = TWO;
 
 /**
@@ -199,8 +199,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
+        //if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+ 		  if(1){
+            HIP_DEBUG("Building LOCATOR parameter in R1\n");
             if ((err = hip_build_locators(msg)) < 0) 
             HIP_DEBUG("LOCATOR2 parameter building failed\n");
        		_HIP_DUMP_MSG(msg);
@@ -397,11 +398,13 @@ int hip_build_locators(struct hip_common *msg)
 {
     int err = 0, i = 0, ii = 0;
     struct netdev_address *n;
+    hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
     struct hip_locator_info_addr_item2 *locs2 = NULL;
     struct hip_locator_info_addr_item *locs1 = NULL;
     int addr_count1 = 0,addr_count2 = 0 ;
     int UDP_relay_count = 0;
+    
     
     //TODO count the number of UDP relay servers.
     // check the control state of every hatb_state. 
@@ -409,12 +412,37 @@ int hip_build_locators(struct hip_common *msg)
 #ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
     if (address_count > 0) {
 #else
-    if (address_count > 1) {
+    	//check if nat mode is on, or ....
+    if (address_count > 0) {
 #endif
 
 		//TODO check out the count for UDP and hip raw.
 		addr_count1 = address_count;
-		addr_count2 = address_count;
+		// type 2 locator number is the 
+		/**wrong impemetation
+		 *  hip_relht_size() is the size of relay client in server side*/
+		//addr_count2 = hip_relht_size();
+		//let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
+		addr_count2 = 10;
+		
+		//make a fcution to get the right locator inforation.
+		HIP_DEBUG("hip_build_locators: find relay address account:%d \n", addr_count2);
+		
+		//retreive the reflexive address.
+		
+		
+		//check out the total number of SA
+		//loop
+		
+		
+		// check of if the peer entry have registered as reflexive server
+		
+		// 
+		
+		//addr_count2 = address_count;
+		
+		//retreive relay server
+	
 		
 		
         HIP_IFEL(!(locs1 = malloc(addr_count1 * 
@@ -428,7 +456,7 @@ int hip_build_locators(struct hip_common *msg)
         memset(locs1,0,(addr_count1 * 
                        sizeof(struct hip_locator_info_addr_item)));
                        
-        memset(locs2,0,(addr_count2 * 
+        memset(locs2,0,(addr_count2 *  
                        sizeof(struct hip_locator_info_addr_item2)));              
         //starting
          list_for_each_safe(item, tmp, addresses, i) {
@@ -461,49 +489,59 @@ int hip_build_locators(struct hip_common *msg)
         }
         
         //ending
+        /***for relay locator
+         * retreive the whole entry list
+         * if there is a reflexive  **/
         ii = 0;             
         i = 0;  
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr), 
+        list_for_each_safe(item, tmp, hadb_hit, i) {
+            ha_n = list_entry(item);
+            // if there are more addresses than we can take, just break it.
+            if (ii>= addr_count2)
+                break;
+            // check if the reflexive udp port. if it not 0. it means addresses found
+            if(ha_n->local_reflexive_udp_port){
+            	memcpy(&locs2[ii].address, &ha_n->local_reflexive_address, 
+            	                       sizeof(struct in6_addr));
+                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+                locs2[ii].reserved = 0;
+                // for IPv4 we add UDP information
+                locs2[ii].port = ha_n->local_reflexive_udp_port;
+                locs2[ii].transport_protocol = 0;
+                locs2[ii].kind = 0;
+                locs2[ii].priority = 126,
+                locs2[ii].spi = 1;
+                ii++;
+                // if there are more addresses than we can take, just break it.
+               if (ii>= addr_count2)
+                   break;
+            }
+            
+            // check it the peer is a full relay server
+            //assume the peer address is IPv4
+            //assume the peer protocol is UDP
+            if(ha_n->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE){
+                memcpy(&locs2[ii].address, &ha_n->preferred_address, 
                        sizeof(struct in6_addr));
                 locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
                 locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
                 locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
                 locs2[ii].reserved = 0;
                  // for IPv6 we add UDP information, maybe we do not need this in IPv6
-                locs2[ii].port = HIP_NAT_UDP_PORT;
-                locs2[ii].transport_protocol = 0;
+                locs2[ii].port = ha_n->peer_udp_port;
+                locs2[ii].transport_protocol =0;
                 locs2[ii].kind = 0;
                 locs2[ii].priority = 126,
                 locs2[ii].spi = 1;
                 ii++;
             }
         }
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs2[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs2[ii].reserved = 0;
-                // for IPv4 we add UDP information
-                locs2[ii].port = HIP_NAT_UDP_PORT;
-                locs2[ii].transport_protocol = 0;
-                locs2[ii].kind = 0;
-                locs2[ii].priority = 126,
-                locs2[ii].spi = 1;
-                ii++;
-            }
-        }
-        err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
+        
+        //ii is the real amount of type2 locator.addr_count2 is the max value we can accept
+        err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,ii);
+        //err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
     }
     else
         HIP_DEBUG("Host has only one or no addresses no point "

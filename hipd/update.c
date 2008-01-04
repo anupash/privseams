@@ -58,7 +58,8 @@ int hip_for_each_locator_addr_item(int (*func)(hip_ha_t *entry,
 
 	return err;
 }
-
+/***remove the duplicated locator
+ * */
 int hip_update_for_each_peer_addr(int (*func)(hip_ha_t *entry,
                                   struct hip_peer_addr_list_item *list_item,
                                   struct hip_spi_out_item *spi_out,
@@ -205,16 +206,47 @@ int hip_update_test_locator_addr(struct in6_addr *addr)
 	return filter_address((struct sockaddr *) &ss, -1);
 }
 
+//change to function to fit the type2 locator
 int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		       struct hip_locator_info_addr_item *locator_address_item,
 		       void *_spi)
-{
+{	
+	/*
 	struct in6_addr *locator_address =
 		&locator_address_item->address;
 	uint32_t lifetime = ntohl(locator_address_item->lifetime);
    	int is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
 	int err = 0, i,locator_is_ipv4, local_is_ipv4;
 	uint32_t spi = *((uint32_t *) _spi);
+	
+	
+	*/
+	
+	
+	struct in6_addr *locator_address;	
+	uint32_t lifetime;
+   	int is_preferred ;
+	int err = 0, i,locator_is_ipv4, local_is_ipv4;
+	uint32_t spi = *((uint32_t *) _spi);
+	struct hip_locator_info_addr_item2 * locator_address_item2;
+	uint16_t port = 0;
+	
+	if(locator_address_item->locator_type == 1){
+		locator_address =
+			&locator_address_item->address;
+		lifetime = ntohl(locator_address_item->lifetime);
+	   	is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
+	}
+	else{
+		locator_address_item2 = (struct hip_locator_info_addr_item2 * ) locator_address_item;
+		locator_address =
+					&locator_address_item2->address;
+		lifetime = ntohl(locator_address_item2->lifetime);
+	   	is_preferred = htonl(locator_address_item2->reserved) == (1 << 7);
+	   	port = ntohs(locator_address_item2->port);
+	   	/**transport protocol has not been checked. only udp for now*/
+	}
+	
 	
 	HIP_DEBUG_HIT("LOCATOR address", locator_address);
 	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
@@ -243,14 +275,15 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	/* Check if the address is already bound to the SPI +
 	   add/update address */
         /* lets try */
-        if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
+        if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0
+        		&& port == entry->peer_udp_port) {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
-                                             lifetime, 1), -1);
+                                             lifetime, 1, port), -1);
         } else {
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
-                                             lifetime, is_preferred), -1);
+                                             lifetime, is_preferred, port), -1);
         }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -271,7 +304,7 @@ int hip_update_locator_match(hip_ha_t *unused,
 			     struct hip_locator_info_addr_item *item1,
 			     void *_item2) {
 	struct hip_locator_info_addr_item *item2 = _item2;
-	return !ipv6_addr_cmp(&item1->address, &item2->address);
+	return !ipv6_addr_cmp(hip_get_locator_item_address(item1), hip_get_locator_item_address(item2));
 }
 
 /**
@@ -2928,7 +2961,7 @@ int parse_locator(struct hip_locator * locator_income, struct hip_locator * loca
                 
                 //copy type 1 locator into entry->locator
                 //copy type2 into entry->locator2
-                for(;locator_address <((char*)locator_income) + hip_get_param_contents_len(locator_income);){
+                for(;locator_address <((char*)locator_income) + 			hip_get_param_contents_len(locator_income);){
                 	if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 1){
                 		memcpy(address1, locator_address, sizeof(struct hip_locator_info_addr_item));
                 		locator_address += sizeof(struct hip_locator_info_addr_item);
@@ -2955,44 +2988,4 @@ out_err:
 
 }
 
-char* get_locator_item(void* first_item, int index){
-	int i= 0;
-	struct hip_locator_info_addr_item *temp;
-	char *result = (char*) first_item;
-	for(;i<index;i++){
-		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == 1)
-			result  +=  sizeof(struct hip_locator_info_addr_item);
-		else 
-			result  +=  sizeof(struct hip_locator_info_addr_item2);
-		
-	}
-	return result ;
-	
-} 
-
-struct in6_addr* get_locator_item_address(void* first_item, int index){
-	int i= 0;
-	struct hip_locator_info_addr_item *temp;
-	char *result = (char*) first_item;
-	for(;i<index;i++){
-		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == 1){
-			result  +=  sizeof(struct hip_locator_info_addr_item);
-		}
-		else {
-			result  +=  sizeof(struct hip_locator_info_addr_item2);
-		}
-		
-	}
-	
-	temp = (struct hip_locator_info_addr_item*) result;
-	if (temp->locator_type == 1){
-		return &temp->address;
-	}
-	else {
-		return &((struct hip_locator_info_addr_item2 *)temp)->address;
-	}
-	
-} 
 

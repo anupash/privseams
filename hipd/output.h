@@ -22,6 +22,7 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
+#include "hiprelay.h"
 #include <netinet/ip.h>
 
 #ifdef CONFIG_HIP_HI3

@@ -25,8 +25,8 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
 
 /** The hashtable storing the relay records. */
-static LHASH *hiprelay_ht = NULL;
-
+//static LHASH *hiprelay_ht = NULL;
+ LHASH *hiprelay_ht = NULL;
 /** 
  * A dummy boolean to indicate the machine has relay capabilities.
  * This is only here for testing and development purposes. It allows the same

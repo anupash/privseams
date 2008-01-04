@@ -791,6 +791,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
+	
+	
+	
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("Build normal I2\n");
 	  /* create I2 */
@@ -799,6 +802,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 				     &(ctx->input->hits));
 	}
 
+	
+	
+	
 	/********** ESP_INFO **********/
 	/* SPI is set below */
 	HIP_IFEL(hip_build_param_esp_info(i2, ctx->esp_keymat_index, 0, 0),
@@ -819,8 +825,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
+        //if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+        if (1) {
+            HIP_DEBUG("Building LOCATOR parameter in I2\n");
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
@@ -1181,9 +1188,9 @@ int hip_handle_r1(struct hip_common *r1,
                 /* Lets save the LOCATOR to the entry 'till we
                    get the esp_info in r2 then handle it */
               	n_addrs1 = hip_get_locator_addr_item1_count(locator);
-              	_HIP_DEBUG("hip_handle_r1() count type1 locators &d.\n" , n_addrs1);
+              	_HIP_DEBUG("hip_handle_r1() count type1 locators1 &d.\n" , n_addrs1);
                 n_addrs2 = hip_get_locator_addr_item2_count(locator);
-                _HIP_DEBUG("hip_handle_r1() count type2 locators &d.\n" , n_addrs2);
+                _HIP_DEBUG("hip_handle_r1() count type2 locators2 &d.\n" , n_addrs2);
              //   loc_size= hip_get_param_contents_len(locator);
                 loc_size1 = sizeof(struct hip_locator) +
                     (n_addrs1 * sizeof(struct hip_locator_info_addr_item));
@@ -1193,6 +1200,7 @@ int hip_handle_r1(struct hip_common *r1,
                     (n_addrs1 * sizeof(struct hip_locator_info_addr_item2));
                 //reserve space for raw addresses
                 if(n_addrs1){
+                	
 	                HIP_IFEL(!(entry->locator = malloc(loc_size1)), 
 	                       -1, "Malloc for entry->locators failed\n");  
 	                //copy the header       
@@ -1217,7 +1225,7 @@ int hip_handle_r1(struct hip_common *r1,
                 //copy type 1 locator into entry->locator
                 //copy type2 into entry->locator2
                 for(;locator_address <((char*)locator) + hip_get_param_contents_len(locator);){
-                	if(((struct hip_locator_info_addr_item*)locator_address) == 1){
+                	if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 1){
                 		memcpy(address1, locator_address, sizeof(struct hip_locator_info_addr_item));
                 		locator_address += sizeof(struct hip_locator_info_addr_item);
                 		address1 += 1;
@@ -2134,7 +2142,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
-	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
+	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1, i2_info->src_port),
 		 -1,  "Failed to add an address to SPI list\n");
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
@@ -2305,8 +2313,9 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  HIP_DEBUG_HIT("Searching relay record on HIT I2", &i2->hitr);
 		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
 		  rec = hip_relht_get(&dummy);
-		  if(rec == NULL)
+		  if(rec == NULL){
 		       HIP_INFO("No matching relay record found.\n");
+		  }
 		  else if(rec->type == HIP_FULLRELAY)
 		  {
 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
@@ -2502,7 +2511,7 @@ int hip_handle_r2(struct hip_common *r2,
         /* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
-				       1, 0, 1);
+				       1, 0, 1, r2_info->src_port);
 	if (err)
 		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
 	entry->default_spi_out = spi_recvd;
@@ -2544,7 +2553,7 @@ int hip_handle_r2(struct hip_common *r2,
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
                         "Error handling reg_response\n"); 
                         /**change to HIP_IFEL in later*/
-                if(handle_reg_from(entry, r2))
+                if(hip_handle_reg_from(entry, r2))
                 HIP_DEBUG("reg_from not found");
         }
 

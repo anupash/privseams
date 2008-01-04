@@ -234,7 +234,8 @@ struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi);
 struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi);
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi, struct in6_addr *addr,
 			     int address_state, uint32_t lifetime,
-			     int is_preferred_addr);
+			     int is_preferred_addr,
+			     uint16_t);
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				 struct hip_context *ctx, int is_initiator);
 /* Utilities */

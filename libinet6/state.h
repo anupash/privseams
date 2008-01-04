@@ -147,6 +147,7 @@ struct hip_context
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
+ * the protocal and port is add to fit the hip_locator_info_addr_item type 2
  */
 struct hip_peer_addr_list_item
 {
@@ -206,6 +207,7 @@ struct hip_spi_in_item
         /* the corresponding esp_info of peer */
 	struct hip_esp_info stored_received_esp_info;
         /* our addresses this SPI is related to, reuse struct to ease coding */
+        /*there is two struct hip_locator_info_addr_item types but use the first to ease coding here*/
 	struct hip_locator_info_addr_item *addresses;
 	int addresses_n; /* number of addresses */
 };
