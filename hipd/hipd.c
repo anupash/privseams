@@ -566,6 +566,8 @@ int hipd_main(int argc, char *argv[])
 				if (opendht_error == -1) {
                                         HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
                                         hip_opendht_error_count++;
+                                        HIP_DEBUG("DHT error count now %d/%d.\n", 
+                                                  hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
                                 }
 				else 
                                         HIP_DEBUG("Put was success (FQDN->HIT)\n");
@@ -595,6 +597,8 @@ int hipd_main(int argc, char *argv[])
 				if (opendht_error == -1) {
                                         HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
                                         hip_opendht_error_count++;
+                                        HIP_DEBUG("DHT error count now %d/%d.\n", 
+                                                  hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
                                 }
 				else 
                                         HIP_DEBUG("Put was success (HIT->IP)\n");
