@@ -1719,20 +1719,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 	     add_address_to_list(addr, if_index);
 	
-	     /* If the incoming I2 packet has 50500 as destination port, NAT
-		mode is set on for the host association, I2 source port is
-		stored as the peer UDP port and send function is set to
-		"hip_send_udp()". Note that we must store the port not until
-		here, since the source port can be different for I1 and I2. */
-	     if(i2_info->dst_port == HIP_NAT_UDP_PORT)
-	     {
-		  entry->nat_mode = 1;
-		  entry->peer_udp_port = i2_info->src_port;
-		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-			    entry);
-		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-	     }
 	}
 
 	/* If there was already state, these may be uninitialized */
@@ -1742,6 +1728,21 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			hip_init_us(entry, plain_local_hit);
 		else
 			hip_init_us(entry, &i2->hitr);
+	}
+
+	/* If the incoming I2 packet has 50500 as destination port, NAT
+	   mode is set on for the host association, I2 source port is
+	   stored as the peer UDP port and send function is set to
+	   "hip_send_udp()". Note that we must store the port not until
+	   here, since the source port can be different for I1 and I2. */
+	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	{
+		entry->nat_mode = 1;
+		entry->peer_udp_port = i2_info->src_port;
+		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
+		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+			  entry);
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
 
 	hip_hadb_insert_state(entry);
