@@ -1694,11 +1694,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	/* The rest of the code assume already locked entry, so lock the
 	   newly created entry as well. */
 	HIP_LOCK_HA(entry);
-	if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status() &&
-	    created_new_state) {
+	if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
 		ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		hip_init_us(entry, plain_local_hit);
-	} else if (created_new_state) {
+	} else {
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		hip_init_us(entry, &i2->hitr);
 	}

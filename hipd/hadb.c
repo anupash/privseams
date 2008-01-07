@@ -1904,6 +1904,8 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 {
 	int err = 0, len, alg;
 
+	if (entry->our_priv)
+		HIP_FREE(entry->our_priv);
 	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
 						HIP_HI_RSA))) {
 		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
@@ -1916,6 +1918,8 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
 
 	len = hip_get_param_total_len(entry->our_priv);
+	if (entry->our_pub)
+		HIP_FREE(entry->our_pub);
 	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
 	memcpy(entry->our_pub, entry->our_priv, len);
 	entry->our_pub = hip_get_public_key(entry->our_pub);
