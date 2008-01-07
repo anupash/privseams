@@ -1702,10 +1702,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		hip_init_us(entry, &i2->hitr);
 	}
 		
-	if (created_new_state) {
+	//if (created_new_state) {
 		hip_hadb_insert_state(entry);
-	}
 	hip_hold_ha(entry);
+		//}
 	     
 	_HIP_DEBUG("HA entry created.");
 	     
