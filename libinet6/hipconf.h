@@ -150,7 +150,7 @@
 # nat on            # the host is behind a NAT\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on # host sends all of its locators in base exchange \n\
-opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika
+opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 debug medium        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
