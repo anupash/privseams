@@ -9,6 +9,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
@@ -107,7 +108,8 @@
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
-#define ACTION_MAX 22 /* exclusive */
+#define ACTION_TCPTIMEOUT 22 /* add By Tao Wan, on 04.01.2008 */
+#define ACTION_MAX 23 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -134,8 +136,9 @@
 #define TYPE_RELAY_UDP_HIP 22
 #define TYPE_SET        23 /* DHT set <name> */
 #define TYPE_DHT        24
-#define TYPE_OPPTCP		25
-#define TYPE_MAX    	26 /* exclusive */
+#define TYPE_OPPTCP	25
+#define TYPE_TCPTIMEOUT	26 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_MAX    	27 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -193,4 +196,5 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 #endif /* HIPCONF */
