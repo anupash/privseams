@@ -1046,7 +1046,7 @@
 -->
   <chapter>
     <title>HIP Firewall</title>
-        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a PHP interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the userspace.  These rules are inserted
