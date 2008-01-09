@@ -953,7 +953,8 @@
   <listitem><para>
       At the responder we have to register to the rendezvous server:
    "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
-   a HIP SA between the rendezvous server and the responder.
+   a HIP SA between the rendezvous server and the responder. Please use the
+   default HIT of the rendezvous server ("hipconf get hi default").
   </para></listitem>
   <listitem><para>
       At the responder start a server listening for incoming connections:
@@ -1045,7 +1046,7 @@
 -->
   <chapter>
     <title>HIP Firewall</title>
-        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a PHP interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the userspace.  These rules are inserted
@@ -1583,7 +1584,8 @@ combo-newgroup=&lt;create new...&gt;
     /etc/hosts and can contain multiple gateway address-name pairs. If
     this file exists hipd chooses gateways from the file by
     random. currently running servers list is at <ulink
-    url="http://www.opendht.org/servers.txt" />. 
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
     </para>
 
     <para>
