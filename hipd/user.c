@@ -225,7 +225,16 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
             struct in_addr ip_gw;
             struct in6_addr ip_gw_mapped;
             int rett = 0, errr = 0;
-            struct sockaddr_in *sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
+            struct sockaddr_in *sa;
+	    if (opendht_serving_gateway == NULL) {
+		    opendht_serving_gateway = malloc(sizeof(struct addrinfo));
+                    memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
+            }
+	    if (opendht_serving_gateway->ai_addr == NULL) {
+		  opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
+                  memset(sa, 0, sizeof(struct sockaddr_in));
+            }
+	    sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
             rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
             IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
             if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -262,7 +271,18 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
             }
             break;
-
+        case SO_HIP_TRANSFORM_ORDER:
+                {
+                extern int hip_transform_order;
+                err = 0;
+                struct hip_opendht_set *name_info; 
+                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
+                         "no name struct found (should contain transform order\n");
+                _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
+                hip_transform_order = atoi(name_info->name);
+                hip_recreate_all_precreated_r1_packets();
+                }
+                break;
         case SO_HIP_DHT_ON:
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;

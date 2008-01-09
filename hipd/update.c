@@ -2470,15 +2470,17 @@ int hip_send_update(struct hip_hadb_state *entry,
 	if (add_locator) {
 		/* mm stuff, per-ifindex SA */
 		/* reuse old SA if we have one, else create a new SA */
-		mapped_spi = hip_hadb_get_spi(entry, ifindex);
+		// miika: changing of spi is not supported, see bug id 434
+		//mapped_spi = hip_hadb_get_spi(entry, ifindex);
+		mapped_spi = hip_hadb_get_spi(entry, -1);
 		HIP_DEBUG("mapped_spi=0x%x\n", mapped_spi);
 		if (mapped_spi) {
 			make_new_sa = 0;
-			_HIP_DEBUG("Mobility with single SA pair, readdress with no rekeying\n");
+			HIP_DEBUG("Mobility with single SA pair, readdress with no rekeying\n");
 			HIP_DEBUG("Reusing old SA\n");
 			/* Mobility with single SA pair */
 		} else {
-			_HIP_DEBUG("Host multihoming\n");
+		        HIP_DEBUG("Host multihoming\n");
 			make_new_sa = 1;
 			_HIP_DEBUG("TODO\n");
 		}

@@ -48,6 +48,13 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
+"transform order <int>\n"
+"    0 = AES_SHA1, 3DES_SHA1, NULL_SHA1\n"
+"    1 = 3DES_SHA1, AES_SHA1, NULL_SHA1\n"
+"    2 = AES_SHA1, NULL_SHA1, 3DES_SHA1\n"
+"    3 = 3DES_SHA1, NULL_SHA1, AES_SHA1\n"
+"    4 = NULL_SHA1, AES_SHA1, 3DES_SHA1\n"
+"    5 = NULL_SHA1, 3DES_SHA1, AES_SHA1\n"
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
@@ -92,6 +99,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
+        hip_conf_handle_trans_order,
 	NULL, /* run */
 };
 
@@ -140,6 +148,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
+        else if (!strcmp("transform", text))
+                ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
 #ifdef CONFIG_HIP_OPPTCP
@@ -209,6 +219,9 @@ int hip_conf_check_action_argc(int action) {
                 break;
         case ACTION_OPENDHT:
                 break;
+        case ACTION_TRANSORDER:
+                count = 2;
+                break;
 #ifdef CONFIG_HIP_OPPTCP	
 	case ACTION_OPPTCP:
                 break;
@@ -275,6 +288,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
+        else if (!strcmp("order", text))
+                ret = TYPE_ORDER;
 	else if (strcmp("opendht", argv[1])==0)
                 ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
@@ -316,6 +331,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
+        case ACTION_TRANSORDER:
 #ifdef CONFIG_HIP_OPPTCP
         case ACTION_OPPTCP:
 #endif
@@ -607,6 +623,53 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
      }
  	
      err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
+     if (err)
+     {
+	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  goto out;
+     }
+ 	
+ out:
+     return err;
+}
+
+/**
+ * Handles the hipconf transform order command.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_trans_order(struct hip_common *msg, int action,
+                                const char *opt[], int optc) 
+{
+     int err, ret, transorder;
+     
+     if (optc != 1) {
+	  HIP_ERROR("Missing arguments\n");
+	  err = -EINVAL;
+	  goto out;
+     }
+ 	 	
+     transorder = atoi(opt[0]);
+     if (transorder < 0 || transorder > 5) {
+             HIP_ERROR("Invalid argument\n");
+             err = -EINVAL;
+             goto out;
+     } 
+     
+     /* a bit wastefull but works */
+     err = hip_build_param_opendht_set(msg, opt[0]);
+     if (err) {
+             HIP_ERROR("build param hit failed: %s\n", strerror(err));
+             goto out;
+     }
+ 	
+     err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
      if (err)
      {
 	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
