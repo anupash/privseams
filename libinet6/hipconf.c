@@ -1,4 +1,6 @@
 
+
+
 /** @file
  * This file defines functions for configuring the the Host Identity
  * Protocol daemon (hipd).
@@ -1765,15 +1767,15 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
     if (!strcmp("on",opt[0])) {
 
 	HIP_INFO("tcptimeout set on\n");
-//     status = SO_HIP_SET_TCPTIMEOUT_ON;
+	status = SO_HIP_SET_TCPTIMEOUT_ON;
     } else if (!strcmp("off",opt[0])) {
        
 	HIP_INFO("tcptimeout set off\n");
-	//  status = SO_HIP_SET_TCPTIMEOUT_OFF;
+	status = SO_HIP_SET_TCPTIMEOUT_OFF;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
- /*   HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err)); */
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
 
  out_err:
     return err;

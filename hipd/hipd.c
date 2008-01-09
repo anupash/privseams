@@ -70,6 +70,10 @@ int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopen
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 
+
+/* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
+int hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).

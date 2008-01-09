@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines a user message handling function for the Host Identity
  * Protocol (HIP).
@@ -8,6 +9,7 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
@@ -96,6 +98,28 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                           hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
+
+	/* Tao added, TCP timeout 09.Jan.2008 */
+		
+	case SO_HIP_SET_TCPTIMEOUT_ON:
+		HIP_DEBUG("Setting TCP TIMEOUT ON\n");
+		hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+		HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+			hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
+		
+                /* paramters setting to do here */
+		break;
+	
+	 case SO_HIP_SET_TCPTIMEOUT_OFF:
+                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
+                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
+                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
+                
+                /* paramters resetting */
+                break;
+
+	
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
 		HIP_DEBUG("Handling DEBUG ALL user message.\n");

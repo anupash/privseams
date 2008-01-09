@@ -96,6 +96,9 @@
 #define SO_HIP_DHT_OFF                          158
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
+/* TCP timeout */
+#define SO_HIP_SET_TCPTIMEOUT_ON                161
+#define SO_HIP_SET_TCPTIMEOUT_OFF               162
 /** @} */
 
 #endif /* _HIP_ICOMM */
