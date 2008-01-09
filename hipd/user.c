@@ -271,7 +271,18 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
             }
             break;
-
+        case SO_HIP_TRANSFORM_ORDER:
+                {
+                extern int hip_transform_order;
+                err = 0;
+                struct hip_opendht_set *name_info; 
+                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
+                         "no name struct found (should contain transform order\n");
+                _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
+                hip_transform_order = atoi(name_info->name);
+                hip_recreate_all_precreated_r1_packets();
+                }
+                break;
         case SO_HIP_DHT_ON:
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;
