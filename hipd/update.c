@@ -1461,9 +1461,7 @@ int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg,
 
 
 #ifdef CONFIG_HIP_ESCROW
-
-int hip_handle_escrow_parameter(hip_ha_t * entry, 
-				struct hip_keys * keys)
+int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys)
 {
      uint32_t spi, spi_old;
      uint16_t op, len, alg;
@@ -1520,8 +1518,8 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 		    op);	 
 	  accept = -1;	
      }
-     /* If firewall is used, the received information shuold be delivered 
-      * to it. TODO: a better place for this? */ 	
+     /** @todo a better place for this? If firewall is used, the received
+	 information should be delivered to it. */ 	
      if (accept == 0) {
 	  if (hip_firewall_is_alive()) {
 	       HIP_DEBUG("Firewall alive!\n");
@@ -1537,11 +1535,9 @@ int hip_handle_escrow_parameter(hip_ha_t * entry,
 	  HIP_DEBUG("Error while handlling escrow parameter");		
      return err;
 }
-
 #endif //CONFIG_HIP_ESCROW
 
-int hip_handle_encrypted(hip_ha_t *entry, 
-			 struct hip_tlv_common *enc)
+int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc)
 {
      int err = 0;
      char * tmp_enc = NULL;
@@ -1617,10 +1613,11 @@ int hip_handle_encrypted(hip_ha_t *entry,
      return err;
 }
 
-int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list_item *addr, uint32_t spi_in){
-
+int hip_update_peer_preferred_address(hip_ha_t *entry,
+				      struct hip_peer_addr_list_item *addr,
+				      uint32_t spi_in)
+{
      int err = 0, i = 0;
-     //uint32_t spi_in;
      struct hip_spi_in_item *item, *tmp;
      hip_list_t *item_nd = NULL, *tmp_nd = NULL;
      struct netdev_address *n;
@@ -1656,8 +1653,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 	  memcpy(&local_addr, &entry->local_address, sizeof(in6_addr_t));
      }
 
-     /* @todo: enabling 1s makes hard handovers work, but softhandovers
-	fail */
+     /** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
 #if 1
      hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
@@ -1710,8 +1706,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry, struct hip_peer_addr_list
 
 int hip_update_handle_echo_response(hip_ha_t *entry,
 				    struct hip_echo_response *echo_resp, 
-                                    in6_addr_t *src_ip){
-
+                                    in6_addr_t *src_ip)
+{
      int err = 0, i;
      hip_list_t *item, *tmp;
      struct hip_spi_out_item *out_item;
@@ -1770,18 +1766,6 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
      return err;
 }
 
-/**
- * hip_receive_update - receive UPDATE packet
- * @param msg buffer where the HIP packet is in
- *
- * This is the initial function which is called when an UPDATE packet
- * is received. The validity of the packet is checked and then this
- * function acts according to whether this packet is a reply or not.
- *
- * @return 0 if successful (HMAC and signature (if needed) are
- * validated, and the rest of the packet is handled if current state
- * allows it), otherwise < 0.
- */
 int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
@@ -1972,19 +1956,9 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
      return err;
 }
 
-/** hip_copy_spi_in_addresses - copy addresses to the inbound SPI
- * @param src address list
- * @param spi_in the inbound SPI the addresses are copied to
- * @param count number of addresses in @src
- *
- * A simple helper function to copy interface addresses to the inbound
- * SPI of. Caller must kfree the allocated memory.
- *
- * @return 0 on success, < 0 otherwise.
- */
 int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
-			      struct hip_spi_in_item *spi_in,
-			      int count) {
+			      struct hip_spi_in_item *spi_in, int count)
+{
      size_t s = count * sizeof(struct hip_locator_info_addr_item);
      void *p = NULL;
 
@@ -2016,16 +1990,11 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 
      return 0;
 }
-/* update_preferred_address - change preferred address advertised to the peer for this connection
- * 
- * @param entry hadb entry corresponding to the peer
- * @param new_pref_addr the new prefferred address
- */
-int hip_update_preferred_address(struct hip_hadb_state *entry,
-				 in6_addr_t *new_pref_addr,
-				 in6_addr_t *daddr,
-				 uint32_t *_spi_in){
 
+int hip_update_preferred_address(struct hip_hadb_state *entry,
+				 in6_addr_t *new_pref_addr, in6_addr_t *daddr,
+				 uint32_t *_spi_in)
+{
      int err = 0;
      struct hip_spi_in_item *item, *tmp;
      uint32_t spi_in = *_spi_in;
@@ -2043,7 +2012,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 #if 1
      hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
-     /* @todo: check that this works with the pfkey api */
+     /** @todo Check that this works with the pfkey API. */
      hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
 		   (int)entry->peer_udp_port, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
@@ -2096,10 +2065,10 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 int hip_update_src_address_list(struct hip_hadb_state *entry, 
 				struct hip_locator_info_addr_item *addr_list, 
-				in6_addr_t *daddr,
-				int addr_count,	int esp_info_old_spi,
-				int is_add, struct sockaddr* addr){
-	   	
+				in6_addr_t *daddr, int addr_count,
+				int esp_info_old_spi, int is_add,
+				struct sockaddr* addr)
+{	   	
      int err = 0, i, preferred_address_found = 0; 
      int choose_random = 0, change_preferred_address = 0;
      struct hip_spi_in_item *spi_in = NULL;
@@ -2265,15 +2234,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 
 }	
-/** hip_send_update - send initial UPDATE packet to the peer
- * @param entry hadb entry corresponding to the peer
- * @param addr_list if non-NULL, LOCATOR parameter is added to the UPDATE
- * @param addr_count number of addresses in @addr_list
- * @param ifindex if non-zero, the ifindex value of the interface which caused the event
- * @param flags TODO comment
- *
- * @return 0 if UPDATE was sent, otherwise < 0.
- */
+
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags, 

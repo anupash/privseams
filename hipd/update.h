@@ -419,9 +419,130 @@ int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry);
 int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg, 
 			uint8_t *types, int type_count);
 
+#ifdef CONFIG_HIP_ESCROW
+/**
+ * ...
+ *
+ * @param entry a pointer to a hadb entry.
+ * @param keys  a pointer to ...
+ * @return      ...
+ */
+int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys);
+#endif //CONFIG_HIP_ESCROW
+
+/**
+ * ...
+ *
+ * @param entry a pointer to a hadb entry.
+ * @param enc   a pointer to ...
+ * @return      ...
+ */
+int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc);
+
+/**
+ * ...
+ *
+ * @param entry  a pointer to a hadb entry.
+ * @param addr   a pointer to ...
+ * @param spi_in a pointer to ...
+ * @return       ...
+ */
+int hip_update_peer_preferred_address(hip_ha_t *entry,
+				      struct hip_peer_addr_list_item *addr,
+				      uint32_t spi_in);
+
+/**
+ * ...
+ *
+ * @param entry     a pointer to a hadb entry.
+ * @param echo_resp a pointer to ...
+ * @param spi_ip    a pointer to ...
+ * @return          ...
+ */
+int hip_update_handle_echo_response(hip_ha_t *entry,
+				    struct hip_echo_response *echo_resp, 
+                                    in6_addr_t *src_ip);
+
+/**
+ * Receives an UPDATE packet.
+ *
+ * This is the initial function which is called when an UPDATE packet is
+ * received. The validity of the packet is checked and then this function acts
+ * according to whether this packet is a reply or not.
+ *
+ * @param msg          a pointer to a buffer where the HIP packet is in.
+ * @param update_saddr a pointer to the UPDATE packet source IP address.
+ * @param update_daddr a pointer to the UPDATE packet destination IP address.
+ * @param entry        a pointer to a hadb entry.
+ * @param sinfo        a pointer to a struct containing the UPDATE packet source
+ *                     and destination ports.
+ * @return             0 if successful (HMAC and signature (if needed) are
+ *                     validated, and the rest of the packet is handled if
+ *                     current state allows it), otherwise < 0.
+ */
 int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
-		       hip_portpair_t *);
+		       hip_portpair_t *sinfo);
+
+/**
+ * Copies addresses to the inbound SPI.
+ *
+ * A simple helper function to copy interface addresses to the inbound SPI of.
+ * Caller must kfree the allocated memory.
+ *
+ * @param src    A pointer to an address list.
+ * @param spi_in A pointer to the inbound SPI the addresses are copied to.
+ * @param count  The number of addresses in @c src.
+ * @return       0 on success, < 0 otherwise.
+ */
+int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
+			      struct hip_spi_in_item *spi_in, int count);
+
+/**
+ * Changes the preferred address advertised to the peer for this connection.
+ * 
+ * @param entry         a pointer to a hadb entry corresponding to the peer.
+ * @param new_pref_addr a pointer to the new prefferred address.
+ * @param daddr         a pointer to destination address.
+ * @param _spi_in       a pointer to ...
+ * @return              ...
+ */
+int hip_update_preferred_address(struct hip_hadb_state *entry,
+				 in6_addr_t *new_pref_addr, in6_addr_t *daddr,
+				 uint32_t *_spi_in);
+
+/**
+ * Updates the source address list.
+ * 
+ * @param entry            a pointer to a hadb entry.
+ * @param addr_list        a pointer to ...
+ * @param daddr            a pointer to ...
+ * @param addr_count       address count.
+ * @param esp_info_old_spi ...
+ * @param is_add           ...
+ * @param addr             ...
+ * @return                 ...
+ */
+int hip_update_src_address_list(struct hip_hadb_state *entry, 
+				struct hip_locator_info_addr_item *addr_list, 
+				in6_addr_t *daddr, int addr_count,
+				int esp_info_old_spi, int is_add,
+				struct sockaddr* addr);
+
+/** 
+ * Sends an initial UPDATE packet to the peer.
+ * 
+ * @param entry      a pointer to a hadb entry corresponding to the peer.
+ * @param addr_list  a pointer to an address list. if non-NULL, LOCATOR
+ *                   parameter is added to the UPDATE.
+ * @param addr_count number of addresses in @c addr_list.
+ * @param ifindex    interface number. If non-zero, the ifindex value of the
+ *                   interface which caused the event.
+ * @param flags      ...
+ * @param is_add     ...
+ * @param addr       a pointer to ...
+ * @return           0 if UPDATE was sent, otherwise < 0.
+ */
 int hip_send_update(struct hip_hadb_state *entry,
 		    struct hip_locator_info_addr_item *addr_list,
 		    int addr_count, int ifindex, int flags, int is_add,
