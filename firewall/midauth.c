@@ -3,6 +3,7 @@
  */
 
 #include "midauth.h"
+#include <string.h>
 
 /**
  * Changes IPv4 header to match new length and updates the checksum.
@@ -32,6 +33,17 @@ static void update_ipv4_header (void *data, int len) {
     ip->check = ~checksum;
 }
 
+static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
+    int verdict = NF_ACCEPT;
+
+    /* just copy it for testing */
+
+    p->size = m->data_len;
+    memcpy(p->buffer, m->payload, p->size);
+
+    return verdict;
+}
+
 int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
     int verdict = NF_ACCEPT;
 
@@ -43,6 +55,7 @@ int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
 	    break;
 	case HIP_R1:
 	    HIP_DEBUG("filtering R1\n");
+	    verdict = filter_midauth_r1(m, p);
 	    break;
 	case HIP_I2:
 	    HIP_DEBUG("filtering I2\n");
