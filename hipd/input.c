@@ -1721,6 +1721,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 	}
 
+	hip_hadb_insert_state(entry);
+	hip_hold_ha(entry);
+	
+	_HIP_DEBUG("HA entry created.");
+	
 	/* If there was already state, these may be uninitialized */
 	entry->hip_transform = hip_tfm;
 	if (!entry->our_pub) {
@@ -1745,11 +1750,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
 
-	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry);
-	
-	_HIP_DEBUG("HA entry created.");
-	
 	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
