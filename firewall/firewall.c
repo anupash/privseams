@@ -765,14 +765,12 @@ int main(int argc, char **argv)
 
 
 	if (use_ipv4) {
-                int *i, j = 4;
-                i = &j;
-                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) j);
+                int j = 4;
+                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) &j);
         }
 	if (use_ipv6) {
-                int *i, j = 6;
-                i = &j;
-                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) j);
+                int j = 6;
+                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) &j);
         }
 
 	if (use_ipv4)
