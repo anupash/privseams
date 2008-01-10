@@ -8,8 +8,8 @@
  * @version 1.0
  * @date    08.01.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
- * @note Based on
- * <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
+ * @note    Based on
+ *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
 #ifndef HIP_UPDATE_H
 #define HIP_UPDATE_H
@@ -20,14 +20,23 @@
 #include "reg.h"
 
 /* FIXME: where to include these from in userspace? */
-#  define IPV6_ADDR_ANY           0x0000U
-#  define IPV6_ADDR_UNICAST       0x0001U 
-#  define IPV6_ADDR_LOOPBACK      0x0010U
-#  define IPV6_ADDR_LINKLOCAL     0x0020U
-#  define IPV6_ADDR_SITELOCAL     0x0040U
+#define IPV6_ADDR_ANY           0x0000U
+#define IPV6_ADDR_UNICAST       0x0001U 
+#define IPV6_ADDR_LOOPBACK      0x0010U
+#define IPV6_ADDR_LINKLOCAL     0x0020U
+#define IPV6_ADDR_SITELOCAL     0x0040U
 
+/** The NAT status of the HIP daemon. I.e. Do we send packets on UPD or not. */
 extern int hip_nat_status;
+/** @todo describe this variable. */
 extern int is_active_handover;
+
+/** A Really ugly hack ripped from rea.c, must convert to list_head asap. */
+struct hip_update_kludge {
+     hip_ha_t **array;
+     int count;
+     int length;
+};
 
 /**
  * Iterate a list of locators using a function. The list handling is interrupted
@@ -408,6 +417,21 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry);
 
 /**
+ * Creates a REG_RESPONSE parameter.
+ *
+ * @param entry         a pointer to a hadb entry.
+ * @param reg           a pointer to REG_RESPONSE parameter struct.
+ * @param requests      a pointer to registration type values.
+ * @param request_count number of requests in @c requests.
+ * @param src_ip        a pointer to source IP address.
+ * @param dst_ip        a pointer to destination IP address.
+ * @return       
+ */
+int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common *reg,
+			    uint8_t *requests, int request_count,
+			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
+
+/**
  * ...
  *
  * @param entry      a pointer to a hadb entry.
@@ -549,6 +573,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 		    struct sockaddr* addr);
 
 /**
+ * Internal function copied originally from rea.c.
+ * 
+ * @param entry a pointer to a hadb entry.
+ * @param addr  op
+ * @return      ...
+ */
+static int hip_update_get_all_valid(hip_ha_t *entry, void *op);
+
+/**
  * Sends UPDATE packet to every peer.
  *
  * UPDATE is sent to the peer only if the peer is in established state. Add
@@ -564,14 +597,40 @@ int hip_send_update(struct hip_hadb_state *entry,
 void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			 int addr_count, int ifindex,  int flags, int is_add,
 			 struct sockaddr* addr);
+
+/**
+ * Handles UPDATE acknowledgement.
+ * 
+ * @param entry    a pointer to a hadb entry corresponding to the peer.
+ * @param ack      a pointer to ...
+ * @param have_nes ...
+ */
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes);
 
-int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
-			in6_addr_t *src_ip, in6_addr_t *dst_ip);
+/**
+ * Internal function copied originally from rea.c.
+ * 
+ * @param entry      a pointer to a hadb entry.
+ * @param server_hit a pointer to server HIT.
+ * @param types      a pointer to...
+ * @param type_count number of types in @c types.
+ * @param op         zero or one. Zero for cancelling registration.
+ * @return           zero on success, non-zero otherwise.
+ */
 int hip_update_send_registration_request(hip_ha_t *entry,
 					 in6_addr_t *server_hit, int *types,
 					 int type_count, int op);
-int hip_create_reg_response(hip_ha_t * entry, struct hip_tlv_common * reg,
-			    uint8_t *requests, int request_count,
-			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
+
+/**
+ * Sends an UPDATE acknowledgement.
+ * 
+ * @param entry  a pointer to a hadb entry corresponding to the peer.
+ * @param msg    a pointer to a hip UPDATE message.
+ * @param src_ip a pointer to source IP address.
+ * @param dst_ip a pointer to destination IP address.
+ * @return       zero on success, non-zero otherwise.
+ */
+int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
+			in6_addr_t *src_ip, in6_addr_t *dst_ip);
+
 #endif /* HIP_UPDATE_H */
