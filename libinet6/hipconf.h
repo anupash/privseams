@@ -139,7 +139,8 @@
 #define TYPE_DHT        24
 #define TYPE_OPPTCP	25
 #define TYPE_TCPTIMEOUT	26 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_MAX    	27 /* exclusive */
+#define TYPE_ORDER      27
+#define TYPE_MAX    	28 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
