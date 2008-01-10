@@ -109,7 +109,7 @@
 #define HIP_PARAM_AGENT_REJECT	        32791
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
-
+#define HIP_PARAM_INT                   32794
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505

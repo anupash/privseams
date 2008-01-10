@@ -1481,7 +1481,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint64_t I, J;	
 	uint32_t spi_in, spi_out;
 	uint16_t crypto_len, nonce;
-	int err = 0, retransmission = 0, replay = 0;
+	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
         struct hip_locator *locator;
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
@@ -1492,6 +1492,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #endif
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
+
+	if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status())
+		use_blind = 1;
 	
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
@@ -1653,7 +1656,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		     hip_get_param_total_len(host_id_in_enc));
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	  // Peer's plain hit
 	  HIP_IFEL((plain_peer_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
 		   -1, "Couldn't allocate memory\n");
@@ -1692,7 +1695,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     /* The rest of the code assume already locked entry, so lock the
 		newly created entry as well. */
 	     HIP_LOCK_HA(entry);
-	     if (ntohs(i2->control) & HIP_PACKET_CTRL_BLIND && hip_blind_get_status()) {
+	     if (use_blind) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
 	     }
@@ -1716,32 +1719,41 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 	     add_address_to_list(addr, if_index);
 	
-	     /* If the incoming I2 packet has 50500 as destination port, NAT
-		mode is set on for the host association, I2 source port is
-		stored as the peer UDP port and send function is set to
-		"hip_send_udp()". Note that we must store the port not until
-		here, since the source port can be different for I1 and I2. */
-	     if(i2_info->dst_port == HIP_NAT_UDP_PORT)
-	     {
-		  entry->nat_mode = 1;
-		  entry->peer_udp_port = i2_info->src_port;
-		  HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-		  HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
-			    entry);
-		  hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-	     }
 	}
-	entry->hip_transform = hip_tfm;
 
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry);
 	
 	_HIP_DEBUG("HA entry created.");
 	
+	/* If there was already state, these may be uninitialized */
+	entry->hip_transform = hip_tfm;
+	if (!entry->our_pub) {
+		if (use_blind)
+			hip_init_us(entry, plain_local_hit);
+		else
+			hip_init_us(entry, &i2->hitr);
+	}
+
+	/* If the incoming I2 packet has 50500 as destination port, NAT
+	   mode is set on for the host association, I2 source port is
+	   stored as the peer UDP port and send function is set to
+	   "hip_send_udp()". Note that we must store the port not until
+	   here, since the source port can be different for I1 and I2. */
+	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	{
+		entry->nat_mode = 1;
+		entry->peer_udp_port = i2_info->src_port;
+		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
+		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+			  entry);
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+	}
+
 	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
 	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
 	  entry->blind_nonce_i = nonce;
@@ -1796,7 +1808,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	  /* Set up IPsec associations */
 	  err = hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
@@ -1807,7 +1819,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	}
 #endif
 
-	if (!hip_blind_get_status()) {
+	if (!use_blind) {
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
@@ -1847,7 +1859,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	   err = hip_add_sa(i2_daddr, i2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
@@ -1856,7 +1868,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	}
 #endif
 
-	if (!hip_blind_get_status()) {
+	if (!use_blind) {
 	  err = hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
@@ -1891,14 +1903,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #endif //CONFIG_HIP_ESCROW
 
 #ifdef CONFIG_HIP_BLIND
-    if (hip_blind_get_status()) {
+    if (use_blind) {
       HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
 				     &entry->hit_our,
 				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
 	       -1, "Setting up SP pair failed\n");
     }
 #endif
-    if (!hip_blind_get_status()) {
+    if (!use_blind) {
 	    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 					   &ctx->input->hitr,
 					   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
@@ -2159,7 +2171,7 @@ int hip_handle_r2(struct hip_common *r2,
         ctx->input = r2;
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	  HIP_IFEL(hip_blind_verify_r2(r2, entry), -1, "hip_blind_verify_host_id failed\n"); 
 	}
 #endif
@@ -2199,7 +2211,7 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
+	if (use_blind) {
 	  err = hip_add_sa(r2_daddr, r2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_recvd, tfm,
