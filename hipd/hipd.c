@@ -561,7 +561,7 @@ int hipd_main(int argc, char *argv[])
 			else err = hip_handle_user_msg(hipd_msg, &app_src);
 		}
                 /* DHT SOCKETS HANDLING */
-                if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                             FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                             (hip_opendht_inuse == SO_HIP_DHT_ON)) {
