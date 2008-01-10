@@ -81,33 +81,38 @@
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
-#define HIP_PARAM_HIT                  32768
-#define HIP_PARAM_IPV6_ADDR            32769
-#define HIP_PARAM_DSA_SIGN_DATA        32770
-#define HIP_PARAM_HI                   32771
-#define HIP_PARAM_DH_SHARED_KEY        32772
-#define HIP_PARAM_UNIT_TEST            32773
-#define HIP_PARAM_EID_SOCKADDR         32774
-#define HIP_PARAM_EID_ENDPOINT         32775
-#define HIP_PARAM_EID_IFACE            32776
-#define HIP_PARAM_EID_ADDR             32777
-#define HIP_PARAM_UINT                 32778
-#define HIP_PARAM_KEYS                 32779
-#define HIP_PSEUDO_HIT                 32780
-#define HIP_PARAM_REG_INFO             32781
-#define HIP_PARAM_REG_REQUEST          32782
-#define HIP_PARAM_REG_RESPONSE         32783
-#define HIP_PARAM_REG_FAILED           32784
-#define HIP_PARAM_BLIND_NONCE          32785
-#define HIP_PARAM_OPENDHT_GW_INFO      32786
-#define HIP_PARAM_ENCAPS_MSG           32787
-#define HIP_PARAM_PORTPAIR             32788
-#define HIP_PARAM_SRC_ADDR             32789
-#define HIP_PARAM_DST_ADDR             32790
-#define HIP_PARAM_AGENT_REJECT         32791
-#define HIP_PARAM_HA_INFO              32792
+#define HIP_PARAM_HIT                   32768
+#define HIP_PARAM_IPV6_ADDR             32769
+/** @todo change to digest */
+#define HIP_PARAM_DSA_SIGN_DATA         32770
+#define HIP_PARAM_HI                    32771
+#define HIP_PARAM_DH_SHARED_KEY         32772
+#define HIP_PARAM_UNIT_TEST             32773
+#define HIP_PARAM_EID_SOCKADDR          32774
+#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
+#define HIP_PARAM_EID_IFACE             32776
+#define HIP_PARAM_EID_ADDR              32777
+#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
+#define HIP_PARAM_KEYS                  32779
+#define HIP_PSEUDO_HIT                  32780 
+#define HIP_PARAM_REG_INFO		32781
+#define HIP_PARAM_REG_REQUEST		32782
+#define HIP_PARAM_REG_RESPONSE		32783
+#define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_OPENDHT_GW_INFO       32786
 
+#define HIP_PARAM_ENCAPS_MSG		32787
+#define HIP_PARAM_PORTPAIR		32788
+#define HIP_PARAM_SRC_ADDR		32789
+#define HIP_PARAM_DST_ADDR		32790
+
+#define HIP_PARAM_AGENT_REJECT	        32791
+#define HIP_PARAM_HA_INFO               32792
+#define HIP_PARAM_OPENDHT_SET           32793
+#define HIP_PARAM_INT                   32794
 /* End of HIPL private parameters. */
+
 #define HIP_PARAM_HMAC                 61505
 #define HIP_PARAM_HMAC2                61569
 #define HIP_PARAM_HIP_SIGNATURE2       61633
@@ -761,6 +766,12 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
+} __attribute__ ((packed));
+
+struct hip_opendht_set {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        char name[256];
 } __attribute__ ((packed));
 
 /* @} */

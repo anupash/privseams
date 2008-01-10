@@ -105,7 +105,10 @@
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
-#define ACTION_MAX 20 /* exclusive */
+#define ACTION_OPENDHT 20
+#define ACTION_OPPTCP  21
+#define ACTION_TRANSORDER 22
+#define ACTION_MAX 23 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -128,9 +131,13 @@
 #define TYPE_MODE       18
 #define TYPE_DEBUG      19
 #define TYPE_DAEMON     20
-#define TYPE_LOCATOR 21
-#define TYPE_RELAY_UDP_HIP             22
-#define TYPE_MAX    	23 /* exclusive */
+#define TYPE_LOCATOR    21
+#define TYPE_RELAY_UDP_HIP 22
+#define TYPE_SET        23 /* DHT set <name> */
+#define TYPE_DHT        24
+#define TYPE_OPPTCP		25
+#define TYPE_ORDER      26
+#define TYPE_MAX    	27 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -143,7 +150,10 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # nat on            # the host is behind a NAT\n\
-# debug none        # no debugging messages will be displayed\n"
+# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
+# locator on # host sends all of its locators in base exchange \n\
+opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
+debug medium        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HOSTS_FILE "/etc/hosts"
@@ -174,7 +184,10 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_trans_order(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(struct hip_common *msg, int action,
 			       const char *opt[], int optc);
 int hip_get_all_hits(struct hip_common *msg,char *argv[]);
@@ -183,5 +196,5 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
+int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 #endif /* HIPCONF */

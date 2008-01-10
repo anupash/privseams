@@ -63,9 +63,9 @@ int connhipd_init(void)
 /*	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
 	          "Starting thread for HIP daemon connection handling\n", n);*/
 
+	hip_agent_thread_started = 0;
 	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
-	hip_agent_thread_started = 0;
 	while (hip_agent_thread_started == 0) usleep(100 * 1000);
 	usleep(100 * 1000);
 
@@ -327,7 +327,7 @@ void *connhipd_thread(void *data)
 		if (!hip_agent_thread_started) continue;
 		if (!FD_ISSET(hip_agent_sock, &read_fdset)) continue;
 
-		bzero(&agent_addr, sizeof(agent_addr));
+		memset(&agent_addr, 0, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
 		             (struct sockaddr *)&agent_addr, &alen);

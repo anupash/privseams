@@ -365,6 +365,9 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HI3
 	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
 #endif
+#ifdef CONFIG_HIP_OPPTCP
+	int hip_is_opptcp_on;
+#endif
 };
 
 /** A data structure defining host association information that is sent
@@ -477,7 +480,8 @@ struct hip_hadb_update_func_set{
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
-					       struct hip_esp_info *esp_info);
+					       struct hip_esp_info *esp_info,
+					       struct hip_seq *seq);
 
 	int (*hip_handle_update_addr_verify)(hip_ha_t *entry,
 					     struct hip_common *msg,

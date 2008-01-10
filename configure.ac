@@ -241,9 +241,9 @@ AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
         #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
+AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
 AC_ARG_ENABLE(blind,
@@ -268,6 +268,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
+
+AC_PREFIX_DEFAULT("/usr/local")
 
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
@@ -323,5 +325,6 @@ AC_CONFIG_FILES([ Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile])
+		  libipsec/Makefile
+                  hipfwmi/Makefile])
 AC_OUTPUT

@@ -336,6 +336,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->is_loopback = 1;
 	}
 
+#ifdef CONFIG_HIP_OPPTCP
+     	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+#endif
+
+
 	hip_hadb_insert_state(entry);
 	/* Released at the end */
 	hip_hold_ha(entry);
@@ -970,7 +975,7 @@ uint32_t hip_hadb_get_spi(hip_ha_t *entry, int ifindex)
 	{
 		spi_item = list_entry(item);
 		_HIP_DEBUG("test item: ifindex=%d spi=0x%x\n", spi_item->ifindex, spi_item->spi);
-		if (spi_item->ifindex == ifindex)
+		if (spi_item->ifindex == ifindex || ifindex == -1)
 		{
 			HIP_DEBUG("found SPI 0x%x\n", spi_item->spi);
 			return spi_item->spi;
@@ -1900,6 +1905,10 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 {
 	int err = 0, len, alg;
 
+	if (entry->our_priv) {
+		HIP_FREE(entry->our_priv);
+		entry->our_priv = NULL;
+	}
 	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
 						HIP_HI_RSA))) {
 		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
@@ -1912,6 +1921,10 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
 
 	len = hip_get_param_total_len(entry->our_priv);
+	if (entry->our_pub) {
+		HIP_FREE(entry->our_pub);
+		entry->our_pub = NULL;
+	}
 	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
 	memcpy(entry->our_pub, entry->our_priv, len);
 	entry->our_pub = hip_get_public_key(entry->our_pub);
