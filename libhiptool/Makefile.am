@@ -49,10 +49,9 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 #include_HEADERS =
 
-#if HIP_OPENDHT
 # INCLUDES += -I../opendht
 # LDADD = ../opendht/.libs/libhipopendht.a
-#endif
+
 
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3

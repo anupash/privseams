@@ -35,20 +35,16 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_OPENDHT
-  conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
-  LDADD += ../opendht/.libs/libhipopendht.a
-  CFLAGS += $(HIPL_XMLL)
-endif
+conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
+LDADD += ../opendht/.libs/libhipopendht.a
+CFLAGS += $(HIPL_XMLL)
 
-if HIP_OPENDHT
 opendhtteststub_LDFLAGS= -lcrypto $(HIP_XMLL) 
 opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   opendhtteststub_LDADD += -lhiptool
 else
   opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
-endif
 endif
 
 bin_PROGRAMS = conntest-client

@@ -109,7 +109,8 @@
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
 #define ACTION_TCPTIMEOUT 22 /* add By Tao Wan, on 04.01.2008 */
-#define ACTION_MAX 23 /* exclusive */
+#define ACTION_TRANSORDER 23
+#define ACTION_MAX 24 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -153,6 +154,7 @@
 # nat on            # the host is behind a NAT\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on # host sends all of its locators in base exchange \n\
+opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 debug medium        # no debugging messages will be displayed\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -184,6 +186,7 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_trans_order(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);
