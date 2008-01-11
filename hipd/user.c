@@ -1,4 +1,5 @@
 
+
 /** @file
  * This file defines a user message handling function for the Host Identity
  * Protocol (HIP).
@@ -107,7 +108,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
 			hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
 		
-                /* paramters setting to do here */
+		/* paramters setting to do here */
+		HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+                         "set new tcptimeout parameters error\n");
 		break;
 	
 	 case SO_HIP_SET_TCPTIMEOUT_OFF:
@@ -117,15 +120,18 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                         hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
                 
                 /* paramters resetting */
+                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
+                         "reset tcptimeout parameters to be default error\n");
+
                 break;
 
 	
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
-		HIP_DEBUG("Handling DEBUG ALL user message.\n");
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 		break;
+
 	case SO_HIP_SET_DEBUG_MEDIUM:
 		/* Removes debugging messages. */
 		HIP_DEBUG("Handling DEBUG MEDIUM user message.\n");

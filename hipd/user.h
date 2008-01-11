@@ -18,6 +18,8 @@
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
+/* added by Tao Wan, 10.Jan.2008*/
+#include "tcptimeout.h"
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;

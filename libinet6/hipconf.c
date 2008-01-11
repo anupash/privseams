@@ -1,6 +1,7 @@
 
 
 
+
 /** @file
  * This file defines functions for configuring the the Host Identity
  * Protocol daemon (hipd).
@@ -52,13 +53,6 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
-"transform order <int>\n"
-"    0 = AES_SHA1, 3DES_SHA1, NULL_SHA1\n"
-"    1 = 3DES_SHA1, AES_SHA1, NULL_SHA1\n"
-"    2 = AES_SHA1, NULL_SHA1, 3DES_SHA1\n"
-"    3 = 3DES_SHA1, NULL_SHA1, AES_SHA1\n"
-"    4 = NULL_SHA1, AES_SHA1, 3DES_SHA1\n"
-"    5 = NULL_SHA1, 3DES_SHA1, AES_SHA1\n"
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
@@ -105,7 +99,6 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
-        hip_conf_handle_trans_order,
 	NULL, /* run */
 };
 
@@ -154,8 +147,6 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
-        else if (!strcmp("transform", text))
-                ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
 	else if (!strcmp("tcptimeout", text)) /*added by Tao Wan, 08.Jan.2008 */
@@ -231,9 +222,6 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_TCPTIMEOUT:
 		count = 1;
 		break;
-        case ACTION_TRANSORDER:
-                count = 2;
-                break;
 #ifdef CONFIG_HIP_OPPTCP	
 	case ACTION_OPPTCP:
                 break;
@@ -303,8 +291,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-        else if (!strcmp("order", text))
-                ret = TYPE_ORDER;
+
+#ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
                 ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
@@ -315,6 +303,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
                 ret = TYPE_SET;
+#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_OPPTCP
@@ -347,7 +336,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
 	case ACTION_TCPTIMEOUT:
-        case ACTION_TRANSORDER:
 #ifdef CONFIG_HIP_OPPTCP
         case ACTION_OPPTCP:
 #endif
@@ -650,53 +638,6 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
 }
 
 /**
- * Handles the hipconf transform order command.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_trans_order(struct hip_common *msg, int action,
-                                const char *opt[], int optc) 
-{
-     int err, ret, transorder;
-     
-     if (optc != 1) {
-	  HIP_ERROR("Missing arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
- 	 	
-     transorder = atoi(opt[0]);
-     if (transorder < 0 || transorder > 5) {
-             HIP_ERROR("Invalid argument\n");
-             err = -EINVAL;
-             goto out;
-     } 
-     
-     /* a bit wastefull but works */
-     err = hip_build_param_opendht_set(msg, opt[0]);
-     if (err) {
-             HIP_ERROR("build param hit failed: %s\n", strerror(err));
-             goto out;
-     }
- 	
-     err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
-     if (err)
-     {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
-	  goto out;
-     }
- 	
- out:
-     return err;
-}
-
-/**
  * Handles the hipconf commands where the type is @c rst.
  *
  * @param msg    a pointer to the buffer where the message for kernel will
@@ -915,7 +856,8 @@ int hip_conf_handle_locator(struct hip_common *msg, int action,
         status = SO_HIP_SET_LOCATOR_OFF;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
-    }
+    	// err = -1;
+	}
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
     
  out_err:
@@ -1834,7 +1776,8 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
 	status = SO_HIP_SET_TCPTIMEOUT_OFF;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
-    }
+       // err = -1;
+	}
     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
 
  out_err:
