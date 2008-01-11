@@ -45,7 +45,7 @@ CODING CONVENTIONS
   ununified look. Especially, if you don't follow the memory deallocation
   procedure below, you might even cause some memory leaks.
 
-- All kcode should follow the standard linux coding conventions
+- All code should follow the standard linux coding conventions
   listed in <linux_root>/Documentation/CodingStyle. Particularly,
   the indenting is eight spaces.
 
