@@ -1,12 +1,13 @@
 #ifndef _DOXYGEN_H
 #define _DOXYGEN_H
-/** @file
- * There should be no need to include this file anywhere!
- * This is only for defining doxygen related things, such as
- * groups and lists.
+/**
+ * @file
+ * There should be no need to include this file anywhere! This is only for
+ * defining doxygen related things, such as groups and lists.
  */
 
-/** @mainpage
+/**
+ * @mainpage
  * Welcome to Host Identity Protocol for Linux (HIPL) Doxygen page.
  *
  * @section sec_doc Project Documents
@@ -189,7 +190,7 @@
 
 /**
  * @defgroup hip_msg HIP daemon message types
- * @note <span style="color:#f00">Don't make these values higher than 255.</span>
+ * @note Don't make these values higher than 255.
  *       The variable, which stores this type, is 8 bits.
  */
 
@@ -491,13 +492,6 @@
  *       and the Responder is willing to set up an association
  *       but has currently a number of I2s in processing queue.
  *       R2 will be sent after the I2 has been processed.
- * @def  HIP_NTF_RVS_NAT
- *       Sent in response by a Rendezvous Server to a Initiator behind a NAT.
- *       An extension value introduced in draft-schmitt-hip-nat-traversal-03.
- *       In the scenario where a NATted HIP node uses rendezvous service to
- *       contact another HIP node in a publicly addressable network, the
- *       Rendezvous Server replies to the Initiator with a NOTIFY message
- *       having a NOTIFICATION parameter of this type.
  */
 
 /**
@@ -557,7 +551,7 @@
  * These are bitmasks used in the @c hip_hadb_state stucture fields
  * @c local_controls and @c peer_controls.
  *
- * @local_controls defines the flags of the current host, while peer_controls
+ * @c local_controls defines the flags of the current host, while peer_controls
  * define the flags of the peer. The flags are used to indicate the state or
  * status of the host. A status can be, for example, that we have requested
  * for a service or that we are capable of offering a service.

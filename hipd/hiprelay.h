@@ -104,7 +104,7 @@ typedef struct{
 /** 
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
- * @enum
+ * @enum hip_relrec_type_t
  */
 typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
 

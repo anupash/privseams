@@ -124,16 +124,15 @@ int hip_check_hip_ri_opportunistic_mode(struct hip_common *, struct in6_addr *,
 					hip_ha_t *);
 
 /**
- * Verifies HMAC
+ * Verifies a HMAC.
  *
- * @param buffer the packet data used in HMAC calculation
- * @param hmac the HMAC to be verified
- * @param hmac_key integrity key used with HMAC
+ * @param buffer    the packet data used in HMAC calculation.
+ * @param hmac      the HMAC to be verified.
+ * @param hmac_key  integrity key used with HMAC.
  * @param hmac_type type of the HMAC digest algorithm.
- *
- * @return 0 if calculated HMAC is same as @hmac, otherwise < 0. On
- * error < 0 is returned.
- * @note Fix the packet len before calling this function!
+ * @return          0 if calculated HMAC is same as @c hmac, otherwise < 0. On
+ *                  error < 0 is returned.
+ * @note            Fix the packet len before calling this function!
  */
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 			   void *hmac_key, int hmac_type);
