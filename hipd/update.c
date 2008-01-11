@@ -1,4 +1,5 @@
-/** @file
+/**
+ * @file
  * This file defines various functions for sending, handling and receiving
  * UPDATE packets for the Host Identity Protocol (HIP).
  * 
@@ -18,7 +19,7 @@
    are inadequate, feel free to complement.
 
    Code is now reformatted "k&r" style and with maximum row width of 80
-   characters (where possible). Please stick to the coding convetion and style
+   characters (where possible). Please stick to the coding convention and style
    guide, they make the code more readable and uniform.
 
    Lauri 10.01.2008 */
