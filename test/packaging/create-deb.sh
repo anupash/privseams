@@ -240,7 +240,7 @@ if [ $TYPE = "binary" ];then
 
     cd "$HIPL"
     echo "** Running make in $HIPL"
-    ./autogen
+    ./autogen.sh
     ./configure --prefix=/usr
     echo "** Running make in $HIPL"
     echo "** Running make in $HIPL"
