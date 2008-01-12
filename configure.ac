@@ -77,10 +77,10 @@ AC_SUBST(usagi_libc)
 
 AC_ARG_ENABLE(firewall,
              AC_HELP_STRING([--enable-firewall],
-                            [HIP enabled firewall daemon (default is NO)]),
-             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=no])
+                            [HIP enabled firewall daemon (default is YES)]),
+             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
-               [ac_cv_use_firewall], [ac_cv_use_firewall=no])
+               [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
         AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))

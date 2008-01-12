@@ -64,6 +64,7 @@ rm -rf $PKGDIR_SRC
 #	echo "** Error while running make!"
 #	exit 1
 #fi
+make
 
 if ! copy_binpkg_files; then
 	echo "** Error while copying files!"
