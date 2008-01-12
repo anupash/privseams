@@ -223,7 +223,7 @@ if [ $TYPE = "binary" ];then
     echo "** Compiling user space software"
     echo "**"
 
-	if [ $CORPORATE = 1 ];then
+	if [ $CORPORATE ];then
 		echo "** Must do make install for libhiptool to be able to make hipl"
 		echo "** (note: only when compiling libhiptool as dynamically linked)"
 	    echo "** Running make in $HIPL/libhiptool"
