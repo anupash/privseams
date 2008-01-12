@@ -20,8 +20,8 @@ DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
-PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
-SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
+PKGDIR_SRC=$PKGROOT/${NAME}-${SUFFIX}-deb-src
+SRCDIR=${PKGDIR_SRC}/${NAME}-${SUFFIX}
 HIPL=$PWD
 PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
@@ -340,16 +340,16 @@ if [ $TYPE = "binary" ];then
 
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
-    if dpkg-source -b "${NAME}-${VERSION}";then
+    if dpkg-source -b "${NAME}-${SUFFIX}";then
 
-	rm -rf "${NAME}-${VERSION}"
+	rm -rf "${NAME}-${SUFFIX}"
 
 	echo "** Successfully finished building the source Debian package"
 	echo "** The debian packages are located in $PKGDIR_SRC"
 	echo "** and they are named:"
-	echo "${NAME}-${VERSION}.diff.gz"
-	echo "${NAME}-${VERSION}.dsc"
- 	echo "${NAME}-${VERSION}.orig.tar.gz"
+	echo "${NAME}-${SUFFIX}.diff.gz"
+	echo "${NAME}-${SUFFIX}.dsc"
+ 	echo "${NAME}-${SUFFIX}.orig.tar.gz"
     else
 	echo "** Error: unable to build package, exiting"
 	rm -rf "${PKGDIR_SRC}"
