@@ -108,15 +108,23 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 }
 
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
-     /** @todo This full scan is stupid, but we have no hashtables anyway...
-	 tkoponen */
-	return (hip_get_hostid_entry_by_lhi_and_algo(&hip_local_hostid_db, our,
+	/* FIXME: This full scan is stupid, but we have no hashtables
+	   anyway... tkoponen */
+	return (hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, our,
 						     HIP_ANY_ALGO, -1) != NULL);
+	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
-/* Interface functions to access databases. */
-
 /*
+ *
+ *
+ * Interface functions to access databases.
+ *
+ *
+ *
+ */
+
+/***
  * ARG/TYPE arguments in following functions.
  *
  * arg is used as a database key. It is _REQUIRED_ to be of type
