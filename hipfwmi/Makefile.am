@@ -5,9 +5,9 @@ sbin_SCRIPTS = ConfigurationInterface.py ManagementLogic.py Rules.py \
 
 EXTRA_DIST = hipmi.fwlist report.bib test report.tex \
              hipmi.conf rulefile.ebnf
-EXTRA_DIST += test/cover test_ConfigurationInterface.py \
-              test_ManagementConsole.py test_all.py \
-              test_FirewallController.py      test_ManagementLogic.py
+EXTRA_DIST += test/cover test/test_ConfigurationInterface.py \
+              test/test_ManagementConsole.py test/test_all.py \
+              test/test_FirewallController.py test/test_ManagementLogic.py
 
 PYTHON=/usr/bin/python2.3
 TRACER=/usr/lib/python2.3/trace.py -C test/cover -c -m -s \
