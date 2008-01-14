@@ -304,6 +304,12 @@ int hipd_init(int flush_ipsec, int killold)
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	hip_load_configuration();
 	
+	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
+
+	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+			"set new tcptimeout parameters error\n");
+
+
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
@@ -649,6 +655,11 @@ void hip_exit(int signal)
 	hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
+
+	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
+	reset_default_tcptimeout_parameters_value();
+
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);

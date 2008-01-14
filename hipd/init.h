@@ -17,6 +17,8 @@
 #include "debug.h"
 #include "hiprelay.h"
 #include "escrow.h"
+/* added by Tao Wan on 14.Jan.2008 */
+#include "tcptimeout.h"
 
 /*
  * HIP daemon initialization functions.
