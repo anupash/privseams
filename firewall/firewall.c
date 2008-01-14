@@ -464,12 +464,9 @@ static void *handle_ip_traffic(void *ptr) {
         struct hip_common * hip_common = NULL;
 	struct in6_addr * src_addr = NULL;
 	struct in6_addr * dst_addr = NULL;
-
-
 	struct ipq_handle *hndl;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
-	int *trafficType = (int *) ptr;
-	int type = trafficType;
+	int type = *((int *) ptr);
 
 	if(type == 4){
 		ipv4Traffic = 1;
@@ -740,14 +737,12 @@ int main(int argc, char **argv)
 
 
 	if (use_ipv4) {
-                int *i, j = 4;
-                i = &j;
-                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) j);
+                int j = 4;
+                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) &j);
         }
 	if (use_ipv6) {
-                int *i, j = 6;
-                i = &j;
-                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) j);
+                int j = 6;
+                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) &j);
         }
 
 	if (use_ipv4)

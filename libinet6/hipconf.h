@@ -107,7 +107,8 @@
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
-#define ACTION_MAX 22 /* exclusive */
+#define ACTION_TRANSORDER 22
+#define ACTION_MAX 23 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	1
@@ -135,7 +136,8 @@
 #define TYPE_SET        23 /* DHT set <name> */
 #define TYPE_DHT        24
 #define TYPE_OPPTCP		25
-#define TYPE_MAX    	26 /* exclusive */
+#define TYPE_ORDER      26
+#define TYPE_MAX    	27 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -182,6 +184,7 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_trans_order(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);

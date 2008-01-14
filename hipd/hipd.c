@@ -50,6 +50,16 @@ int hip_firewall_sock = -1;
 #endif
 struct sockaddr_in6 hip_firewall_addr;
 
+/* 
+HIP transform suite order 
+0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
+1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
+2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
+3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
+4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
+5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
+ */
+int hip_transform_order = 0; 
 
 /* OpenDHT related variables */
 int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
@@ -551,7 +561,7 @@ int hipd_main(int argc, char *argv[])
 			else err = hip_handle_user_msg(hipd_msg, &app_src);
 		}
                 /* DHT SOCKETS HANDLING */
-                if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                             FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                             (hip_opendht_inuse == SO_HIP_DHT_ON)) {
