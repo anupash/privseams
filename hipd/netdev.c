@@ -669,7 +669,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 #ifdef CONFIG_HIP_HI3
 	if(hip_use_i3) {
-		struct in_addr lpback = { INADDR_LOOPBACK };
+		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
 		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
 		err = 0;
 	}
