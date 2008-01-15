@@ -54,7 +54,7 @@ int hip_for_each_locator_addr_item(int (*func)
 				    void *opaq), hip_ha_t *entry,
                                    struct hip_locator *locator, void *opaque);
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param func    a function pointer to ...
  * @param entry   a pointer to a host association.
@@ -69,7 +69,7 @@ int hip_update_for_each_peer_addr(int (*func)
 				   void *opaq), hip_ha_t *entry,
                                   struct hip_spi_out_item *spi_out, void *opaq);
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param func   a function pointer to ...
  * @param entry  a pointer to a host association.
@@ -86,7 +86,7 @@ int hip_update_for_each_local_addr(int (*func)
  * Gets the keys needed by UPDATE.
  * 
  * On success, all encryption and integrity keys are successfully stored and
- * @c @keymat_offset_new, @c @calc_index_new, and @c @Kn_out will contain
+ * @c keymat_offset_new, @c calc_index_new, and @c Kn_out will contain
  * updated values.
  * 
  * @param entry             corresponding hadb entry of the peer.
@@ -117,7 +117,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
 int hip_update_test_locator_addr(in6_addr_t *addr);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry a pointer to a host association.
  * @param locator_address_item a pointer to ...
@@ -163,7 +163,7 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 				     struct hip_peer_addr_list_item *item);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry     a pointer to a host association.
  * @param list_item a pointer to ...
@@ -177,7 +177,7 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 				  void *_locator);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry     a pointer to a host association.
  * @param list_item a pointer to ...
@@ -239,7 +239,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 			       struct hip_esp_info *esp_info);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param  entry a pointer to an hadb entry corresponding to the peer.
  * @param  item  a pointer to ...
@@ -281,7 +281,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 			       in6_addr_t *hits, in6_addr_t *hitr);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry   a pointer to a hadb entry.
  * @param addr    a pointer to ...
@@ -294,7 +294,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_spi_out_item *spi_out,
 				       void *saddr);
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry                   a pointer to a hadb entry.
  * @param addr                    a pointer to ...
@@ -323,7 +323,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 				in6_addr_t *src_ip, uint32_t spi);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry  a pointer to a hadb.
  * @param item   a pointer to ...
@@ -334,7 +334,7 @@ int hip_update_find_address_match(hip_ha_t *entry,
 				  struct hip_locator_info_addr_item *item,
 				  void *opaque);
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param peer_ip a pointer to ...
  * @param locator a pointer to ...
@@ -362,7 +362,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 				    struct hip_esp_info *esp_info,
 				    struct hip_seq *seq);
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param src_ip source IPv6 address to use in the UPDATE to be sent out
@@ -389,7 +389,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 				  in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry a pointer to a hadb entry.
  * @param msg   a pointer to a HIP message.
@@ -398,7 +398,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 int hip_handle_update_seq(hip_ha_t *entry, hip_common_t *msg);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  * 
  * @param entry    a pointer to a hadb entry.
  * @param esp_info a pointer to ...
@@ -408,7 +408,7 @@ int hip_set_rekeying_state(hip_ha_t *entry,
 			   struct hip_esp_info *esp_info);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param msg   a pointer to a HIP message.
  * @param entry a pointer to a hadb entry.
@@ -432,7 +432,7 @@ int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common *reg,
 			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry      a pointer to a hadb entry.
  * @param reg        a pointer to a REG_INFO parameter to be handled.
@@ -445,7 +445,7 @@ int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg,
 
 #ifdef CONFIG_HIP_ESCROW
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry a pointer to a hadb entry.
  * @param keys  a pointer to ...
@@ -455,7 +455,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys);
 #endif //CONFIG_HIP_ESCROW
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry a pointer to a hadb entry.
  * @param enc   a pointer to ...
@@ -464,7 +464,7 @@ int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys);
 int hip_handle_encrypted(hip_ha_t *entry, struct hip_tlv_common *enc);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry  a pointer to a hadb entry.
  * @param addr   a pointer to ...
@@ -476,11 +476,11 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 				      uint32_t spi_in);
 
 /**
- * ...
+ * Function Doxygen comments missing.
  *
  * @param entry     a pointer to a hadb entry.
  * @param echo_resp a pointer to ...
- * @param spi_ip    a pointer to ...
+ * @param src_ip    a pointer to ...
  * @return          ...
  */
 int hip_update_handle_echo_response(hip_ha_t *entry,

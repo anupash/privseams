@@ -1993,7 +1993,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		       HIP_DEBUG("Staying in ESTABLISHED.\n");
 		  } else
 		  {
-		       entry->state = HIP_STATE_R2_SENT;
+		    // loopback connections don't get established with this
+		    //entry->state = HIP_STATE_R2_SENT;
 		  }
 	     }
 #else
@@ -2007,9 +2008,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     {
 		  HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
 		  HIP_DEBUG("Staying in ESTABLISHED.\n");
-	     } else
-	     {
-		  entry->state = HIP_STATE_R2_SENT;
+	     } else {
+	       // loopback connections don't get established with this
+	       // entry->state = HIP_STATE_R2_SENT;
 	     }
 #endif /* CONFIG_HIP_RVS */
 	}

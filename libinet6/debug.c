@@ -1,57 +1,54 @@
-/*
- * Debugging functions for HIPL userspace applications. Use them as follows:
+/**
+ * @file
+ * Debugging functions for HIPL userspace applications. Production of quality
+ * code prints debugging stuff via syslog, testing code prints interactively on
+ * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
+ * variable below).
  *
- *   INFO("test foobar");
- *   INFO("%s\n", "debug test");
- *   _INFO("%s\n", "this is not printed, but may be important in future");
- *   ERROR("%s%d\n", "serious error!", 123);
- *   DIE("%s\n", "really bad error, exiting!");
- *   PERROR("socket");
- *   HEXDUMP("foobar", data, len);
+ * Examples:
+ *<pre>
+ * INFO("test foobar");
+ * INFO("%s\n", "debug test");
+ * _INFO("%s\n", "this is not printed, but may be important in future");
+ * ERROR("%s%d\n", "serious error!", 123);
+ * DIE("%s\n", "really bad error, exiting!");
+ * PERROR("socket");
+ * HEXDUMP("foobar", data, len);
+ *</pre>
+ * 
+ * Adjusting of log types and format dynamically. (there really should not be a
+ * reason to call these in the code, because default settings should be
+ * reasonable)
  *
- *   adjust log types and format dynamically (there really should not
- *   be a reason to call these in the code, because default settings
- *   should be reasonable)
+ *<pre>
+ * hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
+ * hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
+ *</pre>
+ * 
+ * @todo debug messages should not be compiled at all in a production release
+ * @todo set_log{type|format}(XX_DEFAULT)
+ * @todo locking (is it really needed?)
+ * @todo optimize: openlog() and closelog() called only when needed
+ * @todo ifdef gcc (in vararg macro)?
+ * @todo production use: disable info messages?
+ * @todo move file+line from prefix to the actual message body
+ * @todo handle_log_error(): add different policies (exit(), ignore, etc)
+ * @todo check what vlog("xx\nxx\n") does with syslog
+ * @todo struct info { char *file, int line, char *function } ?
+ * @todo macro for ASSERT
+ * @todo change char * to void * in hexdump ?
+ * @todo HIP_ASSERT()
  *
- *   hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
- *   hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
- *
- * TODO: 
- * - debug messages should not be compiled at all in a production release
- * - set_log{type|format}(XX_DEFAULT)
- * - locking (is it really needed?)
- * - optimize: openlog() and closelog() called only when needed
- * - ifdef gcc (in vararg macro)?
- * - production use: disable info messages?
- * - move file+line from prefix to the actual message body
- * - handle_log_error(): add different policies (exit(), ignore, etc)
- * - check what vlog("xx\nxx\n") does with syslog
- * - struct info { char *file, int line, char *function } ?
- * - macro for ASSERT
- * - change char * to void * in hexdump ?
- * - HIP_ASSERT()
- *
- * Production quality code prints debugging stuff via syslog, testing code
- * prints interactively on stderr. This is done automatically using DEBUG
- * flag in Makefile (see logtype variable below).
- *
- * A note about the newlines: PERROR() appends always a newline after message
- * to be printed as in perror(3). In the rest of the functions, you have to
- * append a newline (as in fprinf(3)).
- *
- * BUGS
- * - XX
+ * @note About the newlines: PERROR() appends always a newline after message to
+ *       be printed as in perror(3). In the rest of the functions, you have to
+ *       append a newline (as in fprinf(3)).
  */
-
 #include "debug.h"
 #include "util.h"
 
 /* differentiate between die(), error() and debug() error levels */
-enum debug_level { DEBUG_LEVEL_DIE,
-		   DEBUG_LEVEL_ERROR,
-		   DEBUG_LEVEL_INFO,
-		   DEBUG_LEVEL_DEBUG,
-		   DEBUG_LEVEL_MAX };
+enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
+		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
@@ -410,16 +407,16 @@ void hip_perror_wrapper(const char *file, int line, const char *function,
 }
 
 /**
- * hip_hexdump - print hexdump starting from address @str of length @len
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
+ * Prints a hexdump starting from address @c str of length @c len. Do not call
+ * this function from the outside of the debug module, use the HIP_HEXDUMP macro
+ * instead.
+ * 
+ * @param file     the file from where the debug call was made        
+ * @param line     the line of the debug call in the source file
  * @param function the name of function where the debug call is located
- * @param prefix the prefix string will printed before the hexdump
- * @param str pointer to the beginning of the data to be hexdumped
- * @param len the length of the data to be hexdumped
- *
- * Do not call this function from the outside of the debug module,
- * use the HIP_HEXDUMP macro instead.
+ * @param prefix   the prefix string will printed before the hexdump
+ * @param str      pointer to the beginning of the data to be hexdumped
+ * @param len      the length of the data to be hexdumped
  */
 void hip_hexdump(const char *file, int line, const char *function,
 		 const char *prefix, const void *str, int len) {

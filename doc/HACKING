@@ -45,8 +45,9 @@ CODING CONVENTIONS
   ununified look. Especially, if you don't follow the memory deallocation
   procedure below, you might even cause some memory leaks.
 
-- All kernelspace code should follow the standard linux coding conventions
-  listed in <linux_root>/Documentation/CodingStyle
+- All code should follow the standard linux coding conventions
+  listed in <linux_root>/Documentation/CodingStyle. Particularly,
+  the indenting is eight spaces.
 
 - All code shared between userspace and kernel should follow kernel
   coding style.
@@ -260,44 +261,171 @@ or production build):
 - _HIP_INFO(.. 
 - _HIP_DEBUG(..) 
 
-DOCUMENTATION
-=============
+COMMENTING AND DOCUMENTING THE CODE
+===================================
 
 Doxygen is now used for documenting HIPL. Manual for how to use doxygen
 documentation, is found from here:
 http://www.stack.nl/~dimitri/doxygen/manual.html
 
-To create doxygen documentation in HTML format, execute "make doxygen". Doxygen will create documentation under doc/doxy/html.
+To create doxygen documentation in HTML format, execute "make doxygen".
+Doxygen will create documentation under doc/doxy/html.
+You can view the generated documentation with
+"firefox doc/doxy/html/index.html"
 
-Simple example, how to use some doxygen features:
+The aforementioned Doxygen manual has detailed instructions on how to document
+the code. We go the basics through next.
 
-/** Description of a #define. */
-#define HIP_ENABLED 1
+First of all, Doxygen supports different commenting styles. We use the JavaDoc
+style in this project. In this style, every Doxygen comment starts and ends with
+constant character sequence. To start a commenting block use "\**", and to end a
+commenting block use "*/". Example 1:
+
+/** The number of items in the list. */
+int count;
+
+In example 1 we have a variable named count to which we wish to add a Doxygen
+comment "The number of items in the list." As a general rule, a Doxygen comment
+is bound to the next item. So if in Example 1 we would have had "int count2"
+just after count, the Doxygen comment would have been bound only "int count".
+
+If you wish to add a Doxygen comment on the same line that the variable is, you
+have to to put an additional < marker in the comment block. Example 2:
+
+int count; /**< The number of items in the list. */
+
+This has the same effect as Example 1. Remember that the comment with the <
+marker has to start from the same line as the variable. Using the special marker
+< one can comment also structure members. Example 3:
+
+/** A HIP FROM parameter. */
+struct hip_from {
+     hip_tlv_type_t type;  /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+} __attribute__ ((packed));
+
+Here the whole structure gets Doxygen comment "A HIP FROM parameter", and the
+members get commented as illustrated. The structure members can also be
+commented using the plain /** ... */ comment block by placing the comment block
+on the line before the member, but the < marker saves some space. This does it
+for variable commenting, lets move onto function commenting. Example 4.
 
 /**
- * Description of a global variable.
- * This can continue also to multiple lines,
- * just like previous #define description.
+ * Sets a type for a host association. Sets the type for a host association
+ * and validates the type number. If the type number is illegal, the @c entry
+ * is left untouched. 	
+ * 
+ * @param entry       a pointer to a host association entry. 
+ * @param type_number a type number to be set for @c entry.
+ * @return            zero on success, non-zero else.
+ * @note              the entry must not be NULL
+ * @see               hip_clear_type()
  */
-int hip_sock = -1;
+int hip_set_type(hip_ha_t *entry, int type_number);
+
+Notice how that whole commenting is just before the function block. The
+function commenting block contains three elements, the brief description, the
+description and the special commands starting with "@". The brief description
+is the first comment line which ends at the first dot followed by a space or new
+line. Thus, in example 4 the brief description is "Sets a type for a host
+association." The description consists of the brief description and the rest of
+the lines following the brief description before the special commands.
+
+The special commands comment the function parameters and the return value.
+Furthermore an extra note is added to this comment with "@note" and a reference
+to a related function with "@see". Notice how we refer to the function
+parameters in the description text with the special command "@c" Including this
+special command is by no way obligatory. It only makes the next word to be
+rendered using Courier instead of the default font. However, be careful not to
+add your own special commands by accidentally typing something like @entry.
+
+Function comment blocks can be placed to the c-file or the header file. You 
+should prefer the header file because it saves space from the actual code file.
+Doxygen comment blocks have the tendency to bloat the code. Generally, if
+possible, place the doxygen comment in the header file instead of the c-file.
+This applies to all Doxygen comments, not just function comments.
+
+Doxygen includes a special tag for todo items. The todo tags is "@todo". The todo
+tag can be placed anywhere in the code. When placed inside of a function, the
+todo item becomes a todo item for the respective function. When placed outside
+of a function, the todo item becomes a todo item for the whole file. To create
+a todo item for a variable, insert a @todo inside the variable's Doxygen comment
+block.
+
+Example 5 is an example of an todo item placed inside a function, in the middle
+of the code. Hence, this becomes a todo item for the whole function. Doxygen
+maintains a list that contains all of the todo items of the project. Example 5.
+
+HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
+/** @todo Handle this case. */
+HIP_IFEL(!update_id_out, -EINVAL, "Outgoing UPDATE ID overflowed.\n");
+
+Entire files can be commented with the "@file" special tag as illustrated in
+Example 6. From example 6 we notice that Doxygen comments can also include
+simple HTML.
 
 /**
- * This is a function description. Parameter documentation is in
- * form "@param <param_name> description". Return value is documented
- * using "@return description". Todos are documented using
- * "/*! \todo description */". Then the todos are listed in doxygen
- * created documentation as list.
- *
- * @param name This is a function parameter description.
- * @return This is a return value description.
+ * @file
+ * This file defines various functions for handling HIP messages.
+ * 
+ * @author  John Doe
+ * @version 1.0
+ * @date    11.01.2008
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-int test(char *name)
-{
-	/*! \todo
-	 * Make contents for this function!!!
-	 */
-}
 
+Sometimes you can find yourself in a situation where you have a large number of
+repetitive comments. Say that you have similar type definitions which are nicely
+aligned in a header file. You could, of course, insert a normal Doxygen comment
+berore (or after, using "<") every definition, but you just don't want to break
+the alignment for comments sake. libinet6/protodefs.h is a good example of
+that kind of file.
+
+To help in a situation like this, the HIPL project has a special file just for
+doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
+We can target comments from this file to another files using the "@file" special
+command. For example, to insert a Doxygen comment for the definition of 
+HIP_NTF_INVALID_SYNTAX located in libinet6/protodefs.h you can add the
+following, example 7.
+
+/**
+ * @file libinet6/protodefs.h
+ * @def  HIP_NTF_INVALID_SYNTAX
+ *       Indicates that the HIP message received was invalid because...
+ */
+
+Finally, doc/doxygen.h is a good place for declaring groups. Groups are declared
+with the "@defgroup" special tag. Example 8.
+
+/** @defgroup notification NOTIFICATION parameter values */
+
+To add members to a group, use the "@addtogroup" special tag together with the
+group name. Moreover, you need to use the special tag "@{" to start inclusion,
+and the special tag "@}" to stop the inclusion. example 9 illustrates how we can
+add members to the group declared in example 8.
+
+/** @addtogroup notification
+ * @{ 
+ */
+#define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
+#define HIP_NTF_INVALID_SYNTAX                      7
+/* @} */
+
+The general JavaDoc style guide applies to HIPL project. This style guide is
+available at:
+http://java.sun.com/j2se/javadoc/writingdoccomments/index.html
+
+Remember that the normal non-Doxygen comments are always valid. Thus if you need
+to comment something more specific to the code, use the regular
+
+/* comment here. */
+
+and
+
+// end of line comment here.
+
+commenting style.
 
 SUBMITTING PATCHES
 ==================
