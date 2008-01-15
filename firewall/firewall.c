@@ -75,6 +75,32 @@ int is_escrow_active(){
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
+int hip_get_default_hit(struct in6_addr *hit)
+{
+	int err = 0;
+	int family = AF_INET6;
+	int rtnl_rtdsfield_init;
+	char *rtnl_rtdsfield_tab[256] = { 0 };
+	struct idxmap *idxmap[16] = { 0 };
+	struct rtnl_handle hip_nl_route;
+
+	hip_hit_t hit_tmpl;
+	
+	/* rtnl_rtdsfield_initialize() */
+        rtnl_rtdsfield_init = 1;
+
+        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
+	set_hit_prefix(&hit_tmpl);
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
+		 -1,"Finding ip route failed\n");
+	
+ out_err:
+
+	return err;
+}
+
+
 int firewall_init(){
 	HIP_DEBUG("Initializing firewall\n");
 	/* Register signal handlers */
@@ -371,9 +397,10 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 
 /**
  * adds the i1 option to a packet if required
+ * adds the default HIT after the i1 option (if i1 option should be added)
  * and sends it off with the correct checksum
  */
-void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
+void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, int addHIT){
 	int   sockfd, socketFamily;
 	int   on = 1, i;
 	int   hdr_size, newHdr_size, twoHdrsSize;
@@ -392,10 +419,14 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
 	struct pseudo_hdr  *pseudo;
 	struct pseudo6_hdr *pseudo6;
 	void *pointer;
-	char newHdr [newSize + 4*addOption];
+	hip_hit_t default_hit;
+	char newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
 
 	if(addOption)
 		newSize = newSize + 4;
+	if(addHIT)
+		newSize = newSize + sizeof(struct in6_addr);
+
 
 	//initializing the raw socket
 	if(trafficType == 4)
@@ -436,8 +467,9 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
 		sock6_raw.sin6_addr = ip6_hdr->ip6_dst;
 	}
 
-	//measuring the size of ip and tcp headers
+	//measuring the size of ip and tcp headers (no options)
 	twoHdrsSize = hdr_size + 4*5;
+
 
 	//copy the ip header and the tcp header without the options
 	i = 0;
@@ -446,33 +478,61 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
 		i++;
 	}
 
-	//copy the old options and add the new i1 one
+	//add the i1 option and copy the old options
+	//add the HIT if required, 
 	if(tcphdr->doff == 5){//there are no previous options
 		if(addOption){
-			newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+			newHdr[twoHdrsSize]     = (char)HIP_OPTION_KIND;
 			newHdr[twoHdrsSize + 1] = '0';
 			newHdr[twoHdrsSize + 2] = '0';
 			newHdr[twoHdrsSize + 3] = '0';
+			if(addHIT){
+				hip_get_default_hit(&default_hit);
+				newHdr[twoHdrsSize + 4] = &default_hit;
+			}
+		}
+		else{
+			if(addHIT){
+				hip_get_default_hit(&default_hit);
+				newHdr[twoHdrsSize] = &default_hit;
+			}
 		}
 	}
-	else {//there are previous options
+	else{//there are previous options
 		if(addOption){
-			newHdr[twoHdrsSize] = (char)HIP_OPTION_KIND;
+			newHdr[twoHdrsSize]     = (char)HIP_OPTION_KIND;
 			newHdr[twoHdrsSize + 1] = (char)2;
 			newHdr[twoHdrsSize + 2] = (char)1;
 			newHdr[twoHdrsSize + 3] = (char)1;
 
-			i = 0;
-			while(i < 4*(tcphdr->doff-5)){
-				newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
-				i++;
+			//if the HIT is to be sent, the
+			//other options are not important
+			if(addHIT){
+				hip_get_default_hit(&default_hit);
+				newHdr[twoHdrsSize + 4] = &default_hit;
+			}
+			else{
+				i = 0;
+				while(i < 4*(tcphdr->doff-5)){
+					newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
+					i++;
+				}
 			}
 		}
-		else{
-			i = 0;
-			while(i < 4*(tcphdr->doff-5)){
-				newHdr[i + twoHdrsSize] = bytes[i + twoHdrsSize];
-				i++;
+		else
+		{
+			//if the HIT is to be sent, the
+			//other options are not important
+			if(addHIT){
+				hip_get_default_hit(&default_hit);
+				newHdr[twoHdrsSize] = &default_hit;
+			}
+			else{
+				i = 0;
+				while(i < 4*(tcphdr->doff-5)){
+					newHdr[i + twoHdrsSize] = bytes[i + twoHdrsSize];
+					i++;
+				}
 			}
 		}
 	}
@@ -498,6 +558,8 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption){
 	newTcphdr->check = 0;
 	if(addOption)
 		newTcphdr->doff = newTcphdr->doff + 1;
+	if(addHIT)
+		newTcphdr->doff = newTcphdr->doff + 4;//16 bytes HIT - 4 more words
 
 	//the checksum
 	if(trafficType == 4){
@@ -606,14 +668,16 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			}
 			//set ack field
 			tcphdr->ack_seq = tcphdr->seq + 1;
-			//acknowledge the captured packet
+			//set seq field
 			tcphdr->seq = htonl(0);
 			//set flags
 			tcphdr->syn = 1;
 			tcphdr->ack = 1;
 
-			//send packet out
-			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 0);
+			//send packet out after adding HIT
+			//no need to add i1 option, since
+			//it is already in the received packet
+			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 0, 1);
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
@@ -664,16 +728,16 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 		return;
 	}
 
-	//at this point we have SYN or SYN_ACK packets
-	if(((tcphdr->syn == 1) && (tcphdr->ack == 0)) ||	//outgoing, syn=1 and ack=0
-	   ((tcphdr->syn == 1) && (tcphdr->ack == 1))){		//outgoing, syn=1 and ack=1
+	//outgoing, syn=1 and ack=0
+	if(((tcphdr->syn == 1) && (tcphdr->ack == 0))){
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			allow_packet(handle, packetId);
 			return;
 		}
-		//add the option to the packet and send it
+		//add the option to the packet
+		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 0);
+		//drop original packet
 		drop_packet(handle, packetId);
-		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1);
 		return;
 	}
 
