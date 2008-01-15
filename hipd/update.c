@@ -2540,6 +2540,39 @@ int hip_send_update(struct hip_hadb_state *entry,
 	       }
 	  }
      }
+     /* needs to check also that if entry->local_address differed from 
+        entry->preferred_address. This because of case where CN has 4 and 6 addrs
+        and MN has initially 4 and it does a hard handover 6. This results into 
+        mismatch of addresses that possibly could be fixed by checking the peer_addr_list 
+        SEE ALSO BZ ID 458 */
+     if (IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
+         == IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
+             hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
+                     *tmp_outer = NULL;
+             struct hip_peer_addr_list_item *addr_li;
+             struct hip_spi_out_item *spi_out;
+             int i = 0, ii = 0;
+             list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+                     spi_out = list_entry(item_outer);
+                     ii = 0;
+                     tmp = NULL;
+                     item = NULL;
+                     list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+                             addr_li = list_entry(item);
+                             hip_print_hit("SPI out addresses", &addr_li->address);
+                             if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
+                                 IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                                     HIP_DEBUG("Found matching addr\n");
+                                     ipv6_addr_copy(&daddr, &addr_li->address);
+                                     ipv6_addr_copy(&entry->preferred_address,
+                                                    &addr_li->address);
+                                     /** @todo Or just break? Fix later. */
+                                     goto out_of_loop;
+                             }
+                     }
+             }
+     }
+ out_of_loop:
 
      HIP_DEBUG("Sending initial UPDATE packet.\n");
      /* guarantees retransmissions */
