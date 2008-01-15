@@ -36,7 +36,7 @@ void hip_uninit_services(void)
  * the list.
  *
  * @param service_type the service type to add.
- * @returns       zero on success, or negative on error.
+ * @return             zero on success, or negative on error.
  */ 
 int hip_services_add(int service_type)
 {
@@ -476,13 +476,13 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 		    HIP_DEBUG("Registration rejected (0).\n");
 		    continue;
 	       }
-	       /* @todo Handle registration using each services
-		  handle_registration functionpointer (as now done in escrow).
-		  Or alternatively remove the whole registration database, and
-		  create a state in each individual service indicating the state
-		  of the registration process.
-		  -Lauri 21.09.2007 22:25 */
-
+	       /** @todo Handle registration using each services
+		   handle_registration functionpointer (as now done in escrow).
+		   Or alternatively remove the whole registration database, and
+		   create a state in each individual service indicating the state
+		   of the registration process.
+		   -Lauri 21.09.2007 22:25 */
+	       
 	       request_got_rejected = 0;
 
 	       switch(values[i])
@@ -754,10 +754,10 @@ int hip_cancel_service(void)
 /**
  * Check that the requested service lifetime falls within limits.
  * 
- * @requested_lifetime the lifetime requested.
- * @return             a lifetime fitting within limits.
- * @todo               we should have minumum and maximum lifetimes for each
- *                     service. -Lauri 21.09.2007 20:11
+ * @param requested_lifetime the lifetime requested.
+ * @return                   a lifetime fitting within limits.
+ * @todo                     we should have minumum and maximum lifetimes for
+ *                           each service. -Lauri 21.09.2007 20:11
  */
 uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime)
 {

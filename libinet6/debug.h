@@ -135,9 +135,9 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 /**
  * Gets a binary string representation from an uint16_t value.
  * 
- * @val    the value whose binary string we want.
- * @buffer a target buffer where to put the binary string.
- * @note   make sure the buffer has at least size of 17 * sizeof(char)
+ * @param val    the value whose binary string we want.
+ * @param buffer a target buffer where to put the binary string.
+ * @note         make sure the buffer has at least size of 17 * sizeof(char).
  */
 void uint16_to_binstring(uint16_t val, char *buffer);
 
@@ -146,10 +146,10 @@ void hip_print_locator_addresses(struct hip_common *);
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /**
- * hip_state_str - get name for a state
- * @state: state value
- *
- * Returns: state name as a string.
+ * Gets the name of a state.
+ * 
+ * @param  a state state value
+ * @return a state name as a string.
  */
 static inline const char *hip_state_str(unsigned int state)
 {

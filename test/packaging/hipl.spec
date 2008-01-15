@@ -8,7 +8,7 @@ Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl
+Requires: openssl gtk2 libxml2 glib iptables-dev
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -26,9 +26,8 @@ other related tools and test software.
 %prep
 %setup
 
-# Note: in subsequent releases me may want to use --disable-debugging
 %build
-./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
+./configure --prefix=%{buildroot}/%{prefix} && make
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -73,7 +72,7 @@ rm -rf %{buildroot}
 %defattr (-, root, root)
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
-#%{prefix}/sbin/firewall
+%{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
 %{prefix}/bin/conntest-client

@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 
+#EXTRA_DIST = hip-fw-mi-svn-20060226.tar.gz
+
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 

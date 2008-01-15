@@ -9,6 +9,7 @@
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
 #include "libinet6/hipconf.h"
+#include <netinet/in.h>
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -632,7 +633,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
-
+	
+	int is_loopback = 0;
+	struct in6_addr src_addr;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
@@ -650,7 +653,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
-		   !hip_hidb_hit_is_our(src_hit) &&
+		   hip_hidb_hit_is_our(src_hit) &&
 		   hit_is_real_hit(dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
 
@@ -666,7 +669,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 #ifdef CONFIG_HIP_HI3
 	if(hip_use_i3) {
-		struct in_addr lpback = { INADDR_LOOPBACK };
+		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
 		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
 		err = 0;
 	}
@@ -688,6 +691,16 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 			ha_nat_mode = entry->nat_mode;
 			err = 0;
 		}
+	}
+
+	/* map to loopback if hit is ours  */
+	if (err && hip_hidb_hit_is_our(dst_hit)) {
+		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
+		ipv6_addr_copy(&dst_addr, &lpback);
+		ipv6_addr_copy(&src_addr, &lpback);
+		is_loopback = 1;
+		reuse_hadb_local_address = 1;
+		err = 0;
 	}
 
 	/* broadcast I1 as a last resource */
@@ -713,6 +726,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
 
+	if (is_loopback)
+		ipv6_addr_copy(&(entry->local_address), &src_addr);
+	
 	/* Preserve NAT status with peer */
 	entry->peer_udp_port = ha_peer_port;
 	entry->nat_mode = ha_nat_mode;
