@@ -2072,10 +2072,14 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      struct hip_spi_in_item *item, *tmp;
      uint32_t spi_in = *_spi_in;
      HIP_DEBUG("Checking spi setting %x\n",spi_in); 
+     struct in6_addr srcaddr;
+     struct in6_addr destaddr;
+     memcpy(&srcaddr, new_pref_addr, sizeof(struct in6_addr));
+     memcpy(&destaddr, daddr, sizeof(struct in6_addr));
 
      HIP_DEBUG_HIT("hit our", &entry->hit_our);
      HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-     HIP_DEBUG_IN6ADDR("new_pref_addr", new_pref_addr);
+     HIP_DEBUG_IN6ADDR("saddr", new_pref_addr);
      HIP_DEBUG_IN6ADDR("daddr", daddr);
 
      hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
@@ -2090,12 +2094,43 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
 		   (int)entry->peer_udp_port,
 		   (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+
+     /* THIS IS JUST A GRUDE FIX -> FIX THIS PROPERLY LATER
+        check for a mismatch in addresses and fix the situation
+        at least one case comes here with wrong addrs
+        MN has 4 CN 4 and 6 addresses MN does hard interfamily handover.
+        MN loses 4 addr and obtains 6 addr. As a result this code tries to add
+        saddr(6) daddr(4) SA ... BUG ID 458 
+      */
+     if (IN6_IS_ADDR_V4MAPPED(&srcaddr) != IN6_IS_ADDR_V4MAPPED(&destaddr)) {
+             hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL;
+             struct hip_peer_addr_list_item *addr_li;
+             struct hip_spi_out_item *spi_out;
+             int i = 0, ii = 0;
+             list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+                     spi_out = list_entry(item_outer);
+                     ii = 0;
+                     tmp = NULL;
+                     item = NULL;
+                     list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+                             addr_li = list_entry(item);
+                             hip_print_hit("SPI out addresses", &addr_li->address);
+                             if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
+                                 IN6_IS_ADDR_V4MAPPED(&srcaddr)) {
+                                     HIP_DEBUG("Found matching addr\n");
+                                     ipv6_addr_copy(&destaddr, &addr_li->address);
+                                     goto out_of_loop;
+                             }
+                     }
+             }
+     }
+ out_of_loop:
      
      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
-				    new_pref_addr, daddr, IPPROTO_ESP, 1, 0),
+				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
-     HIP_IFEL(hip_add_sa(new_pref_addr, daddr, &entry->hit_our,
+     HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
 			 &entry->hit_peer, &entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,  
@@ -2113,11 +2148,11 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 #if 1
      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
-				    daddr, new_pref_addr, IPPROTO_ESP, 1, 0),
+				    &destaddr, &srcaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 #endif
 
-     HIP_IFEL(hip_add_sa(daddr, new_pref_addr, &entry->hit_peer,
+     HIP_IFEL(hip_add_sa(&destaddr, &srcaddr, &entry->hit_peer,
 			 &entry->hit_our, &spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
 			 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
@@ -2125,7 +2160,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      "Error while changing inbound security association for new "\
 	      "preferred address\n");
      
-     ipv6_addr_copy(&entry->local_address, new_pref_addr);
+     ipv6_addr_copy(&entry->local_address, &srcaddr); 
 
  out_err:
      return err;
