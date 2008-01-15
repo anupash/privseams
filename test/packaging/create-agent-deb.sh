@@ -4,7 +4,7 @@
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=2
+RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl-manager
 DEBIAN=i386/DEBIAN-gconf
@@ -45,9 +45,9 @@ copy_binpkg_files()
 
 	cp -d $ROOT/agent/hipagent $PKGDIR/usr/sbin/
 
-	cp -d $ROOT/libhipgui/hipmanager.desktop $PKGDIR/etc/xdg/autostart/hipmanager.desktop
-	cp -d $ROOT/libhipgui/hipmanager.app.desktop $PKGDIR/usr/share/applications/hipmanager.app.desktop
-	cp -d $ROOT/libhipgui/hipmanager.menu $PKGDIR/usr/share/menu/hipmanager
+#	cp -d $ROOT/libhipgui/hipmanager.desktop $PKGDIR/etc/xdg/autostart/hipmanager.desktop
+#	cp -d $ROOT/libhipgui/hipmanager.app.desktop $PKGDIR/usr/share/applications/hipmanager.app.desktop
+#	cp -d $ROOT/libhipgui/hipmanager.menu $PKGDIR/usr/share/menu/hipmanager
 	cp -d $ROOT/libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
 
 	set +e
@@ -64,6 +64,7 @@ rm -rf $PKGDIR_SRC
 #	echo "** Error while running make!"
 #	exit 1
 #fi
+make
 
 if ! copy_binpkg_files; then
 	echo "** Error while copying files!"
