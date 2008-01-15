@@ -2546,7 +2546,7 @@ int hip_send_update(struct hip_hadb_state *entry,
         mismatch of addresses that possibly could be fixed by checking the peer_addr_list 
         SEE ALSO BZ ID 458 */
      if (IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
-         == IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
+         != IN6_IS_ADDR_V4MAPPED(&entry->preferred_address)) {
              hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
                      *tmp_outer = NULL;
              struct hip_peer_addr_list_item *addr_li;
