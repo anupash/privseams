@@ -2160,7 +2160,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      "Error while changing inbound security association for new "\
 	      "preferred address\n");
      
-     ipv6_addr_copy(&entry->local_address, &srcaddr); 
+     //ipv6_addr_copy(&entry->local_address, &srcaddr); 
 
  out_err:
      return err;
