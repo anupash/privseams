@@ -506,7 +506,7 @@ static void *handle_ip_traffic(void *ptr) {
                 		_HIP_DEBUG("ipv4\n");
                 		iphdr = (struct ip *) m->payload; 
                 		packet_hdr = (void *)iphdr;
-                		hdr_size = (iphdr->ip_hl * 4);
+                		hdr_size = (iphdr->ip_hl * 4) + sizeof(struct udphdr);
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
                		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
                 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
