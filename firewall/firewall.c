@@ -1025,26 +1025,26 @@ static void *handle_ip_traffic(void *ptr) {
 			packetHook = m->hook;
 
 			if(ipv4Traffic){
-				_HIP_DEBUG("ipv4\n");
-				iphdr = (struct ip *) m->payload; 
-				packet_hdr = (void *)iphdr;
-				hdr_size = (iphdr->ip_hl * 4);
-				_HIP_DEBUG("header size: %d\n", hdr_size);
-				IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
-				IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
-			}
-			else if(ipv6Traffic){
-				_HIP_DEBUG("ipv6\n");
-				ip6_hdr = (struct ip6_hdr *) m->payload;   
-				packet_hdr = (void *)ip6_hdr;
-				hdr_size = sizeof(struct ip6_hdr);
-				_HIP_DEBUG("header size: %d\n", hdr_size);
-				ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
-				ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
-			}
-
-			if(is_hip_packet(packet_hdr, type)){
-      			HIP_DEBUG("****** Received HIP packet ******\n");
+                		_HIP_DEBUG("ipv4\n");
+                		iphdr = (struct ip *) m->payload; 
+                		packet_hdr = (void *)iphdr;
+                		hdr_size = (iphdr->ip_hl * 4) + sizeof(struct udphdr);
+                		_HIP_DEBUG("header size: %d\n", hdr_size);
+               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
+                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
+        		}
+        		else if(ipv6Traffic){
+                		_HIP_DEBUG("ipv6\n");
+                		ip6_hdr = (struct ip6_hdr *) m->payload;   
+                		packet_hdr = (void *)ip6_hdr;
+               		 	hdr_size = sizeof(struct ip6_hdr);
+               		 	_HIP_DEBUG("header size: %d\n", hdr_size);
+                		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
+                		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
+        		}
+      
+      			if(is_hip_packet(packet_hdr, type)){
+      				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
 
