@@ -37,7 +37,7 @@ const char *hipconf_usage =
 "nat on|off|peer_hit\n"
 "rst all|peer_hit\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
-"new|add hi default\n"
+"new|add hi default (HI must be created as root)\n"
 "load config default\n"
 "handoff mode lazy|active\n"
 "get hi default\n"
@@ -468,7 +468,12 @@ int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *
 int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
 		       int optc)
 {
-     int err = 0, anon = 0, use_default = 0;
+	int err = 0, anon = 0, use_default = 0, euid = -1;
+     
+     /* Get the effective user ID. This has to be zero (root), because root owns
+	the key files under /etc/hip/. */
+     euid = geteuid();
+     HIP_IFEL((euid != 0), -1, "New default HI must be created as root.\n");
 
      _HIP_INFO("action=%d optc=%d\n", action, optc);
 
@@ -512,6 +517,9 @@ int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
 
      err = hip_serialize_host_id_action(msg, action, anon, use_default,
 					opt[OPT_HI_FMT], opt[OPT_HI_FILE]);
+
+     HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
+	      "the changes effective.\n\n");
 
  out_err:
      return err;
@@ -1411,11 +1419,12 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
-	The functions build hip_common message. */
+	The functions build a hip_common message. */
      if (argc ==3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
+
      HIP_IFEL(err, -1, "failed to handle msg\n");
 
      /* hipconf new hi does not involve any messages to hipd */
