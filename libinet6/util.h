@@ -1,3 +1,11 @@
+/** @file
+ * A header file for util.c.
+ * 
+ * @author  ?
+ * @version ?
+ * @date    17.01.2008
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef _LIBINET6_UTIL_H
 #define _LIBINET6_UTIL_H
 
@@ -49,12 +57,29 @@ void initlist(List *);
 void insert(List *, char *data);
 void destroy(List *);
 int length(List *);
+
+/**
+ * Gets an item from a linked list. Gets <code>n</code>th item from a linked
+ * list.
+ * 
+ * @param ilist a pointer to a linked list.
+ * @param n     the index of the item to get.
+ * @return      a pointer to <code>n</code>th item in the list, or NULL if
+ *              list is NULL or if there is less than @c n items in the list.
+ */
 char *getitem(List *, int n);
-
 char *getwithoutnewline(char *buffer, int count, FILE *f);
-
 char *findsubstring(const char *string, const char *substring);
 void findkeyfiles(char *path, List *list);
+
+/**
+ * Breaks a string into substrings. Breaks @c string into substrings using space
+ * (' ') as a separator. The substrings are stored in a linked list @c list in
+ * the order of occurance.
+ *
+ * @param string a pointer to a string that is to be broken into substrings.
+ * @param list   a pointer to a linked list where to the substrings are put.
+ */
 void extractsubstrings(char *string, List *list);
 
 /* from getendpointinfo.c, make another header file? */

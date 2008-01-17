@@ -1,49 +1,54 @@
-/* $USAGI: getaddrinfo.c,v 1.10 2003/01/07 10:22:52 yoshfuji Exp $ */
-
-/* The Inner Net License, Version 2.00
-
-  The author(s) grant permission for redistribution and use in source and
-binary forms, with or without modification, of the software and documentation
-provided that the following conditions are met:
-
-0. If you receive a version of the software that is specifically labelled
-   as not being for redistribution (check the version message and/or README),
-   you are not permitted to redistribute that version of the software in any
-   way or form.
-1. All terms of the all other applicable copyrights and licenses must be
-   followed.
-2. Redistributions of source code must retain the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer.
-3. Redistributions in binary form must reproduce the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-4. All advertising materials mentioning features or use of this software
-   must display the following acknowledgement with the name(s) of the
-   authors as specified in the copyright notice(s) substituted where
-   indicated:
-
-	This product includes software developed by <name(s)>, The Inner
-	Net, and other contributors.
-
-5. Neither the name(s) of the author(s) nor the names of its contributors
-   may be used to endorse or promote products derived from this software
-   without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-  If these license terms cause you a real problem, contact the author.  */
-
-/* This software is Copyright 1996 by Craig Metz, All Rights Reserved.  */
-
+/** @file
+ * Functions for getting address information. 
+ * 
+ * \$USAGI: getaddrinfo.c,v 1.10 2003/01/07 10:22:52 yoshfuji Exp \$
+ *
+ * The Inner Net License, Version 2.00
+ *
+ * The author(s) grant permission for redistribution and use in source and
+ * binary forms, with or without modification, of the software and documentation
+ * provided that the following conditions are met:
+ *
+ * 0. If you receive a version of the software that is specifically labelled
+ * as not being for redistribution (check the version message and/or README),
+ * you are not permitted to redistribute that version of the software in any
+ * way or form.
+ * 1. All terms of the all other applicable copyrights and licenses must be
+ * followed.
+ * 2. Redistributions of source code must retain the authors' copyright
+ * notice(s), this list of conditions, and the following disclaimer.
+ * 3. Redistributions in binary form must reproduce the authors' copyright
+ * notice(s), this list of conditions, and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 4. All advertising materials mentioning features or use of this software
+ * must display the following acknowledgement with the name(s) of the
+ * authors as specified in the copyright notice(s) substituted where
+ * indicated:
+ *
+ *	This product includes software developed by <name(s)>, The Inner
+ * 	Net, and other contributors.
+ *
+ * 5. Neither the name(s) of the author(s) nor the names of its contributors
+ * may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * If these license terms cause you a real problem, contact the author.
+ *
+ * This software is Copyright 1996 by Craig Metz, All Rights Reserved.
+ * 
+ * @author Craig Metz
+ */
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
 #endif
@@ -428,32 +433,32 @@ connect_alarm(int signo)
   return; /* for interrupting the connect in gethosts_hit */
 }
 
-int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
+/**
+ * Gets a HIT for a host.
+ * 
+ * @param  name  a pointer to a hostname for which are get the HIT.
+ * @param  pat   a triple pointer to a ...
+ * @param  flags ...
+ * @retrun       ...
+ */
+int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
-        struct in6_addr hit;							
-        FILE *fp = NULL;							
-        char *fqdn_str;                                                       
-        char *hit_str;                                                        
-        int lineno = 0, i=0;                                                  
-        char line[500];							
-        List list;
-        int found_hits = 0;
-        struct gaih_addrtuple *aux = NULL;
         
-        int s, error, ret_hit, ret_addr;
-        char dht_response_hit[1024];
-        char dht_response_addr[1024];
-        struct in6_addr tmp_hit, tmp_addr;
-        struct addrinfo * serving_gateway;
-        char ownaddr[] = "127.0.0.1";
-        
-        struct hip_common *msg;
-        struct hip_opendht_gw_info *gw_info;
+	int s, error, ret_hit, ret_addr, tmp_ttl, tmp_port;
+	int found_hits = 0, lineno = 0, i = 0, err = 0;
+	
+	char dht_response_hit[1024], dht_response_addr[1024], line[500];
+	char ownaddr[] = "127.0.0.1", tmp_ip_str[21];
+        char *pret = NULL, *fqdn_str = NULL;
+	hip_hit_t hit, tmp_hit, tmp_addr;
+	
+	hip_common_t *msg = NULL;
+	struct gaih_addrtuple *aux = NULL;
+	struct addrinfo *serving_gateway = NULL;
+	struct hip_opendht_gw_info *gw_info = NULL;
         struct in_addr tmp_v4;
-        char tmp_ip_str[21];
-        int tmp_ttl, tmp_port;
-        int *pret;
-        int err;
+	FILE *fp = NULL;						
+	List list;
         
         if (flags & AI_NODHT)
                 goto skip_dht;
@@ -464,7 +469,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         ret_hit = -1;  
         ret_addr = -1;
         
-        HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+	HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
                  "Building daemon header failed\n"); 
@@ -496,7 +501,8 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
         if (ret_hit == 0)
                 HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
-        close(s);
+        /* Where is this opened? */
+	close(s);
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = opendht_get_key(serving_gateway, 
                                            dht_response_hit, dht_response_addr);
@@ -535,21 +541,31 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         } 
  skip_dht:
 									
-        /*! \todo check return values */
-        _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
-        fp = fopen(_PATH_HIP_HOSTS, "r");		
+	_HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
         
+	/* Open the file containing HIP hosts for reading. */
+	fp = fopen(_PATH_HIP_HOSTS, "r");		
+        
+	/* Loop through all lines in the file. */
+	/** @todo check return values */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-                int c;								
-                int ret;
-                
-                lineno++;								
-                if(strlen(line)<=1) continue;                                       
-                initlist(&list);                                                    
-                extractsubstrings(line,&list);                                      
-                for(i=0;i<length(&list);i++) {                                      
-                        if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		
-                                fqdn_str = getitem(&list,i);	               		        
+                int c, ret;
+		/* Keep track of line number for debuging purposes. */
+		lineno++;
+		/* Skip empty lines. */
+                if(strlen(line) <= 1) 
+			continue;
+		/* Init a list for the substrings of the line. Note that this is
+		   done for every line. */
+                initlist(&list);
+		/* Break the line into substrings. */
+                extractsubstrings(line,&list);
+		/* Loop through the substrings just created. */
+                for(i = 0; i < length(&list); i++) {
+			/* Try to convert the list item into an IPv6 address. */
+                        if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {
+				fqdn_str = getitem(&list,i);
+				HIP_DEBUG("CALAPUICCO: %s.\n", fqdn_str);
                         }                                                                 
                 }									
                 if ((strlen(name) == strlen(fqdn_str)) &&		         	
@@ -1369,19 +1385,17 @@ static struct gaih gaih[] =
   };
 
 /**
- * getaddrinfo - retrieves the info of the specified peer
- * @param name ?
- * @param service ?
- * @param hints ?
- * @param pai ?
- *
- * Process a request for the list of known peers
- *
- * @return zero on success, or negative error value on failure
- * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
- * database is returned
+ * Retrieves the info of the specified peer. Processes a request for the list
+ * of known peers.
+ * 
+ * @param name    a pointer to a host name.
+ * @param service a pointer to service number, i.e. target port number.
+ * @param hints   a pointer to ...
+ * @param pai     a pointer to a pointer to...
+ * @return        zero on success, or negative error value on failure. In case
+ *                of flags set to AI_KERNEL_LIST, on success the number of
+ *                elements found in the database is returned.
  */
-
 int getaddrinfo (const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
 {
