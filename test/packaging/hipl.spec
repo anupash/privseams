@@ -3,7 +3,7 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: http://infrahip.hiit.fi/hipl/release/%{version}
+Source: hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
@@ -27,7 +27,7 @@ other related tools and test software.
 %setup
 
 %build
-./configure --prefix=%{buildroot}/%{prefix} && make
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -47,7 +47,7 @@ install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
 install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
-make install
+make DESTDIR=%{buildroot} install
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
