@@ -248,6 +248,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_MAP;
 	else if (!strcmp("rst", text))
 		ret = TYPE_RST;
+	else if (!strcmp("hipudprelay", text))
+		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
 	else if (!strcmp("puzzle", text))
