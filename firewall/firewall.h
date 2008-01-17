@@ -27,7 +27,6 @@
 #include "conntrack.h"
 #include "utils.h"
 
-#define HIP_OPTION_KIND 30
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
