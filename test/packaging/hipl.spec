@@ -3,7 +3,7 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
+Source: http://infrahip.hiit.fi/hipl/release/%{version}
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
