@@ -82,7 +82,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib
+%{_libdir}/*
 %config /etc/rc.d/init.d/hipd
 %doc doc/HOWTO.txt doc/howto-html
 
