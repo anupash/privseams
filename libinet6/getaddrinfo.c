@@ -541,8 +541,6 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         } 
  skip_dht:
 									
-	_HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
-        
 	/* Open the file containing HIP hosts for reading. */
 	fp = fopen(_PATH_HIP_HOSTS, "r");		
         
@@ -550,36 +548,47 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	/** @todo check return values */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
                 int c, ret;
+		
 		/* Keep track of line number for debuging purposes. */
 		lineno++;
-		/* Skip empty lines. */
+		/* Skip empty and single character lines. */
                 if(strlen(line) <= 1) 
 			continue;
 		/* Init a list for the substrings of the line. Note that this is
-		   done for every line. */
+		   done for every line. Break the line into substrings next. */
                 initlist(&list);
-		/* Break the line into substrings. */
                 extractsubstrings(line,&list);
-		/* Loop through the substrings just created. */
+		
+		/* Loop through the substrings just created. We try to convert
+		   the list item into an IPv6 address. If the conversion is NOT
+		   successful, we assume that the substring represents a fully
+		   qualified domain name. Note that this omits the possible
+		   aliases that the hosts has. */
                 for(i = 0; i < length(&list); i++) {
-			/* Try to convert the list item into an IPv6 address. */
+			
                         if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {
 				fqdn_str = getitem(&list,i);
-				HIP_DEBUG("CALAPUICCO: %s.\n", fqdn_str);
-                        }                                                                 
-                }									
-                if ((strlen(name) == strlen(fqdn_str)) &&		         	
-                    strcmp(name, fqdn_str) == 0) {				        
-                        HIP_DEBUG("** match on line %d **\n", lineno);			
+			}                                                                 
+                }
+		/* Here we have the domain name in "fqdn" and the HIT in "hit". */
+                if ((strlen(name) == strlen(fqdn_str)) &&
+		    strcmp(name, fqdn_str) == 0) {
+			HIP_INFO("Found a HIT value for host \"%s\" on line "\
+				 "%d of file \"%s\".\n",
+				 name, lineno, _PATH_HIP_HOSTS);
                         found_hits = 1; 
                         
-                        /* add every HIT to linked list */				
-                        for(i=0;i<length(&list);i++) {                                    
+                        /* "add every HIT to linked list"
+			   What do you mean by "every"? We only have one HIT per
+			   line, don't we? Also, wy do we loop through the list
+			   again when we already have the hit stored from the
+			   previous loop?
+			   18.01.2008 16:49 -Lauri. */				
+                        for(i = 0; i <length(&list); i++) {                                    
                                 uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
                                 struct gaih_addrtuple *prev_pat = NULL;	
-                                _HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-                                ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
-                                _HIP_DEBUG("hit: %x\n", hit);              
+				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
+                                
                                 if (ret < 1) continue;         
                                 
                                 if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){

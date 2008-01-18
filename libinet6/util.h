@@ -73,9 +73,9 @@ char *findsubstring(const char *string, const char *substring);
 void findkeyfiles(char *path, List *list);
 
 /**
- * Breaks a string into substrings. Breaks @c string into substrings using space
- * (' ') as a separator. The substrings are stored in a linked list @c list in
- * the order of occurance.
+ * Breaks a string into substrings. Breaks @c string into substrings using any
+ * number of blanks and/or tab characters as separators. The substrings are
+ * stored in a linked list @c list in the order of occurance.
  *
  * @param string a pointer to a string that is to be broken into substrings.
  * @param list   a pointer to a linked list where to the substrings are put.

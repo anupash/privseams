@@ -62,22 +62,18 @@ char *findsubstring(const char *string, const char *substring) {
 void extractsubstrings(char *string, List *list) {
 
 	char *sub_string;
-	char *separator;
-	/* Note: fails if the string includes BOTH spaces and tabs */
-  
-	HIP_DEBUG("extractsubstrings() invoked.\n");
-	HIP_DEBUG("String %s, length %d\n", string, strlen(string));
-	separator = (strrchr(string, ' ') ? " " : "\t");
-	sub_string = strtok(string, separator);
-	HIP_DEBUG("Substring %s, length %d\n", sub_string, strlen(sub_string));
+	char delims[] = " \t";
+	
+	sub_string = strtok(string, delims);
 	
 	if(sub_string)
 		insert(list, sub_string);
 	else 
 		return;
+	
 	sub_string = NULL;
-	while ((sub_string=strtok(NULL, separator)) != NULL) {
-		_HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
+	
+	while ((sub_string = strtok(NULL, delims)) != NULL) {
 		insert(list, sub_string);
 		sub_string = NULL;
 	}
