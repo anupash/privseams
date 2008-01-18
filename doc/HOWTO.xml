@@ -122,11 +122,16 @@
        aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev
     </para>
     <para>
+    On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel
+    </para>
+    <para>
     Note: Some people reported this error:
   /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
   file or directory.  This seems to be a bug in the latest libc6-dev
   package itself. It is just missing a header file. As a workaround,
   åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
+    <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
   </chapter>
   <chapter>
