@@ -8,7 +8,8 @@ Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl gtk2 libxml2 glib iptables-dev
+Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -81,7 +82,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib/*
+%{prefix}/lib
 %config /etc/rc.d/init.d/hipd
 %doc doc/HOWTO.txt doc/howto-html
 
