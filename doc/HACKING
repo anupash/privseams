@@ -52,6 +52,20 @@ CODING CONVENTIONS
 - All code shared between userspace and kernel should follow kernel
   coding style.
 
+- In emacs, you can set the Linux kernel indendation as default by adding
+  the following lines to your ".emacs" file located at your home directory:
+
+    (defun my-c-mode-common-hook ()
+      (c-set-style "linux"))
+    (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
+    (global-set-key [f5] 'indent-region)
+
+  Now, whenever you wish to indend a region,
+
+    1. Move the cursor to the beginning of the region to be indended and press
+       CTRL & SPACE (first control, hold it down and press space.)
+    2. Move the cursor to the end of the region to be indended, and press F5.   
+
 - HIPL code should use the prefix "hip_" in all function and global variable
   definitions to avoid namespace pollution, especially in the
   libraries. The prefix is not necessary in userspace code, but the same
@@ -481,6 +495,7 @@ For more info about rpm packaging, please see:
 
 http://www.redhat.com/docs/books/max-rpm/max-rpm-html/index.html
 http://fedoranews.org/tchung/htmldoc/htmldoc.spec
+http://fedoraproject.org/wiki/Packaging/Guidelines
 
 Debian
 ------

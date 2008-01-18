@@ -40,6 +40,11 @@ hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD
 
 endif
 
+# This is needed when getting a fresh checkout and "./autogen.sh && ./configure && make install"
+# (i.e. the intermediate "make (all)" is missing. Fixes also rpm compilation. -miika
+../libhipgui/libhipgui.a:
+	make -C ../libhipgui
+
 tags:
 	etags $(hipagent_SOURCES) $(include_HEADERS)
 
