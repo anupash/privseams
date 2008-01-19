@@ -9,14 +9,13 @@
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
-      testing HIPL.
+      responsibility!
       </para>
     </chapter>
   <chapter>
     <title>Software Requirements</title>
     <para>
-     It is recommended that you get the latest source and compile it yourself.
+     It is recommended that you get the latest userspace source and compile it yourself.
      As an alternative, you may download frozen, binary releases of the kernel
      from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
      bugs, please have a go with the latest source instead of the binaries
@@ -132,6 +131,10 @@
   åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
+    </para>
+    <para>
+Check the <ulink url="http://infrahip.hiit.fi/hipl/release/latest/">release directory</ulink> for binary kernelspace and
+       userspace images.
     </para>
   </chapter>
   <chapter>
