@@ -15,12 +15,21 @@
   <chapter>
     <title>Software Requirements</title>
     <para>
-     It is recommended that you get the latest userspace source and compile it yourself.
-     As an alternative, you may download frozen, binary releases of the kernel
-     from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
-     bugs, please have a go with the latest source instead of the binaries
-     because the bug may already have been resolved upstream. There is also a
-     Ubuntu based live cd available from the HIPL download pages.
+     You need to modify your kernel and install HIPL userspace software along
+     with its dependencies in order to run HIP. You can patch your
+     kernel by installing the binary kernel images (Ubuntu and Fedora)
+     from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
+     binary kernel images are based on vanilla kernel and therefore do
+     not include any proprietary drivers or firmware images. As a result,
+     you may have to install software for your WLAN interface manually.</para>
+    <para>
+     This section describes how to build a custom kernel image with
+     HIP-related patches and how to build the HIPL userspace software
+     manually.  If you don't want to build the HIPL software manually,
+     you can install the userspace binary images from the
+     release. Before reporting any bugs with last release, please
+     build the the bleeding edge software from the source because your issues
+     may have been already resolved there.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -131,10 +140,6 @@
   åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
-    </para>
-    <para>
-Check the <ulink url="http://infrahip.hiit.fi/hipl/release/latest/">release directory</ulink> for binary kernelspace and
-       userspace images.
     </para>
   </chapter>
   <chapter>
