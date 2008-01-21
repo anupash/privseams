@@ -252,6 +252,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
+	else if (!strcmp("hipudprelay", text))
+		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
 	else if (!strcmp("service", text))

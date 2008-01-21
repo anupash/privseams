@@ -37,7 +37,7 @@ int hip_for_each_locator_addr_item(int (*func)
                                    void *opaque)
 {
      int i = 0, err = 0, n_addrs;
-     struct hip_locator_info_addr_item *locator_address_item = NULL;
+     struct hip_locator_info_addr_item *locator_address_item = NULL, *first_locator_address_item = NULL;
      
      n_addrs = hip_get_locator_addr_item_count(locator);
      HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
@@ -56,8 +56,9 @@ int hip_for_each_locator_addr_item(int (*func)
      
      HIP_IFE(!func, -1);
 
-     locator_address_item = hip_get_locator_first_addr_item(locator);
+     first_locator_address_item = hip_get_locator_first_addr_item(locator);
      for (i = 0; i < n_addrs; i++, locator_address_item++) {
+    	 locator_address_item = (struct hip_locator_info_addr_item *)hip_get_locator_item(first_locator_address_item, i);
 	  HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 		   "Locator handler function returned error\n");
      }
@@ -298,7 +299,7 @@ int hip_update_locator_item_match(hip_ha_t *unused,
 				  void *_item2)
 {
      struct hip_peer_addr_list_item *item2 = _item2;
-     return !ipv6_addr_cmp(&item1->address, &item2->address);
+     return !ipv6_addr_cmp(hip_get_locator_item_address(item1), &item2->address);
 }
 
 int hip_update_locator_contains_item(struct hip_locator *locator,
@@ -317,7 +318,10 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
      uint32_t spi_in;
      struct hip_locator *locator = (void *) _locator;
      
-     if (hip_update_locator_contains_item(locator, list_item))
+   //  if (hip_update_locator_contains_item(locator, list_item))
+     
+     if(hip_for_each_locator_addr_item(hip_update_locator_item_match,
+			   NULL, locator, list_item))
 	  goto out_err;
 
      HIP_DEBUG_HIT("Deprecating address", &list_item->address);

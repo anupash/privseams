@@ -451,7 +451,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 		      "to \"on\"\n");
 	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
-
+	     
+	     entry->peer_udp_port = HIP_NAT_UDP_PORT;
 	     /* Send a I1 packet to relay. */
 	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 		      -1, "sending i1 failed\n");

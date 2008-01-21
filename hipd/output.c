@@ -91,7 +91,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
 						    &daddr, 
 						    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-						    HIP_NAT_UDP_PORT,
+						    entry->peer_udp_port,
 						    i1_blind, entry, 1);
 	}
 #endif
@@ -99,7 +99,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
 				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-				     HIP_NAT_UDP_PORT,
+				     entry->peer_udp_port,
 				     i1, entry, 1);
 	}
 
@@ -482,24 +482,6 @@ int hip_build_locators(struct hip_common *msg)
 		//let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
 		addr_count2 = 10;
 		
-		//make a fcution to get the right locator inforation.
-		HIP_DEBUG("hip_build_locators: find relay address account:%d \n", addr_count2);
-		
-		//retreive the reflexive address.
-		
-		
-		//check out the total number of SA
-		//loop
-		
-		
-		// check of if the peer entry have registered as reflexive server
-		
-		// 
-		
-		//addr_count2 = address_count;
-		
-		//retreive relay server
-	
 		
 		
         HIP_IFEL(!(locs1 = malloc(addr_count1 * 
@@ -514,7 +496,9 @@ int hip_build_locators(struct hip_common *msg)
                        sizeof(struct hip_locator_info_addr_item)));
                        
         memset(locs2,0,(addr_count2 *  
-                       sizeof(struct hip_locator_info_addr_item2)));              
+                       sizeof(struct hip_locator_info_addr_item2)));  
+        
+        HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
         //starting
          list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
@@ -524,10 +508,12 @@ int hip_build_locators(struct hip_common *msg)
                 memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
                        sizeof(struct in6_addr));
                 locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
                 locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
                 locs1[ii].reserved = 0;
+                HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
                 ii++;
+               
             }
         }
         list_for_each_safe(item, tmp, addresses, i) {
@@ -538,9 +524,10 @@ int hip_build_locators(struct hip_common *msg)
                 memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
                        sizeof(struct in6_addr));
                 locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
                 locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
                 locs1[ii].reserved = 0;
+                HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
                 ii++;
             }
         }
@@ -549,23 +536,30 @@ int hip_build_locators(struct hip_common *msg)
         /***for relay locator
          * retreive the whole entry list
          * if there is a reflexive  **/
+        HIP_DEBUG("\n santtu: start look for relay address, there are %d entry in hash \n", hadb_hit->num_items);
         ii = 0;             
         i = 0;  
+        
         list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
             // if there are more addresses than we can take, just break it.
             if (ii>= addr_count2)
                 break;
             // check if the reflexive udp port. if it not 0. it means addresses found
+            HIP_DEBUG_HIT("santtu: look for reflexive, prefered addres  : ",&ha_n->preferred_address );
+            HIP_DEBUG_HIT("santtu: look for reflexive, local addres  : ",&ha_n->local_address );
+            HIP_DEBUG("santtu: look for reflexive port: %d \n",ha_n->local_reflexive_udp_port);
+            HIP_DEBUG_HIT("santtu: look for reflexive addr: ",&ha_n->local_reflexive_address);
+            HIP_DEBUG("santtu: the entry address is %d \n", ha_n);
             if(ha_n->local_reflexive_udp_port){
             	memcpy(&locs2[ii].address, &ha_n->local_reflexive_address, 
             	                       sizeof(struct in6_addr));
                 locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
                 locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
                 locs2[ii].reserved = 0;
                 // for IPv4 we add UDP information
-                locs2[ii].port = ha_n->local_reflexive_udp_port;
+                locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
                 locs2[ii].transport_protocol = 0;
                 locs2[ii].kind = 0;
                 locs2[ii].priority = 126,
@@ -580,14 +574,18 @@ int hip_build_locators(struct hip_common *msg)
             //assume the peer address is IPv4
             //assume the peer protocol is UDP
             if(ha_n->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE){
+            	HIP_DEBUG_HIT("santtu: UDP full relay, prefered addres  : ",&ha_n->preferred_address );
+            	HIP_DEBUG_HIT("santtu: UDP full relay, local addres  : ",&ha_n->local_address );
+            	HIP_DEBUG("santtu: UDP port: %d \n",ha_n->peer_udp_port);
+          
                 memcpy(&locs2[ii].address, &ha_n->preferred_address, 
                        sizeof(struct in6_addr));
                 locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
+                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
                 locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
                 locs2[ii].reserved = 0;
                  // for IPv6 we add UDP information, maybe we do not need this in IPv6
-                locs2[ii].port = ha_n->peer_udp_port;
+                locs2[ii].port = htons(ha_n->peer_udp_port);
                 locs2[ii].transport_protocol =0;
                 locs2[ii].kind = 0;
                 locs2[ii].priority = 126,
@@ -595,7 +593,7 @@ int hip_build_locators(struct hip_common *msg)
                 ii++;
             }
         }
-        
+        HIP_DEBUG("hip_build_locators: find relay address account:%d \n", ii);
         //ii is the real amount of type2 locator.addr_count2 is the max value we can accept
         err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,ii);
         //err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
@@ -724,7 +722,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
-	if(r1_dst_port)
+	if(r1_dst_port != 0)
 	{
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),

@@ -1787,6 +1787,7 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		 "Invalid version in received packet. Dropping\n");
 	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a non-HIT in HIT-source. Dropping\n");
+	HIP_DEBUG_HIT("zzzz", &hip_common->hitr);
 	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hitr) &&
 		 !ipv6_addr_any(&hip_common->hitr),
 		 -EAFNOSUPPORT,
@@ -2173,6 +2174,8 @@ int hip_build_param_reg_from(struct hip_common *msg,
      
      hip_set_param_type(&reg_from, HIP_PARAM_REG_FROM);
      ipv6_addr_copy((struct in6_addr *)&reg_from.address, addr);
+     HIP_DEBUG_IN6ADDR("santtu:reg_from address is ", &reg_from.address);
+     HIP_DEBUG_IN6ADDR("santtu:the given address is ", addr);
      reg_from.port = htons(port);
      hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
      err = hip_build_param(msg, &reg_from);
@@ -2673,6 +2676,9 @@ int hip_build_param_locator2(struct hip_common *msg,
 		(sizeof(struct hip_locator_info_addr_item));
 	int addrs_len2 = address_count2 *
 		(sizeof(struct hip_locator_info_addr_item2));
+	
+	HIP_DEBUG("Santtu: create total locator items : %d \n", address_count1 + address_count2 );
+	HIP_DEBUG("Santtu: create total locator length : %d \n", addrs_len1 + addrs_len2 );
 		
 	HIP_IFE(!(locator_info =
 		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
@@ -2680,7 +2686,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
-				   addrs_len1+addrs_len1);
+				   addrs_len1+addrs_len2);
 	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len1+addrs_len2);
@@ -3515,7 +3521,7 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
 
-char* hip_get_locator_item(void* first_item, int index){
+struct hip_locator_info_addr_item * hip_get_locator_item(void* first_item, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
 	char *result = (char*) first_item;
@@ -3527,11 +3533,11 @@ char* hip_get_locator_item(void* first_item, int index){
 			result  +=  sizeof(struct hip_locator_info_addr_item2);
 		
 	}
-	return result ;
+	return (struct hip_locator_info_addr_item *) result ;
 	
 } 
 
-struct in6_addr* hip_get_locator_item_address(void* first_item){
+struct in6_addr * hip_get_locator_item_address(void* first_item){
 
 	struct hip_locator_info_addr_item *temp;
 	

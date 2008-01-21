@@ -52,6 +52,7 @@
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
 #define SEND_UPDATE_ESP_INFO (1 << 0)
 #define SEND_UPDATE_LOCATOR (1 << 1)
@@ -328,7 +329,7 @@ struct hip_hadb_state
      /* LOCATOR PARAMETER just tmp save if sent in R1 no 
 	esp_info so keeping it here 'till the 
 	hip_update_locator_parameter can be done*/
-     struct hip_locator *locator, *locator2;
+     struct hip_locator *locator;
  
      /** For retransmission. */
      uint64_t puzzle_i;

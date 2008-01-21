@@ -906,31 +906,40 @@ int hip_handle_registration_response(hip_ha_t *entry, struct hip_common *msg)
      rfail = hip_get_param(msg, HIP_PARAM_REG_FAILED);
      HIP_DEBUG("Checking REG_FAILED.\n");
      if (rfail) {
-	  uint8_t *types = (uint8_t *)
-	       (hip_get_param_contents(msg, HIP_PARAM_REG_FAILED));
-	  int typecnt = hip_get_param_contents_len(rfail);
-	  int i;
-                        
-	  if (rfail->type == 0) {
-	       HIP_DEBUG("Registration failed: more credentials required.\n");
-	  }
-	  else {
-	       HIP_DEBUG("Registration failed!.\n");
-	  }
-	  HIP_DEBUG("Found REG_FAILED parameter.\n");                        
-	  for (i = 1; i < typecnt; i++) {
-	       HIP_DEBUG("Service type: %d.\n", types[i]);
-	       if (types[i] == HIP_SERVICE_ESCROW) {
-		    /** @todo Should the base entry be removed when registration fails?
-			Registration unsuccessful - removing base keas*/
-		    hip_kea_remove_base_entries();  
-	       } 
-	       if (types[i] == HIP_SERVICE_RENDEZVOUS) {
-		    // TODO: RVS
-	       }     
-	  }       
+    	  HIP_DEBUG("REG_FAILED  found.\n");
+		  uint8_t *types = (uint8_t *)
+		       (hip_get_param_contents(msg, HIP_PARAM_REG_FAILED));
+		  int typecnt = hip_get_param_contents_len(rfail);
+		  int i;
+	                        
+		  if (rfail->type == 0) {
+		       HIP_DEBUG("Registration failed: more credentials required.\n");
+		  }
+		  else {
+		       HIP_DEBUG("Registration failed!.\n");
+		  }
+		  HIP_DEBUG("Found REG_FAILED parameter.\n");                        
+		  for (i = 1; i < typecnt; i++) {
+		       HIP_DEBUG("Service type: %d.\n", types[i]);
+		       if (types[i] == HIP_SERVICE_ESCROW) {
+			    /** @todo Should the base entry be removed when registration fails?
+				Registration unsuccessful - removing base keas*/
+			    hip_kea_remove_base_entries();  
+		       } 
+		       if (types[i] == HIP_SERVICE_RENDEZVOUS) {
+			    // TODO: RVS
+		       }     
+		  }       
      }
-                
+     else HIP_DEBUG("REG_FAILED no found.\n");
+    	 
+     // place to recalculation the r1, because some new registration addresses.
+     //maybe change to some others solutions
+     /*
+     if (rresp){
+    	 hip_recreate_all_precreated_r1_packets();
+     }
+     */
      /* We are trying to do registration but server does not respond */
      if (!rfail && !rresp) {
 	  HIP_DEBUG("Server not responding to registration attempt.\n");
@@ -951,15 +960,23 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
      rfrom = hip_get_param(msg, HIP_PARAM_REG_FROM);
      if(rfrom){
 		HIP_DEBUG("received a for REG_FROM parameter \n");
+		
+		HIP_DEBUG_IN6ADDR("santtu: the received reg_from address is ", &rfrom->address);
+		HIP_DEBUG_IN6ADDR("santtu: the local address is ", &entry->local_address);
 		//check if it is a local address
-		if(ipv6_addr_cmp((struct in6_addr *)rfrom->address,&entry->local_address) ){	
+		if(!ipv6_addr_cmp(&rfrom->address,&entry->local_address) ){	
 			
-			HIP_DEBUG("the host is not behind nat \n");
+			HIP_DEBUG("Santtu: the host is not behind nat \n");
 		}
 		else{
-			HIP_DEBUG("found a nat");
+			HIP_DEBUG("santtu: found a nat @port %d \n ", ntohs(rfrom->port));
 			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct  in6_addr) );
 			entry->local_reflexive_udp_port = ntohs(rfrom->port);
+			HIP_DEBUG_HIT("santtu: set reflexive address:", &entry->local_reflexive_address);
+			HIP_DEBUG("santtu: set reflexive port: %d \n", entry->local_reflexive_udp_port);
+			HIP_DEBUG("santtu: the entry address is %d \n", entry);
+			
+			 
 		}
 			
      }

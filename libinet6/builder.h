@@ -164,13 +164,13 @@ int hip_get_locator_addr_item_count(struct hip_locator *);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         struct hip_locator *);
+struct hip_locator_info_addr_item * hip_get_locator_item(void* first_item, int index);
+
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 hip_controls_t hip_get_msg_controls(struct hip_common *msg);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
-hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
-struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
-                                          const struct hip_tlv_common *);
+
 void *hip_get_nth_param(const struct hip_common *, hip_tlv_type_t, int);
 void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);

@@ -1121,7 +1121,7 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0;
-    int n_addrs1 = 0, n_addrs2 = 0, loc_size1 = 0, loc_size2 = 0, i = 0;
+    int n_addrs = 0, loc_size = 0, i = 0;
 	uint64_t solved_puzzle;
 	uint64_t I;
 	struct hip_context *ctx = NULL;
@@ -1174,6 +1174,7 @@ int hip_handle_r1(struct hip_common *r1,
 	   behind NAT. We set NAT mode "on" and set the send funtion to 
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
+	// it may not be a good way to code,,,, xiang
 	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
 		HIP_LOCK_HA(entry);
 		entry->nat_mode = 1;
@@ -1184,9 +1185,10 @@ int hip_handle_r1(struct hip_common *r1,
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
-            {
-                /* Lets save the LOCATOR to the entry 'till we
-                   get the esp_info in r2 then handle it */
+            {   /*
+        		HIP_DEBUG_LOCATOR(locator);
+                // Lets save the LOCATOR to the entry 'till we
+                 //  get the esp_info in r2 then handle it 
               	n_addrs1 = hip_get_locator_addr_item1_count(locator);
               	_HIP_DEBUG("hip_handle_r1() count type1 locators1 &d.\n" , n_addrs1);
                 n_addrs2 = hip_get_locator_addr_item2_count(locator);
@@ -1239,9 +1241,12 @@ int hip_handle_r1(struct hip_common *r1,
                 	locator_address += sizeof(struct hip_locator_info_addr_item);
                 	
                 }
-            
-                                   
-              //  memcpy(entry->locator, locator, loc_size);
+              */
+        	n_addrs = hip_get_locator_addr_item_count(locator);
+        	loc_size= hip_get_param_contents_len(locator);
+        	HIP_IFEL(!(entry->locator = malloc(loc_size)), 
+        		                       -1, "Malloc for entry->locators failed\n"); 
+            memcpy(entry->locator, locator, loc_size);
                 
 
 #ifdef CONFIG_HIP_HI3
@@ -1344,10 +1349,18 @@ int hip_handle_r1(struct hip_common *r1,
 			  /* If we have requested for HIP UDP Relay service in
 			     I1, we store the info of responder's capability
 			     here. */
+			  HIP_DEBUG("\ntesting1\n  local_controls:  (0x%04x), peer_controls:  (0x%04x)\n",
+			  			      	       
+			  			      	      entry->local_controls,
+			  			      	       entry->peer_controls);
 			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
 			  {
 			       hip_hadb_set_peer_controls(
 				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+			       HIP_DEBUG("\ntesting2\nlocal_controls:  (0x%04x), peer_controls:  (0x%04x)\n",
+			      	       
+			      	      entry->local_controls,
+			      	       entry->peer_controls);
 
 			  }
 			  break;
@@ -1634,7 +1647,7 @@ int hip_create_r2(struct hip_context *ctx,
 		       r2, dest, dest_port);
 	  }
 	  if(send_reg_from)
-	 		hip_build_param_reg_from(r2,hip_build_param_reg_from, i2_info->src_port);
+	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
 #endif
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -2257,6 +2270,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
+        		HIP_DEBUG_LOCATOR(locator);
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
@@ -2540,16 +2554,17 @@ int hip_handle_r2(struct hip_common *r2,
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	err = 0;
 
-        /***** LOCATOR PARAMETER ******/
-        if (entry->locator)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         entry->locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("entry->locator did not have locators from r1\n");
-
+    /***** LOCATOR PARAMETER ******/
+    if (entry->locator)
+        {
+    		HIP_DEBUG_LOCATOR(entry->locator);
+            HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+                     entry->locator, esp_info),
+                     -1, "hip_update_handle_locator_parameter failed\n");
+        }
+    else
+        HIP_DEBUG("entry->locator did not have locators from r1\n");
+    HIP_DEBUG("santtu: end of handling locator in r2");
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
@@ -2561,13 +2576,27 @@ int hip_handle_r2(struct hip_common *r2,
 	uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
+        
         if (type_count > 0) {
+        	
+        		HIP_DEBUG("santtu: handling req response and reg from in r2");
+        		
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
                         "Error handling reg_response\n"); 
                         /**change to HIP_IFEL in later*/
                 if(hip_handle_reg_from(entry, r2))
-                HIP_DEBUG("reg_from not found");
+                        	                HIP_DEBUG("reg_from not found");
+                
+                // recreate all the r1 package
+                HIP_DEBUG("santtu: reset all the R1");
+                hip_recreate_all_precreated_r1_packets();
+                
+                
+                
+           
         }
+        else
+        	HIP_DEBUG("santtu: not handling req response and reg from in r2 @type counter: %d", type_count);
 
 	/* these will change SAs' state from ACQUIRE to VALID, and
 	 * wake up any transport sockets waiting for a SA */
