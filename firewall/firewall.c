@@ -749,7 +749,7 @@ static void *handle_ip_traffic(void *ptr) {
     
 		switch (ipq_message_type(buf)) {
 		case NLMSG_ERROR:
-			fprintf(stderr, "Received error message %d\n", ipq_get_msgerr(buf));
+		  fprintf(stderr, "Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
 		break;
       
 		case IPQM_PACKET: {
