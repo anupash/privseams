@@ -474,4 +474,6 @@ int hip_recreate_all_precreated_r1_packets()
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}
+
+	return 0;
 }
