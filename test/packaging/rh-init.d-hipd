@@ -20,7 +20,7 @@ BASENAME="hipd"
 
 #PID_FILE=/var/run/hipd.pid
 LOCK_FILE=/var/lock/subsys/hipd
-OPTIONS="-b"
+OPTIONS="-bk"
 
 start()
 {

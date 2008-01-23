@@ -9,19 +9,27 @@
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
-      testing HIPL.
+      responsibility!
       </para>
     </chapter>
   <chapter>
     <title>Software Requirements</title>
     <para>
-     It is recommended that you get the latest source and compile it yourself.
-     As an alternative, you may download frozen, binary releases of the kernel
-     from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
-     bugs, please have a go with the latest source instead of the binaries
-     because the bug may already have been resolved upstream. There is also a
-     Knoppix based live cd available from the HIPL download pages.
+     You need to modify your kernel and install HIPL userspace software along
+     with its dependencies in order to run HIP. You can patch your
+     kernel by installing the binary kernel images (Ubuntu and Fedora)
+     from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
+     binary kernel images are based on vanilla kernel and therefore do
+     not include any proprietary drivers or firmware images. As a result,
+     you may have to install software for your WLAN interface manually.</para>
+    <para>
+     This section describes how to build a custom kernel image with
+     HIP-related patches and how to build the HIPL userspace software
+     manually.  If you don't want to build the HIPL software manually,
+     you can install the userspace binary images from the
+     release. Before reporting any bugs with last release, please
+     build the the bleeding edge software from the source because your issue
+     may have been already resolved there.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -39,16 +47,14 @@
       Linux Operating System
       </para></listitem>
       <listitem><para>
-      A BEET patched Linux 2.6 kernel with dummy device,
-      XFRM_USER, IPv6, IPsec and AES+3DES+SHA1 support. Also,
-      you should have also CONFIG_IP_ADVANCED_ROUTER and
-      CONFIG_IP_MULTIPLE_TABLES as built-in.
+      A BEET patched Linux 2.6 kernel with the modules listed in
+      <xref linkend="kernel" />.
       </para></listitem>
       <listitem><para>
       OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
-      libxml2 and development headers for OpenDHT support
+      libxml2 and its development headers for OpenDHT support
       </para></listitem>
       <listitem><para>
       GNU make
@@ -57,10 +63,14 @@
       the latest versions of autoconf, automake, autoreconf and libtool
       </para></listitem>
       <listitem><para>
-      iproute and its development headers
+      iproute
       </para></listitem>
       <listitem><para>
-      wxgtk 2.6.2 and libgtk-2.x library and development headers
+      gtk2 library and development headers
+      </para></listitem>
+      <listitem><para>
+      Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
+      because atleast in Ubuntu Feisty it messes up the compilation.
       </para></listitem>
     </itemizedlist>
     <para>
@@ -112,6 +122,25 @@
               or you can try enabling the NAT mode at the end-host.
     </para></listitem>
     </itemizedlist>
+    <para>
+       As an example, this was what was required to type in Ubuntu Gutsy
+       Gibbon for compiling the kernel and userspace software:
+    </para>
+    <para>
+       aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev
+    </para>
+    <para>
+    On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel
+    </para>
+    <para>
+    Note: Some people reported this error:
+  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
+  file or directory.  This seems to be a bug in the latest libc6-dev
+  package itself. It is just missing a header file. As a workaround,
+  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
+    <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
+    </para>
   </chapter>
   <chapter>
     <title> Building the HIPL Documentation</title>
@@ -140,7 +169,7 @@
     </itemizedlist>
 
   </chapter>
-  <chapter>
+  <chapter id="kernel">
     <title>Compiling the Kernel</title>
     
     <para>
@@ -172,7 +201,19 @@
             Networking support ---&gt; Networking options
     </para></listitem>
     <listitem><para>
+            &lt;M&gt;  Unix domain sockets
+    </para></listitem>
+    <listitem><para>
+            [*] Transformation user configuration interface
+    </para></listitem>
+    <listitem><para>
             [*] TCP/IP networking
+    </para></listitem>
+    <listitem><para>
+            [*] Advanced router
+    </para></listitem>
+    <listitem><para>
+            [*] IP: policy routing
     </para></listitem>
     <listitem><para>
             &lt;M&gt; Packet socket
@@ -187,10 +228,16 @@
             &lt;M&gt; IP tunneling
     </para></listitem>
     <listitem><para>
-            [*] IPv4: IPsec BEET mode
+            [*] IPv4: IPcomp transformation
     </para></listitem>
     <listitem><para>
-            [*] IPv6: IPsec BEET mode
+            [*] IPv4: IPsec transport mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec tunnel mode
+    </para></listitem>
+    <listitem><para>
+            [*] IPv4: IPsec BEET mode
     </para></listitem>
     <listitem><para>
             &lt;M&gt; IP: ESP transform
@@ -202,7 +249,16 @@
             &lt;M&gt; IPv6: ESP transformation
     </para></listitem>
     <listitem><para>
+            &lt;M&gt; IPv6: IPcomp transformation
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: IPsec BEET mode
+    </para></listitem>
+    <listitem><para>
             &lt;M&gt; IPv6: IPv6-in-IPv6 tunnel
+    </para></listitem>
+    <listitem><para>
+            [*] IPv6: Multiple Routing Tables
     </para></listitem>
     <listitem><para>
             Cryptographic options
@@ -232,7 +288,10 @@
             Security options ---&gt;
     </para></listitem>
     <listitem><para>
-            [ ] Enable different security models
+            [*] Enable different security models
+    </para></listitem>
+    <listitem><para>
+            [M] Default Linux Capabilities
     </para></listitem>
     </itemizedlist>
     <para>
@@ -352,8 +411,11 @@
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HITs of the localhost, run "ifconfig dummy0" or
-      "ip addr show dummy0".
+      If you want to know the HIT of the localhost, run
+      "hipconf get hi default". To avoid routing problems especially with
+      UDP, it is highly recommend to use the default HIT of the machine!
+      You can list all HITs of the machine with "hipconf get hi all", but
+      it is safe to use the optional HITs only with TCP connections!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -417,22 +479,13 @@
     <table frame="all"><title>Test Servers</title>
           <tgroup cols="1">
             <thead>
-              <row><entry>Server</entry><entry>HIT</entry><entry>IP</entry><entry>HI algo</entry></row>
+              <row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
             </thead>
             <tbody>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>RSA</entry></row>
-              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>DSA</entry></row>
-              <row><entry>felwood.infrahip.net</entry><entry>2001:007d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>RSA</entry></row>
-              <row><entry>felwood.infrahip.net</entry><entry>2001:0074:f967:5cb2:cd63:15b5:1737:b083</entry><entry>193.167.187.130</entry><entry>DSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>RSA</entry></row>
-              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>DSA</entry></row>
-              <!--
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              <row><entry></entry><entry></entry><entry>x</entry><entry>x</entry></row>
-              -->
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
+              <row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
+              <row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
             </tbody>
           </tgroup>
     </table>
@@ -660,14 +713,16 @@
   </chapter>
   <chapter>
 
-    <title> How to Use HIP with Applications?</title>
+    <title>How to Use HIP with Applications?</title>
 
     <para>You need to execute first "make install" in the top directory if
           you have not done it before. Otherwise you have to configure
           library paths using LD_LIBRARY_PATH environment variable.
     </para>
-    <para>There are several methods of using HIP in applications. We have
-          categorized the methods to "easy" and "advanced" here. 
+    <para>This section lists different methods on how to set-up HIP manually
+          in order to make applications use HIP.
+          We have categorized the local methods to "easy"
+          and "advanced" here. 
     </para>
     <section>
     <title>Easy Methods</title>
@@ -700,12 +755,28 @@
        able to see list of processes you have executed from GUI.
     </para>
     <para>
-    4. You can also use HITs directly in the application. Insert the HIT of
-       the peer host to /etc/hosts, instead of /etc/hip/hosts. Then, add
-       the HIT-to-IP mapping with "hipconf add map HIT IP". Then you can
-       do e.g. "ping6 PEER_HIT". You can set this also to /etc/hip/hipd_config.
+    4. You can also use HITs directly in the application. For example, you can
+       do "ping6 PEER_HIT". However, hipd must know the mapping from the
+       PEER_HIT to the corresponding IP address. You can tell this mapping to
+       hipd using several ways. First way is to configure the HIT-hostname
+       pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
+       way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
+       hipconf command also to /etc/hip/hipd_config and restart hipd when you
+       want the mapping to be permanent. Works only with IPv6-enabled
+       applications.
     </para>
-
+    <para>
+    5. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+       file and use the hostname in your application. You need to make sure
+       that hipd finds the corresponding IP address as instructed in the
+       previous point. Works only with IPv6-enabled applications.
+    </para>
+    <para>
+    6. Use external nameservices for HIT-IP mapping. For example, you can use
+       AAAA records in DNS for testing (HI records are not supported yet).
+       Alternatively, use the free OpenDHT name service for automatic host
+       naming as described in <xref linkend="opendht" />.
+    </para>
     </section>
     <section>
     <title>Advanced Methods</title>
@@ -746,6 +817,69 @@
       practical example. The API is documented in url:
       <ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
     </para>
+  </section>
+  </chapter>
+  <chapter>
+    <title>Tips for Using HIP with Some Applications</title>
+    <section>
+    <title> Using HIP Enabled Proxy Server</title>
+    <para>
+      In the deployment phase, it is interesting to set-up a proxy server that 
+      translates the TCP/IP traffic into HIP. For instance, this is convenient 
+      in http proxy servers. Thus all http traffic between our host and the proxy 
+      server will benefit from the usage of HIP. 
+    </para>
+    <para>
+      First of all, you should have installed and configured properly your proxy
+      server to employ HIP. This includes alowing HITs to connect the server 
+      (settings in the httpd.conf file) and restarting httpd using HIP.
+    </para>
+    <para>
+      You have several options to enable the HIP proxy within Firefox. In the menu 
+      Edit/Preferences/Advanced/Connection Settings, you can choose:
+    </para>
+    <para>
+      Direct connection to the internet: To disable the usage of any proxy.
+    </para>
+    <para>
+      Auto-detect proxy settings for this network: To enable the auto-detection
+      feature, you should configure the wpad.dat file that it is served by
+      your proxy in the URL http://wpad.mynetwork.com/wpad.dat (or a similar one).
+      The wpad.dat file should return the information of your HIP enabled 
+      proxy server at the end of the function FindProxyForURL(url, host). 
+    </para>
+    <para> 
+      Manual proxy configuration: To manually introduce the information about 
+      your HIP enabled proxy server. You should also identify the port number.  
+    </para>
+    <para> 
+      Automatic proxy configuration URL: To use a wpad.dat file that is not 
+      located in the default URL http://wpad.mynetwork.com/wpad.dat. With this 
+      feature, you can store a wpad.dat file in some other location of your 
+      server and Firefox will fetch it from this URL.    
+    </para>
+    <para>
+      Once you have the proxy server and Firefox ready, you can restart Firefox 
+      under HIP with (please make sure that no other instances of Firefox are being 
+      run at that time):
+    </para>
+    <para>
+      hipconf run normal|opp firefox 
+    </para>
+    <para>
+      Now your Firefox should be connected by HIP to your proxy server, 
+      enabling mobility and enhancing security from your proxy to your host. 
+    </para>
+  </section>
+  <section>
+  <title>Sendmail and Spamassassin</title>
+  <para>
+  Sendmail works fine with HIP after you enable IPv6 in sendmail. We
+  did some experimentation with spamassassin to integrate it with HIP
+  puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
+  README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
+  examples of configuration changes and instructions.
+  </para>
   </section>
   </chapter>
   <chapter>
@@ -798,9 +932,11 @@
    interface. When the responder registers to the rendezvous server, it can
    choose any one four HITs. Please make sure that you use the same HIT here as
    &lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
-   check which HIT is used from the messages the responders's hipdaemon prints;
-   there should be a line saying: "HIT being registered to rvs: &lt;HIT&gt;"
-  </para> 
+   check which HIT is used with the hipconf tool. To do this, start HIP daemon
+   at the Responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
+   the Responder and the default HIT is printed on screen. This is also the
+   HIT that is registered to the RVS.</para>
+ 
   <para>
    RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
    are left blank ("/etc/hosts" can of course contain the non-hiprelated
@@ -830,7 +966,8 @@
   <listitem><para>
       At the responder we have to register to the rendezvous server:
    "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
-   a HIP SA between the rendezvous server and the responder.
+   a HIP SA between the rendezvous server and the responder. Please use the
+   default HIT of the rendezvous server ("hipconf get hi default").
   </para></listitem>
   <listitem><para>
       At the responder start a server listening for incoming connections:
@@ -922,7 +1059,7 @@
 -->
   <chapter>
     <title>HIP Firewall</title>
-        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the userspace.  These rules are inserted
@@ -1450,31 +1587,69 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     </itemizedlist>
 
-    <para> May need a change of contact OpenDHT server, currently 
-	running list is at <ulink url="http://www.opendht.org/servers.txt" />.
-	For documentation, please also check 
-        <ulink url="http://kom.aau.dk/group/05gr680/" />
+    <para>
+    By default OpenDHT support uses opendht.nyuld.net to resolve
+    proximate gateway address. Some times this returns unstable servers
+    address. After a few connection or status errors from DHT, will the
+    gateway be resolved again (hopefully getting a stable
+    one). Gateway addresses can be defined by hand to a file
+    /etc/hip/dhtservers. This file follows the same syntax as
+    /etc/hosts and can contain multiple gateway address-name pairs. If
+    this file exists hipd chooses gateways from the file by
+    random. currently running servers list is at <ulink
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
     </para>
+
+    <para>
+    There is multiple OpenDHT related hipconf commands that you can
+    use to affect the behaviour of the OpenDHT code of HIPL. 
+    </para> 
+
+    <itemizedlist>
+      <listitem><para>
+        hipconf opendht on|off
+      </para></listitem>
+      <listitem><para>
+        hipconf dht gw &lt;IPv4|hostname&gt; &lt;port (OpenDHT default = 5851)&gt; &lt;TTL&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht get &lt;fqdn/hit&gt;
+      </para></listitem>
+      <listitem><para>
+        hipconf dht set &lt;name&gt;
+      </para></listitem>
+    </itemizedlist>
+
+    <para>
+    First one of these commands toggles the on/off status of the
+    code. Second one forces the OpenDHT code to change current serving
+    gateway eith a new one. This command allows to change port and TTL
+    definitions of OpenDHT code on the fly. Third command is a simple
+    get of value under a key. Fourth command lets you set a
+    userdefined name to be sent to the OpenDHT. By default result of
+    "uname -n" is sent to the OpenDHT. 
+    </para>
+
+    <para>
+    For documentation,
+    please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
+    </para>
+
   </chapter>
 
   <chapter>
     <title>Hi3 Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-           unpack <ulink url="http://i3.cs.berkeley.edu/download/i3_0_3.tar.gz" /> in the top directory (hipl--main--2.6)
+          Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht
     </para></listitem>
     <listitem><para>
-           make sure that the link "hipl--main--2.6/i3" points to
-    the unpacked i3_0.3/i3 directory
+          Start the daemon: hipd -3 i3-cfg-PL.xml
     </para></listitem>
     <listitem><para>
-          Compile hipl--main--2.6 with ./configure --enable-hi3
-    </para></listitem>
-    <listitem><para>
-           Not tested for a long time. To work, needs to use some set of
-	i3 servers started locally from i3 distro or running on 
-        PlanetLab. See e.g. <ulink url="http://hipl.infrahip.net/i3_status.html or" /> 
-	http://rose.cs.berkeley.edu:8080/i3_status.html
+          Wait until the trigger is inserted (see log file) and continue with e.g.
+          ping6 or conntest-client-gai with testing.
     </para></listitem>
 	</itemizedlist>
 
@@ -1616,6 +1791,29 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
+  </chapter>
+  <chapter>
+    <title>DNS data manipulation</title>
+    <para>
+      Tools contains the script parse-key-3.py which converts public
+      key file contents to different DNS zone file formats. To convert
+      to unpatched BIND9 format, use command:
+      <programlisting>
+# ./parse-key-3.py &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+      </programlisting>
+      This outputs a line which can be inserted to a zone
+      file. Similarly, with sed command:
+      <programlisting>
+.... | sed -n -e '/^HIPBIND */s///p'
+      </programlisting>
+      an HIP RR entry suitable for OpenDHT version of BIND9 is output
+      and with
+      <programlisting>
+.... | sed -n -e '/^DJBDNS */s///p'
+      </programlisting>
+      a line for Dan Bernstein's tinydns is output. For further
+      information, please refer to parse-key-3.py and myasn.py.
+    </para>
   </chapter>
 </book>    
 

@@ -1,44 +1,26 @@
 /*
-    HIP Agent
+ * HIPL GTK GUI
+ *
+ * License: GNU/GPL
+ * Authors: Antti Partanen <aehparta@cc.hut.fi>
+ */
 
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
-
-#ifndef GUI_EVENTS_H
-#define GUI_EVENTS_H
+#ifndef _EVENTS_H
+#define _EVENTS_H
 
 /******************************************************************************/
 /* INCLUDES */
-#include <string.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <gtk/gtk.h>
-#include "debug.h"
-#include "hit_db.h"
-#include "manage.h"
-#include "exec.h"
-#include "tools.h"
-#include "terminal.h"
+
+#include "hitdb.h"
 #include "widgets.h"
 
-/*!
-	\addtogroup libhipgui
-	@{
-*/
+
+/******************************************************************************/
+/* FUNCTION DEFINITIONS */
 
 /******************************************************************************/
 /* DEFINES */
-enum TOOLBAR_IDS
-{
-	ID_TOOLBAR_RUN = 0,
-	ID_TOOLBAR_NEWHIT,
-	ID_TOOLBAR_TOGGLETOOLWINDOW,
-	ID_TOOLBAR_NEWGROUP,
-
-	TOOLBAR_IDS_N
-};
-
 enum BUTTON_IDS
 {
 	IDB_SEND,
@@ -55,6 +37,7 @@ enum BUTTON_IDS
 	IDB_OPT_NAT,
 
 	IDB_DBG_RSTALL,
+	IDB_DBG_RESTART,
 
 	IDB_SYSTRAY,
 
@@ -78,22 +61,23 @@ enum BUTTON_IDS
 
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
-gboolean main_delete_event(GtkWidget *, GdkEvent *, gpointer);
-gboolean delete_event(GtkWidget *, GdkEvent *, gpointer);
-void main_destroy(GtkWidget *, gpointer);
+gboolean e_delete(GtkWidget *, GdkEvent *, gpointer);
+gboolean e_delete_main(GtkWidget *, GdkEvent *, gpointer);
+void e_destroy_main(GtkWidget *, gpointer);
 
-gboolean list_click(GtkTreeView *, gpointer);
-gboolean list_press(GtkTreeView *, GdkEventButton *, gpointer);
-gboolean list_double_click(GtkTreeSelection *, GtkTreePath *,
-						   GtkTreeViewColumn *, gpointer);
+void e_button(GtkWidget *, gpointer);
 
-void button_event(GtkWidget *, gpointer);
-void toolbar_event(GtkWidget *, gpointer);
-void systray_event(void *, guint, guint, gpointer);
-void notebook_event(GtkNotebook *, GtkNotebookPage *, guint, gpointer);
+void e_cell_data_func(GtkTreeViewColumn *, GtkCellRenderer *,
+                      GtkTreeModel *, GtkTreeIter *, gpointer);
 
+gboolean e_cursor_changed(GtkTreeView *, gpointer);
+gboolean e_button_press(GtkTreeView *, GdkEventButton *, gpointer);
+gboolean e_row_activated(GtkTreeSelection *, GtkTreePath *, GtkTreeViewColumn *, gpointer);
 
-/*! @} addtogroup libhipgui */
+void e_menu_status_icon(void *, guint, guint, gpointer);
+
+void e_local_edit(GtkWidget *, char *);
+
 
 #endif /* END OF HEADER FILE */
 /******************************************************************************/

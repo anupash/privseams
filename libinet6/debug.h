@@ -36,8 +36,8 @@
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DUMP_PACKET(prefix, str, len) \
             hip_hexdump_parsed(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)            
-#define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) \
- hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, family, sockaddr)
+#define HIP_DEBUG_SOCKADDR(prefix, sockaddr) \
+ hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 //#define HIP_DEBUG(...) \
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
@@ -46,7 +46,7 @@
 #else
 #define HIP_DEBUG(...) do {} while(0)
 #define HIP_HEXDUMP(prefix, str, len) do {} while(0)
-#define HIP_DEBUG_SOCKADDR(prefix, family, sockaddr) do {} while(0)
+#define HIP_DEBUG_SOCKADDR(prefix, sockaddr) do {} while(0)
 #define HIP_DUMP_MSG(msg) do {} while(0)
 //#define HIP_DEBUG(...) \
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
@@ -101,6 +101,7 @@
 #define _HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 #define _HIP_DEBUG_LSI(str, lsi) do {} while(0)
 #define _HIP_DEBUG_INADDR(str, in) do {} while(0)
+#define _HIP_DEBUG_SOCKADDR(a,b ) do {} while(0)
 
 enum logtype_t { LOGTYPE_NOLOG, LOGTYPE_SYSLOG, LOGTYPE_STDERR };
 enum logfmt_t { LOGFMT_SHORT, LOGFMT_LONG };
@@ -129,16 +130,26 @@ void hip_hexdump(const char *file, int line, const char *function,
 void hip_print_packet(const char *file, int line, const char *function,
 		 const char *prefix, const void *str, int len);		 
 void hip_print_sockaddr(const char *file, int line, const char *function,
-			const char *prefix, sa_family_t family,
+			const char *prefix,
 			const struct sockaddr *sockaddr);
+/**
+ * Gets a binary string representation from an uint16_t value.
+ * 
+ * @param val    the value whose binary string we want.
+ * @param buffer a target buffer where to put the binary string.
+ * @note         make sure the buffer has at least size of 17 * sizeof(char).
+ */
+void uint16_to_binstring(uint16_t val, char *buffer);
+
+void hip_print_locator_addresses(struct hip_common *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 /**
- * hip_state_str - get name for a state
- * @state: state value
- *
- * Returns: state name as a string.
+ * Gets the name of a state.
+ * 
+ * @param  a state state value
+ * @return a state name as a string.
  */
 static inline const char *hip_state_str(unsigned int state)
 {

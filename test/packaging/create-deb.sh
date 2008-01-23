@@ -9,22 +9,24 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=2
+RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
-DEBIAN=i386/DEBIAN
-DEBIANGPL=i386/DEBIAN-hiptool
+DEBARCH="i386"
+if uname -a|grep x86_64; then DEBARCH=amd64; fi
+DEBIAN=${DEBARCH}/DEBIAN
+DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
-PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
-PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
-SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
+PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
+PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
+SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
-PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 # copy the tarball from the HIPL directory
 copy_tarball ()
@@ -92,6 +94,8 @@ copy_files ()
     cd "$HIPL"
     
     cp hipd/hipd $PKGDIR/usr/sbin/
+
+    cp firewall/firewall $PKGDIR/usr/sbin/
 
     cp tools/hipconf $PKGDIR/usr/sbin/
 #    cp agent/hipagent $PKGDIR/usr/sbin/
@@ -219,7 +223,7 @@ if [ $TYPE = "binary" ];then
     echo "** Compiling user space software"
     echo "**"
 
-	if [ $CORPORATE = 1 ];then
+	if [ $CORPORATE ];then
 		echo "** Must do make install for libhiptool to be able to make hipl"
 		echo "** (note: only when compiling libhiptool as dynamically linked)"
 	    echo "** Running make in $HIPL/libhiptool"
@@ -235,9 +239,12 @@ if [ $TYPE = "binary" ];then
 	fi
 
     cd "$HIPL"
-
     echo "** Running make in $HIPL"
-    if ! make;then
+    ./autogen.sh
+    ./configure --prefix=/usr
+    echo "** Running make in $HIPL"
+    echo "** Running make in $HIPL"
+    if ! make clean all;then
 	echo "** Error while running make in $HIPL, exiting"
 	exit 1
     fi
@@ -299,7 +306,7 @@ if [ $TYPE = "binary" ];then
 	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
 		echo "** Successfully finished building the binary Debian package"
 		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-		echo "** The package can now be installed with dpkg -i $PKGNAME"
+		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
 	else
 		echo "** Error: unable to build package, exiting"
 		error_cleanup
@@ -333,9 +340,9 @@ if [ $TYPE = "binary" ];then
 
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
-    if dpkg-source -b "${NAME}-${VERSION}";then
+    if dpkg-source -b "${NAME}${SUFFIX}";then
 
-	rm -rf "${NAME}-${VERSION}"
+	rm -rf "${NAME}${SUFFIX}"
 
 	echo "** Successfully finished building the source Debian package"
 	echo "** The debian packages are located in $PKGDIR_SRC"
@@ -350,5 +357,10 @@ if [ $TYPE = "binary" ];then
     fi
 fi
 
+cd $HIPL
+echo "Resetting compilation environment, please wait..."
+./configure >/dev/null
+make clean >/dev/null
+echo "Done."
 
 exit 0
