@@ -12,8 +12,10 @@
  *
  * @section sec_doc Project Documents
  * <ul>
- * <li>doc/HACKING. This file contains developer information on policies in the HIPL project.</li>
- * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in project root directory.</li> 
+ * <li>doc/HACKING. This file contains developer information on policies in the
+ * HIPL project.</li>
+ * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
+ * The user manual is now available at doc/howto-html/index.html</li>.
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  * 
@@ -25,7 +27,7 @@
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
  * </ul>
  *
- * @date   10.10.2007
+ * @date   21.01.2008
  */ 
 
 /**
@@ -546,7 +548,7 @@
  */
 
 /**
- * @defgroup hip_ha_controls HIP host association controls.
+ * @defgroup hip_ha_controls HIP host association controls
  *
  * These are bitmasks used in the @c hip_hadb_state stucture fields
  * @c local_controls and @c peer_controls.
@@ -605,12 +607,60 @@
  */
 
 /**
- * @defgroup hip_packet_controls HIP packet Controls field values.
+ * @defgroup hip_packet_controls HIP packet Controls field values
  *
  * These are the values that are used in the HIP message Controls field. More
  * importantantly, these are <span style="color:#f00;">the only values allowed
  * in that field.</span> Do not put any other bits on wire in the Controls
  * field.
+ */
+
+/**
+ * @defgroup hip_ha_state HIP association states
+ *
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10 and some
+ * implementation specific states.
+ * 
+ * The protocol specific states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT
+ * ESTABLISHED, CLOSING, CLOSED, E-FAILED.
+ *
+ * The implementation specific states are: HIP_STATE_FILTERING_I1,
+ * HIP_STATE_FILTERING_R2, HIP_STATE_FILTERED_I1,  HIP_STATE_FILTERED_R2,
+ * HIP_STATE_FILTERING_I2, HIP_STATE_FILTERED_I2.
+ */
+
+/** 
+ * @file libinet6/state.h
+ * @def HIP_STATE_NONE
+ *      No state, structure unused.
+ * @def HIP_STATE_UNASSOCIATED
+ *      UNASSOCIATED, state machine start.
+ * @def HIP_STATE_I1_SENT
+ *      I1-SENT, initiating base exchange.
+ * @def HIP_STATE_I2_SENT
+ *      I2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_R2_SENT
+ *      R2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_ESTABLISHED
+ *      ESTABLISHED, HIP association established.
+ * @def HIP_STATE_CLOSING
+ *      CLOSING, HIP association closing, no data can be sent.
+ * @def HIP_STATE_CLOSED
+ *      CLOSED, HIP association closed, no data can be sent.
+ * @def HIP_STATE_FAILED
+        E-FAILED, HIP exchange failed.
+ * @def HIP_STATE_FILTERING_I1
+ *      @todo Define what this state means.
+ * @def HIP_STATE_FILTERING_R2
+ *      @todo Define what this state means.
+ * @def HIP_STATE_FILTERED_I1
+ *      @todo Define what this state means.
+ * @def HIP_STATE_FILTERED_R2
+ *      @todo Define what this state means.
+ * @def HIP_STATE_FILTERING_I2
+ *      @todo Define what this state means.
+ * @def HIP_STATE_FILTERED_I2
+ *      @todo Define what this state means.
  */
 
 #endif /* _DOXYGEN_H */

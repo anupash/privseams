@@ -43,7 +43,7 @@
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
-#define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
+#define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
@@ -88,17 +88,17 @@
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
 #define HIP_PARAM_EID_SOCKADDR          32774
-#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
+#define HIP_PARAM_EID_ENDPOINT          32775 /**< Pass endpoint_hip structures into kernel */
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
-#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
+#define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
 #define HIP_PARAM_REG_INFO		32781
 #define HIP_PARAM_REG_REQUEST		32782
 #define HIP_PARAM_REG_RESPONSE		32783
 #define HIP_PARAM_REG_FAILED		32784
-#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 
 #define HIP_PARAM_ENCAPS_MSG		32787
@@ -184,7 +184,8 @@
 #define HIP_SIG_RSA                   5
 #define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
 
-/* Kludge: currently set to DSA until bug id 175 is resolved! Should be RSA */
+/** @todo Kludge: currently set to DSA until bug id 175 is resolved!
+    Should be RSA. */
 #define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
@@ -366,7 +367,7 @@ struct hip_locator_info_addr_item {
         uint8_t traffic_type;
         uint8_t locator_type;
         uint8_t locator_length;
-        uint8_t reserved;  /* last bit is P (prefered) */
+        uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 
