@@ -345,6 +345,8 @@ struct hip_hadb_state
 	Use hip_hadb_set_handle_function_set instead */
      hip_xmit_func_set_t *hadb_xmit_func;
 
+     hip_ipsec_func_set_t *hadb_ipsec_func;
+
      /* For e.g. GUI agent */
      hip_input_filter_func_set_t *hadb_input_filter_func;
      hip_output_filter_func_set_t *hadb_output_filter_func;
@@ -534,6 +536,29 @@ struct hip_hadb_xmit_func_set{
 			    in_port_t src_port, in_port_t dst_port,
 			    struct hip_common* msg, hip_ha_t *entry,
 			    int retransmit);
+};
+
+struct hip_ipsec_xmit_func_set{
+	/** A function pointer for userspace/kernelspace ipsec */
+	uint32_t (*hip_add_sa)(struct in6_addr *saddr, struct in6_addr *daddr,
+			       struct in6_addr *src_hit, struct in6_addr *dst_hit,
+			       uint32_t *spi, int ealg,
+			       struct hip_crypto_key *enckey,
+			       struct hip_crypto_key *authkey,
+			       int already_acquired,
+			       int direction, int update,
+			       int sport, int dport);
+	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+				     struct in6_addr *src_addr,
+				     struct in6_addr *dst_addr, u8 proto,
+				     int use_full_prefix, int update);
+	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
+				       int use_full_prefix);
+	int (*hip_flush_all_policy)();
+	int (*hip_flush_all_sa)();
+	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
+	void (*hip_delete_default_prefix_sp_pair)();
+	int (*hip_setup_default_sp_prefix_pair)();
 };
 
 struct hip_hadb_input_filter_func_set { 

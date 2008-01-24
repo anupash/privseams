@@ -26,6 +26,7 @@ static hip_handle_func_set_t default_handle_func_set;
 static hip_handle_func_set_t ahip_handle_func_set;
 static hip_update_func_set_t default_update_func_set;
 static hip_update_func_set_t ahip_update_func_set;
+static hip_ipsec_func_set_t default_ipsec_func_set;
 
 unsigned long hip_hash_peer_addr(const void *ptr)
 {
@@ -511,6 +512,8 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
 			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
+
+	entry->default_ipsec_function_set = &default_ipsec_function_set;
 
  out_err:
 	
@@ -2050,6 +2053,26 @@ void hip_init_hadb(void)
 	-Lauri 25.09.2007 15:11. */
      default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
      default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+
+     if (hip_use_userspace_ipsec) {
+	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_userspace_ipsec_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
+     } else {
+	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+     }
 }
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
