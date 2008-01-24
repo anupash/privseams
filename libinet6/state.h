@@ -1,3 +1,6 @@
+
+
+
 /** @file
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
@@ -79,6 +82,8 @@ typedef enum {
     @c hip_xmit_func_set_t. */
 typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
 			       in_port_t, struct hip_common*, hip_ha_t *, int);
+
+
 
 /**
  * A data structure for storing the source and destination ports of an incoming
@@ -343,10 +348,9 @@ struct hip_hadb_state
 
      /* transmission func set. Do not modify these values directly. 
 	Use hip_hadb_set_handle_function_set instead */
-     hip_xmit_func_set_t *hadb_xmit_func;
+      hip_xmit_func_set_t *hadb_xmit_func; 
 
      hip_ipsec_func_set_t *hadb_ipsec_func;
-
      /* For e.g. GUI agent */
      hip_input_filter_func_set_t *hadb_input_filter_func;
      hip_output_filter_func_set_t *hadb_output_filter_func;
@@ -538,7 +542,7 @@ struct hip_hadb_xmit_func_set{
 			    int retransmit);
 };
 
-struct hip_ipsec_xmit_func_set{
+struct hip_ipsec_func_set {
 	/** A function pointer for userspace/kernelspace ipsec */
 	uint32_t (*hip_add_sa)(struct in6_addr *saddr, struct in6_addr *daddr,
 			       struct in6_addr *src_hit, struct in6_addr *dst_hit,

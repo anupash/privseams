@@ -16,6 +16,10 @@ static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
 hip_xmit_func_set_t default_xmit_func_set;
 /** A transmission function set for NAT traversal. */
 hip_xmit_func_set_t nat_xmit_func_set;
+
+/* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
+hip_ipsec_func_set_t default_ipsec_func_set;
+
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -26,7 +30,6 @@ static hip_handle_func_set_t default_handle_func_set;
 static hip_handle_func_set_t ahip_handle_func_set;
 static hip_update_func_set_t default_update_func_set;
 static hip_update_func_set_t ahip_update_func_set;
-static hip_ipsec_func_set_t default_ipsec_func_set;
 
 unsigned long hip_hash_peer_addr(const void *ptr)
 {
@@ -513,7 +516,8 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
 
-	entry->default_ipsec_function_set = &default_ipsec_function_set;
+	/* added by Tao Wan, on 24, Jan, 2008 */ 
+	entry->hadb_ipsec_func = &default_ipsec_func_set;
 
  out_err:
 	
@@ -2054,6 +2058,7 @@ void hip_init_hadb(void)
      default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
      default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 
+     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)*/
      if (hip_use_userspace_ipsec) {
 	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;

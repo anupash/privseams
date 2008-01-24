@@ -1658,7 +1658,7 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
 		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
 		memset(in6, 0, sizeof(*in6));
 		in6->sin6_family = AF_INET6;
-		ipv6_addr_copy(in6->sin6_addr, addr);
+		ipv6_addr_copy(&in6->sin6_addr, addr);
 	}
 }
 
