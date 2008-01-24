@@ -707,6 +707,9 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
     locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);
     if (locator) {
+
+
+    			
         n_addrs = hip_get_locator_addr_item_count(locator);
         locator_address_item = hip_get_locator_first_addr_item(locator);
                        
@@ -726,7 +729,7 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
     }
 }
 
-void hip_print_locator(struct hip_locator *locator) {
+void hip_print_locator(const char *str, struct hip_locator *locator) {
    // struct hip_locator *locator;
     int n_addrs = 0, i = 0;
     struct hip_locator_info_addr_item *first_address_item = NULL, *locator_address_item = NULL;
@@ -734,6 +737,9 @@ void hip_print_locator(struct hip_locator *locator) {
    /* locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);*/
     if (locator) {
+    	
+    	HIP_DEBUG("%s: \n", str);
+    	
         n_addrs = hip_get_locator_addr_item_count(locator);
         HIP_DEBUG("there are  %d locator items \n", n_addrs);
         first_address_item = hip_get_locator_first_addr_item(locator);

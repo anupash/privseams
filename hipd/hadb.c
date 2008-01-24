@@ -1619,7 +1619,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	list_for_each_safe(item, tmp, spi_list->peer_addr_list, i)
 	{
 		a = list_entry(item);
-		if (!ipv6_addr_cmp(&a->address, addr))
+		//check if the address and port number is the same
+		if (!ipv6_addr_cmp(&a->address, addr) && a->port == port)
 		{
 			// Do we send a verification if state is unverified?
 			// The address should be awaiting verifivation already
@@ -1628,7 +1629,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			break;
 		}
 	}
-
+	
 	if (new)
 	{
 		HIP_DEBUG("create new addr item to SPI list\n");
@@ -1644,7 +1645,10 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	else HIP_DEBUG("update old addr item\n");
 	
 	new_addr->lifetime = lifetime;
-	if (new) ipv6_addr_copy(&new_addr->address, addr);
+	if (new) {
+		ipv6_addr_copy(&new_addr->address, addr);
+		new_addr->port = port;
+	}
 
 	/* If the address is already bound, its lifetime is updated.
 	   If the status of the address is DEPRECATED, the status is

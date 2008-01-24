@@ -2270,7 +2270,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
-        		HIP_DEBUG_LOCATOR(locator);
+        		
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
@@ -2557,7 +2557,7 @@ int hip_handle_r2(struct hip_common *r2,
     /***** LOCATOR PARAMETER ******/
     if (entry->locator)
         {
-    		HIP_DEBUG_LOCATOR(entry->locator);
+    		
             HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                      entry->locator, esp_info),
                      -1, "hip_update_handle_locator_parameter failed\n");

@@ -223,13 +223,13 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	struct hip_locator_info_addr_item2 * locator_address_item2;
 	uint16_t port = 0;
 	
-	if(locator_address_item->locator_type == 1){
+	if(locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		locator_address =
 			&locator_address_item->address;
 		lifetime = ntohl(locator_address_item->lifetime);
 	   	is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
 	}
-	else{
+	else if(locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 		locator_address_item2 = (struct hip_locator_info_addr_item2 * ) locator_address_item;
 		locator_address =
 					&locator_address_item2->address;
@@ -240,7 +240,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	}
 	
 	
-	HIP_DEBUG_HIT("LOCATOR address", locator_address);
+	HIP_DEBUG_HIT("Santtu: add LOCATOR address into SPI" , locator_address);
 	HIP_DEBUG(" address: is_pref=%s reserved=0x%x lifetime=0x%x\n",
 		  is_preferred ? "yes" : "no",
 		  ntohl(locator_address_item->reserved),
@@ -269,10 +269,14 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
         /* lets try */
         if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0
         		&& port == entry->peer_udp_port) {
+        	HIP_DEBUG_HIT("santtu:found a locater item already in spi list :" , locator_address);
+        	HIP_DEBUG("santtu: found a locater item already in spi list, port %d \n" , port);
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
                                              lifetime, 1, port), -1);
         } else {
+        	HIP_DEBUG_HIT("santtu: add a locater item intoin spi list :" , locator_address);
+        	HIP_DEBUG("Santtu: adda locater item  into spi list, port %d \n" , port);
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
                                              lifetime, is_preferred, port), -1);
@@ -362,10 +366,15 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
      int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
      hip_list_t *item = NULL, *tmplist = NULL;
      struct hip_locator_info_addr_item *locator_address_item;
+     struct hip_locator_info_addr_item2 *locator_address_item2;
      struct hip_spi_out_item *spi_out;
      struct hip_peer_addr_list_item *a, *tmp, addr;
      struct netdev_address *n;
-
+     
+     
+     HIP_DEBUG_LOCATOR("santtu: let's handle locator:", locator);
+     
+     
      old_spi = ntohl(esp_info->new_spi);
      new_spi = ntohl(esp_info->new_spi);
      HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
