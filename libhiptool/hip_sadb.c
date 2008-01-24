@@ -156,6 +156,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
     __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
 {
+	
 	hip_sadb_entry *entry;
 	hip_lsi_entry *lsi_entry;
 	int err, key_len;
