@@ -2360,6 +2360,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 
 	HIP_DEBUG("\n");
+
+	HIP_IFEL(entry->is_loopback, 0, "Skipping loopback\n");
 	
 	old_spi = hip_hadb_get_spi(entry, -1);
 	
