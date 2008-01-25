@@ -420,7 +420,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
      n_addrs = hip_get_locator_addr_item_count(locator);
      for (i = 0; i < n_addrs; i++) {
 	  /* check if af same as in entry->local_af */
-	  comp_af = IN6_IS_ADDR_V4MAPPED(&locator_address_item[i].address)
+	  comp_af = IN6_IS_ADDR_V4MAPPED(hip_get_locator_item_address(hip_get_locator_item(locator_address_item, i)))
 	       ? AF_INET : AF_INET6;
 	  if (comp_af == local_af) {
 	       HIP_DEBUG("LOCATOR contained same family members as "\
@@ -452,10 +452,10 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	       locator_address_item = hip_get_locator_first_addr_item(locator);
 	       /* First should be OK, no opposite family in LOCATOR */
 	       memcpy(&entry->preferred_address,
-		      &locator_address_item->address, 
+	    		   hip_get_locator_item_address(locator_address_item), 
 		      sizeof(in6_addr_t));
 	       memcpy(&addr.address,
-		      &locator_address_item->address,
+	    		   hip_get_locator_item_address(locator_address_item),
 		      sizeof(in6_addr_t));
 	       HIP_IFEL(hip_update_peer_preferred_address(
 			     entry, &addr, new_spi), -1,
@@ -1122,11 +1122,15 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 					 hitr),
 	      -1, "Building Verification Packet failed\n");
 	
-     HIP_IFEL(entry->hadb_xmit_func->
-	      hip_send_pkt(src_ip, &addr->address,
-			   (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			   entry->peer_udp_port, update_packet, entry, 1),
+    // HIP_IFEL(entry->hadb_xmit_func->
+	//      hip_send_pkt(src_ip, &addr->address,
+     HIP_IFEL(hip_send(src_ip, &addr->address,
+			   (addr->port ? HIP_NAT_UDP_PORT : 0),
+			   addr->port, update_packet, entry, 1),
 	      -ECOMM, "Sending UPDATE packet failed.\n");
+     
+     HIP_DEBUG_HIT("santtu: send update to verify: peer address: ",&addr->address );
+     HIP_DEBUG("santtu: send update to verify: peer port: %d \n",addr->port );
 	
  out_err:
      return err;

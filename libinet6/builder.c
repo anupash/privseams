@@ -3543,7 +3543,7 @@ struct in6_addr * hip_get_locator_item_address(void* first_item){
 	
 	
 	temp = (struct hip_locator_info_addr_item*) first_item;
-	if (temp->locator_type == 1){
+	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		return &temp->address;
 	}
 	else {

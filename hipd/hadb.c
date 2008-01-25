@@ -1497,11 +1497,18 @@ int hip_update_send_echo(hip_ha_t *entry,
         /* Have to take care of UPDATE echos to opposite family */
         if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&addr->address)
             == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+        	/*
             HIP_IFEL(entry->hadb_xmit_func->
                      hip_send_pkt(&entry->local_address, &addr->address,
                                   (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
                                   update_packet, entry, 1),
                      -ECOMM, "Sending UPDATE packet with echo data failed.\n");
+                     */
+        	
+        	 HIP_IFEL(hip_send(&entry->local_address, &addr->address,
+        	                                  (addr->port ? HIP_NAT_UDP_PORT : 0), addr->port,
+        	                                  update_packet, entry, 1),
+        	                     -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	} else {
             /* UPDATE echo is meant for opposite family of local_address*/
             /* check if we have one, otherwise let fail */
@@ -1509,12 +1516,18 @@ int hip_update_send_echo(hip_ha_t *entry,
                 n = list_entry(item);
                 if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
                     != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                	/*
                     HIP_IFEL(entry->hadb_xmit_func->
                              hip_send_pkt(hip_cast_sa_addr(&n->addr), 
                                           (struct in6_addr*)&addr->address,
                                           (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
                                           update_packet, entry, 1),
-                             -ECOMM, "Sending UPDATE packet with echo data failed.\n"); 
+                             -ECOMM, "Sending UPDATE packet with echo data failed.\n"); */
+                	HIP_IFEL(hip_send(hip_cast_sa_addr(&n->addr), 
+                	                                          (struct in6_addr*)&addr->address,
+                	                                          (addr->port ? HIP_NAT_UDP_PORT : 0), addr->port,
+                	                                          update_packet, entry, 1),
+                	                             -ECOMM, "Sending UPDATE packet with echo data failed.\n");
                 }
             }
         }
