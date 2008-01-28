@@ -475,7 +475,8 @@ int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
      /* Get the effective user ID. This has to be zero (root), because root owns
 	the key files under /etc/hip/. */
      euid = geteuid();
-     HIP_IFEL((euid != 0), -1, "New default HI must be created as root.\n");
+     if (action == ACTION_NEW)
+	     HIP_IFEL((euid != 0), -1, "New default HI must be created as root.\n");
 
      _HIP_INFO("action=%d optc=%d\n", action, optc);
 
