@@ -1231,11 +1231,23 @@ void read_file(char * file_name)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
+	  char *comment;
 	  original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
+
+	  comment = index(line, '#');
+	  if (comment)
+		  *comment = 0;
+	  
+	  if (strlen(line) == 0) {
+		  free(original_line);
+		  continue;
+	  }
+
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
+
 	  rule = parse_rule(line);
 	  if(rule)
 	    {

@@ -32,12 +32,14 @@ int counter = 0;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall -f <file_name> <timeout> [-d|-v] [-F|-H]\n");
+	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
 	printf("      - H allow only HIP related traffic\n");
-	printf("      - file_name is a path to a file containing firewall filtering rules\n");
+	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
 	printf("      - timeout is connection timeout value in seconds\n");
 	printf("      - d = debugging output\n");
 	printf("      - v = verbose output\n");
+	printf("      - t = timeout for packet capture (default %d secs)\n",
+	       HIP_FW_DEFAULT_TIMEOUT);
 	printf("      - F = do not flush iptables rules\n\n");
 }
 
@@ -88,6 +90,10 @@ int hip_get_default_hit(struct in6_addr *hit)
 
 int firewall_init(){
 	HIP_DEBUG("Initializing firewall\n");
+
+	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
+	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
+	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 
 	if (flush_iptables) {
 		HIP_DEBUG("Flushing all rules\n");
@@ -898,12 +904,28 @@ out_err:
 	return;
 }
 
+void check_and_write_default_config() {
+	struct stat status;
+	FILE *fp = NULL;
+	ssize_t items;
+	char *file = HIP_FW_DEFAULT_RULE_FILE;
+
+	if (stat(file, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(file, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIP_FW_CONFIG_FILE_EX,
+			       strlen(HIP_FW_CONFIG_FILE_EX), 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+}
 
 int main(int argc, char **argv)
 {
 	int err = 0;
 	int status;
-	long int timeout;
+	long int timeout = 1;
 	//unsigned char buf[BUFSIZE];
 	struct rule * rule = NULL;
 	struct _GList * temp_list = NULL;
@@ -912,17 +934,19 @@ int main(int argc, char **argv)
 	//struct hip_esp_packet * esp = NULL;
 	int escrow_active = 0;
 	int protocol_family;
-        
 	int ch;        
-	char *rule_file;
+	const char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
+	char *rule_file = default_rule_file;
 	char *traffic;
 	extern char *optarg;
 	extern int optind, optopt;
 	int errflg = 0;
 
+	check_and_write_default_config();
+
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:vdFH")) != -1) {
+	while ((ch = getopt(argc, argv, "f:t:vdFH")) != -1) {
 		switch(ch) {
 		case 'v':
 			hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -936,6 +960,9 @@ int main(int argc, char **argv)
 		case 'f':
 			rule_file = optarg;
 		break;
+		case 't':
+			timeout = atol(argv[optind]);
+		break;
 		case 'F':
 			flush_iptables = 0;
 		break;
@@ -948,11 +975,6 @@ int main(int argc, char **argv)
 			errflg++;
 		}
 	}
-	if (optind < argc)
-		timeout = atol(argv[optind]);
-	else 
-		errflg++;       
-
 
 	if (errflg) {
 		print_usage();
@@ -974,7 +996,6 @@ int main(int argc, char **argv)
 	//  test_parse_copy();
 	//  test_rule_management();
 
-	timeout = atol(argv[2]);
 	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
                 rule_file, timeout);
 
