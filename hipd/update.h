@@ -33,9 +33,9 @@ extern int is_active_handover;
 
 /** A Really ugly hack ripped from rea.c, must convert to list_head asap. */
 struct hip_update_kludge {
-     hip_ha_t **array;
-     int count;
-     int length;
+	hip_ha_t **array;
+	int count;
+	int length;
 };
 
 /**
