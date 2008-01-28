@@ -867,7 +867,7 @@ static void *handle_ip_traffic(void *ptr) {
 					else
 						drop_packet(hndl, m->packet_id);
 				}
-#endif
+#endif /* CONFIG_HIP_OPPTCP */
 		}
 
       		if (status < 0)
