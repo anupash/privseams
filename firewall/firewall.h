@@ -38,6 +38,7 @@ int get_stateful_filtering();
 int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
+void firewall_probe_kernel_modules();
 
 #endif
 

@@ -23,7 +23,8 @@ int statefulFiltering = 1;
 int escrow_active = 0;
 int use_ipv4 = 0;
 int use_ipv6 = 0;
-int accept_normal_traffic = 0;
+int accept_normal_traffic = 1;
+int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 
 int counter = 0;
@@ -31,12 +32,13 @@ int counter = 0;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall -t <traffic_other_than_hip> -f <file_name> <timeout> [-d|-v]\n");
-	printf("      - traffic_other_than_hip, can take the value drop or accept\n");
+	printf("Usage: firewall -f <file_name> <timeout> [-d|-v] [-F|-H]\n");
+	printf("      - H allow only HIP related traffic\n");
 	printf("      - file_name is a path to a file containing firewall filtering rules\n");
 	printf("      - timeout is connection timeout value in seconds\n");
 	printf("      - d = debugging output\n");
-	printf("      - v = verbose output\n\n");
+	printf("      - v = verbose output\n");
+	printf("      - F = do not flush iptables rules\n\n");
 }
 
 //currently done at all times, rule_management 
@@ -86,34 +88,56 @@ int hip_get_default_hit(struct in6_addr *hit)
 
 int firewall_init(){
 	HIP_DEBUG("Initializing firewall\n");
+
+	if (flush_iptables) {
+		HIP_DEBUG("Flushing all rules\n");
+		system("iptables -F INPUT");
+		system("iptables -F OUTPUT");
+		system("iptables -F FORWARD");
+		system("ip6tables -F INPUT");
+		system("ip6tables -F OUTPUT");
+		system("ip6tables -F FORWARD");
+	}
+
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
 	if (use_ipv4) {
 		system("iptables -I FORWARD -p 253 -j QUEUE");
-		system("iptables -I FORWARD -p 17 -j QUEUE");
-		system("iptables -I FORWARD -p 6  -j QUEUE");
-
+		system("iptables -I FORWARD -p 50 -j QUEUE");
+		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+		
 		system("iptables -I INPUT -p 253 -j QUEUE");
-		system("iptables -I INPUT -p 17  -j QUEUE");
-		system("iptables -I INPUT -p 6  -j QUEUE");
-
-		system("iptables -I OUTPUT -p 253 -j QUEUE");
-		system("iptables -I OUTPUT -p 17  -j QUEUE");
-		system("iptables -I OUTPUT -p 6  -j QUEUE");
+		system("iptables -I INPUT -p 50 -j QUEUE");
+		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+		
+		system("iptables -I OUTPUT -p 253  -j QUEUE");
+		system("iptables -I OUTPUT -p 50 -j QUEUE");
+		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+		if (!accept_normal_traffic) {
+			system("iptables -I FORWARD -j DROP");
+			system("iptables -I INPUT -j DROP");
+			system("iptables -I OUTPUT -j DROP");
+		}
 	}
 	if (use_ipv6) {
 		system("ip6tables -I FORWARD -p 253 -j QUEUE");
-		system("ip6tables -I FORWARD -p 17  -j QUEUE");
-		system("ip6tables -I FORWARD -p 6  -j QUEUE");
-
+		system("ip6tables -I FORWARD -p 50 -j QUEUE");
+		
 		system("ip6tables -I INPUT -p 253 -j QUEUE");
-		system("ip6tables -I INPUT -p 17  -j QUEUE");
-		system("ip6tables -I INPUT -p 6  -j QUEUE");
+		system("ip6tables -I INPUT -p 50 -j QUEUE");
+		
+		system("ip6tables -I OUTPUT -p 253  -j QUEUE");
+		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 
-		system("ip6tables -I OUTPUT -p 253 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 17  -j QUEUE");
-		system("ip6tables -I OUTPUT -p 6  -j QUEUE");
+		if (!accept_normal_traffic) {
+			system("ip6tables -I FORWARD -j DROP");
+			system("ip6tables -I INPUT -j DROP");
+			system("ip6tables -I OUTPUT -j DROP");
+		}
 	}
 	return 0;
 }
@@ -126,31 +150,16 @@ void firewall_close(int signal){
 
 void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
-	if (use_ipv4) {
-		system("iptables -D FORWARD -p 253 -j QUEUE");
-		system("iptables -D FORWARD -p 17  -j QUEUE");
-		system("iptables -D FORWARD -p 6  -j QUEUE");
-
-		system("iptables -D INPUT -p 253 -j QUEUE");
-		system("iptables -D INPUT -p 17  -j QUEUE");
-		system("iptables -D INPUT -p 6  -j QUEUE");
-
-		system("iptables -D OUTPUT -p 253 -j QUEUE");
-		system("iptables -D OUTPUT -p 17  -j QUEUE");
- 		system("iptables -D OUTPUT -p 6  -j QUEUE");
-	}
-	if (use_ipv6) {
-		system("ip6tables -D FORWARD -p 253 -j QUEUE");
-		system("ip6tables -D FORWARD -p 17  -j QUEUE");
-		system("ip6tables -D FORWARD -p 6  -j QUEUE");
-
-		system("ip6tables -D INPUT -p 253 -j QUEUE");
-		system("ip6tables -D INPUT -p 17  -j QUEUE");
-		system("ip6tables -D INPUT -p 6  -j QUEUE");
-
-		system("ip6tables -D OUTPUT -p 253 -j QUEUE");
-		system("ip6tables -D OUTPUT -p 17  -j QUEUE");
-		system("ip6tables -D OUTPUT -p 6  -j QUEUE");
+	if (flush_iptables) {
+		HIP_DEBUG("Flushing all rules\n");
+		system("iptables -F INPUT");
+		system("iptables -F OUTPUT");
+		system("iptables -F FORWARD");
+		system("ip6tables -F INPUT");
+		system("ip6tables -F OUTPUT");
+		system("ip6tables -F FORWARD");
+	} else {
+		HIP_DEBUG("Some dagling iptables rules may be present!\n");
 	}
 }
 
@@ -829,27 +838,11 @@ static void *handle_ip_traffic(void *ptr) {
       		} 
       		else{
 				HIP_DEBUG("****** Received Unknown packet ******\n");
-#ifdef CONFIG_HIP_OPPTCP
-				if(iphdr->ip_p != IPPROTO_TCP){
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-				}
-				else if(is_incoming_packet(packetHook))
-					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
-				else if(is_outgoing_packet(packetHook))
-					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
-				else{
-#endif
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-#ifdef CONFIG_HIP_OPPTCP
-				}
-#endif
-			}
+				if(accept_normal_traffic)
+					allow_packet(hndl, m->packet_id);
+				else
+					drop_packet(hndl, m->packet_id);
+		}
 
       		if (status < 0)
 				die(hndl);
@@ -903,7 +896,7 @@ int main(int argc, char **argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, ":t:f:vd")) != -1) {
+	while ((ch = getopt(argc, argv, "f:vdFH")) != -1) {
 		switch(ch) {
 		case 'v':
 			hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -911,11 +904,14 @@ int main(int argc, char **argv)
 		case 'd':
 			hip_set_logdebug(LOGDEBUG_ALL);
 		break;
-		case 't':
-			traffic = optarg;
+		case 'H':
+			accept_normal_traffic = 0;
 		break;
 		case 'f':
 			rule_file = optarg;
+		break;
+		case 'F':
+			flush_iptables = 0;
 		break;
 		case ':':   /* -f or -p without operand */
 			printf("Option -%c requires an operand\n", optopt);
@@ -930,19 +926,6 @@ int main(int argc, char **argv)
 		timeout = atol(argv[optind]);
 	else 
 		errflg++;       
-
-
-	if (strncmp(traffic, "drop", 4) == 0) {
-		HIP_DEBUG("Dropping normal traffic\n");
-		accept_normal_traffic = 0;
-	}
-	else if (strncmp(traffic, "accept", 6) == 0) {
-		HIP_DEBUG("Accepting normal traffic\n");
-		accept_normal_traffic = 1;
-	}
-	else{
-		errflg++;
-	}
 
 
 	if (errflg) {
