@@ -117,6 +117,13 @@ int firewall_init(){
 		system("iptables -I OUTPUT -p 50 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+
+#ifdef CONFIG_HIP_OPPTCP
+		system("iptables -I FORWARD -p 6 -j QUEUE");
+		system("iptables -I INPUT -p 6 -j QUEUE");
+		system("iptables -I OUTPUT -p 6 -j QUEUE");
+#endif
+
 		if (!accept_normal_traffic) {
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
@@ -132,6 +139,12 @@ int firewall_init(){
 		
 		system("ip6tables -I OUTPUT -p 253  -j QUEUE");
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
+
+#ifdef CONFIG_HIP_OPPTCP
+		system("ip6tables -I FORWARD -p 6 -j QUEUE");
+		system("ip6tables -I INPUT -p 6 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
+#endif
 
 		if (!accept_normal_traffic) {
 			system("ip6tables -I FORWARD -j DROP");
@@ -837,11 +850,26 @@ static void *handle_ip_traffic(void *ptr) {
 	  			}
       		} 
       		else{
-				HIP_DEBUG("****** Received Unknown packet ******\n");
-				if(accept_normal_traffic)
-					allow_packet(hndl, m->packet_id);
-				else
-					drop_packet(hndl, m->packet_id);
+#ifdef CONFIG_HIP_OPPTCP
+				if(iphdr->ip_p != IPPROTO_TCP){
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
+				}
+				else if(is_incoming_packet(packetHook))
+					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
+				else if(is_outgoing_packet(packetHook))
+					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
+				else{
+#endif
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
+#ifdef CONFIG_HIP_OPPTCP
+				}
+#endif
 		}
 
       		if (status < 0)
