@@ -13,21 +13,19 @@ GThread * control_thread = NULL;
 
 gpointer run_control_thread(gpointer data)
 {
-	HIP_DEBUG("Executing connection thread\n");
-
-/* Variables. */
+	/* Variables. */
 	int err = 0;
 	int n;
 	int len;
 	int ret;
 	int max_fd;
-    struct sockaddr_in6 sock_addr;
-
-    
+	struct sockaddr_in6 sock_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
 	fd_set read_fdset;
 	struct timeval tv;
+
+	HIP_DEBUG("Executing connection thread\n");
 
 	HIP_DEBUG("Waiting messages...\n\n");
 
@@ -221,12 +219,11 @@ out_err:
 int sendto_hipd(void *msg, size_t len)
 {
 	/* Variables. */
-    struct sockaddr_in6 sock_addr;
-  
+	struct sockaddr_in6 sock_addr;
 	int n, alen;
 	
 	bzero(&sock_addr, sizeof(sock_addr));
-    sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
 	sock_addr.sin6_addr = in6addr_loopback;
     
@@ -254,8 +251,8 @@ int control_thread_init(void)
 		return err;
 	}
 
-    /*New UDP socket for communication with HIPD*/
-    hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	/*New UDP socket for communication with HIPD*/
+	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
