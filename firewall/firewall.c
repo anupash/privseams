@@ -503,7 +503,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 	//allow all the rest
 	allow_packet(handle, packetId);
 }
-#endif
+#endif /* CONFIG_HIP_OPPTCP */
 
 
 /* filter hip packet according to rules.
@@ -849,25 +849,23 @@ static void *handle_ip_traffic(void *ptr) {
 					drop_packet(hndl, m->packet_id);
 	  			}
       		} 
-      		else{
-#ifdef CONFIG_HIP_OPPTCP
-				if(iphdr->ip_p != IPPROTO_TCP){
+			else {
+				if(iphdr->ip_p != IPPROTO_TCP) {
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
 						drop_packet(hndl, m->packet_id);
-				}
+				} /* OPPORTUNISTIC MODE HACKS */ 
+#ifdef CONFIG_HIP_OPPTCP
 				else if(is_incoming_packet(packetHook))
 					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
 					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
 				else{
-#endif
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
 						drop_packet(hndl, m->packet_id);
-#ifdef CONFIG_HIP_OPPTCP
 				}
 #endif
 		}
