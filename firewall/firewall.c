@@ -91,7 +91,7 @@ int firewall_init(){
 	signal(SIGTERM, firewall_close);
 	if (use_ipv4) {
 		system("iptables -I FORWARD -p 253 -j QUEUE");
-		system("iptables -I FORWARD -p 17  -j QUEUE");
+		system("iptables -I FORWARD -p 17 -j QUEUE");
 		system("iptables -I FORWARD -p 6  -j QUEUE");
 
 		system("iptables -I INPUT -p 253 -j QUEUE");
@@ -727,6 +727,8 @@ static void *handle_ip_traffic(void *ptr) {
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
 	unsigned int packetHook;
+
+	HIP_DEBUG("type=IPv%d\n", type);
 
 	if(type == 4){
 		ipv4Traffic = 1;
