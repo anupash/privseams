@@ -1236,6 +1236,7 @@ void read_file(char * file_name)
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
 
+	  /* terminate the line to comment sign */
 	  comment = index(line, '#');
 	  if (comment)
 		  *comment = 0;
