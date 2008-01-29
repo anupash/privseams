@@ -842,11 +842,11 @@ static void *handle_ip_traffic(void *ptr) {
 
 
 				if(filter_hip(src_addr, 
-                      		  dst_addr, 
-		     	 			  hip_common, 
-		      				  m->hook,
-		      				  m->indev_name,
-		      				  m->outdev_name))
+					      dst_addr, 
+					      hip_common, 
+					      m->hook,
+					      m->indev_name,
+					      m->outdev_name))
 	  			{
 					allow_packet(hndl, m->packet_id);
 				}
@@ -854,9 +854,9 @@ static void *handle_ip_traffic(void *ptr) {
 	  			{
 					drop_packet(hndl, m->packet_id);
 	  			}
-      		} 
-			else {
-				if(iphdr->ip_p != IPPROTO_TCP) {
+      		} else {
+				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
+				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
