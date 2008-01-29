@@ -756,7 +756,7 @@ static void *handle_ip_traffic(void *ptr) {
 	int type = *((int *) ptr);
 	unsigned int packetHook;
 
-	HIP_DEBUG("type=IPv%d\n", type);
+	HIP_DEBUG("thread for type=IPv%d traffic started\n", type);
 
 	if(type == 4){
 		ipv4Traffic = 1;
@@ -933,8 +933,8 @@ int main(int argc, char **argv)
 	//struct hip_esp * esp_data = NULL;
 	//struct hip_esp_packet * esp = NULL;
 	int escrow_active = 0;
-	int protocol_family;
-	int ch;        
+	const int family4 = 4, family6 = 6;
+	int ch, tmp;
 	const char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
 	char *rule_file = default_rule_file;
 	char *traffic;
@@ -1038,12 +1038,12 @@ int main(int argc, char **argv)
 
 
 	if (use_ipv4) {
-                int j = 4;
-                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic, (void*) &j);
+                pthread_create(&ipv4Thread, NULL, &handle_ip_traffic,
+			       (void*) &family4);
         }
 	if (use_ipv6) {
-                int j = 6;
-                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic, (void*) &j);
+                pthread_create(&ipv6Thread, NULL, &handle_ip_traffic,
+			       (void*) &family6);
         }
 
 	if (use_ipv4)
