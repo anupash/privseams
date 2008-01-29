@@ -396,9 +396,11 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	   Because we do not have the HIT of RVS in the incoming I1 message, we
 	   have to get the host association using the responder's HIT and the IP
 	   address of the RVS as search keys. */
+#ifdef CONFIG_HIP_RVS
 	rvs_ha_entry =
 		hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, rvs_ip);
      
+#endif /* CONFIG_HIP_RVS */
 	if (rvs_ha_entry == NULL)
 	{
 		HIP_DEBUG("The I1 packet was received from RVS, but the host "\
