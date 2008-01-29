@@ -3,12 +3,13 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
+Source: hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl gtk2 libxml2 glib iptables-dev
+Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -27,7 +28,7 @@ other related tools and test software.
 %setup
 
 %build
-./configure --prefix=%{buildroot}/%{prefix} && make
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -47,7 +48,7 @@ install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
 install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
-make install
+make DESTDIR=%{buildroot} install
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
@@ -81,7 +82,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib/*
+%{_libdir}/*
 %config /etc/rc.d/init.d/hipd
 %doc doc/HOWTO.txt doc/howto-html
 

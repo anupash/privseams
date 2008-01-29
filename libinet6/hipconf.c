@@ -248,6 +248,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_MAP;
 	else if (!strcmp("rst", text))
 		ret = TYPE_RST;
+	else if (!strcmp("hipudprelay", text))
+		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
 	else if (!strcmp("puzzle", text))
@@ -473,7 +475,8 @@ int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
      /* Get the effective user ID. This has to be zero (root), because root owns
 	the key files under /etc/hip/. */
      euid = geteuid();
-     HIP_IFEL((euid != 0 && action == ACTION_SET), -1, "New default HI must be created as root.\n");
+     HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
+	      "New default HI must be created as root.\n");
 
      _HIP_INFO("action=%d optc=%d\n", action, optc);
 

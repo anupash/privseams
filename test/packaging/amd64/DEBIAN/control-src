@@ -6,6 +6,6 @@ Build-Depends: debhelper (>= 4.0.0), autotools-dev, automake, autoconf, libtool,
 Standards-Version: 3.6.2
 
 Package: hipl
-Architecture: i386
+Architecture: amd64
 Description: This package contains the necessary tools, libraries and documents
  for the HIP protocol.

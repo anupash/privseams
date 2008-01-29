@@ -7,13 +7,15 @@ VERSION="$MAJOR.$MINOR"
 RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl-manager
-DEBIAN=i386/DEBIAN-gconf
+DEBARCH="i386"
+if uname -a|grep x86_64; then DEBARCH=amd64; fi
+DEBIAN=${DEBARCH}/DEBIAN-gconf
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
 ROOT=$PWD
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-i386.deb"
+PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
 # Copy binary package files.
 copy_binpkg_files()
