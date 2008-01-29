@@ -25,20 +25,14 @@
 /* When adding new states update debug.h hip_state_str(). Doxygen comments to
    these states are available at doc/doxygen.h */
 #define HIP_STATE_NONE                   0
-#define HIP_STATE_UNASSOCIATED           1  /**< ex-E0 */
-#define HIP_STATE_I1_SENT                2  /**< ex-E1 */
-#define HIP_STATE_I2_SENT                3  /**< ex-E2 */
+#define HIP_STATE_UNASSOCIATED           1
+#define HIP_STATE_I1_SENT                2
+#define HIP_STATE_I2_SENT                3
 #define HIP_STATE_R2_SENT                4
-#define HIP_STATE_ESTABLISHED            5  /**< ex-E3 */
+#define HIP_STATE_ESTABLISHED            5
 #define HIP_STATE_FAILED                 7
 #define HIP_STATE_CLOSING                8
 #define HIP_STATE_CLOSED                 9
-#define HIP_STATE_FILTERING_I1           10
-#define HIP_STATE_FILTERING_R2           11
-#define HIP_STATE_FILTERED_I1            12
-#define HIP_STATE_FILTERED_R2            13
-#define HIP_STATE_FILTERING_I2           14
-#define HIP_STATE_FILTERED_I2            15
 /* @} */
 
 #define HIP_UPDATE_STATE_REKEYING        1 /**< @todo REMOVE */
@@ -253,14 +247,19 @@ struct hip_host_id_entry {
     association between two hosts. Each successful base exchange between two
     different hosts leads to a new @c hip_hadb_state with @c state set to
     @c HIP_STATE_ESTABLISHED. */
+/* If you need to add a new boolean type variable to this structure, consider
+   adding a control value to the local_controls and/or peer_controls bitmask
+   field(s) instead of adding yet another integer. Lauri 24.01.2008. */
 struct hip_hadb_state
 {	
         /** Our Host Identity Tag (HIT). */
 	hip_hit_t                    hit_our;
-	/** Peer Host Identity Tag (HIT). */
+	/** Peer's Host Identity Tag (HIT). */
 	hip_hit_t                    hit_peer;
-	/** Information about the usage of the host association. When zero, the
-	    host association can be freed. */
+	/** Information about the usage of the host association related to
+	    locking stuff which is currently unimplemented because the daemon
+	    is single threaded. When zero, the host association can be freed.
+	    @date 24.01.2008 */
 	hip_hastate_t                hastate; 
 	/** The state of this host association. @see hip_ha_state */ 
 	int                          state;
@@ -276,7 +275,8 @@ struct hip_hadb_state
 	/** Peer control values related to this host association.
 	    @see hip_ha_controls */ 
 	hip_controls_t               peer_controls;
-	/** ? @todo Define. */
+	/** If this host association is from a local HIT to a local HIT this
+	    is non-zero, otherwise zero. */
 	int                          is_loopback;
 	/** Security Parameter Indices (SPI) for incoming Security Associations
 	    (SA). A SPI is an identification tag added to the packet header
@@ -300,11 +300,11 @@ struct hip_hadb_state
 	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_our;
-	/** ? @todo Define. */
+	/** ESP transform type */
 	int                          esp_transform;
-	/** ? @todo Define. */
+	/** HIP transform type */
 	int                          hip_transform;
-	/** Something to do with the birthday paradox? @todo Define. */
+	/** Something to do with the birthday paradox. */
 	uint64_t                     birthday;
 	/** A pointer to the Diffie-Hellman shared key. */
 	char                         *dh_shared_key;
@@ -414,7 +414,7 @@ struct hip_hadb_state
 	int                          is_hi3_state ;
 #endif
 #ifdef CONFIG_HIP_OPPTCP
-	/** ? @todo Define. */
+	/* Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
 #endif
 };

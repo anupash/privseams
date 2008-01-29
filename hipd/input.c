@@ -254,7 +254,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
-	/*! \todo 1024 -> hip_get_dh_size ? */
+	/** @todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
@@ -1959,11 +1959,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	HIP_DEBUG("state is %d\n", entry->state);
 
-	if (entry && entry->state != HIP_STATE_FILTERING_R2)
+	if (entry)
 	{
 
 /* Hmmm... Now that the RVS is compiled as a default value, we take the first
-   path always. Now, is this how it is meant to be? Notice, that currently
+   path always. Is this how it is meant to be? Notice, that currently
    CONFIG_HIP_RVS does not mean that we are the RVS, but rather that the
    extension is in use. Thus we can be I, RVS or R, and as long as the
    RVS options are compiled, we always take the first path.

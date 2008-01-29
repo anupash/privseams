@@ -474,6 +474,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
                  "Building daemon header failed\n"); 
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+
+	HIP_DEBUG("The message is:.\n");
+	HIP_DUMP_MSG(msg);
+
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
                  "No gw struct found\n");
         
@@ -580,7 +584,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         
                         /* "add every HIT to linked list"
 			   What do you mean by "every"? We only have one HIT per
-			   line, don't we? Also, wy do we loop through the list
+			   line, don't we? Also, why do we loop through the list
 			   again when we already have the hit stored from the
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				

@@ -191,7 +191,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
             struct hip_opendht_gw_info *gw_info;
 
             HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-                     "no gw struct found\n");
+                     "No gw struct found\n");
             memset(&tmp_ip_str,'\0',20);
             tmp_ttl = gw_info->ttl;
             tmp_port = htons(gw_info->port);

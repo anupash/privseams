@@ -182,10 +182,13 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP UDP relay database.\n");
+	HIP_INFO("Initializing HIP relay / RVS database.\n");
 	if(hip_relht_init() == NULL)
 	{
-	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
+		HIP_ERROR("Unable to initialize HIP relay / RVS database.\n");
+	} else {
+		HIP_INFO("HIP relay / RVS database initialized "\
+			 "successfully.\n");
 	}
 #endif
 #ifdef CONFIG_HIP_ESCROW

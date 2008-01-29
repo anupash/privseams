@@ -618,15 +618,10 @@
 /**
  * @defgroup hip_ha_state HIP association states
  *
- * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10 and some
- * implementation specific states.
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
  * 
- * The protocol specific states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT
- * ESTABLISHED, CLOSING, CLOSED, E-FAILED.
- *
- * The implementation specific states are: HIP_STATE_FILTERING_I1,
- * HIP_STATE_FILTERING_R2, HIP_STATE_FILTERED_I1,  HIP_STATE_FILTERED_R2,
- * HIP_STATE_FILTERING_I2, HIP_STATE_FILTERED_I2.
+ * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
+ * CLOSED, E-FAILED.
  */
 
 /** 
@@ -648,19 +643,7 @@
  * @def HIP_STATE_CLOSED
  *      CLOSED, HIP association closed, no data can be sent.
  * @def HIP_STATE_FAILED
-        E-FAILED, HIP exchange failed.
- * @def HIP_STATE_FILTERING_I1
- *      @todo Define what this state means.
- * @def HIP_STATE_FILTERING_R2
- *      @todo Define what this state means.
- * @def HIP_STATE_FILTERED_I1
- *      @todo Define what this state means.
- * @def HIP_STATE_FILTERED_R2
- *      @todo Define what this state means.
- * @def HIP_STATE_FILTERING_I2
- *      @todo Define what this state means.
- * @def HIP_STATE_FILTERED_I2
- *      @todo Define what this state means.
+ *      E-FAILED, HIP exchange failed.
  */
 
 #endif /* _DOXYGEN_H */
