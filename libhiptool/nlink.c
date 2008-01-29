@@ -1436,7 +1436,7 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 				//copy the hit
 				HITbytes = (char*)defaultHit;
 				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = HITbytes[j];
+					newHdr[twoHdrsSize + 4 + j] = (char)&HITbytes[j];
 			}
 		}
 		else{
@@ -1446,7 +1446,7 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 				//copy the hit
 				HITbytes = (char*)defaultHit;
 				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = HITbytes[j];
+					newHdr[twoHdrsSize + j] = (char)&HITbytes[j];
 			}
 		}
 	}
@@ -1465,7 +1465,7 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 				//copy the hit
 				HITbytes = (char*)defaultHit;
 				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = HITbytes[j];
+					newHdr[twoHdrsSize + 4 + j] = (char)&HITbytes[j];
 			}
 			else{
 				i = 0;
@@ -1485,7 +1485,7 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 				//copy the hit
 				HITbytes = (char*)defaultHit;
 				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = HITbytes[j];
+					newHdr[twoHdrsSize + j] = (char)&HITbytes[j];
 			}
 			else{
 				i = 0;
