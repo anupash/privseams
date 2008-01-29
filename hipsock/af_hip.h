@@ -24,7 +24,7 @@
 #include "eid_db.h"
 
 #ifndef IPPROTO_HIP
-#  define IPPROTO_HIP             253 /* Also in libinet6/include/netinet/in.h */
+#  define IPPROTO_HIP             139 /* Also in libinet6/include/netinet/in.h */
 #endif
 
 #define NETLINK_HIP             32   /* Host Identity Protocol signalling messages */
