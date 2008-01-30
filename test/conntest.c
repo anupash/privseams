@@ -213,8 +213,8 @@ int main_server(int type, int port)
 }
 
  /**
-  * hip_connect_func - allows to connect to the addresses specified by res
-  * @param proto type of protocol
+  * Connects to the addresses specified by res
+  *
   * @param res list containing the peers addresses
   * @param filename ?
   *
@@ -227,6 +227,8 @@ int main_server(int type, int port)
 	 struct timeval stats_before, stats_after;
 	 unsigned long stats_diff_sec, stats_diff_usec;
 	 FILE *fp = NULL;
+
+	 HIP_DEBUG("FILENAME IS: %s.\n", filename);
 
 	 if (filename)
 		 if ((fp = fopen(filename, "a")) == NULL) {
@@ -315,7 +317,6 @@ int main_server(int type, int port)
 		 printf("failed to connect\n");
 		 goto out_err;
 	 }
-	 
 	
 out_err:
 	 if (filename && fp)

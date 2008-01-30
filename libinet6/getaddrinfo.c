@@ -475,9 +475,6 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                  "Building daemon header failed\n"); 
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
 
-	HIP_DEBUG("The message is:.\n");
-	HIP_DUMP_MSG(msg);
-
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
                  "No gw struct found\n");
         
