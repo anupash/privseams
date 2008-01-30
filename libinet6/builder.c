@@ -1900,7 +1900,7 @@ int hip_build_param_signature_contents(struct hip_common *msg,
 int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 			 int sign, int request)
 {
-	struct hip_echo_request ping;
+	struct hip_echo_request_m ping;
 	int err;
 
 	if (request)
