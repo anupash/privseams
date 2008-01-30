@@ -67,6 +67,7 @@
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
 #define HIP_PARAM_PUZZLE               257
 #define HIP_PARAM_SOLUTION             321
+#define HIP_PARAM_SOLUTION_M           322
 #define HIP_PARAM_SEQ                  385
 #define HIP_PARAM_ACK                  449
 #define HIP_PARAM_DIFFIE_HELLMAN       513
@@ -77,6 +78,7 @@
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
+#define HIP_PARAM_ECHO_RESPONSE_M      962
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
 /* Range 32768 - 49141 can be used for HIPL private parameters. */
@@ -123,6 +125,8 @@
 #define HIP_PARAM_TO_PEER              64006
 #define HIP_PARAM_FROM_PEER            64008
 #define HIP_PARAM_REG_FROM             64010
+#define HIP_PARAM_ECHO_REQUEST_M       65332
+#define HIP_PARAM_PUZZLE_M             65334
 #define HIP_PARAM_FROM                 65498
 #define HIP_PARAM_RVS_HMAC             65500
 #define HIP_PARAM_VIA_RVS              65502
@@ -201,6 +205,7 @@
 #define HIP_VERIFY_PUZZLE             0
 #define HIP_SOLVE_PUZZLE              1
 #define HIP_PUZZLE_OPAQUE_LEN         2
+#define HIP_PUZZLE_M_OPAQUE_LEN       6
 
 #define HIP_PARAM_ENCRYPTED_IV_LEN    8
 
@@ -465,6 +470,37 @@ struct hip_solution {
 	uint8_t           opaque[HIP_PUZZLE_OPAQUE_LEN];
 	uint64_t          I;
 	uint64_t          J;
+} __attribute__ ((packed));
+
+struct hip_puzzle_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	uint8_t           K;
+	uint8_t           lifetime;
+	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
+	uint64_t          I;
+} __attribute__ ((packed));
+
+struct hip_solution_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	uint8_t           K;
+	uint8_t           reserved;
+	uint8_t           opaque[HIP_PUZZLE_M_OPAQUE_LEN];
+	uint64_t          I;
+	uint64_t          J;
+} __attribute__ ((packed));
+
+struct hip_echo_request_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	/* opaque */
+} __attribute__ ((packed));
+
+struct hip_echo_response_m {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+	/* opaque */
 } __attribute__ ((packed));
 
 struct hip_dh_public_value {

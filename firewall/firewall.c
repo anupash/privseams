@@ -573,10 +573,11 @@ static void *handle_ip_traffic(void *ptr) {
 					int size = 0, verdict = NF_ACCEPT;
 					unsigned char *ptr = NULL;
 #ifdef CONFIG_HIP_MIDAUTH
-					struct midauth_packet p;
-
 					if (use_midauth) {
+					    struct midauth_packet p;
 					    p.hip_common = hip_common;
+					    p.ip_version = type;
+					    p.hdr_size = hdr_size;
 					    verdict = filter_midauth(m, &p);
 					    size = p.size;
 					    ptr = size ? p.buffer : NULL;

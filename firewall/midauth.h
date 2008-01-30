@@ -1,7 +1,9 @@
 #ifndef HIP_MIDAUTH_H
 #define HIP_MIDAUTH_H
 
+#include <netinet/ip6.h>
 #include <netinet/ip.h>
+#include <netinet/udp.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
 #include "protodefs.h"
@@ -11,8 +13,10 @@
 
 struct midauth_packet {
     int size;
-    unsigned char buffer[MIDAUTH_PACKET_SIZE];
-    struct hip_common *hip_common;
+    int ip_version;
+    int hdr_size;
+    unsigned char buffer[MIDAUTH_PACKET_SIZE]; /* space for a modified packet */
+    struct hip_common *hip_common; /* in the old packet, don't write there */
 };
 
 /* public functions for midauth */

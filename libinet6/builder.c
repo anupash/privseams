@@ -535,6 +535,12 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_SOLUTION,
                         HIP_PARAM_VIA_RVS,
 			HIP_PARAM_RELAY_TO
+#ifdef CONFIG_HIP_MIDAUTH
+		       ,HIP_PARAM_ECHO_REQUEST_M,
+                        HIP_PARAM_ECHO_RESPONSE_M,
+                        HIP_PARAM_PUZZLE_M,
+                        HIP_PARAM_SOLUTION_M
+#endif
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1005,6 +1011,10 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	case HIP_PARAM_RELAY_TO: return "HIP_PARAM_RELAY_TO";
+	case HIP_PARAM_ECHO_REQUEST_M: return "HIP_PARAM_ECHO_REQUEST_M";
+	case HIP_PARAM_ECHO_RESPONSE_M: return "HIP_PARAM_ECHO_RESPONSE_M";
+	case HIP_PARAM_PUZZLE_M: return "HIP_PARAM_PUZZLE_M";
+	case HIP_PARAM_SOLUTION_M: return "HIP_PARAM_SOLUTION_M";
 	}
 	return "UNDEFINED";
 }
