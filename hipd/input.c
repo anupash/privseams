@@ -927,6 +927,23 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}
 	}
 
+	/********** ECHO_RESPONSE_M (OPTIONAL) **************/
+#ifdef CONFIG_HIP_MIDAUTH
+	{
+		struct hip_echo_request_m *ping;
+
+		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
+		while (ping) {
+			int ln = hip_get_param_contents_len(ping);
+			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
+			    break;
+			HIP_IFEL(hip_build_param_echo_m(i2, ping + 1, ln, 0), -1, 
+				 "Error while creating echo_m reply parameter\n");
+			ping = hip_get_next_param(ctx->input, ping);
+		}
+	}
+#endif
+
 	/************* HMAC ************/
 	HIP_IFEL(hip_build_param_hmac_contents(i2, &ctx->hip_hmac_out),
 		 -1, "Building of HMAC failed\n");
@@ -1393,6 +1410,23 @@ int hip_create_r2(struct hip_context *ctx,
 	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
+
+	/********** ECHO_RESPONSE_M (OPTIONAL) **************/
+#ifdef CONFIG_HIP_MIDAUTH
+	{
+		struct hip_echo_request_m *ping;
+
+		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
+		while (ping) {
+			int ln = hip_get_param_contents_len(ping);
+			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
+			    break;
+			HIP_IFEL(hip_build_param_echo_m(r2, ping + 1, ln, 0), -1, 
+				 "Error while creating echo_m reply parameter\n");
+			ping = hip_get_next_param(ctx->input, ping);
+		}
+	}
+#endif
 
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id

@@ -114,7 +114,8 @@ static void update_all_headers(struct midauth_packet *p) {
 static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
     int verdict = NF_ACCEPT;
     struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    char *nonce = "abcedfgh";
+    char *nonce1 = "abcedfgh";
+    char *nonce2 = "foobar";
     struct hip_puzzle_m puzzle;
 
     /* start with a copy of the original packet */
@@ -136,8 +137,9 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
     hip_set_param_type(&puzzle, HIP_PARAM_PUZZLE_M);
     hip_set_param_contents_len(&puzzle, sizeof(puzzle) - sizeof(struct hip_tlv_common));
 
-    hip_build_param_contents(hip, nonce, HIP_PARAM_ECHO_REQUEST_M, strlen(nonce));
-    hip_build_param(hip, &puzzle);
+    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
+    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
+/*    hip_build_param(hip, &puzzle);*/
     p->size = hip_get_msg_total_len(hip);
 
     /* no more dragons & black magic*/
@@ -160,6 +162,8 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     int verdict = NF_ACCEPT;
     struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
+    char *nonce1 = "hello";
+    char *nonce2 = "world";
 
     /* just copy it for testing */
 
@@ -167,6 +171,9 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     HIP_DEBUG("***************************old*******************************\n");
     HIP_DUMP_MSG(hip);
+
+    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
+    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
 
     p->size = hip_get_msg_total_len(hip);
     HIP_DEBUG("***************************new*************************%i******\n", p->size);
@@ -213,18 +220,14 @@ int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     switch (p->hip_common->type_hdr) {
 	case HIP_I1:
-	    HIP_DEBUG("filtering I1\n");
 	    break;
 	case HIP_R1:
-	    HIP_DEBUG("filtering R1\n");
 	    verdict = filter_midauth_r1(m, p);
 	    break;
 	case HIP_I2:
-	    HIP_DEBUG("filtering I2\n");
 	    verdict = filter_midauth_i2(m, p);
 	    break;
 	case HIP_R2:
-	    HIP_DEBUG("filtering R2\n");
 	    verdict = filter_midauth_r2(m, p);
 	    break;
 	default:

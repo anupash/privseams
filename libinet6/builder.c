@@ -1915,6 +1915,34 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 }
 
 /**
+ * hip_build_param_echo_m - build HIP ECHO_M parameter
+ * @param msg the message 
+ * @param opaque opaque data copied to the parameter
+ * @param len      the length of the parameter
+ * @param request true if parameter is ECHO_REQUEST, otherwise parameter is ECHO_RESPONSE
+ *
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len, 
+                           int request)
+{
+	struct hip_echo_request ping;
+	int err;
+
+	if (request)
+		hip_set_param_type(&ping, HIP_PARAM_ECHO_REQUEST_M);
+	else
+		hip_set_param_type(&ping, HIP_PARAM_ECHO_RESPONSE_M);
+
+	hip_set_param_contents_len(&ping, len);
+	err = hip_build_generic_param(msg, &ping, sizeof(struct hip_echo_request_m),
+				      opaque);
+	return err;
+}
+#endif
+
+/**
  * hip_build_param_r1_counter - build HIP R1_COUNTER parameter
  * @param msg the message 
  * @param generation R1 generation counter
