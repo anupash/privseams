@@ -15,7 +15,8 @@
 #include <time.h>
 #include <sys/uio.h>
 #include "debug.h"
-
+#include "ife.h"
+ 
 int create_socket(int proto);
 int create_serversocket(int proto, int port);
 int main_server(int proto, int port);

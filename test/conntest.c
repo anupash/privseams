@@ -325,53 +325,66 @@ out_err:
 }
 
 /**
- * main_client_gai - it handles the functionality of the client-gai
- * @param proto type of protocol
- * @param socktype the type of socket
- * @param peer_name the peer name
- * @param peer_port_name the prot number
+ * Does the logic of the "conntest-client-gai" command line utility. 
+ *
+ * @param socktype  the type of socket (SOCK_STREAM or SOCK_DGRAM)
+ * @param peer_name the host name of the peer as read from the command lien
+ * @param port_name the port number as a string as read from the command line
+ * @param flags     flags that are set to addrinfo flags.
  *
  * @return 1 with success, 0 otherwise.
  */
-int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int flags)
+int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 {
+	int recvnum = 0, sendnum = 0, datalen = 0, port = 0, datasent = 0;
+	int datareceived = 0, c = 0, sock = 0, err = 0;
+	char sendbuffer[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
+	unsigned long stats_diff_sec = 0, stats_diff_usec = 0;
+	struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
-	unsigned long stats_diff_sec, stats_diff_usec;
-	char mylovemostdata[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
-	int recvnum, sendnum, datalen = 0, port = 0, datasent = 0;
-	int datareceived = 0, ch, gai_err, sock = 0;
-	struct addrinfo hints, *res = NULL, *ai;
 	
-	/* lookup host */
-	memset(&hints, 0, sizeof(struct addrinfo));
+	/* Set the memory allocated from the stack to zeros. */
+	memset(&hints, 0, sizeof(hints));
+	memset(&stats_before, 0, sizeof(stats_before));
+	memset(&stats_after, 0, sizeof(stats_after));
+	memset(sendbuffer, 0, sizeof(sendbuffer));
+	memset(receiveddata, 0, sizeof(receiveddata));
+	
+	/* Fill in the socket address structure to host and service name. */
 	hints.ai_flags = flags;
-	/* If peer_name is not specified the destination is looked in the hadb */
-	if (!peer_name)
+	/* If peer_name is not specified the destination is looked in the
+	   hadb. */
+	if (peer_name == NULL)
 		hints.ai_flags |= AI_KERNEL_LIST;
-	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
+
+	/* Legacy API supports only HIT-in-IPv6 */
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = socktype;
 	
-	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	/* Lets use the "NAME or SERVICE is unknown." error value from
+	   /usr/include/netdb.h. Note that it is defined negative, -2. */
+	HIP_IFEL(getaddrinfo(peer_name, port_name, &hints, &res), EAI_NONAME,
+		 "Name '%s' or service '%s' is unknown.", peer_name, port_name);
 	
-	if (gai_err < 0) {
-		printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
-		return(1);
-	}
-
-	/* data from stdin to buffer */
-	bzero(receiveddata, IP_MAXPACKET);
-	bzero(mylovemostdata, IP_MAXPACKET);
-
-	printf("Input some text, press enter and ctrl+d\n");
-
-	/* horrible code */
-	while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) {
-		mylovemostdata[datalen] = (unsigned char) ch;
+	HIP_INFO("Please input some text to be sent to '%s'.\n"\
+		 "Empty row or more than %d input characters exits.\n",
+		 peer_name, IP_MAXPACKET);
+	
+	/* Read user input from the standard input. */
+	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
+	{
 		datalen++;
+		if((sendbuffer[datalen-1] = c) == '\n'){
+			c = getc(stdin);
+			if(c == '\n'){
+				break;
+			} else {
+				ungetc(c, stdin);
+			}
+		}
+		
 	}
-	/*
-	HIP_HEXDUMP("addr: ", res, sizeof(*res));
-        */
+
         if (res->ai_family == AF_INET)
             {
                 struct sockaddr_in * ad;
@@ -405,7 +418,7 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 	while((datasent < datalen) || (datareceived < datalen)) {
 
 		if (datasent < datalen) {
-			sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
+			sendnum = send(sock, sendbuffer+datasent, datalen-datasent, 0);
 
 			if (sendnum < 0) {
 				perror("send");
@@ -426,7 +439,7 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 	}
 
 	printf("=== connection test result: ");
-	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
+	if (!memcmp(sendbuffer, receiveddata, IP_MAXPACKET)) {
 		printf("OK ===\n");
 	} else {
 		printf("FAIL ===\n");
@@ -435,11 +448,12 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 
 out_err:
 
-	if (res)
+	if (res != NULL)
 		freeaddrinfo(res);
-	if (sock)
+	if (sock != 0)
 		close(sock);
-	return 0;
+	
+	return err;
 }
 
 /**

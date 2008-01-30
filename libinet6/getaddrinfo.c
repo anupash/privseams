@@ -1395,165 +1395,164 @@ static struct gaih gaih[] =
   };
 
 /**
- * Retrieves the info of the specified peer. Processes a request for the list
- * of known peers.
+ * Retrieves the info of the specified peer.
  * 
  * @param name    a pointer to a host name.
- * @param service a pointer to service number, i.e. target port number.
- * @param hints   a pointer to ...
- * @param pai     a pointer to a pointer to...
- * @return        zero on success, or negative error value on failure. In case
- *                of flags set to AI_KERNEL_LIST, on success the number of
- *                elements found in the database is returned.
+ * @param service a pointer to port number as a string.
+ * @param hints   a pointer to a socket address structure that is used as a
+ *                search key.
+ * @param pai     a double (?) pointer to a target buffer where the info is to
+ *                be stored. 
+ * @return        zero on success, or negative error value on failure. If the
+ *                flags are set to AI_KERNEL_LIST, the number of the elements
+ *                found in the database is returned on success.
  */
 int getaddrinfo (const char *name, const char *service,
-	     const struct addrinfo *hints, struct addrinfo **pai)
+		 const struct addrinfo *hints, struct addrinfo **pai)
 {
-  int i = 0, j = 0, last_i = 0;
-  struct addrinfo *p = NULL, **end;
-  struct gaih *g = gaih, *pg = NULL;
-  struct gaih_service gaih_service, *pservice;
-  int hip_transparent_mode;
+	int i = 0, j = 0, last_i = 0;
+	struct addrinfo *p = NULL, **end;
+	struct gaih *g = gaih, *pg = NULL;
+	struct gaih_service gaih_service, *pservice;
+	int hip_transparent_mode;
+	
+	/*
+	HIP_DEBUG("name='%s' service='%s'\n", name, service);
+	if (hints)
+		HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+	else
+		HIP_DEBUG("hints=NULL\n");
+	*/
 
-  _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  HIP_DEBUG("name='%s' service='%s'\n", name, service);
-  if (hints)
-    _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
-  else
-    _HIP_DEBUG("hints=NULL\n");
+	if (name != NULL && name[0] == '*' && name[1] == 0)
+		name = NULL;
 
-  //  if (*pai)
-  // HIP_DEBUG("pai:ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d\n", (*pai)->ai_flags, (*pai)->ai_family, (*pai)->ai_socktype, (*pai)->ai_protocol);
+	if (service != NULL && service[0] == '*' && service[1] == 0)
+		service = NULL;
 
-  if (name != NULL && name[0] == '*' && name[1] == 0)
-    name = NULL;
+	if (name == NULL && service == NULL)
+		return EAI_NONAME;
 
-  if (service != NULL && service[0] == '*' && service[1] == 0)
-    service = NULL;
+	if (hints == NULL) {
+		hints = &default_hints;
+		_HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+	}
 
-  if (name == NULL && service == NULL)
-    return EAI_NONAME;
+	_HIP_DEBUG("flags: %x\n", hints->ai_flags);
+	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
+				AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
+				AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
+		return EAI_BADFLAGS;
 
-  if (hints == NULL) {
-    hints = &default_hints;
-    _HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
-  }
+	if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
+		return EAI_BADFLAGS;
 
-  _HIP_DEBUG("flags: %x\n", hints->ai_flags);
-  if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
-			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
-    return EAI_BADFLAGS;
-
-  if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
-    return EAI_BADFLAGS;
-
-  if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
-    return EAI_BADFLAGS;
+	if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
+		return EAI_BADFLAGS;
 
 #ifdef HIP_TRANSPARENT_API
-  /* Transparent mode does not work with HIP native resolver */
-  hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
+	/* Transparent mode does not work with HIP native resolver */
+	hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else
-  hip_transparent_mode = 0;
+	hip_transparent_mode = 0;
 #endif
   
-  if (service && service[0])
-    {
-      char *c;
-
-      gaih_service.name = service;
-      gaih_service.num = strtoul (gaih_service.name, &c, 10);
-      if (*c)
-	gaih_service.num = -1;
-      else
-	/* Can't specify a numerical socket unless a protocol family was
-	   given. */
-        if (hints->ai_socktype == 0 && hints->ai_protocol == 0)
-          return EAI_SERVICE;
-      pservice = &gaih_service;
-    }
-  else
-    pservice = NULL;
-
-  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-    int err = 0, port, i;
-    
-    *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
-    if (*pai == NULL) {
-      HIP_ERROR("Unable to allocated memory\n");
-      err = -EAI_MEMORY;
-      return err;
-    }
-
-    if (!pservice)
-      port = 0;
-    else
-      port = pservice->num;
-    /* This is the case which is used after BOS packet is processed, as a second parameter
-     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
-     * the struct sockaddr_in6 list
-     */
-    err = hip_recv_daemon_info(NULL, 0);
-    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
-    if (err < 0) {
-      HIP_ERROR("getsockopt failed (%d)\n", err);
-    }
-    return err;
-  }
-
-  if (pai)
-    end = &p;
-  else
-    end = NULL;
-
-  while (g->gaih)
-    {
-      if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
+	if (service && service[0])
 	{
-	  if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
-	    continue;
-	  j++;
-	  if (pg == NULL || pg->gaih != g->gaih)
-	    {
-	      pg = g;
-	      i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
-	      if (i != 0)
-		{
-		  last_i = i;
+		char *c;
 
-		  if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
-		    continue;
-
-		  if (p)
-		    freeaddrinfo (p);
-
-		  return -(i & GAIH_EAI);
-		}
-	      if (end)
-		while(*end) end = &((*end)->ai_next);
-	    }
+		gaih_service.name = service;
+		gaih_service.num = strtoul (gaih_service.name, &c, 10);
+		if (*c)
+			gaih_service.num = -1;
+		else
+			/* Can't specify a numerical socket unless a protocol family was
+			   given. */
+			if (hints->ai_socktype == 0 && hints->ai_protocol == 0)
+				return EAI_SERVICE;
+		pservice = &gaih_service;
 	}
-      ++g;
-    }
+	else
+		pservice = NULL;
 
-  if (j == 0)
-    return EAI_FAMILY;
+	if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+		socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+		int err = 0, port, i;
+    
+		*pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
+		if (*pai == NULL) {
+			HIP_ERROR("Unable to allocated memory\n");
+			err = -EAI_MEMORY;
+			return err;
+		}
 
-  if (p) // here should be true
-    {
-      *pai = p;
-      return 0;
-    }
+		if (!pservice)
+			port = 0;
+		else
+			port = pservice->num;
+		/* This is the case which is used after BOS packet is processed, as a second parameter
+		 * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
+		 * the struct sockaddr_in6 list
+		 */
+		err = hip_recv_daemon_info(NULL, 0);
+		HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
+		if (err < 0) {
+			HIP_ERROR("getsockopt failed (%d)\n", err);
+		}
+		return err;
+	}
 
-  if (pai == NULL && last_i == 0)
-    return 0;
+	if (pai)
+		end = &p;
+	else
+		end = NULL;
 
-  if (p)
-    freeaddrinfo (p);
+	while (g->gaih)
+	{
+		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
+		{
+			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
+				continue;
+			j++;
+			if (pg == NULL || pg->gaih != g->gaih)
+			{
+				pg = g;
+				i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
+				if (i != 0)
+				{
+					last_i = i;
 
-  return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
+					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
+						continue;
+
+					if (p)
+						freeaddrinfo (p);
+
+					return -(i & GAIH_EAI);
+				}
+				if (end)
+					while(*end) end = &((*end)->ai_next);
+			}
+		}
+		++g;
+	}
+
+	if (j == 0)
+		return EAI_FAMILY;
+
+	if (p) // here should be true
+	{
+		*pai = p;
+		return 0;
+	}
+
+	if (pai == NULL && last_i == 0)
+		return 0;
+
+	if (p)
+		freeaddrinfo (p);
+
+	return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 
 void
