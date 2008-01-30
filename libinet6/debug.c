@@ -46,10 +46,6 @@
 #include "debug.h"
 #include "util.h"
 
-/* differentiate between die(), error() and debug() error levels */
-enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
-		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
-
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
 			         LOG_ERR,
@@ -128,7 +124,7 @@ int hip_set_auto_logdebug(const char *cfile){
 	if (!strcmp(cfile, "default"))
 		fname = HIPD_CONFIG_FILE;
 	else
-		fname = cfile;
+	  fname = (char *) cfile;
 
 	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
 		 "Error: can't open config file %s.\n", fname);
@@ -276,48 +272,16 @@ void hip_vlog(int debug_level, const char *file, const int line,
 
 }
 
-/**
- * hip_info - output informative (medium level) debugging messages
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
- * @param function the name of function where the debug call is located
- * @param fmt the output format of the debug message as in printf(3)
- *
- * The variable size argument list (...) is used as in printf(3).
- * Do not call this function from the outside of the debug module,
- * use the HIP_INFO macro instead.
- */
-void hip_info(const char *file, int line, const char *function,
-	      const char *fmt, ...) {
-
-  if ( logdebug != LOGDEBUG_NONE ){
-    va_list args;
-    va_start(args, fmt);
-    hip_vlog(DEBUG_LEVEL_INFO, file, line, function, fmt, args);
-    va_end(args);
-  }
-}
-
-/**
- * hip_debug - output development (low level) debugging messages
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
- * @param function the name of function where the debug call is located
- * @param fmt the output format of the debug message as in printf(3)
- *
- * The variable size argument list (...) is used as in printf(3).
- * Do not call this function from the outside of the debug module,
- * use the HIP_DEBUG macro instead.
- */
-void hip_debug(const char *file, int line, const char *function,
-	       const char *fmt, ...) {
-
-  if ( logdebug == LOGDEBUG_ALL ){
+void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
-	hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
+	if ((debug_level == DEBUG_LEVEL_INFO && logdebug != LOGDEBUG_NONE) ||
+	    (debug_level == DEBUG_LEVEL_DEBUG && logdebug == LOGDEBUG_ALL) ||
+	    (debug_level == DEBUG_LEVEL_ERROR && logdebug != LOGDEBUG_NONE) ||
+	    (debug_level == DEBUG_LEVEL_DIE))
+	  hip_vlog(debug_level, file, line, function, fmt, args);
 	va_end(args);
-  }
 }
 
 /**
@@ -349,6 +313,7 @@ void hip_debug_gl(int debug_group, int debug_level,
 		va_end(args);
 	}
 }
+
 /**
  * hip_die - output a fatal error and exit
  * @param file the file from where the debug call was made        
@@ -364,10 +329,11 @@ void hip_die(const char *file, int line, const char *function,
 	     const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hip_vlog(DEBUG_LEVEL_DIE, file, line, function, fmt, args);
+  hip_print_str(DEBUG_LEVEL_DIE, file, line, function, fmt, args);
   va_end(args);
   exit(1);
 }
+
 
 /**
  * hip_error - output an error message (high level)
@@ -456,7 +422,7 @@ void hip_hexdump(const char *file, int line, const char *function,
 	char_index++;
 	} while(char_index < len);
 	
-	hip_info(file, line, function, "%s0x%s\n", prefix, hexdump);
+	hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s0x%s\n", prefix, hexdump);
   }
 
   free(hexdump);
@@ -582,7 +548,7 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 			}
 			char_index++;
 		} 
-		hip_info(file, line, function, "%s%s\n", prefix, hexdump);
+		hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s%s\n", prefix, hexdump);
   	}
 	else {
 	  HIP_ERROR("hexdump length was 0\n");  
@@ -642,18 +608,20 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 	HIP_DEBUG("%s\n", addr_str);
 }
 
-void hip_print_lsi(const char *str, const struct in_addr *lsi)
+void hip_print_lsi(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in_addr *lsi)
 {
 	char dst[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
-	HIP_DEBUG("%s: %s\n", str, dst);
+	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
 /**
  * hip_print_hit - print a HIT
  * @param str string to be printed before the HIT
  * @param hit the HIT to be printed
  */
-void hip_print_hit(const char *str, const struct in6_addr *hit)
+void hip_print_hit(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
 		HIP_DEBUG("%s: NULL\n", str);
@@ -665,20 +633,22 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 		if (IN6_IS_ADDR_V4MAPPED(hit)) {
 			struct in_addr in_addr;
 			IPV6_TO_IPV4_MAP(hit, &in_addr);
-			hip_print_lsi(str, &in_addr);
+			hip_print_lsi(debug_level, file, line, function, str, &in_addr);
 		} else {
 			hip_in6_ntop(hit, dst);
-			HIP_DEBUG("%s: %s\n", str, dst);
+			hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 		}
 		return;
 	}
 }
 
-void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_len)
+void hip_print_key(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct hip_crypto_key *key,
+		   int key_len)
 {
 	char dst[key_len];
 	strncpy(dst, key->key, key_len);
-	HIP_DEBUG("%s: %s\n", str, dst);
+	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
 
 void uint16_to_binstring(uint16_t val, char *buffer)
@@ -712,7 +682,7 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
                                        sizeof(struct hip_locator_info_addr_item));
             if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                 
-                hip_print_hit("LOCATOR from DHT",
+                HIP_DEBUG_HIT("LOCATOR from DHT",
                               (struct in6_addr *)&locator_address_item[i].address);
                 _HIP_HEXDUMP("Should be in6_addr", 
                              &locator_address_item[i].address,
