@@ -493,8 +493,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
-        /* THIS MIGHT CAUSE PROBLEMS LATER */
- out_err: 
+
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
@@ -543,6 +542,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         } 
+ out_err: 
  skip_dht:
 									
 	/* Open the file containing HIP hosts for reading. */
