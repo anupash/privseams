@@ -228,8 +228,6 @@ int main_server(int type, int port)
 	 unsigned long stats_diff_sec, stats_diff_usec;
 	 FILE *fp = NULL;
 
-	 HIP_DEBUG("FILENAME IS: %s.\n", filename);
-
 	 if (filename)
 		 if ((fp = fopen(filename, "a")) == NULL) {
 			 HIP_ERROR("Error opening file\n");
@@ -255,13 +253,14 @@ int main_server(int type, int port)
 			 goto out_err;
 		 }
 		 
+		 /*
 		 HIP_DEBUG("ai_flags %d\n",ai->ai_flags );
 		 HIP_DEBUG("ai_family %d\n",ai->ai_family); 
 		 HIP_DEBUG("ai_socktype %d\n",ai->ai_socktype); 
 		 HIP_DEBUG("ai_protocol%d\n",ai->ai_protocol); 
 		 HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
 		 HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
-		 
+		 */
 		 
 		 if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
 				sizeof(addr_str))) {
@@ -332,39 +331,41 @@ out_err:
  * @param port_name the port number as a string as read from the command line
  * @param flags     flags that are set to addrinfo flags.
  *
- * @return 1 with success, 0 otherwise.
+ * @return          zero on success, non-zero otherwise.
  */
 int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 {
-	int recvnum = 0, sendnum = 0, datalen = 0, port = 0, datasent = 0;
+	int recvnum = 0, sendnum = 0, datalen = 0, port = 0, bytes_sent = 0;
 	int datareceived = 0, c = 0, sock = 0, err = 0;
 	char sendbuffer[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
-	unsigned long stats_diff_sec = 0, stats_diff_usec = 0;
-	struct addrinfo hints, *res = NULL;
+	unsigned long microseconds = 0;
+	struct addrinfo search_key, *peer_ai = NULL;
 	struct timeval stats_before, stats_after;
 	
 	/* Set the memory allocated from the stack to zeros. */
-	memset(&hints, 0, sizeof(hints));
+	memset(&search_key, 0, sizeof(search_key));
 	memset(&stats_before, 0, sizeof(stats_before));
 	memset(&stats_after, 0, sizeof(stats_after));
 	memset(sendbuffer, 0, sizeof(sendbuffer));
 	memset(receiveddata, 0, sizeof(receiveddata));
 	
 	/* Fill in the socket address structure to host and service name. */
-	hints.ai_flags = flags;
+	search_key.ai_flags = flags;
 	/* If peer_name is not specified the destination is looked in the
 	   hadb. */
 	if (peer_name == NULL)
-		hints.ai_flags |= AI_KERNEL_LIST;
+		search_key.ai_flags |= AI_KERNEL_LIST;
 
 	/* Legacy API supports only HIT-in-IPv6 */
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = socktype;
+	search_key.ai_family = AF_UNSPEC;
+	search_key.ai_socktype = socktype;
 	
-	/* Lets use the "NAME or SERVICE is unknown." error value from
+	/* Get the peer's address info.
+	   Lets use the "NAME or SERVICE is unknown." error value from
 	   /usr/include/netdb.h. Note that it is defined negative, -2. */
-	HIP_IFEL(getaddrinfo(peer_name, port_name, &hints, &res), EAI_NONAME,
-		 "Name '%s' or service '%s' is unknown.", peer_name, port_name);
+	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
+		 EAI_NONAME, "Name '%s' or service '%s' is unknown.",
+		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
 		 "Empty row or more than %d input characters exits.\n",
@@ -385,49 +386,25 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		
 	}
 
-        if (res->ai_family == AF_INET)
-            {
-                struct sockaddr_in * ad;
-                ad = (struct sockaddr_in *)res->ai_addr;
-                hip_print_lsi("Addr given to connect", &ad->sin_addr);
-            }
-        if (res->ai_family == AF_INET6)
-            {
-                struct sockaddr_in6 * ad6;
-                ad6 = (struct sockaddr_in6 *)res->ai_addr;
-                hip_print_hit("Addr given to connect", &ad6->sin6_addr);
-            }
-
 	gettimeofday(&stats_before, NULL);
-	/* Connecting... */
-	HIP_INFO("!!!! conntest.c Connecting...\n");
-	sock = hip_connect_func(res, NULL);
-	if (!sock)
-		goto out_err;
-	HIP_INFO("!!!! conntest.c got sock %d\n", sock);
-	gettimeofday(&stats_after, NULL);
-	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-#if 0
-	printf("connect took %.3f sec\n",
-	       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-#endif
 
-	/* send and receive data */
-
-	while((datasent < datalen) || (datareceived < datalen)) {
-
-		if (datasent < datalen) {
-			sendnum = send(sock, sendbuffer+datasent, datalen-datasent, 0);
+	HIP_IFEL((sock = hip_connect_func(peer_ai, NULL)) == 0,
+		 -EFAULT, "Unable to get a socket for sending.\n");
+	
+	/* Send and receive data from the sockect. */
+	while((bytes_sent < datalen) || (datareceived < datalen)) {
+		/* Send. */
+		if (bytes_sent < datalen) {
+			sendnum = send(sock, sendbuffer + bytes_sent, datalen-bytes_sent, 0);
 
 			if (sendnum < 0) {
 				perror("send");
 				printf("FAIL\n");
 				goto out_err;
 			}
-			datasent += sendnum;
+			bytes_sent += sendnum;
 		}
-
+		/* Receive. */
 		if (datareceived < datalen) {
 			recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
 			if (recvnum <= 0) {
@@ -437,6 +414,15 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 			datareceived += recvnum;
 		}
 	}
+	
+	gettimeofday(&stats_after, NULL);
+	
+	microseconds  =
+		((stats_after.tv_sec - stats_before.tv_sec) * 1000000)
+		+ (stats_after.tv_usec - stats_before.tv_usec);
+	
+	HIP_DEBUG("Connecting and sending data took %.4f seconds.\n",
+		  microseconds / 1000000.0 );
 
 	printf("=== connection test result: ");
 	if (!memcmp(sendbuffer, receiveddata, IP_MAXPACKET)) {
@@ -446,10 +432,10 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		return(1);
 	}
 
-out_err:
+ out_err:
 
-	if (res != NULL)
-		freeaddrinfo(res);
+	if (peer_ai != NULL)
+		freeaddrinfo(peer_ai);
 	if (sock != 0)
 		close(sock);
 	
