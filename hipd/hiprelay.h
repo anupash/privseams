@@ -83,28 +83,28 @@
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
-     /** The type of this relay record (full relay or rvs) */
-     uint8_t type;
-     /** The lifetime of this record, seconds. */
-     double lifetime;
-     /** Time when this record was last used, seconds since epoch. */
-     time_t last_contact;
-     /** HIT of Responder (Relay Client) */
-     hip_hit_t hit_r;
-     /** IP address of Responder (Relay Client) */
-     in6_addr_t ip_r;
-     /** Client UDP port received in I2 packet of registration. */
-     in_port_t udp_port_r;
-     /** Integrity key established while registration occurred. */
-     hip_crypto_key_t hmac_relay;
-     /** Function pointer to send function (raw or udp). */
-     hip_xmit_func_t send_fn;
+	/** The type of this relay record (full relay or rvs) */
+	uint8_t type;
+	/** The lifetime of this record, seconds. */
+	double lifetime;
+	/** Time when this record was last used, seconds since epoch. */
+	time_t last_contact;
+	/** HIT of Responder (Relay Client) */
+	hip_hit_t hit_r;
+	/** IP address of Responder (Relay Client) */
+	in6_addr_t ip_r;
+	/** Client UDP port received in I2 packet of registration. */
+	in_port_t udp_port_r;
+	/** Integrity key established while registration occurred. */
+	hip_crypto_key_t hmac_relay;
+	/** Function pointer to send function (raw or udp). */
+	hip_xmit_func_t send_fn;
 }hip_relrec_t;
 
 /** 
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
- * @enum
+ * @enum hip_relrec_type_t
  */
 typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
 

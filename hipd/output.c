@@ -396,7 +396,7 @@ int hip_build_locators(struct hip_common *msg)
 #ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
     if (address_count > 0) {
 #else
-    if (address_count > 1) {
+    if (address_count > 0) {
 #endif
         HIP_IFEL(!(locs = malloc(address_count * 
                                  sizeof(struct hip_locator_info_addr_item))), 
@@ -434,7 +434,7 @@ int hip_build_locators(struct hip_common *msg)
         err = hip_build_param_locator(msg, locs, address_count);
     }
     else
-        HIP_DEBUG("Host has only one or no addresses no point "
+        HIP_DEBUG("Host has no addresses no point "
                   "in building LOCATOR parameters\n");
  out_err:
 

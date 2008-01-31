@@ -1,18 +1,17 @@
 /*
  * HIP kernelspace debugging functions
- *
  * Licence: GNU/GPL
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@iki.fi>
+ *
+ * @author Miika Komu <miika#iki.fi>
+ * @author Mika Kousa <mkousa#iki.fi>
  */
-
 #include "debug.h"
 
 /**
- * hip_print_hit - print a HIT
- * @param str string to be printed before the HIT
- * @param hit the HIT to be printed
+ * Prints a HIT.
+ * 
+ * @param str string to be printed before the HIT.
+ * @param hit the HIT to be printed.
  */
 inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 {
@@ -24,13 +23,13 @@ inline void hip_print_hit(const char *str, const struct in6_addr *hit)
 }
 
 /**
- * khexdump - hexdumper for HIP kernel module
- * @param tag a start tag (a string ending in \0) that will be printed before
- *        the actual hexdump
+ * A hexdumper for the HIP kernel module. Hexdumps data starting from address
+ * @c data of length @c len.
+ * 
+ * @param tag  a start tag (a string ending in '\\0') that will be printed before
+ *             the actual hexdump
  * @param data the data to be hexdumped
- * @param len the length of the data to hexdumped
- *
- * Hexdumps data starting from address @data of length @len.
+ * @param len  the length of the data to hexdumped
  */
 inline void hip_khexdump(const char *tag, const void *data, const int len)
 {
