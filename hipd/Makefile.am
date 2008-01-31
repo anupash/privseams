@@ -19,13 +19,27 @@ hipd_SOURCES += user.c hadb.c oppdb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 
+# Put these library directories in the library search path:
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a
+
 if HIP_CORPORATE
   hipd_LDADD += -lhiptool
 else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
+
+#hipd_LDADD += pjlib pjlib-util pjnath pjsip pjsip-ua pjsip-simple pjsua pjmedia pjmedia-codec
+
+# Begin Miika's custom made hack for Xiang
+
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a
+
+../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a:
+	echo ok
+
+# End Miika's custom made hack for Xiang
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm
 
