@@ -22,7 +22,7 @@ int create_serversocket(int proto, int port);
 int main_server(int proto, int port);
 int main_server_native(int socktype, char *port_name);
 
-int hip_connect_func(struct addrinfo *res, const char* filename);
+int hip_connect_func(struct addrinfo *res, int *sock);//, const char* filename);
 int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int hints);
 int main_client_native(int socktype, char *peer_name, char *peer_port_name);
 

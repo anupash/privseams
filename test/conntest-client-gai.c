@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 	char usage[100];
 	in_port_t port = 0;
 
-	sprintf(usage, "Usage: %s host tcp|udp <port>", argv[0]);
+	sprintf(usage, "Usage: %s <host> tcp|udp <port>", argv[0]);
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
@@ -78,11 +78,14 @@ int main(int argc, char *argv[]) {
 	}
 	
 	/* Call the main function to do the actual logic. */
-	HIP_IFEL(main_client_gai(socktype, argv[1], argv[3], AI_HIP),
-		 -2, "Error: Cannot set the client.\n");
-	
-	return EXIT_SUCCESS;
+	err = main_client_gai(socktype, argv[1], argv[3], AI_HIP);
 
  out_err:
-	return EXIT_FAILURE;
+	if(err == 0) {
+		HIP_INFO("=== Connection test result: SUCCESS ===\n");
+		return EXIT_SUCCESS;
+	} else {
+		HIP_INFO("=== Connection test result: FAILURE ===\n");
+		return EXIT_FAILURE;
+	}
 }

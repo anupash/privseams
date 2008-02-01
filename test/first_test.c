@@ -170,11 +170,11 @@ int handle_single_connection()
 			if (ipv6_addr_cmp(&my_hit, &sin6->sin6_addr) > 0) {
 				/* my_hit is greater ---> I am the initiator */
 				printf("Initiator mode ...\n");
-
+				
 				hip_set_logtype(LOGTYPE_STDERR);
 				hip_set_logfmt(LOGFMT_SHORT);
 
-				sock = hip_connect_func(res, "/tmp/results.txt");
+				hip_connect_func(res, &sock);//, "/tmp/results.txt");
 				if (sock)
 					close(sock);
 				
