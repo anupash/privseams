@@ -972,7 +972,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                         }
 				}
 				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-                        hip_send_update_all(locators, i,
+				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
                                 if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
