@@ -190,6 +190,16 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(hipproxy,
+             AC_HELP_STRING([--enable-hipproxy],
+                            [HIP Proxy (default is NO)]),
+             [ac_cv_use_hipproxy=$enableval], [ac_cv_use_hipproxy=no])
+AC_CACHE_CHECK([whether to use HIP proxy],
+               [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=no])
+if test x"$ac_cv_use_hipproxy" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_HIPPROXY, AC_PREREQ(2.53))
+fi
+
 AC_ARG_ENABLE(buggyipsec,
              AC_HELP_STRING([--enable-buggyipsec],
                             [Support for IPsec in older kernels (default is NO)]),
