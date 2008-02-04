@@ -250,7 +250,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        hip_print_hit("deleting_address=",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -264,9 +264,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 }
             } else {
                 /* remove from list if address matches */
-                hip_print_hit("interface address",
+                HIP_DEBUG_HIT("interface address",
                               hip_cast_sa_addr(&n->addr));
-                hip_print_hit("address to be removed",hip_cast_sa_addr(&addr_sin6));                
+                HIP_DEBUG_HIT("address to be removed",hip_cast_sa_addr(&addr_sin6));                
                 if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
                                  hip_cast_sa_addr(&addr_sin6))==0) {
                     list_del(n, addresses);
