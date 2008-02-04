@@ -469,14 +469,15 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         ret_hit = -1;  
         ret_addr = -1;
         
-	HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+	
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
                  "Building daemon header failed\n"); 
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
 
-        HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
-                 "No gw struct found\n");
+        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1);
+	//"No gw struct found\n");
         
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
@@ -543,8 +544,12 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
  skip_dht:
 									
 	/* Open the file containing HIP hosts for reading. */
-	fp = fopen(_PATH_HIP_HOSTS, "r");		
-        
+	fp = fopen(_PATH_HIP_HOSTS, "r");
+	if(fp == NULL)
+	{
+		HIP_ERROR("Error opening file '%s' for reading.\n", _PATH_HIP_HOSTS);		
+        }
+
 	/* Loop through all lines in the file. */
 	/** @todo check return values */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
@@ -574,8 +579,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		/* Here we have the domain name in "fqdn" and the HIT in "hit". */
                 if ((strlen(name) == strlen(fqdn_str)) &&
 		    strcmp(name, fqdn_str) == 0) {
-			HIP_INFO("Found a HIT value for host \"%s\" on line "\
-				 "%d of file \"%s\".\n",
+			HIP_INFO("Found a HIT value for host '%s' on line "\
+				 "%d of file '%s'.\n",
 				 name, lineno, _PATH_HIP_HOSTS);
                         found_hits = 1; 
                         
@@ -623,8 +628,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                 } // end of if 
                 
                 destroy(&list);                                                     
-        } // end of while	              							
-        if (fp)                                                               
+        } // end of while
+
+	if (fp)                                                               
                 fclose(fp);		
         return found_hits;	        				
 }
@@ -1035,7 +1041,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       int old_res_options = _res.options;
       int found_hits = 0;
       
-      HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST)\n");
+      _HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
+		"(!AI_NUMERICHOST)\n");
       _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
@@ -1077,16 +1084,21 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are returned\n");
+	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+		    "returned\n");
 	} else {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are found only HITs will be returned; if not, IPs will be returned\n");
+	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are "\
+		    "found only HITs will be returned; if not, IPs will be "\
+		    "returned\n");
 	}
       } else /* not hip_transparent_mode */ {
 	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are returned\n");
+	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+		    "returned\n");
 	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
 	} else {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are returned\n");
+	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are "\
+		    "returned\n");
 	}
       }
 
@@ -1401,8 +1413,8 @@ static struct gaih gaih[] =
  * @param service a pointer to port number as a string.
  * @param hints   a pointer to a socket address structure that is used as a
  *                search key.
- * @param pai     a double (?) pointer to a target buffer where the info is to
- *                be stored. 
+ * @param pai     a pointer to a target buffer list where the info is to be
+ *                stored. 
  * @return        zero on success, or negative error value on failure. If the
  *                flags are set to AI_KERNEL_LIST, the number of the elements
  *                found in the database is returned on success.
@@ -1415,14 +1427,6 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice;
 	int hip_transparent_mode;
-	
-	/*
-	HIP_DEBUG("name='%s' service='%s'\n", name, service);
-	if (hints)
-		HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
-	else
-		HIP_DEBUG("hints=NULL\n");
-	*/
 
 	if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
@@ -1435,10 +1439,12 @@ int getaddrinfo(const char *name, const char *service,
 
 	if (hints == NULL) {
 		hints = &default_hints;
-		_HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+		_HIP_DEBUG("set hints=default_hints:ai_flags=0x%x "\
+			   "ai_family=%d ai_socktype=%d ai_protocol=%d\n",
+			   hints->ai_flags, hints->ai_family,
+			   hints->ai_socktype, hints->ai_protocol);
 	}
 
-	_HIP_DEBUG("flags: %x\n", hints->ai_flags);
 	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
 				AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
 				AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
@@ -1490,12 +1496,12 @@ int getaddrinfo(const char *name, const char *service,
 			port = 0;
 		else
 			port = pservice->num;
-		/* This is the case which is used after BOS packet is processed, as a second parameter
-		 * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
-		 * the struct sockaddr_in6 list
-		 */
+		/* This is the case which is used after BOS packet is processed,
+		   as a second parameter instead of the IPPROTO_HIP we put the
+		   port number because it is needed to fill in the struct
+		   sockaddr_in6 list. */
 		err = hip_recv_daemon_info(NULL, 0);
-		HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
+		HIP_ASSERT(0); /** @todo fix recv_daemon_msg */
 		if (err < 0) {
 			HIP_ERROR("getsockopt failed (%d)\n", err);
 		}
@@ -1506,7 +1512,7 @@ int getaddrinfo(const char *name, const char *service,
 		end = &p;
 	else
 		end = NULL;
-
+	
 	while (g->gaih)
 	{
 		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)

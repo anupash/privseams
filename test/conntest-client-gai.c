@@ -77,6 +77,10 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	}
 	
+	HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
+		 (socktype == SOCK_STREAM ? "TCP" : "UDP"), argv[1],
+		 argv[3]);
+
 	/* Call the main function to do the actual logic. */
 	err = main_client_gai(socktype, argv[1], argv[3], AI_HIP);
 

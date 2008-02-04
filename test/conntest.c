@@ -212,20 +212,20 @@ int main_server(int type, int port)
 	return err;
 }
 
- /**
-  * Creates a socket and connects it a remote socket address. The connection is
-  * tried using addresses in the @c peer_ai in the order specified by the linked
-  * list of the structure. If a connection is successful, the rest of the
-  * addresses are omitted. The socket is bound to the peer HIT, not to the peer
-  * IP addresses. This function does not support Local Scope Indentifiers
-  * (LSIs). Therefore, all addresses that are not of INET6 address family are
-  * skipped.
-  *
-  * @param peer_ai a pointer to peer address info.
-  * @param sock    a target buffer where the socket file descriptor is to be
-  *                stored.
-  * @return        zero on success, negative on failure.
-  */
+/**
+ * Creates a socket and connects it a remote socket address. The connection is
+ * tried using addresses in the @c peer_ai in the order specified by the linked
+ * list of the structure. If a connection is successful, the rest of the
+ * addresses are omitted. The socket is bound to the peer HIT, not to the peer
+ * IP addresses. This function does not support Local Scope Indentifiers
+ * (LSIs). Therefore, all addresses that are not of INET6 address family are
+ * skipped.
+ *
+ * @param peer_ai a pointer to peer address info.
+ * @param sock    a target buffer where the socket file descriptor is to be
+ *                stored.
+ * @return        zero on success, negative on failure.
+ */
 int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	int err = 0, e = 0;
 	struct addrinfo *ai = NULL;
@@ -235,6 +235,9 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	unsigned long microseconds = 0;
 	char addr_str[INET6_ADDRSTRLEN];
 	
+	/* Reset the global error value. */
+	errno = 0;
+
 	/* Set the memory allocated from the stack to zeros. */
 	memset(&stats_before, 0, sizeof(stats_before));
 	memset(&stats_after, 0, sizeof(stats_after));
@@ -326,10 +329,6 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_family = AF_UNSPEC;
 	search_key.ai_socktype = socktype;
 	
-	HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
-		 (socktype == SOCK_STREAM ? "TCP" : "UDP"), peer_name,
-		 port_name);
-
 	/* Get the peer's address info.
 	   Lets use the "NAME or SERVICE is unknown." error value from
 	   /usr/include/netdb.h. Note that it is defined negative, -2. */
@@ -338,7 +337,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
-		 "Empty row sends data.\n", peer_name);
+		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
 	
 	/* Read user input from the standard input. */
 	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
@@ -355,42 +354,56 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		
 	}
 
-	/* Get a socket for sending and receiving data. */
-	HIP_IFE((hip_connect_func(peer_ai, &sock) != 0), -EFAULT);
-	gettimeofday(&stats_before, NULL);
-
-	/* Send and receive data from the socket. */
-	while((bytes_sent < datalen) || (bytes_received < datalen)) {
-		/* send() returns the number of bytes sent or negative on
-		   error. */
-		if (bytes_sent < datalen) {
-			HIP_IFEL( ((sendnum =
-				    send(sock, sendbuffer + bytes_sent,
-					 datalen - bytes_sent, 0)) < 0),
-				  -ECOMM, "Communication error on send.\n");
-			
-			bytes_sent += sendnum;
-		}
-		
-		/* receive() returns the number of bytes sent, negative on error
-		   or zero when the peer has performed an orderly shutdown. */
-		if (bytes_received < datalen) {
-			recvnum = recv(sock, receivebuffer + bytes_received,
-				       datalen - bytes_received, 0);
-			
-			if (recvnum == 0) {
-				HIP_INFO("The peer has performed an orderly "\
-					 "shutdown.\n");
-				goto out_err;
-			} else if(recvnum < 0) {
-				err = -EIO;
-				HIP_ERROR("Communication error on receive.\n");
-			}
-			
-			bytes_received += recvnum;
-		}
+	if(datalen == 0) {
+		HIP_INFO("No input data given.\nRunning plain connection test "\
+			 "with no payload data exchange.\n");
+		/* Set sendnum and recvnum > 0 to avoid perror() at out_err. */
+		sendnum = 1;
+		recvnum = 1;
 	}
 	
+	/* Get a socket for sending and receiving data. */
+	HIP_IFE((hip_connect_func(peer_ai, &sock) != 0), -EFAULT);
+
+	gettimeofday(&stats_before, NULL);
+	
+	if(datalen > 1) {
+		/* Send and receive data from the socket. */
+		while((bytes_sent < datalen) || (bytes_received < datalen)) {
+			/* send() returns the number of bytes sent or negative
+			   on error. */
+			if (bytes_sent < datalen) {
+				HIP_IFEL( ((sendnum =
+					    send(sock, sendbuffer + bytes_sent,
+						 datalen - bytes_sent, 0)) < 0),
+					  -ECOMM,
+					  "Communication error on send.\n");
+				bytes_sent += sendnum;
+			}
+		
+			/* receive() returns the number of bytes sent, negative
+			   on error or zero when the peer has performed an
+			   orderly shutdown. */
+			if (bytes_received < datalen) {
+				recvnum = recv(sock,
+					       receivebuffer + bytes_received,
+					       datalen - bytes_received, 0);
+			
+				if (recvnum == 0) {
+					HIP_INFO("The peer has performed an "\
+						 "orderly shutdown.\n");
+					goto out_err;
+				} else if(recvnum < 0) {
+					err = -EIO;
+					HIP_ERROR("Communication error on "\
+						  "receive.\n");
+				}
+				
+				bytes_received += recvnum;
+			}
+		}
+	}
+
 	gettimeofday(&stats_after, NULL);
 	
 	microseconds  =
@@ -400,7 +413,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	HIP_INFO("Data exchange took %.5f seconds.\n",
 		 microseconds / 1000000.0 );
 
-	HIP_INFO("Sent %d bytes to and received %d bytes from '%s'.\n",
+	HIP_INFO("Sent/received %d/%d bytes payload data to/from '%s'.\n",
 		 bytes_sent, bytes_received, peer_name);
 	
 	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) == 0) {

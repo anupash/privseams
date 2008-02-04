@@ -35,7 +35,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 	
  out_err:
-	HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
+	_HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
 	if (err)
 		bytes = -1;
 	if (msg)
@@ -80,7 +80,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	HIP_DEBUG("waiting to receive daemon info\n");
+	_HIP_DEBUG("waiting to receive daemon info\n");
 
 	n = recv(hip_user_sock, msg,
 		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
@@ -89,7 +89,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		err = -1;
 		goto out_err;
 	} else {
-		HIP_DEBUG("%d bytes received\n", n); 
+		_HIP_DEBUG("%d bytes received\n", n); 
 		
 	}
 

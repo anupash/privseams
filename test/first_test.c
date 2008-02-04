@@ -174,7 +174,7 @@ int handle_single_connection()
 				hip_set_logtype(LOGTYPE_STDERR);
 				hip_set_logfmt(LOGFMT_SHORT);
 
-				hip_connect_func(res, &sock);//, "/tmp/results.txt");
+				hip_connect_func(res, &sock);
 				if (sock)
 					close(sock);
 				
