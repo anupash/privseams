@@ -947,85 +947,115 @@ gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *servic
   return 0;
 }
 
-int 
-gaih_inet_get_name(const char *name, const struct addrinfo *req, 
-		   const struct gaih_typeproto *tp, 
-		   struct gaih_servtuple *st, struct gaih_addrtuple **at, 
-		   int hip_transparent_mode) 
+
+/**
+ * Retrieves host information?
+ *
+ * @param  name                host name. 
+ * @param  reg                  a pointer to... 
+ * @param  tp                   a pointer to...
+ * @param  st                   a pointer to...
+ * @param  at                   a pointer to...
+ * @param  hip_transparent_mode ... 
+ * @return zero on success, negative on error.
+ */ 
+int gaih_inet_get_name(const char *name, const struct addrinfo *req,
+		       const struct gaih_typeproto *tp, 
+		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
+		       int hip_transparent_mode) 
 {
-  int rc;
-  int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
-    (req->ai_flags & AI_V4MAPPED);
-  char *namebuf = strdupa (name);
-  _HIP_DEBUG(">> name != NULL\n");
-  
-  *at = malloc (sizeof (struct gaih_addrtuple));
-  
-  (*at)->family = AF_UNSPEC;
-  (*at)->scopeid = 0;
-  (*at)->next = NULL;
-  
-  // is ipv4 address?
-  if (inet_pton (AF_INET, name, (*at)->addr) > 0)
-    {
-      HIP_DEBUG("The name to resolve is an IPv4\n");
-      
-      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET || v4mapped)
-	(*at)->family = AF_INET;
-      else
-	return -EAI_FAMILY;
-    }
-  
-  // not ipv4
-  if ((*at)->family == AF_UNSPEC)
-    {
-      char *namebuf = strdupa (name);
-      char *scope_delim;
-      
-      _HIP_DEBUG("not IPv4\n");
-      
-      scope_delim = strchr (namebuf, SCOPE_DELIMITER);
-      if (scope_delim != NULL)
-	*scope_delim = '\0';
-      
-      // is ipv6 address?
-      if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
+	int rc;
+	int v4mapped = (req->ai_family == PF_UNSPEC ||
+			req->ai_family == PF_INET6) &&
+		(req->ai_flags & AI_V4MAPPED);
+	char *namebuf = strdupa(name);
+	
+	*at = malloc (sizeof (struct gaih_addrtuple));
+	
+	(*at)->family = AF_UNSPEC;
+	(*at)->scopeid = 0;
+	(*at)->next = NULL;
+	
+	/* Check if the addredd is an IPv4 address. */
+	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-	  HIP_DEBUG("The name to resolve is an IPv6\n");
-	  
-	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
-	    (*at)->family = AF_INET6;
-	  else
-	    return -EAI_FAMILY;
-	  
-	  if (scope_delim != NULL)
-	    {
-	      int try_numericscope = 0;
-	      if (IN6_IS_ADDR_LINKLOCAL ((*at)->addr)
-		  || IN6_IS_ADDR_MC_LINKLOCAL ((*at)->addr))
+		HIP_DEBUG("The name to resolve is an IPv4\n");
+		if (req->ai_family == AF_UNSPEC ||
+		    req->ai_family == AF_INET || v4mapped)
 		{
-		  (*at)->scopeid = if_nametoindex (scope_delim + 1);
-		  if ((*at)->scopeid == 0)
-		    try_numericscope = 1;
-		} 
-	      else
-		try_numericscope = 1;
-	      
-	      if (try_numericscope != 0)
-		{
-		  char *end;
-		  unsigned long scopeid = strtoul (scope_delim + 1, &end,
-						   10);
-		  if (*end != '\0' || 
-		      (sizeof((*at)->scopeid) < sizeof(scopeid) &&
-		       scopeid > 0xffffffff)) 
-		    return GAIH_OKIFUNSPEC | -EAI_NONAME;
-		  (*at)->scopeid = (uint32_t) scopeid;
+			(*at)->family = AF_INET;
 		}
-	    }
+		else
+		{
+			return -EAI_FAMILY;
+		}
 	}
-    }
   
+	/* If the address is not an IPv4 and the family is not specified. */
+	if ((*at)->family == AF_UNSPEC)
+	{
+		char *namebuf = strdupa (name);
+		char *scope_delim;
+		
+		_HIP_DEBUG("not IPv4\n");
+		
+		scope_delim = strchr (namebuf, SCOPE_DELIMITER);
+		if (scope_delim != NULL)
+		{
+			*scope_delim = '\0';
+		}
+		
+		/* Check if the addredd is an IPv6 address. */
+		if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
+		{
+			HIP_DEBUG("The name to resolve is an IPv6\n");
+			
+			if (req->ai_family == AF_UNSPEC ||
+			    req->ai_family == AF_INET6)
+			{
+				(*at)->family = AF_INET6;
+			}
+			else
+			{
+				return -EAI_FAMILY;
+			}
+
+			if (scope_delim != NULL)
+			{
+				int try_numericscope = 0;
+				if (IN6_IS_ADDR_LINKLOCAL ((*at)->addr)
+				    || IN6_IS_ADDR_MC_LINKLOCAL ((*at)->addr))
+				{
+					(*at)->scopeid =
+						if_nametoindex(scope_delim + 1);
+					if ((*at)->scopeid == 0)
+					{
+						try_numericscope = 1;
+					}
+				} 
+				else
+				{
+					try_numericscope = 1;
+				}
+				if (try_numericscope != 0)
+				{
+					char *end;
+					unsigned long scopeid = strtoul(
+						scope_delim + 1, &end, 10);
+					if (*end != '\0' ||
+					    (sizeof((*at)->scopeid) <
+					     sizeof(scopeid) &&
+					     scopeid > 0xffffffff))
+					{
+						return GAIH_OKIFUNSPEC |
+							-EAI_NONAME;
+					}
+					(*at)->scopeid = (uint32_t) scopeid;
+				}
+			}
+		}
+	}
+	
     // host name is not an IP address
     /* Note: Due to problems in some platforms (FC7), it is not possible 
        to use the flag AI_NUMERICHOST to identify whether the name is a 
@@ -1142,15 +1172,21 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
     
       _HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
+
+      /** @todo When the next debug line is not commented out,
+	  conntest-client-gai segfaults. Don't know why it happens + this
+	  function is horrible to debug. - Lauri 05.02.2008*/
       _HIP_DEBUG("found_hits: %d\n", found_hits);
-      /* HIP: Finally remove IP addresses from the list to be
-	 returned depending on the AI_HIP flag */ 
+      
+      /* HIP: Finally remove IP addresses from the list to be returned depending
+	 on the AI_HIP flag. */ 
       if ((req->ai_flags & AI_HIP) || found_hits) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
-	HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
+	_HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
 	_HIP_DEBUG("(*at)->addr: %s  (*at)->family: %d\n", (*at)->addr, (*at)->family);
 
 	while (a != NULL) {
+	
 	  struct gaih_addrtuple *nxt = a->next;
 	  
 	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
@@ -1160,7 +1196,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
               hip_print_lsi("\na->addr",a->addr);
           if (a->family == AF_INET6)
               hip_print_hit("\na->addr",a->addr);
-
+	  
+	  
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
@@ -1178,7 +1215,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	      aux = aux->next;
 	    aux->next = a->next;
 	  }
-	  HIP_DEBUG("freeing IP address\n");
+	  _HIP_DEBUG("freeing IP address\n");
 	  free(a);
 	  a = nxt;
 	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
@@ -1468,7 +1505,7 @@ int getaddrinfo(const char *name, const char *service,
 		char *c;
 
 		gaih_service.name = service;
-		gaih_service.num = strtoul (gaih_service.name, &c, 10);
+		gaih_service.num = strtoul(gaih_service.name, &c, 10);
 		if (*c)
 			gaih_service.num = -1;
 		else
@@ -1532,7 +1569,7 @@ int getaddrinfo(const char *name, const char *service,
 						continue;
 
 					if (p)
-						freeaddrinfo (p);
+						freeaddrinfo(p);
 
 					return -(i & GAIH_EAI);
 				}

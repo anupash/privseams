@@ -75,7 +75,7 @@ int main_server_tcp(int serversock) {
 	while((recvnum = recv(peerfd, mylovemostdata,
 			      sizeof(mylovemostdata), 0)) > 0 ) {
 		mylovemostdata[recvnum] = '\0';
-		printf("Client sends: %s", mylovemostdata);
+		printf("Client sends:\n%s", mylovemostdata);
 		fflush(stdout);
 		if (recvnum == 0) {
 			close(peerfd);
@@ -344,6 +344,9 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	{
 		datalen++;
 		if((sendbuffer[datalen-1] = c) == '\n'){
+			if(datalen == 1){
+				break;
+			}
 			c = getc(stdin);
 			if(c == '\n'){
 				break;
@@ -367,7 +370,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 
 	gettimeofday(&stats_before, NULL);
 	
-	if(datalen > 1) {
+	if(datalen > 0) {
 		/* Send and receive data from the socket. */
 		while((bytes_sent < datalen) || (bytes_received < datalen)) {
 			/* send() returns the number of bytes sent or negative
