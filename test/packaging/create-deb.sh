@@ -15,6 +15,7 @@ NAME=hipl
 NAMEGPL=libhiptool
 DEBARCH="i386"
 if uname -a|grep x86_64; then DEBARCH=amd64; fi
+if uname -a|grep armel*; then DEBARCH=armel; fi
 DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
@@ -176,11 +177,11 @@ parse_args() {
       
       case $N in
 	    a) TYPE=binary
-               DEBIAN=armel/DEBIAN
+              	DEBIAN=armel/DEBIAN
 		PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
 
             b) TYPE=binary    
-               GIVEN=${GIVEN}+1 ;;
+               	GIVEN=${GIVEN}+1 ;;
 
             s) TYPE=source ;;
 
@@ -312,9 +313,10 @@ if [ $TYPE = "binary" ];then
 		error_cleanup
 		exit 1
 	fi
-	rm -rf ${PKGDIR}
-	else
-# $TYPE == "source
+	rm -rf ${PKGDIR} 
+fi
+
+if [ $TYPE = "source" ];then
 # Debian SOURCE package
 
     if ! mkdir -p "$PKGDIR_SRC";then
@@ -340,6 +342,8 @@ if [ $TYPE = "binary" ];then
 
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
+    
+
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	rm -rf "${NAME}${SUFFIX}"
