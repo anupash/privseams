@@ -2256,6 +2256,49 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 }
 
 /**
+ * hip_build_param_puzzle_m - build and append a HIP puzzle_m into the message
+ * @param msg the message where the puzzle_m is to be appended
+ * @param val_K the K value for the puzzle_m
+ * @param lifetime lifetime field of the puzzle_m
+ * @param opaque the opaque value for the puzzle_m
+ * @param random_i random I value for the puzzle_m (in host byte order)
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ * 
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_puzzle_m(struct hip_common *msg, uint8_t val_K,
+			     uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
+{
+	struct hip_puzzle_m puzzle;
+	int err = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&puzzle,
+				   sizeof(struct hip_puzzle_m) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&puzzle, HIP_PARAM_PUZZLE_M);
+
+	/* only the random_j_k is in host byte order */
+	puzzle.K = val_K;
+	puzzle.lifetime = lifetime;
+	memcpy(&puzzle.opaque, opaque, HIP_PUZZLE_M_OPAQUE_LEN);
+	puzzle.I = random_i;
+
+        err = hip_build_generic_param(msg, &puzzle,
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_direct(&puzzle));
+	return err;
+
+}
+#endif
+
+/**
  * hip_build_param_solution - build and append a HIP solution into the message
  * @param msg the message where the solution is to be appended
  * @param pz values from the corresponding puzzle copied to the solution
@@ -2290,6 +2333,44 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 				      hip_get_param_contents_direct(&cookie));
 	return err;
 }
+
+/**
+ * hip_build_param_solution_m - build and append a HIP solution into the message
+ * @param msg the message where the solution is to be appended
+ * @param pz values from the corresponding puzzle_m copied to the solution
+ * @param val_J J value for the solution (in host byte order)
+ *
+ * The puzzle mechanism assumes that every value is in network byte order
+ * except for the hip_birthday_cookie.cv union, where the value is in
+ * host byte order. This is an exception to the normal builder rules, where
+ * input arguments are normally always in host byte order.
+ * 
+ * @return zero for success, or non-zero on error
+ */
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_build_param_solution_m(struct hip_common *msg, struct hip_puzzle_m *pz,
+			     uint64_t val_J)
+{
+	struct hip_solution_m cookie;
+	int err = 0;
+
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&cookie,
+				   sizeof(struct hip_solution_m) -
+				   sizeof(struct hip_tlv_common));
+	/* Type 2 (in R1) or 3 (in I2) */
+	hip_set_param_type(&cookie, HIP_PARAM_SOLUTION_M);
+
+	cookie.J = hton64(val_J);
+	memcpy(&cookie.K, &pz->K, 10 + HIP_PUZZLE_M_OPAQUE_LEN);
+
+	cookie.reserved = 0;
+        err = hip_build_generic_param(msg, &cookie,
+				      sizeof(struct hip_tlv_common),
+				      hip_get_param_contents_direct(&cookie));
+	return err;
+}
+#endif
 
 /**
  * hip_build_param_diffie_hellman_contents - build HIP DH contents,

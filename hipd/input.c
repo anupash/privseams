@@ -389,6 +389,42 @@ int hip_produce_keying_material(struct hip_common *msg,
 	return err;
 }
 
+#ifdef CONFIG_HIP_MIDAUTH
+int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *entry)
+{
+	struct hip_puzzle_m *pz;
+	struct hip_puzzle tmp;
+	uint64_t solution;
+	int err = 0;
+
+	pz = hip_get_param(in, HIP_PARAM_PUZZLE_M);
+	while (pz) {
+		int ln = hip_get_param_contents_len(pz);
+		if (hip_get_param_type(pz) != HIP_PARAM_PUZZLE_M)
+			break;
+
+		tmp.type = pz->type;
+		tmp.length = tmp.length;
+		tmp.K = pz->K;
+		tmp.lifetime = pz->lifetime;
+		tmp.opaque[0] = tmp.opaque[1] = 0;
+		tmp.I = pz->I;
+
+		HIP_IFEL((solution = entry->hadb_misc_func->hip_solve_puzzle(
+	                 &tmp, in, HIP_SOLVE_PUZZLE)) == 0,
+			 -EINVAL, "Solving of puzzle failed\n");
+
+		HIP_IFEL(hip_build_param_solution_m(out, pz, solution), -1, 
+			"Error while creating solution_m reply parameter\n");
+		pz = (struct hip_puzzle_m *) hip_get_next_param(in, 
+		       (struct hip_tlv_common *) pz);
+	}
+
+out_err:
+	return err;
+}
+#endif
+
 int hip_receive_control_packet(struct hip_common *msg,
 			       struct in6_addr *src_addr,
 			       struct in6_addr *dst_addr,
@@ -706,6 +742,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_IFEL(hip_build_param_solution(i2, pz, ntoh64(solved_puzzle)), -1, 
 			 "Building of solution failed\n");
 	}
+	/********** SOLUTION_M **********/
+#ifdef CONFIG_HIP_MIDAUTH
+	HIP_IFEL(hip_solve_puzzle_m(i2, ctx->input, entry), -1, 
+		 "Building of solution_m failed\n");
+#endif
 
 	/********** Diffie-Hellman *********/
 	HIP_IFEL(!(dh_req = hip_get_param(ctx->input, HIP_PARAM_DIFFIE_HELLMAN)),
@@ -939,7 +980,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			    break;
 			HIP_IFEL(hip_build_param_echo_m(i2, ping + 1, ln, 0), -1, 
 				 "Error while creating echo_m reply parameter\n");
-			ping = hip_get_next_param(ctx->input, ping);
+			ping = (struct hip_echo_request_m *) hip_get_next_param(ctx->input, (struct hip_tlv_common *) ping);
 		}
 	}
 #endif
@@ -1423,7 +1464,7 @@ int hip_create_r2(struct hip_context *ctx,
 			    break;
 			HIP_IFEL(hip_build_param_echo_m(r2, ping + 1, ln, 0), -1, 
 				 "Error while creating echo_m reply parameter\n");
-			ping = hip_get_next_param(ctx->input, ping);
+			ping = (struct hip_echo_request_m *) hip_get_next_param(ctx->input, (struct hip_tlv_common *) ping);
 		}
 	}
 #endif

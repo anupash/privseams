@@ -116,7 +116,6 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
     struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
     char *nonce1 = "abcedfgh";
     char *nonce2 = "foobar";
-    struct hip_puzzle_m puzzle;
 
     /* start with a copy of the original packet */
 
@@ -127,19 +126,11 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     /* beware: black magic & dragons ahead */
 
-    memset(&puzzle, 'X', sizeof(puzzle));
-    puzzle.opaque[0]='H';
-    puzzle.opaque[1]='E';
-    puzzle.opaque[2]='L';
-    puzzle.opaque[3]='L';
-    puzzle.opaque[4]='O';
-    puzzle.opaque[5]='!';
-    hip_set_param_type(&puzzle, HIP_PARAM_PUZZLE_M);
-    hip_set_param_contents_len(&puzzle, sizeof(puzzle) - sizeof(struct hip_tlv_common));
-
     hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
     hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-/*    hip_build_param(hip, &puzzle);*/
+    hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00);
+    hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEF);
+
     p->size = hip_get_msg_total_len(hip);
 
     /* no more dragons & black magic*/
