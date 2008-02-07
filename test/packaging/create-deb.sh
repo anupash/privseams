@@ -29,8 +29,10 @@ PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
-if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb"; fi
+POSTFIX="deb"
+TMPNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel"; fi
+PKGNAME="${TMPNAME}.${POSTFIX}"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
@@ -111,8 +113,7 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.core.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.core.deb"; fi
+    PKGNAME="${TMPNAME}.core.${POSTFIX}"
     create_sub_package;
     
     init_files;
@@ -120,8 +121,7 @@ copy_and_package_files ()
     echo "** Copying firewall to $PKGDIR"
     cp firewall/firewall $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.firewall.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.firewall.deb"; fi
+    PKGNAME="${TMPNAME}.firewall.${POSTFIX}"
     create_sub_package;
 
     #hipl-tools (depends on hipl-lib, hipl-core)
@@ -130,8 +130,7 @@ copy_and_package_files ()
 
     cp tools/hipconf $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.tools.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.tools.deb"; fi
+    PKGNAME="${TMPNAME}.tools.${POSTFIX}"
     create_sub_package;
    
     init_files;
@@ -148,8 +147,7 @@ copy_and_package_files ()
 
     cp test/hipsetup $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.test.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.test.deb"; fi
+    PKGNAME="${TMPNAME}.test.${POSTFIX}"
     create_sub_package;
 
     init_files;
@@ -178,10 +176,9 @@ copy_and_package_files ()
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-#    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+    #cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.lib.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.lib.deb"; fi
+    PKGNAME="${TMPNAME}.lib.${POSTFIX}"
     create_sub_package;
   
     init_files;
@@ -198,8 +195,7 @@ copy_and_package_files ()
     DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     set +e
     
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.doc.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.doc.deb"; fi
+    PKGNAME="${TMPNAME}.doc.${POSTFIX}"
     create_sub_package;
 }
 
