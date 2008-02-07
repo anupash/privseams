@@ -782,7 +782,7 @@ skip_entry_creation:
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
-
+ 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
 

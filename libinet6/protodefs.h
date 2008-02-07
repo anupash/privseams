@@ -110,6 +110,10 @@
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
 #define HIP_PARAM_INT                   32794
+#ifdef CONFIG_HIP_OPPTCP
+	#define HIP_PARAM_SRC_TCP_PORT		32795
+	#define HIP_PARAM_DST_TCP_PORT		32796
+#endif
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505

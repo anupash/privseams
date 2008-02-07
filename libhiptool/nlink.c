@@ -1344,9 +1344,16 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
  * adds the i1 option to a packet if required
  * adds the default HIT after the i1 option (if i1 option should be added)
  * and sends it off with the correct checksum
+
+ * trafficType - 4 or 6 - standing for ipv4 and ipv6
  */
-void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, int addHIT){
-	int   sockfd, socketFamily;
+void send_tcp_packet(void * hdr,
+					 int newSize,
+					 int trafficType,
+					 int sockfd,
+					 int addOption,
+					 int addHIT)
+{
 	int   on = 1, i, j;
 	int   hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
@@ -1373,16 +1380,6 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 	if(addHIT)
 		newSize = newSize + sizeof(struct in6_addr);
 
-	//initializing the raw socket
-	if(trafficType == 4)
-		socketFamily = AF_INET;
-	else if(trafficType == 6)
-		socketFamily = AF_INET6;
-
-	if((sockfd = socket(socketFamily, SOCK_RAW, IPPROTO_RAW)) < 0 ){
-			HIP_DEBUG("Error creating raw socket\n");
-			return;
-	}
 	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
 		return;
@@ -1427,9 +1424,9 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 	if(tcphdr->doff == 5){//there are no previous options
 		if(addOption){
 			newHdr[twoHdrsSize]     = (char)HIP_OPTION_KIND;
-			newHdr[twoHdrsSize + 1] = '0';
-			newHdr[twoHdrsSize + 2] = '0';
-			newHdr[twoHdrsSize + 3] = '0';
+			newHdr[twoHdrsSize + 1] = (char)2;
+			newHdr[twoHdrsSize + 2] = (char)1;
+			newHdr[twoHdrsSize + 3] = (char)1;
 			if(addHIT){
 				//get the default hit
 				hip_get_default_hit(defaultHit);

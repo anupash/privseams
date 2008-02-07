@@ -380,6 +380,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	struct in6_addr *ptr = NULL;
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
+	in_port_t *src_tcp_port = NULL;
+	in_port_t *dst_tcp_port = NULL;
 	
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
@@ -404,7 +406,23 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
-	
+
+#ifdef CONFIG_HIP_OPPTCP
+	/*get the src tcp port from the message for the TCP SYN i1 packet*/
+	memset(&src_tcp_port, 0, sizeof(in_port_t));
+	ptr = (in_port_t *) hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT);
+	HIP_IFEL(!ptr, -1, "No peer port in msg\n");
+	memcpy(&src_tcp_port, ptr, sizeof(src_tcp_port));
+	HIP_DEBUG_HIT("peer port = ", &src_tcp_port);
+
+	/*get the dst tcp port from the message for the TCP SYN i1 packet*/
+	memset(&dst_tcp_port, 0, sizeof(in_port_t));
+	ptr = (in_port_t *) hip_get_param_contents(msg, HIP_PARAM_DST_TCP_PORT);
+	HIP_IFEL(!ptr, -1, "No peer port in msg\n");
+	memcpy(&dst_tcp_port, ptr, sizeof(dst_tcp_port));
+	HIP_DEBUG_HIT("peer port = ", &dst_tcp_port);
+#endif
+
 	hip_msg_init(msg);
 
 	/* Return the HIT immediately if we have already a host
@@ -453,11 +471,18 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
-	
+
 	//entry = hip_oppdb_find_byhits(&phit, src);
 	//HIP_ASSERT(!entry);
 	HIP_IFEL(hip_oppdb_add_entry(&phit, &hit_our, &dst_ip, NULL,
 				     src), -1, "Add db failed\n");
+
+//adding the src and dst ports, needed for the TCP SYN_i1 packet
+#ifdef CONFIG_HIP_OPPTCP
+	ha->tcp_opptcp_src_port = src_tcp_port;
+	ha->tcp_opptcp_dst_port = dst_tcp_port;
+#endif
+
 	HIP_IFEL(hip_send_i1(&hit_our, &phit, ha), -1,
 		 "sending of I1 failed\n");
 

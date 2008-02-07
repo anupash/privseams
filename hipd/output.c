@@ -12,6 +12,85 @@
 
 enum number_dh_keys_t number_dh_keys = TWO;
 
+
+#ifdef CONFIG_HIP_OPPTCP
+
+/**
+ * Builds the TCP SYN packet that will be send with the i1 option.
+ * 
+ * Send an I1 packet to the responder if an IPv6 address for the peer
+ * is known.
+ * 
+ * @param entry   	a pointer to a host association database state reserved for
+ *                	the peer. The src and dst ports are included in this parameter
+ * @return        	nothing
+ */
+void hip_send_opp_tcp_i1(hip_ha_t *entry){
+	int    ipType = ! IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+	struct ip * iphdr;
+	struct ip6_hdr * ip6_hdr;
+	struct tcphdr *tcphdr;
+	int    i, hdr_size;
+	char bytes [sizeof(struct ip)*(1 - ipType)   +   sizeof(struct ip6_hdr)*ipType   +   5*4];
+
+	if(ipType == 0)
+		hdr_size = sizeof(struct ip);
+	else if(ipType == 0)
+		hdr_size = sizeof(struct ip6_hdr);
+
+	//set all bits to 0
+	for(i = 0; i < 40; i++)
+		bytes[i] = (char)0;
+
+	//fill in the ip header fields
+	if(ipType == 0){//ipv4
+		//get the ip header
+		iphdr = (struct ip *)&bytes[0];
+		//get the tcp header
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+
+		iphdr->ip_v = 4;
+		iphdr->ip_hl = 5;
+		iphdr->ip_tos = 0;
+		iphdr->ip_len = 44;//20+20+4 ?????
+		iphdr->ip_id = 100;//random
+		//iphdr->FLAGS
+		iphdr->ip_off = 0;
+		iphdr->ip_ttl = 64;
+		iphdr->ip_p = 6;
+		iphdr->ip_sum = in_cksum((unsigned short *)iphdr, sizeof(struct ip));
+		IPV6_TO_IPV4_MAP(&entry->local_address, &iphdr->ip_src);
+		IPV6_TO_IPV4_MAP(&entry->preferred_address, &iphdr->ip_dst);
+	}
+	else if(ipType == 1){//ipv6
+		//get the ip header
+		ip6_hdr = (struct ip6_hdr *)&bytes[0];
+		//get the tcp header
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+
+		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_flow = 1610612736;//01100000000000000000000000000000;
+		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
+		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = 6;
+		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 64;
+		memcpy(&ip6_hdr->ip6_src, &entry->local_address, sizeof(struct in6_addr));
+		memcpy(&ip6_hdr->ip6_dst, &entry->preferred_address, sizeof(struct in6_addr));
+	}
+
+	//set tcp header fields
+	tcphdr->source = entry->tcp_opptcp_src_port;
+	tcphdr->dest   = entry->tcp_opptcp_dst_port;
+	tcphdr->seq = 0;
+	tcphdr->ack_seq = 0;//is not important in the SYN packet
+	tcphdr->doff = 5;
+	tcphdr->syn = 1;
+	tcphdr->window = 8704;//random
+	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
+	//tcphdr->urg_ptr = ???????? TO BE FIXED
+	send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, (ipType == 0) ? 4 : 6, hip_raw_sock_v4, 1, 0);
+}
+#endif
+
+
 /**
  * Sends an I1 packet to the peer.
  * 
@@ -26,14 +105,20 @@ enum number_dh_keys_t number_dh_keys = TWO;
  */
 int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
-        struct hip_common *i1 = 0;
+	struct hip_common *i1 = 0;
 	struct in6_addr daddr;
 	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
 	int err = 0;
 		
 	HIP_DEBUG("\n");
-	
+
+#ifdef CONFIG_HIP_OPPTCP
+	if(hip_get_opportunistic_tcp_status() && hit_is_opportunistic_hashed_hit(dst_hit))
+		hip_send_opp_tcp_i1(entry);
+	else{
+#endif
+  
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
@@ -113,6 +198,10 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	else if (err == 1)
 		err = 0;
 
+
+#ifdef CONFIG_HIP_OPPTCP
+	}
+#endif
 
 out_err:
 	if (i1)

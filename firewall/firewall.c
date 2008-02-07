@@ -316,10 +316,15 @@ int is_outgoing_packet(unsigned int theHook){
 
 
 /**
-* checks for the i1 option in a packet
-*/
+ * checks for the i1 option in a packet
+ *
+ * @param  tcphdrBytes	a pointer to the TCP header that is examined.
+ * @param  hdrLen  		the length of the TCP header in bytes.
+ * @return zero if i1 option not found in the options, or 1 if it is found.
+ */ 
 int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
-	int i = 20, foundHipOpp = 0, len = 0;
+	int i = 20;//the initial obligatory part of the TCP header
+	int foundHipOpp = 0, len = 0;
 	char *bytes =(char*)tcphdrBytes;
 	//HIP_OPTION_KIND
 
@@ -382,10 +387,26 @@ void examine_incoming_packet(struct ipq_handle *handle,
 	struct tcphdr *tcphdr;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
+	int sockfd, socketFamily, on = 1;
 	//fields for temporary values
 	u_int16_t portTemp;
 	struct in_addr  addrTemp;
 	struct in6_addr addr6Temp;
+	struct in6_addr *peerHit;
+
+	//initialize the socket
+	if((sockfd = socket(socketFamily, SOCK_RAW, IPPROTO_RAW)) < 0 ){
+			HIP_DEBUG("Error creating raw socket\n");
+			return;
+	}
+	if(trafficType == 4)
+		socketFamily = AF_INET;
+	else if(trafficType == 6)
+		socketFamily = AF_INET6;
+	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+		HIP_DEBUG("Error setting an option to raw socket\n"); 
+		return;
+	}
 
 	if(trafficType == 4){
 		iphdr = (struct ip *)hdr;
@@ -402,12 +423,12 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		hdrBytes = ((char *) ip6_hdr) + hdr_size;
 	}
 
-	//check if SYN field is 0
+/*	//check if SYN field is 0
 	if(tcphdr->syn == 0){
 		allow_packet(handle, packetId);
 		return;
 	}
-
+*/
 	//check that there are options
 	if(tcphdr->doff == 5){	//no options
 		allow_packet(handle, packetId);
@@ -439,10 +460,14 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			tcphdr->syn = 1;
 			tcphdr->ack = 1;
 
-			//send packet out after adding HIT
-			//no need to add i1 option, since
-			//it is already in the received packet
-			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 0, 1);
+			/* send packet out after adding HIT
+			 * the option is already there but
+			 * it has to be added again since
+			 * if only the HIT is added, it will
+			 * overwrite the i1 option that is
+			 * in the options of TCP
+			 */
+			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 0, 1);
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
@@ -452,10 +477,25 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			return;
 		}
 	}
-	else if((tcphdr->syn == 1) && (tcphdr->ack == 1)){	//incoming, syn=1 and ack=1
+	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
+			((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
+
+
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+			//extract peer hit
+			////peerHit =  ((struct in6_addr *) hdrBytes) + 4*5 + 4;//tcp header pointer + 20(minimum header length) + 4(i1 option length in the TCP options)
+			//update hit db
+			//send i1
+		}
+		else{
+			//signal for the normal TCP packets not to be blocked for this peer
+		}
+
+
 		allow_packet(handle, packetId);
 		return;
 	}
+
 	//allow all the rest
 	allow_packet(handle, packetId);
 }
@@ -471,6 +511,21 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 	int   optionsLen;
 	char *hdrBytes = NULL;
 	struct tcphdr *tcphdr;
+	int sockfd, socketFamily, on = 1;
+
+	//initialize the socket
+	if((sockfd = socket(socketFamily, SOCK_RAW, IPPROTO_RAW)) < 0 ){
+			HIP_DEBUG("Error creating raw socket\n");
+			return;
+	}
+	if(trafficType == 4)
+		socketFamily = AF_INET;
+	else if(trafficType == 6)
+		socketFamily = AF_INET6;
+	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+		HIP_DEBUG("Error setting an option to raw socket\n"); 
+		return;
+	}
 
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;
@@ -500,7 +555,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 			return;
 		}
 		//add the option to the packet
-		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 0);
+		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 0);
 		//drop original packet
 		drop_packet(handle, packetId);
 		return;
