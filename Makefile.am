@@ -26,13 +26,7 @@ doxygen:
 rpm:
 	test/packaging/create-rpm.sh
 deb:
-	ARCH=`(uname -m)`
-	@if [ "armel*" == "$(ARCH)" ];then	\
-		test/packaging/create-deb.sh -a; \
-		echo "$(ARCH)";	\
-	else	\
-	test/packaging/create-deb.sh;\
-	fi
+	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
 source-deb:
 	test/packaging/create-deb.sh -s
