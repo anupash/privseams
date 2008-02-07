@@ -3,13 +3,12 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: hipl-%{version}.tar.gz
+Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
+Requires: openssl
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -27,8 +26,9 @@ other related tools and test software.
 %prep
 %setup
 
+# Note: in subsequent releases me may want to use --disable-debugging
 %build
-%configure
+./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -48,7 +48,7 @@ install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
 install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
-make DESTDIR=%{buildroot} install
+make install
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
@@ -64,7 +64,6 @@ install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
 %postun
 
-
 %clean
 rm -rf %{buildroot}
 
@@ -73,7 +72,7 @@ rm -rf %{buildroot}
 %defattr (-, root, root)
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
-%{prefix}/sbin/firewall
+#%{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
 %{prefix}/bin/conntest-client
@@ -82,9 +81,52 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{_libdir}/*
+%{prefix}/lib/*
+# subdirective that could be used to exclude files from inclusion
+# %exclude
+# allowing creation of device nodes (type,major,minor) 
+# %dev 
+# to flag the specified file as being a configuration file
 %config /etc/rc.d/init.d/hipd
-%doc doc/HOWTO.txt doc/howto-html
+# if a user installs the package using --excludedocs, these files will not be installed
+%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
+
+# creates <name-of-subpackage> subpackage
+# list of files with the name of <name-of-subpackage> subpackage
+%package bin
+Summary:	binary files
+Group:		System Environment/Kernel
+%description bin
+%files	bin
+%defattr (-, root, root)
+%{prefix}/sbin/hipconf
+%{prefix}/sbin/hipd
+#%{prefix}/sbin/firewall
+%{prefix}/bin/hipsetup
+%{prefix}/bin/hipagent
+%{prefix}/bin/conntest-client
+%{prefix}/bin/conntest-client-gai
+%{prefix}/bin/conntest-client-native
+%{prefix}/bin/conntest-client-native-user-key
+%{prefix}/bin/conntest-server
+%{prefix}/bin/conntest-server-native
+#
+%package lib
+Summary:	library files
+Group:		System Environment/Kernel
+%description lib
+%files	lib 
+%defattr (-, root, root)
+%{prefix}/lib/*
+#
+%package other
+Summary:	other files
+Group:		System Environment/Kernel
+%description other
+%files	other
+%defattr (-, root, root)
+%config /etc/rc.d/init.d/hipd
+%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
 
 %changelog
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
@@ -95,3 +137,4 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
+
