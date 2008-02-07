@@ -97,7 +97,8 @@ copy_files ()
     cd "$PKGDIR"
 
     # create directory structure
-    mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    mkdir -p usr/sbin usr/bin
     cd "$HIPL"
     
     cp hipd/hipd $PKGDIR/usr/sbin/
@@ -105,15 +106,50 @@ copy_files ()
     cp firewall/firewall $PKGDIR/usr/sbin/
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-#    cp agent/hipagent $PKGDIR/usr/sbin/
+    #cp agent/hipagent $PKGDIR/usr/sbin/
 
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
     done
+
     for suffix in "" -native;do
 	cp test/conntest-server$suffix $PKGDIR/usr/bin/
     done
+
     cp test/hipsetup $PKGDIR/usr/sbin/
+
+    cd "$PKGROOT"
+
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.bin.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.bin.deb"; fi
+
+    echo "** Creating the Debian package '$PKGNAME'"
+    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+	echo "** Successfully finished building the binary Debian package"
+	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+    else
+	echo "** Error: unable to build package, exiting"
+	error_cleanup
+	exit 1
+    fi
+
+    rm -rf ${PKGDIR}
+
+    set -e
+    mkdir -p "$PKGDIR/DEBIAN"
+    for f in control changelog copyright postinst prerm;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
+    done
+    
+    echo "** Copying library files to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+   
+    mkdir -p usr/lib
+
+    cd "$HIPL"
+
     for suffix in a so so.0 so.0.0.0;do
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
@@ -122,6 +158,7 @@ copy_files ()
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
 	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
+
     cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
 	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
@@ -131,6 +168,37 @@ copy_files ()
     
 #    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
+    cd "$PKGROOT"
+
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.lib.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.lib.deb"; fi
+
+    echo "** Creating the Debian package '$PKGNAME'"
+    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+	echo "** Successfully finished building the binary Debian package"
+	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+    else
+	echo "** Error: unable to build package, exiting"
+	error_cleanup
+	exit 1
+    fi
+
+    rm -rf ${PKGDIR}
+
+    set -e
+    mkdir -p "$PKGDIR/DEBIAN"
+    for f in control changelog copyright postinst prerm;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
+    done
+    
+    echo "** Copying other files to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p etc/hip usr/share/doc etc/init.d
+
+    cd "$HIPL"
 
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
@@ -139,7 +207,26 @@ copy_files ()
     cd "$HIPL/doc"
     DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     set +e
+
+    cd "$PKGROOT"
+
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.other.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.other.deb"; fi
+
+    echo "** Creating the Debian package '$PKGNAME'"
+    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+	echo "** Successfully finished building the binary Debian package"
+	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+    else
+	echo "** Error: unable to build package, exiting"
+	error_cleanup
+	exit 1
+    fi
+
+    rm -rf ${PKGDIR}
 }
+
 
 error_cleanup()
 {
@@ -168,8 +255,10 @@ die() {
 
 help() {
 cat <<EOF
-usage: $0 [-b] | [-s] | [-a]
-b=binary, s=source, a=armel
+#usage: $0 [-b] | [-s] | [-a]
+#b=binary, s=source, a=armel
+usage: $0 [-b] | [-s]
+b=binary, s=source
 default: ${TYPE}
 EOF
 }
@@ -207,7 +296,6 @@ parse_args() {
 ######## "Main" function ###################################################
 
 parse_args $@
-
 
 echo "** Creating the directory structure and files for building the"
 echo "** binary Debian package containing HIPL user space software"
@@ -283,43 +371,45 @@ if [ $TYPE = "binary" ];then
 	exit 1
     fi
 
-	cd "$PKGROOT"
+    cd "$PKGROOT"
     if ! copy_files;then
 	echo "** Error: unable to copy files, exiting"
 	exit 1
     fi
 
-	cd "$PKGROOT"
-	if [ $CORPORATE = 1 ];then
-		if ! copy_files_gpl;then
-		echo "** Error: unable to copy GPL files, exiting"
-		exit 1
-		fi
+    cd "$PKGROOT"
+    	if [ $CORPORATE = 1 ];then
+    		if ! copy_files_gpl;then
+    		echo "** Error: unable to copy GPL files, exiting"
+    		exit 1
+    		fi
 	
-		cd "$PKGROOT"
-		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-		echo "** Successfully finished building the binary GPL Debian package"
-		else
+    		cd "$PKGROOT"
+    		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+    		echo "** Successfully finished building the binary GPL Debian package"
+    		else
 		echo "** Error!"
 		echo "** Error: Unable to build the binary GPL Debian package!"
 		echo "** Error!"
 		exit 1
 		fi
 	fi
+#
+#
+#	cd "$PKGROOT"
+#	echo "** Creating the Debian package '$PKGNAME'"
+#	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+#		echo "** Successfully finished building the binary Debian package"
+#		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+#		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+#	else
+#		echo "** Error: unable to build package, exiting"
+#		error_cleanup
+#		exit 1
+#	fi
 
+#	rm -rf ${PKGDIR} 
 
-	cd "$PKGROOT"
-	echo "** Creating the Debian package '$PKGNAME'"
-	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-		echo "** Successfully finished building the binary Debian package"
-		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-	else
-		echo "** Error: unable to build package, exiting"
-		error_cleanup
-		exit 1
-	fi
-	rm -rf ${PKGDIR} 
 fi
 
 if [ $TYPE = "source" ];then
