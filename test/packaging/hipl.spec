@@ -82,51 +82,50 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
 %{prefix}/lib/*
-# subdirective that could be used to exclude files from inclusion
-# %exclude
-# allowing creation of device nodes (type,major,minor) 
-# %dev 
-# to flag the specified file as being a configuration file
+# flag the specified file as being a configuration file
 %config /etc/rc.d/init.d/hipd
 # if a user installs the package using --excludedocs, these files will not be installed
 %doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
 
-# creates <name-of-subpackage> subpackage
-# list of files with the name of <name-of-subpackage> subpackage
-%package bin
-Summary:	binary files
-Group:		System Environment/Kernel
-%description bin
-%files	bin
+# allowing creation of device nodes (type,major,minor) 
+# %dev 
+
+# create subpackage
+# list of files with the name of subpackage
+
+%package lib
+Summary: library files
+Group: System Environment/Kernel
+%description lib
+%files	lib 
 %defattr (-, root, root)
-%{prefix}/sbin/hipconf
-%{prefix}/sbin/hipd
-#%{prefix}/sbin/firewall
+%{prefix}/lib/*
+
+%package core
+Summary: core files
+Group: System Environment/Kernel
+%description core
+%files	core
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
+%{prefix}/sbin/hipconf
+%{prefix}/sbin/hipd
+%defattr (-, root, root)
+%config /etc/rc.d/init.d/hipd
+%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
+
+%package test
+Summary: test files
+Group: System Environment/Kernel
+%description test
+%files	test
+%defattr (-, root, root)
 %{prefix}/bin/conntest-client
 %{prefix}/bin/conntest-client-gai
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-#
-%package lib
-Summary:	library files
-Group:		System Environment/Kernel
-%description lib
-%files	lib 
-%defattr (-, root, root)
-%{prefix}/lib/*
-#
-%package other
-Summary:	other files
-Group:		System Environment/Kernel
-%description other
-%files	other
-%defattr (-, root, root)
-%config /etc/rc.d/init.d/hipd
-%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
 
 %changelog
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
