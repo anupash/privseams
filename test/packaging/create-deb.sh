@@ -81,16 +81,20 @@ copy_files_gpl()
 	set +e
 }
 
-# copy files
-copy_files ()
+init_files ()
 {
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
-    
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
     for f in control changelog copyright postinst prerm;do
 	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
     done
+}
+
+# copy and package files
+copy_and_package_files ()
+{
+    init_files;
     
     echo "** Copying binary files to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
@@ -98,14 +102,40 @@ copy_files ()
 
     # create directory structure
     # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
-    mkdir -p usr/sbin usr/bin
+    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
     
-    cp hipd/hipd $PKGDIR/usr/sbin/
+    #hipl-core (hipd + firewall): depends on hipl-lib
 
+    cp hipd/hipd $PKGDIR/usr/sbin/
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.core.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.core.deb"; fi
+    create_sub_package;
+    
+    init_files;
+
+    echo "** Copying firewall to $PKGDIR"
     cp firewall/firewall $PKGDIR/usr/sbin/
 
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.firewall.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.firewall.deb"; fi
+    create_sub_package;
+
+    #hipl-tools (depends on hipl-lib, hipl-core)
+
+    init_files;
+
     cp tools/hipconf $PKGDIR/usr/sbin/
+
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.tools.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.tools.deb"; fi
+    create_sub_package;
+   
+    init_files;
+
     #cp agent/hipagent $PKGDIR/usr/sbin/
 
     for suffix in "" -gai -native -native-user-key;do
@@ -118,29 +148,11 @@ copy_files ()
 
     cp test/hipsetup $PKGDIR/usr/sbin/
 
-    cd "$PKGROOT"
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.test.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.test.deb"; fi
+    create_sub_package;
 
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.bin.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.bin.deb"; fi
-
-    echo "** Creating the Debian package '$PKGNAME'"
-    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-    else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
-    fi
-
-    rm -rf ${PKGDIR}
-
-    set -e
-    mkdir -p "$PKGDIR/DEBIAN"
-    for f in control changelog copyright postinst prerm;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
-    done
+    init_files;
     
     echo "** Copying library files to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
@@ -168,63 +180,27 @@ copy_files ()
     
 #    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
-    cd "$PKGROOT"
-
     PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.lib.deb"
     if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.lib.deb"; fi
+    create_sub_package;
+  
+    init_files;
 
-    echo "** Creating the Debian package '$PKGNAME'"
-    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-    else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
-    fi
-
-    rm -rf ${PKGDIR}
-
-    set -e
-    mkdir -p "$PKGDIR/DEBIAN"
-    for f in control changelog copyright postinst prerm;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
-    done
-    
-    echo "** Copying other files to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p etc/hip usr/share/doc etc/init.d
+    mkdir -p usr/share/doc
 
     cd "$HIPL"
 
-    echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
-    
     echo "** Copying documentation to '$PKGDIR'"
     cd "$HIPL/doc"
     DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     set +e
-
-    cd "$PKGROOT"
-
-    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.other.deb"
-    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.other.deb"; fi
-
-    echo "** Creating the Debian package '$PKGNAME'"
-    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-	echo "** Successfully finished building the binary Debian package"
-	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-    else
-	echo "** Error: unable to build package, exiting"
-	error_cleanup
-	exit 1
-    fi
-
-    rm -rf ${PKGDIR}
+    
+    PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.doc.deb"
+    if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.doc.deb"; fi
+    create_sub_package;
 }
 
 
@@ -236,6 +212,24 @@ error_cleanup()
 	    echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
 	fi
     fi
+}
+
+create_sub_package()
+{
+
+    echo "** Creating the Debian package '$PKGNAME'"
+    cd "$PKGROOT"
+    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+	echo "** Successfully finished building the binary Debian package"
+	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+    else
+	echo "** Error: unable to build package, exiting"
+	error_cleanup
+	exit 1
+    fi
+
+    rm -rf ${PKGDIR}
 }
 
 error_cleanup_src()
@@ -372,7 +366,7 @@ if [ $TYPE = "binary" ];then
     fi
 
     cd "$PKGROOT"
-    if ! copy_files;then
+    if ! copy_and_package_files;then
 	echo "** Error: unable to copy files, exiting"
 	exit 1
     fi
