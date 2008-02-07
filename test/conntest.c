@@ -373,15 +373,15 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
         */
         if (res->ai_family == AF_INET)
             {
-                struct sockaddr_in * ad;
+                struct sockaddr_in *ad;
                 ad = (struct sockaddr_in *)res->ai_addr;
-                hip_print_lsi("Addr given to connect", &ad->sin_addr);
+		HIP_DEBUG_LSI("Addr given to connect", &ad->sin_addr);
             }
         if (res->ai_family == AF_INET6)
             {
                 struct sockaddr_in6 * ad6;
                 ad6 = (struct sockaddr_in6 *)res->ai_addr;
-                hip_print_hit("Addr given to connect", &ad6->sin6_addr);
+		HIP_DEBUG_HIT("Addr given to connect", &ad6->sin6_addr);
             }
 
 	gettimeofday(&stats_before, NULL);

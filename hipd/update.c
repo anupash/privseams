@@ -1694,7 +1694,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 				memset(&local_addr, 0, sizeof(in6_addr_t));
 				memcpy(&local_addr, hip_cast_sa_addr(&n->addr),
 				       sizeof(in6_addr_t));
-				hip_print_hit("Using addr for SA", &local_addr);
+				HIP_DEBUG_HIT("Using addr for SA", &local_addr);
 				break;
 			}
 		}
@@ -2114,7 +2114,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
                      item = NULL;
                      list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
                              addr_li = list_entry(item);
-                             hip_print_hit("SPI out addresses", &addr_li->address);
+                             HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
                              if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
                                  IN6_IS_ADDR_V4MAPPED(&srcaddr)) {
                                      HIP_DEBUG("Found matching addr\n");
@@ -2271,7 +2271,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				item = NULL;
 				list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
 					addr_li = list_entry(item);
-					hip_print_hit("SPI out addresses", &addr_li->address);
+					HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
 					if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) !=
 					    IN6_IS_ADDR_V4MAPPED(daddr)) {
 						HIP_DEBUG("Found other family than BEX address "\
@@ -2595,7 +2595,7 @@ int hip_send_update(struct hip_hadb_state *entry,
                      item = NULL;
                      list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
                              addr_li = list_entry(item);
-                             hip_print_hit("SPI out addresses", &addr_li->address);
+                             HIP_DEBUG_HIT("SPI out addresses", &addr_li->address);
                              if (IN6_IS_ADDR_V4MAPPED(&addr_li->address) ==
                                  IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
                                      HIP_DEBUG("Found matching addr\n");
