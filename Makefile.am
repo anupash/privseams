@@ -19,8 +19,6 @@ EXTRA_DIST += i3-cfg-PL.xml
 #SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi
 SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent
 
-ARCH=`(uname -m)`
-
 showip:
 	cd showip && sh create.sh
 doxygen:
@@ -28,11 +26,12 @@ doxygen:
 rpm:
 	test/packaging/create-rpm.sh
 deb:
+	ARCH=`(uname -m)`
 	@if [ "armel*" == "$(ARCH)" ];then	\
 		test/packaging/create-deb.sh -a; \
-		echo "$(ARCH)"; \
+		echo "$(ARCH)";	\
 	else	\
-	test/packaging/create-deb.sh; \	
+	test/packaging/create-deb.sh;\
 	fi
 	test/packaging/create-deb.sh -s
 source-deb:
