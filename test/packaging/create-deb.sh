@@ -13,10 +13,14 @@ RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
+
 DEBARCH="i386"
-if uname -a|grep x86_64; then DEBARCH=amd64; fi
-if uname -a|grep armel*; then DEBARCH=armel; fi
+if uname -m|grep x86_64; then DEBARCH=amd64; fi
+if uname -m|grep arm*; then DEBARCH=armel; fi
+
 DEBIAN=${DEBARCH}/DEBIAN
+if dpkg --print-architecture|grep armel;then DEBIAN=armel/DEBIAN; fi
+
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
@@ -24,7 +28,9 @@ PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
+
 PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
+if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb"; fi
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
@@ -176,9 +182,9 @@ parse_args() {
       getopts abchs N "$@"
       
       case $N in
-	    a) TYPE=binary
-              	DEBIAN=armel/DEBIAN
-		PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
+	#    a) TYPE=binary
+        #     	DEBIAN=armel/DEBIAN
+	#	PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
 
             b) TYPE=binary    
                	GIVEN=${GIVEN}+1 ;;
