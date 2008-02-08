@@ -458,7 +458,7 @@
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
-      For tcpdump, you can use "tcpdump -n -i any esp or proto 253 or 
+      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or 
       port 50500" to catch HIP-only traffic.
     </para>
     <para>
@@ -1064,15 +1064,15 @@
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the userspace.  These rules are inserted
               automatically at the head of each chain. Other rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              concern the HIP (-p 139) and ESP packets (-p 50) must not be 
               inserted before them.</para>
 
 <itemizedlist>
-        <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A FORWARD -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A INPUT -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A OUTPUT -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
 </itemizedlist>
 

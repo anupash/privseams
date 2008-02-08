@@ -1059,10 +1059,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                 outbound traffic (state machine)?
  */
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
-	char id[32];
+	char id[100];
 	sprintf_i3_id(id, (ID *)ctx_data);
 	
-	HIP_ERROR("Following ID not found: %s", id);
+	HIP_ERROR("Following ID not found: %s\n", id);
 }
 
 /** 
