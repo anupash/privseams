@@ -1192,12 +1192,12 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
 		    req->ai_family, a->family, 
                     ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  if (a->family == AF_INET)
-              hip_print_lsi("\na->addr",a->addr);
-          if (a->family == AF_INET6)
-              hip_print_hit("\na->addr",a->addr);
-	  
-	  
+	  if (a->family == AF_INET) {
+              HIP_DEBUG_LSI("\na->addr",a->addr);
+	  }
+          if (a->family == AF_INET6) {
+              HIP_DEBUG_HIT("\na->addr",a->addr);
+	  }
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
