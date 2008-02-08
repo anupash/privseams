@@ -31,7 +31,7 @@ HIPL=$PWD
 
 POSTFIX="deb"
 TMPNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}"
-if dpkg --print-architecture|grep armel;then PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel"; fi
+if dpkg --print-architecture|grep armel;then TMPNAME="${NAME}-${VERSION}-${RELEASE}-armel"; fi
 PKGNAME="${TMPNAME}.${POSTFIX}"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
