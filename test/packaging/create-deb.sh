@@ -30,9 +30,9 @@ SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 
 POSTFIX="deb"
-TMPNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}"
-if dpkg --print-architecture|grep armel;then TMPNAME="${NAME}-${VERSION}-${RELEASE}-armel"; fi
-PKGNAME="${TMPNAME}.${POSTFIX}"
+TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
+PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
@@ -113,7 +113,7 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
-    PKGNAME="${TMPNAME}.core.${POSTFIX}"
+    PKGNAME="${NAME}-core-${TMPNAME}.${POSTFIX}"
     create_sub_package;
     
     init_files;
@@ -121,7 +121,7 @@ copy_and_package_files ()
     echo "** Copying firewall to $PKGDIR"
     cp firewall/firewall $PKGDIR/usr/sbin/
 
-    PKGNAME="${TMPNAME}.firewall.${POSTFIX}"
+    PKGNAME="${NAME}-firewall-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
     #hipl-tools (depends on hipl-lib, hipl-core)
@@ -130,7 +130,7 @@ copy_and_package_files ()
 
     cp tools/hipconf $PKGDIR/usr/sbin/
 
-    PKGNAME="${TMPNAME}.tools.${POSTFIX}"
+    PKGNAME="${NAME}-tools-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
     init_files;
@@ -147,7 +147,7 @@ copy_and_package_files ()
 
     cp test/hipsetup $PKGDIR/usr/sbin/
 
-    PKGNAME="${TMPNAME}.test.${POSTFIX}"
+    PKGNAME="${NAME}-test-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
     init_files;
@@ -178,7 +178,7 @@ copy_and_package_files ()
     
     #cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
-    PKGNAME="${TMPNAME}.lib.${POSTFIX}"
+    PKGNAME="${NAME}-lib-${TMPNAME}.${POSTFIX}"
     create_sub_package;
   
     init_files;
@@ -195,7 +195,7 @@ copy_and_package_files ()
     DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     set +e
     
-    PKGNAME="${TMPNAME}.doc.${POSTFIX}"
+    PKGNAME="${NAME}-doc-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 }
 
