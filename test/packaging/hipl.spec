@@ -3,7 +3,7 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: hipl-%{version}.tar.gz
+Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
@@ -27,6 +27,7 @@ other related tools and test software.
 %prep
 %setup
 
+# Note: in subsequent releases me may want to use --disable-debugging
 %build
 %configure
 make -C doc all
@@ -64,27 +65,45 @@ install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
 %postun
 
-
 %clean
 rm -rf %{buildroot}
 
 # Note: we are not distributing everything from test directory, just essentials
-%files
-%defattr (-, root, root)
+
+# create subpackage
+# list of files with the name of subpackage
+
+%package lib
+Summary: library files
+Group: System Environment/Kernel
+%description lib
+%files	lib 
+%{_libdir}/*
+
+%package core
+Summary: core files
+Group: System Environment/Kernel
+%description core
+%files	core
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
 %{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
+%config /etc/rc.d/init.d/hipd
+%doc doc/HOWTO.txt doc/howto-html
+
+%package test
+Summary: test files
+Group: System Environment/Kernel
+%description test
+%files	test
 %{prefix}/bin/conntest-client
 %{prefix}/bin/conntest-client-gai
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{_libdir}/*
-%config /etc/rc.d/init.d/hipd
-%doc doc/HOWTO.txt doc/howto-html
 
 %changelog
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
@@ -95,3 +114,4 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
+
