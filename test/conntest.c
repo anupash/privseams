@@ -365,18 +365,6 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		recvnum = 1;
 	}
 	
-        if (res->ai_family == AF_INET)
-            {
-                struct sockaddr_in *ad;
-                ad = (struct sockaddr_in *)res->ai_addr;
-		HIP_DEBUG_LSI("Addr given to connect", &ad->sin_addr);
-            }
-        if (res->ai_family == AF_INET6)
-            {
-                struct sockaddr_in6 * ad6;
-                ad6 = (struct sockaddr_in6 *)res->ai_addr;
-		HIP_DEBUG_HIT("Addr given to connect", &ad6->sin6_addr);
-            }
 	/* Get a socket for sending and receiving data. */
 	HIP_IFE((hip_connect_func(peer_ai, &sock) != 0), -EFAULT);
 

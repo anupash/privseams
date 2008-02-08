@@ -1173,9 +1173,6 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
     
       _HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
 
-      /** @todo When the next debug line is not commented out,
-	  conntest-client-gai segfaults. Don't know why it happens + this
-	  function is horrible to debug. - Lauri 05.02.2008*/
       _HIP_DEBUG("found_hits: %d\n", found_hits);
       
       /* HIP: Finally remove IP addresses from the list to be returned depending
@@ -1193,10 +1190,10 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		    req->ai_family, a->family, 
                     ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
 	  if (a->family == AF_INET) {
-              HIP_DEBUG_LSI("\na->addr",a->addr);
+              _HIP_DEBUG_LSI("\na->addr",a->addr);
 	  }
           if (a->family == AF_INET6) {
-              HIP_DEBUG_HIT("\na->addr",a->addr);
+              _HIP_DEBUG_HIT("\na->addr",a->addr);
 	  }
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
