@@ -3,12 +3,13 @@ Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
-Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
+Source: hipl-%{version}.tar.gz
 Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl
+Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -26,9 +27,8 @@ other related tools and test software.
 %prep
 %setup
 
-# Note: in subsequent releases me may want to use --disable-debugging
 %build
-./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -48,7 +48,7 @@ install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
 install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
-make install
+make DESTDIR=%{buildroot} install
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
@@ -64,6 +64,7 @@ install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 
 %postun
 
+
 %clean
 rm -rf %{buildroot}
 
@@ -72,7 +73,7 @@ rm -rf %{buildroot}
 %defattr (-, root, root)
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
-#%{prefix}/sbin/firewall
+%{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
 %{prefix}/bin/hipagent
 %{prefix}/bin/conntest-client
@@ -81,51 +82,9 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib/*
-# flag the specified file as being a configuration file
+%{_libdir}/*
 %config /etc/rc.d/init.d/hipd
-# if a user installs the package using --excludedocs, these files will not be installed
-%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
-
-# allowing creation of device nodes (type,major,minor) 
-# %dev 
-
-# create subpackage
-# list of files with the name of subpackage
-
-%package lib
-Summary: library files
-Group: System Environment/Kernel
-%description lib
-%files	lib 
-%defattr (-, root, root)
-%{prefix}/lib/*
-
-%package core
-Summary: core files
-Group: System Environment/Kernel
-%description core
-%files	core
-%{prefix}/bin/hipsetup
-%{prefix}/bin/hipagent
-%{prefix}/sbin/hipconf
-%{prefix}/sbin/hipd
-%defattr (-, root, root)
-%config /etc/rc.d/init.d/hipd
-%doc doc/HOWTO.txt doc/howto-html /doc/HOWTO.xml doc/README 
-
-%package test
-Summary: test files
-Group: System Environment/Kernel
-%description test
-%files	test
-%defattr (-, root, root)
-%{prefix}/bin/conntest-client
-%{prefix}/bin/conntest-client-gai
-%{prefix}/bin/conntest-client-native
-%{prefix}/bin/conntest-client-native-user-key
-%{prefix}/bin/conntest-server
-%{prefix}/bin/conntest-server-native
+%doc doc/HOWTO.txt doc/howto-html
 
 %changelog
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
@@ -136,4 +95,3 @@ Group: System Environment/Kernel
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
-
