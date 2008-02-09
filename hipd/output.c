@@ -1048,6 +1048,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+int hip_send_r2_response(struct hip_common *r2,
+		struct in6_addr *r2_saddr,
+		struct in6_addr *r2_daddr,
+		hip_ha_t *entry,
+		hip_portpair_t *r2_info)
+{
+	
+}
+
+
 #ifdef CONFIG_HIP_HI3
 /**
  * The callback for i3 "no matching id" callback.

@@ -32,7 +32,7 @@ static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
 	return (mkstemp(fname));
 	/*
-	if (mktemp(fname) == NULL)
+      if (mktemp(fname) == NULL)
 		return -1;
 	else
 		return 0;
@@ -87,8 +87,10 @@ struct hip_opp_blocking_request_entry
 	//atomic_t             	refcnt;
 	
 	time_t                creation_time;
-	struct in6_addr       peer_ip;
-	struct in6_addr       our_ip;
+    struct in6_addr       peer_ip;
+    struct in6_addr       our_ip;  
+    uint8_t               proxy_flag; //0: normal connection, 1: connection through proxy
+  
 };
 
 struct hip_opp_hit_pair {

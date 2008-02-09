@@ -2314,6 +2314,9 @@ int hip_handle_r2(struct hip_common *r2,
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
+	//TODO Send the R2 Response to Firewall
+	
+	
  out_err:
 	if (ctx)
 		HIP_FREE(ctx);
@@ -2763,5 +2766,172 @@ int hip_receive_bos(struct hip_common *bos,
 	if (entry)
 		hip_put_ha(entry);
  out_err:
+	return err;
+}
+
+int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_saddr, struct in6_addr *i1_daddr)
+{
+	int err = 0, if_index = 0, is_ipv4_locator,
+		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
+                old_global_nat_mode = hip_nat_status;
+        in_port_t ha_peer_port;
+	hip_ha_t *entry;
+	hip_hit_t *src_hit, *dst_hit;
+	
+	int is_loopback = 0;
+	struct in6_addr src_addr;
+//	struct xfrm_user_acquire *acq;
+	struct in6_addr dst_addr, ha_match;
+	struct sockaddr_storage ss_addr;
+	struct sockaddr *addr;
+	addr = (struct sockaddr*) &ss_addr;
+
+	HIP_DEBUG("Acquire from Firewall: sending I1! \n");
+
+	src_hit = &(msg->hits);
+	dst_hit = &(msg->hitr);
+
+	HIP_DEBUG_HIT("src HIT", src_hit);
+	HIP_DEBUG_HIT("dst HIT", dst_hit);
+
+	/* Sometimes we get deformed HITs from kernel, skip them */
+	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
+		   hip_hidb_hit_is_our(src_hit) &&
+		   hit_is_real_hit(dst_hit)), -1,
+		 "Received rubbish from firewall, skip\n");
+
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	if (entry) {
+		reuse_hadb_local_address = 1;
+		goto skip_entry_creation;
+	}
+
+
+	/* No entry found; find first IP matching to the HIT and then
+	   create the entry */
+
+#ifdef CONFIG_HIP_HI3
+	if(hip_use_i3) {
+		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
+		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		err = 0;
+	}
+	else {
+		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+	}
+#else
+	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+#endif // CONFIG_HIP_HI3
+
+	if (err) {
+		/* Search HADB for existing entries */
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		if (entry) {
+			HIP_DEBUG_IN6ADDR("reusing HA",
+					  &entry->preferred_address);
+			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+			ha_peer_port = entry->peer_udp_port;
+			ha_nat_mode = entry->nat_mode;
+			err = 0;
+		}
+	}
+
+	/* map to loopback if hit is ours  */
+	if (err && hip_hidb_hit_is_our(dst_hit)) {
+		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
+		ipv6_addr_copy(&dst_addr, &lpback);
+		ipv6_addr_copy(&src_addr, &lpback);
+		is_loopback = 1;
+		reuse_hadb_local_address = 1;
+		err = 0;
+	}
+
+	/* broadcast I1 as a last resource */
+	if (err) {
+		struct in_addr bcast = { INADDR_BROADCAST };
+		/* IPv6 multicast (see bos.c) failed to bind() to link local,
+		   so using IPv4 here -mk */
+		HIP_DEBUG("No information of peer found, trying broadcast\n");
+		IPV4_TO_IPV6_MAP(&bcast, &dst_addr);
+		/* Broadcast did not work with UDP packets -mk */
+		ha_nat_mode = 0;
+		err = 0;
+	}
+
+	/* @fixme: changing global state won't work with threads */
+	hip_nat_status = ha_nat_mode;
+
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
+		 "map failed\n");
+
+	hip_nat_status = old_global_nat_mode; /* restore nat status */
+	
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+		 "Internal lookup error\n");
+
+	if (is_loopback)
+		ipv6_addr_copy(&(entry->local_address), &src_addr);
+	
+	/* Preserve NAT status with peer */
+	entry->peer_udp_port = ha_peer_port;
+	entry->nat_mode = ha_nat_mode;
+
+	reuse_hadb_local_address = 1;
+
+skip_entry_creation:
+
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("Acquire from firewall in established state (hard handover?), skip\n");
+		goto out_err;
+	} else if (entry->state == HIP_STATE_NONE ||
+	    entry->state == HIP_STATE_UNASSOCIATED) {
+		HIP_DEBUG("State is %d, sending i1\n", entry->state);
+	} else if (entry->hip_msg_retrans.buf == NULL) {
+		HIP_DEBUG("Expired retransmissions, sending i1\n");
+	} else {
+		HIP_DEBUG("I1 was already sent, ignoring\n");
+		goto out_err;
+	}
+
+	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+
+	memset(addr, 0, sizeof(struct sockaddr_storage));
+	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
+
+	if (!reuse_hadb_local_address)
+		if (is_ipv4_locator) {
+			IPV4_TO_IPV6_MAP((struct in_addr*) i1_saddr,
+					&entry->local_address);
+//			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
+//					 &entry->local_address);
+		} else {
+			ipv6_addr_copy(&entry->local_address,
+					(struct in6_addr*) i1_saddr);
+//			ipv6_addr_copy(&entry->local_address,
+//				       ((struct in6_addr*)&acq->id.daddr));
+
+		}
+	
+	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	       hip_sa_addr_len(addr));
+
+	HIP_DEBUG_HIT("our hit", &entry->hit_our);
+        HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
+	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
+	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
+
+	if_index = hip_devaddr2ifindex(&entry->local_address);
+	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
+        /* we could try also hip_select_source_address() here on failure,
+	   but it seems to fail too */
+
+	HIP_DEBUG("Using ifindex %d\n", if_index);
+
+	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
+
+	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
+		 "Sending of I1 failed\n");
+
+out_err:
 	return err;
 }

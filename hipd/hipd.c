@@ -280,19 +280,31 @@ out_err:
 }
 #endif
 
-/*int hip_sendto_firewall(const struct hip_common *msg){
+int hip_sendto_firewall(const struct hip_common *msg, size_t len){	
+	/* Variables. */
+	struct sockaddr_in6 sock_addr;
+	int alen;
+	
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+	
+	alen = sizeof(sock_addr);
+    
 #ifdef CONFIG_HIP_FIREWALL
 	if (hip_get_firewall_status()) {
 		int n = 0;
-		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
+		n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+		   0, (struct sockaddr *)&sock_addr, alen);
+		
 		return n;
 	}
 #else
 	HIP_DEBUG("Firewall is disabled.\n");
 	return 0;
 #endif // CONFIG_HIP_FIREWALL
-}*/
+}
 
 
 /**
