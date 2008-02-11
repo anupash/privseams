@@ -97,9 +97,10 @@ init_files ()
 	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
     echo "** Modify Debian control file for $DEBLIB $TMP and $DEBARCH"
-    sed -i '/'"$LINE1"'/ s/.*/&'", $DEBLIB"'/' $PKGDIR\/DEBIAN\/control
+    sed -i '/'"$LINE1"'/ s/.*/&'"$DEBLIB"'/' $PKGDIR\/DEBIAN\/control
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+    cp  $PKGDIR/DEBIAN/control $PKGROOT/control.$TMP
 }
 
 # copy and package files
@@ -107,7 +108,7 @@ copy_and_package_files ()
 {
     TMP="core"
     #hipl-core (hipd + firewall): depends on hipl-lib
-    DEBLIB="$NAME-lib"
+    DEBLIB=", $NAME-lib"
     init_files;
     
     echo "** Copying binary files to '$PKGDIR'"
@@ -138,7 +139,7 @@ copy_and_package_files ()
 
     TMP="tools"
     #hipl-tools (depends on hipl-lib, hipl-core)
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB=", $NAME-lib, $NAME-core"
 
     init_files;
 
@@ -148,7 +149,7 @@ copy_and_package_files ()
     create_sub_package;
    
     TMP="test"
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB=", $NAME-lib, $NAME-core"
     init_files;
 
     #cp agent/hipagent $PKGDIR/usr/sbin/
