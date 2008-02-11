@@ -356,6 +356,9 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_OPPTCP
 	int hip_is_opptcp_on;
 #endif
+#ifdef CONFIG_HIP_HIPPROXY
+	int hipproxy;
+#endif
 };
 
 /** A data structure defining host association information that is sent

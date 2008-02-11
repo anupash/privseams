@@ -38,6 +38,9 @@
 #define HIP_SET_ESCROW_INACTIVE 86
 #define HIP_NAT_ON              87
 #define HIP_NAT_OFF             88
+#define HIP_HIPPROXY_ON			89
+#define HIP_HIPPROXY_OFF		90
+#define HIP_HIPPROXY_STATUS_REQUEST 91
 #define HIP_DAEMON_QUIT         127
 /* @} */
 

@@ -46,7 +46,7 @@ gpointer run_control_thread(gpointer data)
 		} 
 		else if (err == 0) {
 			/* idle cycle - select() timeout */
-			_HIP_DEBUG("Idle\n");
+			HIP_DEBUG("Idle\n");
 		}
 		else if (FD_ISSET(hip_firewall_sock, &read_fdset))
 		{
@@ -61,6 +61,7 @@ gpointer run_control_thread(gpointer data)
 				err = -1;
 				goto out_err;
 			}
+
 
 			_HIP_DEBUG("Header received successfully\n");
 			alen = sizeof(sock_addr);
@@ -78,7 +79,7 @@ gpointer run_control_thread(gpointer data)
 			}
 
 			HIP_ASSERT(n == len);
-		
+
 			err = handle_msg(msg, &sock_addr);
 			if (err < 0){
 				HIP_ERROR("Error handling message\n");
@@ -115,7 +116,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	int err = 0;
 	
 
-	_HIP_DEBUG("Handling message from hipd\n");
+	HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
 	
 	if (type == HIP_ADD_ESCROW_DATA)
@@ -198,17 +199,23 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 }
                 
 	}
-        else if (type == HIP_SET_ESCROW_ACTIVE) {
-                HIP_DEBUG("Received activate escrow message from hipd\n\n");
-                set_escrow_active(1);
-                
-        }
-        else if (type == HIP_SET_ESCROW_INACTIVE) {
-                HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
-                set_escrow_active(0);
-        }
-        
-        
+    else if (type == HIP_SET_ESCROW_ACTIVE) {
+            HIP_DEBUG("Received activate escrow message from hipd\n\n");
+            set_escrow_active(1);
+            
+    }
+    else if (type == HIP_SET_ESCROW_INACTIVE) {
+            HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
+            set_escrow_active(0);
+    }
+    else if (type == HIP_HIPPROXY_ON){
+	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n\n");
+	        hip_proxy_status = 1;
+    }
+    else if (type == HIP_HIPPROXY_OFF){
+	        HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
+	        hip_proxy_status = 0;
+    }
 	
 out_err:	
 	return err;
@@ -260,23 +267,27 @@ int control_thread_init(void)
 	sock_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
-
-    	if( !g_thread_supported() )
-  		{
-     		g_thread_init(NULL);
-     		HIP_DEBUG("control_thread_init: initialized thread system\n");
-  		}
-  		else
-  		{
-     		HIP_DEBUG("control_thread_init: thread system already initialized\n");
-  		}
-    	control_thread_started = 1;
-    	control_thread = g_thread_create(run_control_thread, 
-					   (gpointer)msg, 
-					   FALSE,
-					   NULL);   
-		if (!control_thread)
-		HIP_DEBUG("Could not initialize control_thread\n");			   
+	
+#ifdef CONFIG_HIP_HIPPROXY	
+	request_hipproxy_status(); //send hipproxy status request before the control thread running.
+#endif /* CONFIG_HIP_HIPPROXY */
+	
+	if( !g_thread_supported() )
+	{
+ 		g_thread_init(NULL);
+ 		HIP_DEBUG("control_thread_init: initialized thread system\n");
+	}
+	else
+	{
+ 		HIP_DEBUG("control_thread_init: thread system already initialized\n");
+	}
+	control_thread_started = 1;
+	control_thread = g_thread_create(run_control_thread, 
+				   (gpointer)msg, 
+				   FALSE,
+				   NULL);   
+	if (!control_thread)
+	HIP_DEBUG("Could not initialize control_thread\n");			   
 
 	return 0;
 
@@ -287,3 +298,36 @@ out_err:
 	return err;			   
 }
 
+#ifdef CONFIG_HIP_HIPPROXY
+int request_hipproxy_status(void)
+{
+        struct hip_common *msg;
+        int err = 0;
+        int n;
+        socklen_t alen;
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");                        
+        HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+        hip_msg_init(msg);
+        HIP_IFEL(hip_build_user_hdr(msg, 
+                HIP_HIPPROXY_STATUS_REQUEST, 0), 
+                -1, "Build hdr failed\n");
+                
+        //n = hip_sendto(msg, &hip_firewall_addr);
+        
+        //n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+        //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
+
+        
+        n = sendto_hipd(msg, hip_get_msg_total_len(msg));
+        if (n < 0) {
+                HIP_ERROR("HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
+                err = -1;
+                goto out_err;
+        }
+        else {
+                HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
+        }  
+out_err:
+        return err;
+}
+#endif /* CONFIG_HIP_HIPPROXY */

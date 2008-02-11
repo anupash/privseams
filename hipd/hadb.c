@@ -337,6 +337,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 #ifdef CONFIG_HIP_OPPTCP
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
 #endif
+     	
+#ifdef CONFIG_HIP_HIPPROXY
+     	entry->hipproxy = hip_get_hip_proxy_status();
+#endif
 
 
 	hip_hadb_insert_state(entry);
@@ -476,6 +480,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	
+#ifdef CONFIG_HIP_HIPPROXY
+	entry->hipproxy = 0;
+#endif
 	HIP_LOCK_INIT(entry);
 	//atomic_set(&entry->refcnt,0);
 

@@ -272,7 +272,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
             }
             break;
         case SO_HIP_TRANSFORM_ORDER:
-                {
+        	{
                 extern int hip_transform_order;
                 err = 0;
                 struct hip_opendht_set *name_info; 
@@ -281,20 +281,111 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
                 hip_transform_order = atoi(name_info->name);
                 hip_recreate_all_precreated_r1_packets();
-                }
-                break;
+            }
+            break;
         case SO_HIP_DHT_ON:
+        	{
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
-                break;
+        	}
+            break;
+            
         case SO_HIP_DHT_OFF:
+        	{
                 HIP_DEBUG("Setting DHT OFF\n");
                 hip_opendht_inuse = SO_HIP_DHT_OFF;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
-                break;
+        	}
+            break;
+                
+        case SO_HIP_SET_HIPPROXY_ON:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY ON\n");
+        		hip_set_hip_proxy_on();
+      			hip_build_user_hdr(msg, HIP_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break;
+        		
+        case SO_HIP_SET_HIPPROXY_OFF:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY OFF\n");
+        		hip_set_hip_proxy_off();
+      			hip_build_user_hdr(msg, HIP_HIPPROXY_OFF, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break; 
+        		
+        case HIP_HIPPROXY_STATUS_REQUEST:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+     		
+        		memset(msg, 0, sizeof(struct hip_common));
+        		
+        		if(hip_get_hip_proxy_status() == 0)
+        			hip_build_user_hdr(msg, HIP_HIPPROXY_OFF, 0);
+        		
+        		if(hip_get_hip_proxy_status() == 1)
+        			hip_build_user_hdr(msg, HIP_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+ //   			HIP_DEBUG("SENDTO ERRNO: 0x%x\n", errno);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        		//SEND RESPONSE();
+        	}
+        	break; 
 
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:

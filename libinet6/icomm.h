@@ -97,6 +97,8 @@
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
 #define SO_HIP_TRANSFORM_ORDER                  161
+#define SO_HIP_SET_HIPPROXY_ON					162
+#define SO_HIP_SET_HIPPROXY_OFF					163
 /** @} */
 
 #endif /* _HIP_ICOMM */

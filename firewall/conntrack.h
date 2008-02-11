@@ -34,6 +34,8 @@ enum{
   STATE_CLOSING
 };
 
+extern int hipproxy;
+
 
 void print_data(struct hip_data * data);
 int filter_esp_state(const struct in6_addr * dst_addr, 

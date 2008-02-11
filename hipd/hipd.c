@@ -31,6 +31,9 @@ int hip_nat_sock_udp = 0;
     machine is behind a NAT. */
 int hip_nat_status = 0;
 
+/** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
+int hipproxy = 0;
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
@@ -45,9 +48,9 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-#if 0
+//#if 0
 int hip_firewall_sock = -1;
-#endif
+//#endif
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 
@@ -220,7 +223,7 @@ out_err:
 }
 
 
-#if 0
+//#if 0
 /**
  * Receive message from firewall socket.
  */
@@ -269,6 +272,32 @@ int hip_sock_recv_firewall(void)
 		if (hip_firewall_is_alive())
 			hip_firewall_set_escrow_active(1);
 	}
+	
+/*
+#ifdef CONFIG_HIP_HIPPROXY
+	else if (msg_type == HIP_HIPPROXY_STATUS_REQUEST)
+	{
+		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+		memset(hipd_msg, 0, sizeof(struct hip_common));
+		
+		if(hip_get_hip_proxy_status() == 0)
+			hip_build_user_hdr(hipd_msg, HIP_HIPPROXY_OFF, 0);
+		
+		if(hip_get_hip_proxy_status() == 1)
+			hip_build_user_hdr(hipd_msg, HIP_HIPPROXY_ON, 0);
+		
+		alen = sizeof(hip_firewall_addr);                    
+		n = hip_sendto(hipd_msg, &hip_firewall_addr);
+		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+		if (err == 0)
+		{
+			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+		}
+	}
+#endif /* CONFIG_HIP_HIPPROXY */
+
+	
 	else if (msg_type == HIP_FIREWALL_QUIT)
 	{
 		HIP_DEBUG("Firewall quit.\n");
@@ -278,7 +307,7 @@ int hip_sock_recv_firewall(void)
 out_err:
 	return err;
 }
-#endif
+//#endif
 
 int hip_sendto_firewall(const struct hip_common *msg, size_t len){	
 	/* Variables. */

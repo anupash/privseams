@@ -263,6 +263,9 @@ void insert_new_connection(struct hip_data * data){
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->original.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -272,12 +275,14 @@ void insert_new_connection(struct hip_data * data){
   connection->original.hip_tuple->data->dst_hit = data->dst_hit;
   connection->original.hip_tuple->data->src_hi = NULL;
   connection->original.hip_tuple->data->verify = NULL;
-  
 
   //reply direction tuple
   connection->reply.state = HIP_STATE_UNASSOCIATED;
   connection->reply.direction = REPLY_DIR;
   connection->reply.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->reply.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.connection = connection;
   connection->reply.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
   connection->reply.hip_tuple->tuple = &connection->reply;
@@ -531,6 +536,9 @@ int insert_connection_from_update(struct hip_data * data,
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->original.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -547,6 +555,9 @@ int insert_connection_from_update(struct hip_data * data,
   connection->reply.direction = REPLY_DIR;
 
   connection->reply.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->reply.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.esp_tuples = (struct GSList *)g_slist_append((struct _GSList *) 
 						connection->reply.esp_tuples,
 						(gpointer) esp_tuple);
@@ -560,6 +571,8 @@ int insert_connection_from_update(struct hip_data * data,
   connection->reply.hip_tuple->data->dst_hit = data->src_hit;
   connection->reply.hip_tuple->data->src_hi = NULL;
   connection->reply.hip_tuple->data->verify = NULL;
+  
+
 
   //add tuples to list
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 

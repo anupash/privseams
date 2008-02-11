@@ -28,6 +28,7 @@ int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 
 int counter = 0;
+hip_proxy_status = 0;
 
 void print_usage()
 {
@@ -1019,7 +1020,7 @@ int main(int argc, char **argv)
 			die(h6);
 	}
 
-	firewall_init();
+	firewall_init();	
 
 #ifdef G_THREADS_IMPL_POSIX
       	HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
