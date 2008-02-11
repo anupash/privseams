@@ -33,6 +33,11 @@ POSTFIX="deb"
 TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
 if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
+TMP=""
+DEBLIB="$NAME-$TMP"
+LINE1="Build-Depends:" 
+LINE2="Package:"
+LINE3="Architecture:"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
@@ -89,13 +94,20 @@ init_files ()
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
     for f in control changelog copyright postinst prerm;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
+    echo "** Modify Debian control file for $DEBLIB $TMP and $DEBARCH"
+    sed -i '/'"$LINE1"'/ s/.*/&'", $DEBLIB"'/' $PKGDIR\/DEBIAN\/control
+    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 }
 
 # copy and package files
 copy_and_package_files ()
 {
+    TMP="core"
+    #hipl-core (hipd + firewall): depends on hipl-lib
+    DEBLIB="$NAME-lib"
     init_files;
     
     echo "** Copying binary files to '$PKGDIR'"
@@ -107,32 +119,36 @@ copy_and_package_files ()
     mkdir -p usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
     
-    #hipl-core (hipd + firewall): depends on hipl-lib
-
     cp hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
-    PKGNAME="${NAME}-core-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
     
+    TMP="firewall"
+    DEBLIB=""
     init_files;
 
     echo "** Copying firewall to $PKGDIR"
     cp firewall/firewall $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-firewall-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
+    TMP="tools"
     #hipl-tools (depends on hipl-lib, hipl-core)
+    DEBLIB="$NAME-lib, $NAME-core"
 
     init_files;
 
     cp tools/hipconf $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-tools-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
+    TMP="test"
+    DEBLIB="$NAME-lib, $NAME-core"
     init_files;
 
     #cp agent/hipagent $PKGDIR/usr/sbin/
@@ -147,9 +163,11 @@ copy_and_package_files ()
 
     cp test/hipsetup $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-test-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
+    TMP="lib"
+    DEBLIB=""
     init_files;
     
     echo "** Copying library files to '$PKGDIR'"
@@ -178,9 +196,11 @@ copy_and_package_files ()
     
     #cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
-    PKGNAME="${NAME}-lib-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
   
+    TMP="doc"
+    DEBLIB=""
     init_files;
 
     mkdir -p "$PKGDIR/usr"
@@ -195,7 +215,7 @@ copy_and_package_files ()
     DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     set +e
     
-    PKGNAME="${NAME}-doc-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 }
 
