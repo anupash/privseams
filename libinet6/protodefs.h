@@ -110,6 +110,7 @@
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
 #define HIP_PARAM_INT                   32794
+#define HIP_PARAM_LSI			32795 /*LSI Support*/
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -416,8 +417,8 @@ struct hip_common {
 	uint8_t      ver_res;
 	uint16_t     checksum;
 	uint16_t     control;
-	struct in6_addr hits;  /**< Sender HIT   */
-	struct in6_addr hitr;  /**< Receiver HIT */
+	struct in6_addr hits;	/**< Sender HIT   */
+	struct in6_addr hitr;	/**< Receiver HIT */
 } __attribute__ ((packed));
 
 /**

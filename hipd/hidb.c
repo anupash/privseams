@@ -6,6 +6,7 @@
  * @author Miika Komu <miika#iki.fi>
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <kslavov#hiit.fi>
+ * @author Teresa Finez <tfinezmo#hut.tkk.fi>
  */
 #include "hidb.h"
 
@@ -115,6 +116,23 @@ int hip_hidb_hit_is_our(const hip_hit_t *our) {
 	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
+
+int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c, err = 1;
+
+	list_for_each(item, hip_local_hostid_db, c) {
+		id_entry = list_entry(item);
+		if (hip_hit_are_equal(&id_entry->lhi.hit,our)){
+			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
+			return 0;
+		}		
+	}
+	return err;
+}
+
+
 /*
  *
  *
@@ -159,6 +177,7 @@ void hip_uninit_host_id_dbs(void)
  */
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
+		    hip_lsi_t *lsi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg), 
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -201,6 +220,16 @@ int hip_add_host_id(hip_db_struct_t *db,
 		err = -EEXIST;
 		goto out_err;
 	}
+
+	/* assign a free lsi address */
+	err = hip_add_lsi(db, id_entry);
+
+	if (err < 0){
+		HIP_ERROR("No LSI free\n");
+		err = -EEXIST;
+		goto out_err;
+	}
+	lsi = &id_entry->lsi;
 
 	id_entry->insert = insert;
 	id_entry->remove = remove;
@@ -258,7 +287,7 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
-	hip_lsi_t lsi_tmp;
+	hip_lsi_t lsi;
 	//struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("/* --------- */ \n");
@@ -302,9 +331,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 		  1 : 0;
 
 	/*  lhi.algo = eid_endpoint.algo;*/
-	  
-	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
-					 host_identity, 
+
+	  /* Adding the pair <HI,LSI> */
+	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
+					 &lsi, host_identity,
 					 NULL, NULL, NULL),
 		   -EFAULT,
 		   "adding of local host identity failed\n");
@@ -315,12 +345,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
 		   "Failed to add HIT to the device\n");
 
-#if 0 /* LSIs are not supported yet  */
-	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
-	  hip_add_iface_local_route_lsi(lsi_tmp);
-	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
+	/* Adding LSI route - is it necesssary? what exactly means ?  */
+	  hip_add_iface_local_route_lsi(&lsi);
+	  HIP_IFEL(hip_add_iface_local_lsi(&lsi), -1,
 		   "Failed to add LSI to the device\n");
-#endif
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
@@ -703,6 +731,49 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 	}
 	return hi;
 }
+
+/**
+ * Adds a free lsi to the entry
+ *
+ * @param  db		database structure
+ * @param  id_entry	contains an entry to the db, will contain an unsigned lsi
+ * @return		zero on success, or negative error value on failure.
+ */
+
+int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
+{
+	struct hip_host_id_entry *id_entry_aux;
+	hip_list_t *item;
+	hip_lsi_t lsi_aux;
+	int err = -1, used_lsi, c, i;
+	int len = sizeof(lsi_addresses)/sizeof(*lsi_addresses);
+	
+	for(i=0; i < len; i++) {	
+		err = inet_aton(lsi_addresses[i],&lsi_aux);
+		used_lsi = 0;
+
+		if (err = 0)	HIP_ERROR("wrong lsi format: (%s)\n",lsi_addresses[i]);
+
+		list_for_each(item, db, c) {
+			id_entry_aux = list_entry(item);
+			//HIP_DEBUG("---------ipv4_addr_cmp: %s == %s",lsi_addresses[i],inet_ntoa(id_entry_aux->lsi));
+			if (ipv4_addr_cmp(&lsi_aux,&id_entry_aux->lsi) == 0) {
+				used_lsi = 1;
+				c = -1;				
+			}
+		}
+
+		if (!used_lsi){
+			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
+			HIP_HEXDUMP("--------------- Host ID HIT:",&id_entry->lhi.hit, 16);
+			HIP_DEBUG("---------LSI:%s\n",inet_ntoa(id_entry->lsi));
+			err = 0;
+			break;
+		}
+	}
+	return err;	
+}
+
 
 /**
  * Lists every hit in the database. 

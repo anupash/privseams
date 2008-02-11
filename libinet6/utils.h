@@ -146,10 +146,12 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 
 #define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
-	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr)) 
-
+	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr))
+ 
+/* LSI not based in HIT structure, so not necessary at the moment */
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
+
 
 /*
  * TRUE if a is from 1.0.0.0/8

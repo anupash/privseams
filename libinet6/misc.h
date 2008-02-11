@@ -19,6 +19,20 @@
 #define HIP_OPP_IP_DB_SIZE		16
 
 
+/*This function must go to a folder related with libc4 ¿? I think it could be better*/
+static inline int ipv4_addr_cmp(const struct in_addr *a1,
+				const struct in_addr *a2)
+{
+	return memcmp((const void *) a1, (const void *) a2,
+		      sizeof(struct in_addr));
+}
+
+static inline void ipv4_addr_copy(struct in_addr *a1,
+				  const struct in_addr *a2)
+{
+	memcpy((void *) a1, (const void *) a2, sizeof(struct in_addr));
+}
+
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {
@@ -58,6 +72,8 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
+int hip_hit_are_equal(const struct in6_addr *hit1,
+		      const struct in6_addr *hit2);
 void hip_xor_hits(struct in6_addr *res, 
 		  const struct in6_addr *hit1, 
 		  const struct in6_addr *hit2);
@@ -67,6 +83,7 @@ unsigned long hip_hash_spi(const void *spi);
 int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
 const char *hip_algorithm_to_string(int algo);
+int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
