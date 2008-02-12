@@ -198,6 +198,18 @@ libraries.
 cd hipl--main--2.6
 baz changes --link
 
+YUM
+---
+
+- to configure yum for Fedora 
+
+[package]
+name=package
+baseurl=http://URL/yum/base/package
+ 
+- install the HIPL package using command
+
+$yum install package
 
 ARCH POLICY
 ===========
