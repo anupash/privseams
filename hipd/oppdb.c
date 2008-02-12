@@ -490,6 +490,80 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	return err;
 }
 
+
+#ifdef CONFIG_HIP_OPPTCP
+/*
+TO DO, add function description
+*/
+int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
+	int n = 0, err = 0, alen = 0;
+	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
+	struct in6_addr *ptr = NULL;
+	hip_opp_block_t *entry = NULL;
+	hip_ha_t *ha = NULL;
+
+	if(!opportunistic_mode) {
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
+			 "Building of user header failed\n");
+	}
+
+	//get the dst tcp port from the message for the TCP SYN i1 packet
+	memset(&dst_ip, 0, sizeof(struct in6_addr *));
+	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	HIP_IFEL(!ptr, -1, "No ip in msg\n");
+	memcpy(&dst_ip, ptr, sizeof(dst_ip));
+	HIP_DEBUG_HIT("dst ip = ", &dst_ip);
+
+	hip_msg_init(msg);//?????
+
+	err = hip_for_each_opp(hip_handle_opp_reject, &dst_ip);
+	HIP_IFEL(err, 0, "for_each_ha err.\n");
+
+ out_err:
+	return err;
+}
+
+
+/*
+TO DO, add function description
+*/
+int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src)
+{
+	int n = 0, err = 0, alen = 0;
+	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
+	struct in6_addr *ptr = NULL;
+	hip_opp_block_t *entry = NULL;
+	hip_ha_t *ha = NULL;
+
+	if(!opportunistic_mode) {
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
+			 "Building of user header failed\n");
+	}
+
+	//get the dst tcp port from the message for the TCP SYN i1 packet
+	memset(&dst_ip, 0, sizeof(struct in6_addr *));
+	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	HIP_IFEL(!ptr, -1, "No ip in msg\n");
+	memcpy(&dst_ip, ptr, sizeof(dst_ip));
+	HIP_DEBUG_HIT("dst ip = ", &dst_ip);
+
+	hip_msg_init(msg);//?????
+
+	err = hip_oppipdb_add_entry(&dst_ip);
+	HIP_IFEL(err, 0, "for_each_ha err.\n");
+
+ out_err:
+	return err;
+}
+#endif
+
+
+
+
+
 int hip_handle_opp_fallback(hip_opp_block_t *entry,
 			    void *current_time) {
 	int err = 0, disable_fallback = 0;

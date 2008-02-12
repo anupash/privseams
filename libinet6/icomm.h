@@ -94,9 +94,18 @@
 #define SO_HIP_DHT_SET                          156
 #define SO_HIP_DHT_ON                           157
 #define SO_HIP_DHT_OFF                          158
-#define SO_HIP_SET_OPPTCP_ON                    159
-#define SO_HIP_SET_OPPTCP_OFF                   160
+
+#ifdef CONFIG_HIP_OPPTCP
+	#define SO_HIP_SET_OPPTCP_ON				159
+	#define SO_HIP_SET_OPPTCP_OFF				160
+#endif
+
 #define SO_HIP_TRANSFORM_ORDER                  161
+
+#ifdef CONFIG_HIP_OPPTCP
+	#define SO_HIP_OPPTCP_UNBLOCK_APP			162
+	#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		163
+#endif
 /** @} */
 
 #endif /* _HIP_ICOMM */

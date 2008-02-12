@@ -1,5 +1,9 @@
 #include "nlink.h"
 
+/* For receiving of HIP control messages */
+int hip_raw_sock_v6 = 0;
+int hip_raw_sock_v4 = 0;
+
 /*
  * Note that most of the functions are modified versions of
  * libnetlink functions.
@@ -1555,12 +1559,6 @@ void send_tcp_packet(void * hdr,
 
 
 	//finally send through the socket
-	sendto(sockfd, &newHdr[0], newSize, 0, 
-			(struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	int kot = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
 }
-
-
-
-
-
 #endif
