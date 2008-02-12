@@ -1683,7 +1683,7 @@ void init_timeout_checking(long int timeout_val)
  	connectionTableMutex = g_mutex_new();
   if (timeout_val > 0)
     {
-	HIP_DEBUG("Timeout val = %d", timeout_val);
+      HIP_DEBUG("Timeout val = %d\n", timeout_val);
       timeoutValue = timeout_val;
       timeoutChecking = 1;
       if (!g_thread_supported()) 
