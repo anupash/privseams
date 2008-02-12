@@ -484,8 +484,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
-        /* THIS MIGHT CAUSE PROBLEMS LATER */
- out_err: 
+
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
@@ -533,6 +532,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         } 
+ out_err: 
  skip_dht:
 									
         /*! \todo check return values */
@@ -1118,10 +1118,12 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
 		    req->ai_family, a->family, 
                     ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  if (a->family == AF_INET)
-              hip_print_lsi("\na->addr",a->addr);
-          if (a->family == AF_INET6)
-              hip_print_hit("\na->addr",a->addr);
+	  if (a->family == AF_INET) {
+              HIP_DEBUG_LSI("\na->addr",a->addr);
+	  }
+          if (a->family == AF_INET6) {
+              HIP_DEBUG_HIT("\na->addr",a->addr);
+	  }
 
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
