@@ -26,6 +26,7 @@
  * @note    All Doxygen comments have been added in version 1.1.
  */ 
 #include "nat.h"
+#include "pjnath.h"
 
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
@@ -290,3 +291,70 @@ void hip_nat_randomize_nat_ports()
 		  hip_nat_rand_port1, hip_nat_rand_port2);
 }
 #endif
+
+//TODO
+pj_ice_sess **  	p_ice;
+
+
+void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
+	HIP_DEBUG("hip_on_ice_complete");
+}
+
+pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
+	HIP_DEBUG("hip_on_tx_pkt");
+	return 0;
+	
+}
+void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
+	HIP_DEBUG("hip_on_rx_data");
+}
+
+
+int hip_external_ice_init(){
+	
+	pj_stun_config * stun_config;
+	
+	const char *  name = "hip_ice";
+	pj_ice_sess_role   	 role = PJ_ICE_SESS_ROLE_CONTROLLING;
+	
+	struct pj_ice_sess_cb cb;
+	
+	//hip_ice_sess_cb.
+	//DOTO tobe reset
+ 	unsigned   	 comp_cnt = 10;
+ 	
+ 	const pj_str_t *   	 local_ufrag = NULL;
+ 	const pj_str_t *  	local_passwd = NULL;
+ 	
+ 	//cinfigure the call back handle
+ 	cb.on_ice_complete = hip_on_ice_complete;
+ 	cb.on_tx_pkt = hip_on_tx_pkt;
+ 	cb.on_rx_data=hip_on_rx_data;
+ 	
+ 	//check if there is already a session
+ 	if(!p_ice)
+ 	 return pj_ice_sess_create( 
+ 			stun_config,
+ 			name,
+ 			role,
+ 			comp_cnt,
+ 			&cb,
+ 			local_ufrag,
+ 			local_passwd,
+ 			p_ice	 
+ 		) ;
+ 	/**/
+ 	return 0;
+ 	
+}
+	
+/*
+pj_ice_sess_add_cand()
+
+pj_ice_sess_start_check() 
+
+*/
+
+
+
+
