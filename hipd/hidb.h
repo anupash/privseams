@@ -61,7 +61,6 @@ struct hip_hadb_multi {
 	int              m_type;
 };
 
-static char *lsi_addresses[] = {"192.0.0.1","192.0.0.2","192.0.0.3","192.0.0.4"};
 /*
  * Note: lhit->hit and hid are stored in network byte order.
  */
@@ -87,7 +86,6 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 				    struct in6_addr *hit, int algo);
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
-		    hip_lsi_t *lsi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -104,14 +102,8 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
-/*lsi support*/
-int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
-
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);
-/*----Test*/
-int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi);
-/*----EndTest*/
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
 

@@ -250,7 +250,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        hip_print_hit("deleting_address=",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -264,9 +264,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 }
             } else {
                 /* remove from list if address matches */
-                hip_print_hit("interface address",
+                HIP_DEBUG_HIT("interface address",
                               hip_cast_sa_addr(&n->addr));
-                hip_print_hit("address to be removed",hip_cast_sa_addr(&addr_sin6));                
+                HIP_DEBUG_HIT("address to be removed",hip_cast_sa_addr(&addr_sin6));                
                 if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
                                  hip_cast_sa_addr(&addr_sin6))==0) {
                     list_del(n, addresses);
@@ -633,7 +633,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
-	hip_lsi_t peer_lsi;
 	
 	int is_loopback = 0;
 	struct in6_addr src_addr;
@@ -670,8 +669,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 #ifdef CONFIG_HIP_HI3
 	if(hip_use_i3) {
-		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
-		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		struct in6_addr lpback = { IN6ADDR_LOOPBACK_INIT };
+		memcpy(&dst_addr, &lpback, sizeof(struct in6_addr));
+		/*struct in_addr lpback = { INADDR_LOOPBACK };
+		  IPV4_TO_IPV6_MAP(&lpback, &dst_addr);*/
 		err = 0;
 	}
 	else {
@@ -719,8 +720,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	/*@fixme: peer_lsi need to assign a value*/
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, &peer_lsi), -1,
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */

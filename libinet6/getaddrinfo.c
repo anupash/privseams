@@ -450,7 +450,6 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         struct hip_common *msg;
         struct hip_opendht_gw_info *gw_info;
         struct in_addr tmp_v4;
-	//hip_lsi_t lsi;
         char tmp_ip_str[21];
         int tmp_ttl, tmp_port;
         int *pret;
@@ -485,8 +484,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
-        /* THIS MIGHT CAUSE PROBLEMS LATER */
- out_err: 
+
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
@@ -534,6 +532,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         } 
+ out_err: 
  skip_dht:
 									
         /*! \todo check return values */
@@ -559,8 +558,8 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                         found_hits = 1; 
                         
                         /* add every HIT to linked list */				
-                        for(i=0;i<length(&list);i++) {	
-				//err = hip_hidb_get_lsi_by_hit(&hit, &lsi);
+                        for(i=0;i<length(&list);i++) {                                    
+                                uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
                                 struct gaih_addrtuple *prev_pat = NULL;	
                                 _HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
                                 ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
@@ -579,10 +578,9 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                                 aux->family = AF_INET6;
                                 memcpy(aux->addr, &hit, sizeof(struct in6_addr));
                                 
- 
-/* Disabled as this is not support by the daemon yet -miika*/
+#if 0 /* Disabled as this is not support by the daemon yet -miika*/
                                 /* AG: add LSI as well */					
-/*                                if (**pat == NULL) {
+                                if (**pat == NULL) {
                                         if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
                                                 HIP_ERROR("Memory allocation error\n");
                                                 exit(-EAI_MEMORY);
@@ -594,7 +592,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                                 (**pat)->family = AF_INET;					
                                 memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
                                 *pat = &((**pat)->next);					      
-*/
+#endif
                         }									
                 } // end of if 
                 
@@ -1120,10 +1118,12 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
 		    req->ai_family, a->family, 
                     ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  if (a->family == AF_INET)
-              hip_print_lsi("\na->addr",a->addr);
-          if (a->family == AF_INET6)
-              hip_print_hit("\na->addr",a->addr);
+	  if (a->family == AF_INET) {
+              HIP_DEBUG_LSI("\na->addr",a->addr);
+	  }
+          if (a->family == AF_INET6) {
+              HIP_DEBUG_HIT("\na->addr",a->addr);
+	  }
 
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 

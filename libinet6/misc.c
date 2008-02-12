@@ -133,11 +133,6 @@ int hip_hit_is_bigger(const struct in6_addr *hit1,
 	return (ipv6_addr_cmp(hit1, hit2) > 0);
 }
 
-int hip_hit_are_equal(const struct in6_addr *hit1,
-		      const struct in6_addr *hit2)
-{
-	return (ipv6_addr_cmp(hit1, hit2) == 0);
-}
 
 char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
 {
@@ -481,19 +476,6 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	return tid;
 }
 
-int convert_string_to_address_v4(const char *str, struct in_addr *ip) {
-	int ret = 0, err = 0;
-	
-	ret = inet_pton(AF_INET, str, ip);
-	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-		 "inet_pton: not a valid address family\n");
-	HIP_IFEL((ret == 0), -1,
-		 "inet_pton: %s: not a valid network address\n", str);		 	
- out_err:
-	return err;
-}
-
-
 #ifndef __KERNEL__
 
 int convert_string_to_address(const char *str, struct in6_addr *ip6) {
@@ -511,11 +493,13 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	}
 
 	/* Might be an ipv4 address (ret == 0). Lets catch it here. */
-	
-	err = convert_string_to_address_v4(str, &ip4);
-	if (err)
-		goto out_err;
-
+		
+	ret = inet_pton(AF_INET, str, &ip4);
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret == 0), -1,
+		 "inet_pton: %s: not a valid network address\n", str);
+		
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
 	HIP_DEBUG("Mapped v4 to v6\n");
 	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	

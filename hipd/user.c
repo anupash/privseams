@@ -49,8 +49,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_DEL_LOCAL_HI:
 		err = hip_handle_del_local_hi(msg);
 		break;
-	case SO_HIP_ADD_PEER_MAP_HIT_IP:	
-		HIP_DEBUG("Handling SO_HIP_ADD_PEER_MAP_HIT_IP.\n");
+	case SO_HIP_ADD_PEER_MAP_HIT_IP:
 		err = hip_add_peer_map(msg);
 		if(err)
 		{

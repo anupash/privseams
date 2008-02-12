@@ -433,7 +433,6 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 {
 	struct hip_host_id *private = NULL;
 	struct hip_lhi lhi;
-	hip_lsi_t lsi;
 	int err = 0, len;
 	HIP_HASHTABLE *ht = (HIP_HASHTABLE *) new_hash;
 
@@ -450,16 +449,15 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
 		 "Failed to delete host id\n");
 
-	HIP_IFEL(hip_add_host_id(ht, &lhi, &lsi, private, 
+	HIP_IFEL(hip_add_host_id(ht, &lhi, private, 
 				 NULL, NULL, NULL), -1,
-		 "add host id failed\n");//this calll 
+		 "add host id failed\n");
 
  out_err:
 	if (private)
 		free(private);
 	return err;
 }
-
 
 int hip_recreate_all_precreated_r1_packets()
 {

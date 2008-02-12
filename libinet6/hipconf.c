@@ -10,7 +10,6 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
- * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -25,7 +24,6 @@ const char *hipconf_usage =
 "add|del escrow  hit\n"
 #endif
 "add|del map hit ipv6\n"
-"add|del map hit ipv6 lsi\n"
 "add|del service escrow|hipudprelay|rvs\n"
 "add rvs <hit> <ipv6>\n"
 "add hipudprelay <hit> <ipv6>\n"
@@ -549,18 +547,17 @@ int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
      int err = 0;
      int ret;
      struct in6_addr hit, ip6;
-     struct in_addr lsi;
 
      HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
-     HIP_IFEL((optc != 2 && optc != 3), -1, "Missing arguments\n");
+     HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	      "string to address conversion failed\n");
 
      HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
-     
+
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(struct in6_addr)), -1,
 	      "build param hit failed\n");
@@ -570,23 +567,10 @@ int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
 				       sizeof(struct in6_addr)), -1,
 	      "build param hit failed\n");
 
-HIP_DEBUG("---------holaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-     if(optc == 3){
-	     HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
-		      "string to address conversion failed\n");
-	
-	     HIP_DEBUG("---------direccion es ......%s\n", opt[2]);
-
-	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
-				       HIP_PARAM_LSI,
-				       sizeof(struct in_addr)), -1,
-	      "build param lsi failed\n");		
-     }
-
      switch(action) {
      case ACTION_ADD:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
-	      		              0), -1, "add peer map failed\n");
+				      0), -1, "add peer map failed\n");
 	  break;
      case ACTION_DEL:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,
@@ -1418,7 +1402,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      HIP_IFEL((action == -1), -1,
 	      "Invalid action argument '%s'\n", argv[1]);
      
-     /* Check that we have at least the minimum number of arguments
+     /* Check that we have at least the minumum number of arguments
 	for the given action. */
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 	      "Not enough arguments given for the action '%s'\n",

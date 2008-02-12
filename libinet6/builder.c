@@ -691,7 +691,6 @@ void *hip_get_param(const struct hip_common *msg,
 void *hip_get_param_contents(const struct hip_common *msg,
 			     hip_tlv_type_t param_type)
 {
-	
 	void *contents = hip_get_param(msg,param_type);
 	if (contents)
 		contents += sizeof(struct hip_tlv_common);
@@ -1180,8 +1179,6 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
-
-
 int hip_build_generic_param(struct hip_common *msg,
 			    const void *parameter_hdr,
 			    hip_tlv_len_t param_hdr_size,
