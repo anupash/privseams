@@ -61,6 +61,10 @@ void hip_xfrm_set_algo_names(int new_algo_names) {
  *
  * @return 0 if successful, else < 0
  */
+
+//hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd, dst_hit, src_hit, src_addr, dst_addr,XFRM_POLICY_IN, proto, prefix,AF_INET6)
+
+
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
 			   struct in6_addr *tmpl_saddr,
@@ -498,6 +502,10 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
  out_err:
 	return err;
 }
+
+
+//hip_setup_hit_sp_pair(peer_hit, local_hit,local_addr, peer_addr, 0, 1, 0)
+
 
 int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			  struct in6_addr *src_addr,

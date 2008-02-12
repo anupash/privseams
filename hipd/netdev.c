@@ -633,6 +633,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
+	hip_lsi_t peer_lsi;
 	
 	int is_loopback = 0;
 	struct in6_addr src_addr;
@@ -720,7 +721,8 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
+	/*@fixme: peer_lsi need to assign a value*/
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, &peer_lsi), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */

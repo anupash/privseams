@@ -164,6 +164,7 @@ void hip_delete_all_sp();
 
 /* Accessors */
 //hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
+hip_ha_t *hip_hadb_find_bylsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *);
@@ -197,7 +198,7 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi);
 
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
@@ -269,6 +270,7 @@ typedef struct hip_peer_opaque {
 struct hip_peer_map_info {
 	hip_hit_t peer_hit;
 	struct in6_addr our_addr, peer_addr;
+	hip_lsi_t peer_lsi;//added by tere
 };
 
 void hip_hadb_remove_hs(uint32_t spi);
