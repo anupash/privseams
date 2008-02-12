@@ -164,7 +164,6 @@ void hip_delete_all_sp();
 
 /* Accessors */
 //hip_ha_t *hip_hadb_find_byhit(hip_hit_t *hit);
-hip_ha_t *hip_hadb_find_bylsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_find_byspi_list(uint32_t spi);
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2);
 hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *);
@@ -270,7 +269,7 @@ typedef struct hip_peer_opaque {
 struct hip_peer_map_info {
 	hip_hit_t peer_hit;
 	struct in6_addr our_addr, peer_addr;
-	hip_lsi_t peer_lsi;//added by tere
+	hip_lsi_t peer_lsi;
 };
 
 void hip_hadb_remove_hs(uint32_t spi);
