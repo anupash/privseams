@@ -1154,7 +1154,9 @@ int hip_handle_r1(struct hip_common *r1,
 			}
 
 			struct in6_addr daddr;
-			
+
+			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
@@ -2144,7 +2146,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	}
 
         /***** LOCATOR PARAMETER ******/
-#ifndef CONFIG_HIP_HI3
+	//#ifndef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
@@ -2156,7 +2158,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
             HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
-#endif /* CONFIG_HIP_HI3 */
+	//#endif /* CONFIG_HIP_HI3 */
 
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
@@ -2405,7 +2407,7 @@ int hip_handle_r2(struct hip_common *r2,
 	err = 0;
 
         /***** LOCATOR PARAMETER ******/
-#ifndef CONFIG_HIP_HI3
+	//#ifndef CONFIG_HIP_HI3
         if (entry->locator)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
@@ -2414,7 +2416,7 @@ int hip_handle_r2(struct hip_common *r2,
             }
         else
             HIP_DEBUG("entry->locator did not have locators from r1\n");
-#endif /* CONFIG_HIP_HI3 */
+	//#endif /* CONFIG_HIP_HI3 */
 
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");
