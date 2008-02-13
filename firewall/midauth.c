@@ -1,5 +1,9 @@
 /*
  * This code is GNU/GPL.
+ *
+ * According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level 
+ * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
+ * Currently we do neither.
  */
 
 #include "midauth.h"
@@ -128,8 +132,8 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
     hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-    hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00);
-    hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEF);
+    hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+    hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
     p->size = hip_get_msg_total_len(hip);
 
@@ -229,11 +233,6 @@ int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
     /* do not change packet when it is dropped */
     if (verdict != NF_ACCEPT)
 	p->size = 0;
-
-    if (p->size == 0)
-	HIP_DEBUG("*******************NOT CHANGING PACKET\n");
-    else
-	HIP_DEBUG("*******************CHANGING PACKET\n");
 
     return verdict;
 }
