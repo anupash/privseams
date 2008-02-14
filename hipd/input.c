@@ -1001,6 +1001,7 @@ int hip_handle_r1(struct hip_common *r1,
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int ii = 0;
+	int use_ip4 = 1;
 #endif
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
@@ -1062,16 +1063,42 @@ int hip_handle_r1(struct hip_common *r1,
 		{
 			first = (char*)locator+sizeof(struct hip_locator);
 			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+
 			list_for_each_safe(item, tmp, addresses, ii)
 				{
 					n = list_entry(item);
-					memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-					break;
+					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+						continue;
+					if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+					{
+						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+						       hip_sa_addr_len(&n->addr));
+						ii = -1;
+						use_ip4 = 0;
+						break;
+					}
 				}
+			if( use_ip4 ) 
+			{
+				list_for_each_safe(item, tmp, addresses, ii)
+					{
+						n = list_entry(item);
+						if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+							continue;
+						if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+						{
+							memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+							       hip_sa_addr_len(&n->addr));
+							ii = -1;
+							break;
+						}
+					}
+			}
 
 			struct in6_addr daddr;
-			
+
+			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
 			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
@@ -1489,6 +1516,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int ii = 0;
+	int use_ip4 = 1;
 #endif
 	
 	HIP_DEBUG("hip_handle_i2() invoked.\n");
@@ -1519,6 +1547,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			 -ENOMSG, "Cookie solution rejected\n");
 	}
 
+ 	HIP_DEBUG("Cookie accepted\n");
+
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 
@@ -1526,22 +1556,47 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	{
 		n_addrs = hip_get_locator_addr_item_count(locator);
 	
-		if( i2_info->hi3_in_use && n_addrs > 0 ) 
-		{
-			first = (char*)locator+sizeof(struct hip_locator);
-			memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
-			list_for_each_safe(item, tmp, addresses, ii)
-				{
-					n = list_entry(item);
-					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-					       hip_sa_addr_len(&n->addr));
-					break;
-				}
-		}	}
-	
+		if( i2_info->hi3_in_use && n_addrs > 0 )
+                {
+                        first = (char*)locator+sizeof(struct hip_locator);
+                        memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
+
+                        list_for_each_safe(item, tmp, addresses, ii)
+                                {
+                                        n = list_entry(item);
+                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                                                continue;
+                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+                                        {
+                                                memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+                                                       hip_sa_addr_len(&n->addr));
+                                                ii = -1;
+                                                use_ip4 = 0;
+                                                break;
+                                        }
+                                }
+                        if( use_ip4 )
+                        {
+                                list_for_each_safe(item, tmp, addresses, ii)
+                                        {
+                                                n = list_entry(item);
+                                                if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+                                                        continue;
+                                                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+                                                {
+                                                        memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+                                                               hip_sa_addr_len(&n->addr));
+                                                        ii = -1;
+                                                        break;
+                                                }
+                                        }
+                        }
+
+
+                }
+	}
 #endif
 
- 	HIP_DEBUG("Cookie accepted\n");
 
 	if (entry) {
 		/* If the I2 packet is a retransmission, we need reuse
@@ -2016,6 +2071,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	}
 
         /***** LOCATOR PARAMETER ******/
+	//#ifndef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         if (locator && esp_info)
             {
@@ -2027,6 +2083,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
             HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
+	//#endif /* CONFIG_HIP_HI3 */
 
  out_err:
 	/* ha is not NULL if hip_receive_i2() fetched the HA for us.
@@ -2275,6 +2332,7 @@ int hip_handle_r2(struct hip_common *r2,
 	err = 0;
 
         /***** LOCATOR PARAMETER ******/
+	//#ifndef CONFIG_HIP_HI3
         if (entry->locator)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
@@ -2283,6 +2341,7 @@ int hip_handle_r2(struct hip_common *r2,
             }
         else
             HIP_DEBUG("entry->locator did not have locators from r1\n");
+	//#endif /* CONFIG_HIP_HI3 */
 
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");
