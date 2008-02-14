@@ -1458,6 +1458,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	}*/
 
      /* send msg to hipd */
+     HIP_INFO("Send msg to hipd");
      HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
      HIP_INFO("hipconf command successful\n");
 

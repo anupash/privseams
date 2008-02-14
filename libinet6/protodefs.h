@@ -48,7 +48,8 @@
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_HIT_PREFIX_LEN      28     /* bits */
+#define HIP_HIT_PREFIX_LEN      28	/* bits */
+#define HIP_LSI_PREFIX_LEN	8	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \

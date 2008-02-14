@@ -23,19 +23,20 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	
 	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc (%d)failed\n",
 		 hdr_size);
-	
+
 	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
 				    NULL, NULL)) != hdr_size), -1,
 		 "recv peek\n");
-	
+
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
 	HIP_IFEL((bytes > HIP_MAX_PACKET), -1, "packet too long\n");
 	HIP_IFEL((bytes == 0), -1, "packet length is zero\n");
 	bytes += encap_hdr_size;
-	
+
  out_err:
 	HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
+	
 	if (err)
 		bytes = -1;
 	if (msg)
@@ -72,6 +73,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
 
+	
+	
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
 	if (n < len) {
@@ -80,25 +83,25 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	HIP_DEBUG("waiting to receive daemon info\n");
+	//HIP_DEBUG("waiting to receive daemon info\n");
+
+	int hol = hip_peek_recv_total_len(hip_user_sock, 0);
 
 	n = recv(hip_user_sock, msg,
 		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
+
 	if (n < sizeof(struct hip_common)) {
 		HIP_ERROR("Could not receive message from daemon.\n");
 		err = -1;
 		goto out_err;
 	} else {
-		HIP_DEBUG("%d bytes received\n", n); 
-		
+		HIP_DEBUG("%d bytes received\n", n); 		
 	}
 
-	if (hip_get_msg_err(msg)) {
+	if (hip_get_msg_err(msg))
 		HIP_ERROR("msg contained error\n");
-	}
 
  out_err:
-
 	if (hip_user_sock)
 		close(hip_user_sock);
 	return err;
@@ -118,6 +121,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
+
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;

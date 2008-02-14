@@ -291,6 +291,23 @@ int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 	return 0;
 }
 
+void hip_print_debug_info(struct in6_addr *local_addr,
+				    struct in6_addr *peer_addr,
+				    hip_hit_t *local_hit,
+				    hip_hit_t *peer_hit,
+				    hip_lsi_t *peer_lsi){
+	
+	HIP_DEBUG_IN6ADDR("Our addr", local_addr);
+	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
+	HIP_DEBUG_HIT("Our HIT", local_hit);
+	HIP_DEBUG_HIT("Peer HIT", peer_hit);
+	HIP_DEBUG_LSI("Peer LSI", peer_lsi);
+}
+
+int hip_null_lsi(hip_lsi_t lsi_peer){
+
+	return strcmp(inet_ntoa(lsi_peer),"0.0.0.0");
+}
 
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
@@ -316,30 +333,23 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	int err = 0, n=0;
 	hip_ha_t *entry;
 	hip_lsi_t local_lsi;
-	
-	HIP_DEBUG("hip_hadb_add_peer_info_complete() invoked.\n");
-	HIP_DEBUG_IN6ADDR("Our addr", local_addr);
-	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
-	HIP_DEBUG_HIT("Our HIT", local_hit);
-	HIP_DEBUG_HIT("Peer HIT", peer_hit);
-	HIP_DEBUG_LSI("Peer LSI", peer_lsi);
+	struct in6_addr in6_local_lsi, in6_peer_lsi;	
+
+	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
-	if (entry){
-		HIP_DEBUG("---BEFORE----------------------hip_hadb_dump_spis_out\n");	
+	if (entry){	
 		hip_hadb_dump_spis_out(entry);
-		HIP_DEBUG("---AFTER----------------------hip_hadb_dump_spis_out\n");
 		/*Compare if different lsi's*/
-		if (peer_lsi){
-			HIP_DEBUG("-------------------------compare different lsi\n");			
+		if (peer_lsi){			
 			HIP_IFEL(ipv4_addr_cmp(&entry->lsi_peer, peer_lsi) == 0, 0,
 			 	 "Ignoring new mapping, old one exists\n");	
 		}	
 	}
 
-	if (!entry || strcmp(inet_ntoa(entry->lsi_peer),"0.0.0.0")){
-		HIP_DEBUG("-------------------------hip_hadb_create_state\n");
+	if (!entry || hip_null_lsi(entry->lsi_peer)){
+		HIP_DEBUG("hip_hadb_create_state\n");
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		HIP_IFEL(!entry, -1, "Unable to create a new entry");
 		_HIP_DEBUG("created a new sdb entry\n");
@@ -383,7 +393,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 #endif
 
 	int value = hip_hadb_insert_state(entry);
-	HIP_DEBUG("num of hashes where the insert is made %i\n",value);
 
 	/* Released at the end */
 	hip_hold_ha(entry);
@@ -397,11 +406,23 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		goto out_err;
 	}
 
-	
-	/*Add lsi support in the creation of SP*/
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-				       local_addr, peer_addr, 0, 1, 0),
-		 -1, "Error in setting the SPs\n");
+	if (&local_lsi && hip_null_lsi(*peer_lsi)){
+		HIP_DEBUG("Establishing SP_PAIR per lsi\n");
+		//Translating IPv4 -- IPv6
+		IPV4_TO_IPV6_MAP(&local_lsi, &in6_local_lsi);
+		IPV4_TO_IPV6_MAP(peer_lsi, &in6_peer_lsi);
+		
+		HIP_IFEL(hip_setup_hit_sp_pair(&in6_peer_lsi, &in6_local_lsi,
+					       local_addr, peer_addr, 0, 1, 0),
+			 -1, "Error in setting the SPs with LSI\n");
+
+		HIP_DEBUG("Going out from establishing SP_PAIR per lsi\n");
+	}else{
+
+		HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+					       local_addr, peer_addr, 0, 1, 0),
+			 -1, "Error in setting the SPs\n");
+	}
 
 	if (entry){
 		hip_db_put_ha(entry, hip_hadb_delete_state);
@@ -409,7 +430,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	hip_for_each_ha(hip_print_info_hadb, &n);
 
-out_err:	
+out_err:
 	return err;
 }
 
@@ -464,8 +485,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
 					   &peer_map.peer_addr), -1,
 		 "Cannot find source address\n");
-
-	HIP_DEBUG("Source address found\n");
 
 	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
 	         "for_each_hi err.\n");	
@@ -769,7 +788,6 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		goto out_err;
 	}
 
-	/** @todo replace following with hip_hadb_get_spi_list */
 	spi_list = hip_hadb_get_spi_list(entry, spi);
 
 	if (!spi_list)

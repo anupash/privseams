@@ -823,34 +823,48 @@ int xfrm_fill_encap(struct xfrm_encap_tmpl *encap, int sport, int dport, struct 
  * xfrm_fill_selector - fill in the selector.
  * Selector is bound to HITs
  * @param sel pointer to xfrm_selector to be filled in
- * @param hit_our Source HIT
- * @param hit_peer Peer HIT
+ * @param hit_our Source HIT or LSI, if the last is defined
+ * @param hit_peer Peer HIT or LSI, if the last is defined 
  * @param proto ?
- * @param hit_prefix ?
+ * @param id_prefix Length of the identifier's prefix
  * @param src_port ?
  * @param dst_port ?
  * @param preferred_family ?
  *
  * @return 0
  */
+
+
 int xfrm_fill_selector(struct xfrm_selector *sel,
-		       struct in6_addr *hit_our,
-		       struct in6_addr *hit_peer,
-		       __u8 proto, u8 hit_prefix,
+		       struct in6_addr *id_our,
+		       struct in6_addr *id_peer,
+		       __u8 proto, u8 id_prefix,
 		       uint32_t src_port, uint32_t dst_port,
 		       int preferred_family)
 {
 
-	sel->family = preferred_family;
-	memcpy(&sel->daddr, hit_peer, sizeof(sel->daddr));
-	memcpy(&sel->saddr, hit_our, sizeof(sel->saddr));
+	struct in_addr in_id_our, in_id_peer;
+	
+	if (IN6_IS_ADDR_V4MAPPED(id_our)){
+		sel->family = AF_INET;
+		IPV6_TO_IPV4_MAP(id_our, &in_id_our);
+		IPV6_TO_IPV4_MAP(id_peer, &in_id_peer);
+		memcpy(&sel->daddr, &in_id_our, sizeof(sel->daddr));
+		memcpy(&sel->saddr, &in_id_peer, sizeof(sel->saddr));
+	}
+	else{
+		sel->family = preferred_family;
+		memcpy(&sel->daddr, id_peer, sizeof(sel->daddr));
+		memcpy(&sel->saddr, id_our, sizeof(sel->saddr));
+	}
 
 	if (proto) {
 		HIP_DEBUG("proto = %d\n", proto);
 		sel->proto = proto;
 	}
-	sel->prefixlen_d = hit_prefix;
-	sel->prefixlen_s = hit_prefix;
+
+	sel->prefixlen_d = id_prefix;
+	sel->prefixlen_s = id_prefix;
 
 	//xfrm_selector_upspec(sel, src_port, dst_port);
 
