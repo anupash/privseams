@@ -253,14 +253,6 @@ int hip_update_add_peer_addr_item(
 	return err;
 }
 
-int hip_update_locator_match(hip_ha_t *unused,
-			     struct hip_locator_info_addr_item *item1,
-			     void *_item2)
-{
-	struct hip_locator_info_addr_item *item2 = _item2;
-	return !ipv6_addr_cmp(&item1->address, &item2->address);
-}
-
 int hip_update_locator_item_match(hip_ha_t *unused,
 				  struct hip_locator_info_addr_item *item1,
 				  void *_item2)

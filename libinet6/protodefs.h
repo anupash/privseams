@@ -359,7 +359,7 @@ struct hip_unit_test {
 
 /**
  * Fixed start of this struct must match to struct hip_peer_addr_list_item
- * for the part of address item. It is used in hip_update_locator_match().
+ * for the part of address item. It is used in hip_update_locator_item_match().
  * @todo Maybe fix this in some better way?
  */
 struct hip_locator_info_addr_item {
