@@ -38,9 +38,8 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	else if(ipType == 0)
 		hdr_size = sizeof(struct ip6_hdr);
 
-	//set all bits to 0
-	for(i = 0; i < 40; i++)
-		bytes[i] = (char)0;
+	//set all bytes of both headers to 0
+	memset(&bytes[0], 0, 40);
 
 	//fill in the ip header fields
 	if(ipType == 0){//ipv4

@@ -1374,20 +1374,19 @@ void send_tcp_packet(void * hdr,
 	struct ip6_hdr * newIp6_hdr;
 	struct pseudo_hdr  *pseudo;
 	struct pseudo6_hdr *pseudo6;
-	void *pointer;
-	char *HITbytes;
+	void  *pointer;
 	struct in6_addr *defaultHit;
-	char newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
+	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
 
 	if(addOption)
 		newSize = newSize + 4;
 	if(addHIT)
 		newSize = newSize + sizeof(struct in6_addr);
 
-	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+	/*if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
 		return;
-	}
+	}*/
 
 	//initializing the headers and setting socket settings
 	if(trafficType == 4){
@@ -1398,8 +1397,8 @@ void send_tcp_packet(void * hdr,
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		//socket settings
 		sock_raw.sin_family = AF_INET;
-		sock_raw.sin_port = htons(tcphdr->dest);
-		sock_raw.sin_addr = iphdr->ip_dst;
+		sock_raw.sin_port   = htons(tcphdr->dest);
+		sock_raw.sin_addr   = iphdr->ip_dst;
 	}
 	else if(trafficType == 6){
 		//get the ip header
@@ -1409,19 +1408,15 @@ void send_tcp_packet(void * hdr,
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		//socket settings
 		sock6_raw.sin6_family = AF_INET6;
-		sock6_raw.sin6_port = htons(tcphdr->dest);
-		sock6_raw.sin6_addr = ip6_hdr->ip6_dst;
+		sock6_raw.sin6_port   = htons(tcphdr->dest);
+		sock6_raw.sin6_addr   = ip6_hdr->ip6_dst;
 	}
 
 	//measuring the size of ip and tcp headers (no options)
 	twoHdrsSize = hdr_size + 4*5;
 
 	//copy the ip header and the tcp header without the options
-	i = 0;
-	while(i < twoHdrsSize){
-		newHdr[i] = bytes[i];
-		i++;
-	}
+	memcpy(&newHdr[0], &bytes[0], twoHdrsSize);
 
 	//add the i1 option and copy the old options
 	//add the HIT if required, 
@@ -1434,20 +1429,14 @@ void send_tcp_packet(void * hdr,
 			if(addHIT){
 				//get the default hit
 				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = (char)&HITbytes[j];
+				memcpy(&newHdr[twoHdrsSize + 4], defaultHit, 16);
 			}
 		}
 		else{
 			if(addHIT){
 				//get the default hit
 				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = (char)&HITbytes[j];
+				memcpy(&newHdr[twoHdrsSize], defaultHit, 16);
 			}
 		}
 	}
@@ -1463,18 +1452,10 @@ void send_tcp_packet(void * hdr,
 			if(addHIT){
 				//get the default hit
 				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = (char)&HITbytes[j];
+				memcpy(&newHdr[twoHdrsSize + 4], defaultHit, 16);
 			}
-			else{
-				i = 0;
-				while(i < 4*(tcphdr->doff-5)){
-					newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
-					i++;
-				}
-			}
+			else
+				memcpy(&newHdr[twoHdrsSize + 4], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
 		}
 		else
 		{
@@ -1483,18 +1464,10 @@ void send_tcp_packet(void * hdr,
 			if(addHIT){
 				//get the default hit
 				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = (char)&HITbytes[j];
+				memcpy(&newHdr[twoHdrsSize], defaultHit, 16);
 			}
-			else{
-				i = 0;
-				while(i < 4*(tcphdr->doff-5)){
-					newHdr[i + twoHdrsSize] = bytes[i + twoHdrsSize];
-					i++;
-				}
-			}
+			else
+				memcpy(&newHdr[twoHdrsSize], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
 		}
 	}
 
@@ -1549,14 +1522,7 @@ void send_tcp_packet(void * hdr,
 	}
 
 	//replace the pseudo header bytes with the correct ones
-	i = 0;
-	while(i < hdr_size){
-		newHdr[i] = bytes[i];
-		i++;
-	}
-
-	//change the src and dst ip if it was an incoming packet******
-
+	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	//finally send through the socket
 	int kot = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));

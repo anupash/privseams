@@ -528,7 +528,7 @@ void examine_incoming_packet(struct ipq_handle *handle,
 	/* the following vars are needed for
 	 * sending the i1 - initiating the exchange
 	 * in case we see that the peer supports hip*/
-	struct in6_addr *peer_ip;
+	struct in6_addr *peer_ip = NULL;
 	struct in6_addr *peer_hit;
 	struct in6_addr *local_ip;
 	struct in6_addr *local_hit;
@@ -540,6 +540,8 @@ void examine_incoming_packet(struct ipq_handle *handle,
 
 	//initialize the socket
 	sockfd = hip_raw_sock_v4;
+
+	peer_ip = HIP_MALLOC(sizeof(struct in6_addr), 0);
 
 	if(trafficType == 4){
 		iphdr = (struct ip *)hdr;
@@ -688,7 +690,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 	}
 
 	//outgoing, syn=1 and ack=0
-	if(((tcphdr->syn == 1) && (tcphdr->ack == 0))){
+/*	if(((tcphdr->syn == 1) && (tcphdr->ack == 0))){
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			allow_packet(handle, packetId);
 			return;
@@ -698,7 +700,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 		//drop original packet
 		drop_packet(handle, packetId);
 		return;
-	}
+	}*/
 
 	//allow all the rest
 	allow_packet(handle, packetId);
