@@ -92,4 +92,6 @@ void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 
+uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+
 #endif /* HIP_MISC_H */
