@@ -488,10 +488,6 @@ void hip_request_oppipdb_add_entry(const struct in6_addr *peer_ip){
 }
 
 
-
-
-
-
 /*
 add description
 */
@@ -509,31 +505,31 @@ void hip_request_send_tcp_packet(void *hdr,
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(hdr),
+	HIP_IFEL(hip_build_param_contents(msg, (void *)hdr,
 					  HIP_PARAM_IP_HEADER,
 					  packet_size), -1,
 		 "build param HIP_PARAM_IP_HEADER failed\n");
 	
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&packet_size),
+	HIP_IFEL(hip_build_param_contents(msg, (int *)(&packet_size),
 					  HIP_PARAM_PACKET_SIZE,
 					  sizeof(int)), -1,
 		 "build param HIP_PARAM_PACKET_SIZE failed\n");
 
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&trafficType),
+	HIP_IFEL(hip_build_param_contents(msg, (int *)(&trafficType),
 					  HIP_PARAM_TRAFFIC_TYPE,
 					  sizeof(int)), -1,
 		 "build param HIP_PARAM_TRAFFIC_TYPE failed\n");
 
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&addHit),
+	HIP_IFEL(hip_build_param_contents(msg, (int *)(&addHit),
 					  HIP_PARAM_ADD_HIT,
 					  sizeof(int)), -1,
 		 "build param HIP_PARAM_ADD_HIT failed\n");
 
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&addOption),
+	HIP_IFEL(hip_build_param_contents(msg, (int *)(&addOption),
 					  HIP_PARAM_ADD_OPTION,
 					  sizeof(int)), -1,
 		 "build param HIP_PARAM_ADD_OPTION failed\n");
@@ -555,24 +551,6 @@ HIP_DUMP_MSG(msg);
  out_err:
 	return err;
 }
-/*
-SO_HIP_OPPTCP_SEND_TCP_PACKET
-
-HIP_PARAM_IP_HEADER	hdr
-HIP_PARAM_PACKET_SIZE	hdr_size + 4*tcphdr->doff
-HIP_PARAM_TRAFFIC_TYPE	trafficType
-HIP_PARAM_ADD_HIT	ADDHIT
-HIP_PARAM_ADD_OPTION	ADDOPTION
-*/
-
-
-//send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
-/*
-
-
-*/
-
-
 
 
 /**
@@ -645,8 +623,8 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		return;
 	}
 
-	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
-		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+//	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
+//		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			//swap the ports
 			portTemp = tcphdr->source;
 			tcphdr->source = tcphdr->dest;
@@ -683,14 +661,14 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
-		}
-		else{
-			allow_packet(handle, packetId);
-			return;
-		}
-	}
-	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
-		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
+//		}
+//		else{
+//			allow_packet(handle, packetId);
+//			return;
+//		}
+//	}
+//	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
+//		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
 
 		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			//tcp header pointer + 20(minimum header length) +
@@ -712,9 +690,9 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		}*/
 
 		//the packet is no more needed
-		allow_packet(handle, packetId);
-		return;
-	}
+//		allow_packet(handle, packetId);
+//		return;
+//	}
 
 	//allow all the rest
 	allow_packet(handle, packetId);
@@ -1132,7 +1110,8 @@ static void *handle_ip_traffic(void *ptr){
 				else if(is_incoming_packet(packetHook))
 					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
-					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
+//					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
+					allow_packet(hndl, m->packet_id);
 				else{
 #endif
 					if(accept_normal_traffic)

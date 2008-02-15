@@ -1351,15 +1351,14 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 
  * trafficType - 4 or 6 - standing for ipv4 and ipv6
  */
-void send_tcp_packet(struct rtnl_handle *hip_nl_route,
+int send_tcp_packet(struct rtnl_handle *hip_nl_route,
 		     void * hdr,
-			int newSize,
-			int trafficType,
-			int sockfd,
-			int addOption,
-			int addHIT)
-{
-	int    on = 1, i, j;
+		     int newSize,
+		     int trafficType,
+		     int sockfd,
+		     int addOption,
+		     int addHIT){
+	int    on = 1, i, j, err = 0;
 	int    hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
 	char  *bytes =(char*)hdr;
@@ -1387,7 +1386,7 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 
 	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
-		//return;
+		return;
 	}
 
 	//initializing the headers and setting socket settings
@@ -1530,14 +1529,15 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	//finally send through the socket
-	int err = sendto(sockfd, &newHdr[20], newSize-20, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
 	//if(err == -1) 
 		HIP_PERROR("send_tcp_packet");
 
 out_err:
 	if(defaultHit)
- 		HIP_FREE(defaultHit);
-	
+		HIP_FREE(defaultHit);
+
+	return err;
 }
 
 

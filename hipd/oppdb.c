@@ -570,11 +570,11 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	hip_opp_block_t *entry = NULL;
 	hip_ha_t *ha = NULL;
 
-	void *hdr;
-	int packet_size;
-	int trafficType;
-	int addHit;
-	int addOption;
+	char *hdr	  = NULL;
+	int  *packet_size = NULL;
+	int  *trafficType = NULL;
+	int  *addHit      = NULL;
+	int  *addOption   = NULL;
 
 
 	if(!opportunistic_mode) {
@@ -592,21 +592,22 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 
 	//get the pointer to the ip header that is to be sent
-	memset(hdr, 0, packet_size);
+	hdr = HIP_MALLOC((int)packet_size, 0);
+	memset(hdr, 0, (int)packet_size);
 	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
 	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
-	memcpy(hdr, ptr, hdr);
+	memcpy(hdr, ptr, (int)packet_size);
 	//HIP_DEBUG_HIT("hdr = ", hdr);
 
 
-	//get the size of the packet
+	//get the type of traffic
 	memset(&trafficType, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
 	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
 	memcpy(&trafficType, ptr, sizeof(trafficType));
 
 
-	//get the size of the packet
+	//get whether hit option is to be added
 	memset(&addHit, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
@@ -621,7 +622,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	hip_msg_init(msg);//?????
 
-	err = send_tcp_packet(&hip_nl_route, hdr, packet_size, trafficType, hip_raw_sock_v4, addHit, addOption);
+	err = send_tcp_packet(&hip_nl_route, (void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
 
 	HIP_IFEL(err, 0, "error sending tcp packet\n");
 
@@ -630,6 +631,18 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 }
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
