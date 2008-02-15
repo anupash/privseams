@@ -461,8 +461,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
 	HIP_DEBUG_HIT("phit", &phit);
 
-	HIP_IFEL(hip_select_source_address(&hip_nl_route,
-					   &our_addr,
+	HIP_IFEL(hip_select_source_address(&hip_nl_route, &our_addr,
 					   &dst_ip), -1,
 		 "Cannot find source address\n");
 	

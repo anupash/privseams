@@ -1387,7 +1387,7 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 
 	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
-		return;
+		//return;
 	}
 
 	//initializing the headers and setting socket settings
@@ -1422,6 +1422,7 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 
 	if(addHIT){
 		//get the default hit
+		defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
 		hip_get_default_hit(hip_nl_route, defaultHit);
 		HITbytes = (char*)defaultHit;
 	}
@@ -1532,6 +1533,10 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	int err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
 	//if(err == -1) 
 		HIP_PERROR("send_tcp_packet");
+
+out_err:
+	if(defaultHit)
+ 		HIP_FREE(defaultHit);
 	
 }
 

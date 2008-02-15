@@ -1079,6 +1079,10 @@ out_err:
 	}
   	ipq_destroy_handle(hndl);
 
+	if(src_addr)
+ 		HIP_FREE(src_addr);
+	if(dst_addr)
+ 		HIP_FREE(dst_addr);
 	return;
 }
 
