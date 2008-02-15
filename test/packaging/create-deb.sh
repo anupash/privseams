@@ -95,7 +95,7 @@ init_files ()
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
-    for f in control changelog copyright postinst prerm;do
+    for f in control changelog copyright;do
 	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
     echo "** Modify Debian control file for $DEBLIB $TMP and $DEBARCH"
