@@ -85,7 +85,7 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	tcphdr->window = 8704;//random
 	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
 	//tcphdr->urg_ptr = ???????? TO BE FIXED
-	send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, (ipType == 0) ? 4 : 6, hip_raw_sock_v4, 1, 0);
+	send_tcp_packet(&hip_nl_route, &bytes[0], hdr_size + 4*tcphdr->doff, (ipType == 0) ? 4 : 6, hip_raw_sock_v4, 1, 0);
 }
 #endif
 
@@ -888,7 +888,8 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
-		HIP_IFEL(hip_select_source_address(&my_addr,
+		HIP_IFEL(hip_select_source_address(&hip_nl_route,
+						   &my_addr,
 						   peer_addr), -1,
 			 "Cannot find source address\n");
 	}
@@ -1060,7 +1061,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
 		HIP_IFEL(hip_select_source_address(
-				 &my_addr, peer_addr), -EADDRNOTAVAIL,
+				 &hip_nl_route, &my_addr, peer_addr), -EADDRNOTAVAIL,
 			 "Cannot find local address.\n");
 		my_addr_ptr = &my_addr;
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);

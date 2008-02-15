@@ -2385,11 +2385,11 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
 		if (addr4.s_addr == INADDR_BROADCAST) {
 			HIP_DEBUG("Received i1 broadcast\n");
-			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+			HIP_IFEL(hip_select_source_address(&hip_nl_route, i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 		}
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
-			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
+			HIP_IFEL(hip_select_source_address(&hip_nl_route, i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 	}
 
