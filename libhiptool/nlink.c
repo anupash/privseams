@@ -1351,12 +1351,13 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 
  * trafficType - 4 or 6 - standing for ipv4 and ipv6
  */
-void send_tcp_packet(void * hdr,
-					 int newSize,
-					 int trafficType,
-					 int sockfd,
-					 int addOption,
-					 int addHIT)
+void send_tcp_packet(struct rtnl_handle *hip_nl_route,
+		     void * hdr,
+			int newSize,
+			int trafficType,
+			int sockfd,
+			int addOption,
+			int addHIT)
 {
 	int   on = 1, i, j;
 	int   hdr_size, newHdr_size, twoHdrsSize;
@@ -1377,6 +1378,7 @@ void send_tcp_packet(void * hdr,
 	void  *pointer;
 	struct in6_addr *defaultHit;
 	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
+	char *HITbytes;
 
 	if(addOption)
 		newSize = newSize + 4;
@@ -1387,6 +1389,8 @@ void send_tcp_packet(void * hdr,
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
 		return;
 	}*/
+
+//setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on));
 
 	//initializing the headers and setting socket settings
 	if(trafficType == 4){
@@ -1418,6 +1422,12 @@ void send_tcp_packet(void * hdr,
 	//copy the ip header and the tcp header without the options
 	memcpy(&newHdr[0], &bytes[0], twoHdrsSize);
 
+	if(addHIT){
+		//get the default hit
+		hip_get_default_hit(hip_nl_route, defaultHit);
+		HITbytes = (char*)defaultHit;
+	}
+
 	//add the i1 option and copy the old options
 	//add the HIT if required, 
 	if(tcphdr->doff == 5){//there are no previous options
@@ -1427,16 +1437,14 @@ void send_tcp_packet(void * hdr,
 			newHdr[twoHdrsSize + 2] = (char)1;
 			newHdr[twoHdrsSize + 3] = (char)1;
 			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				memcpy(&newHdr[twoHdrsSize + 4], defaultHit, 16);
+				//put the default hit
+				memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
 			}
 		}
 		else{
 			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				memcpy(&newHdr[twoHdrsSize], defaultHit, 16);
+				//put the default hit
+				memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
 			}
 		}
 	}
@@ -1450,9 +1458,8 @@ void send_tcp_packet(void * hdr,
 			//if the HIT is to be sent, the
 			//other options are not important
 			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				memcpy(&newHdr[twoHdrsSize + 4], defaultHit, 16);
+				//put the default hit
+				memcpy(&newHdr[twoHdrsSize + 4], &HITbytes[0], 16);
 			}
 			else
 				memcpy(&newHdr[twoHdrsSize + 4], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
@@ -1462,9 +1469,8 @@ void send_tcp_packet(void * hdr,
 			//if the HIT is to be sent, the
 			//other options are not important
 			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				memcpy(&newHdr[twoHdrsSize], defaultHit, 16);
+				//put the default hit
+				memcpy(&newHdr[twoHdrsSize], &HITbytes[0], 16);
 			}
 			else
 				memcpy(&newHdr[twoHdrsSize], &bytes[twoHdrsSize], 4*(tcphdr->doff-5));
@@ -1525,6 +1531,63 @@ void send_tcp_packet(void * hdr,
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	//finally send through the socket
-	int kot = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	int err = sendto(sockfd, &newHdr[20], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	//if(err == -1) 
+		HIP_PERROR("send_tcp_packet");
+	
 }
+
 #endif
+
+
+
+int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit)
+{
+	int err = 0;
+	int family = AF_INET6;
+	int rtnl_rtdsfield_init;
+	char *rtnl_rtdsfield_tab[256] = { 0 };
+	struct idxmap *idxmap[16] = { 0 };
+	hip_hit_t hit_tmpl;
+	
+	/* rtnl_rtdsfield_initialize() */
+        rtnl_rtdsfield_init = 1;
+
+        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
+	set_hit_prefix(&hit_tmpl);
+	HIP_IFEL(hip_iproute_get(hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
+		 -1,"Finding ip route failed\n");
+	
+ out_err:
+
+	return err;
+}
+
+int hip_select_source_address(struct rtnl_handle *hip_nl_route, struct in6_addr *src, struct in6_addr *dst)
+{
+	int err = 0;
+	int family = AF_INET6;
+//	int rtnl_rtdsfield_init;
+//	char *rtnl_rtdsfield_tab[256] = { 0 };
+	struct idxmap *idxmap[16] = { 0 };
+		
+	/* rtnl_rtdsfield_initialize() */
+//	rtnl_rtdsfield_init = 1;
+	
+//	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
+	HIP_DEBUG_IN6ADDR("dst", dst);
+	HIP_DEBUG_IN6ADDR("src", src);
+
+	HIP_IFEL(hip_iproute_get(hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+
+	HIP_DEBUG_IN6ADDR("src", src);
+
+out_err:
+//	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab
+	return err;
+}
+
+
+
+

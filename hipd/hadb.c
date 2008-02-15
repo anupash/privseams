@@ -168,7 +168,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 	memset(&our_hit, 0, sizeof(our_hit));
 
 	/* Let's try with the default HIT first */
-	hip_get_default_hit(&our_hit);
+	hip_get_default_hit(&hip_nl_route, &our_hit);
 
 	if (entry = hip_hadb_find_byhits(hit, &our_hit)) {
 		_HIP_DEBUG_HIT("Returning default HIT", our_hit);

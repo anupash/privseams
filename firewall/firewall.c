@@ -26,7 +26,7 @@ int use_ipv6 = 0;
 int accept_normal_traffic = 1;
 int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
-
+struct rtnl_handle hip_nl_route = { 0 };
 int counter = 0;
 
 void print_usage()
@@ -64,31 +64,9 @@ int is_escrow_active(){
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
-int hip_get_default_hit(struct in6_addr *hit)
-{
-	int err = 0;
-	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { 0 };
-	struct idxmap *idxmap[16] = { 0 };
-	hip_hit_t hit_tmpl;
-	struct rtnl_handle hip_nl_route;
-
-	// rtnl_rtdsfield_initialize()
-        rtnl_rtdsfield_init = 1;
-
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
-	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
-	set_hit_prefix(&hit_tmpl);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
-		 -1,"Finding ip route failed\n");
-	
- out_err:
-
-	return err;
-}
 
 int firewall_init(){
+	int err = 0;
 	HIP_DEBUG("Initializing firewall\n");
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -158,6 +136,16 @@ int firewall_init(){
 			system("ip6tables -I OUTPUT -j DROP");
 		}
 	}
+
+	if (rtnl_open_byproto(&hip_nl_route, NETLINK_ROUTE) < 0)
+	{
+		err = 1;
+		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
+		goto out_err;
+	}
+
+out_err:
+
 	return 0;
 }
 
@@ -169,6 +157,8 @@ void firewall_close(int signal){
 
 void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
+	if (hip_nl_route.fd)
+		rtnl_close(&hip_nl_route);
 	if (flush_iptables) {
 		HIP_DEBUG("Flushing all rules\n");
 		system("iptables -F INPUT");
@@ -608,7 +598,7 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			 * overwrite the i1 option that is
 			 * in the options of TCP
 			 */
-			send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
+			send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
@@ -696,7 +686,7 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 			return;
 		}
 		//add the option to the packet
-		send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 0);//1, 0
+		send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 0);//1, 0
 		//drop original packet
 		drop_packet(handle, packetId);
 		return;

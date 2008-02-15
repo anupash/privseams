@@ -1117,59 +1117,12 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
-int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
-{
-	int err = 0;
-	int family = AF_INET6;
-//	int rtnl_rtdsfield_init;
-//	char *rtnl_rtdsfield_tab[256] = { 0 };
-	struct idxmap *idxmap[16] = { 0 };
-		
-	/* rtnl_rtdsfield_initialize() */
-//	rtnl_rtdsfield_init = 1;
-	
-//	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
-	HIP_DEBUG_IN6ADDR("dst", dst);
-	HIP_DEBUG_IN6ADDR("src", src);
-
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
-
-	HIP_DEBUG_IN6ADDR("src", src);
-
-out_err:
-//	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab
-	return err;
-}
-
-int hip_get_default_hit(struct in6_addr *hit)
-{
-	int err = 0;
-	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { 0 };
-	struct idxmap *idxmap[16] = { 0 };
-	hip_hit_t hit_tmpl;
-	
-	/* rtnl_rtdsfield_initialize() */
-        rtnl_rtdsfield_init = 1;
-
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
-	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
-	set_hit_prefix(&hit_tmpl);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
-		 -1,"Finding ip route failed\n");
-	
- out_err:
-
-	return err;
-}
-
 int hip_get_default_hit_msg(struct hip_common *msg)
 {
 	int err = 0;
 	hip_hit_t hit;
 	
-	hip_get_default_hit(&hit);
+	hip_get_default_hit(&hip_nl_route, &hit);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
 	
  out_err:
