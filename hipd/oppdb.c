@@ -303,8 +303,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *src_addr,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
-		       hip_portpair_t *msg_info)
-{
+		       hip_portpair_t *msg_info){
 	hip_opp_hit_pair_t hit_pair;
 	hip_ha_t *entry;
 	hip_hit_t phit;
@@ -373,8 +372,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 /**
  * No description.
  */
-int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
-{
+int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -495,8 +493,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 /*
 TO DO, add function description
 */
-int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src)
-{
+int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -529,8 +526,7 @@ int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src)
 /*
 TO DO, add function description
 */
-int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src)
-{
+int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -558,6 +554,81 @@ int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src)
  out_err:
 	return err;
 }
+
+
+/*
+TO DO, add function description
+*/
+/*
+send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
+hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
+*/
+int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src){
+	int n = 0, err = 0, alen = 0;
+	struct in6_addr phit, hit_our, id, our_addr;
+	struct in6_addr *ptr = NULL;
+	hip_opp_block_t *entry = NULL;
+	hip_ha_t *ha = NULL;
+
+	void *hdr;
+	int packet_size;
+	int trafficType;
+	int addHit;
+	int addOption;
+
+
+	if(!opportunistic_mode) {
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
+			 "Building of user header failed\n");
+	}
+
+
+	//get the size of the packet
+	memset(&packet_size, 0, sizeof(int));
+	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
+	HIP_IFEL(!ptr, -1, "No packet size in msg\n");
+	memcpy(&packet_size, ptr, sizeof(packet_size));
+
+
+	//get the pointer to the ip header that is to be sent
+	memset(hdr, 0, packet_size);
+	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
+	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
+	memcpy(hdr, ptr, hdr);
+	//HIP_DEBUG_HIT("hdr = ", hdr);
+
+
+	//get the size of the packet
+	memset(&trafficType, 0, sizeof(int));
+	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
+	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
+	memcpy(&trafficType, ptr, sizeof(trafficType));
+
+
+	//get the size of the packet
+	memset(&addHit, 0, sizeof(int));
+	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
+	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
+	memcpy(&addHit, ptr, sizeof(addHit));
+
+
+	//get the size of the packet
+	memset(&addOption, 0, sizeof(int));
+	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
+	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
+	memcpy(&addOption, ptr, sizeof(addOption));
+
+	hip_msg_init(msg);//?????
+
+	err = send_tcp_packet(&hip_nl_route, hdr, packet_size, trafficType, hip_raw_sock_v4, addHit, addOption);
+
+	HIP_IFEL(err, 0, "error sending tcp packet\n");
+
+ out_err:
+	return err;
+}
+
 #endif
 
 

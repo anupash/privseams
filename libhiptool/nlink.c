@@ -1530,7 +1530,7 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	//finally send through the socket
-	int err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	int err = sendto(sockfd, &newHdr[20], newSize-20, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
 	//if(err == -1) 
 		HIP_PERROR("send_tcp_packet");
 

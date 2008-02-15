@@ -533,6 +533,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
 		break;
+
+	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
+		hip_opptcp_send_tcp_packet(msg, src);
+		break;
+
 #endif
 
 	default:

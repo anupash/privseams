@@ -488,6 +488,93 @@ void hip_request_oppipdb_add_entry(const struct in6_addr *peer_ip){
 }
 
 
+
+
+
+
+/*
+add description
+*/
+void hip_request_send_tcp_packet(void *hdr,
+				 int packet_size,
+				 int trafficType,
+				 int addHit,
+				 int addOption){
+	struct hip_common *msg = NULL;
+	struct in6_addr *hit_recv = NULL;
+	hip_hit_t *ptr = NULL;
+	int err = 0;
+	int ret = 0;
+	
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(hdr),
+					  HIP_PARAM_IP_HEADER,
+					  packet_size), -1,
+		 "build param HIP_PARAM_IP_HEADER failed\n");
+	
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&packet_size),
+					  HIP_PARAM_PACKET_SIZE,
+					  sizeof(int)), -1,
+		 "build param HIP_PARAM_PACKET_SIZE failed\n");
+
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&trafficType),
+					  HIP_PARAM_TRAFFIC_TYPE,
+					  sizeof(int)), -1,
+		 "build param HIP_PARAM_TRAFFIC_TYPE failed\n");
+
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&addHit),
+					  HIP_PARAM_ADD_HIT,
+					  sizeof(int)), -1,
+		 "build param HIP_PARAM_ADD_HIT failed\n");
+
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&addOption),
+					  HIP_PARAM_ADD_OPTION,
+					  sizeof(int)), -1,
+		 "build param HIP_PARAM_ADD_OPTION failed\n");
+
+
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0), -1,
+		 "build hdr failed\n");
+	
+HIP_DUMP_MSG(msg);
+
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+	
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+
+ out_err:
+	return err;
+}
+/*
+SO_HIP_OPPTCP_SEND_TCP_PACKET
+
+HIP_PARAM_IP_HEADER	hdr
+HIP_PARAM_PACKET_SIZE	hdr_size + 4*tcphdr->doff
+HIP_PARAM_TRAFFIC_TYPE	trafficType
+HIP_PARAM_ADD_HIT	ADDHIT
+HIP_PARAM_ADD_OPTION	ADDOPTION
+*/
+
+
+//send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
+/*
+
+
+*/
+
+
+
+
 /**
 *
 */
@@ -590,7 +677,9 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			 * overwrite the i1 option that is
 			 * in the options of TCP
 			 */
-			send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
+			//send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
+			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
+
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
