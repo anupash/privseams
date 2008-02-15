@@ -33,6 +33,8 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	int    i, hdr_size;
 	char bytes [sizeof(struct ip)*(1 - ipType)   +   sizeof(struct ip6_hdr)*ipType   +   5*4];
 
+	HIP_DEBUG("\n");
+
 	if(ipType == 0)
 		hdr_size = sizeof(struct ip);
 	else if(ipType == 0)

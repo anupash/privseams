@@ -1359,8 +1359,8 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 			int addOption,
 			int addHIT)
 {
-	int   on = 1, i, j;
-	int   hdr_size, newHdr_size, twoHdrsSize;
+	int    on = 1, i, j;
+	int    hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
 	char  *bytes =(char*)hdr;
 	struct sockaddr_in  sock_raw;
@@ -1378,7 +1378,7 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	void  *pointer;
 	struct in6_addr *defaultHit;
 	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
-	char *HITbytes;
+	char  *HITbytes;
 
 	if(addOption)
 		newSize = newSize + 4;
@@ -1389,8 +1389,6 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 		HIP_DEBUG("Error setting an option to raw socket\n"); 
 		return;
 	}
-
-//setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on));
 
 	//initializing the headers and setting socket settings
 	if(trafficType == 4){
@@ -1536,6 +1534,27 @@ void send_tcp_packet(struct rtnl_handle *hip_nl_route,
 		HIP_PERROR("send_tcp_packet");
 	
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif
 
