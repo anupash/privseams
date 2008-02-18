@@ -130,6 +130,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
 int hip_netlink_send(struct hip_work_order *hwo);
 void hip_netlink_close(struct rtnl_handle *rth);
-int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit);
+//int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit);
 
 #endif /* _HIP_NLINK_H */

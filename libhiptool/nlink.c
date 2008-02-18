@@ -1,9 +1,5 @@
 #include "nlink.h"
 
-/* For receiving of HIP control messages */
-int hip_raw_sock_v6 = 0;
-int hip_raw_sock_v4 = 0;
-
 /*
  * Note that most of the functions are modified versions of
  * libnetlink functions.
@@ -1422,7 +1418,7 @@ int send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	if(addHIT){
 		//get the default hit
 		defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
-		hip_get_default_hit(hip_nl_route, defaultHit);
+		hip_get_default_hit(defaultHit);
 		HITbytes = (char*)defaultHit;
 	}
 
@@ -1540,32 +1536,20 @@ out_err:
 	return err;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #endif
 
 
 
-int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit)
+
+
+
+
+
+
+
+
+
+int hip_get_default_hit(struct in6_addr *hit)
 {
 	int err = 0;
 	int family = AF_INET6;
@@ -1580,7 +1564,7 @@ int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit)
         rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
 	set_hit_prefix(&hit_tmpl);
-	HIP_IFEL(hip_iproute_get(hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
 		 -1,"Finding ip route failed\n");
 	
  out_err:
@@ -1611,7 +1595,3 @@ out_err:
 //	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab
 	return err;
 }
-
-
-
-

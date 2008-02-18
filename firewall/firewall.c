@@ -14,7 +14,6 @@
 
 //#include <hipd/netdev.h>
 
-
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
 
@@ -26,7 +25,6 @@ int use_ipv6 = 0;
 int accept_normal_traffic = 1;
 int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
-struct rtnl_handle hip_nl_route = { 0 };
 int counter = 0;
 
 void print_usage()
@@ -66,7 +64,6 @@ int is_escrow_active(){
 
 
 int firewall_init(){
-	int err = 0;
 	HIP_DEBUG("Initializing firewall\n");
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -137,15 +134,7 @@ int firewall_init(){
 		}
 	}
 
-	if (rtnl_open_byproto(&hip_nl_route, NETLINK_ROUTE) < 0)
-	{
-		err = 1;
-		HIP_ERROR("Routing socket error: %s\n", strerror(errno));
-		goto out_err;
-	}
-
 out_err:
-
 	return 0;
 }
 
@@ -157,8 +146,7 @@ void firewall_close(int signal){
 
 void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
-	if (hip_nl_route.fd)
-		rtnl_close(&hip_nl_route);
+
 	if (flush_iptables) {
 		HIP_DEBUG("Flushing all rules\n");
 		system("iptables -F INPUT");
@@ -313,8 +301,8 @@ int is_outgoing_packet(unsigned int theHook){
  * @return zero if i1 option not found in the options, or 1 if it is found.
  */ 
 int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
-	int i = 20;//the initial obligatory part of the TCP header
-	int foundHipOpp = 0, len = 0;
+	int   i = 20;//the initial obligatory part of the TCP header
+	int   foundHipOpp = 0, len = 0;
 	char *bytes =(char*)tcphdrBytes;
 	//HIP_OPTION_KIND
 
@@ -363,24 +351,15 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 }
 
 
-
-
-
-
-
-
 /*
 
 add description
 explanation that the ports are needed to be 0 here
 
 */
-void hip_request_send_i1_to_hip_peer_from_hipd(const struct in6_addr *peer_ip,
-					       struct in6_addr *peer_hit,
-					       const struct in6_addr *local_hit){
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
+					       struct in6_addr *peer_hit){
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
 	int err = 0;
 	in_port_t *src_tcp_port;
 	in_port_t *dst_tcp_port;
@@ -390,26 +369,30 @@ void hip_request_send_i1_to_hip_peer_from_hipd(const struct in6_addr *peer_ip,
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(NULL),
+					  HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)),
+		-1, "build param HIP_PARAM_HIT failed\n");
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+					  sizeof(struct in6_addr)),
+		-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 
 	/*both ports are 0 here so that we don't send the TCp SYN_i1 in hip_send_i1*/
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
 					  HIP_PARAM_SRC_TCP_PORT,
-					  sizeof(in_port_t)), -1,
-		 "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+					  sizeof(in_port_t)),
+		-1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
 					  HIP_PARAM_DST_TCP_PORT,
-					  sizeof(in_port_t)), -1,
-		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
+					  sizeof(in_port_t)),
+		-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
 	
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
-		 "build hdr failed\n");
-	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, "build hdr failed\n");
+	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
@@ -427,26 +410,22 @@ add description
 */
 void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
 	int err = 0;
-	int ret = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+					  sizeof(struct in6_addr)),
+		-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 	
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1,
-		 "build hdr failed\n");
-	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+		 -1, "build hdr failed\n");
+	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
-	
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
@@ -458,28 +437,24 @@ void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 /*
 add description
 */
-void hip_request_oppipdb_add_entry(const struct in6_addr *peer_ip){
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
 	int err = 0;
-	int ret = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+					  sizeof(struct in6_addr)),
+		-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY, 0), -1,
 		 "build hdr failed\n");
-	
+	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
-	
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
@@ -492,59 +467,47 @@ void hip_request_oppipdb_add_entry(const struct in6_addr *peer_ip){
 add description
 */
 void hip_request_send_tcp_packet(void *hdr,
-				 int packet_size,
-				 int trafficType,
-				 int addHit,
-				 int addOption){
+				 int   packet_size,
+				 int   trafficType,
+				 int   addHit,
+				 int   addOption){
 	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
 	int err = 0;
-	int ret = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hdr,
 					  HIP_PARAM_IP_HEADER,
-					  packet_size), -1,
-		 "build param HIP_PARAM_IP_HEADER failed\n");
+					  packet_size),
+		-1, "build param HIP_PARAM_IP_HEADER failed\n");
 	
-
 	HIP_IFEL(hip_build_param_contents(msg, (int *)(&packet_size),
 					  HIP_PARAM_PACKET_SIZE,
-					  sizeof(int)), -1,
-		 "build param HIP_PARAM_PACKET_SIZE failed\n");
-
+					  sizeof(int)),
+		-1, "build param HIP_PARAM_PACKET_SIZE failed\n");
 
 	HIP_IFEL(hip_build_param_contents(msg, (int *)(&trafficType),
 					  HIP_PARAM_TRAFFIC_TYPE,
-					  sizeof(int)), -1,
-		 "build param HIP_PARAM_TRAFFIC_TYPE failed\n");
-
+					  sizeof(int)),
+		-1, "build param HIP_PARAM_TRAFFIC_TYPE failed\n");
 
 	HIP_IFEL(hip_build_param_contents(msg, (int *)(&addHit),
 					  HIP_PARAM_ADD_HIT,
-					  sizeof(int)), -1,
-		 "build param HIP_PARAM_ADD_HIT failed\n");
-
+					  sizeof(int)),
+		-1, "build param HIP_PARAM_ADD_HIT failed\n");
 
 	HIP_IFEL(hip_build_param_contents(msg, (int *)(&addOption),
 					  HIP_PARAM_ADD_OPTION,
-					  sizeof(int)), -1,
-		 "build param HIP_PARAM_ADD_OPTION failed\n");
-
+					  sizeof(int)),
+		-1, "build param HIP_PARAM_ADD_OPTION failed\n");
 
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0), -1,
-		 "build hdr failed\n");
-	
-HIP_DUMP_MSG(msg);
-
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0),
+		-1, "build hdr failed\n");
+	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
-	
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
@@ -558,37 +521,29 @@ HIP_DUMP_MSG(msg);
 */
 void examine_incoming_packet(struct ipq_handle *handle,
 			     unsigned long	packetId,
-			     void		*hdr,
+			     void	       *hdr,
 			     int		trafficType){
-    int   i, optLen;
-	int   hdr_size;
-	int   optionsLen;
-	char *hdrBytes = NULL;
-	struct tcphdr *tcphdr;
+	int i, optLen, hdr_size, optionsLen;
+	char 	       *hdrBytes = NULL;
+	struct tcphdr  *tcphdr;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
-	int sockfd, socketFamily, on = 1;
 	//fields for temporary values
-	u_int16_t portTemp;
+	u_int16_t       portTemp;
 	struct in_addr  addrTemp;
 	struct in6_addr addr6Temp;
 	/* the following vars are needed for
 	 * sending the i1 - initiating the exchange
 	 * in case we see that the peer supports hip*/
-	struct in6_addr *peer_ip = NULL;
-	struct in6_addr *peer_hit;
-	struct in6_addr *local_ip;
-	struct in6_addr *local_hit;
-	in_port_t src_tcp_port;
-	in_port_t dst_tcp_port;
+	struct in6_addr *peer_ip  = NULL;
+	struct in6_addr *peer_hit = NULL;
+	in_port_t        src_tcp_port;
+	in_port_t        dst_tcp_port;
 
 	HIP_DEBUG("\n");
 
-
-	//initialize the socket
-	sockfd = hip_raw_sock_v4;
-
-	peer_ip = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	peer_hit = HIP_MALLOC(16, 0);
 
 	if(trafficType == 4){
 		iphdr = (struct ip *)hdr;
@@ -623,8 +578,8 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		return;
 	}
 
-//	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
-//		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			//swap the ports
 			portTemp = tcphdr->source;
 			tcphdr->source = tcphdr->dest;
@@ -655,44 +610,41 @@ void examine_incoming_packet(struct ipq_handle *handle,
 			 * overwrite the i1 option that is
 			 * in the options of TCP
 			 */
-			//send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
 			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
 
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
-//		}
-//		else{
-//			allow_packet(handle, packetId);
-//			return;
-//		}
-//	}
-//	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
-//		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
+		}
+		else{
+			allow_packet(handle, packetId);
+			return;
+		}
+	}
+	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
+		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
 
-		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			//tcp header pointer + 20(minimum header length) +
 			// + 4(i1 option length in the TCP options)
-			peer_hit =  ((struct in6_addr *) hdrBytes) + 4*5 + 4;
-			local_hit = NULL;
+			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
 
 			hip_request_send_i1_to_hip_peer_from_hipd(
 					peer_ip,
-					peer_hit,
-					local_hit);
+					peer_hit);
 		}
-		else{
+//		else{
 			//save in db that peer does not support hip
-			hip_request_oppipdb_add_entry(peer_ip);
+//			hip_request_oppipdb_add_entry(peer_ip);
 
 			//signal for the normal TCP packets not to be blocked for this peer
-			hip_request_unblock_app_from_hipd(peer_ip);
-		}*/
+//			hip_request_unblock_app_from_hipd(peer_ip);
+//		}
 
 		//the packet is no more needed
-//		allow_packet(handle, packetId);
-//		return;
-//	}
+		drop_packet(handle, packetId);
+		return;
+	}
 
 	//allow all the rest
 	allow_packet(handle, packetId);
@@ -704,18 +656,11 @@ void examine_outgoing_packet(struct ipq_handle *handle,
 			     unsigned long      packetId,
 			     void              *hdr,
 			     int		trafficType){
-    int   i, optLen;
-	int   hdr_size;
-	int   optionsLen;
-	char *hdrBytes = NULL;
+	int i, optLen, hdr_size, optionsLen;
+	char          *hdrBytes = NULL;
 	struct tcphdr *tcphdr;
-	int sockfd, socketFamily, on = 1;
-
 
 	HIP_DEBUG("WWWW outgoing\n");
-
-	//initialize the socket
-	sockfd = hip_raw_sock_v4;
 
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;

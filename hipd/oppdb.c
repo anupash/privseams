@@ -287,7 +287,7 @@ hip_ha_t *hip_oppdb_get_hadb_entry_i1_r1(struct hip_common *msg,
 		if(!hit_is_opportunistic_null(&msg->hitr)){
 			goto out_err;
 		}
-		hip_get_default_hit(&hip_nl_route, &msg->hitr);
+		hip_get_default_hit(&msg->hitr);
 		//hip_get_any_localhost_hit(&msg->hitr, HIP_HI_DEFAULT_ALGO, 0);
 	} else if (type == HIP_R1) {
 		entry = hip_oppdb_get_hadb_entry(&msg->hitr, src_addr);
@@ -576,13 +576,11 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	int  *addHit      = NULL;
 	int  *addOption   = NULL;
 
-
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
 			 "Building of user header failed\n");
 	}
-
 
 	//get the size of the packet
 	memset(&packet_size, 0, sizeof(int));
@@ -590,15 +588,12 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	HIP_IFEL(!ptr, -1, "No packet size in msg\n");
 	memcpy(&packet_size, ptr, sizeof(packet_size));
 
-
 	//get the pointer to the ip header that is to be sent
 	hdr = HIP_MALLOC((int)packet_size, 0);
 	memset(hdr, 0, (int)packet_size);
 	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
 	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
 	memcpy(hdr, ptr, (int)packet_size);
-	//HIP_DEBUG_HIT("hdr = ", hdr);
-
 
 	//get the type of traffic
 	memset(&trafficType, 0, sizeof(int));
@@ -606,13 +601,11 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
 	memcpy(&trafficType, ptr, sizeof(trafficType));
 
-
 	//get whether hit option is to be added
 	memset(&addHit, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
 	memcpy(&addHit, ptr, sizeof(addHit));
-
 
 	//get the size of the packet
 	memset(&addOption, 0, sizeof(int));
@@ -620,7 +613,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
 	memcpy(&addOption, ptr, sizeof(addOption));
 
-	hip_msg_init(msg);//?????
+	hip_msg_init(msg);
 
 	err = send_tcp_packet(&hip_nl_route, (void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
 
@@ -631,21 +624,6 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 }
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 int hip_handle_opp_fallback(hip_opp_block_t *entry,

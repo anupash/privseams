@@ -389,7 +389,7 @@ void register_to_dht ()
                         opendht_n = list_entry(item);	
                         if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
                                 continue;
-                        if (hip_get_default_hit(&hip_nl_route, &tmp_hit)) {
+                        if (hip_get_default_hit(&tmp_hit)) {
                                 HIP_ERROR("No HIT found\n");
                                 return;
                         }

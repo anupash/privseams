@@ -21,7 +21,9 @@ struct hip_common *hipd_msg_v4 = NULL;
 int is_active_handover = 1; /* which handover to use active or lazy? */
 int hip_blind_status = 0; /* Blind status */
 
-
+/* For receiving of HIP control messages */
+int hip_raw_sock_v6 = 0;
+int hip_raw_sock_v4 = 0;
 
 /** File descriptor of the socket used for hip control packet NAT traversal on
     UDP/IPv4. */
