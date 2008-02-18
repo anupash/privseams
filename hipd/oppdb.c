@@ -423,9 +423,17 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 	hip_msg_init(msg);
 
+
+
+
+
+
+
+#ifdef CONFIG_HIP_OPPTCP
+if((src_tcp_port != 0) && (dst_tcp_port != 0)){
+#endif
 	/* Return the HIT immediately if we have already a host
 	   association with the peer host */
-
 	ipv6_addr_copy(&id, &dst_ip);
 	if (hip_for_each_ha(hip_hadb_map_ip_to_hit, &id)) {
 		HIP_DEBUG_HIT("existing HA found with HIT", &id);
@@ -440,6 +448,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		goto out_err;
 	}
 
+
 	/* Fallback if we have contacted peer before the peer did not
 	   support HIP the last time */
 	if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
@@ -450,6 +459,15 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		goto out_err;
 	}
+#ifdef CONFIG_HIP_OPPTCP
+}
+#endif
+
+
+
+
+
+
 
 	/* No previous contact, new host. Let's do the opportunistic magic */
 	
@@ -506,7 +524,6 @@ int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 			 "Building of user header failed\n");
 	}
 
-	//get the dst tcp port from the message for the TCP SYN i1 packet
 	memset(&dst_ip, 0, sizeof(struct in6_addr *));
 	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
@@ -617,7 +634,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	err = send_tcp_packet(&hip_nl_route, (void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
 
-	HIP_IFEL(err, 0, "error sending tcp packet\n");
+	HIP_IFEL(err, -1, "error sending tcp packet\n");
 
  out_err:
 	return err;

@@ -1371,7 +1371,7 @@ int send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	struct pseudo_hdr  *pseudo;
 	struct pseudo6_hdr *pseudo6;
 	void  *pointer;
-	struct in6_addr *defaultHit;
+	struct in6_addr *defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
 	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
 	char  *HITbytes;
 
@@ -1415,9 +1415,8 @@ int send_tcp_packet(struct rtnl_handle *hip_nl_route,
 	//copy the ip header and the tcp header without the options
 	memcpy(&newHdr[0], &bytes[0], twoHdrsSize);
 
+	//get the default hit
 	if(addHIT){
-		//get the default hit
-		defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
 		hip_get_default_hit(defaultHit);
 		HITbytes = (char*)defaultHit;
 	}

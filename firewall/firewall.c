@@ -351,25 +351,20 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 }
 
 
-/*
-
+/* TESTED OK
 add description
 explanation that the ports are needed to be 0 here
-
 */
 void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
 					       struct in6_addr *peer_hit){
 	struct hip_common *msg = NULL;
 	int err = 0;
-	in_port_t *src_tcp_port;
-	in_port_t *dst_tcp_port;
-
-	*src_tcp_port = (in_port_t)0;
-	*dst_tcp_port = (in_port_t)0;
+	in_port_t src_tcp_port = (in_port_t)0;
+	in_port_t dst_tcp_port = (in_port_t)0;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(NULL),
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_hit),
 					  HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)),
 		-1, "build param HIP_PARAM_HIT failed\n");
@@ -380,12 +375,12 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
 		-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 
 	/*both ports are 0 here so that we don't send the TCp SYN_i1 in hip_send_i1*/
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+	HIP_IFEL(hip_build_param_contents(msg, (in_port_t *)(&src_tcp_port),
 					  HIP_PARAM_SRC_TCP_PORT,
 					  sizeof(in_port_t)),
 		-1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+	HIP_IFEL(hip_build_param_contents(msg, (in_port_t *)(&dst_tcp_port),
 					  HIP_PARAM_DST_TCP_PORT,
 					  sizeof(in_port_t)),
 		-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
@@ -405,7 +400,7 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
 }
 
 
-/*
+/* TESTED OK
 add description
 */
 void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
@@ -434,7 +429,7 @@ void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 }
 
 
-/*
+/* TESTED OK
 add description
 */
 void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
@@ -463,7 +458,7 @@ void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
 }
 
 
-/*
+/* TESTED OK
 add description
 */
 void hip_request_send_tcp_packet(void *hdr,
@@ -633,13 +628,13 @@ void examine_incoming_packet(struct ipq_handle *handle,
 					peer_ip,
 					peer_hit);
 		}
-//		else{
+		else{
 			//save in db that peer does not support hip
-//			hip_request_oppipdb_add_entry(peer_ip);
+			hip_request_oppipdb_add_entry(peer_ip);
 
 			//signal for the normal TCP packets not to be blocked for this peer
-//			hip_request_unblock_app_from_hipd(peer_ip);
-//		}
+			hip_request_unblock_app_from_hipd(peer_ip);
+		}
 
 		//the packet is no more needed
 		drop_packet(handle, packetId);

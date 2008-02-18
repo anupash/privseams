@@ -115,9 +115,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG("\n");
 
 #ifdef CONFIG_HIP_OPPTCP
-	if(hip_get_opportunistic_tcp_status() &&
-			hit_is_opportunistic_hashed_hit(dst_hit) &&
-			!((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port)))
+	if(hip_get_opportunistic_tcp_status()        &&
+	   hit_is_opportunistic_hashed_hit(dst_hit)  &&
+	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0)))
 		hip_send_opp_tcp_i1(entry);
 	else{
 #endif
