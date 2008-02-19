@@ -118,6 +118,8 @@
 	#define HIP_PARAM_TRAFFIC_TYPE		32799
 	#define HIP_PARAM_ADD_HIT		32800
 	#define HIP_PARAM_ADD_OPTION		32801
+	#define HIP_PARAM_PEER_HIT		32802
+
 #endif
 /* End of HIPL private parameters. */
 

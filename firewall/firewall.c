@@ -22,7 +22,8 @@ int statefulFiltering = 1;
 int escrow_active = 0;
 int use_ipv4 = 0;
 int use_ipv6 = 0;
-int accept_normal_traffic = 1;
+int accept_normal_traffic  = 1;
+int accept_hip_esp_traffic = 0;
 int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 int counter = 0;
@@ -83,7 +84,12 @@ int firewall_init(){
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
-	if (use_ipv4) {
+
+
+/*IPV4 TRAFFIC*/
+
+	// udp/esp/hip over ipv4 traffic
+	if (use_ipv4 && !accept_hip_esp_traffic) {
 		system("iptables -I FORWARD -p 253 -j QUEUE");
 		system("iptables -I FORWARD -p 50 -j QUEUE");
 		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
@@ -99,11 +105,7 @@ int firewall_init(){
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-#ifdef CONFIG_HIP_OPPTCP
-		system("iptables -I FORWARD -p 6 -j QUEUE");
-		system("iptables -I INPUT -p 6 -j QUEUE");
-		system("iptables -I OUTPUT -p 6 -j QUEUE");
-#endif
+
 
 		if (!accept_normal_traffic) {
 			system("iptables -I FORWARD -j DROP");
@@ -111,7 +113,20 @@ int firewall_init(){
 			system("iptables -I OUTPUT -j DROP");
 		}
 	}
-	if (use_ipv6) {
+#ifdef CONFIG_HIP_OPPTCP
+	//tcp over ipv4 traffic
+	if (use_ipv4) {
+		system("iptables -I FORWARD -p 6 -j QUEUE");
+		system("iptables -I INPUT -p 6 -j QUEUE");
+		system("iptables -I OUTPUT -p 6 -j QUEUE");
+	}
+#endif
+
+
+/*IPV6 TRAFFIC*/
+
+	// udp/esp/hip over ipv6 traffic
+	if (use_ipv6 && !accept_hip_esp_traffic) {
 		system("ip6tables -I FORWARD -p 253 -j QUEUE");
 		system("ip6tables -I FORWARD -p 50 -j QUEUE");
 		
@@ -121,11 +136,7 @@ int firewall_init(){
 		system("ip6tables -I OUTPUT -p 253  -j QUEUE");
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 
-#ifdef CONFIG_HIP_OPPTCP
-		system("ip6tables -I FORWARD -p 6 -j QUEUE");
-		system("ip6tables -I INPUT -p 6 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-#endif
+
 
 		if (!accept_normal_traffic) {
 			system("ip6tables -I FORWARD -j DROP");
@@ -133,6 +144,15 @@ int firewall_init(){
 			system("ip6tables -I OUTPUT -j DROP");
 		}
 	}
+#ifdef CONFIG_HIP_OPPTCP
+	//tcp over ipv6 traffic
+	if (use_ipv4) {
+		system("ip6tables -I FORWARD -p 6 -j QUEUE");
+		system("ip6tables -I INPUT -p 6 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
+	}
+#endif
+
 
 out_err:
 	return 0;
@@ -355,8 +375,8 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 add description
 explanation that the ports are needed to be 0 here
 */
-void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
-					       struct in6_addr *peer_hit){
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
 	int err = 0;
 	in_port_t src_tcp_port = (in_port_t)0;
@@ -364,11 +384,11 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_hit),
-					  HIP_PARAM_HIT,
+/*	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_hit),
+					  HIP_PARAM_PEER_HIT,
 					  sizeof(struct in6_addr)),
-		-1, "build param HIP_PARAM_HIT failed\n");
-
+		-1, "build param HIP_PARAM_PEER_HIT failed\n");
+*/
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)),
@@ -386,7 +406,7 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_ip,
 		-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
 	
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1, "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_FROM_FIREWALL, 0), -1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
@@ -437,6 +457,8 @@ void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
 	int err = 0;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+HIP_DEBUG_HIT("peer ip = ", peer_ip);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
@@ -547,6 +569,8 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		hdrBytes = ((char *) iphdr) + hdr_size;
 
+HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
+
 		//peer and local ip needed for sending the i1 through hipd
 		IPV4_TO_IPV6_MAP(&iphdr->ip_src, peer_ip);//TO  BE FIXED obtain the pseudo hit instead
 	}
@@ -622,11 +646,11 @@ void examine_incoming_packet(struct ipq_handle *handle,
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			//tcp header pointer + 20(minimum header length) +
 			// + 4(i1 option length in the TCP options)
-			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
+////			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
 
 			hip_request_send_i1_to_hip_peer_from_hipd(
-					peer_ip,
-					peer_hit);
+					peer_hit,
+					peer_ip);
 		}
 		else{
 			//save in db that peer does not support hip
@@ -643,6 +667,9 @@ void examine_incoming_packet(struct ipq_handle *handle,
 
 	//allow all the rest
 	allow_packet(handle, packetId);
+
+
+	
 }
 
 
@@ -999,6 +1026,7 @@ static void *handle_ip_traffic(void *ptr){
         		}
       
       			if(is_hip_packet(packet_hdr, type)){
+printf("WWWWW\n");
       				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
@@ -1038,7 +1066,7 @@ static void *handle_ip_traffic(void *ptr){
 	  			{
 					drop_packet(hndl, m->packet_id);
 	  			}
-      		} else {
+			} else {
 #ifdef CONFIG_HIP_OPPTCP
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
@@ -1138,7 +1166,7 @@ int main(int argc, char **argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFH")) != -1) {
+	while ((ch = getopt(argc, argv, "f:t:vdFHA")) != -1) {
 		switch(ch) {
 		case 'v':
 			hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -1149,6 +1177,10 @@ int main(int argc, char **argv)
 		case 'H':
 			accept_normal_traffic = 0;
 		break;
+		case 'A':
+			accept_hip_esp_traffic = 1;
+		break;
+
 		case 'f':
 			rule_file = optarg;
 		break;

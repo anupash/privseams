@@ -372,7 +372,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 /**
  * No description.
  */
-int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src){
+int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src, int fromFirewall){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -392,18 +392,39 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	/* Check each HA for the peer hit, if so, create the header of the message */
 
 	/* Create an opportunistic HIT from the peer's IP  */
-	
+
+
+//to do
+//add the HIP_PARAM_PEER_HIT case here
+
+
+#ifdef CONFIG_HIP_OPPTCP
+	if(fromFirewall){
+		memset(&hit_our, 0, sizeof(struct in6_addr));
+		hip_get_default_hit(&hit_our);
+	}
+	else{
+		memset(&hit_our, 0, sizeof(struct in6_addr));
+		ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+		HIP_IFEL(!ptr, -1, "No hit in msg\n");
+		memcpy(&hit_our, ptr, sizeof(hit_our));
+	}
+	HIP_DEBUG_HIT("hit_our=", &hit_our);
+
+#else
 	memset(&hit_our, 0, sizeof(struct in6_addr));
 	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);
 	HIP_IFEL(!ptr, -1, "No hit in msg\n");
 	memcpy(&hit_our, ptr, sizeof(hit_our));
 	HIP_DEBUG_HIT("hit_our=", &hit_our);
-	
+#endif
+
 	ptr = (struct in6_addr *)
 		hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+
 
 #ifdef CONFIG_HIP_OPPTCP
 	/*get the src tcp port from the message for the TCP SYN i1 packet*/
@@ -424,14 +445,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src)
 	hip_msg_init(msg);
 
 
-
-
-
-
-
-#ifdef CONFIG_HIP_OPPTCP
-if((src_tcp_port != 0) && (dst_tcp_port != 0)){
-#endif
 	/* Return the HIT immediately if we have already a host
 	   association with the peer host */
 	ipv6_addr_copy(&id, &dst_ip);
@@ -448,7 +461,6 @@ if((src_tcp_port != 0) && (dst_tcp_port != 0)){
 		goto out_err;
 	}
 
-
 	/* Fallback if we have contacted peer before the peer did not
 	   support HIP the last time */
 	if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
@@ -459,14 +471,6 @@ if((src_tcp_port != 0) && (dst_tcp_port != 0)){
 		
 		goto out_err;
 	}
-#ifdef CONFIG_HIP_OPPTCP
-}
-#endif
-
-
-
-
-
 
 
 	/* No previous contact, new host. Let's do the opportunistic magic */
