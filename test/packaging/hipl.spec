@@ -87,10 +87,29 @@ Group: System Environment/Kernel
 %files	core
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
-%{prefix}/sbin/firewall
 %{prefix}/bin/hipsetup
+%config /etc/rc.d/init.d/hipd
+
+%package agent
+Summary: agent files
+Group: System Environment/Kernel
+%description agent
+%files	agent
 %{prefix}/bin/hipagent
 %config /etc/rc.d/init.d/hipd
+
+%package firewall
+Summary: firewall files
+Group: System Environment/Kernel
+%description firewall
+%files  firewall
+%{prefix}/sbin/firewall
+
+%package doc
+Summary: doc files
+Group: System Environment/Kernel
+%description doc
+%files  doc
 %doc doc/HOWTO.txt doc/howto-html
 
 %package test
