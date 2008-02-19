@@ -102,6 +102,8 @@ init_files ()
     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+
+    # cp $PKGDIR/DEBIAN/control $PKGROOT/control-$TMP
    
 }
 
@@ -193,10 +195,22 @@ copy_and_package_files ()
 	if [ ! $CORPORATE ];then
 	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
+   
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-    #cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
+    TMP="agent"
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+
+    echo "** Copying hipagent to '$PKGDIR'"
+    cp agent/hipagent $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
