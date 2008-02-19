@@ -273,12 +273,10 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
 #ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) 
-	{
-		hip_interfamily_status = SO_HIP_SET_INTERFAMILY_ON;
+	if( hip_use_i3 ) {
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
 	}
 #endif
-
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -301,18 +299,6 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
-//	TODO: initialize firewall socket
-	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL(hip_firewall_sock < 0, 1,
-	         "Could not create socket for firewall communication.\n");
-	unlink(HIP_FIREWALLADDR_PATH);
-	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
-	hip_firewall_addr.sun_family = AF_LOCAL;
-	strcpy(hip_firewall_addr.sun_path, HIP_FIREWALLADDR_PATH);
-	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)&hip_firewall_addr,
-	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
-	chmod(HIP_FIREWALLADDR_PATH, 0777);
-
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
@@ -359,11 +345,13 @@ int hip_init_dht()
                 if (hip_opendht_sock_fqdn > 0) {
                         close(hip_opendht_sock_fqdn);
                          hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                         hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
                 }
                  
                 if (hip_opendht_sock_hit > 0) {
                         close(hip_opendht_sock_hit);
                          hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                         hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
                 }
 
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");

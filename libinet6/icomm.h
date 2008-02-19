@@ -14,6 +14,7 @@
 #endif
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
+#define HIP_FIREWALL_PORT                      60600
 #define HIP_DAEMON_LOCAL_PORT                  40400
 #define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 #define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
@@ -95,6 +96,7 @@
 #define SO_HIP_DHT_OFF                          158
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
+#define SO_HIP_TRANSFORM_ORDER                  161
 /** @} */
 
 #endif /* _HIP_ICOMM */

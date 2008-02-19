@@ -9,19 +9,27 @@
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
-      responsibility! Using VMWare, Xen or User Mode Linux is recommended for
-      testing HIPL.
+      responsibility!
       </para>
     </chapter>
   <chapter>
     <title>Software Requirements</title>
     <para>
-     It is recommended that you get the latest source and compile it yourself.
-     As an alternative, you may download frozen, binary releases of the kernel
-     from <ulink url="http://hipl.hiit.fi/hipl/release/" />. However, before reporting any
-     bugs, please have a go with the latest source instead of the binaries
-     because the bug may already have been resolved upstream. There is also a
-     Ubuntu based live cd available from the HIPL download pages.
+     You need to modify your kernel and install HIPL userspace software along
+     with its dependencies in order to run HIP. You can patch your
+     kernel by installing the binary kernel images (Ubuntu and Fedora)
+     from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
+     binary kernel images are based on vanilla kernel and therefore do
+     not include any proprietary drivers or firmware images. As a result,
+     you may have to install software for your WLAN interface manually.</para>
+    <para>
+     This section describes how to build a custom kernel image with
+     HIP-related patches and how to build the HIPL userspace software
+     manually.  If you don't want to build the HIPL software manually,
+     you can install the userspace binary images from the
+     release. Before reporting any bugs with last release, please
+     build the the bleeding edge software from the source because your issue
+     may have been already resolved there.
     </para>
     <para>
       As the first requirement, you also need know the basics on Linux kernel
@@ -119,7 +127,10 @@
        Gibbon for compiling the kernel and userspace software:
     </para>
     <para>
-       aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6
+       aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev
+    </para>
+    <para>
+    On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel
     </para>
     <para>
     Note: Some people reported this error:
@@ -127,6 +138,8 @@
   file or directory.  This seems to be a bug in the latest libc6-dev
   package itself. It is just missing a header file. As a workaround,
   åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
+    <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
   </chapter>
   <chapter>
@@ -445,7 +458,7 @@
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
-      For tcpdump, you can use "tcpdump -n -i any esp or proto 253 or 
+      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or 
       port 50500" to catch HIP-only traffic.
     </para>
     <para>
@@ -953,7 +966,8 @@
   <listitem><para>
       At the responder we have to register to the rendezvous server:
    "tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;". This will establish
-   a HIP SA between the rendezvous server and the responder.
+   a HIP SA between the rendezvous server and the responder. Please use the
+   default HIT of the rendezvous server ("hipconf get hi default").
   </para></listitem>
   <listitem><para>
       At the responder start a server listening for incoming connections:
@@ -1045,20 +1059,20 @@
 -->
   <chapter>
     <title>HIP Firewall</title>
-        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure.</para>
+        <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
         <para>Ip6tables must define that HIP and ESP packets are
               queued in the userspace.  These rules are inserted
               automatically at the head of each chain. Other rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
+              concern the HIP (-p 139) and ESP packets (-p 50) must not be 
               inserted before them.</para>
 
 <itemizedlist>
-        <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A FORWARD -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A INPUT -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
+        <listitem><para>ip6tables -A OUTPUT -p 139 -j QUEUE</para></listitem>
         <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
 </itemizedlist>
 
@@ -1583,7 +1597,8 @@ combo-newgroup=&lt;create new...&gt;
     /etc/hosts and can contain multiple gateway address-name pairs. If
     this file exists hipd chooses gateways from the file by
     random. currently running servers list is at <ulink
-    url="http://www.opendht.org/servers.txt" />. 
+    url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
+    script can create you the list automatically (in tools directory).
     </para>
 
     <para>

@@ -140,6 +140,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
+        extern int hip_transform_order;
 	struct hip_common *msg = NULL;
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
@@ -156,15 +157,71 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_list_t *item, *tmp;
 
 	/* Supported HIP and ESP transforms. */
- 	hip_transform_suite_t transform_hip_suite[] = {
-		HIP_HIP_AES_SHA1,
-		HIP_HIP_3DES_SHA1,
-		HIP_HIP_NULL_SHA1	};
- 	hip_transform_suite_t transform_esp_suite[] = {
+        hip_transform_suite_t transform_hip_suite[] = {
+                HIP_HIP_AES_SHA1,
+                HIP_HIP_3DES_SHA1,
+                HIP_HIP_NULL_SHA1	};
+        hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
+        /* change order if necessary */
+        if (hip_transform_order == 0) {
+                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
+                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
+                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
+                
+                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
+                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
+                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
+                HIP_DEBUG("Transform order 0\n");
+        } else if (hip_transform_order == 1) {
+                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
+                transform_hip_suite[1] =  HIP_HIP_AES_SHA1;
+                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
+                
+                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
+                transform_esp_suite[1] =  HIP_ESP_AES_SHA1;
+                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
+                HIP_DEBUG("Transform order 1\n");
+        } else if (hip_transform_order == 2) {
+                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
+                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
+                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
+                
+                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
+                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
+                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
+                HIP_DEBUG("Transform order 2\n");
+        } else if (hip_transform_order == 3) {
+                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
+                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
+                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
+
+                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
+                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
+                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
+                HIP_DEBUG("Transform order 3\n");
+        } else if (hip_transform_order == 4) {
+                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
+                transform_hip_suite[1] = HIP_HIP_AES_SHA1;
+                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
+
+                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
+                transform_esp_suite[1] = HIP_ESP_AES_SHA1;
+                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
+                HIP_DEBUG("Transform order 4\n");
+        } else if (hip_transform_order == 5) {
+                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
+                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
+                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
+
+                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
+                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
+                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
+                HIP_DEBUG("Transform order 5\n");
+        }
 	
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -339,7 +396,7 @@ int hip_build_locators(struct hip_common *msg)
 #ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
     if (address_count > 0) {
 #else
-    if (address_count > 1) {
+    if (address_count > 0) {
 #endif
         HIP_IFEL(!(locs = malloc(address_count * 
                                  sizeof(struct hip_locator_info_addr_item))), 
@@ -377,7 +434,7 @@ int hip_build_locators(struct hip_common *msg)
         err = hip_build_param_locator(msg, locs, address_count);
     }
     else
-        HIP_DEBUG("Host has only one or no addresses no point "
+        HIP_DEBUG("Host has no addresses no point "
                   "in building LOCATOR parameters\n");
  out_err:
 
@@ -487,7 +544,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
-	if(r1_dst_port == HIP_NAT_UDP_PORT)
+	if(r1_dst_port)
 	{
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
@@ -1002,10 +1059,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                 outbound traffic (state machine)?
  */
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
-	char id[32];
+	char id[100];
 	sprintf_i3_id(id, (ID *)ctx_data);
 	
-	HIP_ERROR("Following ID not found: %s", id);
+	HIP_ERROR("Following ID not found: %s\n", id);
 }
 
 /** 
