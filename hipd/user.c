@@ -541,7 +541,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		hip_opp_unblock(msg, src);
+		hip_opptcp_unblock(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:

@@ -87,9 +87,8 @@ int firewall_init(){
 
 
 /*IPV4 TRAFFIC*/
-
 	// udp/esp/hip over ipv4 traffic
-	if (use_ipv4 && !accept_hip_esp_traffic) {
+	if(use_ipv4 && !accept_hip_esp_traffic){
 		system("iptables -I FORWARD -p 253 -j QUEUE");
 		system("iptables -I FORWARD -p 50 -j QUEUE");
 		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
@@ -105,8 +104,6 @@ int firewall_init(){
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-
-
 		if (!accept_normal_traffic) {
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
@@ -115,18 +112,18 @@ int firewall_init(){
 	}
 #ifdef CONFIG_HIP_OPPTCP
 	//tcp over ipv4 traffic
-	if (use_ipv4) {
+	if(use_ipv4){
 		system("iptables -I FORWARD -p 6 -j QUEUE");
 		system("iptables -I INPUT -p 6 -j QUEUE");
 		system("iptables -I OUTPUT -p 6 -j QUEUE");
 	}
 #endif
+/*end of IPV4 TRAFFIC*/
 
 
 /*IPV6 TRAFFIC*/
-
 	// udp/esp/hip over ipv6 traffic
-	if (use_ipv6 && !accept_hip_esp_traffic) {
+	if(use_ipv6 && !accept_hip_esp_traffic){
 		system("ip6tables -I FORWARD -p 253 -j QUEUE");
 		system("ip6tables -I FORWARD -p 50 -j QUEUE");
 		
@@ -136,8 +133,6 @@ int firewall_init(){
 		system("ip6tables -I OUTPUT -p 253  -j QUEUE");
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 
-
-
 		if (!accept_normal_traffic) {
 			system("ip6tables -I FORWARD -j DROP");
 			system("ip6tables -I INPUT -j DROP");
@@ -146,13 +141,13 @@ int firewall_init(){
 	}
 #ifdef CONFIG_HIP_OPPTCP
 	//tcp over ipv6 traffic
-	if (use_ipv4) {
+	if(use_ipv6){
 		system("ip6tables -I FORWARD -p 6 -j QUEUE");
 		system("ip6tables -I INPUT -p 6 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 	}
 #endif
-
+/*end of IPV6 TRAFFIC*/
 
 out_err:
 	return 0;
@@ -242,6 +237,8 @@ int is_hip_packet(void * hdr, int trafficType){
 	struct udphdr *udphdr;
 	int hdr_size;
 
+	HIP_DEBUG("\n");
+
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;
 		if(iphdr->ip_p == IPPROTO_HIP) 
@@ -274,8 +271,12 @@ int is_hip_packet(void * hdr, int trafficType){
 
 
 /**
-*
-*/
+ * Not allow a packet to pass
+ * 
+ * @param handle	the handle for the packets.
+ * @param packetId	the packet ID.
+ * @return		nothing
+ */
 void allow_packet(struct ipq_handle *handle, unsigned long packetId){
 	ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
 	HIP_DEBUG("Packet accepted \n\n");
@@ -283,8 +284,12 @@ void allow_packet(struct ipq_handle *handle, unsigned long packetId){
 
 
 /**
-*
-*/
+ * Not allow a packet to pass
+ * 
+ * @param handle	the handle for the packets.
+ * @param packetId	the packet ID.
+ * @return		nothing
+ */
 void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 	ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
 	HIP_DEBUG("Packet dropped \n\n");
@@ -294,8 +299,11 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 #ifdef CONFIG_HIP_OPPTCP
 
 /**
-*
-*/
+ * Returns whether a packet is incoming
+ * 
+ * @param theHook	the packet hook.
+ * @return		1 if incoming packet, 0 otherwise.
+ */
 int is_incoming_packet(unsigned int theHook){
 	if(theHook == NF_IP_LOCAL_IN)
 		return 1;
@@ -304,8 +312,11 @@ int is_incoming_packet(unsigned int theHook){
 
 
 /**
-*
-*/
+ * Returns whether a packet is outgoing
+ * 
+ * @param theHook	the packet hook.
+ * @return		1 if outgoing packet, 0 otherwise.
+ */
 int is_outgoing_packet(unsigned int theHook){
 	if(theHook == NF_IP_LOCAL_OUT)
 		return 1;
@@ -317,14 +328,15 @@ int is_outgoing_packet(unsigned int theHook){
  * checks for the i1 option in a packet
  *
  * @param  tcphdrBytes	a pointer to the TCP header that is examined.
- * @param  hdrLen  		the length of the TCP header in bytes.
- * @return zero if i1 option not found in the options, or 1 if it is found.
+ * @param  hdrLen  	the length of the TCP header in bytes.
+ * @return 		zero if i1 option not found in the options, or 1 if it is found.
  */ 
 int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 	int   i = 20;//the initial obligatory part of the TCP header
 	int   foundHipOpp = 0, len = 0;
 	char *bytes =(char*)tcphdrBytes;
-	//HIP_OPTION_KIND
+
+	HIP_DEBUG("\n");
 
 	while((i < hdrLen) && (foundHipOpp == 0)){
 		switch (bytes[i]) {
@@ -365,22 +377,26 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 			return 1;
 		break;
 		}
-		//i++;
 	}
 	return foundHipOpp;
 }
 
 
-/* TESTED OK
-add description
-explanation that the ports are needed to be 0 here
-*/
+/**
+ * Sends a message to hipd so that hipd initiates the basic exchange, sending the i1. In this message, the ports are 0, so that at the hip_send_i1 function we know we don't need to send the TCP SYN_i1 again.
+ * 
+ * @param peer_hit	the peer hit that has been obtained from the TCP SYN_ACK_i1 packet.
+ * @param peer_ip	the peer ip to send the i1 packet to.
+ * @return		nothing.
+ */
 void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
 					       struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
 	int err = 0;
 	in_port_t src_tcp_port = (in_port_t)0;
 	in_port_t dst_tcp_port = (in_port_t)0;
+
+	HIP_DEBUG("\n");
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
@@ -420,13 +436,18 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
 }
 
 
-/* TESTED OK
-add description
-*/
+/**
+ * Send the ip of a peer to hipd, so that it can unblock the packets that are sent to a particular peer. This is done when we receive a TCP SYN_ACK/RST_ACK without the i1 option.
+ * 
+ * @param peer_ip	peer ip.
+ * @return		nothing
+ */
 void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
 	int err = 0;
-	
+
+	HIP_DEBUG("\n");	
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
@@ -449,16 +470,19 @@ void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 }
 
 
-/* TESTED OK
-add description
-*/
+/**
+ * Send the ip of a peer to hipd, so that it can add it to the blacklist database.
+ * 
+ * @param peer_ip	peer ip.
+ * @return		nothing
+ */
 void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
 	int err = 0;
-	
-	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-HIP_DEBUG_HIT("peer ip = ", peer_ip);
+	HIP_DEBUG("\n");
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
@@ -480,9 +504,16 @@ HIP_DEBUG_HIT("peer ip = ", peer_ip);
 }
 
 
-/* TESTED OK
-add description
-*/
+/**
+ * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.
+ * 
+ * @param *hdr		pointer to the packet that is to be sent.
+ * @param packet_size	the size of the packet.
+ * @param trafficType	ipv4 or ipv6.
+ * @param addHit	whether the local HIT is to be added at the tcp options
+ * @param addOption	whether the i1 option is to be added at the tcp options
+ * @return		nothing
+ */
 void hip_request_send_tcp_packet(void *hdr,
 				 int   packet_size,
 				 int   trafficType,
@@ -491,6 +522,8 @@ void hip_request_send_tcp_packet(void *hdr,
 	struct hip_common *msg = NULL;
 	int err = 0;
 	
+	HIP_DEBUG("\n");
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hdr,
@@ -534,12 +567,18 @@ void hip_request_send_tcp_packet(void *hdr,
 
 
 /**
-*
-*/
-void examine_incoming_packet(struct ipq_handle *handle,
-			     unsigned long	packetId,
-			     void	       *hdr,
-			     int		trafficType){
+ * Analyzes incoming TCP packets
+ * 
+ * @param *handle	the handle that has grabbed the packet, needed when allowing or dropping the packet.
+ * @param packetId	the ID of the packet.
+ * @param hdr		pointer to the ip packet being examined.
+ * @param trafficType	ipv4 or ipv6 type of traffic.
+ * @return		nothing
+ */
+void examine_incoming_tcp_packet(struct ipq_handle *handle,
+				 unsigned long	    packetId,
+				 void		   *hdr,
+				 int		    trafficType){
 	int i, optLen, hdr_size, optionsLen;
 	char 	       *hdrBytes = NULL;
 	struct tcphdr  *tcphdr;
@@ -585,14 +624,19 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 		peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
 	}
 
-/*	//check if SYN field is 0
+/*	//no checking for SYN 0 here
+	//because there is a following case
+	//of checking TCP RST_ACK packets,
+	//where SYN is 0
+
+	//check if SYN field is 0
 	if(tcphdr->syn == 0){
 		allow_packet(handle, packetId);
 		return;
 	}
 */
-	//check that there are options
-	if(tcphdr->doff == 5){	//no options
+	//check that there are no options
+	if(tcphdr->doff == 5){
 		allow_packet(handle, packetId);
 		return;
 	}
@@ -644,9 +688,8 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
 
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			//tcp header pointer + 20(minimum header length) +
-			// + 4(i1 option length in the TCP options)
-////			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
+			//tcp header pointer + 20(minimum header length) + 4(i1 option length in the TCP options)
+			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
 
 			hip_request_send_i1_to_hip_peer_from_hipd(
 					peer_hit,
@@ -659,30 +702,35 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 			//signal for the normal TCP packets not to be blocked for this peer
 			hip_request_unblock_app_from_hipd(peer_ip);
 		}
-
 		//the packet is no more needed
 		drop_packet(handle, packetId);
 		return;
 	}
-
 	//allow all the rest
 	allow_packet(handle, packetId);
-
-
-	
 }
 
 
-//###########################################################
-void examine_outgoing_packet(struct ipq_handle *handle,
-			     unsigned long      packetId,
-			     void              *hdr,
-			     int		trafficType){
+/**
+ * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
+ * from hip_send_i1 in hipd, so for the moment this is not being used.
+ * 
+ * @param *handle	the handle that has grabbed the packet,
+ * 			needed when allowing or dropping the packet.
+ * @param packetId	the ID of the packet.
+ * @param hdr		pointer to the ip packet being examined.
+ * @param trafficType	ipv4 or ipv6 type of traffic.
+ * @return		nothing
+ */
+void examine_outgoing_tcp_packet(struct ipq_handle *handle,
+				 unsigned long	    packetId,
+				 void		   *hdr,
+				 int		    trafficType){
 	int i, optLen, hdr_size, optionsLen;
 	char          *hdrBytes = NULL;
 	struct tcphdr *tcphdr;
 
-	HIP_DEBUG("WWWW outgoing\n");
+	HIP_DEBUG("\n");
 
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;
@@ -831,6 +879,8 @@ int filter_hip(const struct in6_addr * ip6_src,
   	int conntracked = 0;
   	int ret_val = 0;
 
+	HIP_DEBUG("\n");
+
   	//if dynamically changing rules possible 
   	//int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
   	//+ filter_state käsittelemään myös esp paketit
@@ -951,9 +1001,14 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 /**
-* function called by a thread that loops
-* through either ipv4 or ipv6 packets
-*/
+ * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
+ * from hip_send_i1 in hipd, so for the moment this is not being used.
+ * 
+ * @param *ptr	pointer to an integer that indicates
+ * 		the type of traffic: 4 - ipv4; 6 - ipv6.
+ * @return	nothing, this function loops forever,
+ * 		until the firewall is stopped.
+ */
 static void *handle_ip_traffic(void *ptr){
 	int status;
 	unsigned char buf[BUFSIZE];
@@ -1026,7 +1081,6 @@ static void *handle_ip_traffic(void *ptr){
         		}
       
       			if(is_hip_packet(packet_hdr, type)){
-printf("WWWWW\n");
       				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
@@ -1067,6 +1121,7 @@ printf("WWWWW\n");
 					drop_packet(hndl, m->packet_id);
 	  			}
 			} else {
+/* OPPORTUNISTIC MODE HACKS */
 #ifdef CONFIG_HIP_OPPTCP
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
@@ -1074,11 +1129,11 @@ printf("WWWWW\n");
 						allow_packet(hndl, m->packet_id);
 					else
 						drop_packet(hndl, m->packet_id);
-				} /* OPPORTUNISTIC MODE HACKS */ 
+				}  
 				else if(is_incoming_packet(packetHook))
-					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
+					examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
-//					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
+					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					allow_packet(hndl, m->packet_id);
 				else{
 #endif
@@ -1127,6 +1182,8 @@ void check_and_write_default_config(){
 	FILE *fp = NULL;
 	ssize_t items;
 	char *file = HIP_FW_DEFAULT_RULE_FILE;
+
+	HIP_DEBUG("");
 
 	if (stat(file, &status) && errno == ENOENT) {
 		errno = 0;
@@ -1279,6 +1336,12 @@ int main(int argc, char **argv)
   	return 0;
 }
 
+
+/**
+ * Loads several modules that are neede by th firewall.
+ * 
+ * @return	nothing.
+ */
 void firewall_probe_kernel_modules()
 {
 	int count, err, status;

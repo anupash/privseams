@@ -393,13 +393,11 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 
 	/* Create an opportunistic HIT from the peer's IP  */
 
-
-//to do
-//add the HIP_PARAM_PEER_HIT case here
-
-
 #ifdef CONFIG_HIP_OPPTCP
 	if(fromFirewall){
+		//to do
+		//add the HIP_PARAM_PEER_HIT case here
+
 		memset(&hit_our, 0, sizeof(struct in6_addr));
 		hip_get_default_hit(&hit_our);
 	}
@@ -512,10 +510,16 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 
 
 #ifdef CONFIG_HIP_OPPTCP
-/*
-TO DO, add function description
-*/
-int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
+
+/**
+ * Processes a message that has been sent to hipd from the firewall,
+ * telling it to unblock the applications that connect to a particular peer.
+ * 
+ * @param *msg	the message.
+ * @param *src	the source of the message.
+ * @return	an error, if any, during the processing.
+ */
+int hip_opptcp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -524,8 +528,8 @@ int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
-			 "Building of user header failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+			 -1, "Building of user header failed\n");
 	}
 
 	memset(&dst_ip, 0, sizeof(struct in6_addr *));
@@ -544,9 +548,14 @@ int hip_opp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 }
 
 
-/*
-TO DO, add function description
-*/
+/**
+ * Processes a message that has been sent to hipd from the firewall,
+ * telling it to add the ip of a peer to the blacklist database.
+ * 
+ * @param *msg	the message.
+ * @param *src	the source of the message.
+ * @return	an error, if any, during the processing.
+ */
 int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
@@ -556,8 +565,8 @@ int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
-			 "Building of user header failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+			 -1, "Building of user header failed\n");
 	}
 
 	//get the dst tcp port from the message for the TCP SYN i1 packet
@@ -577,13 +586,14 @@ int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src)
 }
 
 
-/*
-TO DO, add function description
-*/
-/*
-send_tcp_packet(&hip_nl_route, hdr, hdr_size + 4*tcphdr->doff, trafficType, sockfd, 1, 1);
-hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
-*/
+/**
+ * Processes a message that has been sent to hipd from the firewall,
+ * telling it to send a tcp packet.
+ * 
+ * @param *msg	the message.
+ * @param *src	the source of the message.
+ * @return	an error, if any, during the processing.
+ */
 int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, hit_our, id, our_addr;
@@ -599,8 +609,8 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0), -1, 
-			 "Building of user header failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+			 -1, "Building of user header failed\n");
 	}
 
 	//get the size of the packet
@@ -636,7 +646,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	hip_msg_init(msg);
 
-	err = send_tcp_packet(&hip_nl_route, (void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
+	err = send_tcp_packet(/*&hip_nl_route, */(void*)hdr, (int)packet_size, (int)trafficType, hip_raw_sock_v4, (int)addHit, (int)addOption);
 
 	HIP_IFEL(err, -1, "error sending tcp packet\n");
 
