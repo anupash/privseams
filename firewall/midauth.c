@@ -109,6 +109,27 @@ static void update_all_headers(struct midauth_packet *p) {
 }
 
 /**
+ * Check the correctness of a hip_solution_m
+ *
+ * @param hip the hip_common that contains the solution
+ * @param s the solution to be checked
+ * @return 0 if correct, nonzero otherwise
+ */
+static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s) {
+    struct hip_solution solution;
+
+    solution.K = s->K;
+    solution.reserved = s->reserved;
+    solution.I = s->I;
+    solution.J = s->J;
+
+    if (hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0)
+	return 1;
+
+    return 0;
+}
+
+/**
  * Insert the nonce into the R1 packet.
  *
  * @param m the original packet
@@ -157,6 +178,7 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     int verdict = NF_ACCEPT;
     struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
+    struct hip_solution_m *solution;
     char *nonce1 = "hello";
     char *nonce2 = "world";
 
@@ -166,6 +188,16 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     HIP_DEBUG("***************************old*******************************\n");
     HIP_DUMP_MSG(hip);
+
+    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+    if (solution)
+    {
+	if (midauth_verify_solution_m(hip, solution) == 0)
+	    HIP_DEBUG("++++found correct hip_solution_m\n");
+	else
+	    HIP_DEBUG("++++found wrong hip_solution_m\n");
+    } else
+	HIP_DEBUG("++++found no hip_solution_m\n");
 
     hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
     hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
