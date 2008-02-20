@@ -27,10 +27,10 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
+	test/packaging/create-agent-deb.sh -s
+	sudo /etc/init.d/hipd start
 source-deb:
 	test/packaging/create-deb.sh -s
-agent-deb:
-	test/packaging/create-agent-deb.sh -s
 corporate-deb:
 	test/packaging/create-deb.sh -c
 dist-hook:
