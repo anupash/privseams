@@ -414,7 +414,7 @@ int hip_solve_puzzle_m(struct hip_common *out, struct hip_common *in, hip_ha_t *
 	                 &tmp, in, HIP_SOLVE_PUZZLE)) == 0,
 			 -EINVAL, "Solving of puzzle failed\n");
 
-		HIP_IFEL(hip_build_param_solution_m(out, pz, solution), -1, 
+		HIP_IFEL(hip_build_param_solution_m(out, pz, ntoh64(solution)), -1, 
 			"Error while creating solution_m reply parameter\n");
 		pz = (struct hip_puzzle_m *) hip_get_next_param(in, 
 		       (struct hip_tlv_common *) pz);
