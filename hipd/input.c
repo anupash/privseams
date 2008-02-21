@@ -1479,6 +1479,12 @@ int hip_create_r2(struct hip_context *ctx,
 					  0, spi_in), -1,
 		 "building of ESP_INFO failed.\n");
 
+	/********** SOLUTION_M **********/
+#ifdef CONFIG_HIP_MIDAUTH
+	HIP_IFEL(hip_solve_puzzle_m(r2, ctx->input, entry), -1, 
+		 "Building of solution_m failed\n");
+#endif
+
 	/********** ECHO_RESPONSE_M (OPTIONAL) **************/
 #ifdef CONFIG_HIP_MIDAUTH
 	{

@@ -146,9 +146,6 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     memcpy(p->buffer, m->payload, m->data_len);
 
-    HIP_DEBUG("***************************old*******************************\n");
-    HIP_DUMP_MSG(hip);
-
     /* beware: black magic & dragons ahead */
 
     hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
@@ -156,13 +153,9 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
     hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
     hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
-    p->size = hip_get_msg_total_len(hip);
-
     /* no more dragons & black magic*/
 
-    HIP_DEBUG("***************************new*******************************\n");
-    HIP_DUMP_MSG(hip);
-
+    p->size = hip_get_msg_total_len(hip);
     update_all_headers(p);
 
     return verdict;
@@ -186,26 +179,22 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     memcpy(p->buffer, m->payload, m->data_len);
 
-    HIP_DEBUG("***************************old*******************************\n");
-    HIP_DUMP_MSG(hip);
-
     solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
     if (solution)
     {
 	if (midauth_verify_solution_m(hip, solution) == 0)
-	    HIP_DEBUG("++++found correct hip_solution_m\n");
+	    HIP_DEBUG("found correct hip_solution_m\n");
 	else
-	    HIP_DEBUG("++++found wrong hip_solution_m\n");
+	    HIP_DEBUG("found wrong hip_solution_m\n");
     } else
-	HIP_DEBUG("++++found no hip_solution_m\n");
+	HIP_DEBUG("found no hip_solution_m\n");
 
     hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
     hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
+    hip_build_param_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
+    hip_build_param_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
 
     p->size = hip_get_msg_total_len(hip);
-    HIP_DEBUG("***************************new*************************%i******\n", p->size);
-    HIP_DUMP_MSG(hip);
-
     update_all_headers(p);
 
     return verdict;
@@ -221,21 +210,22 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
 static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     int verdict = NF_ACCEPT;
     struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
+    struct hip_solution_m *solution;
 
-    /* FIXME potential buffer overflow, using fixed size buffer in
-     * midauth_packet */
-
-    /* just copy it for testing */
+    /* don't copy here, packet will not be modified anyway */
     memcpy(p->buffer, m->payload, m->data_len);
 
-    HIP_DEBUG("***************************old*******************************\n");
-    HIP_DUMP_MSG(hip);
-    p->size = hip_get_msg_total_len(hip);
-    HIP_DEBUG("***************************new*******************************\n");
-    HIP_DUMP_MSG(hip);
+    /* check for ECHO_REPLY_M and SOLUTION_M here */
+    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+    if (solution)
+    {
+	if (midauth_verify_solution_m(hip, solution) == 0)
+	    HIP_DEBUG("found correct hip_solution_m\n");
+	else
+	    HIP_DEBUG("found wrong hip_solution_m\n");
+    } else
+	HIP_DEBUG("found no hip_solution_m\n");
 
-    update_all_headers(p);
-    p->size=0;
 
     return verdict;
 }
