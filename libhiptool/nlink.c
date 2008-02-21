@@ -1,6 +1,6 @@
 #include "nlink.h"
 
-/*
+/* 
  * Note that most of the functions are modified versions of
  * libnetlink functions.
  */
@@ -19,7 +19,10 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	rta->rta_type = type;
 	rta->rta_len = len;
 	memcpy(RTA_DATA(rta), data, alen);
+	HIP_ERROR("				NLMSG_ALIGN(n->nlmsg_len) = %d\n", NLMSG_ALIGN(n->nlmsg_len));
 	n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
+	HIP_ERROR("-------------------addattr_l: longitud de n->nlmsg_len es %d\n",n->nlmsg_len);	
+	HIP_ERROR("				RTA_ALIGN(len) = %d\n", RTA_ALIGN(len));
 	return 0;
 }
 
@@ -166,6 +169,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 			n->nlmsg_flags |= NLM_F_ACK;
 
 	status = sendmsg(nl->fd, &msg, 0);
+	
 	if (status < 0)
 	{
 		HIP_PERROR("Cannot talk to rtnetlink");
@@ -173,23 +177,24 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 		goto out_err;
 	}
 
+	
 	memset(buf,0,sizeof(buf));
 	iov.iov_base = buf;
 
 	while (HIP_NETLINK_TALK_ACK) {
-			iov.iov_len = sizeof(buf);
-			status = recvmsg(nl->fd, &msg, 0);
+		iov.iov_len = sizeof(buf);
+		status = recvmsg(nl->fd, &msg, 0);
 
-			if (status < 0)
+		if (status < 0)
+		{
+			if (errno == EINTR)
 			{
-				if (errno == EINTR)
-				{
-					HIP_DEBUG("EINTR\n");
-					continue;
-				}
-				HIP_PERROR("OVERRUN");
+				HIP_DEBUG("EINTR\n");
 				continue;
 			}
+			HIP_PERROR("OVERRUN");
+			continue;
+		}
 		if (status == 0) {
                         HIP_ERROR("EOF on netlink.\n");
 			err = -1;
@@ -419,9 +424,6 @@ int get_addr_1(inet_prefix *addr, const char *name, int family)
                 return 0;
         }
 
-
-
-
         addr->family = AF_INET;
         if (family != AF_UNSPEC && family != AF_INET)
                 return -1;
@@ -540,8 +542,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                 req1.r.rtm_type = RTN_UNICAST;
         }
 
-	HIP_DEBUG("Setting %s as route for %s device with family %d\n",
-		  ip, dev, family);
+	if (family== AF_INET) HIP_DEBUG("Setting %s as route for %s device with family %d\n",ip, dev, family);
         HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
         //if (req.r.rtm_family == AF_UNSPEC)
                 //req.r.rtm_family = dst.family;
@@ -558,7 +559,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
 	addattr32(&req1.n, sizeof(req1), RTA_OIF, idx);
 
-        HIP_IFEL((netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+  	HIP_IFEL((netlink_talk(rth, &req1.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 		"netlink_talk failed\n");
 
  out_err:
@@ -619,7 +620,7 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 	HIP_ASSERT(dst_addr);
 
 	HIP_DEBUG_IN6ADDR("Getting route for destination address", dst_addr);
-
+	
 	if(IN6_IS_ADDR_V4MAPPED(dst_addr)) {
 		IPV6_TO_IPV4_MAP(dst_addr, &ip4);
 		preferred_family = AF_INET;
@@ -672,6 +673,38 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 	return err;
 }
 
+/*
+hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
+                                  strcat(lsi_str, HIP_LSI_PREFIX_STR),
+				  HIP_HIT_DEV, idxmap), -1);
+
+*/
+
+int convert_ipv6_slash_to_ipv4_slash(char *ip, int cmd){
+	struct in6_addr ip6_aux;
+	struct in_addr ip4;
+	char *slash = strchr(ip, '/');
+	char *lsi_str;
+	int convert = 0;	
+	
+	if (slash)
+               *slash = 0;
+
+	inet_pton(AF_INET6, ip, &ip6_aux);
+
+	if(IN6_IS_ADDR_V4MAPPED(&ip6_aux)) {
+		IPV6_TO_IPV4_MAP(&ip6_aux, &ip4);
+		lsi_str = inet_ntoa(ip4);
+		convert = 1;
+
+		if (cmd == RTM_NEWADDR)
+			ip = strcat(lsi_str, HIP_LSI_PREFIX_STR);
+		else if (cmd == RTM_NEWROUTE)
+			ip = strcat(lsi_str, HIP_LSI_FULL_PREFIX_STR);			
+	}
+	return convert;
+}
+
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 		      char *dev, struct idxmap **idxmap)
 {
@@ -680,20 +713,21 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
                 struct ifaddrmsg        ifa;
                 char                    buf[256];
         } req;
-        char  *lcl_arg = NULL;
+
         inet_prefix lcl;
         int local_len = 0, err = 0;
         inet_prefix addr;
 
         memset(&req, 0, sizeof(req));
 
-        req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
-        req.n.nlmsg_flags = NLM_F_REQUEST;
-        req.n.nlmsg_type = cmd;
-        req.ifa.ifa_family = family;
+	if(convert_ipv6_slash_to_ipv4_slash(ip, cmd))
+		family = AF_INET;
 
-        lcl_arg = ip;
-	HIP_DEBUG("IP got %s\n", ip);
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)); //length of the message, including header
+	req.n.nlmsg_type = cmd;//message content
+        req.n.nlmsg_flags = NLM_F_REQUEST; // flags, in this case indication about a request message
+	req.ifa.ifa_family = family;
+
 	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
         addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
         local_len = lcl.bytelen;
@@ -704,7 +738,9 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
 		 -1, "ll_name_to_index failed\n");
 
-        HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+	int aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);// adds to the device dummy0
+	HIP_DEBUG("value exit function netlink_talk %i\n", aux);
+        HIP_IFEL((aux < 0), -1,
 		 "netlink talk failed\n");
 
  out_err:
@@ -1080,7 +1116,7 @@ int rtnl_wilddump_request(struct rtnl_handle *rth, int family, int type)
 
 int ll_init_map(struct rtnl_handle *rth, struct idxmap **idxmap)
 {
-        if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
+	if (rtnl_wilddump_request(rth, AF_UNSPEC, RTM_GETLINK) < 0) {
                 HIP_PERROR("Cannot send dump request");
                 return -1;
         }

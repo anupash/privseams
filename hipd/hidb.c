@@ -229,8 +229,8 @@ int hip_add_host_id(hip_db_struct_t *db,
 		err = -EEXIST;
 		goto out_err;
 	}
-	lsi = &id_entry->lsi;
 
+	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
 	id_entry->remove = remove;
 	id_entry->arg = arg;
@@ -287,8 +287,8 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
+	struct in6_addr in6_lsi;
 	hip_lsi_t lsi;
-	//struct in6_addr dsa_hit, rsa_hit;
 	
 	HIP_DEBUG("/* --------- */ \n");
 	HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
@@ -303,57 +303,52 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	  
 	  /* NOTE: changed to use hip_eid_endpoint structs instead of 
 	     hip_host_id:s when passing IDs from user space to kernel */
-	  if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
-	    continue;
-	  HIP_DEBUG("host id found in the msg\n");
+		if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
+	  		continue;
+	  	HIP_DEBUG("host id found in the msg\n");
 	  
-	  eid_endpoint = (struct hip_eid_endpoint *)param;
+		eid_endpoint = (struct hip_eid_endpoint *)param;
+	
+		HIP_IFEL(!eid_endpoint,-ENOENT,"No host endpoint in input\n");
 
-	  if (!eid_endpoint) {
-	    HIP_ERROR("No host endpoint in input\n");
-	    err = -ENOENT;
-	    goto out_err;
-	  }
-
-	  host_identity = &eid_endpoint->endpoint.id.host_id;
+		host_identity = &eid_endpoint->endpoint.id.host_id;
 	  
-	  _HIP_HEXDUMP("host id\n", host_identity,
+		_HIP_HEXDUMP("host id\n", host_identity,
 		       hip_get_param_total_len(host_identity));
 	  
-	  HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
+		HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
 					      HIP_HIT_TYPE_HASH100),
-		   -EFAULT,
-		   "Host id to hit conversion failed\n");
+			-EFAULT, "Host id to hit conversion failed\n");
 	  
-	  lhi.anonymous =
-		  (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
-		  ?
-		  1 : 0;
+		lhi.anonymous =
+			(eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
+			?
+			1 : 0;
 
-	/*  lhi.algo = eid_endpoint.algo;*/
+		/*  lhi.algo = eid_endpoint.algo;*/
 
-	  /* Adding the pair <HI,LSI> */
-	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
-					 &lsi, host_identity,
-					 NULL, NULL, NULL),
-		   -EFAULT,
-		   "adding of local host identity failed\n");
+		/* Adding the pair <HI,LSI> */
+		HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
+					&lsi, host_identity,
+					NULL, NULL, NULL),
+			-EFAULT, "adding of local host identity failed\n");
 
-	  /* Adding the route just in case it does not exist */
-	  hip_add_iface_local_route(&lhi.hit);
+		IPV4_TO_IPV6_MAP(&lsi, &in6_lsi);
 
-	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
-		   "Failed to add HIT to the device\n");
-
-	/* Adding LSI route - is it necesssary? what exactly means ?  */
-	  hip_add_iface_local_route_lsi(&lsi);
-	  HIP_IFEL(hip_add_iface_local_lsi(&lsi), -1,
-		   "Failed to add LSI to the device\n");
+		/* Adding routes just in case they don't exist */
+		hip_add_iface_local_route(&lhi.hit);
+		hip_add_iface_local_route(&in6_lsi);
+		
+		/* Adding HITs and LSIs to the interface */
+		HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
+			"Failed to add HIT to the device\n");
+		HIP_IFEL(hip_add_iface_local_hit(&in6_lsi), -1, 
+			"Failed to add LSI to the device\n");
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
- out_err:
-	
+
+ out_err:	
 	return err;
 }
 
@@ -745,18 +740,15 @@ int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 	struct hip_host_id_entry *id_entry_aux;
 	hip_list_t *item;
 	hip_lsi_t lsi_aux;
-	int err = -1, used_lsi, c, i;
+	int err = 0, used_lsi, c, i;
 	int len = sizeof(lsi_addresses)/sizeof(*lsi_addresses);
 	
 	for(i=0; i < len; i++) {	
-		err = inet_aton(lsi_addresses[i],&lsi_aux);
+		inet_aton(lsi_addresses[i],&lsi_aux);
 		used_lsi = 0;
-
-		if (err = 0)	HIP_ERROR("wrong lsi format: (%s)\n",lsi_addresses[i]);
 
 		list_for_each(item, db, c) {
 			id_entry_aux = list_entry(item);
-			//HIP_DEBUG("---------ipv4_addr_cmp: %s == %s",lsi_addresses[i],inet_ntoa(id_entry_aux->lsi));
 			if (ipv4_addr_cmp(&lsi_aux,&id_entry_aux->lsi) == 0) {
 				used_lsi = 1;
 				c = -1;				
@@ -765,9 +757,7 @@ int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 
 		if (!used_lsi){
 			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
-			HIP_HEXDUMP("--------------- Host ID HIT:",&id_entry->lhi.hit, 16);
 			HIP_DEBUG("---------LSI:%s\n",inet_ntoa(id_entry->lsi));
-			err = 0;
 			break;
 		}
 	}

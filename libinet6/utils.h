@@ -148,10 +148,10 @@ static inline void set_hit_prefix(struct in6_addr *hit)
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
 	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr))
  
-/* LSI not based in HIT structure, so not necessary at the moment */
+/* LSI not based in HIT structure, so not necessary at the moment 
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
-
+*/
 
 /*
  * TRUE if a is from 1.0.0.0/8
@@ -162,11 +162,13 @@ static inline void set_hit_prefix(struct in6_addr *hit)
  */
 #define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
 
+/* LSI not based in HIT structure, so not necessary at the moment 
 #define HIT_IS_LSI(a) \
         ((((__const uint32_t *) (a))[0] == 0)                                 \
          && (((__const uint32_t *) (a))[1] == 0)                              \
          && (((__const uint32_t *) (a))[2] == 0)                              \
          && IS_LSI32(((__const uint32_t *) (a))[3]))        
+*/
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))

@@ -201,8 +201,9 @@ int hipd_init(int flush_ipsec, int killold)
 	   will maintain the list This needs to be done before opening
 	   NETLINK_ROUTE! See the comment about address_count global var. */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&hip_nl_ipsec);
 
+	hip_netdev_init_addresses(&hip_nl_ipsec);
+	
 	if (rtnl_open_byproto(&hip_nl_route,
 	                      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 	                      | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -249,7 +250,7 @@ int hipd_init(int flush_ipsec, int killold)
                     HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
-
+	
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
@@ -277,6 +278,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
 	}
 #endif
+
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -503,6 +505,7 @@ int hip_init_host_ids()
 	}
 	
 	err = hip_handle_add_local_hi(user_msg);
+
 	if (err)
 	{
 		HIP_ERROR("Adding of keys failed\n");

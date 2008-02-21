@@ -371,7 +371,7 @@ int hipd_main(int argc, char *argv[])
 	
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
-
+	
 	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_v6,
 		hip_user_sock, hip_nl_ipsec.fd,
 		hip_agent_sock, hip_raw_sock_v4,

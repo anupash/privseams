@@ -112,9 +112,9 @@ int filter_address(struct sockaddr *addr, int ifindex)
 			} else if (IN_MULTICAST(ntohs(a_in))) {
 				HIP_DEBUG("Ignore: MULTICAST\n");
 				return FA_IGNORE;
-			} else if (IS_LSI32(a_in)) {
+			/*} else if (IS_LSI32(a_in)) {
 				HIP_DEBUG("Ignore: LSI32\n");
-				return FA_IGNORE;
+				return FA_IGNORE;*/
 			} else if (IS_IPV4_LOOPBACK(a_in)) {
 				HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
 				return FA_IGNORE;
@@ -174,7 +174,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
-	struct netdev_address *n;
+	struct netdev_address *n, *aux;
         unsigned char tmp_secret[40];
         int err_rand = 0;
 
@@ -193,6 +193,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	}
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
+	aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));//asdad
 	if (!n)
 	{
 		// FIXME; memory error
@@ -200,6 +201,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		return;
 	}
 	memset(n, 0, sizeof(struct netdev_address));
+	memset(aux, 0, sizeof(struct netdev_address));//asdad
 
 	/* Convert IPv4 address to IPv6 */
 	if (addr->sa_family == AF_INET)
@@ -211,9 +213,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
 	}
+
 	else
 		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
-
+	
         /*
           Add secret to address. Used with openDHT removable puts.
         */        
@@ -231,6 +234,8 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	list_add(n, addresses);
 	address_count++;
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
+	
+
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)
@@ -431,10 +436,10 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 			continue;
 		HIP_IFEL(!(if_index = if_nametoindex(g_iface->ifa_name)),
 			 -1, "if_nametoindex failed\n");
-
 		add_address_to_list(g_iface->ifa_addr, if_index);
+		
 	}
-
+	
  out_err:
 	if (g_ifaces)
 		freeifaddrs(g_ifaces);
@@ -1065,21 +1070,25 @@ int hip_add_iface_local_hit(const hip_hit_t *local_hit)
 	return err;
 }
 
+/*
 int hip_add_iface_local_lsi(const hip_lsi_t lsi)
 {
-	int err = 0;
-	char lsi_str[INET_ADDRSTRLEN+5];
+	int i, err = 0;
+	//char lsi_str[INET_ADDRSTRLEN+5];
+	char lsi_str[INET_ADDRSTRLEN];
 	struct idxmap *idxmap[16] = {0};
 
 	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))),
 		-1);
-	HIP_DEBUG("Adding LSI: %s\n", lsi_str);
-	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
-                                  lsi_str, HIP_HIT_DEV, idxmap), -1);
- out_err:
 
+	HIP_IFE(hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
+                                  strcat(lsi_str, HIP_LSI_PREFIX_STR),
+				  HIP_HIT_DEV, idxmap), -1);
+ out_err:
 	return err;
 }
+*/
+
 
 int hip_add_iface_local_route(const hip_hit_t *local_hit)
 {
@@ -1102,6 +1111,7 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	return err;
 }
 
+/*
 int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 {
 	int err = 0;
@@ -1110,16 +1120,18 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 
 	HIP_IFE((!(inet_ntop(AF_INET, &lsi, lsi_str, sizeof(lsi_str)))),
 		-1);
-	HIP_DEBUG("Adding local LSI route: %s\n", lsi_str);
+	
 	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
-				   NLM_F_CREATE|NLM_F_EXCL,
-				   AF_INET, lsi_str, HIP_HIT_DEV, idxmap),
+			   	   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET, strcat(lsi_str, HIP_LSI_FULL_PREFIX_STR),
+				   HIP_HIT_DEV, idxmap),
 		-1);
 
  out_err:
 
 	return err;
-}
+}*/
+
 
 int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
