@@ -15,9 +15,9 @@ NAMEGPL=libhiptool
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
 if uname -m|grep arm*; then DEBARCH=armel; fi
+# if dpkg --print-architecture|grep armel;then DEBARCH=armel; fi
 
 DEBIAN=${DEBARCH}/DEBIAN
-if dpkg --print-architecture|grep armel;then DEBIAN=armel/DEBIAN; fi
 
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
