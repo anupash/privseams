@@ -8,8 +8,11 @@ RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl-manager
 DEBARCH="i386"
-if uname -a|grep x86_64; then DEBARCH=amd64; fi
-DEBIAN=${DEBARCH}/DEBIAN-gconf
+if uname -m|grep x86_64; then DEBARCH=amd64; fi
+if uname -m|grep arm*; then DEBARCH=armel; fi
+#DEBIAN=${DEBARCH}/DEBIAN-gconf
+DEBIAN=${DEBARCH}/DEBIAN
+if dpkg --print-architecture|grep armel;then DEBIAN=armel/DEBIAN; fi
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}-${VERSION}-deb-src
@@ -24,10 +27,10 @@ copy_binpkg_files()
 	set -e
 
 	mkdir -p "$PKGDIR/DEBIAN"
-	for f in control changelog copyright postinst postrm; do
+	for f in control changelog copyright; do
 		cp $PKGROOT/$DEBIAN/$f "$PKGDIR/DEBIAN"
 	done
-	
+
 	mkdir -p "$PKGDIR/usr"
 	mkdir -p "$PKGDIR/usr/sbin"
 	mkdir -p "$PKGDIR/usr/lib"
