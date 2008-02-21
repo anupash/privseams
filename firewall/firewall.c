@@ -33,6 +33,7 @@ void print_usage()
 	printf("HIP Firewall\n");
 	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
 	printf("      - H allow only HIP related traffic\n");
+	printf("      - A allow pure HIP/ESP, as well as HIP/ESP over UDP\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
 	printf("      - timeout is connection timeout value in seconds\n");
 	printf("      - d = debugging output\n");
@@ -694,6 +695,10 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 			hip_request_send_i1_to_hip_peer_from_hipd(
 					peer_hit,
 					peer_ip);
+
+			//the packet is no more needed
+			drop_packet(handle, packetId);
+			return;
 		}
 		else{
 			//save in db that peer does not support hip
@@ -701,10 +706,11 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 
 			//signal for the normal TCP packets not to be blocked for this peer
 			hip_request_unblock_app_from_hipd(peer_ip);
+
+			//normal traffic connections should be allowed to be created
+			allow_packet(handle, packetId);
+			return;
 		}
-		//the packet is no more needed
-		drop_packet(handle, packetId);
-		return;
 	}
 	//allow all the rest
 	allow_packet(handle, packetId);
@@ -1183,7 +1189,7 @@ void check_and_write_default_config(){
 	ssize_t items;
 	char *file = HIP_FW_DEFAULT_RULE_FILE;
 
-	HIP_DEBUG("");
+	HIP_DEBUG("\n");
 
 	if (stat(file, &status) && errno == ENOENT) {
 		errno = 0;
