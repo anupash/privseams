@@ -27,12 +27,14 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
-	test/packaging/create-agent-deb.sh -s
+	test/packaging/create-agent-deb.sh
 	sudo /etc/init.d/hipd start
 source-deb:
 	test/packaging/create-deb.sh -s
 corporate-deb:
 	test/packaging/create-deb.sh -c
+agent-deb:
+	test/packaging/create-agent-deb.sh
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
 
