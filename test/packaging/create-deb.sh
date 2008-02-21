@@ -1,8 +1,6 @@
 #!/bin/sh -xv
 # This script allows for building binary and source debian packages
 
-# XX FIXME: ADD OPP + RVS OPTIONS
-
 #Default debian package is BINARY
 TYPE=binary
 
@@ -107,7 +105,7 @@ init_files ()
    
 }
 
-# copy and package files
+# copy and build package files
 copy_and_package_files ()
 {
     TMP="core"
@@ -319,7 +317,7 @@ parse_args() {
     done
 }
 
-######## "Main" function ###################################################
+######################## "Main" function #############################
 
 parse_args $@
 
@@ -420,22 +418,6 @@ if [ $TYPE = "binary" ];then
 		exit 1
 		fi
 	fi
-#
-#
-#	cd "$PKGROOT"
-#	echo "** Creating the Debian package '$PKGNAME'"
-#	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-#		echo "** Successfully finished building the binary Debian package"
-#		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-#		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-#	else
-#		echo "** Error: unable to build package, exiting"
-#		error_cleanup
-#		exit 1
-#	fi
-
-#	rm -rf ${PKGDIR} 
-
 fi
 
 if [ $TYPE = "source" ];then
@@ -488,5 +470,5 @@ echo "Resetting compilation environment, please wait..."
 ./configure >/dev/null
 make clean >/dev/null
 echo "Done."
-
 exit 0
+
