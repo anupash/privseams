@@ -18,6 +18,8 @@
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
 
+HIP_HASHTABLE *hip_proxy_db;
+
 struct ipq_handle *h4 = NULL, *h6 = NULL;
 int statefulFiltering = 1; 
 int escrow_active = 0;
