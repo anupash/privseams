@@ -108,66 +108,7 @@ init_files ()
 # copy and build package files
 copy_and_package_files ()
 {
-    TMP="core"
-    #hipl-core (hipd + firewall): depends on hipl-lib
-    DEBLIB="$NAME-lib"
-    init_files;
     
-    echo "** Copying binary files to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
-    cd "$PKGDIR"
-
-    # create directory structure
-    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
-    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
-    cd "$HIPL"
-    
-    cp hipd/hipd $PKGDIR/usr/sbin/
-    echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
-    
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    create_sub_package;
-    
-    TMP="firewall"
-    DEBLIB=""
-    init_files;
-
-    echo "** Copying firewall to $PKGDIR"
-    cp firewall/firewall $PKGDIR/usr/sbin/
-
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    create_sub_package;
-
-    TMP="tools"
-    #hipl-tools (depends on hipl-lib, hipl-core)
-    DEBLIB="$NAME-lib, $NAME-core"
-    init_files;
-
-    cp tools/hipconf $PKGDIR/usr/sbin/
-
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    create_sub_package;
-   
-    TMP="test"
-    DEBLIB="$NAME-lib, $NAME-core"
-    init_files;
-
-    #cp agent/hipagent $PKGDIR/usr/sbin/
-
-    for suffix in "" -gai -native -native-user-key;do
-	cp test/conntest-client$suffix $PKGDIR/usr/bin/
-    done
-
-    for suffix in "" -native;do
-	cp test/conntest-server$suffix $PKGDIR/usr/bin/
-    done
-
-    cp test/hipsetup $PKGDIR/usr/sbin/
-
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    create_sub_package;
-
     TMP="lib"
     DEBLIB=""
     init_files;
@@ -199,6 +140,66 @@ copy_and_package_files ()
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
     cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
+    TMP="core"
+    #hipl-core hipd: depends on hipl-lib
+    DEBLIB="$NAME-lib"
+    init_files;
+    
+    echo "** Copying binary files to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    # create directory structure
+    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
+    cd "$HIPL"
+    
+    cp hipd/hipd $PKGDIR/usr/sbin/
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+    
+    TMP="firewall"
+    DEBLIB=""
+    init_files;
+
+    echo "** Copying firewall to $PKGDIR"
+    cp firewall/firewall $PKGDIR/usr/sbin/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
+    TMP="tools"
+    #hipl-tools (depends on hipl-lib and hipl-core)
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+
+    cp tools/hipconf $PKGDIR/usr/sbin/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+   
+    TMP="test"
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+
+    #cp agent/hipagent $PKGDIR/usr/sbin/
+
+    for suffix in "" -gai -native -native-user-key;do
+	cp test/conntest-client$suffix $PKGDIR/usr/bin/
+    done
+
+    for suffix in "" -native;do
+	cp test/conntest-server$suffix $PKGDIR/usr/bin/
+    done
+
+    cp test/hipsetup $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
