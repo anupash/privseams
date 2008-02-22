@@ -108,7 +108,8 @@ init_files ()
 # copy and build package files
 copy_and_package_files ()
 {
-    
+    echo "copying and packaging files"
+
     TMP="lib"
     DEBLIB=""
     init_files;
@@ -117,9 +118,13 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
    
+    echo "$PKGDIR"
+
     mkdir -p usr/lib
 
     cd "$HIPL"
+    
+    echo "$HIPL"
 
     for suffix in a so so.0 so.0.0.0;do
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
@@ -153,11 +158,15 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
+    echo "$PKGDIR"
+
     # create directory structure
     # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
     mkdir -p usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
     
+    echo "$HIPL"
+
     cp hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
@@ -168,6 +177,13 @@ copy_and_package_files ()
     TMP="firewall"
     DEBLIB=""
     init_files;
+    
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/sbin
+    cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
     cp firewall/firewall $PKGDIR/usr/sbin/
@@ -180,14 +196,28 @@ copy_and_package_files ()
     DEBLIB="$NAME-lib, $NAME-core"
     init_files;
 
-    cp tools/hipconf $PKGDIR/usr/sbin/
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
 
+    mkdir -p usr/sbin
+    cd "$HIPL"
+
+    cp tools/hipconf $PKGDIR/usr/sbin/
+    
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
     TMP="test"
     DEBLIB="$NAME-lib, $NAME-core"
     init_files;
+    
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/bin usr/sbin
+    cd "$HIPL"
 
     #cp agent/hipagent $PKGDIR/usr/sbin/
 
@@ -208,6 +238,13 @@ copy_and_package_files ()
     DEBLIB="$NAME-lib, $NAME-core"
     init_files;
 
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/sbin
+    cd "$HIPL"
+
     echo "** Copying hipagent to '$PKGDIR'"
     cp agent/hipagent $PKGDIR/usr/sbin/
 
@@ -222,7 +259,6 @@ copy_and_package_files ()
     cd "$PKGDIR"
 
     mkdir -p usr/share/doc
-
     cd "$HIPL"
 
     echo "** Copying documentation to '$PKGDIR'"
