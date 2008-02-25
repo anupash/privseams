@@ -93,9 +93,17 @@ init_files ()
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
-    for f in control changelog copyright;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    done
+    
+    if [ $TMP = "core" ]; then
+    	for f in control changelog copyright postinst prerm;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+    else
+	for f in control changelog copyright;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+    fi
+
     echo "** Modify Debian control file for $DEBLIB $TMP and $DEBARCH"
     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
@@ -242,7 +250,7 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    mkdir -p usr/sbin etc/init.d
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
