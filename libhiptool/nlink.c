@@ -710,7 +710,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         } req;
 
         inet_prefix lcl;
-        int local_len = 0, err = 0;
+        int local_len = 0, err = 0, size_dev;
         inet_prefix addr;
 	struct in6_addr ip6_aux;
 	struct in_addr ip4;
@@ -739,7 +739,9 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 	addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
 	
         if(ip_is_v4 && lsi_total > 0){
-		HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label)+8, 0)), -1, "alloc\n");
+		size_dev = sizeof(dev)+sizeof(label);
+		res = (char *)malloc(size_dev+1);
+		memset(res,'\0',size_dev+1);
 		strcat(res, dev);
 		strcat(res, label);
 		HIP_DEBUG("Name device inserted %s\n", res);
@@ -804,7 +806,6 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
                 return -1;
 
         err = ioctl(fd, SIOCGIFFLAGS, &ifr);// get interface dummy0 flags
-	HIP_DEBUG("ioctl 1 devuelve %i",err);
 
 
         if (err) {
@@ -832,6 +833,7 @@ int set_up_device(char *dev, int up)
 	__u32 flags = 0;
 	char label[4];
 	char *res = NULL;
+	int size_dev;
 
 	if(up == 1){
 		mask |= IFF_UP;
@@ -840,16 +842,16 @@ int set_up_device(char *dev, int up)
 		mask |= IFF_UP;
 		flags &= ~IFF_UP;
 		for( total_add = lsi_total; total_add >0; total_add--){
-			HIP_DEBUG("---------------------------------------inside for\n");
 			sprintf(label, ":%d", total_add);
-			HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label), 0)), -1, "alloc\n");
+			size_dev = sizeof(dev)+sizeof(label);
+			res = (char *)malloc(size_dev+1);
+			memset(res,'\0',size_dev+1);
 			strcat(strcat(res, dev), label);
 			err = do_chflags(res, flags, mask);
 			if (res)
 				HIP_FREE(res);
 		}
 	}
-
 	err = do_chflags(dev, flags, mask);
 	
 out_err:

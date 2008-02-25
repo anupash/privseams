@@ -152,6 +152,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		}
 		else { // addr->sa_family == AF_INET
 			// Hope never happen...If happens we need to add Mapping
+			HIP_DEBUG("Hope never happen...If happens we need to add Mapping\n");
 		}
 		
 		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
@@ -190,6 +191,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
 	aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));
+
 	if (!n)
 	{
 		// FIXME; memory error
@@ -230,8 +232,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	list_add(n, addresses);
 	address_count++;
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
-	
-
+	/*if (n)
+		HIP_FREE(n);
+	if(aux)
+		HIP_FREE(aux);*/
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)

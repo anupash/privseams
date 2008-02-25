@@ -142,10 +142,12 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 		memcpy(x, &req.n, sizeof(req.n));
 		HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 			 "netlink_talk failed\n");
+		///if (x)
+			//free(x);
 	}
 
 out_err:
-
+	
 	return err;
 }
 
