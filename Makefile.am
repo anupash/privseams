@@ -28,7 +28,6 @@ deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
 	test/packaging/create-agent-deb.sh
-	sudo /etc/init.d/hipd start
 source-deb:
 	test/packaging/create-deb.sh -s
 corporate-deb:
