@@ -5,6 +5,8 @@
  * libnetlink functions.
  */
 
+lsi_total = 0;
+
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen)
 {
@@ -19,10 +21,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	rta->rta_type = type;
 	rta->rta_len = len;
 	memcpy(RTA_DATA(rta), data, alen);
-	HIP_ERROR("				NLMSG_ALIGN(n->nlmsg_len) = %d\n", NLMSG_ALIGN(n->nlmsg_len));
 	n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
-	HIP_ERROR("-------------------addattr_l: longitud de n->nlmsg_len es %d\n",n->nlmsg_len);	
-	HIP_ERROR("				RTA_ALIGN(len) = %d\n", RTA_ALIGN(len));
 	return 0;
 }
 
@@ -146,6 +145,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 	};
 
 	memset(&nladdr, 0, sizeof(nladdr));
+	/*Assign values to the socket address*/
 	nladdr.nl_family = AF_NETLINK;
 	nladdr.nl_pid = peer;
 	nladdr.nl_groups = groups;
@@ -182,6 +182,7 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 	iov.iov_base = buf;
 
 	while (HIP_NETLINK_TALK_ACK) {
+		HIP_DEBUG("inside the while\n");
 		iov.iov_len = sizeof(buf);
 		status = recvmsg(nl->fd, &msg, 0);
 
@@ -673,18 +674,11 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 	return err;
 }
 
-/*
-hip_ipaddr_modify(&hip_nl_route, RTM_NEWADDR, AF_INET,
-                                  strcat(lsi_str, HIP_LSI_PREFIX_STR),
-				  HIP_HIT_DEV, idxmap), -1);
-
-*/
-
 int convert_ipv6_slash_to_ipv4_slash(char *ip, int cmd){
 	struct in6_addr ip6_aux;
-	struct in_addr ip4;
+	//struct in_addr ip4;
 	char *slash = strchr(ip, '/');
-	char *lsi_str;
+	//char *lsi_str;
 	int convert = 0;	
 	
 	if (slash)
@@ -693,14 +687,15 @@ int convert_ipv6_slash_to_ipv4_slash(char *ip, int cmd){
 	inet_pton(AF_INET6, ip, &ip6_aux);
 
 	if(IN6_IS_ADDR_V4MAPPED(&ip6_aux)) {
-		IPV6_TO_IPV4_MAP(&ip6_aux, &ip4);
-		lsi_str = inet_ntoa(ip4);
 		convert = 1;
+/*		IPV6_TO_IPV4_MAP(&ip6_aux, &ip4);
+		lsi_str = inet_ntoa(ip4);
+		
 
 		if (cmd == RTM_NEWADDR)
 			ip = strcat(lsi_str, HIP_LSI_PREFIX_STR);
 		else if (cmd == RTM_NEWROUTE)
-			ip = strcat(lsi_str, HIP_LSI_FULL_PREFIX_STR);			
+			ip = strcat(lsi_str, HIP_LSI_FULL_PREFIX_STR);*/			
 	}
 	return convert;
 }
@@ -717,19 +712,40 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         inet_prefix lcl;
         int local_len = 0, err = 0;
         inet_prefix addr;
+	struct in6_addr ip6_aux;
+	struct in_addr ip4;
+	int ip_is_v4 = 0;
+	char label[4];
+	char *res = NULL;
 
         memset(&req, 0, sizeof(req));
-
-	if(convert_ipv6_slash_to_ipv4_slash(ip, cmd))
+	
+	if(convert_ipv6_slash_to_ipv4_slash(ip, cmd)){
 		family = AF_INET;
+		inet_pton(AF_INET6, ip, &ip6_aux);
+		IPV6_TO_IPV4_MAP(&ip6_aux, &ip4);
+		ip = strcat(inet_ntoa(ip4), HIP_LSI_FULL_PREFIX_STR);		
+		ip_is_v4 = 1;
+		lsi_total++;		
+		sprintf(label, ":%d", lsi_total);
+	}
 
-	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)); //length of the message, including header
-	req.n.nlmsg_type = cmd;//message content
-        req.n.nlmsg_flags = NLM_F_REQUEST; // flags, in this case indication about a request message
+	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)); 
+	req.n.nlmsg_type = cmd;
+        req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.ifa.ifa_family = family;
 
 	get_prefix_1(&lcl, ip, req.ifa.ifa_family);
-        addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
+	addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
+	
+        if(ip_is_v4 && lsi_total > 0){
+		HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label), 0)), -1, "alloc\n");
+		strcat(res, dev);
+		strcat(res, label);
+		HIP_DEBUG("Name device inserted %s\n",res);
+		addattr_l(&req.n, sizeof(req), IFA_LABEL, res, strlen(dev) + strlen(label)+1);		
+	}	
+
         local_len = lcl.bytelen;
 
 	if (req.ifa.ifa_prefixlen == 0)
@@ -738,13 +754,16 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
         HIP_IFEL(((req.ifa.ifa_index = ll_name_to_index(dev, idxmap)) == 0),
 		 -1, "ll_name_to_index failed\n");
 
+	HIP_DEBUG("IFA INDEX IS %d\n",req.ifa.ifa_index);
+
 	int aux = netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);// adds to the device dummy0
 	HIP_DEBUG("value exit function netlink_talk %i\n", aux);
         HIP_IFEL((aux < 0), -1,
 		 "netlink talk failed\n");
 
  out_err:
-
+	if (res)
+		HIP_FREE(res);
 	return 0;
 }
 
@@ -783,7 +802,11 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
         fd = get_ctl_fd();
         if (fd < 0)
                 return -1;
-        err = ioctl(fd, SIOCGIFFLAGS, &ifr);
+
+        err = ioctl(fd, SIOCGIFFLAGS, &ifr);// get interface dummy0 flags
+	HIP_DEBUG("ioctl 1 devuelve %i",err);
+
+
         if (err) {
                 HIP_PERROR("SIOCGIFFLAGS");
                 close(fd);
@@ -796,6 +819,7 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
                 if (err)
                         HIP_PERROR("SIOCSIFFLAGS");
         }
+
         close(fd);
         return err;
 }
@@ -803,9 +827,11 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
 
 int set_up_device(char *dev, int up)
 {
-	int err = -1;
+	int err = -1, total_add;
 	__u32 mask = 0;
 	__u32 flags = 0;
+	char label[4];
+	char *res = NULL;
 
 	if(up == 1){
 		mask |= IFF_UP;
@@ -813,10 +839,19 @@ int set_up_device(char *dev, int up)
 	} else {
 		mask |= IFF_UP;
 		flags &= ~IFF_UP;
+		for( total_add = lsi_total; total_add >0; total_add--){
+			sprintf(label, ":%d", total_add);
+			HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label), 0)), -1, "alloc\n");
+			strcat(strcat(res, dev), label);
+			err = do_chflags(res, flags, mask);
+			if (res)
+				HIP_FREE(res);
+		}
 	}
 
 	err = do_chflags(dev, flags, mask);
-	HIP_DEBUG("setting %s done\n", dev);
+	
+out_err:
 	return err;
 }
 
@@ -1611,9 +1646,6 @@ void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, in
 	sendto(sockfd, &newHdr[0], newSize, 0, 
 			(struct sockaddr *)&sock_raw, sizeof(sock_raw));
 }
-
-
-
 
 
 #endif

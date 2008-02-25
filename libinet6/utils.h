@@ -157,6 +157,12 @@ static inline void set_hit_prefix(struct in6_addr *hit)
  * TRUE if a is from 1.0.0.0/8
  */
 #define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
+
+/*
+ * TRUE if a is from 192.0.0.0/8
+ */
+#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
 /*
  * TRUE if a is from 127.0.0.0/8
  */

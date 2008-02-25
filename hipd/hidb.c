@@ -6,7 +6,7 @@
  * @author Miika Komu <miika#iki.fi>
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <kslavov#hiit.fi>
- * @author Teresa Finez <tfinezmo#hut.tkk.fi>
+ * @author Teresa Finez <tfinezmo#hut.tkk.fi> 
  */
 #include "hidb.h"
 
@@ -109,11 +109,8 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 }
 
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
-	/* FIXME: This full scan is stupid, but we have no hashtables
-	   anyway... tkoponen */
 	return (hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, our,
 						     HIP_ANY_ALGO, -1) != NULL);
-	//return hip_for_each_ha(hit_match, (void *) our);
 }
 
 
@@ -222,13 +219,7 @@ int hip_add_host_id(hip_db_struct_t *db,
 	}
 
 	/* assign a free lsi address */
-	err = hip_add_lsi(db, id_entry);
-
-	if (err < 0){
-		HIP_ERROR("No LSI free\n");
-		err = -EEXIST;
-		goto out_err;
-	}
+	HIP_IFEL((hip_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
 
 	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
@@ -677,10 +668,8 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	res = hip_get_rsa_public_key(tmp);
 	if (!res)
 		HIP_FREE(tmp);
-	else {
+	else 
 		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH100);
-		HIP_HEXDUMP("--->peer_hit:", &peer_hit, 16);
-	}
 	  
 	return res;	
 }
@@ -757,7 +746,7 @@ int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 
 		if (!used_lsi){
 			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
-			HIP_DEBUG("---------LSI:%s\n",inet_ntoa(id_entry->lsi));
+			HIP_DEBUG("LSI assigned:%s\n",inet_ntoa(id_entry->lsi));
 			break;
 		}
 	}

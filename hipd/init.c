@@ -645,20 +645,22 @@ void hip_close(int signal)
  */
 void hip_exit(int signal)
 {
+
 	int alen;
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	hip_delete_default_prefix_sp_pair();//empty
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
         if (hipd_msg_v4)
-            HIP_FREE(hipd_msg_v4);
+        	HIP_FREE(hipd_msg_v4);
 	
-	hip_delete_all_sp();
+	hip_delete_all_sp();//empty
 
 	delete_all_addresses();
 
@@ -684,18 +686,30 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	if (hip_raw_sock_v6)
+	if (hip_raw_sock_v6){
+		HIP_INFO("hip_raw_sock_v6\n");
 		close(hip_raw_sock_v6);
-	if (hip_raw_sock_v4)
+	}
+	if (hip_raw_sock_v4){
+		HIP_INFO("hip_raw_sock_v4\n");
 		close(hip_raw_sock_v4);
-	if(hip_nat_sock_udp)
+	}
+	if(hip_nat_sock_udp){
+		HIP_INFO("hip_nat_sock_udp\n");
 		close(hip_nat_sock_udp);
-	if (hip_user_sock)
+	}
+	if (hip_user_sock){
+		HIP_INFO("hip_user_sock\n");
 		close(hip_user_sock);
-	if (hip_nl_ipsec.fd)
+	}
+	if (hip_nl_ipsec.fd){
+		HIP_INFO("hip_nl_ipsec.fd\n");
 		rtnl_close(&hip_nl_ipsec);
-	if (hip_nl_route.fd)
+	}	
+	if (hip_nl_route.fd){
+		HIP_INFO("hip_nl_route.fd\n");
 		rtnl_close(&hip_nl_route);
+	}
 
 	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+
 #include "builder.h"
 #include "debug.h"
 #include "xfrm.h"
@@ -109,6 +110,9 @@ struct rtnl_handle
         __u32                   seq;
         __u32                   dump;
 };
+
+
+int lsi_total;
 
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
