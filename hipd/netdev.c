@@ -170,7 +170,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
-	struct netdev_address *n;
+	struct netdev_address *n, *aux;
         unsigned char tmp_secret[40];
         int err_rand = 0;
 
@@ -189,7 +189,7 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	}
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
-
+	aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));
 	if (!n)
 	{
 		// FIXME; memory error

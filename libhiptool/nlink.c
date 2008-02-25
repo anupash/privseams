@@ -739,10 +739,10 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 	addattr_l(&req.n, sizeof(req), IFA_LOCAL, &lcl.data, lcl.bytelen);
 	
         if(ip_is_v4 && lsi_total > 0){
-		HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label), 0)), -1, "alloc\n");
+		HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label)+8, 0)), -1, "alloc\n");
 		strcat(res, dev);
 		strcat(res, label);
-		HIP_DEBUG("Name device inserted %s\n",res);
+		HIP_DEBUG("Name device inserted %s\n", res);
 		addattr_l(&req.n, sizeof(req), IFA_LABEL, res, strlen(dev) + strlen(label)+1);		
 	}	
 
@@ -840,6 +840,7 @@ int set_up_device(char *dev, int up)
 		mask |= IFF_UP;
 		flags &= ~IFF_UP;
 		for( total_add = lsi_total; total_add >0; total_add--){
+			HIP_DEBUG("---------------------------------------inside for\n");
 			sprintf(label, ":%d", total_add);
 			HIP_IFEL(!(res = HIP_MALLOC(sizeof(dev)+sizeof(label), 0)), -1, "alloc\n");
 			strcat(strcat(res, dev), label);
