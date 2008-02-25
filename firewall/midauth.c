@@ -6,6 +6,8 @@
  * Currently we do neither.
  */
 
+#ifdef CONFIG_HIP_MIDAUTH
+
 #include "midauth.h"
 #include <string.h>
 
@@ -258,3 +260,6 @@ int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     return verdict;
 }
+
+#endif
+
