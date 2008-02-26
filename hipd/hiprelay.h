@@ -76,10 +76,26 @@
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
 #include "misc.h" /* For hip_hash_hit and hip_match_hit. */
+#include "configfilereader.h"
 
-/** Default relay record life time in seconds. After this time, the record is
- *  deleted if it has been idle. */
-#define HIP_RELREC_LIFETIME 600
+/** The number of seconds the relay / RVS client is granted the service if the
+ *  service request specifies an invalid time.
+ *  @note this is a fallback value if we are not able to read the configuration
+ *        file.
+ */
+#define HIP_RELREC_DEF_LIFETIME 600
+/** The minimum number of seconds the relay / RVS client is granted the service.
+ *  @note this is a fallback value if we are not able to read the configuration
+ *        file.
+ */
+#define HIP_RELREC_MIN_LIFETIME 60
+/** The maximum number of seconds the relay / RVS client is granted the service.
+ *  @note this is a fallback value if we are not able to read the configuration
+ *        file.
+ */
+#define HIP_RELREC_MAX_LIFETIME 3600
+/** HIP relay config file name and path. */
+#define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
@@ -177,7 +193,7 @@ void hip_relht_rec_free(hip_relrec_t *rec);
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
  * allocated for the record, if the record has expired. The relay record is deleted if
- * it has been last contacted more than @c HIP_RELREC_LIFETIME seconds ago.
+ * it has been last contacted more than @c hiprelay_lifetime seconds ago.
  */
 void hip_relht_free_expired(hip_relrec_t *rec);
 
@@ -323,5 +339,15 @@ int hip_relay_rvs(const hip_common_t *i1,
 int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
+
+/**
+ * .
+ *
+ * .
+ *
+ * @param  
+ * @return 
+ */ 
+int hip_relay_read_config();
 
 #endif /* HIP_HIPRELAY_H */

@@ -2,7 +2,7 @@
  * A header file for configfilereader.c
  *
  * This is a general purpose configurationfilereader. The configurationfile
- * consists of of stanzas of the following form: 
+ * consists of stanzas of the following form: 
  * <pre>
  * parametername = "value1", "value2", "value3", "value4", ...
  * </pre>

@@ -24,9 +24,19 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
 
-/** The hashtable storing the relay records. */
+/** A hashtable for storing the relay records. */
 static LHASH *hiprelay_ht = NULL;
+/** A hashtable for storing the the HITs of the clients that are, allowed to use
+    the relay / RVS service. */
+static LHASH *hiprelay_whitelist = NULL;
 
+/** Default relay record life time in seconds. After this time, the record is
+ *  deleted if it has been idle. */
+int hiprelay_lifetime = HIP_RELREC_DEF_LIFETIME;
+/** Minimum relay record life time in seconds. */
+int hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
+/** Maximum relay record life time in seconds. */
+int hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 /** 
  * A dummy boolean to indicate the machine has relay capabilities.
  * This is only here for testing and development purposes. It allows the same
@@ -74,14 +84,15 @@ void hip_relht_put(hip_relrec_t *rec)
 		return;
      
 	/* If we are trying to insert a duplicate element (same HIT), we have to
-	   delete the previous entry. If we do not do so, only the pointer in the
-	   hash table is replaced and the refrence to the previous element is
-	   lost resulting in a memory leak. */
+	   delete the previous entry. If we do not do so, only the pointer in
+	   the hash table is replaced and the refrence to the previous element
+	   is lost resulting in a memory leak. */
 	hip_relrec_t dummy;
 	memcpy(&(dummy.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
 	hip_relht_rec_free(&dummy);
      
-	/* lh_insert returns always NULL, we cannot return anything from this function. */
+	/* lh_insert returns always NULL, we cannot return anything from this
+	   function. */
 	lh_insert(hiprelay_ht, rec);
 }
 
@@ -115,7 +126,7 @@ void hip_relht_free_expired(hip_relrec_t *rec)
 	if(rec == NULL)
 		return;
 
-	if((double)(time(NULL)) - rec->last_contact > HIP_RELREC_LIFETIME)
+	if((double)(time(NULL)) - rec->last_contact > HIP_RELREC_DEF_LIFETIME)
 	{
 		HIP_INFO("Relay record expired, deleting.\n");
 		hip_relht_rec_free(rec);
@@ -422,4 +433,80 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	HIP_DEBUG("RVS_HMAC verified.\n");
 
 	return 0;
+}
+
+int hip_relay_read_config(){
+	FILE *fp = NULL;
+	int lineerr = 0, parseerr = 0, err = 0;
+	char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
+	hip_ll_t values;
+	/* The theoretical maximum number of seconds resulting from the lifetime
+	   formula given in the registration draft. */
+	double max = 15384774.906;
+
+	HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL), -ENOENT,
+		 "Cannot open file %s for reading.\n");
+	
+	do {
+		parseerr = 0;
+		memset(parameter, '\0', sizeof(parameter));
+		hip_ll_init(&values);
+		lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
+				
+		if(parseerr == 0){
+			hip_ll_node_t *current = NULL;
+			
+			if(strcmp(parameter, "whitelist") == 0) {
+				while((current = hip_ll_get_next(
+					       &values, current)) != NULL) {
+					/* Check & store the values to the white
+					   list hashtable. */
+				}
+			} else if(strcmp(parameter, "default_lifetime") == 0) {
+				double tmp = 0;
+				hip_ll_get_next(&values, current);
+				/* We use atol() instead of atof() because
+				   atol() accepts only digits. */
+				tmp = (double)atol(current->data);
+				if(tmp >= 1) {
+					hiprelay_lifetime =
+						(tmp > max) ? max : tmp;
+				}
+			} else if(strcmp(parameter, "minimum_lifetime") == 0) {
+				double tmp = 0;
+				hip_ll_get_next(&values, current);
+				tmp = (double)atol(current->data);
+				if(tmp >= 1) {
+					hiprelay_min_lifetime =
+						(tmp > max) ? max : tmp;
+				}
+			} else if(strcmp(parameter, "maximum_lifetime") == 0) {
+				double tmp = 0;
+				hip_ll_get_next(&values, current);
+				tmp = (double)atol(current->data);
+				if(tmp >= 1) {
+					hiprelay_max_lifetime =
+						(tmp > max) ? max : tmp;
+				}
+			}
+						
+			printf("param: '%s', values:", parameter);
+			
+			/*while((current = hip_ll_get_next(&values, current)) != NULL) {
+			  print_node(current);
+			  }*/
+			printf("\n");
+		}
+
+		hip_ll_uninit(&values);
+		
+	} while(lineerr != EOF);
+	
+	if(fclose(fp) != 0) {
+		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
+	}
+	
+ out_err:
+	
+	return err;
 }
