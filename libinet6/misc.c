@@ -1664,4 +1664,6 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
 
 
 
+
+
 #endif /* ! __KERNEL__ */

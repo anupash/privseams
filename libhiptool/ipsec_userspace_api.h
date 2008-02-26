@@ -19,6 +19,16 @@
 #include "user.h"
 #include "misc.h"
 #include "state.h"
+#include "protodefs.h"
+
+
+/* For wrapper the API of the usespace IPsec implementation */
+#define TYPE_USERSPACE_IPSEC 0
+
+/* 0-default, 1-transport, 2-tunnel, 3 - beet */
+
+#define IPSEC_MODE 3  
+
 
 
 
