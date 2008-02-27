@@ -31,7 +31,7 @@ copy_binpkg_files()
 		cp "$PKGROOT/$DEBIAN/$f" "$PKGDIR/DEBIAN"
 	done
 	
-	echo "** Remove Depends-Build from control file **"
+	echo "** Removing Depends-Build from control file **"
 	sed -i '/'"$LINE"'/d' $PKGDIR\/DEBIAN\/control
 
 	mkdir -p "$PKGDIR/usr"
