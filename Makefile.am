@@ -27,7 +27,6 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
-	test/packaging/create-agent-deb.sh
 source-deb:
 	test/packaging/create-deb.sh -s
 corporate-deb:
