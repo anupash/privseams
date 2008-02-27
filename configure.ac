@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
 # Checks for programs.
-AC_PROG_CXX
+#AC_PROG_CXX
 AC_PROG_AWK
 AC_PROG_YACC
 AC_PROG_CC
