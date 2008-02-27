@@ -14,8 +14,9 @@ NAMEGPL=libhiptool
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
-if uname -m|grep arm*; then DEBARCH=armel; fi
-# if dpkg --print-architecture|grep armel;then DEBARCH=armel; fi
+# if uname -m|grep arm*; then DEBARCH=armel; fi 
+if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
+
 
 DEBIAN=${DEBARCH}/DEBIAN
 
@@ -104,7 +105,7 @@ init_files ()
     	done
     fi
 
-    echo "** Modify Debian control file for $DEBLIB $TMP and $DEBARCH"
+    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
@@ -250,7 +251,7 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin etc/init.d
+    mkdir -p usr/sbin
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
@@ -266,16 +267,20 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/share/doc
-    cd "$HIPL"
+    if [ $DEBARCH != "armel" ]; then
 
-    echo "** Copying documentation to '$PKGDIR'"
-    cd "$HIPL/doc"
-    DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
-    set +e
+    	mkdir -p usr/share/doc
+    	#cd "$HIPL"
+
+    	echo "** Copying documentation to '$PKGDIR'"
+    	cd "$HIPL/doc"
+    	DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+    	set +e
     
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
-    create_sub_package;
+    	PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    	create_sub_package;
+    fi
+
 }
 
 
