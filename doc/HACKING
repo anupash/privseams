@@ -301,16 +301,16 @@ int count;
 In example 1 we have a variable named count to which we wish to add a Doxygen
 comment "The number of items in the list." As a general rule, a Doxygen comment
 is bound to the next item. So if in Example 1 we would have had "int count2"
-just after count, the Doxygen comment would have been bound only "int count".
+just after count, the Doxygen comment would have been bound only to "int count".
 
-If you wish to add a Doxygen comment on the same line that the variable is, you
-have to to put an additional < marker in the comment block. Example 2:
+If you wish to add a Doxygen comment on the same line that the variable is,
+you'll have to to put an additional "<" marker in the comment block. Example 2:
 
 int count; /**< The number of items in the list. */
 
-This has the same effect as Example 1. Remember that the comment with the <
+This has the same effect as Example 1. Remember that the comment with the "<"
 marker has to start from the same line as the variable. Using the special marker
-< one can comment also structure members. Example 3:
+"<" one can comment also structure members. Example 3:
 
 /** A HIP FROM parameter. */
 struct hip_from {
@@ -322,7 +322,7 @@ struct hip_from {
 Here the whole structure gets Doxygen comment "A HIP FROM parameter", and the
 members get commented as illustrated. The structure members can also be
 commented using the plain /** ... */ comment block by placing the comment block
-on the line before the member, but the < marker saves some space. This does it
+on the line before the member, but the "<" marker saves some space. This does it
 for variable commenting, lets move onto function commenting. Example 4.
 
 /**
@@ -355,8 +355,8 @@ rendered using Courier instead of the default font. However, be careful not to
 add your own special commands by accidentally typing something like @entry.
 
 Function comment blocks can be placed to the c-file or the header file. You 
-should prefer the header file because it saves space from the actual code file.
-Doxygen comment blocks have the tendency to bloat the code. Generally, if
+should prefer the header file because it saves space in the actual code file.
+Doxygen comment blocks have a tendency to bloat the code. Generally, if
 possible, place the doxygen comment in the header file instead of the c-file.
 This applies to all Doxygen comments, not just function comments.
 
@@ -369,7 +369,7 @@ block.
 
 Example 5 is an example of an todo item placed inside a function, in the middle
 of the code. Hence, this becomes a todo item for the whole function. Doxygen
-maintains a list that contains all of the todo items of the project. Example 5.
+maintains a list that contains all the todo items of the project. Example 5.
 
 HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 /** @todo Handle this case. */
@@ -379,8 +379,7 @@ Entire files can be commented with the "@file" special tag as illustrated in
 Example 6. From example 6 we notice that Doxygen comments can also include
 simple HTML.
 
-/**
- * @file
+/**@file
  * This file defines various functions for handling HIP messages.
  * 
  * @author  John Doe
@@ -401,7 +400,7 @@ doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
 We can target comments from this file to another files using the "@file" special
 command. For example, to insert a Doxygen comment for the definition of 
 HIP_NTF_INVALID_SYNTAX located in libinet6/protodefs.h you can add the
-following, example 7.
+following comment block in doc/doxygen.h, example 7.
 
 /**
  * @file libinet6/protodefs.h
@@ -409,7 +408,7 @@ following, example 7.
  *       Indicates that the HIP message received was invalid because...
  */
 
-Finally, doc/doxygen.h is a good place for declaring groups. Groups are declared
+doc/doxygen.h is also a good place for declaring groups. Groups are declared
 with the "@defgroup" special tag. Example 8.
 
 /** @defgroup notification NOTIFICATION parameter values */
@@ -430,7 +429,7 @@ The general JavaDoc style guide applies to HIPL project. This style guide is
 available at:
 http://java.sun.com/j2se/javadoc/writingdoccomments/index.html
 
-Remember that the normal non-Doxygen comments are always valid. Thus if you need
+Remember that normal non-Doxygen comments are always valid. Thus if you need
 to comment something more specific to the code, use the regular
 
 /* comment here. */

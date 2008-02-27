@@ -190,6 +190,10 @@ int hipd_init(int flush_ipsec, int killold)
 		HIP_INFO("HIP relay / RVS database initialized "\
 			 "successfully.\n");
 	}
+	HIP_DEBUG("\n\n\n###\n\n\n");
+	HIP_DEBUG("Reading config file.\n");
+	hip_relay_read_config();
+	HIP_DEBUG("\n\n\n###\n\n\n");
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();

@@ -85,7 +85,7 @@ void hip_relht_put(hip_relrec_t *rec)
      
 	/* If we are trying to insert a duplicate element (same HIT), we have to
 	   delete the previous entry. If we do not do so, only the pointer in
-	   the hash table is replaced and the refrence to the previous element
+	   the hash table is replaced and the reference to the previous element
 	   is lost resulting in a memory leak. */
 	hip_relrec_t dummy;
 	memcpy(&(dummy.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
@@ -245,6 +245,37 @@ void hip_relrec_info(const hip_relrec_t *rec)
 int hip_we_are_relay()
 {
 	return we_are_relay;
+}
+
+unsigned long hip_hash_func(hip_hit_t *hit)
+{
+	uint32_t bits_1st = 0;
+	unsigned long hash = 0;
+
+	/* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
+	   We have four groups of 32 bit sequences here, but the first 28 bits
+	   are constant and have no hash value. Therefore, we create a new
+	   replacement sequence for first 32 bit sequence. */
+	   
+	bits_1st = (~hit->in6_u.u6_addr8[3]) << 28;
+	bits_1st |= hit->in6_u.u6_addr8[3] << 24;
+	bits_1st |= hit->in6_u.u6_addr8[7] << 16;
+	bits_1st |= hit->in6_u.u6_addr8[11] << 8;
+	bits_1st |= hit->in6_u.u6_addr8[15];
+		
+	/* We calculate the hash by avalanching the bits. The avalanching
+	   ensures that we make use of all bits when dealing with 64 bits
+	   architectures. */
+	hash =  (bits_1st ^ hit->in6_u.u6_addr32[1]);
+	hash ^= hash << 3;
+	hash ^= (hit->in6_u.u6_addr32[2] ^ hit->in6_u.u6_addr32[3]);
+	hash += hash >> 5;
+	hash ^= hash << 4;
+	hash += hash >> 17;
+	hash ^= hash << 25;
+	hash += hash >> 6;
+	
+	return hash;
 }
 
 int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
@@ -454,6 +485,7 @@ int hip_relay_read_config(){
 		lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 				
 		if(parseerr == 0){
+			HIP_DEBUG("param: '%s'\n", parameter);
 			hip_ll_node_t *current = NULL;
 			
 			if(strcmp(parameter, "whitelist") == 0) {
@@ -464,7 +496,7 @@ int hip_relay_read_config(){
 				}
 			} else if(strcmp(parameter, "default_lifetime") == 0) {
 				double tmp = 0;
-				hip_ll_get_next(&values, current);
+				current = hip_ll_get_next(&values, current);
 				/* We use atol() instead of atof() because
 				   atol() accepts only digits. */
 				tmp = (double)atol(current->data);
@@ -474,7 +506,7 @@ int hip_relay_read_config(){
 				}
 			} else if(strcmp(parameter, "minimum_lifetime") == 0) {
 				double tmp = 0;
-				hip_ll_get_next(&values, current);
+				current = hip_ll_get_next(&values, current);
 				tmp = (double)atol(current->data);
 				if(tmp >= 1) {
 					hiprelay_min_lifetime =
@@ -482,20 +514,17 @@ int hip_relay_read_config(){
 				}
 			} else if(strcmp(parameter, "maximum_lifetime") == 0) {
 				double tmp = 0;
-				hip_ll_get_next(&values, current);
+				current = hip_ll_get_next(&values, current);
 				tmp = (double)atol(current->data);
 				if(tmp >= 1) {
 					hiprelay_max_lifetime =
 						(tmp > max) ? max : tmp;
 				}
 			}
-						
-			printf("param: '%s', values:", parameter);
 			
 			/*while((current = hip_ll_get_next(&values, current)) != NULL) {
 			  print_node(current);
 			  }*/
-			printf("\n");
 		}
 
 		hip_ll_uninit(&values);
@@ -506,6 +535,9 @@ int hip_relay_read_config(){
 		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
 	}
 	
+	HIP_DEBUG("def: %ld, min: %ld, max: %ld.\n", hiprelay_lifetime,
+		  hiprelay_min_lifetime, hiprelay_max_lifetime);
+
  out_err:
 	
 	return err;

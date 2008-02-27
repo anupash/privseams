@@ -283,6 +283,14 @@ void hip_relrec_info(const hip_relrec_t *rec);
 int hip_we_are_relay();
 
 /**
+ * Returns a hash calculated over a HIT.
+ *
+ * @param  hit a HIT value over which the hash is calculated.
+ * @return a hash value.
+ */
+unsigned long hip_hash_func(hip_hit_t *hit);
+
+/**
  * Relays an incoming I1 packet.
  *
  * This function relays an incoming I1 packet to the next node on path
