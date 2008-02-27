@@ -248,14 +248,32 @@ copy_and_package_files ()
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
-    cd "$PKGDIR"
+    #mkdir -p "$PKGDIR/usr"
+    #cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    mkdir -p "$PKGDIR/usr"
+    mkdir -p "$PKGDIR/usr/sbin"
+    mkdir -p "$PKGDIR/usr/lib"
+    mkdir -p "$PKGDIR/usr/share"
+    mkdir -p "$PKGDIR/usr/share/hipl"
+    mkdir -p "$PKGDIR/usr/share/hipl/libhipgui"
+    mkdir -p "$PKGDIR/usr/share/menu"
+    mkdir -p "$PKGDIR/usr/share/pixmaps"
+    mkdir -p "$PKGDIR/usr/share/applications"
+    mkdir -p "$PKGDIR/etc"
+    mkdir -p "$PKGDIR/etc/xdg"
+    mkdir -p "$PKGDIR/etc/xdg/autostart"
+
+    #mkdir -p usr/sbin
+    
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
     cp agent/hipagent $PKGDIR/usr/sbin/
+
+    cp -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
+
+    set +e
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
