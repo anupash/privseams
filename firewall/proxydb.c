@@ -1,5 +1,9 @@
 #include "proxydb.h"
 
+/** A callback wrapper of the prototype required by @c lh_new(). */
+//static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+//static IMPLEMENT_LHASH_COMP_FN(hip_compare_proxy_db, const hip_proxy_t *)
 
 /**
  * Maps function @c func to every HA in HIT hash table. The hash table is
@@ -14,7 +18,7 @@
  *               applying the mapper function to the last element in the hash
  *               table.
  */
-int hip_for_each_proxy_db(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
+int hip_for_each_proxy_db(int (*func)(hip_proxy_t *entry, void *opaq), void *opaque)
 {
 	int i = 0, fail = 0;
 	hip_proxy_t *this;
@@ -23,8 +27,8 @@ int hip_for_each_proxy_db(int (*func)(hip_ha_t *entry, void *opaq), void *opaque
 	if (!func)
 		return -EINVAL;
 
-	HIP_LOCK_HT(&hadb_hit);
-	list_for_each_safe(item, tmp, hadb_hit, i)
+	HIP_LOCK_HT(&hip_proxy_db);
+	list_for_each_safe(item, tmp, hip_proxy_db, i)
 	{
 		this = list_entry(item);
 		_HIP_DEBUG("list_for_each_safe\n");
@@ -36,7 +40,7 @@ int hip_for_each_proxy_db(int (*func)(hip_ha_t *entry, void *opaq), void *opaque
 	}
 
  out_err:	
-	HIP_UNLOCK_HT(&hadb_hit);
+	HIP_UNLOCK_HT(&hip_proxy_db);
 	return fail;
 }
 
@@ -72,7 +76,7 @@ int hip_compare_proxy_db(const hip_proxy_t *ha1, const hip_proxy_t *ha2)
      return (hip_hash_proxy_db(ha1) != hip_hash_proxy_db(ha2));
 }
 
-void hip_init_hadb(void)
+void hip_init_proxy_db(void)
 {
      /** @todo Check for errors. */
      
@@ -81,8 +85,10 @@ void hip_init_hadb(void)
 	IMPLEMENT_LHASH_COMP_FN defined in the beginning of this file. These
 	provide automagic variable casts, so that all elements stored in the
 	hash table are cast to hip_ha_t. Lauri 09.10.2007 16:58. */
-	hip_proxy_db = hip_ht_init(LHASH_HASH_FN(hip_hash_proxy_db),
-				   LHASH_COMP_FN(hip_compare_proxy_db));
+	//hip_proxy_db = hip_ht_init(LHASH_HASH_FN(hip_hash_proxy_db),
+	//			   LHASH_COMP_FN(hip_compare_proxy_db));
+	
+	hip_proxy_db = hip_ht_init(hip_hash_proxy_db, hip_compare_proxy_db);
 }
 
 
@@ -133,7 +139,7 @@ hip_proxy_t *hip_proxy_find_by_addr(struct in6_addr *addr, struct in6_addr *addr
 	return hip_ht_find(hip_proxy_db, &p);
 }
 
-hip_proxy_t *hip_proxy_find_by_hit(hip_hit_t *hit_our, hit_hit_t *hit_peer)
+hip_proxy_t *hip_proxy_find_by_hit(hip_hit_t *hit_our, hip_hit_t *hit_peer)
 {
 	int i = 0, fail = 0;
 	hip_proxy_t *this;

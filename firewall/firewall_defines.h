@@ -6,7 +6,7 @@
 #include <glib/gtypes.h>
 #include <glib/gthread.h>
 
-int hip_proxy_status;
+//int hip_proxy_status;
 
 /********** State table structures **************/
 

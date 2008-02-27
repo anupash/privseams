@@ -34,7 +34,7 @@ enum{
   STATE_CLOSING
 };
 
-extern int hipproxy;
+extern int hip_proxy_status;
 
 
 void print_data(struct hip_data * data);

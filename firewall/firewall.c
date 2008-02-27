@@ -28,7 +28,7 @@ int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 
 int counter = 0;
-hip_proxy_status = 0;
+int hip_proxy_status = 0;
 
 void print_usage()
 {
