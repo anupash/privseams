@@ -81,6 +81,32 @@ static void update_udp_header(struct iphdr *ip, int len) {
 }
 
 /**
+ * Calculate the new checksum for the HIP packet in IPv4. Note that UDP
+ * encapsulated HIP packets don't have a checksum. Therefore don't call this
+ * function for them.
+ *
+ * @param ip the modified IP packet
+ */
+static void update_hip_checksum_ipv4(struct iphdr *ip) {
+    struct sockaddr_in src, dst;
+    struct hip_common *msg = (struct hip_common *)((char*)ip + (ip->ihl * 4));
+
+    memset(&src, 0, sizeof(src));
+    memset(&dst, 0, sizeof(dst));
+
+    src.sin_family = AF_INET;
+    memcpy(&src.sin_addr, &ip->saddr, sizeof (u_int32_t));
+    
+    dst.sin_family = AF_INET;
+    memcpy(&dst.sin_addr, &ip->daddr, sizeof (u_int32_t));
+
+    hip_zero_msg_checksum(msg);
+    msg->checksum = hip_checksum_packet((char*)msg,
+					(struct sockaddr *) &src,
+                                        (struct sockaddr *) &dst);
+}
+
+/**
  * Take care of adapting all headers in front of the HIP payload to the new
  * content. Call only once per packet, as it modifies the packet size to
  * include header length.
@@ -97,11 +123,14 @@ static void update_all_headers(struct midauth_packet *p) {
 	    if (ipv4->protocol == IPPROTO_UDP) {
 		p->size += sizeof(struct udphdr);
 		update_udp_header(ipv4, p->size);
+	    } else {
+		update_hip_checksum_ipv4(ipv4);
 	    }
 	    update_ipv4_header(ipv4, p->size);    
 	    break;
 	case 6:
 	    p->size += sizeof(struct ip6_hdr);
+	    /* TODO: implement update_hip_checksum_ipv6) */
 	    HIP_ERROR("Trying to modify the IPv6 packet. Not implemented yet!");
 	    break;
 	default:
