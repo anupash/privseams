@@ -40,6 +40,10 @@
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
+#include "hip_usermode.h"
+
+
+
 
 /**** some definitions from hip_types.h ****/
 

@@ -86,6 +86,56 @@ extern int g_state;
 #define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
 #define IS_LSI32(a) ((a & 0xFF) == 0x01)
 
+/* Tao add 27th, Feb */
+#define SA(x) ((struct sockaddr*)x)
+
+
+
+/* The below prefix applies to the uppermost 28 bits only (RFC 4843) */
+#define HIT_PREFIX_SHA1_32BITS 0x20010010 
+
+
+
+/* LSI functions */
+#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+#ifdef __WIN32__
+#define IN6_ARE_ADDR_EQUAL IN6_ADDR_EQUAL
+#define IS_HIT(x) (( (ntohs(((struct in6_addr*)x)->s6_words[0]) & 0xFFFF) \
+                        == ((HIT_PREFIX_SHA1_32BITS >> 4) & 0xFFFF)) && \
+                   ( (ntohs(((struct in6_addr*)x)->s6_words[1]) & 0xFFF0) \
+                        == ((HIT_PREFIX_SHA1_32BITS & 0xFFFF)) ) )
+#elif defined (__MACOSX__)
+#define IS_HIT(x) ( (ntohl(((struct in6_addr*)x)->__u6_addr.__u6_addr32[0]) \
+                  & 0xFFFFFFF0L) == HIT_PREFIX_SHA1_32BITS )
+#else /* Linux */
+#define IS_HIT(x) ( (ntohl(((struct in6_addr*)x)->s6_addr32[0]) & 0xFFFFFFF0L) \
+                        == HIT_PREFIX_SHA1_32BITS )
+#endif
+
+#define SA2IP6(x) ( &((struct sockaddr_in6*)x)->sin6_addr )
+
+#if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
+#define IS_LSI(a) ( ( ((struct sockaddr*)a)->sa_family == AF_INET) ? \
+         (IS_LSI32( ((struct sockaddr_in*)a)->sin_addr.s_addr >> 24)) : \
+         (IS_HIT(  &((struct sockaddr_in6*)a)->sin6_addr) ) )
+#else /* __MACOSX__ */
+#define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
+                   (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \
+                   (IS_HIT( &((struct sockaddr_in6*)a)->sin6_addr) )     )
+
+#endif /* __MACOSX__ */
+#define VALID_FAM(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) || \
+                       (((struct sockaddr*)a)->sa_family == AF_INET6) )
+
+
+
+
+
+
+
+
+
+
 /* from linux/include/linux/kernel.h */
 #define NIPQUAD(addr) \
 	((unsigned char *)&addr)[0], \

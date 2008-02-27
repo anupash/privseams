@@ -1,3 +1,5 @@
+
+
 #ifndef IPSEC_USERSPACE_API_H
 #define IPSEC_USERSPACE_API_H
 
@@ -22,14 +24,21 @@
 #include "protodefs.h"
 
 
+
+typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Tag */
+
+
 /* For wrapper the API of the usespace IPsec implementation */
 #define TYPE_USERSPACE_IPSEC 0
 
 /* 0-default, 1-transport, 2-tunnel, 3 - beet */
 
-#define IPSEC_MODE 3  
+#define IPSEC_MODE 0  
 
 
+
+
+__u16 checksum_magic(const hip_hit *i, const hip_hit *r);
 
 
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,

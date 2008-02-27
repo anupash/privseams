@@ -1,97 +1,57 @@
 #include "ipsec_userspace_api.h"
 
-/* struct sockaddr {
- *        unsigned short sa_family;
- *      char sa_data[14];
- *
+ 
+
+
+/*
+ * * function checksum_magic()
+ * *
+ * * Calculates the hitMagic value given two HITs.
+ * * Note that since this is simple addition, it doesn't matter
+ * * which HIT is given first, and the one's complement is not
+ *   * taken.
+ *    */
+
+__u16 checksum_magic(const hip_hit *i, const hip_hit *r)
+
+{
+	int count;
+	unsigned long sum = 0;
+	unsigned short *p; /* 16-bit */
+	
+/* 
+ * 	 * this checksum algorithm can be found 
+ * 	 * in RFC 1071 section 4.1, pseudo-header
+ * 	* from RFC 2460
  * */
 
-
-
-
-
-
-static __u16 hit_magic_value(void *sockaddr_src_hit, void *sockaddr_dst_hit)
-{
-	__u16 hit_magic_value;
-
-	__u16 sa_src_hit_magic;
-	__u16 sa_dst_hit_magic;
-	
-	struct sockaddr *sa_src_hit = (struct sockaddr *) sockaddr_src_hit;
- 	struct sockaddr *sa_dst_hit = (struct sockaddr *) scokaddr_dst_hit;
-
-
-	struct in_addr *in_addr_src = NULL;
-	struct in6_addr *in6_addr_src = NULL;
-	
-	struct in_addr *in_addr_dst = NULL;
-	struct in6_addr *in6_addr_dst = NULL;
-
-
-
-
-	
-	switch(sa_src_hit->sa_family) {
-
-	case AF_INET:
-		in_addr_src =  (struct in_addr *) hip_cast_sa_addr(sockaddr_src_hit);
-		sa_src_hit_magic = in_addr_src->s_addr; /*  unsigned long */
-
-	case AF_INET6:
-		in6_addr_src = (struct in6_addr *) hip_cast_sa_addr(sockaddr_src_hit);
-		in6_addr_src->s6_addr;   /* u_int8_t  s6_addr[16];  IPv6 address */ 
-
-
+	/* one's complement sum 16-bit words of data */
+	/* sum initiator's HIT */
+	count = HIT_SIZE;
+	p = (unsigned short*) i;
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* sum responder's HIT */
+	count = HIT_SIZE;
+	p = (unsigned short*) r;
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
 	}
 
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
 
-
-	switch(sa_dst_hit->sa_family) {
-
-	case AF_INET:
-		in_addr_dst = (struct in_addr *) hip_cast_sa_addr(scokaddr_dst_hit);
-		
-
-	case AF_INET6:
-
-		in6_addr_dst = (struct in6_addr *) hip_cast_sa_addr(scokaddr_dst_hit);
-
-   }	
-
-	/* in order to get sockaddr_in or sockaddr_in6 address*/
-	struct sockaddr_in *sa_src_hit_ret = hip_cast_sa_addr(sockaddr_src_hit);
-
-	struct sockaddr_in *sa_dst_hit_ret =  hip_cast_sa_addr(sockaddr_dst_hit);
-
-	switch(sa_src_hit_ret->);
-
-      
-
-         
+	HIP_DEBUG("hitMagic checksum over %d bytes: 0x%x\n",
+	    2*HIT_SIZE, (__u16)sum);
 	
-
-
-
-  struct sockaddr *sa = (struct sockaddr *) sockaddr;
-  void *ret;
-
-  switch(sa->sa_family)  {
-  case AF_INET:
-    ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
-    break;
-  case AF_INET6:
-    ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
-    break;
-  default:
-    ret = NULL;
-  
-  return ret;
-
+	/* don't take the one's complement of the sum */
+	return((__u16)sum);
 }
 
-}
- 
 
 
 
@@ -113,11 +73,14 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
   struct sockaddr *src, *dst; /* IP address*/
 
   __u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
-  __u32 ipsec_e_type = (__u32) ealg; /* encry*/
-   
- 
-  
+  __u32 ipsec_e_type = (__u32) ealg; /* encryption type */
+  __u32 ipsec_a_type = ipsec_e_type; /* authentication type is equal to encryption type */
 
+  __u8 *ipsec_e_key; 
+  __u8 *ipsec_a_key;
+
+  __u32 ipsec_e_keylen = HIP_MAX_KEY_LEN; 
+  __u32 ipsec_a_keylen = HIP_MAX_KEY_LEN;
 
 
   /* ip6/ip4 (in6_addr) address conversion to sockddr */
@@ -140,10 +103,9 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
  */
 
 
-*hip_cast_sa_addr(void *sockaddr)  
 
+ hit_magic = checksum_magic((hip_hit *) src_hit->s6_addr, (hip_hit *) dst_hit->s6_addr);
 
- // hit_magic = 
 
  
 
@@ -152,16 +114,16 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
 
 
 /* struct hip_crypto_key {
- *  char key[HIP_MAX_]
- *
- * }
- *
- *  
- *  */
-
+ *  char key[HIP_MAX_KEY_LEN]
+*  }
+*  HIP_MAX_KEY_LEN 32 // max. draw: 256 bits!
+*/
 
 /* struct hip_crypto_key *enckey ---> __u8 *e_key */
 /* struct hip_crypto_key *authkey  ---> __u8 *a_key */
+
+ipsec_e_key = (__u8 *) enckey->key;
+ipsec_a_key = (__u8 *) authkey->key;
 
 
 
@@ -175,19 +137,31 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 
 */
 
+/* looking at the usermode code, it may be that the lifetime is stored in
+ * the hip_sadb_entry but never used. It is supposed to be the value in
+ * seconds after which the SA expires but I don't think this is
+ * implemented. It is a preserved field from the kernel API, from the
+ * PFKEY messages.
+ *
+ * */
 
+/* Here just give a value 100 to lifetime*/
 
-
-
-
+hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, inner_src, inner_dst, src, dst,
+ (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,ipsec_a_key, 
+ ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
 
 }
+
 
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				    struct in6_addr *src_addr,
 				    struct in6_addr *dst_addr, u8 proto,
 				    int use_full_prefix, int update) {
 	/* XX FIXME: TAO */
+
+
+
 }
 
 void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,

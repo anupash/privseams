@@ -56,11 +56,23 @@
 //#include <hip/hip_funcs.h>
 #include "hip_usermode.h"
 #include "hip_sadb.h"
+#include "misc.h"
+
+
+#include <sys/time.h>
+#include <sys/wait.h>		/* waitpid()	*/
+#include <pthread.h>		/* pthreads support*/
+
+
 #if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
 #include <mac/checksum_mac.h>
 #else
 #include "win32-checksum.h"
 #endif
+
+
+
+
 /* 
  * Globals
  */
@@ -89,6 +101,9 @@ long g_read_usec;
 #define BUFF_LEN 2000
 #define HMAC_SHA_96_BITS 96 /* 12 bytes */
 
+/* added By Tao Wan*/
+#define H_PROTO_UDP 17
+
 /* array of Ethernet addresses used by get_eth_addr() */
 #define MAX_ETH_ADDRS 255
 __u8 eth_addrs[6 * MAX_ETH_ADDRS]; /* must be initialized to random values */
@@ -96,6 +111,13 @@ __u8 eth_addrs[6 * MAX_ETH_ADDRS]; /* must be initialized to random values */
 
 /* Prototype of checksum function defined in hip_util.c */
 __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst);
+
+
+/* added by Tao Wan, define g_state to be 1 */
+
+int g_state = 1;
+
+
 
 /* 
  * Local data types 
@@ -126,6 +148,26 @@ struct arp_hdr {
 	__u16 ar_op;
 };
 
+/*added by Tao Wan pseudo_header6, pseudo_header*/
+
+typedef struct _pseudo_header6
+{
+	unsigned char src_addr[16];
+	unsigned char dst_addr[16];
+	__u32 packet_length;
+	char zero[3];
+	__u8 next_hdr;
+} pseudo_header6;
+
+typedef struct _pseudo_header
+{
+	unsigned char src_addr[4];
+	unsigned char dst_addr[4];
+	__u8 zero;
+	__u8 protocol;
+	__u16 packet_length;
+} pseudo_header;
+
 
 #define ARPOP_REQUEST 1
 #define ARPOP_REPLY 2
@@ -155,13 +197,135 @@ __u64 get_eth_addr(int family, __u8 *addr);
 /* void reset_sadbentry_udp_port (__u32 spi_out); */
 int send_udp_esp_tunnel_activation (__u32 spi_out);
 
-extern __u32 get_preferred_lsi();
-extern int do_bcast();
+// extern __u32 get_preferred_lsi();
+// extern int do_bcast();
 extern int maxof(int num_args, ...);
 
 #ifdef __MACOSX__
 void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
 #endif
+
+
+
+
+/*
+ * function checksum_udp_packet()
+ *
+ * XXX TODO: combine with other checksum functions
+ *
+ * Calculates the checksum of a UDP packet with pseudo-header
+ * src and dst are IPv4 or IPv6 addresses in network byte order
+ */
+__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
+{
+	__u16 checksum;
+	unsigned long sum = 0;
+	int count, length;
+	unsigned short *p; /* 16-bit */
+	pseudo_header pseudoh;
+	pseudo_header6 pseudoh6;
+	__u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	udphdr* udph = (udphdr*) data;
+
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+	
+		memset(&pseudoh, 0, sizeof(pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = H_PROTO_UDP;
+		length = ntohs(udph->len);
+		pseudoh.packet_length = htons((__u16)length);
+
+		count = sizeof(pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+	
+		memset(&pseudoh6, 0, sizeof(pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = ntohs(udph->len);
+		pseudoh6.next_hdr = H_PROTO_UDP;
+		pseudoh6.packet_length = htonl(length);
+		
+		count = sizeof(pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+    
+	/* one's complement sum 16-bit words of data */
+	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+ 
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = (__u16)(~sum);
+    
+	return(checksum);
+}
+
+
+/* added by Tao Wan, different from boeing implemenation */
+
+int get_preferred_lsi(struct sockaddr *lsi) {
+
+   if (lsi != NULL) {
+    struct in_addr *lsi_in = hip_cast_sa_addr(lsi);
+    lsi_in->s_addr = 0;
+    return (0);
+} else
+  
+	return (-1); 
+
+} 
+
+
+/*
+ * Platform-independent sleep function. added by Tao Wan from Boeing code
+ */
+void hip_sleep(int seconds)
+{
+#ifdef __WIN32__
+	/* Microsoft requires at least one of the select() file sets
+	 * to contain a valid socket, so we use Sleep() instead. */
+	Sleep(seconds * 1000);
+#else
+	/* usleep() and sleep() are not thread safe */
+	struct timeval timeout;
+	timeout.tv_sec = seconds;
+	timeout.tv_usec = 0;
+	select(0, NULL, NULL, NULL, &timeout);
+#endif
+}
+
+
+
 void init_readsp()
 {
 	if (readsp[0])
@@ -177,6 +341,20 @@ void init_readsp()
 	/* also initialize the Ethernet address table */
 	RAND_bytes(eth_addrs, sizeof(eth_addrs));
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
  * hip_esp_output()
@@ -293,17 +471,26 @@ void *hip_esp_output(void *arg)
 			lsi->sa_family = AF_INET;
 			LSI4(lsi) = lsi_ip;
 			is_broadcast = FALSE;
+			
+			/* We do not have broadcast packets,  added by Tao
+			Wan on 27th, Feb */
 			/* broadcast packets */
-			if ((lsi_ip & 0x00FFFFFF)==0x00FFFFFF) {
-				if (!do_bcast())
-					continue;
+					
+        
+		// if ((lsi_ip & 0x00FFFFFF)==0x00FFFFFF) {
+		//		if (!do_bcast())
+		//			continue;
 				/* unicast the broadcast to each entry */
-				entry = hip_sadb_get_next(NULL);
-				is_broadcast = TRUE;
-			/* unicast packets */
-			} else if (!(entry = hip_sadb_lookup_addr(lsi))) {
-				/* No SADB entry. Send ACQUIRE if we haven't
-				 * already, i.e. a new lsi_entry was created */
+		//		entry = hip_sadb_get_next(NULL);
+		//		is_broadcast = TRUE;
+			
+		//	} 
+
+
+                      /* unicast packets */
+			if (!(entry = hip_sadb_lookup_addr(lsi))) {
+		/* No SADB entry. Send ACQUIRE if we haven't
+		* already, i.e. a new lsi_entry was created */
 				if (buffer_packet(lsi, raw_buff, len)==TRUE)
 					pfkey_send_acquire(lsi);
 				continue;
