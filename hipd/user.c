@@ -555,6 +555,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 hip_set_opportunistic_tcp_status(0);
 		break;
 #endif
+	case SO_HIP_TRIGGER_BEX:
+		dst_hit = hip_param_contents(msg, HIP_PARAM_HIT);
+		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
+		/* Fetch the hadb entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+
+		goto out_err;
+	  break;
 	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
