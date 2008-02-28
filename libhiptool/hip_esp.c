@@ -205,7 +205,32 @@ extern int maxof(int num_args, ...);
 void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
 #endif
 
+int pfkey_send_acquire(hip_hit_t *hit)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
 
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(hit),
+					  HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_HIT  failed\n");
+	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
+		 "build hdr failed\n");
+	
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+	
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	
+ out_err:
+	return err;
+}
 
 
 /*
