@@ -75,7 +75,7 @@
 #include <netinet/in.h> /* For IPv6 addresses etc. */
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
-#include "misc.h" /* For hip_hash_hit and hip_match_hit. */
+#include "misc.h" /* For debuging macros. */
 #include "configfilereader.h"
 
 /** The number of seconds the relay / RVS client is granted the service if the
@@ -125,22 +125,24 @@ typedef struct{
 typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
 
 /**
- * Initializes the global HIP relay hashtable. Allocates memory for hiprelay_ht.
+ * Initializes the global HIP relay hashtable. Allocates memory for
+ * @c hiprelay_ht.
  *
  * @return a pointer to a new hashtable, NULL if failed to init.
  */ 
 LHASH *hip_relht_init();
 
 /** 
- * Uninitializes the HIP relay hashtable. Frees the memory allocated for the hashtable
- * and for the relay records. Thus after calling this function, all memory allocated
- * from heap related to the relay records is freed.
+ * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
+ * allocated for the hashtable and for the relay records. Thus, after calling
+ * this function, all memory allocated from the heap related to the relay record
+ * hashtable is free.
  */
 void hip_relht_uninit();
 
 /**
- * The hash function of the hashtable. Calculates a hash from parameter relay record
- * HIT.
+ * The hash function of the @c hiprelay_ht hashtable. Calculates a hash from
+ * parameter relay record HIT.
  * 
  * @param rec a pointer to a relay record.
  * @return    the calculated hash or zero if @c rec or hit_r is NULL.
@@ -148,28 +150,36 @@ void hip_relht_uninit();
 unsigned long hip_relht_hash(const hip_relrec_t *rec);
 
 /**
- * The compare function of the hashtable. Compares the hash values calculated from
- * parameter @c rec1 and @c rec2.
+ * The compare function of the @c hiprelay_ht hashtable. Compares the hash
+ * values calculated from parameters @c rec1 and @c rec2.
  * 
- * @param rec1 a pointer to a relay record.
- * @param rec2 a pointer to a relay record.
- * @return     0 if keys are equal, non-zero otherwise.
+ * @param rec1 a pointer to a HIT.
+ * @param rec2 a pointer to a HIT.
+ * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
  */
 int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2);
 
 /**
- * Puts a relay record in the hashtable. Puts the relay record pointed to by @c rec
- * into the hashtable. If there already is an entry with the same key, the old value
- * is replaced. Note that we store pointers here, the data are not copied. There
- * should be no need to put a relay record more than once into the hashtable. If
- * the fields of an individual relay record need to be changed, just retrieve the
- * record with @c hip_relht_get() and alter the fields of it, but do not re-put it.
+ * Puts a relay record into the hashtable. Puts the relay record pointed by
+ * @c rec into the hashtable @c hiprelay_ht. If there already is an entry with
+ * the same key the old value is replaced, and <b>the memory allocated for the
+ * existing element is freed</b>. Note that we store pointers here, the data are
+ * not copied. There should be no need to put a relay record more than once into
+ * the hashtable. If the fields of an individual relay record need to be
+ * changed, just retrieve the record with @c hip_relht_get() and alter the
+ * fields of it, but do not re-put it into the hashtable.
  *
  * @param rec a pointer to a relay record to be inserted into the hashtable.
- * @note      <b style="color: #f00;">Do not put records allocated from stack into the
- *            hashtable.</b> Instead put only records created with hip_relrec_alloc().
+ * @return    -1 if there was a hash collision i.e. an entry with duplicate HIT
+ *            is inserted, zero otherwise.
+ * @note      <b style="color: #f00;">Do not put records allocated from stack
+ *            into the hashtable.</b> Instead put only records created with
+ *            hip_relrec_alloc().
+ * @note      In case of a hash collision, the existing relay record is freed.
+ *            If you store references to relay records that are in the hashtable
+ *            elsewhere outside the hashtable, NULL pointers can result.
  */
-void hip_relht_put(hip_relrec_t *rec);
+int hip_relht_put(hip_relrec_t *rec);
 
 /**
  * Retrieves a relay record from the hashtable. The parameter record @c rec needs
@@ -273,6 +283,70 @@ void hip_relrec_set_udpport(hip_relrec_t *rec, const in_port_t port);
  */
 void hip_relrec_info(const hip_relrec_t *rec);
 
+/**
+ * Initializes the global HIP relay whitelist. Allocates memory for
+ * @c hiprelay_wl.
+ *
+ * @return a pointer to a new hashtable, NULL if failed to init.
+ */ 
+LHASH *hip_relwl_init();
+
+/** 
+ * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
+ * memory allocated for the hashtable and for the HITs. Thus, after calling
+ * this function, all memory allocated from the heap related to the whitelist
+ * is free.
+ */
+void hip_relwl_uninit();
+
+/**
+ * The hash function of the @c hiprelay_wl hashtable. Calculates a hash from
+ * parameter HIT.
+ * 
+ * @param hit a pointer to a HIT.
+ * @return    the calculated hash or zero if @c hit is NULL.
+ */
+unsigned long hip_relwl_hash(const hip_hit_t *hit);
+
+/**
+ * The compare function of the @c hiprelay_wl hashtable. Compares the hash
+ * values calculated from parameter @c hit1 and @c hit2.
+ * 
+ * @param hit1 a pointer to a HIT.
+ * @param hit2 a pointer to a HIT.
+ * @return     0 if keys are equal and neither is NULL, non-zero otherwise.
+ */
+int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
+
+/**
+ * Puts a HIT into the whitelist. Puts the HIT pointed by @c hit into the
+ * whitelist hashtable @c hiprelay_wl. If there already is an entry with the
+ * same HIT, the old value is replaced, and <b>the memory allocated for the
+ * existing element is freed</b>. Note that we store pointers here, the data are
+ * not copied.
+ *
+ * @param hit a pointer to a HIT to be inserted into the whitelist.
+ * @return    -1 if there was a hash collision i.e. a duplicate HIT is inserted,
+ *            zero otherwise.
+ * @note      <b style="color: #f00;">Do not put HITs allocated from the stack
+ *            into the whitelist.</b> Instead put only HITs created with
+ *            malloc().
+ * @note      In case of a hash collision, the existing HIT is freed. If you
+ *            store references to HITs that are in the whitelist elsewhere
+ *            outside the whitelist, NULL pointers can result.
+ */
+int hip_relwl_put(hip_hit_t *hit);
+hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
+
+/**
+ * Deletes a single entry from the whitelist hashtable and frees the memory
+ * allocated for the element. The parameter HIT is itself left untouched, it is
+ * only used as an search key.
+ *
+ * @param hit a pointer to a HIT. 
+ */
+void hip_relwl_hit_free(hip_hit_t *hit);
+
 /** 
  * A dummy function for development purposes.
  * This is only here for testing and development purposes. It allows the same
@@ -288,7 +362,7 @@ int hip_we_are_relay();
  * @param  hit a HIT value over which the hash is calculated.
  * @return a hash value.
  */
-unsigned long hip_hash_func(hip_hit_t *hit);
+unsigned long hip_hash_func(const hip_hit_t *hit);
 
 /**
  * Relays an incoming I1 packet.

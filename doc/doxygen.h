@@ -22,12 +22,17 @@
  * @section sec_links Links
  * <ul>
  * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
- * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3 for C-library functions.</li>
+ * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3
+ *     for C-library functions.</li>
  * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2001/02/cfu.html">C Language Gotchas</a>.
+ *     A description of some easy-to-make mistakes in C.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2003/03/inline.html">Inline Functions In C</a>.
+ *     Notes on GCC and standard C inline functions.</li>
  * </ul>
  *
- * @date   21.01.2008
+ * @date   28.02.2008
  */ 
 
 /**

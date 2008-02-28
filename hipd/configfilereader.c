@@ -318,8 +318,8 @@ hip_ll_node_t *hip_ll_get_next(hip_ll_t *linkedlist, hip_ll_node_t *current)
 void print_node(hip_ll_node_t *node)
 {
 	if(node == NULL){
-		printf("Node NULL.\n");
+		HIP_INFO("Node NULL.\n");
 		return;
 	}
-	printf(" '%s' ", (node->data == NULL) ? NULL : node->data);
+	HIP_INFO(" '%s' ", (node->data == NULL) ? "NULL" : node->data);
 }

@@ -12,24 +12,15 @@
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-02.txt">
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see     hiprelay.h
  */ 
 #include "hiprelay.h"
 
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_new(). */
-static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
-/** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
-
 /** A hashtable for storing the relay records. */
 static LHASH *hiprelay_ht = NULL;
-/** A hashtable for storing the the HITs of the clients that are, allowed to use
+/** A hashtable for storing the the HITs of the clients that are allowed to use
     the relay / RVS service. */
-static LHASH *hiprelay_whitelist = NULL;
-
+static LHASH *hiprelay_wl = NULL;
 /** Default relay record life time in seconds. After this time, the record is
  *  deleted if it has been idle. */
 int hiprelay_lifetime = HIP_RELREC_DEF_LIFETIME;
@@ -43,6 +34,22 @@ int hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
  * code to be used at the relay and at endhosts without C precompiler #ifdefs
  */
 int we_are_relay = 0;
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(hip_relwl_hash, const hip_hit_t *)
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(hip_relwl_compare, const hip_hit_t *)
+/** A callback wrapper of the prototype required by @c lh_doall(). */
+static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
 LHASH *hip_relht_init()
 {
@@ -63,10 +70,8 @@ unsigned long hip_relht_hash(const hip_relrec_t *rec)
 {
 	if(rec == NULL || &(rec->hit_r) == NULL)
 		return 0;
-
-	uint8_t hash[HIP_AH_SHA_LEN];
-	hip_build_digest(HIP_DIGEST_SHA1, &(rec->hit_r), sizeof(rec->hit_r), hash);
-	return *((unsigned long *)hash);
+	
+	return hip_hash_func(&(rec->hit_r));
 }
 
 int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
@@ -78,22 +83,27 @@ int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2)
 	return (hip_relht_hash(rec1) != hip_relht_hash(rec2));
 }
 
-void hip_relht_put(hip_relrec_t *rec)
+int hip_relht_put(hip_relrec_t *rec)
 {
 	if(hiprelay_ht == NULL || rec == NULL)
 		return;
      
 	/* If we are trying to insert a duplicate element (same HIT), we have to
 	   delete the previous entry. If we do not do so, only the pointer in
-	   the hash table is replaced and the reference to the previous element
+	   the hashtable is replaced and the reference to the previous element
 	   is lost resulting in a memory leak. */
-	hip_relrec_t dummy;
-	memcpy(&(dummy.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
-	hip_relht_rec_free(&dummy);
-     
-	/* lh_insert returns always NULL, we cannot return anything from this
-	   function. */
-	lh_insert(hiprelay_ht, rec);
+	hip_relrec_t key, *match;
+	memcpy(&(key.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
+	match = hip_relht_get(rec);
+
+	if(match != NULL) {
+		hip_relht_rec_free(&key);
+		lh_insert(hiprelay_ht, rec);
+		return -1;
+	} else {
+		lh_insert(hiprelay_wl, rec);
+		return 0;
+	}
 }
 
 hip_relrec_t *hip_relht_get(const hip_relrec_t *rec)
@@ -115,6 +125,8 @@ void hip_relht_rec_free(hip_relrec_t *rec)
 	/* Free the memory allocated for the element. */
 	if(deleted_rec != NULL)
 	{
+		/* We set the memory to '\0' because the user may still have a
+		   reference to the memory region that is freed here. */
 		memset(deleted_rec, '\0', sizeof(*deleted_rec));
 		free(deleted_rec);
 		HIP_DEBUG("Relay record deleted.\n");
@@ -242,12 +254,90 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	HIP_INFO("\n%s", status);
 }
 
+LHASH *hip_relwl_init()
+{
+	return hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl_hash),
+				    LHASH_COMP_FN(hip_relwl_compare));
+}
+
+void hip_relwl_uninit()
+{
+	if(hiprelay_wl == NULL)
+		return;
+
+	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
+	lh_free(hiprelay_wl);
+}
+
+unsigned long hip_relwl_hash(const hip_hit_t *hit)
+{
+	if(hit == NULL)
+		return 0;
+	
+	return hip_hash_func(hit);
+}
+
+int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2)
+{
+	if(hit1 == NULL || hit2 == NULL)
+		return 1;
+
+	return (hip_relwl_hash(hit1) != hip_relwl_hash(hit2));
+}
+
+int hip_relwl_put(hip_hit_t *hit)
+{
+	if(hiprelay_wl == NULL || hit == NULL)
+		return;
+     
+	/* If we are trying to insert a duplicate element (same HIT), we have to
+	   delete the previous entry. If we do not do so, only the pointer in
+	   the hashtable is replaced and the reference to the previous element
+	   is lost resulting in a memory leak. */
+	hip_hit_t *dummy = hip_relwl_get(hit);
+	if(dummy != NULL) {
+		hip_relwl_hit_free(dummy);
+		lh_insert(hiprelay_wl, hit);
+		return -1;
+	} else {
+		lh_insert(hiprelay_wl, hit);
+		return 0;
+	}
+}
+
+hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
+{
+	if(hiprelay_wl == NULL || hit == NULL)
+		return NULL;
+
+	return (hip_hit_t *)lh_retrieve(hiprelay_wl, hit);
+}
+
+void hip_relwl_hit_free(hip_hit_t *hit)
+{
+	if(hiprelay_wl == NULL || hit == NULL)
+		return;
+	
+	/* Check if such element exist, and delete the pointer from the hashtable. */
+	hip_hit_t *deleted_hit = lh_delete(hiprelay_wl, hit);
+
+	/* Free the memory allocated for the element. */
+	if(deleted_hit != NULL)
+	{
+		/* We set the memory to '\0' because the user may still have a
+		   reference to the memory region that is freed here. */
+		memset(deleted_hit, '\0', sizeof(*deleted_hit));
+		free(deleted_hit);
+		HIP_DEBUG("HIT deleted from the relay whitelist.\n");
+	}
+}
+
 int hip_we_are_relay()
 {
 	return we_are_relay;
 }
 
-unsigned long hip_hash_func(hip_hit_t *hit)
+unsigned long hip_hash_func(const hip_hit_t *hit)
 {
 	uint32_t bits_1st = 0;
 	unsigned long hash = 0;
@@ -471,6 +561,7 @@ int hip_relay_read_config(){
 	int lineerr = 0, parseerr = 0, err = 0;
 	char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
 	hip_ll_t values;
+	hip_hit_t hit, *wl_hit = NULL;
 	/* The theoretical maximum number of seconds resulting from the lifetime
 	   formula given in the registration draft. */
 	double max = 15384774.906;
@@ -489,10 +580,21 @@ int hip_relay_read_config(){
 			hip_ll_node_t *current = NULL;
 			
 			if(strcmp(parameter, "whitelist") == 0) {
-				while((current = hip_ll_get_next(
-					       &values, current)) != NULL) {
-					/* Check & store the values to the white
-					   list hashtable. */
+				while((current = 
+				       hip_ll_get_next(&values, current))
+				      != NULL) {
+					if(inet_pton(AF_INET6, current->data,
+						     &hit) > 0)
+					{
+						/* store the HIT to the whitelist. */
+						wl_hit = (hip_hit_t*)
+							malloc(sizeof(hip_hit_t));
+						// Check malloc() fail...
+						memcpy(wl_hit, &hit, sizeof(hit));
+						//hip_relwl_put(wl_hit);
+					}
+					
+					print_node(current);
 				}
 			} else if(strcmp(parameter, "default_lifetime") == 0) {
 				double tmp = 0;
