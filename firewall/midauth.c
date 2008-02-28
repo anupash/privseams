@@ -38,6 +38,16 @@ static void update_ipv4_header (struct iphdr *ip, int len) {
     ip->check = ~checksum;
 }
 
+/**
+ * Changes IPv6 header to match new length.
+ *
+ * @param ip a pointer to the IPv6 header
+ * @param len new payload length
+ */
+static void update_ipv6_header (struct ip6_hdr *ip, int len) {
+    ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len);
+}
+
 #define CHECKSUM_CARRY(x) \
 (x = (x >> 16) + (x & 0xffff), (~(x + (x >> 16)) & 0xffff))
 
@@ -107,6 +117,30 @@ static void update_hip_checksum_ipv4(struct iphdr *ip) {
 }
 
 /**
+ * Calculate the new checksum for the HIP packet in IPv6.
+ *
+ * @param ip the modified IP packet
+ */
+static void update_hip_checksum_ipv6(struct ip6_hdr *ip) {
+    struct sockaddr_in6 src, dst;
+    struct hip_common *msg = (struct hip_common *)((char*)ip + sizeof(struct ip6_hdr));
+
+    memset(&src, 0, sizeof(src));
+    memset(&dst, 0, sizeof(dst));
+
+    src.sin6_family = AF_INET6;
+    memcpy(&src.sin6_addr, &ip->ip6_src, sizeof (struct in6_addr));
+    
+    dst.sin6_family = AF_INET6;
+    memcpy(&dst.sin6_addr, &ip->ip6_dst, sizeof (struct in6_addr));
+
+    hip_zero_msg_checksum(msg);
+    msg->checksum = hip_checksum_packet((char*)msg,
+					(struct sockaddr *) &src,
+                                        (struct sockaddr *) &dst);
+}
+
+/**
  * Take care of adapting all headers in front of the HIP payload to the new
  * content. Call only once per packet, as it modifies the packet size to
  * include header length.
@@ -115,6 +149,7 @@ static void update_hip_checksum_ipv4(struct iphdr *ip) {
  */
 static void update_all_headers(struct midauth_packet *p) {
     struct iphdr *ipv4 = NULL;
+    struct ip6_hdr *ipv6 = NULL;
 
     switch (p->ip_version) {
 	case 4:
@@ -129,12 +164,13 @@ static void update_all_headers(struct midauth_packet *p) {
 	    update_ipv4_header(ipv4, p->size);    
 	    break;
 	case 6:
+	    ipv6 = (struct ip6_hdr *) p->buffer;
 	    p->size += sizeof(struct ip6_hdr);
-	    /* TODO: implement update_hip_checksum_ipv6) */
-	    HIP_ERROR("Trying to modify the IPv6 packet. Not implemented yet!");
+	    update_hip_checksum_ipv6(ipv6);
+	    update_ipv6_header(ipv6, p->size);
 	    break;
 	default:
-	    HIP_ERROR("Unknown IP version. %i, expected 4 or 6.", p->ip_version);
+	    HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n", p->ip_version);
 	    break;
     }
 }
