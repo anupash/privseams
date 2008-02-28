@@ -42,87 +42,92 @@ make -C doc all
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
 
-%install
-rm -rf %{buildroot}
-install -d %{buildroot}/%{prefix}/bin
-install -d %{buildroot}/%{prefix}/sbin
-install -d %{buildroot}/%{prefix}/lib
-install -d %{buildroot}/doc
-install -d %{buildroot}/etc/rc.d/init.d
-make DESTDIR=%{buildroot} install
-install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-
-%pre
-
-%post
-/sbin/chkconfig --add hipd
-/sbin/service hipd start
-
-%preun
-/sbin/service hipd stop
-/sbin/chkconfig --del hipd
-
-%postun
-
-%clean
-rm -rf %{buildroot}
-
 # Note: we are not distributing everything from test directory, just essentials
 
 # create subpackage
 # list of files with the name of subpackage
 
 %package lib
-Summary: library files
+Summary: hip library files
 Group: System Environment/Kernel
 %description lib
-%files	lib 
-%{_libdir}/*
 
 %package core
-Summary: core files
+Requires: hipl-lib
+Summary: hip core files
 Group: System Environment/Kernel
 %description core
-%files	core
+
+%package agent
+Requires: hipl-lib, hipl-core
+Summary: hip agent files
+Group: System Environment/Kernel
+%description agent
+
+%package firewall
+Summary: hip firewall files
+Group: System Environment/Kernel
+%description firewall
+
+%package test
+Requires: hipl-lib, hipl-core
+Summary: hip test files
+Group: System Environment/Kernel
+%description test
+
+%package doc
+Summary: hip doc files
+Group: System Environment/Kernel
+%description doc
+
+%install
+rm -rf %{buildroot}
+install -d %{buildroot}/%{prefix}/bin
+install -d %{buildroot}/%{prefix}/sbin
+install -d %{buildroot}/%{prefix}/lib
+install -d %{buildroot}/etc/rc.d/init.d
+install -d %{buildroot}/doc
+make DESTDIR=%{buildroot} install
+install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 644 doc/HOWTO.txt %{buildroot}/doc
+
+%post core
+sudo /sbin/chkconfig --add hipd
+sudo /sbin/chkconfig --level 2 hipd on
+sudo /sbin/service hipd start
+
+%preun core
+/sbin/service hipd stop
+/sbin/chkconfig --del hipd
+
+%clean
+rm -rf %{buildroot}
+
+%files lib
+%{_libdir}
+
+%files core
 %{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
-%package agent
-Summary: agent files
-Group: System Environment/Kernel
-%description agent
-%files	agent
+%files agent
 %{prefix}/bin/hipagent
-%config /etc/rc.d/init.d/hipd
 
-%package firewall
-Summary: firewall files
-Group: System Environment/Kernel
-%description firewall
-%files  firewall
-%{prefix}/sbin/firewall
-
-%package doc
-Summary: doc files
-Group: System Environment/Kernel
-%description doc
-%files  doc
-%doc doc/HOWTO.txt doc/howto-html
-
-%package test
-Summary: test files
-Group: System Environment/Kernel
-%description test
-%files	test
+%files test
 %{prefix}/bin/conntest-client
 %{prefix}/bin/conntest-client-gai
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
+
+%files firewall
+%{prefix}/sbin/firewall
+
+%files doc
+%doc doc/HOWTO.txt doc/howto-html
 
 %changelog
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
