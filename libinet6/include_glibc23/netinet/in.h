@@ -76,7 +76,7 @@ enum
     IPPROTO_ENCAP = 98,	   /* Encapsulation Header.  */
 /* BEGIN HIPL PATCH */
 #define IPPROTO_HIP             IPPROTO_HIP
-    IPPROTO_HIP = 253,      /* Host Identity Protocol */
+    IPPROTO_HIP = 139,      /* Host Identity Protocol */
 /* END HIP PATCH */
 #define IPPROTO_ENCAP		IPPROTO_ENCAP
     IPPROTO_PIM = 103,	   /* Protocol Independent Multicast.  */

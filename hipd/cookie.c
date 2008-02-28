@@ -1,10 +1,9 @@
-/*
- * HIP cookie handling
+/**
+ * @file
+ * HIP cookie handling. Licence: GNU/GPL
  * 
- * Licence: GNU/GPL
- * Authors: Kristian Slavov <ksl@iki.fi>
- *          Miika Komu <miika@iki.fi>
- *
+ * @author Kristian Slavov <ksl#iki.fi>
+ * @author Miika Komu <miika#iki.fi>
  */
 
 #include "cookie.h"
@@ -49,7 +48,7 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
  * @param ip_r Responder's IPv6 address
  * @param hit_i Initiators HIT
  *
- * Return 0 <= x < HIP_R1TABLESIZE
+ * @return 0 <= x < HIP_R1TABLESIZE
  */
 int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			       struct in6_addr *hit_i)
@@ -161,7 +160,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
  * @param hdr The incoming R1/I2 packet header.
  * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
- * The K and I is read from the @puzzle_or_solution. 
+ * The K and I is read from the @c puzzle_or_solution. 
  *
  * The J that solves the puzzle is returned, or 0 to indicate an error.
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
@@ -475,4 +474,6 @@ int hip_recreate_all_precreated_r1_packets()
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}
+
+	return 0;
 }

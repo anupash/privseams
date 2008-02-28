@@ -396,7 +396,7 @@ int hip_build_locators(struct hip_common *msg)
 #ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
     if (address_count > 0) {
 #else
-    if (address_count > 1) {
+    if (address_count > 0) {
 #endif
         HIP_IFEL(!(locs = malloc(address_count * 
                                  sizeof(struct hip_locator_info_addr_item))), 
@@ -434,7 +434,7 @@ int hip_build_locators(struct hip_common *msg)
         err = hip_build_param_locator(msg, locs, address_count);
     }
     else
-        HIP_DEBUG("Host has only one or no addresses no point "
+        HIP_DEBUG("Host has no addresses no point "
                   "in building LOCATOR parameters\n");
  out_err:
 
@@ -1059,10 +1059,10 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  *                 outbound traffic (state machine)?
  */
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
-	char id[32];
+	char id[100];
 	sprintf_i3_id(id, (ID *)ctx_data);
 	
-	HIP_ERROR("Following ID not found: %s", id);
+	HIP_ERROR("Following ID not found: %s\n", id);
 }
 
 /** 

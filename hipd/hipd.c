@@ -51,14 +51,14 @@ int hip_firewall_sock = -1;
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 
-HIP transform suite order 
-0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
-1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
-2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
-3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
-4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
-5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
- */
+   HIP transform suite order 
+   0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
+   1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
+   2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
+   3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
+   4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
+   5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
+*/
 int hip_transform_order = 0; 
 
 /* OpenDHT related variables */
@@ -113,6 +113,7 @@ int hip_use_userspace_ipsec = 1;
 int hip_use_opptcp = 0; // false
 
 void hip_set_opportunistic_tcp_status(int newVal)
+
 {
         if((newVal == 0) || (newVal == 1))
                 hip_use_opptcp = newVal;
