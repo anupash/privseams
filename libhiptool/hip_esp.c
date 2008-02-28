@@ -205,8 +205,13 @@ extern int maxof(int num_args, ...);
 void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
 #endif
 
-int pfkey_send_acquire(hip_hit_t *hit)
+
+/* hit is the in6_addr struct  */
+
+int pfkey_send_acquire(struct sockaddr *target)
 {
+	
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(target);
 	struct hip_common *msg = NULL;
 	int err = 0;
 
