@@ -210,6 +210,8 @@ int pfkey_send_acquire(hip_hit_t *hit)
 	struct hip_common *msg = NULL;
 	int err = 0;
 
+	/* @todo: Tao, how do we find the peer IP ? */
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(hit),
