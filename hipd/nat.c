@@ -27,6 +27,7 @@
  */ 
 #include "nat.h"
 #include "pjnath.h"
+#include "pjlib.h"
 
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
@@ -295,48 +296,120 @@ void hip_nat_randomize_nat_ports()
 //TODO
 pj_ice_sess **  	p_ice;
 
-
+/***
+ * this the call back interface when check complete.
+ * */
 void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	HIP_DEBUG("hip_on_ice_complete");
-}
-
-pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
-	HIP_DEBUG("hip_on_tx_pkt");
-	return 0;
+	
+	// the verified list is in ice->verified_check_list
+	
+	
+	//read all the element from the list
+	
+	//we set the flag in the peer list to verified.
+	
+	//TODO decide if we should save the paired local address also.
 	
 }
+
+/**
+ * this is the call back interface to send package.
+ * */
+pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
+	HIP_DEBUG("hip_on_tx_pkt");
+	
+	
+	//use sendto send the UDP packet.
+
+
+	return 0;
+}
+/**
+ * 
+ * this is the call back interface when the received packet is not strun.
+ * we ignire here.
+ * */
 void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
 	HIP_DEBUG("hip_on_rx_data");
 }
 
 
-int hip_external_ice_init(){
+pj_caching_pool cp;
+pj_status_t status;
+pj_pool_t *pool = 0;
+
+
+
+/***
+ * this function is added to create the ice seesion
+ * currently we suppport only one session at one time.
+ * only one component in the seesion. 
+ * */
+
+int hip_external_ice_init(int role){
 	
-	pj_stun_config * stun_config;
+	//init for PJproject
+	status = pj_init();
+	pjlib_util_init();
+	
+	
+    if (status != PJ_SUCCESS) {
+        HIP_DEBUG("Error initializing PJLIB", status);
+        return 1;
+    }
+	//init for memery pool factroy
+    // using default pool policy.
+    pj_caching_pool_init(&cp, &pj_pool_factory_default_policy,0 );  
+    
+    pjnath_init();
+    
+	
+	pj_stun_config  stun_cfg;
 	
 	const char *  name = "hip_ice";
-	pj_ice_sess_role   	 role = PJ_ICE_SESS_ROLE_CONTROLLING;
+	pj_ice_sess_role   	 ice_role;
+	if(role)
+		ice_role = PJ_ICE_SESS_ROLE_CONTROLLING;
+	else
+		ice_role = PJ_ICE_SESS_ROLE_CONTROLLED;
 	
 	struct pj_ice_sess_cb cb;
 	
 	//hip_ice_sess_cb.
 	//DOTO tobe reset
- 	unsigned   	 comp_cnt = 10;
+ 	unsigned   	 comp_cnt = 1;
  	
- 	const pj_str_t *   	 local_ufrag = NULL;
- 	const pj_str_t *  	local_passwd = NULL;
+ 	const pj_str_t *   	 local_ufrag ;
+ 	const pj_str_t *  	local_passwd ;
  	
- 	//cinfigure the call back handle
- 	cb.on_ice_complete = hip_on_ice_complete;
- 	cb.on_tx_pkt = hip_on_tx_pkt;
- 	cb.on_rx_data=hip_on_rx_data;
+	//copy from test
+	  	pj_pool_t *pool;
+	    pj_ioqueue_t *ioqueue;
+	    pj_timer_heap_t *timer_heap;
+	   //end copy
  	
+ 	//configure the call back handle
+ 	cb.on_ice_complete = &hip_on_ice_complete;
+ 	cb.on_tx_pkt = &hip_on_tx_pkt;
+ 	cb.on_rx_data= &hip_on_rx_data;
+ 	
+ 	//copy from test
+ 	    
+ 	    pj_ioqueue_create(pool, 12, &ioqueue);
+ 	    pj_timer_heap_create(pool, 100, &timer_heap);
+ 	    
+ 	    pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
+ 	    pool = pj_pool_create(stun_cfg.pf, NULL, 4000, 4000, NULL);
+ 	//end copy
+ 	    
+ 	    
  	//check if there is already a session
  	if(!p_ice)
  	 return pj_ice_sess_create( 
- 			stun_config,
+ 			&stun_cfg,
  			name,
- 			role,
+ 			ice_role,
  			comp_cnt,
  			&cb,
  			local_ufrag,
@@ -347,7 +420,38 @@ int hip_external_ice_init(){
  	return 0;
  	
 }
+
+/***
+ * this function is called to add local candidates for the only component
+ *  
+ * */
+int hip_external_ice_add_local_candidates(){
 	
+	
+	
+	return 0;
+}
+
+
+/*****
+*  
+*this function is called after the local candidates are added. 
+* the check list will created inside the seesion object. 
+*/
+int hip_external_ice_add_remote_candidates(){
+	return 0;
+}
+
+
+int hip_external_ice_end(){
+	//destory the pool
+	if(pool)
+		pj_pool_release(pool);
+    //destory the pool factory
+    pj_caching_pool_destroy(&cp);
+}
+
+
 /*
 pj_ice_sess_add_cand()
 
