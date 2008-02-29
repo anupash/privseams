@@ -1,8 +1,6 @@
 #!/bin/sh -xv
 # This script allows for building binary and source debian packages
 
-# XX FIXME: ADD OPP + RVS OPTIONS
-
 #Default debian package is BINARY
 TYPE=binary
 
@@ -13,9 +11,15 @@ RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
+
 DEBARCH="i386"
-if uname -a|grep x86_64; then DEBARCH=amd64; fi
+if uname -m|grep x86_64; then DEBARCH=amd64; fi
+# if uname -m|grep arm*; then DEBARCH=armel; fi 
+if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
+
+
 DEBIAN=${DEBARCH}/DEBIAN
+
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
@@ -23,7 +27,18 @@ PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
-PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
+
+POSTFIX="deb"
+TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
+PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
+TMP=""
+DEBLIB="$NAME-$TMP"
+
+LINE0="Depends:"
+LINE1="Build-Depends:"
+LINE2="Package:"
+LINE3="Architecture:"
 
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
@@ -74,39 +89,58 @@ copy_files_gpl()
 	set +e
 }
 
-# copy files
-copy_files ()
+init_files ()
 {
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
-    
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
-    for f in control changelog copyright postinst prerm;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN"
-    done
     
-    echo "** Copying binary files to '$PKGDIR'"
+    if [ $TMP = "core" ]; then
+    	for f in control changelog copyright postinst prerm;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+    else
+	for f in control changelog copyright;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+    fi
+
+    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    
+    if [ "$DEBLIB" = "" ]; then
+     sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    else
+     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    fi
+
+    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+
+    # cp $PKGDIR/DEBIAN/control $PKGROOT/control-$TMP
+   
+}
+
+# copy and build package files
+copy_and_package_files ()
+{
+    echo "copying and packaging files"
+
+    TMP="lib"
+    DEBLIB=""
+    init_files;
+    
+    echo "** Copying library files to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
+   
+    echo "$PKGDIR"
 
-    # create directory structure
-    mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    mkdir -p usr/lib
+
     cd "$HIPL"
     
-    cp hipd/hipd $PKGDIR/usr/sbin/
+    echo "$HIPL"
 
-    cp firewall/firewall $PKGDIR/usr/sbin/
-
-    cp tools/hipconf $PKGDIR/usr/sbin/
-#    cp agent/hipagent $PKGDIR/usr/sbin/
-
-    for suffix in "" -gai -native -native-user-key;do
-	cp test/conntest-client$suffix $PKGDIR/usr/bin/
-    done
-    for suffix in "" -native;do
-	cp test/conntest-server$suffix $PKGDIR/usr/bin/
-    done
-    cp test/hipsetup $PKGDIR/usr/sbin/
     for suffix in a so so.0 so.0.0.0;do
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
@@ -115,24 +149,164 @@ copy_files ()
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
 	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
+
     cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	if [ ! $CORPORATE ];then
 	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
+   
     cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    
     cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-#    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
 
+    TMP="core"
+    #hipl-core hipd: depends on hipl-lib
+    DEBLIB="$NAME-lib"
+    init_files;
+    
+    echo "** Copying binary files to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    echo "$PKGDIR"
+
+    # create directory structure
+    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
+    cd "$HIPL"
+    
+    echo "$HIPL"
+
+    cp hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
-    echo "** Copying documentation to '$PKGDIR'"
-    cd "$HIPL/doc"
-    DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+    
+    TMP="firewall"
+    DEBLIB="$NAME-lib"
+    init_files;
+    
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/sbin
+    cd "$HIPL"
+
+    echo "** Copying firewall to $PKGDIR"
+    cp firewall/firewall $PKGDIR/usr/sbin/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
+    TMP="tools"
+    #hipl-tools (depends on hipl-lib and hipl-core)
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/sbin
+    cd "$HIPL"
+
+    cp tools/hipconf $PKGDIR/usr/sbin/
+    
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+   
+    TMP="test"
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+    
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    mkdir -p usr/bin usr/sbin
+    cd "$HIPL"
+
+    #cp agent/hipagent $PKGDIR/usr/sbin/
+
+    for suffix in "" -gai -native -native-user-key;do
+	cp test/conntest-client$suffix $PKGDIR/usr/bin/
+    done
+
+    for suffix in "" -native;do
+	cp test/conntest-server$suffix $PKGDIR/usr/bin/
+    done
+
+    cp test/hipsetup $PKGDIR/usr/sbin/
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
+    TMP="agent"
+    DEBLIB="$NAME-lib, $NAME-core"
+    init_files;
+
+    echo "** Making directory to '$PKGDIR'"
+    #mkdir -p "$PKGDIR/usr"
+    #cd "$PKGDIR"
+
+    mkdir -p "$PKGDIR/usr"
+    mkdir -p "$PKGDIR/usr/sbin"
+    mkdir -p "$PKGDIR/usr/lib"
+    mkdir -p "$PKGDIR/usr/share"
+    mkdir -p "$PKGDIR/usr/share/hipl"
+    mkdir -p "$PKGDIR/usr/share/hipl/libhipgui"
+    mkdir -p "$PKGDIR/usr/share/menu"
+    mkdir -p "$PKGDIR/usr/share/pixmaps"
+    mkdir -p "$PKGDIR/usr/share/applications"
+    mkdir -p "$PKGDIR/etc"
+    mkdir -p "$PKGDIR/etc/xdg"
+    mkdir -p "$PKGDIR/etc/xdg/autostart"
+
+    #mkdir -p usr/sbin
+    
+    cd "$HIPL"
+
+    echo "** Copying hipagent to '$PKGDIR'"
+    cp agent/hipagent $PKGDIR/usr/sbin/
+
+    cp -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
+
     set +e
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+  
+    TMP="doc"
+    DEBLIB=""
+    init_files;
+
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    if [ $DEBARCH != "armel" ]; then
+
+    	mkdir -p usr/share/doc
+    	#cd "$HIPL"
+
+    	echo "** Copying documentation to '$PKGDIR'"
+    	cd "$HIPL/doc"
+    	DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
+    	set +e
+    
+    	PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    	create_sub_package;
+    fi
+
 }
+
 
 error_cleanup()
 {
@@ -142,6 +316,24 @@ error_cleanup()
 	    echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
 	fi
     fi
+}
+
+create_sub_package()
+{
+
+    echo "** Creating the Debian package '$PKGNAME'"
+    cd "$PKGROOT"
+    if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
+	echo "** Successfully finished building the binary Debian package"
+	echo "** The debian packages is located in $PKGROOT/$PKGNAME"
+	echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
+    else
+	echo "** Error: unable to build package, exiting"
+	error_cleanup
+	exit 1
+    fi
+
+    rm -rf ${PKGDIR}
 }
 
 error_cleanup_src()
@@ -161,8 +353,10 @@ die() {
 
 help() {
 cat <<EOF
-usage: $0 [-b] | [-s] | [-a]
-b=binary, s=source, a=armel
+#usage: $0 [-b] | [-s] | [-a]
+#b=binary, s=source, a=armel
+usage: $0 [-b] | [-s]
+b=binary, s=source
 default: ${TYPE}
 EOF
 }
@@ -175,12 +369,12 @@ parse_args() {
       getopts abchs N "$@"
       
       case $N in
-	    a) TYPE=binary
-               DEBIAN=armel/DEBIAN
-		PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
+	#    a) TYPE=binary
+        #     	DEBIAN=armel/DEBIAN
+	#	PKGNAME="${NAME}-${VERSION}-${RELEASE}-armel.deb" ;;
 
             b) TYPE=binary    
-               GIVEN=${GIVEN}+1 ;;
+               	GIVEN=${GIVEN}+1 ;;
 
             s) TYPE=source ;;
 
@@ -197,10 +391,9 @@ parse_args() {
     done
 }
 
-######## "Main" function ###################################################
+######################## "Main" function #############################
 
 parse_args $@
-
 
 echo "** Creating the directory structure and files for building the"
 echo "** binary Debian package containing HIPL user space software"
@@ -276,45 +469,32 @@ if [ $TYPE = "binary" ];then
 	exit 1
     fi
 
-	cd "$PKGROOT"
-    if ! copy_files;then
+    cd "$PKGROOT"
+    if ! copy_and_package_files;then
 	echo "** Error: unable to copy files, exiting"
 	exit 1
     fi
 
-	cd "$PKGROOT"
-	if [ $CORPORATE = 1 ];then
-		if ! copy_files_gpl;then
-		echo "** Error: unable to copy GPL files, exiting"
-		exit 1
-		fi
+    cd "$PKGROOT"
+    	if [ $CORPORATE = 1 ];then
+    		if ! copy_files_gpl;then
+    		echo "** Error: unable to copy GPL files, exiting"
+    		exit 1
+    		fi
 	
-		cd "$PKGROOT"
-		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-		echo "** Successfully finished building the binary GPL Debian package"
-		else
+    		cd "$PKGROOT"
+    		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+    		echo "** Successfully finished building the binary GPL Debian package"
+    		else
 		echo "** Error!"
 		echo "** Error: Unable to build the binary GPL Debian package!"
 		echo "** Error!"
 		exit 1
 		fi
 	fi
+fi
 
-
-	cd "$PKGROOT"
-	echo "** Creating the Debian package '$PKGNAME'"
-	if dpkg-deb -b "$PKGDIR" "$PKGNAME";then
-		echo "** Successfully finished building the binary Debian package"
-		echo "** The debian packages is located in $PKGROOT/$PKGNAME"
-		echo "** The package can now be installed with dpkg -i $PKGROOT/$PKGNAME"
-	else
-		echo "** Error: unable to build package, exiting"
-		error_cleanup
-		exit 1
-	fi
-	rm -rf ${PKGDIR}
-	else
-# $TYPE == "source
+if [ $TYPE = "source" ];then
 # Debian SOURCE package
 
     if ! mkdir -p "$PKGDIR_SRC";then
@@ -340,6 +520,8 @@ if [ $TYPE = "binary" ];then
 
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
+    
+
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	rm -rf "${NAME}${SUFFIX}"
@@ -362,5 +544,5 @@ echo "Resetting compilation environment, please wait..."
 ./configure >/dev/null
 make clean >/dev/null
 echo "Done."
-
 exit 0
+
