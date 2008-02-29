@@ -186,14 +186,17 @@ int hipd_init(int flush_ipsec, int killold)
 	if(hip_relht_init() == NULL)
 	{
 		HIP_ERROR("Unable to initialize HIP relay / RVS database.\n");
+	} else if(hip_relwl_init() == NULL){
+		HIP_ERROR("Unable to initialize HIP relay / RVS whitelist.\n");
+		hip_relht_uninit();
 	} else {
-		HIP_INFO("HIP relay / RVS database initialized "\
-			 "successfully.\n");
+		HIP_INFO("HIP relay / RVS database and whitelist initialized "\
+			 "successfully.\nReading configuration file %s.\n",
+			 HIP_RELAY_CONFIG_FILE);
+		HIP_DEBUG("\n\n\n###\n\n\n");
+		hip_relay_read_config();
+		HIP_DEBUG("\n\n\n###\n\n\n");
 	}
-	HIP_DEBUG("\n\n\n###\n\n\n");
-	HIP_DEBUG("Reading config file.\n");
-	hip_relay_read_config();
-	HIP_DEBUG("\n\n\n###\n\n\n");
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();

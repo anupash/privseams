@@ -19,7 +19,7 @@
 /** A hashtable for storing the relay records. */
 static LHASH *hiprelay_ht = NULL;
 /** A hashtable for storing the the HITs of the clients that are allowed to use
-    the relay / RVS service. */
+ *  the relay / RVS service. */
 static LHASH *hiprelay_wl = NULL;
 /** Default relay record life time in seconds. After this time, the record is
  *  deleted if it has been idle. */
@@ -101,7 +101,7 @@ int hip_relht_put(hip_relrec_t *rec)
 		lh_insert(hiprelay_ht, rec);
 		return -1;
 	} else {
-		lh_insert(hiprelay_wl, rec);
+		lh_insert(hiprelay_ht, rec);
 		return 0;
 	}
 }
@@ -313,6 +313,14 @@ hip_hit_t *hip_relwl_get(const hip_hit_t *hit)
 	return (hip_hit_t *)lh_retrieve(hiprelay_wl, hit);
 }
 
+unsigned long hip_relwl_size()
+{
+	if(hiprelay_wl == NULL)
+		return 0;
+
+	return hiprelay_wl->num_items;
+}
+
 void hip_relwl_hit_free(hip_hit_t *hit)
 {
 	if(hiprelay_wl == NULL || hit == NULL)
@@ -335,37 +343,6 @@ void hip_relwl_hit_free(hip_hit_t *hit)
 int hip_we_are_relay()
 {
 	return we_are_relay;
-}
-
-unsigned long hip_hash_func(const hip_hit_t *hit)
-{
-	uint32_t bits_1st = 0;
-	unsigned long hash = 0;
-
-	/* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
-	   We have four groups of 32 bit sequences here, but the first 28 bits
-	   are constant and have no hash value. Therefore, we create a new
-	   replacement sequence for first 32 bit sequence. */
-	   
-	bits_1st = (~hit->in6_u.u6_addr8[3]) << 28;
-	bits_1st |= hit->in6_u.u6_addr8[3] << 24;
-	bits_1st |= hit->in6_u.u6_addr8[7] << 16;
-	bits_1st |= hit->in6_u.u6_addr8[11] << 8;
-	bits_1st |= hit->in6_u.u6_addr8[15];
-		
-	/* We calculate the hash by avalanching the bits. The avalanching
-	   ensures that we make use of all bits when dealing with 64 bits
-	   architectures. */
-	hash =  (bits_1st ^ hit->in6_u.u6_addr32[1]);
-	hash ^= hash << 3;
-	hash ^= (hit->in6_u.u6_addr32[2] ^ hit->in6_u.u6_addr32[3]);
-	hash += hash >> 5;
-	hash ^= hash << 4;
-	hash += hash >> 17;
-	hash ^= hash << 25;
-	hash += hash >> 6;
-	
-	return hash;
 }
 
 int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
@@ -583,18 +560,26 @@ int hip_relay_read_config(){
 				while((current = 
 				       hip_ll_get_next(&values, current))
 				      != NULL) {
+					/* Try to convert the characters to an
+					   IPv6 address. */
 					if(inet_pton(AF_INET6, current->data,
 						     &hit) > 0)
 					{
 						/* store the HIT to the whitelist. */
 						wl_hit = (hip_hit_t*)
 							malloc(sizeof(hip_hit_t));
-						// Check malloc() fail...
+						if(wl_hit == NULL) {
+							HIP_ERROR("Error "\
+								  "allocating "\
+								  "memory for "\
+								  "whitelist "\
+								  "HIT.\n");
+							break;
+						}
 						memcpy(wl_hit, &hit, sizeof(hit));
-						//hip_relwl_put(wl_hit);
+						hip_relwl_put(wl_hit);
+						print_node(current);
 					}
-					
-					print_node(current);
 				}
 			} else if(strcmp(parameter, "default_lifetime") == 0) {
 				double tmp = 0;
@@ -623,10 +608,6 @@ int hip_relay_read_config(){
 						(tmp > max) ? max : tmp;
 				}
 			}
-			
-			/*while((current = hip_ll_get_next(&values, current)) != NULL) {
-			  print_node(current);
-			  }*/
 		}
 
 		hip_ll_uninit(&values);
@@ -637,8 +618,9 @@ int hip_relay_read_config(){
 		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
 	}
 	
-	HIP_DEBUG("def: %ld, min: %ld, max: %ld.\n", hiprelay_lifetime,
-		  hiprelay_min_lifetime, hiprelay_max_lifetime);
+	HIP_DEBUG("def: %ld, min: %ld, max: %ld, wl size: %lu.\n",
+		  hiprelay_lifetime, hiprelay_min_lifetime,
+		  hiprelay_max_lifetime, hip_relwl_size());
 
  out_err:
 	

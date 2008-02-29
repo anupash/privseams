@@ -321,5 +321,5 @@ void print_node(hip_ll_node_t *node)
 		HIP_INFO("Node NULL.\n");
 		return;
 	}
-	HIP_INFO(" '%s' ", (node->data == NULL) ? "NULL" : node->data);
+	HIP_INFO(" '%s'\n", (node->data == NULL) ? "NULL" : node->data);
 }

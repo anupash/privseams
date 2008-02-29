@@ -125,6 +125,43 @@ typedef struct{
 typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
 
 /**
+ * Returns a hash calculated over a HIT.
+ *
+ * @param  hit a HIT value over which the hash is calculated.
+ * @return a hash value.
+ */
+static inline unsigned long hip_hash_func(const hip_hit_t *hit)
+{
+	uint32_t bits_1st = 0;
+	unsigned long hash = 0;
+
+	/* HITs are of the form: 2001:001x:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx
+	   We have four groups of 32 bit sequences here, but the first 28 bits
+	   are constant and have no hash value. Therefore, we create a new
+	   replacement sequence for first 32 bit sequence. */
+	   
+	bits_1st = (~hit->in6_u.u6_addr8[3]) << 28;
+	bits_1st |= hit->in6_u.u6_addr8[3] << 24;
+	bits_1st |= hit->in6_u.u6_addr8[7] << 16;
+	bits_1st |= hit->in6_u.u6_addr8[11] << 8;
+	bits_1st |= hit->in6_u.u6_addr8[15];
+		
+	/* We calculate the hash by avalanching the bits. The avalanching
+	   ensures that we make use of all bits when dealing with 64 bits
+	   architectures. */
+	hash =  (bits_1st ^ hit->in6_u.u6_addr32[1]);
+	hash ^= hash << 3;
+	hash ^= (hit->in6_u.u6_addr32[2] ^ hit->in6_u.u6_addr32[3]);
+	hash += hash >> 5;
+	hash ^= hash << 4;
+	hash += hash >> 17;
+	hash ^= hash << 25;
+	hash += hash >> 6;
+	
+	return hash;
+}
+
+/**
  * Initializes the global HIP relay hashtable. Allocates memory for
  * @c hiprelay_ht.
  *
@@ -182,11 +219,12 @@ int hip_relht_compare(const hip_relrec_t *rec1, const hip_relrec_t *rec2);
 int hip_relht_put(hip_relrec_t *rec);
 
 /**
- * Retrieves a relay record from the hashtable. The parameter record @c rec needs
- * only to have field @c hit_r populated.
+ * Retrieves a relay record from the hashtable @c hiprelay_ht. The parameter
+ * record @c rec only needs to have field @c hit_r populated.
  *
  * @param rec a pointer to a relay record.
- * @return    a pointer to a fully populated relay record if found, NULL otherwise.
+ * @return    a pointer to a fully populated relay record if found, NULL
+ *            otherwise.
  */
 hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
 
@@ -208,7 +246,7 @@ void hip_relht_rec_free(hip_relrec_t *rec);
 void hip_relht_free_expired(hip_relrec_t *rec);
 
 /**
- * Returns the number of relay records in the hashtable.
+ * Returns the number of relay records in the hashtable @c hiprelay_ht.
  * 
  * @return  number of relay records in the hashtable.
  */
@@ -336,7 +374,21 @@ int hip_relwl_compare(const hip_hit_t *hit1, const hip_hit_t *hit2);
  *            outside the whitelist, NULL pointers can result.
  */
 int hip_relwl_put(hip_hit_t *hit);
+
+/**
+ * Retrieves a HIT from the hashtable @c hiprelay_wl.
+ *
+ * @param hit a pointer to a HIT.
+ * @return    a pointer to a matching HIT, NULL otherwise.
+ */
 hip_hit_t *hip_relwl_get(const hip_hit_t *hit);
+
+/**
+ * Returns the number of HITs in the hashtable @c hiprelay_wl.
+ * 
+ * @return  number of HITs in the hashtable.
+ */
+unsigned long hip_relwl_size();
 
 /**
  * Deletes a single entry from the whitelist hashtable and frees the memory
@@ -355,14 +407,6 @@ void hip_relwl_hit_free(hip_hit_t *hit);
  * @return zero if we are not an RVS or HIP RELAY, one otherwise.
  */
 int hip_we_are_relay();
-
-/**
- * Returns a hash calculated over a HIT.
- *
- * @param  hit a HIT value over which the hash is calculated.
- * @return a hash value.
- */
-unsigned long hip_hash_func(const hip_hit_t *hit);
 
 /**
  * Relays an incoming I1 packet.
@@ -423,12 +467,9 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
 
 /**
- * .
+ * Reads RVS/hiprelay configuration from a file.
  *
- * .
- *
- * @param  
- * @return 
+ * @return zero on succes.
  */ 
 int hip_relay_read_config();
 
