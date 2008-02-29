@@ -106,7 +106,13 @@ init_files ()
     fi
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
-    sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    
+    if [ "$DEBLIB" = "" ]; then
+     sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    else
+     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    fi
+
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
@@ -184,7 +190,7 @@ copy_and_package_files ()
     create_sub_package;
     
     TMP="firewall"
-    DEBLIB=""
+    DEBLIB="$NAME-lib"
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
