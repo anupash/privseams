@@ -333,7 +333,6 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	int err = 0, n=0;
 	hip_ha_t *entry;
 	hip_lsi_t local_lsi;
-	struct in6_addr in6_local_lsi, in6_peer_lsi;	
 
 	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
 
@@ -398,35 +397,15 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_hold_ha(entry);
 	
 	/* Add initial HIT-IP mapping. */
-	err = hip_hadb_add_peer_addr(entry, peer_addr, 0, 0,
-				     PEER_ADDR_STATE_ACTIVE);
-	if (err) {
-		HIP_ERROR("error while adding a new peer address\n");
-		err = -2;
-		goto out_err;
-	}
+	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE),
+		 -2, "error while adding a new peer address\n");
 
-	if (&local_lsi && hip_null_lsi(*peer_lsi)){
-		HIP_DEBUG("Establishing SP_PAIR per lsi\n");
-		//Translating IPv4 -- IPv6
-		IPV4_TO_IPV6_MAP(&local_lsi, &in6_local_lsi);
-		IPV4_TO_IPV6_MAP(peer_lsi, &in6_peer_lsi);
-		
-		HIP_IFEL(hip_setup_hit_sp_pair(&in6_peer_lsi, &in6_local_lsi,
-					       local_addr, peer_addr, 0, 1, 0),
-			 -1, "Error in setting the SPs with LSI\n");
+	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit, peer_lsi, &local_lsi,
+					local_addr, peer_addr, 0, 1, 0),
+					-1, "Error in setting the SPs\n");
 
-		HIP_DEBUG("Going out from establishing SP_PAIR per lsi\n");
-	}else{
-
-		HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-					       local_addr, peer_addr, 0, 1, 0),
-			 -1, "Error in setting the SPs\n");
-	}
-
-	if (entry){
+	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-	}
 
 	hip_for_each_ha(hip_print_info_hadb, &n);
 

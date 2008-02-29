@@ -570,12 +570,9 @@ int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
 				       sizeof(struct in6_addr)), -1,
 	      "build param hit failed\n");
 
-HIP_DEBUG("---------holaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n");
      if(optc == 3){
 	     HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
 		      "string to address conversion failed\n");
-	
-	     HIP_DEBUG("---------direccion es ......%s\n", opt[2]);
 
 	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
 				       HIP_PARAM_LSI,

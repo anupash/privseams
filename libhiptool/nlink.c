@@ -676,28 +676,14 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 
 int convert_ipv6_slash_to_ipv4_slash(char *ip, int cmd){
 	struct in6_addr ip6_aux;
-	//struct in_addr ip4;
 	char *slash = strchr(ip, '/');
-	//char *lsi_str;
-	int convert = 0;	
 	
 	if (slash)
                *slash = 0;
 
 	inet_pton(AF_INET6, ip, &ip6_aux);
 
-	if(IN6_IS_ADDR_V4MAPPED(&ip6_aux)) {
-		convert = 1;
-/*		IPV6_TO_IPV4_MAP(&ip6_aux, &ip4);
-		lsi_str = inet_ntoa(ip4);
-		
-
-		if (cmd == RTM_NEWADDR)
-			ip = strcat(lsi_str, HIP_LSI_PREFIX_STR);
-		else if (cmd == RTM_NEWROUTE)
-			ip = strcat(lsi_str, HIP_LSI_FULL_PREFIX_STR);*/			
-	}
-	return convert;
+	return IN6_IS_ADDR_V4MAPPED(&ip6_aux);
 }
 
 int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
