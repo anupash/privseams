@@ -22,6 +22,7 @@ AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
+#AC_CHECK_LIB([pthread], [sem_open])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC

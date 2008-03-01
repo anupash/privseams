@@ -30,6 +30,9 @@ else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
+# Required for pjsip
+hipd_LDADD += -lpthread
+
 #hipd_LDADD += pjlib pjlib-util pjnath pjsip pjsip-ua pjsip-simple pjsua pjmedia pjmedia-codec
 
 # Begin Miika's custom made hack for Xiang
@@ -37,12 +40,10 @@ endif
 #hipd_LDADD += ../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a
 
 #../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a:
-#	echo ok
 
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-i686-pc-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-i686-pc-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-i686-pc-linux-gnu.a
 
 ../pjproject/pjlib/lib/libpj-i686-pc-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-i686-pc-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-i686-pc-linux-gnu.a:
-	echo ok
 
 # End Miika's custom made hack for Xiang
 
