@@ -32,20 +32,25 @@ endif
 
 # Required for pjsip
 hipd_LDADD += -lpthread
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
+hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-ua-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-simple-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsua-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a
 
-#hipd_LDADD += pjlib pjlib-util pjnath pjsip pjsip-ua pjsip-simple pjsua pjmedia pjmedia-codec
-
-# Begin Miika's custom made hack for Xiang
-
-#hipd_LDADD += ../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a
-
-#../pjproject/pjlib/lib/libpj-x86_64-unknown-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-x86_64-unknown-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-x86_64-unknown-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-x86_64-unknown-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-x86_64-unknown-linux-gnu.a:
-
-hipd_LDADD += ../pjproject/pjlib/lib/libpj-i686-pc-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-i686-pc-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-i686-pc-linux-gnu.a
-
-../pjproject/pjlib/lib/libpj-i686-pc-linux-gnu.a ../pjproject/pjlib-util/lib/libpjlib-util-i686-pc-linux-gnu.a ../pjproject/pjnath/lib/libpjnath-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-ua-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsip-simple-i686-pc-linux-gnu.a ../pjproject/pjsip/lib/libpjsua-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-i686-pc-linux-gnu.a ../pjproject/pjmedia/lib/libpjmedia-codec-i686-pc-linux-gnu.a:
-
-# End Miika's custom made hack for Xiang
+../pjproject/pjlib/lib/libpj-${host}.a:
+../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
+../pjproject/pjnath/lib/libpjnath-${host}.a:
+../pjproject/pjsip/lib/libpjsip-${host}.a:
+../pjproject/pjsip/lib/libpjsip-ua-${host}.a:
+../pjproject/pjsip/lib/libpjsip-simple-${host}.a:
+../pjproject/pjsip/lib/libpjsua-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a:
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm
 
