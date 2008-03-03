@@ -544,7 +544,7 @@ int hip_relay_read_config(){
 	double max = 15384774.906;
 
 	HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "r")) == NULL), -ENOENT,
-		 "Cannot open file %s for reading.\n");
+		 "Cannot open file %s for reading.\n", HIP_RELAY_CONFIG_FILE);
 	
 	do {
 		parseerr = 0;
@@ -618,11 +618,41 @@ int hip_relay_read_config(){
 		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
 	}
 	
+	/* Check that the read values are sane. */
+	if(hiprelay_min_lifetime > hiprelay_max_lifetime) {
+		hiprelay_min_lifetime = hiprelay_max_lifetime;
+	}
+	
+	if(hiprelay_lifetime > hiprelay_max_lifetime) {
+		hiprelay_lifetime = hiprelay_max_lifetime;
+	} else if(hiprelay_lifetime < hiprelay_min_lifetime) {
+		hiprelay_lifetime = hiprelay_min_lifetime;
+	}
+
 	HIP_DEBUG("def: %ld, min: %ld, max: %ld, wl size: %lu.\n",
 		  hiprelay_lifetime, hiprelay_min_lifetime,
 		  hiprelay_max_lifetime, hip_relwl_size());
 
  out_err:
 	
+	return err;
+}
+
+int hip_relay_write_config()
+{
+	int err = 0;
+	FILE *fp = NULL;
+
+	HIP_IFEL(((fp = fopen(HIP_RELAY_CONFIG_FILE, "w")) == NULL), -ENOENT,
+		 "Cannot open file %s for writing.\n", HIP_RELAY_CONFIG_FILE);
+
+	fprintf(fp, HIP_RC_FILE_FORMAT_STRING, HIP_RC_FILE_CONTENT);
+
+	if(fclose(fp) != 0) {
+		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
+	}
+
+ out_err:
+
 	return err;
 }

@@ -96,6 +96,45 @@
 #define HIP_RELREC_MAX_LIFETIME 3600
 /** HIP relay config file name and path. */
 #define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
+/** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
+ *  cannot be opened for reading, we write a new config file from scratch using
+ *  this content.
+ *  @note @c HIP_RC_FILE_FORMAT_STRING must match the printf format of this
+ *        string.
+ */
+#define HIP_RC_FILE_CONTENT \
+"# HIP relay / RVS configuration file.\n"\
+"#\n"\
+"# This file consists of stanzas of the following form:\n"\
+"# \n"\
+"# parametername = \"value1\", \"value2\", \"value3\", \"value4\", ...\n"\
+"#\n"\
+"# where there can be as many values as needed per line with the limitation of\n"\
+"# total line length of ",HIP_RELAY_MAX_LINE_LEN," characters. The 'parametername' is at most ",HIP_RELAY_MAX_PAR_LEN,"\n"\
+"# characters long and 'values' are at most ",HIP_RELAY_MAX_VAL_LEN," characters long. A value itself\n"\
+"# may not contain a '",HIP_RELAY_VAL_SEP,"' character.\n"\
+"#\n"\
+"# The '",HIP_RELAY_COMMENT,"' character is used for comments. End of line comments are not allowed.\n"\
+"\n"\
+"# Relay Whitelist. The HITs of the clients that are, allowed to use the relay /\n"\
+"# RVS service. You may use multiple stanzas of the same name.\n"\
+"#whitelist = \"\"\n"\
+"\n"\
+"# The number of seconds the relay / RVS client is granted the service if the\n"\
+"# service request specifies an invalid time.\n"\
+"default_lifetime = \"",HIP_RELREC_DEF_LIFETIME,"\"\n"\
+"\n"\
+"# The minimum number of seconds the relay / RVS client is granted the service.\n"\
+"# If the service request defines a value smaller than this value, this value is\n"\
+"# used.\n"\
+"minimum_lifetime = \"",HIP_RELREC_MIN_LIFETIME,"\"\n"\
+"\n"\
+"# The maximum number of seconds the relay / RVS client is granted the service.\n"\
+"# If the service request defines a value bigger than this value, this value is\n"\
+"# used.\n"\
+"maximum_lifetime = \"",HIP_RELREC_MAX_LIFETIME,"\"\n"
+/** The printf format string of @c HIP_RC_FILE_CONTENT. */
+#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s%d%s%d%s%d%s"
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
@@ -467,10 +506,24 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
 
 /**
- * Reads RVS/hiprelay configuration from a file.
+ * Reads RVS / HIP Relay configuration from a file. Reads configuration
+ * information from @c HIP_RELAY_CONFIG_FILE. 
  *
- * @return zero on succes.
+ * @return zero on success, -ENOENT if the file could not be opened for reading.
+ * @note   The white list @c hiprelay_wl must be initialized before this
+ *         function is called.
  */ 
 int hip_relay_read_config();
+
+/**
+ * Writes RVS / HIP Relay configuration file with default content. Writes a RVS
+ * / HIP Relay configuration file to @c HIP_RELAY_CONFIG_FILE. The file is
+ * opened with "w" argument mode, which means that a possibly existing file is
+ * truncated to zero length.
+ *
+ * @return zero on success, -ENOENT if the file could not be opened for writing.
+ * @note   Truncates existing file to zero length.
+ */ 
+int hip_relay_write_config();
 
 #endif /* HIP_HIPRELAY_H */

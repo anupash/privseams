@@ -194,7 +194,20 @@ int hipd_init(int flush_ipsec, int killold)
 			 "successfully.\nReading configuration file %s.\n",
 			 HIP_RELAY_CONFIG_FILE);
 		HIP_DEBUG("\n\n\n###\n\n\n");
-		hip_relay_read_config();
+		if(hip_relay_read_config() == -ENOENT) {
+			HIP_ERROR("The configuration file %s could not be "\
+				  "read.\nTrying to write a new configuration "\
+				  "file from scratch.\n",
+				  HIP_RELAY_CONFIG_FILE);
+			if(hip_relay_write_config() == -ENOENT) {
+				HIP_ERROR("Could not create a configuration "\
+					  "file %s.\n",
+					  HIP_RELAY_CONFIG_FILE);
+			} else {
+				HIP_INFO("Created a new configuration file "\
+					 "%s.\n", HIP_RELAY_CONFIG_FILE);
+			}
+		}
 		HIP_DEBUG("\n\n\n###\n\n\n");
 	}
 #endif
