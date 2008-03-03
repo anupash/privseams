@@ -325,13 +325,13 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	}
 
 	//set tcp header fields
-	tcphdr->source = entry->tcp_opptcp_src_port;
+	tcphdr->source = entry->tcp_opptcp_src_port;//rand() % 65536;
 	tcphdr->dest   = entry->tcp_opptcp_dst_port;
 	tcphdr->seq = 0;
 	tcphdr->ack_seq = 0;//is not important in the SYN packet
 	tcphdr->doff = 5;
 	tcphdr->syn = 1;
-	tcphdr->window = 8704;//random
+	tcphdr->window = 34;//random
 	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
 	//tcphdr->urg_ptr = ???????? TO BE FIXED
 	send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, (ipType == 0) ? 4 : 6, hip_raw_sock_v4, 1, 0);

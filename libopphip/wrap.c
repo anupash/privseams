@@ -551,9 +551,9 @@ int hip_translate_new(hip_opp_socket_t *entry,
 	we need it for sending the TCP SYN_i1*/
 	struct sockaddr *sa = (struct sockaddr*)&(entry->translated_local_id);
   	if(sa->sa_family == AF_INET)
-    	src_opptcp_port = ((struct sockaddr_in *) sa)->sin_port;
+    		src_opptcp_port = ((struct sockaddr_in *) sa)->sin_port;
   	else//AF_INET6
-    	src_opptcp_port = ((struct sockaddr_in6 *) sa)->sin6_port;
+    		src_opptcp_port = ((struct sockaddr_in6 *) sa)->sin6_port;
 
 
 	/* Try opportunistic base exchange to retrieve peer's HIT */
