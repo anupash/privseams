@@ -385,7 +385,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 			break;
 		}
 	}
-	if (same_af == 0) {
+	if (same_af != 0) {
 		HIP_DEBUG("Did not find any address of same family\n");
 		goto out_of_loop;
 	}
