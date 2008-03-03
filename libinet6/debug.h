@@ -24,21 +24,21 @@
 // oleg 2006-11-22
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
-#define HIP_INFO(...) hip_info(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define HIP_ERROR(...) hip_error(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define HIP_INFO(...) hip_print_str(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define HIP_ERROR(...) hip_print_str(DEBUG_LEVEL_ERROR, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
 
 #ifdef CONFIG_HIP_DEBUG
-#define HIP_DEBUG(...) hip_debug(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define HIP_DEBUG(...) hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) \
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DUMP_PACKET(prefix, str, len) \
             hip_hexdump_parsed(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)            
 #define HIP_DEBUG_SOCKADDR(prefix, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, sockaddr)
-#define HIP_DUMP_MSG(msg) { hip_info(__FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
+#define HIP_DUMP_MSG(msg) { hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
 //#define HIP_DEBUG(...) \
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...)\
@@ -79,13 +79,19 @@
 
 # define HIP_DEBUG_LEVEL HIP_DEBUG_LEVEL_ALL
 
+/* differentiate between die(), error() and debug() error levels */
+enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
+		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
+
 /* XX FIXME: implement! */
 //#define HIP_DEBUG_HIT(str, hit) do {} while(0)
-#define HIP_DEBUG_HIT(str, hit)  hip_print_hit(str, hit)
-#define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(str, in6)
-#define HIP_DEBUG_LSI(str, hit)  hip_print_lsi(str, lsi)
-#define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(str, in)
-#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(str, key, key_len)
+#define HIP_INFO_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
+#define HIP_DEBUG_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
+#define HIP_INFO_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in6)
+#define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in6)
+#define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
+#define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
+#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, key, key_len)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
@@ -132,6 +138,7 @@ void hip_print_packet(const char *file, int line, const char *function,
 void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
+void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
 /**
  * Gets a binary string representation from an uint16_t value.
  * 

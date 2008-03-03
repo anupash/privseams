@@ -132,13 +132,6 @@
     <para>
     On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel
     </para>
-    <para>
-    Note: Some people reported this error:
-  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
-  file or directory.  This seems to be a bug in the latest libc6-dev
-  package itself. It is just missing a header file. As a workaround,
-  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
-    </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
   </chapter>
@@ -324,8 +317,14 @@
       ./configure &amp;&amp; make install
     </para>
     <para>
-      Note: you can also try "make deb" or "make rpm" if you want to build a
-      binary package.
+    Note1: Some people reported this error:
+  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
+  file or directory.  This seems to be a bug in the latest libc6-dev
+  package itself. It is just missing a header file. As a workaround,
+  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+    </para>
+    <para>
+      Note2: you can optionally compile a binary package with "make deb" or "make rpm".
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
@@ -458,7 +457,7 @@
       See the log messages for information about the result of HIP base
       exchange and USAGI IPSec negotiation. Tcpdump or ethereal are good
       tools for dumping the network traffic during the base exchange.
-      For tcpdump, you can use "tcpdump -n -i any esp or proto 253 or 
+      For tcpdump, you can use "tcpdump -n -i any esp or proto 139 or 
       port 50500" to catch HIP-only traffic.
     </para>
     <para>
@@ -1060,25 +1059,6 @@
   <chapter>
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
-
-        <para>Ip6tables must define that HIP and ESP packets are
-              queued in the userspace.  These rules are inserted
-              automatically at the head of each chain. Other rules that might
-              concern the HIP (-p 253) and ESP packets (-p 50) must not be 
-              inserted before them.</para>
-
-<itemizedlist>
-        <listitem><para>ip6tables -A FORWARD -p 253 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A FORWARD -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A INPUT -p 253 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A INPUT -p 50 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A OUTPUT -p 253 -j QUEUE</para></listitem>
-        <listitem><para>ip6tables -A OUTPUT -p 50 -j QUEUE</para></listitem>
-</itemizedlist>
-
-        <para>Make sure that you set /proc/sys/net/ipv6/conf/all/forwarding
-              to one, if you want your firewall to forward IPv6 traffic.
-              Remember to configure IPv6 routes to the hosts.</para>
 
         <para>Firewall can be started with "./firewall &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name

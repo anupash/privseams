@@ -250,7 +250,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        hip_print_hit("deleting_address=",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -264,9 +264,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 }
             } else {
                 /* remove from list if address matches */
-                hip_print_hit("interface address",
+                HIP_DEBUG_HIT("interface address",
                               hip_cast_sa_addr(&n->addr));
-                hip_print_hit("address to be removed",hip_cast_sa_addr(&addr_sin6));                
+                HIP_DEBUG_HIT("address to be removed",hip_cast_sa_addr(&addr_sin6));                
                 if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
                                  hip_cast_sa_addr(&addr_sin6))==0) {
                     list_del(n, addresses);
@@ -669,8 +669,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 #ifdef CONFIG_HIP_HI3
 	if(hip_use_i3) {
-		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
-		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		struct in6_addr lpback = { IN6ADDR_LOOPBACK_INIT };
+		memcpy(&dst_addr, &lpback, sizeof(struct in6_addr));
+		/*struct in_addr lpback = { INADDR_LOOPBACK };
+		  IPV4_TO_IPV6_MAP(&lpback, &dst_addr);*/
 		err = 0;
 	}
 	else {
@@ -972,7 +974,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                         }
 				}
 				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-                        hip_send_update_all(locators, i,
+				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
                                 if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
