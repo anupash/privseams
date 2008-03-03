@@ -79,16 +79,19 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	} hit_req, lsi_req;
 
 	char tmpls_buf[XFRM_TMPLS_BUF_SIZE];
+	void *tmpls_buf_lsi;
 	int tmpls_len = 0, err = 0;
 	unsigned flags = 0;
-	struct xfrm_user_tmpl *tmpl;
-	struct in6_addr in6_lsi_peer;
+	struct xfrm_user_tmpl *tmpl, *tmpl1;
+	struct in6_addr in6_lsi_peer, in6_lsi_our;
 
 	memset(&hit_req, 0, sizeof(hit_req));
 	memset(&lsi_req, 0, sizeof(lsi_req));
 	memset(&tmpls_buf, 0, sizeof(tmpls_buf));
 
 	IPV4_TO_IPV6_MAP(lsi_peer, &in6_lsi_peer);
+	IPV4_TO_IPV6_MAP(lsi_our, &in6_lsi_our);
+
 	u8 hit_prefix = hip_calc_sp_prefix(hit_peer, use_full_prefix);
 	u8 lsi_prefix = hip_calc_sp_prefix(&in6_lsi_peer, use_full_prefix);
 
@@ -100,17 +103,13 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	xfrm_init_lft(&lsi_req.xpinfo.lft);
 
 	/* Direction */
-	hit_req.xpinfo.dir = dir;
-	lsi_req.xpinfo.dir = dir;
-
-	HIP_IFE(xfrm_fill_selector(&lsi_req.xpinfo.sel, lsi_peer, lsi_our, 0,
-				   lsi_prefix, 0, 0, AF_INET), -1);
-	HIP_DEBUG("Lsi values are:\n  Peer:%s\n  Our:%s\n", lsi_peer, lsi_our);
-
+	hit_req.xpinfo.dir = lsi_req.xpinfo.dir = dir;
+	
 	HIP_IFE(xfrm_fill_selector(&hit_req.xpinfo.sel, hit_peer, hit_our, 0,
 				   hit_prefix, 0, 0, AF_INET6), -1);
-	HIP_DEBUG("Hit values are:\n  Peer:%s\n  Our:%s\n", hit_peer, hit_our);
-
+	HIP_IFE(xfrm_fill_selector(&lsi_req.xpinfo.sel, &in6_lsi_peer, &in6_lsi_our, 0,
+				   lsi_prefix, 0, 0, AF_INET), -1);
+	
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
 
@@ -147,8 +146,10 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	addattr_l(&hit_req.n, sizeof(hit_req), XFRMA_TMPL,
 		  (void *)tmpls_buf, tmpls_len);
 
+	tmpls_buf_lsi = tmpl;
+
 	addattr_l(&lsi_req.n, sizeof(lsi_req), XFRMA_TMPL,
-		  (void *)tmpls_buf, tmpls_len);
+		  tmpls_buf_lsi, tmpls_len);
 
 	if (hit_req.xpinfo.sel.family == AF_UNSPEC)
 		hit_req.xpinfo.sel.family = AF_INET6;
@@ -158,22 +159,13 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 
 	{
-		/*void *x = malloc(sizeof(hit_req.n) * 10);
-		memcpy(x, &hit_req.n, sizeof(hit_req.n));
-
-		void *x1 = malloc(sizeof(lsi_req.n) * 10);
-		memcpy(x1, &lsi_req.n, sizeof(lsi_req.n));
-*/
 		HIP_IFEL((netlink_talk(rth, &hit_req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 			 "netlink_talk failed\n");
 		HIP_IFEL((netlink_talk(rth, &lsi_req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 			 "netlink_talk failed\n");
-		///if (x)
-			//free(x);
 	}
 
 out_err:
-	
 	return err;
 }
 
@@ -235,45 +227,59 @@ int hip_flush_all_sa() {
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  * @param hit_our Source HIT
  * @param hit_peer Peer HIT
+ * @param lsi_our Source LSI
+ * @param lsi_peer Peer LSI
  *
  * @return 0 if successful, else < 0
  */
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
+			   hip_lsi_t *lsi_our, 
+			   hip_lsi_t *lsi_peer,
 			   int dir, u8 proto,
-			   u8 hit_prefix,
-			   int preferred_family) {
+			   int use_full_prefix) {
 
 	struct {
 		struct nlmsghdr			n;
 		struct xfrm_userpolicy_id	xpid;
-	} req;
-	char *dirp = NULL;
-	char *selp = NULL;
-	char *indexp = NULL;
+	} hit_req, lsi_req;
+
+	struct in6_addr in6_lsi_peer, in6_lsi_our;
+
+	IPV4_TO_IPV6_MAP(lsi_peer, &in6_lsi_peer);
+	IPV4_TO_IPV6_MAP(lsi_our, &in6_lsi_our);
+
 	int err = 0;
 
-	memset(&req, 0, sizeof(req));
+	u8 hit_prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+	u8 lsi_prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
 
-	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xpid));
-	req.n.nlmsg_flags = NLM_F_REQUEST;
-	req.n.nlmsg_type = XFRM_MSG_DELPOLICY;
+	memset(&hit_req, 0, sizeof(hit_req));
+	memset(&lsi_req, 0, sizeof(lsi_req));
 
-	req.xpid.dir = dir;
+	hit_req.n.nlmsg_len = NLMSG_LENGTH(sizeof(hit_req.xpid));
+	lsi_req.n.nlmsg_len = NLMSG_LENGTH(sizeof(lsi_req.xpid));
+	hit_req.n.nlmsg_flags = lsi_req.n.nlmsg_flags = NLM_F_REQUEST;
+	hit_req.n.nlmsg_type = lsi_req.n.nlmsg_type = XFRM_MSG_DELPOLICY;
 
-	/* SELECTOR <--> HITs */
-	HIP_IFE(xfrm_fill_selector(&req.xpid.sel, hit_peer, hit_our, 0,
-				   hit_prefix, 0, 0, preferred_family), -1);
-/*
-	if (req.xpid.sel.family == AF_UNSPEC)
-		req.xpid.sel.family = AF_INET6;
-*/
-	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
-		 "No associated policies to be deleted\n");
+	hit_req.xpid.dir = lsi_req.xpid.dir = dir;
+
+
+	/* SELECTOR <--> HITs and LSIs */
+	HIP_IFE(xfrm_fill_selector(&hit_req.xpid.sel, hit_peer, hit_our, 0,
+				   hit_prefix, 0, 0, AF_INET6), -1);
+
+	HIP_IFE(xfrm_fill_selector(&lsi_req.xpid.sel, &in6_lsi_peer, &in6_lsi_our, 0,
+				   lsi_prefix, 0, 0, AF_INET), -1);
+	
+	HIP_IFEL((netlink_talk(rth, &hit_req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "No associated policies to hit's to be deleted\n");
+
+	HIP_IFEL((netlink_talk(rth, &lsi_req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
+		 "No associated policies to lsi's to be deleted\n");
 
  out_err:
-
 	return err;
 }
 
@@ -581,16 +587,20 @@ int hip_setup_hit_sp_pair(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 }
 
 
-void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, 
+int hip_delete_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			    hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
 			    u8 proto, int use_full_prefix)
 {
-	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
-	/*change these calls*/
-	hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
-			       XFRM_POLICY_IN, proto, prefix, AF_INET6);
-	hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, src_hit, dst_hit,
-			       XFRM_POLICY_OUT, proto, prefix, AF_INET6);
+	int err = 0;
+	HIP_IFE(hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
+			       	       dst_lsi, src_lsi, XFRM_POLICY_IN, proto,
+				       use_full_prefix), -1);
+
+	HIP_IFE(hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, src_hit, dst_hit,
+				       src_lsi, dst_lsi, XFRM_POLICY_OUT, proto,
+				       use_full_prefix), -1);
+out_err:
+	return err;
 }
 
 void hip_delete_default_prefix_sp_pair() {
@@ -608,7 +618,7 @@ void hip_delete_default_prefix_sp_pair() {
 	set_lsi_prefix(&src_lsi);
 	set_lsi_prefix(&dst_lsi);
 
-	hip_delete_hit_sp_pair(&src_hit, &dst_hit, &src_lsi, &dst_lsi, 0, 0);
+	hip_delete_sp_pair(&src_hit, &dst_hit, &src_lsi, &dst_lsi, 0, 0);
 }
 
 int hip_setup_default_sp_prefix_pair() {
@@ -627,8 +637,9 @@ int hip_setup_default_sp_prefix_pair() {
 	/* The OUTGOING and INCOMING policy is set to the generic value */
 	set_hit_prefix(&src_hit);
 	set_hit_prefix(&dst_hit);
-	set_lsi_prefix(&src_lsi);//definir la funcion esta
-	set_lsi_prefix(&dst_lsi);//definir la funcion esta
+
+	set_lsi_prefix(&src_lsi);
+	set_lsi_prefix(&dst_lsi);
 
 	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &src_lsi, &dst_lsi, &ip, &ip, 0, 0, 0),
 		-1);

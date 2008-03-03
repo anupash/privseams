@@ -132,8 +132,8 @@ static inline void set_lsi_prefix(hip_hit_t *lsi)
 {
 	hip_closest_prefix_type_t lsi_begin;
 	memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));
-	lsi_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
-	lsi_begin |= htonl(HIP_HIT_PREFIX);
+	lsi_begin &= htonl(HIP_LSI_TYPE_MASK_CLEAR);
+	lsi_begin |= htonl(HIP_LSI_PREFIX);
 	memcpy(lsi, &lsi_begin, sizeof(hip_closest_prefix_type_t));
 }
 

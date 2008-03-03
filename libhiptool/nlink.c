@@ -904,7 +904,7 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 {
 
 	struct in_addr in_id_our, in_id_peer;
-	
+
 	if (IN6_IS_ADDR_V4MAPPED(id_our)){
 		sel->family = AF_INET;
 		IPV6_TO_IPV4_MAP(id_our, &in_id_our);
@@ -914,6 +914,8 @@ int xfrm_fill_selector(struct xfrm_selector *sel,
 	}
 	else{
 		sel->family = preferred_family;
+		int aux = sizeof(sel->daddr);
+		int aux1 = sizeof(id_peer);
 		memcpy(&sel->daddr, id_peer, sizeof(sel->daddr));
 		memcpy(&sel->saddr, id_our, sizeof(sel->saddr));
 	}

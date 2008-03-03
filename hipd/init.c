@@ -650,7 +650,7 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();//empty
+	hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
