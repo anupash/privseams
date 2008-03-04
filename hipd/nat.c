@@ -295,6 +295,11 @@ void hip_nat_randomize_nat_ports()
 
 //TODO
 pj_ice_sess **  	p_ice;
+pj_caching_pool cp;
+pj_status_t status;
+pj_pool_t *pool = 0;
+
+#define PJ_COM_ID 1 
 
 /***
  * this the call back interface when check complete.
@@ -335,9 +340,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 }
 
 
-pj_caching_pool cp;
-pj_status_t status;
-pj_pool_t *pool = 0;
+
 
 
 
@@ -393,7 +396,7 @@ int hip_external_ice_init(int role){
  	cb.on_ice_complete = &hip_on_ice_complete;
  	cb.on_tx_pkt = &hip_on_tx_pkt;
  	cb.on_rx_data= &hip_on_rx_data;
- 	
+ 
  	//copy from test
  	    
  	    pj_ioqueue_create(pool, 12, &ioqueue);
@@ -425,11 +428,70 @@ int hip_external_ice_init(int role){
  * this function is called to add local candidates for the only component
  *  
  * */
-int hip_external_ice_add_local_candidates(){
+int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in_port_t port, int addr_type){
+	
+	 pj_ice_sess *   	 ice;
+	 unsigned  	comp_id;
+	 pj_ice_cand_type  	type;
+	 pj_uint16_t  	local_pref;
+	 pj_str_t   	foundation;
+	 const pj_sockaddr_t *  	base_addr;
+	 const pj_sockaddr_t *  	rel_addr;
+	 int  	addr_len;
+	 unsigned *  	p_cand_id;
+	 pj_sockaddr_in pj_addr;
+	 pj_status_t pj_status;
+	 
+	 
+	 ice = session;
+	 comp_id = PJ_COM_ID;
+	 type = addr_type;
+	 foundation = pj_str("ice");
+//for preference calculation
+	// local_pref = 65536;
+	 
+	 //TODO  this is only for IPv4
+	 pj_sockaddr_in_set_port(&pj_addr, 
+	 					port); 
+	 //TODO check if HIP address is unit 32
+	 pj_sockaddr_in_set_addr(&pj_addr,
+			 hip_addr->s6_addr32);
+	 
+	 addr_len = sizeof(pj_sockaddr_in);
+	 
+	 
+	 //pj_sockaddr_t is a void point. we need pj_sockaddr struct.
+	 
+	 /*
+		pj_sockaddr_in addr;
+
+		pj_sockaddr_in_init(&addr, pj_cstr(&a, cand[i].addr), (pj_uint16_t)cand[i].port);
+		status = pj_ice_strans_add_cand(ice_st, cand[i].comp_id, cand[i].type,
+					    65535, &addr, PJ_FALSE);
+	 */
+	 
+	 /**
+	PJ_ICE_CAND_TYPE_HOST 	ICE host candidate. A host candidate represents the actual local transport address in the host.
+	PJ_ICE_CAND_TYPE_SRFLX 	ICE server reflexive candidate, which represents the public mapped address of the local address, and is obtained by sending STUN Binding request from the host candidate to a STUN server.
+	PJ_ICE_CAND_TYPE_PRFLX 	ICE peer reflexive candidate, which is the address as seen by peer agent during connectivity check.
+	PJ_ICE_CAND_TYPE_RELAYED 	ICE relayed candidate, which represents the address allocated in TURN server.
+	  * */
 	
 	
+	pj_status =  pj_ice_sess_add_cand  	(   ice,
+			comp_id,
+			type,
+			65535,
+			&foundation,
+			&pj_addr,
+			base_addr,
+			rel_addr,
+			addr_len,
+			p_cand_id	 
+		) ;
 	
-	return 0;
+		
+	return pj_status;
 }
 
 
@@ -438,10 +500,50 @@ int hip_external_ice_add_local_candidates(){
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates(){
+int hip_external_ice_add_remote_candidates( void * session, int num, struct hip_peer_addr_list_item* list){
+	
+	pj_ice_sess *   	 ice = session;
+	const pj_str_t *  	rem_ufrag;
+	const pj_str_t *  	rem_passwd;
+	unsigned  	rem_cand_cnt;
+	pj_ice_sess_cand *  	rem_cand;	
+	int i;
+	
+	rem_cand_cnt = num;
+	//reserve space for the cand
+	
+	
+	for(i = 0; i< num; i ++){
+		//(rem_cand+i)->
+	}
+	
+	
+	/*
+	 * 
+	 *
+	pj_status_t pj_ice_sess_create_check_list  	(  	pj_ice_sess *   	 ice,
+		const pj_str_t *  	rem_ufrag,
+		const pj_str_t *  	rem_passwd,
+		unsigned  	rem_cand_cnt,
+		const pj_ice_sess_cand  	rem_cand[]	 
+	) 
+	*/
 	return 0;
 }
+/**
+ * 
+ * called after check list is created
+ * */
 
+int hip_ice_start_check(void* ice){
+	
+	pj_status_t result;
+	
+	result = pj_ice_sess_start_check  	(  ice  	 ) ;  
+	if(result == PJ_SUCCESS) return 1;
+	else return 0;
+			
+}
 
 int hip_external_ice_end(){
 	//destory the pool
