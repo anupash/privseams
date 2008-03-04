@@ -127,7 +127,7 @@ int hipd_init(int flush_ipsec, int killold)
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
-	HIP_IFEL(hip_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
 		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
@@ -688,7 +688,7 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);

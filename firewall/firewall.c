@@ -179,6 +179,8 @@ void firewall_exit(){
 	} else {
 		HIP_DEBUG("Some dagling iptables rules may be present!\n");
 	}
+
+	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
@@ -1286,7 +1288,7 @@ int main(int argc, char **argv)
 			return 0;
 	}
 
-	HIP_IFEL(hip_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
+	HIP_IFEL(hip_create_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
 		 "Failed to obtain firewall lock.\n");
 
 	HIP_INFO("firewall pid=%d starting\n", getpid());

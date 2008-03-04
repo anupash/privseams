@@ -91,6 +91,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
-int hip_lock_file(char *filename, int killold);
+int hip_create_lock_file(char *filename, int killold);
+int hip_remove_lock_file(char *filename);
 
 #endif /* HIP_MISC_H */
