@@ -14,6 +14,7 @@
 #include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
+#include <linux/netfilter_ipv4.h>
 
 #include "crypto.h"
 #include "ife.h"

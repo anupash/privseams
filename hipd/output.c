@@ -84,8 +84,8 @@ int send_tcp_packet(void *hdr,
 	int    hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
 	char  *bytes =(char*)hdr;
-	struct sockaddr_in  sock_raw;
-	struct sockaddr_in6 sock6_raw;
+	struct sockaddr_in  sin_addr;
+	struct sockaddr_in6 sin6_addr;
 	struct in_addr  dstAddr;
 	struct in6_addr dst6Addr;
 	struct tcphdr *tcphdr;
@@ -119,9 +119,9 @@ int send_tcp_packet(void *hdr,
 		hdr_size = (iphdr->ip_hl * 4);
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		//socket settings
-		sock_raw.sin_family = AF_INET;
-		sock_raw.sin_port   = htons(tcphdr->dest);
-		sock_raw.sin_addr   = iphdr->ip_dst;
+		sin_addr.sin_family = AF_INET;
+		sin_addr.sin_port   = htons(tcphdr->dest);
+		sin_addr.sin_addr   = iphdr->ip_dst;
 	}
 	else if(trafficType == 6){
 		//get the ip header
@@ -130,9 +130,9 @@ int send_tcp_packet(void *hdr,
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		//socket settings
-		sock6_raw.sin6_family = AF_INET6;
-		sock6_raw.sin6_port   = htons(tcphdr->dest);
-		sock6_raw.sin6_addr   = ip6_hdr->ip6_dst;
+		sin6_addr.sin6_family = AF_INET6;
+		sin6_addr.sin6_port   = htons(tcphdr->dest);
+		sin6_addr.sin6_addr   = ip6_hdr->ip6_dst;
 	}
 
 	//measuring the size of ip and tcp headers (no options)
@@ -250,7 +250,7 @@ int send_tcp_packet(void *hdr,
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
 	//finally send through the socket
-	err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sock_raw, sizeof(sock_raw));
+	err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
 	//if(err == -1) 
 		HIP_PERROR("send_tcp_packet");
 
