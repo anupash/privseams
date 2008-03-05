@@ -2584,6 +2584,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	       if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
 		   IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
+                    ipv6_addr_copy(&entry->local_address, &saddr); 
                     break;
 	       }
 	  }
