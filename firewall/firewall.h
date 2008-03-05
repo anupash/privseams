@@ -43,6 +43,8 @@
 "#\n"\
 "\n"
 
+#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
+
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
 	      struct in6_addr packet_hit, 

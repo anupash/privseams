@@ -27,6 +27,7 @@ int accept_hip_esp_traffic = 0;
 int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 int counter = 0;
+int foreground = 1;
 
 void print_usage()
 {
@@ -40,7 +41,9 @@ void print_usage()
 	printf("      - v = verbose output\n");
 	printf("      - t = timeout for packet capture (default %d secs)\n",
 	       HIP_FW_DEFAULT_TIMEOUT);
-	printf("      - F = do not flush iptables rules\n\n");
+	printf("      - F = do not flush iptables rules\n");
+	printf("      - b = fork the firewall to background\n");
+	printf("      - k = kill running firewall pid\n\n");
 }
 
 //currently done at all times, rule_management 
@@ -1191,7 +1194,7 @@ void check_and_write_default_config(){
 	ssize_t items;
 	char *file = HIP_FW_DEFAULT_RULE_FILE;
 
-	HIP_DEBUG("\n");
+	_HIP_DEBUG("\n");
 
 	if (stat(file, &status) && errno == ENOENT) {
 		errno = 0;
@@ -1225,13 +1228,13 @@ int main(int argc, char **argv)
 	char *traffic;
 	extern char *optarg;
 	extern int optind, optopt;
-	int errflg = 0;
+	int errflg = 0, killold = 0;
 
 	check_and_write_default_config();
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHA")) != -1) {
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbk")) != -1) {
 		switch(ch) {
 		case 'v':
 			hip_set_logdebug(LOGDEBUG_MEDIUM);
@@ -1259,6 +1262,12 @@ int main(int argc, char **argv)
 			printf("Option -%c requires an operand\n", optopt);
 			errflg++;
 		break;
+		case 'b':
+			foreground = 0;
+		break;
+		case 'k':
+			killold = 1;
+		break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
 			errflg++;
@@ -1271,6 +1280,16 @@ int main(int argc, char **argv)
 		exit(2);
 	}    
 
+	if (!foreground) {
+		hip_set_logtype(LOGTYPE_SYSLOG);
+		if (fork() > 0)
+			return 0;
+	}
+
+	HIP_IFEL(hip_lock_file(HIP_FIREWALL_LOCK_FILE, killold), -1,
+		 "Failed to obtain firewall lock.\n");
+
+	HIP_INFO("firewall pid=%d starting\n", getpid());
 
 	//use by default both ipv4 and ipv6
 	HIP_DEBUG("Using ipv4 and ipv6\n");
@@ -1339,6 +1358,8 @@ int main(int argc, char **argv)
 		pthread_join(ipv4Thread, NULL);
 	if (use_ipv6)
 		pthread_join(ipv6Thread, NULL);	
+
+out_err:
 
   	firewall_exit();
   	return 0;

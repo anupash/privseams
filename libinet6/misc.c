@@ -1647,4 +1647,34 @@ int hip_sa_addr_len(void *sockaddr) {
   return len;
 }
 
+int hip_lock_file(char *filename, int killold) {
+	int err = 0, fd = 0, pid = 0;
+	char str[64];
+
+	/* Write pid to file. */
+	fd = open(filename, O_RDWR | O_CREAT, 0644);
+	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+
+	memset(str, 0, sizeof(str));
+	read(fd, str, sizeof(str) - 1);
+	pid = atoi(str);
+	sprintf(str, "%d\n", getpid());
+		
+	if (lockf(fd, F_TLOCK, 0) < 0)
+	{
+		HIP_IFEL(!killold, -1,
+			 "HIP daemon already running with pid %d!"
+			 " Give -k option to kill old daemon.\n");
+		
+		HIP_INFO("Daemon is already running with pid %d?"
+			 "-k option given, terminating old one...\n", pid);
+		HIP_IFEL(kill(pid, SIGKILL), -1, "kill failed\n");
+	}
+	
+	write(fd, str, strlen(str)); /* record pid to lockfile */
+
+out_err:
+	return err;
+}
+
 #endif /* ! __KERNEL__ */
