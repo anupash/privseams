@@ -10,7 +10,7 @@
 
 #include "firewall.h"
 #include <sys/types.h>
-#include <libiptc/libiptc.h>
+/* #include <libiptc/libiptc.h> */
 
 //#include <hipd/netdev.h>
 

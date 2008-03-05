@@ -22,24 +22,17 @@ showip:
 	cd showip && sh create.sh
 doxygen:
 	cd doc && doxygen
-
 rpm:
 	test/packaging/create-rpm.sh
 deb:
 	test/packaging/create-deb.sh
-#	test/packaging/create-deb.sh -s
-
-armel-deb:
-	test/packaging/create-deb.sh -a
-
+	test/packaging/create-deb.sh -s
 source-deb:
 	test/packaging/create-deb.sh -s
-
-agent-deb:
-	test/packaging/create-agent-deb.sh -s
-
 corporate-deb:
 	test/packaging/create-deb.sh -c
-
+agent-deb:
+	test/packaging/create-agent-deb.sh
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
+
