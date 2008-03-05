@@ -42,7 +42,7 @@ static void update_ipv4_header (struct iphdr *ip, int len) {
  * Changes IPv6 header to match new length.
  *
  * @param ip a pointer to the IPv6 header
- * @param len new payload length
+ * @param len new IPv6 packet length
  */
 static void update_ipv6_header (struct ip6_hdr *ip, int len) {
     ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len - sizeof(struct ip6_hdr));
