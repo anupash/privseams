@@ -1,10 +1,11 @@
 /** @file
  * This file defines the rendezvous extension and the UDP relay for HIP packets
  * for the Host Identity Protocol (HIP). See header file for usage
- * instructions.
+ * instructions. Version 1.1 added support for white list and configuration
+ * file.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
+ * @version 1.1
  * @date    27.09.2007
  * @note    Related drafts:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">

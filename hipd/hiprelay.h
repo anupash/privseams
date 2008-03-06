@@ -58,7 +58,7 @@
  * </ul>
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
+ * @version 1.1
  * @date    27.09.2007
  * @note    Related drafts:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
