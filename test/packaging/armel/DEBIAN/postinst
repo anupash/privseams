@@ -2,13 +2,13 @@
 
 ldconfig
 
-if [ -s /etc/hip/hip_host_dsa_key_anon.pub ]
-then
- echo "Not creating host keys under /etc/hip, they already exist"
-else
- echo "Creating host keys under /etc/hip"
- hipconf new hi default
-fi
+#if [ -s /etc/hip/hip_host_dsa_key_anon.pub ]
+#then
+# echo "Not creating host keys under /etc/hip, they already exist"
+#else
+# echo "Creating host keys under /etc/hip"
+# hipconf new hi default
+#fi
 
 #invoke-rc.d --force --quiet hipd stop
 #update-rc.d -f hipd remove
