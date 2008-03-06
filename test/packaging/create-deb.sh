@@ -428,15 +428,17 @@ if [ $TYPE = "binary" ];then
 		fi
 	fi
 
+    # jk: do not re-configure as it messes up any configs we might need.
     cd "$HIPL"
+    #echo "** Running make in $HIPL"
+    #./autogen.sh
+    #./configure --prefix=/usr
+    #echo "** Running make in $HIPL"
+    #if ! make clean all;then
     echo "** Running make in $HIPL"
-    ./autogen.sh
-    ./configure --prefix=/usr
-    echo "** Running make in $HIPL"
-    echo "** Running make in $HIPL"
-    if ! make clean all;then
-	echo "** Error while running make in $HIPL, exiting"
-	exit 1
+    if ! make all;then
+    	echo "** Error while running make in $HIPL, exiting"
+    	exit 1
     fi
     echo "** Compilation was successful"
     echo "**"
@@ -536,10 +538,11 @@ if [ $TYPE = "source" ];then
     fi
 fi
 
-cd $HIPL
-echo "Resetting compilation environment, please wait..."
-./configure >/dev/null
-make clean >/dev/null
-echo "Done."
+# jk: what is this??
+#cd $HIPL
+#echo "Resetting compilation environment, please wait..."
+#./configure >/dev/null
+#make clean >/dev/null
+#echo "Done."
 exit 0
 
