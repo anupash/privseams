@@ -106,6 +106,7 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
 /*lsi support*/
 int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
+int hip_hidb_exists_lsi(hip_lsi_t *lsi);
 
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);

@@ -121,7 +121,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
 
 	list_for_each(item, hip_local_hostid_db, c) {
 		id_entry = list_entry(item);
-		if (hip_hit_are_equal(&id_entry->lhi.hit,our)){
+		if (hip_hit_are_equal(&id_entry->lhi.hit, our)){
 			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 			return 0;
 		}		
@@ -738,7 +738,7 @@ int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 
 		list_for_each(item, db, c) {
 			id_entry_aux = list_entry(item);
-			if (ipv4_addr_cmp(&lsi_aux,&id_entry_aux->lsi) == 0) {
+			if (hip_lsi_are_equal(&lsi_aux,&id_entry_aux->lsi)) {
 				used_lsi = 1;
 				c = -1;				
 			}
@@ -751,6 +751,25 @@ int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 		}
 	}
 	return err;	
+}
+
+/**
+* Search if the lsi exists already in the hidb
+*
+* @param lsi lsi we are searching
+* @return 0 if it's not in the hidb, 1 if it is
+*/
+int hip_hidb_exists_lsi(hip_lsi_t *lsi){
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c, res = 0;
+
+	list_for_each(item, hip_local_hostid_db, c) {
+		id_entry = list_entry(item);
+		if (hip_lsi_are_equal(&id_entry->lsi, lsi))
+			return 1;		
+	}
+	return res;
 }
 
 

@@ -827,30 +827,33 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+		/* let the setup routine give us a SPI. */
+		HIP_DEBUG("Blind is ON\n");
+		HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
+			      &entry->lsi_peer, &entry->lsi_our,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+		         "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
 
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("Blind is OFF\n");
-	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
-	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+	  /*Find lsi identifiers for the pair of hits given by the context */
+	  hip_ha_t *entry_aux = hip_hadb_find_byhits(local_hit, peer_hit);
 	  /* let the setup routine give us a SPI. */
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
+			      &entry_aux->lsi_peer, &entry_aux->lsi_our,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+
 	}
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1924,11 +1927,12 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #endif
 
 	if (!use_blind) {
-	  err = hip_add_sa(i2_daddr, i2_saddr,
+/*	  err = hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
 			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+Tere---temporaly commented*/
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
@@ -2279,11 +2283,12 @@ int hip_handle_r2(struct hip_common *r2,
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
-	  err = hip_add_sa(r2_daddr, r2_saddr,
+/*	  err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+Tere---temporaly commented*/
 	}
 
 	/*

@@ -120,6 +120,13 @@ int maxof(int num_args, ...)
 }
 
 
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+		      const hip_lsi_t *lsi2)
+{
+	return (ipv4_addr_cmp(lsi1, lsi2) == 0);
+}
+
+
 /**
  * hip_hit_is_bigger - compare two HITs
  * @param hit1 the first HIT to be compared

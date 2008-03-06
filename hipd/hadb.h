@@ -355,6 +355,10 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
+
+/*lsi support functions*/
+int hip_generate_peer_lsi();
 int hip_null_lsi(hip_lsi_t lsi_peer);
+int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 
 #endif /* HIP_HADB_H */

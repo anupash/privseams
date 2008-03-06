@@ -18,8 +18,6 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
-
-/*This function must go to a folder related with libc4 ¿? I think it could be better*/
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {
@@ -70,6 +68,9 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
+
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+		      const hip_lsi_t *lsi2);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
 int hip_hit_are_equal(const struct in6_addr *hit1,

@@ -78,8 +78,8 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer, 
-			   hip_lsi_t *lsi_our, 
-			   hip_lsi_t *lsi_peer,
+			   /*hip_lsi_t *lsi_our, 
+			   hip_lsi_t *lsi_peer,*/
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, 
 			   u8 proto, int use_full_prefix);
@@ -87,8 +87,8 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
-			   hip_lsi_t *lsi_our, 
-			   hip_lsi_t *lsi_peer,
+			  /* hip_lsi_t *lsi_our, 
+			   hip_lsi_t *lsi_peer,*/
 			   int dir, u8 proto,
 			   int use_full_prefix);
 
@@ -97,6 +97,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  struct in6_addr *daddr, 
 			  struct in6_addr *src_hit, 
 			  struct in6_addr *dst_hit,
+			  /*hip_lsi_t *src_lsi,
+			  hip_lsi_t *dst_lsi,*/
 			  __u32 spi, int ealg, struct hip_crypto_key *enckey,
 			  int enckey_len,
 			  int aalg, struct hip_crypto_key *authkey,
@@ -111,8 +113,8 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 /* Setups the SA (with a given SPI if so said) */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
-		    struct hip_crypto_key *authkey,
+   		    hip_ha_t *entry, uint32_t *spi, int ealg, 
+		    struct hip_crypto_key *enckey, struct hip_crypto_key *authkey,
 		    int already_acquired, int direction, int update,
 			int sport, int dport);
 
