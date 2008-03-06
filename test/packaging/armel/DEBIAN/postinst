@@ -10,7 +10,7 @@ ldconfig
 # hipconf new hi default
 #fi
 
-#invoke-rc.d --force --quiet hipd stop
-#update-rc.d -f hipd remove
-#update-rc.d hipd defaults 
-#invoke-rc.d hipd start
+invoke-rc.d --force --quiet hipd stop
+update-rc.d -f hipd remove
+update-rc.d hipd defaults 
+invoke-rc.d hipd start
