@@ -41,7 +41,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	}
 
 	msg_type = hip_get_msg_type(msg);
-	HIP_DEBUG("Message type %d\n", type);
+	HIP_DEBUG("Message type %d\n", msg_type);
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
