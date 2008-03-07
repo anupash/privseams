@@ -17,7 +17,6 @@ if uname -m|grep x86_64; then DEBARCH=amd64; fi
 # if uname -m|grep arm*; then DEBARCH=armel; fi 
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
-
 DEBIAN=${DEBARCH}/DEBIAN
 
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
@@ -233,8 +232,6 @@ copy_and_package_files ()
 
     mkdir -p usr/bin usr/sbin
     cd "$HIPL"
-
-    #cp agent/hipagent $PKGDIR/usr/sbin/
 
     for suffix in "" -gai -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
