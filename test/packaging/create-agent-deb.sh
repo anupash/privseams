@@ -8,7 +8,8 @@ RELEASE=3
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl-manager
 DEBARCH="i386"
-if uname -a|grep x86_64; then DEBARCH=amd64; fi
+if uname -m|grep x86_64; then DEBARCH=amd64; fi
+if uname -m|grep arm*; then DEBARCH=armel; fi
 DEBIAN=${DEBARCH}/DEBIAN-gconf
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}-${VERSION}-deb
@@ -17,17 +18,22 @@ SRCDIR=${PKGDIR_SRC}/${NAME}-${VERSION}
 ROOT=$PWD
 PKGNAME="${NAME}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
+LINE="Build-Depends:"
+
 # Copy binary package files.
 copy_binpkg_files()
 {
 	echo "** Copying binaries..."
 	set -e
-
+	
 	mkdir -p "$PKGDIR/DEBIAN"
-	for f in control changelog copyright postinst postrm; do
-		cp $PKGROOT/$DEBIAN/$f "$PKGDIR/DEBIAN"
+	for f in control changelog copyright; do
+		cp "$PKGROOT/$DEBIAN/$f" "$PKGDIR/DEBIAN"
 	done
 	
+	echo "** Removing Depends-Build from control file **"
+	sed -i '/'"$LINE"'/d' $PKGDIR\/DEBIAN\/control
+
 	mkdir -p "$PKGDIR/usr"
 	mkdir -p "$PKGDIR/usr/sbin"
 	mkdir -p "$PKGDIR/usr/lib"
