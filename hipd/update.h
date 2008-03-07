@@ -26,8 +26,10 @@
 #define IPV6_ADDR_LINKLOCAL     0x0020U
 #define IPV6_ADDR_SITELOCAL     0x0040U
 
-/** The NAT status of the HIP daemon. I.e. Do we send packets on UDP or not. */
+/** The NAT status of the HIP daemon. I.e. Do we send packets on UPD or not. */
 extern int hip_nat_status;
+/** @todo describe this variable. */
+extern int is_active_handover;
 
 /** A Really ugly hack ripped from rea.c, must convert to list_head asap. */
 struct hip_update_kludge {
@@ -125,6 +127,18 @@ int hip_update_test_locator_addr(in6_addr_t *addr);
 int hip_update_add_peer_addr_item(hip_ha_t *entry,
 				  struct hip_locator_info_addr_item *locator_address_item,
 				  void *_spi);
+
+/**
+ * Compares two locators for equality.
+ *
+ * @param unused a pointer to ...
+ * @param item1  a pointer to the first item to compare.
+ * @param item2  a pointer to the second item to compare.
+ * @return       non-zero when address are equal, otherwise zero.
+ */
+int hip_update_locator_match(hip_ha_t *unused,
+			     struct hip_locator_info_addr_item *item1,
+			     void *_item2);
 
 /**
  * Compares a locator and an addr list item for equality.

@@ -23,7 +23,7 @@
 #include "string.h"
 #include "nat.h"
 #include <netinet/ip.h>
-#include <libiptc/libiptc.h>
+/* #include <libiptc/libiptc.h> */
 
 #ifdef CONFIG_HIP_HI3
 //#include "i3_id.h"
