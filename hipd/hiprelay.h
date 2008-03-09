@@ -107,7 +107,7 @@
 "#\n"\
 "# This file consists of stanzas of the following form:\n"\
 "# \n"\
-"# parametername = \"value1\", \"value2\", \"value3\", \"value4\", ...\n"\
+"# parametername = \"value1\", \"value2\", ... \"valueN\"\n"\
 "#\n"\
 "# where there can be as many values as needed per line with the limitation of\n"\
 "# total line length of ",HIP_RELAY_MAX_LINE_LEN," characters. The 'parametername' is at most ",HIP_RELAY_MAX_PAR_LEN,"\n"\

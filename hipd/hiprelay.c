@@ -331,8 +331,7 @@ void hip_relwl_hit_free(hip_hit_t *hit)
 	hip_hit_t *deleted_hit = lh_delete(hiprelay_wl, hit);
 
 	/* Free the memory allocated for the element. */
-	if(deleted_hit != NULL)
-	{
+	if(deleted_hit != NULL) {
 		/* We set the memory to '\0' because the user may still have a
 		   reference to the memory region that is freed here. */
 		memset(deleted_hit, '\0', sizeof(*deleted_hit));
@@ -374,8 +373,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		builder_function = hip_build_param_relay_from;
 		param_type = HIP_PARAM_RELAY_FROM;
-	}
-	else {
+	} else {
 		builder_function = hip_build_param_from;
 		param_type = HIP_PARAM_FROM;
 	}
@@ -394,13 +392,12 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	   cases the incoming I1 has no paramaters at all, and this "while" loop
 	   is skipped. Multiple rvses en route to responder is one (and only?)
 	   case when the incoming I1 packet has parameters. */
-	while ((current_param = hip_get_next_param(i1, current_param)) != NULL){
+	while ((current_param = hip_get_next_param(i1, current_param)) != NULL) {
 		
 		HIP_DEBUG("Found parameter in I1.\n");
 		/* Copy while type is smaller than or equal to FROM (RELAY_FROM)
 		   or a new FROM (RELAY_FROM) has already been added. */
-		if (from_added || hip_get_param_type(current_param) <= param_type)
-		{
+		if (from_added || hip_get_param_type(current_param) <= param_type) {
 			HIP_DEBUG("Copying existing parameter to I1 packet "\
 				  "to be relayed.\n");
 			hip_build_param(i1_to_be_relayed,current_param);
@@ -410,8 +407,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 		   (RELAY_FROM) parameter: insert a new FROM (RELAY_FROM) parameter
 		   between the last found FROM (RELAY_FROM) parameter and
 		   "current_param". */
-		else
-		{
+		else {
 			HIP_DEBUG("Created new %s and copied "\
 				  "current parameter to relayed I1.\n",
 				  hip_param_type_name(param_type));
@@ -424,8 +420,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 
 	/* If the incoming I1 had no parameters after the existing FROM (RELAY_FROM)
 	   parameters, new FROM (RELAY_FROM) parameter is not added until here. */
-	if (!from_added)
-	{
+	if (!from_added) {
 		HIP_DEBUG("No parameters found, adding a new %s.\n",
 			  hip_param_type_name(param_type));
 		builder_function(i1_to_be_relayed, i1_saddr, i1_info->src_port);
@@ -461,8 +456,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_DEBUG_HIT("hip_relay_rvs(): Relayed I1 to", &(rec->ip_r));
 
  out_err:
-	if(i1_to_be_relayed != NULL)
-	{
+	if(i1_to_be_relayed != NULL) {
 		HIP_FREE(i1_to_be_relayed);
 	}
 	return err;
@@ -483,16 +477,13 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		hip_get_param(source_msg, HIP_PARAM_FROM);
      
 	/* Copy parameter data to target buffers. */
-	if(relay_from == NULL && from == NULL)
-	{
+	if(relay_from == NULL && from == NULL) {
 		HIP_DEBUG("No FROM or RELAY_FROM parameters found in I1.\n");
 		return 0;
-	} else if(from != NULL)
-	{
+	} else if(from != NULL) {
 		HIP_DEBUG("Found FROM parameter in I1.\n");
 		memcpy(dest_ip, &from->address, sizeof(from->address));
-	} else
-	{
+	} else {
 		HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
 		memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
 		*dest_port = ntohs(relay_from->port);
@@ -511,8 +502,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		hip_hadb_find_rvs_candidate_entry(&source_msg->hitr, rvs_ip);
      
 #endif /* CONFIG_HIP_RVS */
-	if (rvs_ha_entry == NULL)
-	{
+	if (rvs_ha_entry == NULL) {
 		HIP_DEBUG("The I1 packet was received from RVS, but the host "\
 			  "association created during registration is not found. "
 			  "RVS_HMAC cannot be verified.\n");
@@ -523,8 +513,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
      
 	/* Verify the RVS hmac. */
 	if(hip_verify_packet_rvs_hmac(source_msg, &rvs_ha_entry->hip_hmac_out)
-	   != 0)
-	{
+	   != 0) {
 		HIP_INFO("RVS_HMAC verification failed.\n");
 		return -1;
 	}

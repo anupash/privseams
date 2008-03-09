@@ -468,7 +468,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	       service = hip_get_service(values[i]);
 	       if(service == NULL)
 	       {
-		    HIP_INFO("Client is trying to register to an service (%u) "\
+		    HIP_INFO("Client is trying to register to a service (%u) "\
 			     "that we do not have in our services database. "\
 			     "Registration REJECTED.\n", values[i]);
 		    rejected_requests[rejected_count] = values[i];
@@ -494,8 +494,14 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 		       cancel the RVS first*/
 		    if(fetch_record != NULL && fetch_record->type == HIP_FULLRELAY)
 		    {
-			 request_got_rejected = 1;
-			 HIP_DEBUG("Registration rejected (1).\n");
+			    request_got_rejected = 1;
+			    HIP_DEBUG("Registration rejected (1).\n");
+		    } else if (hip_relwl_get(&source_msg->hits) == NULL) {
+			    request_got_rejected = 1;    
+			    HIP_INFO("Client is trying to register to RVS "\
+				     "service, but client's HIT is not listed "\
+				     "in the whitelist. Registration "\
+				     "rejected.\n");
 		    }
 		    /* Check that we have not inserted a service for this
 		       REG_REQUEST. This is needed, if the client sends a

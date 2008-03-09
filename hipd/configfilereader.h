@@ -53,7 +53,6 @@
  * @author  Lauri Silvennoinen
  * @version 1.0
  * @date    14.02.2008
- * @note    Related drafts:
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #ifndef CONFIGFILEREADER_H
