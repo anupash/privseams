@@ -362,8 +362,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_DEBUG("hip_relay_rvs() invoked.\n");
 	HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 source address", i1_saddr);
 	HIP_DEBUG_IN6ADDR("hip_relay_rvs():  I1 destination address", i1_daddr);
-	HIP_DEBUG_HIT("hip_relay_rvs(): Relay record hit",
-		      &rec->hit_r);
+	HIP_DEBUG_HIT("hip_relay_rvs(): Relay record hit", &rec->hit_r);
 	HIP_DEBUG("Relay record port: %d.\n", rec->udp_port_r);
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
