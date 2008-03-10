@@ -123,39 +123,12 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, fd, dhterr;
-	char str[64];
+	int err = 0, dhterr;
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
-//	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-
-	/* Write pid to file. */
-	if (fd > 0)
-	{
-		if (lockf(fd, F_TLOCK, 0) < 0)
-		{
-			int pid = 0;
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			pid = atoi(str);
-			
-			if (!killold)
-			{
-				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
-				HIP_ERROR("Use -k option to kill old daemon.\n");
-				exit(1);
-			}
-		
-			HIP_INFO("Daemon is already running with pid %d?"
-			         "-k option given, terminating old one...\n", pid);
-			kill(pid, SIGKILL);
-		}
-		
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
 
@@ -588,7 +561,9 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(encap_on));
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 
 	myaddr.sin_family=AF_INET;
@@ -715,7 +690,7 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);

@@ -14,6 +14,7 @@
 #include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
+#include <linux/netfilter_ipv4.h>
 
 #include "crypto.h"
 #include "ife.h"
@@ -43,6 +44,7 @@
 "\n"
 
 
+#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 extern int hipproxy;
 
 //made public for filter_esp_state function

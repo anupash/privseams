@@ -41,6 +41,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	}
 
 	msg_type = hip_get_msg_type(msg);
+	HIP_DEBUG("Message type %d\n", msg_type);
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
@@ -137,7 +138,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		err = hip_opp_get_peer_hit(msg, src);
+		err = hip_opp_get_peer_hit(msg, src, 0);
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
@@ -237,6 +238,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	    sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
             rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
             IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+	    HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
+	    memset(msg, 0, HIP_MAX_PACKET);
+            HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
+	      "Building of daemon header failed\n");
+	    _HIP_DUMP_MSG(msg);
             if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                     errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
                                                            opendht_serving_gateway_ttl,
@@ -607,16 +613,44 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 
 #ifdef CONFIG_HIP_OPPTCP
-        case SO_HIP_SET_OPPTCP_ON:
-                HIP_DEBUG("Setting opptcp on!!\n");
-                hip_set_opportunistic_tcp_status(1);
+	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
+		err = hip_opp_get_peer_hit(msg, src, 1);
+		if(err){
+			_HIP_ERROR("get pseudo hit failed.\n");
+			send_response = 1;
+			if (err == -11) /* immediate fallback, do not pass */
+			 	err = 0;
+			goto out_err;
+		} else {
+			send_response = 0;
+                }
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
+	  break;
+	case SO_HIP_SET_OPPTCP_ON:
+		HIP_DEBUG("Setting opptcp on!!\n");
+		hip_set_opportunistic_tcp_status(1);
 		break;
-        case SO_HIP_SET_OPPTCP_OFF:
-                HIP_DEBUG("Setting opptcp off!!\n");
-                hip_set_opportunistic_tcp_status(0);
+
+	case SO_HIP_SET_OPPTCP_OFF:
+		HIP_DEBUG("Setting opptcp off!!\n");
+		hip_set_opportunistic_tcp_status(0);
 		break;
+
+	case SO_HIP_OPPTCP_UNBLOCK_APP:
+		hip_opptcp_unblock(msg, src);
+		break;
+
+	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_add_entry(msg, src);
+		break;
+
+	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
+		hip_opptcp_send_tcp_packet(msg, src);
+		break;
+
 #endif
-	
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
