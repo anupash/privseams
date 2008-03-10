@@ -1701,3 +1701,109 @@ out_err:
 }
 
 #endif /* ! __KERNEL__ */
+
+/**
+ * hip_solve_puzzle - Solve puzzle.
+ * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
+ * @param hdr The incoming R1/I2 packet header.
+ * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
+ *
+ * The K and I is read from the @c puzzle_or_solution. 
+ *
+ * The J that solves the puzzle is returned, or 0 to indicate an error.
+ * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
+ * odds are 1/2^64 to try 0, I don't see the point in improving this now.
+ */
+uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
+			  int mode)
+{
+	uint64_t mask = 0;
+	uint64_t randval = 0;
+	uint64_t maxtries = 0;
+	uint64_t digest = 0;
+	u8 cookie[48];
+	int err = 0;
+	union {
+		struct hip_puzzle pz;
+		struct hip_solution sl;
+	} *u;
+
+	HIP_HEXDUMP("puzzle", puzzle_or_solution,
+		    (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) : sizeof(struct hip_puzzle)));
+
+	_HIP_DEBUG("\n");
+	/* pre-create cookie */
+	u = puzzle_or_solution;
+
+	_HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
+	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0, 
+		 "Cookie K %u is higher than we are willing to calculate"
+		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
+
+	mask = hton64((1ULL << u->pz.K) - 1);
+	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
+
+	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
+
+	if (mode == HIP_VERIFY_PUZZLE) {
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
+		//randval = ntoh64(u->sl.J);
+		randval = u->sl.J;
+		_HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
+		maxtries = 1;
+	} else if (mode == HIP_SOLVE_PUZZLE) {
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
+		maxtries = 1ULL << (u->pz.K + 3);
+		get_random_bytes(&randval, sizeof(u_int64_t));
+	} else {
+		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
+	}
+
+	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
+	/* while loops should work even if the maxtries is unsigned
+	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
+	 * the next round while (0 > 0) [maxtries > 0 now]
+	 */
+	while(maxtries-- > 0) {
+	 	u8 sha_digest[HIP_AH_SHA_LEN];
+		
+		/* must be 8 */
+		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
+
+		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
+
+                /* copy the last 8 bytes for checking */
+		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
+
+		/* now, in order to be able to do correctly the bitwise
+		 * AND-operation we have to remember that little endian
+		 * processors will interpret the digest and mask reversely.
+		 * digest is the last 64 bits of the sha1-digest.. how that is
+		 * ordered in processors registers etc.. does not matter to us.
+		 * If the last 64 bits of the sha1-digest is
+		 * 0x12345678DEADBEEF, whether we have 0xEFBEADDE78563412
+		 * doesn't matter because the mask matters... if the mask is
+		 * 0x000000000000FFFF (or in other endianness
+		 * 0xFFFF000000000000). Either ways... the result is
+		 * 0x000000000000BEEF or 0xEFBE000000000000, which the cpu
+		 * interprets as 0xBEEF. The mask is converted to network byte
+		 * order (above).
+		 */
+		if ((digest & mask) == 0) {
+			_HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n",randval);
+			_HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
+			_HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
+			return randval;
+		}
+
+		/* It seems like the puzzle was not correctly solved */
+		HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
+		randval++;
+	}
+
+	HIP_ERROR("Could not solve the puzzle, no solution found\n");
+ out_err:
+	return err;
+}

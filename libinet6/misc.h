@@ -94,4 +94,6 @@ int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);
 
+uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+
 #endif /* HIP_MISC_H */

@@ -1235,6 +1235,21 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		}
 	}
  out_err:
+
+	/* Reset the interface to wildcard or otherwise receiving
+	   broadcast messages fails from the raw sockets */ 
+	if (dst_is_ipv4) {
+		src4->sin_addr.s_addr = INADDR_ANY;
+		src4->sin_family = AF_INET;
+		sa_size = sizeof(struct sockaddr_in);
+	} else {
+		struct in6_addr any = IN6ADDR_ANY_INIT;
+		src6->sin6_family = AF_INET6;
+		ipv6_addr_copy(&src6->sin6_addr, &any);
+		sa_size = sizeof(struct sockaddr_in6);
+	}
+	bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
+
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
 

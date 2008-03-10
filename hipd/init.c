@@ -561,7 +561,9 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(encap_on));
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 
 	myaddr.sin_family=AF_INET;
