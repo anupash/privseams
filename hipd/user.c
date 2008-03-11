@@ -44,6 +44,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	}
 
 	msg_type = hip_get_msg_type(msg);
+	HIP_DEBUG("Message type %d\n", msg_type);
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
@@ -267,6 +268,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	    sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
             rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
             IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+	    HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
+	    memset(msg, 0, HIP_MAX_PACKET);
+            HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
+	      "Building of daemon header failed\n");
+	    _HIP_DUMP_MSG(msg);
             if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                     errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
                                                            opendht_serving_gateway_ttl,
