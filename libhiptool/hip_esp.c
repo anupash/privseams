@@ -214,6 +214,8 @@ int pfkey_send_acquire(struct sockaddr *target)
 	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(target);
 	int err = 0;
 	
+	/* @todo: Tao, IPv4 -> Ipv6 conversion if necessary */
+	
 	err = hip_trigger_bex(NULL, hit, NULL, NULL);
  out_err:
 	return err;
