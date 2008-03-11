@@ -1,17 +1,16 @@
-/*
+/** @file
  * HIP userspace communication mechanism between userspace and kernelspace.
  * The mechanism is used by hipd, hipconf and unittest.
  * 
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- * TODO
- * - asynchronous term should be replaced with a better one
- * - async messages should also have a counterpart that receives
- *   a response from kernel
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see     hiprelay.h
+ * @todo    Asynchronous term should be replaced with a better one.
+ * @todo    Asynchronous messages should also have a counterpart that receives
+ *          a response from kernel.
  */
-
 #include "message.h"
 
 int hip_peek_recv_total_len(int socket, int encap_hdr_size)
@@ -107,7 +106,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	int hip_user_sock = 0, err = 0, n, len;
-
+	
 	if (!send_only)
 		return hip_send_recv_daemon_info(msg);
 	
@@ -171,32 +170,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	return err;
 }
 
-/**
- * Prepares a @c hip_common struct based on information received from a socket.
- * 
- * Prepares a @c hip_common struct, allocates memory for buffers and nested
- * structs. Receives a message from socket and fills the @c hip_common struct
- * with the values from this message.
- *
- * @param socket         a socket to read from.
- * @param hip_msg        a pointer to a buffer where to put the received HIP
- *                       common header. This is returned as filled struct.
- * @param read_addr      a flag whether the adresses should be read from the
- *                       received packet. <b>1</b>:read addresses,
- *                       <b>0</b>:don't read addresses.
- * @param saddr          a pointer to a buffer where to put the source IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param daddr          a pointer to a buffer where to put the destination IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param msg_info       a pointer to a buffer where to put the source and 
- *                       destination ports of the received message.
- * @param encap_hdr_size size of encapsulated header in bytes.
- * @param is_ipv4        a boolean value to indicate whether message is received
- *                       on IPv4.
- * @return               -1 in case of an error, 0 otherwise.
- */
+/* Moved function doxy descriptor to the header file. Lauri 11.03.2008 */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,

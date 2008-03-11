@@ -100,7 +100,7 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
-	NULL, /* run */
+	NULL /* run */
 };
 
 /**
@@ -377,30 +377,34 @@ int hip_conf_get_type_arg(int action)
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 			int optc)
 {
-     struct in6_addr hit, ip6;
-     int err=0;
-     int ret;
-     HIP_DEBUG("handle_rvs() invoked.\n");
-     HIP_INFO("action=%d optc=%d\n", action, optc);
-	
-     HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"rvs\".\n");
-     HIP_IFEL((optc != 2), -1, "Missing arguments\n");
-	
-     HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,"string to address conversion failed\n");
-     HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,"string to address conversion failed\n");
-	
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &hit,
-				       HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,"build param hit failed\n");
-	
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
-				       HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr)), -1,
-	      "build param hit failed\n");
+	struct in6_addr hit, ip6;
+	int err = 0;
 
-     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
-	      "build hdr failed\n");
+	HIP_DEBUG("handle_rvs() invoked.\n");
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+	
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"rvs\".\n");
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+		 "string to address conversion failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)),
+		 -1, "build param hit failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
+		 "build hdr failed\n");
  out_err:
-     return err;
+	return err;
 }
 
 
@@ -426,35 +430,37 @@ int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[],
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], 
-				int optc)
+int hip_conf_handle_hipudprelay(struct hip_common *msg, int action,
+				const char *opt[], int optc)
 {
-     struct in6_addr hit, ip6;
-     int err=0;
-     int ret;
-     HIP_DEBUG("handle_hipudprelay() invoked.\n");
-     HIP_INFO("action=%d optc=%d\n", action, optc);
-     
+	struct in6_addr hit, ip6;
+	int err=0;
 
-     HIP_IFEL((action != ACTION_ADD), -1,"Only action \"add\" is supported for \"hipudprelay\".\n");
-     HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	HIP_DEBUG("handle_hipudprelay() invoked.\n");
+	HIP_INFO("action=%d optc=%d\n", action, optc);
+     
+	HIP_IFEL((action != ACTION_ADD), -1,
+		 "Only action \"add\" is supported for \"hipudprelay\".\n");
+	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-     HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,"string to address conversion failed\n");
-     HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,"string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+		 "string to address conversion failed\n");
+	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+		 "string to address conversion failed\n");
      
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &hit,
-				       HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,"build param hit failed\n");
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
-				       HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr)), -1,
-	      "build param hit failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param hit failed\n");
      
-     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY_UDP_HIP, 0), -1,
-	      "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY_UDP_HIP, 0), -1,
+		 "build hdr failed\n");
  out_err:
-     return err;
+	return err;
 }
-
 
 /**
  * Handles the hipconf commands where the type is @c hi.
@@ -1419,7 +1425,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
      memset(msg, 0, HIP_MAX_PACKET);
      hip_get_all_hits(msg,argv);
-	
+     
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */

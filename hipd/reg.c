@@ -8,7 +8,7 @@
  */
 #include "reg.h"
 
-/** A linked list for storing the supported services. */
+/** A hashtable for storing the supported services. */
 HIP_HASHTABLE *services;
 
 void hip_init_services(void)

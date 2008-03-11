@@ -488,7 +488,7 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 		 "inet_pton: not a valid address family\n");
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("id", ip6);
+		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 

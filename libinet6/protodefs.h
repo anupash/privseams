@@ -79,11 +79,11 @@
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
-/* Range 32768 - 49141 can be used for HIPL private parameters. */
+/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
+   parameters passed from hipconf to hipdaemon. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-/** @todo change to digest */
-#define HIP_PARAM_DSA_SIGN_DATA         32770
+#define HIP_PARAM_DSA_SIGN_DATA         32770 /**< @todo change to digest */
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
@@ -100,12 +100,10 @@
 #define HIP_PARAM_REG_FAILED		32784
 #define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
-
 #define HIP_PARAM_ENCAPS_MSG		32787
 #define HIP_PARAM_PORTPAIR		32788
 #define HIP_PARAM_SRC_ADDR		32789
 #define HIP_PARAM_DST_ADDR		32790
-
 #define HIP_PARAM_AGENT_REJECT	        32791
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
@@ -162,7 +160,6 @@
 #define HIP_TRANSFORM_ESP_MAX           6
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
-
 
 #define HIP_ESP_RESERVED                0
 #define HIP_ESP_AES_SHA1                1

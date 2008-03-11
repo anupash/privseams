@@ -1,7 +1,6 @@
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
- * (HIP) kernel module and user messages <span style="color:#f00">(Update the
- * comments of this file)</span>.
+ * (HIP) kernel module and user messages.
  * 
  * These functions work both in the userspace and in the kernel.
  * 

@@ -111,33 +111,33 @@
 #define ACTION_MAX 23 /* exclusive */
 
 /* 0 is reserved */
-#define TYPE_HI      	1
-#define TYPE_MAP     	2
-#define TYPE_RST     	3
-#define TYPE_RVS     	4
-#define TYPE_BOS     	5
-#define TYPE_PUZZLE  	6
-#define TYPE_NAT     	7
-#define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	9
-#define TYPE_SERVICE 	10
-#define TYPE_CONFIG     11
-#define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-#define TYPE_TTL        13
-#define TYPE_GW         14
-#define TYPE_GET        15
-#define TYPE_BLIND      16
-#define TYPE_HA         17
-#define TYPE_MODE       18
-#define TYPE_DEBUG      19
-#define TYPE_DAEMON     20
-#define TYPE_LOCATOR    21
+#define TYPE_HI      	   1
+#define TYPE_MAP     	   2
+#define TYPE_RST           3
+#define TYPE_RVS     	   4
+#define TYPE_BOS     	   5
+#define TYPE_PUZZLE  	   6
+#define TYPE_NAT           7
+#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_ESCROW  	   9
+#define TYPE_SERVICE 	   10
+#define TYPE_CONFIG        11
+#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_TTL           13
+#define TYPE_GW            14
+#define TYPE_GET           15
+#define TYPE_BLIND         16
+#define TYPE_HA            17
+#define TYPE_MODE          18
+#define TYPE_DEBUG         19
+#define TYPE_DAEMON        20
+#define TYPE_LOCATOR       21
 #define TYPE_RELAY_UDP_HIP 22
-#define TYPE_SET        23 /* DHT set <name> */
-#define TYPE_DHT        24
-#define TYPE_OPPTCP		25
-#define TYPE_ORDER      26
-#define TYPE_MAX    	27 /* exclusive */
+#define TYPE_SET           23 /* DHT set <name> */
+#define TYPE_DHT           24
+#define TYPE_OPPTCP	   25
+#define TYPE_ORDER         26
+#define TYPE_MAX           27 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

@@ -424,21 +424,27 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_ADD_RELAY_UDP_HIP:
 	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
 		Responder (of I,Relay,R hierarchy) handles this message. Message
-		indicates that the current machine wants to register to a rvs
-		server. This message is received from hipconf. */
+		indicates that the current machine wants to register to a HIP
+		relay server. This message is received from hipconf. */
 	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
 		
-	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
-	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
-			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+	     /* Get HIP relay IP address and HIT that were given as commandline
+		parameters to hipconf. */
+	     HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+		      -1, "Relay server HIT was not found from the message.\n");
 	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
-			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-	     /* Add HIT to IP mapping of relay to hadb. */ 
-	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-	     /* Fetch the hadb entry just created. */
+				msg, HIP_PARAM_IPV6_ADDR)), -1, "Relay server "\
+		      "IP address was not found from the message.\n");
+	     /* Create a new host association database entry from the message
+		received from the hipconf. This creates a HIT to IP mapping
+		of the relay server. */
+	     HIP_IFEL(hip_add_peer_map(msg), -1, "Failed to create a new host "
+		      "association database entry for the relay server.\n");
+	     /* Fetch the host association database entry just created. */
 	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-		      -1, "internal error: no hadb entry found\n");
-		
+		      -1, "Unable to find host association database entry "\
+		      "matching relay server's HIT.\n");
+	     
 	     /* Set a hipudprelay request flag. */
 	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
 
