@@ -31,7 +31,6 @@ int hip_precreate_r1(struct hip_r1entry *r1table,
 int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
 		      struct hip_common *hdr,
 		      struct hip_solution *cookie);
-uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 int hip_verify_generation(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			  uint64_t birthday);
 
