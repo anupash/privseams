@@ -797,6 +797,7 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
+	return 0;
 }
 
 /**
