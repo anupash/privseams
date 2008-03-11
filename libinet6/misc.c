@@ -1773,3 +1773,49 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
  out_err:
 	return err;
 }
+
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	if (src_hit)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
+						  HIP_PARAM_HIT,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed\n");
+	
+	if (dst_hit)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
+						  HIP_PARAM_HIT,
+						  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_HIT  failed\n");
+	
+	if (src_ip)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
+						  HIP_PARAM_IPV6_ADDR,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	if (dst_ip)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
+						  HIP_PARAM_IPV6_ADDR,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
+		 "build hdr failed\n");
+	
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+	
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	
+ out_err:
+	return err;
+}
