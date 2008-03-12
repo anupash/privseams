@@ -42,10 +42,12 @@
 "#\n"\
 "\n"
 
-struct firewall_hl_t {
+struct firewall_hl {
 	hip_lsi_t lsi;
 	hip_hit_t hit;	
 };
+
+typedef struct firewall_hl firewall_hl_t;
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
@@ -59,5 +61,10 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 
+/*Firewall database functions*/
+firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t lsi_our);
+int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi);
+void firewall_init_hldb(void);
+unsigned long firewall_hash_hl(const firewall_hl_t *hl);
+int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2);
 #endif
-

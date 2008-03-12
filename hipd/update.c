@@ -738,7 +738,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	    entry parameter --Abi */
 
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr, entry, &new_spi_in, esp_transform,
+			 hitr, &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
@@ -750,7 +750,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
 	err = hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
-			 hits, entry, &new_spi_out, esp_transform,
+			 hits, &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0,
@@ -1741,14 +1741,13 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
-				       &entry->lsi_our, &entry->lsi_peer,
 				       &local_addr, &addr->address,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
 	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, 
 			    &entry->hit_our, &entry->hit_peer,
-			    entry, &entry->default_spi_out,
+			    &entry->default_spi_out,
 			    entry->esp_transform, &entry->esp_out,
 			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,
 			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1758,7 +1757,6 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
      
 #if 1
 	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-				       &entry->lsi_peer, &entry->lsi_our,
 				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
@@ -1766,7 +1764,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	HIP_IFEL(hip_add_sa(&addr->address, &local_addr,
 			    &entry->hit_peer, &entry->hit_our, 
-			    entry, &spi_in, entry->esp_transform,
+			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
 			    HIP_SPI_DIRECTION_IN, 0, 
 			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -2154,13 +2152,12 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
  out_of_loop:
      
      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
-				    &entry->lsi_our, &entry->lsi_peer,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
      HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, 
 			 &entry->hit_our, &entry->hit_peer, 
-			 entry, &entry->default_spi_out,
+			 &entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,  
 			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -2177,14 +2174,13 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 #if 1
      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-  				    &entry->lsi_peer, &entry->lsi_our,
 				    &destaddr, &srcaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 #endif
 
      HIP_IFEL(hip_add_sa(&destaddr, &srcaddr, 
 			 &entry->hit_peer, &entry->hit_our,
-			 entry, &spi_in, entry->esp_transform,
+			 &spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
 			 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
 			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)), -1, 
