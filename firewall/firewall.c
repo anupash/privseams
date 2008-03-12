@@ -18,6 +18,8 @@
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
 
+HIP_HASHTABLE *firewall_lsi_hit_db;
+
 struct ipq_handle *h4 = NULL, *h6 = NULL;
 int statefulFiltering = 1; 
 int escrow_active = 0;
@@ -190,9 +192,9 @@ int match_hit(struct in6_addr match_hit,
   	HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n", 
 	    addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit), boolean, i);
   	if(boolean)
-    	return i;
+    		return i;
   	else 
-    	return !i;
+    		return !i;
 }
 
 /**
@@ -202,18 +204,17 @@ int match_hit(struct in6_addr match_hit,
 int match_hi(struct hip_host_id * hi, 
 	     	struct hip_common * packet){
 	int value = 0;  
-	if(packet->type_hdr == HIP_I1)
-    {
-      	_HIP_DEBUG("match_hi: I1\n");
-    	return 1;
-    }
+	if(packet->type_hdr == HIP_I1){
+	      	_HIP_DEBUG("match_hi: I1\n");
+	    	return 1;
+	}
   	value = verify_packet_signature(hi, packet);
   	if(value == 0)
-    	_HIP_DEBUG("match_hi: verify ok\n");
+    		_HIP_DEBUG("match_hi: verify ok\n");
   	else
-    	_HIP_DEBUG("match_hi: verify failed\n");
+    		_HIP_DEBUG("match_hi: verify failed\n");
   	if(value == 0)
-    	return 1;
+    		return 1;
   	return 0;
 }
 
@@ -749,9 +750,12 @@ static void *handle_ip_traffic(void *ptr) {
 	struct hip_esp * esp_data = NULL;
 	struct hip_esp_packet * esp = NULL;
 	struct hip_common * hip_common = NULL;
+	struct hip_common_t *hip_bex = NULL; // tere addition
 	struct in6_addr * src_addr = NULL;
 	struct in6_addr * dst_addr = NULL;
 	struct ipq_handle *hndl;
+	hip_hit_t hit_peer;
+	hip_lsi_t lsi;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
 	unsigned int packetHook;
@@ -796,13 +800,33 @@ static void *handle_ip_traffic(void *ptr) {
                 		iphdr = (struct ip *) m->payload; 
                 		packet_hdr = (void *)iphdr;
                 		hdr_size = (iphdr->ip_hl * 4);
-
 				if (iphdr->ip_p == IPPROTO_UDP){
 					hdr_size += sizeof(struct udphdr);
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
                		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
                 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
+				/*LSI IF LSI ALREADY IN THE DATABASE OK*/
+				// in the case of applications where the destination is set in the ip destination field
+				// add the case if the destination ip is in the ip payload ???
+				if ((hit_peer = firewall_hit_lsi_db_match(&iphdr->ip_dst))){
+					//BEX already done
+					// inject packet to networking stack using raw sockets
+						//default_local_hit as our and hit_peer
+					//HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
+					//FD_ZERO(&read_fdset);
+					//FD_SET(hip_raw_sock_v4, &read_fdset);	
+	
+				}
+				else{
+					// RUN BEX
+					hip_trigger_bex(NULL, NULL, src_addr, dst_addr);
+					
+					// 3. Insert the lsi in the message
+					HIP_IFEL(hip_build_param_contents(hip_bex, (void *) &lsi,
+				       		 HIP_PARAM_LSI, sizeof(struct in_addr)), -1, "build param lsi failed\n");
+				}
+				/*ENDLSI ELSE REGISTER LSI AND GOTO BASE_EXCHANGE*/
         		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -813,9 +837,14 @@ static void *handle_ip_traffic(void *ptr) {
                 		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         		}
-      
+      				
       			if(is_hip_packet(packet_hdr, type)){
-      				HIP_DEBUG("****** Received HIP packet ******\n");
+				// if lsi_send == 1 and type==R2 -> message can obtain HIT and INSERT IN DATABASE
+				//add_entry to firewall database
+				// hit is received from the base exchange
+				//firewall_add_hit_lsi(firewall_lsi_hit_db, hit, &lsi);
+      				
+				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
 
@@ -854,7 +883,7 @@ static void *handle_ip_traffic(void *ptr) {
 	  			{
 					drop_packet(hndl, m->packet_id);
 	  			}
-      		} else {
+      			} else {
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
 					if(accept_normal_traffic)
@@ -903,6 +932,103 @@ out_err:
 
 	return;
 }
+
+//----------------------------------FIREWALL DATABASE---------------------------------
+/*
+*
+*
+*/
+
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_HASH_FN(firewall_hash_hl, const firewall_hl_t *);
+/** A callback wrapper of the prototype required by @c lh_new(). */
+static IMPLEMENT_LHASH_COMP_FN(firewall_compare_hl, const firewall_hl_t *);
+
+struct in6_addr *firewall_hit_lsi_db_match(hip_lsi_t lsi_our){
+	int err = 0;
+	struct firewall_hl_t *hit_peer = NULL, *entry_aux;
+
+	HIP_IFEL(!(entry_aux = (struct firewall_hl_t *) HIP_MALLOC(sizeof(struct firewall_hl_t),
+								      0)), -ENOMEM,
+		 "No memory available for host id\n");
+
+	memset(entry_aux, 0, sizeof(struct firewall_hl_t));
+	ipv4_addr_copy(&entry_aux->lsi, lsi);
+	
+	err = hip_ht_find(firewall_lsi_hit_db, entry_aux);
+
+out_err:
+	if (entry_aux)
+		HIP_FREE(entry_aux);
+	return hit_peer;
+}
+
+/*
+*
+*
+*/
+int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi){
+	int err = 0;
+	struct firewall_hl_t *entry;
+
+	HIP_ASSERT(hit != NULL && lsi != NULL);
+	
+	HIP_IFEL(!(entry = (struct firewall_hl_t *) HIP_MALLOC(sizeof(struct firewall_hl_t),
+								      0)), -ENOMEM,
+		 "No memory available for host id\n");
+	memset(entry, 0, sizeof(struct hip_host_id_entry));
+
+	ipv6_addr_copy(&entry->hit, hit);
+	ipv4_addr_copy(&entry->lsi, lsi);
+
+	HIP_WRITE_LOCK_DB(db);
+	list_add(entry, db);
+	HIP_WRITE_UNLOCK_DB(db);
+
+out_err:
+	if (entry) {
+		HIP_FREE(entry);
+	}
+	return err;
+}
+
+
+void firewall_init_hldb(void)
+{
+	firewall_lsi_hit_db = hip_ht_init(LHASH_HASH_FN(firewall_hash_hl),
+			      LHASH_COMP_FN(firewall_compare_hl));
+}
+
+unsigned long firewall_hash_hl(const firewall_hl_t *hl)
+{
+     if(hl == NULL || &(hl->lsi) == NULL || &(hl->hit) == NULL)
+     {
+	  return 0;
+     }
+     
+     hip_hit_t hit_lsipair[2];
+     memcpy(&hitpair[0], &(hl->lsi), sizeof(hl->lsi));
+     memcpy(&hitpair[1], &(hl->hit), sizeof(hl->hit));
+     
+     uint8_t hash[HIP_AH_SHA_LEN];
+     hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
+     
+     return *((unsigned long *)hash);
+}
+
+int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2)
+{
+     if(hl1 == NULL || &(hl1->lsi) == NULL || &(hl1->hit) == NULL ||
+	hl2 == NULL || &(hl2->lsi) == NULL || &(hl2->hit) == NULL)
+     {
+	  return 1;
+     }
+
+     return (firewall_hash_hl(hl1) != firewall_hash_hl(hl2));
+}
+
+//----------------------------------END FIREWALL DATABASE SUPPORT---------------------------------
+
 
 void check_and_write_default_config() {
 	struct stat status;

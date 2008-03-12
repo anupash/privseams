@@ -140,18 +140,6 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 
 	return ret;
 }
-/*
-int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
-{
-     if(ha1 == NULL || &(ha1->hit_our) == NULL || &(ha1->hit_peer) == NULL ||
-	ha2 == NULL || &(ha2->hit_our) == NULL || &(ha2->hit_peer) == NULL)
-     {
-	  return 1;
-     }
-
-     return (hip_hash_ha(ha1) != hip_hash_ha(ha2));
-}
-*/
 
 /**
  * This function simply goes through all local HIs and tries
@@ -436,7 +424,6 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 	return err;
 }
 
-
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_lsi_t *peer_lsi)
 {
 	int err = 0;
@@ -475,10 +462,14 @@ int hip_add_peer_map(const struct hip_common *input)
 	hip_lsi_t *lsi;
 	int err = 0;
 	_HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
+
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("handle async map: no hit\n");
+	lsi = (hip_lsi_t *)
+		hip_get_param_contents(input, HIP_PARAM_LSI);
+
+	if (!hit && !lsi) {
+		HIP_ERROR("handle async map: no hit and no lsi\n");
 		err = -ENODATA;
 		goto out_err;
 	}
@@ -490,9 +481,6 @@ int hip_add_peer_map(const struct hip_common *input)
 		err = -ENODATA;
 		goto out_err;
 	}
-
-	lsi = 	(hip_lsi_t *)
-		  hip_get_param_contents(input, HIP_PARAM_LSI);
 
 	err = hip_hadb_add_peer_info(hit, ip, lsi);
 
@@ -2714,7 +2702,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 #endif
 
 struct in_addr hip_generate_peer_lsi(){
-	while (lsi_assigned(peer_lsi_index++));
+	//while (lsi_assigned(peer_lsi_index++));
 	return peer_lsi_index;
 }
 
@@ -2747,4 +2735,56 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 }
 
 
+/**
+ * This function simply goes through all HADB to find an entry that
+ * matches the current lsi and
+ * the given peer lsi. First matching HADB entry is then returned.
+ *
+ * @note This way of finding HA entries doesn't work properly if we have 
+ * multiple entries with the same peer_lsi. Currently, that's not the case.
+ * Our implementation doesn't allow repeated lsi's.
+ */
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi)
+{
+	hip_list_t *item, *tmp;
+	struct hip_host_id_entry *e;
+	hip_ha_t *entry = NULL;
+	hip_lsi_t our_lsi;
+	int i;
+
+	memset(&our_lsi, 0, sizeof(our_lsi));
+
+	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
+	{
+		e = list_entry(item);
+		ipv4_addr_copy(&our_lsi, &e->lsi);
+		entry = hip_hadb_find_bylsis(lsi, &our_lsi);
+		if (!entry)
+			continue;
+		else
+			return entry;
+	}
+	return NULL;
+}
+
+
+/**
+ * This function searches for a hip_ha_t entry from the hip_hadb_hit
+ * by an LSI pair (local,peer).
+ */
+hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2)
+{
+	hip_ha_t ha, *ret;
+	memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
+	memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
+
+	ret = hip_ht_find(hadb_hit, &ha);
+	if (!ret) {
+		memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
+		memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
+		ret = hip_ht_find(hadb_hit, &ha);
+	}
+
+	return ret;
+}
 

@@ -357,8 +357,12 @@ int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
 /*lsi support functions*/
-int hip_generate_peer_lsi();
+struct in_addr hip_generate_peer_lsi();
 int hip_null_lsi(hip_lsi_t lsi_peer);
+int hip_hadb_exists_lsi(hip_lsi_t *lsi);
 int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
+hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2);
+
 
 #endif /* HIP_HADB_H */

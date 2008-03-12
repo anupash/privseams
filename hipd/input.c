@@ -831,8 +831,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		HIP_DEBUG("Blind is ON\n");
 		HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
-			      &entry->lsi_peer, &entry->lsi_our,
-			      &spi_in, transform_esp_suite, 
+			      entry, &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
@@ -843,12 +842,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("Blind is OFF\n");
 	  /*Find lsi identifiers for the pair of hits given by the context */
-	  hip_ha_t *entry_aux = hip_hadb_find_byhits(local_hit, peer_hit);
+	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
 	  /* let the setup routine give us a SPI. */
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
-			      &entry_aux->lsi_peer, &entry_aux->lsi_our,
-			      &spi_in, transform_esp_suite, 
+			      entry_aux, &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
@@ -1870,7 +1868,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	  /* Set up IPsec associations */
 	  err = hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
-			   &spi_in,
+			   entry, &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			   retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
 			   i2_info->dst_port);
@@ -1879,9 +1877,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	if (!use_blind) {
 	/* Set up IPsec associations */
+	hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
-			 &spi_in,
+			 entry_aux, &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
 				i2_info->dst_port);

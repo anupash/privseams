@@ -78,8 +78,6 @@ int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer, 
-			   /*hip_lsi_t *lsi_our, 
-			   hip_lsi_t *lsi_peer,*/
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, 
 			   u8 proto, int use_full_prefix);
@@ -87,8 +85,6 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
-			  /* hip_lsi_t *lsi_our, 
-			   hip_lsi_t *lsi_peer,*/
 			   int dir, u8 proto,
 			   int use_full_prefix);
 

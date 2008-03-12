@@ -593,7 +593,6 @@ int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
 
 
 int hip_setup_hit_sp_pair(struct in6_addr *src_hit, struct in6_addr *dst_hit,
-			  /*hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi, */
 			  struct in6_addr *src_addr, struct in6_addr *dst_addr, 
 			  u8 proto, int use_full_prefix, int update)
 {
@@ -605,14 +604,12 @@ int hip_setup_hit_sp_pair(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       dst_hit, src_hit,
-				      /* dst_lsi, src_lsi,*/
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, 
 				       use_full_prefix), -1);
 
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       src_hit, dst_hit,
-				       /*src_lsi, dst_lsi,*/
 				       dst_addr, src_addr,
 				       XFRM_POLICY_OUT, proto, 
 				       use_full_prefix), -1);
@@ -624,16 +621,15 @@ int hip_setup_hit_sp_pair(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
 
 int hip_delete_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-			    /*hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,*/
 			    u8 proto, int use_full_prefix)
 {
 	int err = 0;
 	HIP_IFE(hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, dst_hit, src_hit,
-			       	       /*dst_lsi, src_lsi,*/ XFRM_POLICY_IN, proto,
+			       	       XFRM_POLICY_IN, proto,
 				       use_full_prefix), -1);
 
 	HIP_IFE(hip_xfrm_policy_delete(hip_xfrmapi_nl_ipsec, src_hit, dst_hit,
-				       /*src_lsi, dst_lsi,*/ XFRM_POLICY_OUT, proto,
+				       XFRM_POLICY_OUT, proto,
 				       use_full_prefix), -1);
 out_err:
 	return err;
@@ -641,43 +637,32 @@ out_err:
 
 void hip_delete_default_prefix_sp_pair() {
 	hip_hit_t src_hit, dst_hit;
-	//hip_lsi_t src_lsi, dst_lsi;
 
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
-	//memset(&src_lsi, 0, sizeof(hip_lsi_t));
-	//memset(&dst_lsi, 0, sizeof(hip_lsi_t));
 
 	/* See the comment in hip_setup_sp_prefix_pair() */
 	set_hit_prefix(&src_hit);
 	set_hit_prefix(&dst_hit);
-	//set_lsi_prefix(&src_lsi);
-	//set_lsi_prefix(&dst_lsi);
 
-	hip_delete_sp_pair(&src_hit, &dst_hit, /*&src_lsi, &dst_lsi,*/ 0, 0);
+	hip_delete_sp_pair(&src_hit, &dst_hit, 0, 0);
 }
 
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
 #ifndef CONFIG_HIP_BUGGYPREFIX
 	hip_hit_t src_hit, dst_hit;
-	//hip_lsi_t src_lsi, dst_lsi;
 	struct in6_addr ip;
 
 	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));
-/*	memset(&src_lsi, 0, sizeof(hip_lsi_t));
-	memset(&dst_lsi, 0, sizeof(hip_lsi_t));*/
 
 	/* The OUTGOING and INCOMING policy is set to the generic value */
 	set_hit_prefix(&src_hit);
 	set_hit_prefix(&dst_hit);
 
-/*	set_lsi_prefix(&src_lsi);
-	set_lsi_prefix(&dst_lsi);*/
-
-	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, /*&src_lsi, &dst_lsi,*/ &ip, &ip, 0, 0, 0),
+	HIP_IFE(hip_setup_hit_sp_pair(&src_hit, &dst_hit, &ip, &ip, 0, 0, 0),
 		-1);
 #endif
  out_err:

@@ -23,6 +23,7 @@
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit, *src_hit, *dst_hit;
+	hip_lsi_t *lsi;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type, n = 0, len = 0, state=0;
@@ -521,6 +522,25 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Restart message received, restarting HIP daemon now!!!\n");
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
+		break;
+
+	case SO_HIP_TRIGGER_BEX:
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+
+		if (!lsi){
+			dst_hit = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
+			HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
+			/* Fetch the hadb entry just created. */
+			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+				 -1, "internal error: no hadb entry found\n");
+		}else{
+			//lsi already mapped because hipconf command and non-opportunistic mode
+			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_lsi(lsi)),
+				 -1, "internal error: no hadb entry found\n");
+			ipv4_addr_copy(dst_hit, &entry->hit_peer);		
+		}
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+				 -1, "sending i1 failed\n");
 		break;
 
 #ifdef CONFIG_HIP_OPPTCP
