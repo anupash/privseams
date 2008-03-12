@@ -712,8 +712,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
 		IPV4_TO_IPV6_MAP(&bcast, &dst_addr);
-		/* Broadcast did not work with UDP packets -mk */
-		ha_nat_mode = 0;
 		err = 0;
 	}
 
