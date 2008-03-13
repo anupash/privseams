@@ -533,16 +533,27 @@ int hipd_main(int argc, char *argv[])
 			
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
-						    &saddr, &daddr,
-						    &pkt_info, 0)) {
+        		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
+			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info,0);			
+			if (err) 			
+			{
                                 HIP_ERROR("Reading network msg failed\n");
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
-                        } else {
-				err =  hip_receive_udp_control_packet(
-					hipd_msg, &saddr, &daddr, &pkt_info);
-                        }
+                        } 
+			else 
+			{
+                        	struct in_addr addr4;
+				IPV6_TO_IPV4_MAP(&daddr, &addr4);
+				if (addr4.s_addr == INADDR_BROADCAST)
+                        	{
+					HIP_DEBUG("Received i1 broadcast\n");
+                        	}
+			 	else
+			 	{ 
+			   		err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
+                         	}
+                        } 
 
 		}
 
