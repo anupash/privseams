@@ -14,6 +14,8 @@
 #include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
+#include <stdlib.h>
+
 
 #include "crypto.h"
 #include "ife.h"
@@ -53,6 +55,10 @@ int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
+int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
+				      void (*hip_esp_userspace_traffic)(void *), 
+				      void *thread_param);
+
 
 #endif
 

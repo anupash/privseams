@@ -27,6 +27,12 @@ int accept_normal_traffic = 1;
 int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 
+/* Thread ID for hip_esp_output_id and hip_esp_inputput_id 
+ * Added by Tao, 13, Mar, 2008
+ * */
+pthread_t *hip_esp_ouput_id, *hip_esp_input_id;
+
+
 int counter = 0;
 
 void print_usage()
@@ -97,12 +103,14 @@ int firewall_init(){
 
 	if (flush_iptables) {
 		HIP_DEBUG("Flushing all rules\n");
-		system("iptables -F INPUT");
+		/*	system("iptables -F INPUT");
 		system("iptables -F OUTPUT");
 		system("iptables -F FORWARD");
 		system("ip6tables -F INPUT");
 		system("ip6tables -F OUTPUT");
-		system("ip6tables -F FORWARD");
+		system("ip6tables -F FORWARD");*/
+
+		  
 	}
 
 	/* Register signal handlers */
@@ -1086,3 +1094,32 @@ void firewall_probe_kernel_modules()
 	}
 	HIP_DEBUG("Probing completed\n");
 }
+
+
+int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
+				      void (*hip_esp_userspace_traffic)(void *), 
+				      void *thread_param)
+  {
+  pthread_attr_t  attr;
+  int rc = 0;
+  unsigned int stacksize;
+ 
+  if (rc = pthread_attr_init(&attr))
+    return EXIT_FAILURE;
+  
+  
+  if (rc = pthread_attr_setstacksize(&attr, stacksize))
+    return EXIT_FAILURE;   
+  
+  if (rc = pthread_create(hip_esp_userspace_id_param, &attr, (void*(*)(void*)) &hip_esp_userspace_traffic, 
+			  thread_param))
+    return EXIT_FAILURE;     
+  
+  /* wait for thread termination */
+  pthread_join(hip_esp_userspace_id_param, NULL);
+  return EXIT_SUCCESS;
+
+}
+
+
+
