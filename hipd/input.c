@@ -2427,7 +2427,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0;
+	int err = 0, state, mask = 0,cmphits=0, bcast=0;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2437,16 +2437,25 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
+	
+	HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
+	HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
 
 	/* check i1 for broadcast/multicast addresses */
-	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) {
+	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) 
+        {
 		struct in_addr addr4;
+
 		IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
-		if (addr4.s_addr == INADDR_BROADCAST) {
+
+		if (addr4.s_addr == INADDR_BROADCAST) 
+		{
+			bcast=1;
 			HIP_DEBUG("Received i1 broadcast\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 		}
+
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
@@ -2499,15 +2508,22 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-	     if (cmphits == 1) {
+             if(bcast == 0)
+	     {
+	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+	     	if (cmphits == 1) {
 		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
 			   -ENOSYS, "Dropping HIP packet\n");
 		  
-	     } else if (cmphits == 0) {
+	     	} else if (cmphits == 0) {
 		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
-	     } 
+	     	} 
+             }
+	     else /* bcast == 1; */
+		{
+		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
+		}
 
 	     break;
 	case HIP_STATE_UNASSOCIATED:
