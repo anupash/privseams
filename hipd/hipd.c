@@ -543,16 +543,7 @@ int hipd_main(int argc, char *argv[])
                         } 
 			else 
 			{
-                        	struct in_addr addr4;
-				IPV6_TO_IPV4_MAP(&daddr, &addr4);
-				if (addr4.s_addr == INADDR_BROADCAST)
-                        	{
-					HIP_DEBUG("Received i1 broadcast\n");
-                        	}
-			 	else
-			 	{ 
-			   		err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
-                         	}
+			   err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
                         } 
 
 		}
