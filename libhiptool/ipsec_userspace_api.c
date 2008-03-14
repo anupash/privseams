@@ -96,16 +96,16 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
 
 
   /* hit_magic is the 16-bit sum of the bytes of both HITs. 
- * the checksum is calculated as other Internet checksum, according to 
- * the HIP spec this is the sum of 16-bit words from the input data a 
- * 32-bit accumulator is used but the end result is folded into a 16-bit
- * sum
- */
+   * the checksum is calculated as other Internet checksum, according to 
+   * the HIP spec this is the sum of 16-bit words from the input data a 
+   * 32-bit accumulator is used but the end result is folded into a 16-bit
+   * sum
+   */
 
 
 
- hit_magic = checksum_magic((hip_hit *) src_hit->s6_addr, (hip_hit *) dst_hit->s6_addr);
-
+  hit_magic = checksum_magic((hip_hit *) src_hit->s6_addr, (hip_hit *) dst_hit->s6_addr);
+ 
 
  
 
@@ -113,44 +113,44 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
 
 
 
-/* struct hip_crypto_key {
- *  char key[HIP_MAX_KEY_LEN]
-*  }
-*  HIP_MAX_KEY_LEN 32 // max. draw: 256 bits!
-*/
-
-/* struct hip_crypto_key *enckey ---> __u8 *e_key */
-/* struct hip_crypto_key *authkey  ---> __u8 *a_key */
-
-ipsec_e_key = (__u8 *) enckey->key;
-ipsec_a_key = (__u8 *) authkey->key;
-
-
-
-
-/* 
-int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst,
-    __u16 port,
-    __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
-
-*/
-
-/* looking at the usermode code, it may be that the lifetime is stored in
- * the hip_sadb_entry but never used. It is supposed to be the value in
- * seconds after which the SA expires but I don't think this is
- * implemented. It is a preserved field from the kernel API, from the
- * PFKEY messages.
- *
- * */
-
-/* Here just give a value 100 to lifetime*/
-
-hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, inner_src, inner_dst, src, dst,
- (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,ipsec_a_key, 
- ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
-
+  /* struct hip_crypto_key {
+   *  char key[HIP_MAX_KEY_LEN]
+   *  }
+   *  HIP_MAX_KEY_LEN 32 // max. draw: 256 bits!
+   */
+  
+  /* struct hip_crypto_key *enckey ---> __u8 *e_key */
+  /* struct hip_crypto_key *authkey  ---> __u8 *a_key */
+  
+  ipsec_e_key = (__u8 *) enckey->key;
+  ipsec_a_key = (__u8 *) authkey->key;
+  
+  
+  
+  
+  /* 
+     int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
+     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst,
+     __u16 port,
+     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
+     __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
+     
+  */
+  
+  /* looking at the usermode code, it may be that the lifetime is stored in
+   * the hip_sadb_entry but never used. It is supposed to be the value in
+   * seconds after which the SA expires but I don't think this is
+   * implemented. It is a preserved field from the kernel API, from the
+   * PFKEY messages.
+   *
+   * */
+  
+  /* Here just give a value 100 to lifetime*/
+  
+  hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, inner_src, inner_dst, src, dst,
+	       (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,ipsec_a_key, 
+	       ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
+  
 }
 
 

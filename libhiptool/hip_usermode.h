@@ -26,6 +26,9 @@
 #include <sys/socket.h>	/* struct sockaddr */
 #endif
 
+#include "utils.h" 
+
+
 /*
  * Globally-accessible functions
  */

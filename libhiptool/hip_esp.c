@@ -1,3 +1,4 @@
+
 /*
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
@@ -208,14 +209,31 @@ void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
 
 /* hit is the in6_addr struct  */
 
+/* Tao: probably we won't need this at all */
 int pfkey_send_acquire(struct sockaddr *target)
 {
+        struct sockaddr *sa = (struct sockaddr *) target;
+	hip_hit_t conversion_hit;
+	hip_hit_t *hit = NULL;
+	int err = 0;		
+
+	struct in_addr *ipv4_addr = NULL;
+	struct in6_addr *ipv6_addr = NULL;
 	
-	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(target);
-	int err = 0;
+	switch(sa->sa_family) {
+	case AF_INET:
+	  ipv4_addr = (struct in_addr *) &(((struct sockaddr_in *)target)->sin_addr);
+	    //HIP_DEBUG("Size of: %u\n", ret);
+	  IPV4_TO_IPV6_MAP(ipv4_addr, &conversion_hit);
+	  hit = &conversion_hit;
+	  break;
+	case AF_INET6:
+	  ipv6_addr = (struct in6_addr *) (&(((struct sockaddr_in6 *) target)->sin6_addr));
+	hit = (hip_hit_t *) ipv6_addr;
+	  break;
 	
-	/* @todo: Tao, IPv4 -> Ipv6 conversion if necessary */
-	
+	}
+	  /* Trigger base exchange */
 	err = hip_trigger_bex(NULL, hit, NULL, NULL);
  out_err:
 	return err;
