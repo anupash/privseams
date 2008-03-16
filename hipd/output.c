@@ -981,10 +981,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
         if (local_addr != NULL) {
 		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
 		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
-			 "Local address is pure IPv6 address, IPv6 address "\
+			 "Local address is a native IPv6 address, IPv6 address"\
 			 "family is currently not supported on UDP/HIP.\n");
 		my_addr_ptr = local_addr;
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
+		src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
+		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
 		HIP_IFEL(hip_select_source_address(
@@ -999,6 +1001,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
 		 "currently not supported on UDP/HIP.\n");
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
 	
         /* Source port */
 	if(src_port != 0) {
@@ -1032,9 +1035,13 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 					  entry), -1, "Queueing failed.\n");
 	}
 
+	/*
+	  Currently disabled because I could not make this work -miika
 	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
-		 -1, "Binding to raw sock failed\n");
+		 -1, "Binding to udp sock failed\n");
 	
+	*/
+
 	/* Try to send the data. */
 	do {
 		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
@@ -1071,9 +1078,11 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   and receiving because we cannot receive a broadcast while
 	   sending */ 
 
-	src4.sin_addr.s_addr = INADDR_ANY;
-	src4.sin_family = AF_INET;
-	bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
+	/* currently disabled because I could not make this work -miika
+	   src4.sin_addr.s_addr = INADDR_ANY;
+	   src4.sin_family = AF_INET;
+	   bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
+	*/
 
 	if (sockfd)
 		close(sockfd);
