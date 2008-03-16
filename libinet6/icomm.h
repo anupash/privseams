@@ -110,6 +110,7 @@
 #endif
 #define SO_HIP_SET_HIPPROXY_ON					166
 #define SO_HIP_SET_HIPPROXY_OFF					167
+#define SO_HIP_GET_PROXY_LOCAL_ADDRESS		168
 /** @} */
 
 #endif /* _HIP_ICOMM */

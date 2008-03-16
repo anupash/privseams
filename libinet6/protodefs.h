@@ -41,6 +41,7 @@
 #define HIP_HIPPROXY_ON			89
 #define HIP_HIPPROXY_OFF		90
 #define HIP_HIPPROXY_STATUS_REQUEST 91
+#define HIP_HIPPROXY_LOCAL_ADDRESS 92
 #define HIP_DAEMON_QUIT         127
 /* @} */
 
@@ -274,9 +275,15 @@
  * @{ 
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
-#define HIP_SERVICE_ESCROW	         201
+#define HIP_SERVICE_ESCROW	        	 201
 #define HIP_SERVICE_RELAY_UDP_HIP	 202
 #define HIP_SERVICE_RELAY_UDP_ESP	 203
+
+/** @addtogroup hip_proxy
+ * @{ 
+ */
+#define HIP_PROXY_PASSTHROUGH		0
+#define HIP_PROXY_TRANSLATE 			1
 
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_NUMBER_OF_EXISTING_SERVICES  4

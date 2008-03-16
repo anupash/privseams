@@ -28,6 +28,7 @@
 #include "conntrack.h"
 #include "utils.h"
 
+
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
 #define HIP_FW_CONFIG_FILE_EX \
@@ -43,6 +44,16 @@
 "#\n"\
 "\n"
 
+typedef struct hip_proxy_t {
+	hip_hit_t hit_our;
+	hip_hit_t hit_peer;
+	hip_hit_t hit_proxy;
+	struct in6_addr addr_our;
+	struct in6_addr addr_peer;
+	struct in6_addr addr_proxy;
+	int state;
+	int hip_capable;
+} hip_proxy_t;
 
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 extern int hipproxy;

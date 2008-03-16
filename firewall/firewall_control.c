@@ -216,7 +216,15 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
 	        hip_proxy_status = 0;
     }
-	
+ /*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
+	    	HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n\n");
+		if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
+		{
+			_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
+			hit_s = hip_get_param_contents_direct(param);
+		}
+    }
+*/	
 out_err:	
 	return err;
 

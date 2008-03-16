@@ -651,6 +651,26 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 #endif
 
+	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
+	{
+		//firewall socket address
+		struct sockaddr_in6 sock_addr;     		
+		bzero(&sock_addr, sizeof(sock_addr));
+		sock_addr.sin6_family = AF_INET6;
+		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+		sock_addr.sin6_addr = in6addr_loopback;		
+		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
+		hip_get_local_addr(msg);
+//		hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+		n = hip_sendto(msg, &sock_addr);		
+		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+		if (err == 0)
+		{
+			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
+		}
+		break;
+	}
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
