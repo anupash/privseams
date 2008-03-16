@@ -415,6 +415,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
+/* MIKÄ type kun msg on BROADCAST?*/
+
 	type = hip_get_msg_type(msg);
 
 	/** @todo Check packet csum.*/
@@ -491,6 +493,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 #endif
 
+/* KÄSITTELE type == BROADCAST mikä on case?*/
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
@@ -2451,6 +2454,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		if (addr4.s_addr == INADDR_BROADCAST) 
 		{
 			bcast=1;
+                        
 			HIP_DEBUG("Received i1 broadcast\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
@@ -2465,6 +2469,9 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 
 	if (entry) {
+                if (bcast)                
+		state = HIP_STATE_UNASSOCIATED;
+		else
 		state = entry->state;
 		hip_put_ha(entry);
 	}
@@ -2508,8 +2515,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-             if(bcast == 0)
-	     {
 	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
 	     	if (cmphits == 1) {
 		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
@@ -2519,12 +2524,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
 	     	} 
-             }
-	     else /* bcast == 1; */
-		{
-		hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-		}
-
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
