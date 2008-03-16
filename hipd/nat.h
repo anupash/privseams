@@ -30,6 +30,7 @@
 #include "user.h"
 #include "debug.h"
 #include "state.h"
+#include "output.h"
 
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000

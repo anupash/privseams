@@ -306,17 +306,49 @@ pj_pool_t *pool = 0;
  * */
 void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	HIP_DEBUG("hip_on_ice_complete");
+	pj_ice_sess_checklist 	valid_list;
+	int i =0;
 	
-	// the verified list is in ice->verified_check_list
+	
+	// found the right entry. 
 	
 	
+	
+	
+	// the verified list 
+	if(status == PJ_SUCCESS){
+		valid_list = ice->valid_list;
+	}
 	//read all the element from the list
-	
+	if(valid_list.count > 0){
+		for(i = 0; i< valid_list.count; i++){
+			if (valid_list.checks[i].nominated == PJ_TRUE){
+				//set the prefered peer
+				
+				//
+			}
+			else{
+				if(valid_list.checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
+					
+				}
+				//set the flag for the peer list
+			}
+				
+			
+		}
+	}
 	//we set the flag in the peer list to verified.
 	
 	//TODO decide if we should save the paired local address also.
 	
 }
+
+
+
+
+
+
+
 
 /**
  * this is the call back interface to send package.
@@ -324,11 +356,24 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
 	HIP_DEBUG("hip_on_tx_pkt");
 	
+	struct in6_addr *local_addr = 0;
+	struct in6_addr *peer_addr;
+	in_port_t src_port = 0; 
+	in_port_t dst_port ;
+	pj_sockaddr_in *addr;
 	
-	//use sendto send the UDP packet.
-
-
-	return 0;
+	addr =(pj_sockaddr_in *) dst_addr;
+	//only IP_V4 is supported
+	peer_addr  = (struct in6_addr * )&addr->sin_addr;
+	dst_port = addr->sin_port;
+	
+	int msg_len ;
+	int retransmit = 0;
+	
+	if(hip_send_stun(local_addr, peer_addr, src_port,dst_port, pkt, size,0) )
+		return PJ_SUCCESS;
+	//TODO check out what should be returned
+	else return 44;
 }
 /**
  * 
@@ -455,7 +500,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 					port); 
 	 //TODO check if HIP address is unit 32
 	 pj_sockaddr_in_set_addr(&pj_addr,
-			 hip_addr->s6_addr32);
+			(pj_uint32_t) hip_addr->s6_addr32);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
 	 

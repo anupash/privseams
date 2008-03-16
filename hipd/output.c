@@ -1241,6 +1241,126 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+
+int hip_send_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 void *msg, int msg_len, int retransmit)
+{
+	int sockfd = 0, err = 0, xmit_count = 0;
+	/* IPv4 Internet socket addresses. */
+	struct sockaddr_in src4, dst4;
+	/* Length of the HIP message. */
+	uint16_t packet_length = 0;
+	/* Number of characters sent. */
+	ssize_t chars_sent = 0;
+	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
+	   points to the final source address (my_addr or local_addr). */
+	struct in6_addr my_addr, *my_addr_ptr = NULL;
+	
+	HIP_DEBUG("hip_send_stun() invoked.\n");
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr != NULL && msg != NULL);
+
+	HIP_DEBUG_IN6ADDR("hip_send_stun(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_stun(): peer_addr", peer_addr);
+	HIP_DEBUG("Source port: %d, destination port: %d.\n",
+		  src_port, dst_port);
+	HIP_DUMP_MSG(msg);
+
+	/* Currently only IPv4 is supported, so we set internet address family
+	   accordingly and map IPv6 addresses to IPv4 addresses. */
+	src4.sin_family = dst4.sin_family = AF_INET;
+	
+        /* Source address. */
+        if (local_addr != NULL) {
+		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
+		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
+			 "Local address is pure IPv6 address, IPv6 address "\
+			 "family is currently not supported on UDP/HIP.\n");
+		my_addr_ptr = local_addr;
+		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
+	} else {
+		HIP_DEBUG("Local address is NOT given, selecting one.\n");
+		HIP_IFEL(hip_select_source_address(
+				 &my_addr, peer_addr), -EADDRNOTAVAIL,
+			 "Cannot find local address.\n");
+		my_addr_ptr = &my_addr;
+		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
+	}
+	
+        /* Destination address. */
+	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
+		 "Peer address is pure IPv6 address, IPv6 address family is "\
+		 "currently not supported on UDP/HIP.\n");
+	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	
+        /* Source port */
+	if(src_port != 0) {
+		src4.sin_port = htons(src_port);
+	}
+	else {
+		src4.sin_port = 0;
+	}
+	
+	/* Destination port. */
+	if(dst_port != 0) {
+		dst4.sin_port = htons(dst_port);
+	}
+	else {
+		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
+	}
+	
+	/* Get the packet total length for sendto(). */
+	packet_length = msg_len;
+	
+	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
+		  "destination port: %u.\n",
+		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
+	
+	/* If this is a retransmission, the packet is queued before sending. */
+	/*
+	//TODO check out if the retrnsmit is needed for stun
+	if (retransmit) {
+		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
+					  entry), -1, "Queueing failed.\n");
+	}
+	*/
+	/* Try to send the data. */
+	do {
+		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
+				     (struct sockaddr *) &dst4, sizeof(dst4));
+		if(chars_sent < 0)
+		{
+			/* Failure. */
+			HIP_DEBUG("Problem in sending STUN UDP packet. Sleeping "\
+				  "for %d seconds and trying again.\n",
+				  HIP_NAT_SLEEP_TIME);
+			sleep(HIP_NAT_SLEEP_TIME);
+		}
+		else
+		{
+			/* Success. */
+			break;
+		}
+		xmit_count++;
+	} while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
+
+	/* Verify that the message was sent completely. */
+	HIP_IFEL((chars_sent != packet_length), -ECOMM,
+		 "Error while sending data on STUN UDP: %d bytes of %d sent.)\n",
+		 chars_sent, packet_length);
+
+	HIP_DEBUG("Packet sent successfully over STUN UDP, characters sent: %u, "\
+		  "packet length: %u.\n", chars_sent, packet_length);
+
+ out_err:
+	if (sockfd)
+		close(sockfd);
+	return err;
+}
+
+
+
 #ifdef CONFIG_HIP_HI3
 /**
  * The callback for i3 "no matching id" callback.
