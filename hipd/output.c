@@ -324,14 +324,18 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		memcpy(&ip6_hdr->ip6_dst, &entry->preferred_address, sizeof(struct in6_addr));
 	}
 
-	//set tcp header fields
-	tcphdr->source = entry->tcp_opptcp_src_port;//rand() % 65536;
+	//randomize the source port to one of 1024-65535
+	//but different from entry->tcp_opptcp_src_port
+	tcphdr->source = rand() % (65536-1024) + 1024;//entry->tcp_opptcp_src_port;
+	while(tcphdr->source == entry->tcp_opptcp_src_port)
+		tcphdr->source = rand() % (65536-1024) + 1024;
+
 	tcphdr->dest   = entry->tcp_opptcp_dst_port;
 	tcphdr->seq = 0;
 	tcphdr->ack_seq = 0;//is not important in the SYN packet
 	tcphdr->doff = 5;
 	tcphdr->syn = 1;
-	tcphdr->rst = 1;
+	//tcphdr->rst = 1;
 	tcphdr->window = 34;//random
 	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
 	//tcphdr->urg_ptr = ???????? TO BE FIXED

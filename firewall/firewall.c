@@ -33,8 +33,8 @@ void print_usage()
 {
 	printf("HIP Firewall\n");
 	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
-	printf("      - H allow only HIP related traffic\n");
-	printf("      - A allow pure HIP/ESP, as well as HIP/ESP over UDP\n");
+	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
+	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
 	printf("      - timeout is connection timeout value in seconds\n");
 	printf("      - d = debugging output\n");
@@ -92,69 +92,63 @@ int firewall_init(){
 
 	//ipv4 traffic
 	if(use_ipv4){
+#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
+		system("iptables -I FORWARD -p 6 -j QUEUE");
+		system("iptables -I INPUT -p 6 -j QUEUE");
+		system("iptables -I OUTPUT -p 6 -j QUEUE");
+#endif
+		if(!accept_hip_esp_traffic){
+			system("iptables -I FORWARD -p 253 -j QUEUE");
+			system("iptables -I FORWARD -p 50 -j QUEUE");
+			system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+			
+			system("iptables -I INPUT -p 253 -j QUEUE");
+			system("iptables -I INPUT -p 50 -j QUEUE");
+			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+			
+			system("iptables -I OUTPUT -p 253  -j QUEUE");
+			system("iptables -I OUTPUT -p 50 -j QUEUE");
+			system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+		}
 		if(!accept_normal_traffic){
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
 			system("iptables -I OUTPUT -j DROP");
 		}
-		else{
-			if(!accept_hip_esp_traffic){
-				system("iptables -I FORWARD -p 253 -j QUEUE");
-				system("iptables -I FORWARD -p 50 -j QUEUE");
-				system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-				system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
-				
-				system("iptables -I INPUT -p 253 -j QUEUE");
-				system("iptables -I INPUT -p 50 -j QUEUE");
-				system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-				system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
-				
-				system("iptables -I OUTPUT -p 253  -j QUEUE");
-				system("iptables -I OUTPUT -p 50 -j QUEUE");
-				system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-				system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-			}
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-			system("iptables -I FORWARD -p 6 -j QUEUE");
-			system("iptables -I INPUT -p 6 -j QUEUE");
-			system("iptables -I OUTPUT -p 6 -j QUEUE");
-#endif
-		}
 	}
-
 
 	//ipv6 traffic
 	if(use_ipv6){
-		if(!accept_normal_traffic){
-			system("ip6tables -I FORWARD -j DROP");
-			system("ip6tables -I INPUT -j DROP");
-			system("ip6tables -I OUTPUT -j DROP");
-		}
-		else{
-			if(!accept_hip_esp_traffic){
-				system("ip6tables -I FORWARD -p 253 -j QUEUE");
-				system("ip6tables -I FORWARD -p 50 -j QUEUE");
-				system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-				system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
-				
-				system("ip6tables -I INPUT -p 253 -j QUEUE");
-				system("ip6tables -I INPUT -p 50 -j QUEUE");
-				system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
-				system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
-				
-				system("ip6tables -I OUTPUT -p 253  -j QUEUE");
-				system("ip6tables -I OUTPUT -p 50 -j QUEUE");
-				system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-				system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-			}
 #ifdef CONFIG_HIP_OPPTCP//tcp over ipv6
 			system("ip6tables -I FORWARD -p 6 -j QUEUE");
 			system("ip6tables -I INPUT -p 6 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 #endif
+		if(!accept_hip_esp_traffic){
+			system("ip6tables -I FORWARD -p 253 -j QUEUE");
+			system("ip6tables -I FORWARD -p 50 -j QUEUE");
+			system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+			
+			system("ip6tables -I INPUT -p 253 -j QUEUE");
+			system("ip6tables -I INPUT -p 50 -j QUEUE");
+			system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
+			
+			system("ip6tables -I OUTPUT -p 253  -j QUEUE");
+			system("ip6tables -I OUTPUT -p 50 -j QUEUE");
+			system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+		}
+		if(!accept_normal_traffic){
+			system("ip6tables -I FORWARD -j DROP");
+			system("ip6tables -I INPUT -j DROP");
+			system("ip6tables -I OUTPUT -j DROP");
 		}
 	}
-
 out_err:
 	return 0;
 }
@@ -341,13 +335,16 @@ int is_outgoing_packet(unsigned int theHook){
  */ 
 int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 	int   i = 20;//the initial obligatory part of the TCP header
-	int   foundHipOpp = 0, len = 0;
-	char *bytes =(char*)tcphdrBytes;
+	int   len = 0;
+	unsigned char *bytes =(char*)tcphdrBytes;
 
 	HIP_DEBUG("\n");
 
-	while((i < hdrLen) && (foundHipOpp == 0)){
+	while(i < hdrLen){
 		switch (bytes[i]) {
+		case HIP_OPTION_KIND:	//hip option
+			return 1;
+		break;
 		//options with one-byte length
 		case 0:
 			break;
@@ -381,12 +378,9 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 		case 27: len = bytes[i+1]; i += len; break;
 		case 253: len = bytes[i+1]; i += len; break;
 		case 254: len = bytes[i+1]; i += len; break;
-		case HIP_OPTION_KIND:	//hip option
-			return 1;
-		break;
 		}
 	}
-	return foundHipOpp;
+	return 0;
 }
 
 
@@ -440,7 +434,7 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
  out_err:
-	return err;
+	return;
 }
 
 
@@ -474,7 +468,7 @@ void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip){
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
  out_err:
-	return err;
+	return;
 }
 
 
@@ -508,7 +502,7 @@ void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip){
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
  out_err:
-	return err;
+	return;
 }
 
 
@@ -570,7 +564,7 @@ void hip_request_send_tcp_packet(void *hdr,
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
  out_err:
-	return err;
+	return;
 }
 
 
@@ -1202,7 +1196,7 @@ void check_and_write_default_config(){
 		errno = 0;
 		fp = fopen(file, "w" /* mode */);
 		if(!fp)
-			HIP_PERROR("Failed to write config file\N");
+			HIP_PERROR("Failed to write config file.\n");
 		HIP_ASSERT(fp);
 		items = fwrite(HIP_FW_CONFIG_FILE_EX,
 			       strlen(HIP_FW_CONFIG_FILE_EX), 1, fp);
@@ -1225,7 +1219,7 @@ int main(int argc, char **argv)
 	int escrow_active = 0;
 	const int family4 = 4, family6 = 6;
 	int ch, tmp;
-	const char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
+	char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
 	char *rule_file = default_rule_file;
 	char *traffic;
 	extern char *optarg;
@@ -1369,7 +1363,7 @@ out_err:
 
 
 /**
- * Loads several modules that are neede by th firewall.
+ * Loads several modules that are needed by the firewall.
  * 
  * @return	nothing.
  */
