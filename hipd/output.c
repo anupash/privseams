@@ -890,7 +890,10 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  out_err:
 
 	/* Reset the interface to wildcard or otherwise receiving
-	   broadcast messages fails from the raw sockets */ 
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
 	if (dst_is_ipv4) {
 		src4->sin_addr.s_addr = INADDR_ANY;
 		src4->sin_family = AF_INET;
@@ -1028,11 +1031,14 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
 	}
+
+	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
+		 -1, "Binding to raw sock failed\n");
 	
 	/* Try to send the data. */
 	do {
-		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
-				     (struct sockaddr *) &dst4, sizeof(dst4));
+		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
+				    (struct sockaddr *) &dst4, sizeof(dst4));
 		if(chars_sent < 0)
 		{
 			/* Failure. */
@@ -1058,6 +1064,17 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  "packet length: %u.\n", chars_sent, packet_length);
 
  out_err:
+
+	/* Reset the interface to wildcard or otherwise receiving
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
+
+	src4.sin_addr.s_addr = INADDR_ANY;
+	src4.sin_family = AF_INET;
+	bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
+
 	if (sockfd)
 		close(sockfd);
 	return err;
