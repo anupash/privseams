@@ -95,20 +95,14 @@
 #define SO_HIP_DHT_ON                           157
 #define SO_HIP_DHT_OFF                          158
 
-#ifdef CONFIG_HIP_OPPTCP
-	#define SO_HIP_SET_OPPTCP_ON			159
-	#define SO_HIP_SET_OPPTCP_OFF			160
-#endif
-
-#define SO_HIP_TRANSFORM_ORDER                  161
-
-#ifdef CONFIG_HIP_OPPTCP
-	#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	162
-	#define SO_HIP_OPPTCP_UNBLOCK_APP		163
-	#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		164
-	#define SO_HIP_OPPTCP_SEND_TCP_PACKET		165
-
-#endif
+#define SO_HIP_SET_OPPTCP_ON			159
+#define SO_HIP_SET_OPPTCP_OFF			160
+#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	161
+#define SO_HIP_OPPTCP_UNBLOCK_APP		162
+#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		163
+#define SO_HIP_OPPTCP_SEND_TCP_PACKET		164
+#define SO_HIP_TRANSFORM_ORDER                  165
+#define SO_HIP_TRIGGER_BEX                      166
 /** @} */
 
 #endif /* _HIP_ICOMM */

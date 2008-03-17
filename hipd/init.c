@@ -282,8 +282,8 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
-		hip_get_default_hit(&peer_hit);
-		hip_i3_init(&peer_hit);
+//		hip_get_default_hit(&peer_hit);
+		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
 
@@ -644,7 +644,7 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_HI3
-	cl_exit();
+	hip_hi3_clean();
 #endif
 
 #ifdef CONFIG_HIP_RVS
