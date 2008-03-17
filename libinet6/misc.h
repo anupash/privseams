@@ -9,6 +9,7 @@
 
 #include "utils.h"
 #include "hidb.h"
+#include "icomm.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"

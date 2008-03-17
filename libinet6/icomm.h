@@ -101,6 +101,8 @@
 #define SO_HIP_SET_TCPTIMEOUT_OFF               162
 #define SO_HIP_TRANSFORM_ORDER                  163
 #define SO_HIP_TRIGGER_BEX                      164
+#define SO_HIP_TRANSFORM_ORDER                  165
+#define SO_HIP_TRIGGER_BEX                      166
 /** @} */
 
 #endif /* _HIP_ICOMM */
