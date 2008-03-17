@@ -1090,22 +1090,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 }
 
 #ifdef CONFIG_HIP_HI3
-/**
- * The callback for i3 "no matching id" callback.
- * 
- * @param ctx_data a pointer to...
- * @param data     a pointer to...
- * @param fun_ctx  a pointer to...
- * @todo           tkoponen: should this somehow trigger the timeout for waiting
- *                 outbound traffic (state machine)?
- */
-static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
-	char id[100];
-	sprintf_i3_id(id, (ID *)ctx_data);
-	
-	HIP_ERROR("Following ID not found: %s\n", id);
-}
-
 /** 
  * Hi3 outbound traffic processing.
  * 
@@ -1143,6 +1127,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 
 	msg_len = hip_get_msg_total_len(msg);
+
 	clb = cl_alloc_buf(msg_len);
 	if (!clb) {
 		HIP_ERROR("Out of memory\n.");
@@ -1163,10 +1148,9 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
 	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	//cl_set_private_id(&id);
+	cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */
-	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);
 	cl_send(&id, clb, 0);  
 	cl_free_buf(clb);
 	
