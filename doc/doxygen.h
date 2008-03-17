@@ -519,8 +519,6 @@
  *      Escrow services for some key exchange.
  * @def HIP_SERVICE_RELAY_UDP_HIP
  *      UDP encapsulated relay service for HIP packets.
- * @def HIP_SERVICE_RELAY_UDP_ESP
- *      UDP encapsulated relay service for ESP packets.
  * @def HIP_NUMBER_OF_EXISTING_SERVICES
  *      Total number of services, which must equal the sum of all existing
  *      services.

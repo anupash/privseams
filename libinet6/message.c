@@ -6,7 +6,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
- * @see     hiprelay.h
+ * @see     message.h
  * @todo    Asynchronous term should be replaced with a better one.
  * @todo    Asynchronous messages should also have a counterpart that receives
  *          a response from kernel.
@@ -25,7 +25,8 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	
 	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
 				    NULL, NULL)) != hdr_size), -1,
-		 "recv peek\n");
+		 "Receive peek error when trying to communicate with the HIP "\
+		 "daemon.\nIs the daemon running?\n");
 	
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
@@ -134,7 +135,6 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
-  	//hip_send_daemon_info(msg);
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
@@ -152,9 +152,9 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	
 	_HIP_DEBUG("msg total length = %d\n", total);
 	
-	/* TODO: Compiler warning;
-	   warning: pointer targets in passing argument 6 of 'recvfrom'
-	   differ in signedness. */
+	/** @todo Compiler warning;
+	    warning: pointer targets in passing argument 6 of 'recvfrom'
+	    differ in signedness. */
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");

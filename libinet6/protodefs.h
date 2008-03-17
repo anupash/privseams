@@ -260,10 +260,9 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY_UDP_HIP	 202
-#define HIP_SERVICE_RELAY_UDP_ESP	 203
 
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_NUMBER_OF_EXISTING_SERVICES  4
+#define HIP_NUMBER_OF_EXISTING_SERVICES  3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.

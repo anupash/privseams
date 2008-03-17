@@ -415,13 +415,6 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 					request_got_rejected = 1;
 				}
 				break;
-			case HIP_SERVICE_RELAY_UDP_ESP:
-				HIP_INFO("Client is cancelling registration "\
-					 "to UDP relay for ESP packets "\
-					 "service.\n");
-				/* Alas, we do not support UDP ESP relay yet. */
-				request_got_rejected = 1;
-				break;
 			default:
 				/* We should never come here, since the
 				   registration database check should fail for
@@ -614,12 +607,6 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 					HIP_DEBUG("Registration rejected (3).\n");
 				}
 				break;
-			case HIP_SERVICE_RELAY_UDP_ESP:
-				HIP_INFO("Client is registering to UDP relay for ESP "\
-					 "packets service.\n");
-				/* Alas, we do not support UDP ESP relay yet. :( */
-				request_got_rejected = 1;
-				break;
 			default:
 				/* We should never come here, since the registration
 				   database check should fail for unsupported services. */
@@ -807,8 +794,37 @@ uint8_t hip_get_service_max_lifetime()
      return HIP_SERVICE_MAX_LIFETIME;
 }
 
+int get_lifetime_value(double seconds, uint8_t *lifetime)
+{
+	/* Check that we get a lifetime value between 1 and 255. The minimum
+	   lifetime according to the registration draft is 0.004 seconds, but
+	   the reverse formula gives zero for that. 0.0045 seconds gives a
+	   lifetime value of one. 15384774.906 seconds is the maximum value.
+	   The boundary checks done here are just curiosities since services
+	   are usually granted for minutes to a couple of days, but not for
+	   milliseconds and days. However, log() gives a range error if
+	   "seconds" is zero. */
+	if(seconds < 0.0045) {
+		*lifetime = 0;
+		return -1;
+	}else if(seconds > 15384774.906) {
+		*lifetime = 255;
+		return -1;
+	} else {
+		*lifetime = (8 * (log(seconds) / log(2))) + 64;
+		return 0;
+	}
+}
 
-/************************/
+int get_lifetime_seconds(uint8_t lifetime, double *seconds){
+	if(lifetime == 0) {
+		*seconds = 0;
+		return -1;
+	} else {
+		*seconds = pow(2, ((double)((lifetime)-64)/8));
+		return 0;
+	}
+}
 
 /* TODO: Move to more appropriate place */
 int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op, uint8_t srvs[])

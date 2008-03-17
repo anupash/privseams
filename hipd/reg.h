@@ -79,7 +79,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			  hip_common_t *target_msg);
 
 /**
- *  Handles registration attempt.
+ * Handles registration attempt.
  * 
  * @param entry a pointer to host association
  * @param msg   a pointer to HIP message
@@ -100,7 +100,30 @@ uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime);
 uint8_t hip_get_service_min_lifetime();
 uint8_t hip_get_service_max_lifetime();
 
-/**************/
+/**
+ * Translates a service life time from seconds to a 8-bit integer value. The
+ * lifetime value in seconds is translated to a 8-bit integer value using
+ * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
+ * + 64</code> and truncated. The formula is the inverse of the formula given
+ * in the registration draft.
+ * 
+ * @param  seconds  the lifetime to convert.
+ * @param  lifetime a target buffer for the coverted lifetime.
+ * @return zero on success, -1 on error. Error occurs when @c seconds is
+ *         smaller than 0.0045 or greater than 15384774.906.
+ */ 
+int get_lifetime_value(double seconds, uint8_t *lifetime);
+
+/**
+ * Translates a service life time from a 8-bit integer valueto seconds. The
+ * lifetime value is translated to a 8-bit integer value using following
+ * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
+ *
+ * @param  lifetime the lifetime to convert.
+ * @param  seconds  a target buffer for the converted lifetime.
+ * @return zero on success, -1 on error. Error occurs when @c lifetime is zero.
+ */ 
+int get_lifetime_seconds(uint8_t lifetime, double *seconds);
 
 /**
  * Get an array of incompleted registration types. In other words, services
