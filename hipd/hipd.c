@@ -24,6 +24,7 @@ int hip_blind_status = 0; /* Blind status */
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
+
 /** File descriptor of the socket used for hip control packet NAT traversal on
     UDP/IPv4. */
 int hip_nat_sock_udp = 0;

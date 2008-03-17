@@ -15,7 +15,7 @@
 #include <string.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
-
+#include <linux/netfilter_ipv4.h>
 
 #include "crypto.h"
 #include "ife.h"
@@ -43,6 +43,8 @@
 "#            -state [!] <state> --verify_responder --accept_mobile --decrypt_contents\n"\
 "#\n"\
 "\n"
+
+#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
