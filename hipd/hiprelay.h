@@ -76,24 +76,33 @@
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
 #include "misc.h" /* For debuging macros. */
+#include "reg.h" /* For lifetime conversions. */
 #include "configfilereader.h"
 
-/** The number of seconds the relay / RVS client is granted the service if the
- *  service request specifies an invalid time.
- *  @note this is a fallback value if we are not able to read the configuration
- *        file.
+/**
+ * The lifetime the relay / RVS client is granted the service if the service
+ * request specifies an invalid time. The lifetime value in seconds is
+ * calculated using the formula given in the registration draft.
+ * @note this is a fallback value if we are not able to read the configuration
+ *       file.
  */
-#define HIP_RELREC_DEF_LIFETIME 600
-/** The minimum number of seconds the relay / RVS client is granted the service.
- *  @note this is a fallback value if we are not able to read the configuration
- *        file.
+#define HIP_RELREC_DEF_LIFETIME 138 // Equals 608.874 seconds.
+/**
+ * The minimum lifetime the relay / RVS client is granted the service. This
+ * value is used as a 8-bit integer value. The lifetime value in seconds is
+ * calculated using the formula given in the registration draft.
+ * @note this is a fallback value if we are not able to read the configuration
+ *       file.
  */
-#define HIP_RELREC_MIN_LIFETIME 60
-/** The maximum number of seconds the relay / RVS client is granted the service.
- *  @note this is a fallback value if we are not able to read the configuration
- *        file.
+#define HIP_RELREC_MIN_LIFETIME 112 // Equals 64 seconds.
+/**
+ * The maximum lifetime the relay / RVS client is granted the service. This
+ * value is used as a 8-bit integer value. The lifetime value in seconds is
+ * calculated using the formula given in the registration draft.
+ * @note this is a fallback value if we are not able to read the configuration
+ *       file.
  */
-#define HIP_RELREC_MAX_LIFETIME 3600
+#define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756.049 seconds.
 /** HIP relay config file name and path. */
 #define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
@@ -122,19 +131,19 @@
 "\n"\
 "# The number of seconds the relay / RVS client is granted the service if the\n"\
 "# service request specifies an invalid time.\n"\
-"default_lifetime = \"",HIP_RELREC_DEF_LIFETIME,"\"\n"\
+"default_lifetime = \"600\"\n"\
 "\n"\
 "# The minimum number of seconds the relay / RVS client is granted the service.\n"\
 "# If the service request defines a value smaller than this value, this value is\n"\
 "# used.\n"\
-"minimum_lifetime = \"",HIP_RELREC_MIN_LIFETIME,"\"\n"\
+"minimum_lifetime = \"60\"\n"\
 "\n"\
 "# The maximum number of seconds the relay / RVS client is granted the service.\n"\
 "# If the service request defines a value bigger than this value, this value is\n"\
 "# used.\n"\
-"maximum_lifetime = \"",HIP_RELREC_MAX_LIFETIME,"\"\n"
+"maximum_lifetime = \"3600\"\n"
 /** The printf format string of @c HIP_RC_FILE_CONTENT. */
-#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s%d%s%d%s%d%s"
+#define HIP_RC_FILE_FORMAT_STRING "%s%d%s%d%s%d%s%c%s%c%s"
 
 /** HIP Relay record. These records are stored in the HIP Relay hashtable. */
 typedef struct{
@@ -142,6 +151,8 @@ typedef struct{
 	uint8_t type;
 	/** The lifetime of this record, seconds. */
 	double lifetime;
+	/** Time when this record was created, seconds since epoch. */
+	time_t created;
 	/** Time when this record was last used, seconds since epoch. */
 	time_t last_contact;
 	/** HIT of Responder (Relay Client) */
