@@ -910,8 +910,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("packet type: UPDATE\n");
 
                           
-		HIP_DEBUG_HIT("src hit: ", &buf->hits);
-        	HIP_DEBUG_HIT("dst hit: ", &buf->hitr);
+		HIP_DEBUG_HIT("src hit: ", &(buf->hits));
+        	HIP_DEBUG_HIT("dst hit: ", &(buf->hitr));
 
       		if(match && rule->src_hit)
 	  	{
