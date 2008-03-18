@@ -415,13 +415,22 @@ int hip_receive_control_packet(struct hip_common *msg,
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
-/* MIKÄ type kun msg on BROADCAST?*/
-
 	type = hip_get_msg_type(msg);
+
+        /* bugzilla 490 */
+        struct in_addr bcast_addr = { INADDR_BROADCAST };
+        struct in6_addr bcast6_addr;
+	IPV4_TO_IPV6_MAP(&bcast_addr,&bcast6_addr);
+        if((ipv6_addr_cmp(dst_addr,&bcast6_addr) == 0) && hip_hidb_hit_is_our(&msg->hits))
+	{
+		type = 10; /* "UNKNOWN" */
+		HIP_DEBUG("Discard broadcast\n");
+	}
 
 	/** @todo Check packet csum.*/
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
 	    (type == HIP_I1 || type == HIP_R1)) {
@@ -493,7 +502,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 	}
 #endif
 
-/* KÄSITTELE type == BROADCAST mikä on case?*/
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
@@ -612,7 +620,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 		saddr_public = &entry->preferred_address;
 	}
 #endif
-
 	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
 		 "receiving of control packet failed\n");
  out_err:
@@ -2426,11 +2433,12 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      return err;
 }
 
+
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0, bcast=0;
+	int err = 0, state, mask = 0,cmphits=0;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2453,8 +2461,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 
 		if (addr4.s_addr == INADDR_BROADCAST) 
 		{
-			bcast=1;
-                        
 			HIP_DEBUG("Received i1 broadcast\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
@@ -2469,9 +2475,6 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 
 	if (entry) {
-                if (bcast)                
-		state = HIP_STATE_UNASSOCIATED;
-		else
 		state = entry->state;
 		hip_put_ha(entry);
 	}
