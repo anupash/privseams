@@ -841,9 +841,7 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	   should be 1 */
 	HIP_DEBUG_HIT("our HIT", &ha->hit_our);
 	HIP_DEBUG_HIT("peer HIT", &ha->hit_peer);
-	hip_delete_sp_pair(&ha->hit_peer, &ha->hit_our,
-			   &ha->lsi_peer, &ha->lsi_our,
-			   IPPROTO_ESP, 1);
+	hip_delete_hit_sp_pair(&ha->hit_peer, &ha->hit_our, IPPROTO_ESP, 1);
 	/* Not going to "put" the entry because it has been removed
 	   from the hashtable already (hip_exit won't find it
 	   anymore). */

@@ -236,10 +236,10 @@ int sendto_hipd(void *msg, size_t len)
 
 int control_thread_init(void)
 {
-   int err = 0;
+	int err = 0;
 	int n;
 	int len;
-    struct sockaddr_in6 sock_addr;
+	struct sockaddr_in6 sock_addr;
     
 	struct hip_common *msg = NULL;
 	socklen_t alen;
@@ -286,4 +286,27 @@ out_err:
 
 	return err;			   
 }
+
+
+int firewall_init_raw_sock_v6(int *firewall_raw_sock_v6)
+{
+	int on = 1, off = 0, err = 0;
+
+	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
+	HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+
+	/* see bug id 212 why RECV_ERR is off */
+	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+	err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+
+ out_err:
+	return err;
+}
+
+
+
 

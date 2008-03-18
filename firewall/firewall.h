@@ -5,6 +5,7 @@
 #include <linux/netfilter.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
@@ -14,7 +15,6 @@
 #include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
-
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
@@ -56,15 +56,22 @@ int match_hit(struct in6_addr match_hit,
 void set_stateful_filtering(int v);
 int get_stateful_filtering();
 
-int firewall_init();
+int firewall_init(char *rule_file);
 void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 
-/*Firewall database functions*/
-firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t lsi_our);
-int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi);
+/*** Firewall database functions ***/
+
+/*Initializes the firewall database*/
 void firewall_init_hldb(void);
+/*Consult/Modify operations in firewall database*/
+firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_our);
+int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi);
+/*Comparation definition for the db structure*/
 unsigned long firewall_hash_hl(const firewall_hl_t *hl);
 int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2);
+/*Using raw_sockets injects the packet in the network with HITs*/
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m);
+int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst);
 #endif

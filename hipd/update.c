@@ -716,7 +716,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 				auth_transf_length * 2, Kn);
 	
 	/* XFRM API doesn't support multiple SA for one SP */
-	hip_delete_sp_pair(hits, hitr, IPPROTO_ESP, 1);
+	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
 	hip_delete_sa(prev_spi_out, &entry->preferred_address,
 		      &entry->local_address, AF_INET6,
@@ -1721,9 +1721,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	/** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
 #if 1
-	hip_delete_sp_pair(&entry->hit_our, &entry->hit_peer, 
-			   &entry->lsi_our, &entry->lsi_peer, 
-			   IPPROTO_ESP, 1);
+	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
 	hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr, 
 		      AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1731,9 +1729,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 #endif
 
 #if 1
-	hip_delete_sp_pair(&entry->hit_peer, &entry->hit_our,
-			   &entry->lsi_peer, &entry->lsi_our,
-			   IPPROTO_ESP, 1);
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif 
 
 	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
@@ -2103,17 +2099,13 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      HIP_DEBUG_IN6ADDR("saddr", new_pref_addr);
      HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-     hip_delete_sp_pair(&entry->hit_our, &entry->hit_peer,
-			&entry->lsi_our, &entry->lsi_peer,
-			IPPROTO_ESP, 1);
+     hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
      hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address,
 		   AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 		   (int)entry->peer_udp_port);
 #if 1
-	hip_delete_sp_pair(&entry->hit_peer, &entry->hit_our, 
-			   &entry->lsi_peer, &entry->lsi_our,
-			   IPPROTO_ESP, 1);
+	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
      /** @todo Check that this works with the pfkey API. */
      hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,

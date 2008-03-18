@@ -846,7 +846,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  /* let the setup routine give us a SPI. */
 	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
-			      entry_aux, &spi_in, transform_esp_suite, 
+			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
@@ -1880,10 +1880,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
 	err = hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
-			 entry_aux, &spi_in,
-			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-				i2_info->dst_port);
+			 &spi_in, esp_tfm, &ctx->esp_in, &ctx->auth_in,
+			 retransmission, HIP_SPI_DIRECTION_IN, 0,
+			 i2_info->src_port, i2_info->dst_port);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);

@@ -35,6 +35,7 @@ int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 
 int counter = 0;
+int firewall_raw_sock_v6 = 0;
 
 void print_usage()
 {
@@ -95,7 +96,8 @@ int hip_get_default_hit(struct in6_addr *hit)
 	return err;
 }
 
-int firewall_init(){
+int firewall_init(char *rule_file){
+
 	HIP_DEBUG("Initializing firewall\n");
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -115,6 +117,16 @@ int firewall_init(){
 	/* Register signal handlers */
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
+
+	read_file(rule_file);
+	HIP_DEBUG("Firewall rule table: \n");
+	print_rule_tables();
+	//running test functions for rule handling
+	//  test_parse_copy();
+	//  test_rule_management();
+
+	//HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
+          //      rule_file, timeout);
 	if (use_ipv4) {
 		system("iptables -I FORWARD -p 139 -j QUEUE");
 		system("iptables -I FORWARD -p 50 -j QUEUE");
@@ -187,6 +199,8 @@ void firewall_exit(){
 	} else {
 		HIP_DEBUG("Some dagling iptables rules may be present!\n");
 	}
+	if (firewall_raw_sock_v6)
+		close(firewall_raw_sock_v6);
 }
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
@@ -299,10 +313,10 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 }
 
 
-#ifdef CONFIG_HIP_OPPTCP
+
 
 /**
-*
+* Returns true if the packet direction is input
 */
 int is_incoming_packet(unsigned int theHook){
 	if(theHook == NF_IP_LOCAL_IN)
@@ -312,7 +326,7 @@ int is_incoming_packet(unsigned int theHook){
 
 
 /**
-*
+* Returns true if the packet direction is output
 */
 int is_outgoing_packet(unsigned int theHook){
 	if(theHook == NF_IP_LOCAL_OUT)
@@ -320,6 +334,7 @@ int is_outgoing_packet(unsigned int theHook){
 	return 0;
 }
 
+#ifdef CONFIG_HIP_OPPTCP
 
 /**
 * checks for the i1 option in a packet
@@ -755,12 +770,9 @@ static void *handle_ip_traffic(void *ptr) {
 	struct hip_esp *esp_data = NULL;
 	struct hip_esp_packet *esp = NULL;
 	struct hip_common *hip_common = NULL;
-	hip_common_t *hip_bex = NULL; // tere addition
 	struct in6_addr *src_addr = NULL;
 	struct in6_addr *dst_addr = NULL;
 	struct ipq_handle *hndl;
-	firewall_hl_t *lsi_hit_peer;
-	struct in6_addr *dst_hit;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
 	unsigned int packetHook;
@@ -805,36 +817,16 @@ static void *handle_ip_traffic(void *ptr) {
                 		iphdr = (struct ip *) m->payload; 
                 		packet_hdr = (void *)iphdr;
                 		hdr_size = (iphdr->ip_hl * 4);
-				if (iphdr->ip_p == IPPROTO_UDP){
+				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
-				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
-				/*LSI IF LSI ALREADY IN THE DATABASE OK*/
-				// in the case of applications where the destination is set in the ip destination field
-				// add the case if the destination ip is in the ip payload ???
-				lsi_hit_peer = firewall_hit_lsi_db_match(iphdr->ip_dst);
-				if (lsi_hit_peer){
-					//BEX already done
-					// inject packet to networking stack using raw sockets
-					//default_local_hit as our and hit_peer: lsi_hit_peer->hit
-					// inject_packet(lsi_hit_peer);
-					//HIP_IFE(!(hipd_msg_v4 = hip_msg_alloc()), 1);
-					//FD_ZERO(&read_fdset);
-					//FD_SET(hip_raw_sock_v4, &read_fdset);	
-	
-				}
-				else{
-					// RUN BEX to initialize SP and SA
-					HIP_IFEL(hip_trigger_bex(NULL, dst_hit, NULL, dst_addr), -1, "Base Exchange Trigger failed");
-					//add_entry to firewall database
-					firewall_add_hit_lsi(firewall_lsi_hit_db, dst_hit, &iphdr->ip_dst);
-					
-					
-				}
-				/*ENDLSI ELSE REGISTER LSI AND GOTO BASE_EXCHANGE*/
-        		}
+				if(is_outgoing_packet(packetHook))
+					firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+				else if (is_incoming_packet(packetHook))
+					firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+				drop_packet(hndl, m->packet_id);
+				break;
+ 	      		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
                 		ip6_hdr = (struct ip6_hdr *) m->payload;   
@@ -935,9 +927,78 @@ out_err:
 	return;
 }
 
+int firewall_trigger_incoming_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
+	int err = 0;
+	return err;
+}
+
+int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
+	int err;
+	struct in6_addr *src_addr = NULL;
+	struct in6_addr *dst_addr = NULL;
+	struct in6_addr dst_hit;
+	struct in6_addr *default_local_hit;		
+	firewall_hl_t *lsi_hit_peer;
+
+       	IPV4_TO_IPV6_MAP(ip_src, src_addr);
+        IPV4_TO_IPV6_MAP(ip_dst, dst_addr);
+	hip_get_default_hit(default_local_hit);
+	/*HIT IF LSI ALREADY IN THE DATABASE*/
+	lsi_hit_peer = firewall_hit_lsi_db_match(ip_dst);
+	if (lsi_hit_peer){
+		// BEX already done
+		// insert in the packet the hits
+		reinject_packet(lsi_hit_peer->hit, *default_local_hit, m);
+	}
+	else{
+		// RUN BEX to initialize SP and SA
+		HIP_IFEL(hip_trigger_bex(NULL, dst_hit, NULL, dst_addr), -1, "Base Exchange Trigger failed");
+		//add_entry to firewall database
+		firewall_add_hit_lsi(firewall_lsi_hit_db, &dst_hit, ip_dst);
+		reinject_packet(dst_hit, *default_local_hit, m);					
+	}
+	
+out_err: 
+	return err;
+}
+
+
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m){
+	int err = 0;
+	int sa_size = sizeof(struct sockaddr_in6);	
+	struct ip *iphdr = (struct ip *) m->payload;
+	int hdr_size = (iphdr->ip_hl * 4);
+	struct tcphdr *tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+	struct sockaddr_in6 sock6_src, sock6_dest;
+	struct in6_addr any = IN6ADDR_ANY_INIT;
+
+	sock6_src.sin6_family = AF_INET6;
+	sock6_src.sin6_port = htons(tcphdr->source);
+	sock6_src.sin6_addr = src_hit;
+
+	sock6_dest.sin6_family = AF_INET6;
+	sock6_dest.sin6_port = htons(tcphdr->dest);
+	sock6_dest.sin6_addr = dst_hit;
+
+	HIP_IFEL(bind(firewall_raw_sock_v6, (struct sockaddr *) &sock6_src, sa_size),
+		 -1, "Binding to raw sock failed\n");
+
+	HIP_IFEL(sendto(firewall_raw_sock_v6, &tcphdr, sizeof(tcphdr), 0,
+			(struct sockaddr *) &sock6_dest, sa_size), 
+		 -1, "Sent with raw sock failed\n");
+
+out_err:
+	/* Reset the interface to wildcard*/	
+	ipv6_addr_copy(&sock6_src.sin6_addr, &any);
+	bind(firewall_raw_sock_v6, (struct sockaddr *) &sock6_src, sa_size);
+
+	return err;
+}
+
+
 //----------------------------------FIREWALL DATABASE---------------------------------
 
-firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t lsi_our){
+firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_our){
 	int err = 0;
 	firewall_hl_t *hit_lsi_peer, *entry_aux;
 
@@ -946,7 +1007,7 @@ firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t lsi_our){
 		 "No memory available for host id\n");
 
 	memset(entry_aux, 0, sizeof(firewall_hl_t));
-	ipv4_addr_copy(&entry_aux->lsi, &lsi_our);
+	ipv4_addr_copy(&entry_aux->lsi, lsi_our);
 	
 	hit_lsi_peer = hip_ht_find(firewall_lsi_hit_db, entry_aux);
 
@@ -1018,6 +1079,7 @@ int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2)
      return (firewall_hash_hl(hl1) != firewall_hash_hl(hl2));
 }
 
+
 //----------------------------------END FIREWALL DATABASE SUPPORT---------------------------------
 
 
@@ -1052,12 +1114,13 @@ int main(int argc, char **argv)
 	int escrow_active = 0;
 	const int family4 = 4, family6 = 6;
 	int ch, tmp;
-	const char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
-	char *rule_file = default_rule_file;
 	char *traffic;
 	extern char *optarg;
 	extern int optind, optopt;
 	int errflg = 0;
+	const char *default_rule_file = HIP_FW_DEFAULT_RULE_FILE;
+	char *rule_file = default_rule_file;
+	
 
 	check_and_write_default_config();
 
@@ -1105,17 +1168,6 @@ int main(int argc, char **argv)
 	use_ipv4 = 1;
 	use_ipv6 = 1;
 
-
-	read_file(rule_file);
-	HIP_DEBUG("Firewall rule table: \n");
-	print_rule_tables();
-	//running test functions for rule handling
-	//  test_parse_copy();
-	//  test_rule_management();
-
-	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
-                rule_file, timeout);
-
 	firewall_probe_kernel_modules();
 
 	if (use_ipv4) {
@@ -1136,7 +1188,7 @@ int main(int argc, char **argv)
 			die(h6);
 	}
 
-	firewall_init();
+	firewall_init(rule_file);
 
 #ifdef G_THREADS_IMPL_POSIX
       	HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
@@ -1152,7 +1204,7 @@ int main(int argc, char **argv)
   
   	init_timeout_checking(timeout);
   	control_thread_init();
-
+	firewall_init_raw_sock_v6(&firewall_raw_sock_v6);
 
 	if (use_ipv4) {
                 pthread_create(&ipv4Thread, NULL, &handle_ip_traffic,
