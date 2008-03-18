@@ -36,9 +36,8 @@ struct hip_key_escrow_association
 	atomic_t               refcnt;
 	spinlock_t             lock;
 	struct in6_addr        hit; /* if we are the server, this is client hit,
-				 if we are the client, this is our own hit */
-	/*! \todo Find better key. Client HIT used for now. */
-	//struct in6_addr       	client_hit; 
+				       if we are the client, this is our own hit */
+	/** @todo Find better key. Client HIT used for now. */
 	struct in6_addr        peer_hit; 
 	struct in6_addr        server_hit;
 	

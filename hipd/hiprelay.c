@@ -22,9 +22,7 @@ static LHASH *hiprelay_ht = NULL;
 /** A hashtable for storing the the HITs of the clients that are allowed to use
  *  the relay / RVS service. */
 static LHASH *hiprelay_wl = NULL;
-/** Default relay record life time as a 8-bit integer. After this time, the
- * record is deleted if it has been idle. */
-uint8_t hiprelay_lifetime = HIP_RELREC_DEF_LIFETIME;
+
 /** Minimum relay record life time as a 8-bit integer. */
 uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
@@ -347,7 +345,7 @@ int hip_we_are_relay()
 	return we_are_relay;
 }
 
-int hip_relay_validate_lifetime(uint8_t requested_lifetime,
+int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
 				uint8_t *granted_lifetime)
 {
 	if(requested_lifetime < hiprelay_min_lifetime){
@@ -366,8 +364,8 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info)
 {
-	struct hip_common *i1_to_be_relayed = NULL;
-	struct hip_tlv_common *current_param = NULL;
+	hip_common_t *i1_to_be_relayed = NULL;
+	hip_tlv_common_t *current_param = NULL;
 	int err = 0, from_added = 0;
 	hip_tlv_type_t param_type = 0;
 	/* A function pointer to either hip_build_param_from() or
@@ -585,18 +583,6 @@ int hip_relay_read_config(){
 						print_node(current);
 					}
 				}
-			} else if(strcmp(parameter, "default_lifetime") == 0) {
-				time_t tmp = 0;
-				uint8_t val = 0;
-				current = hip_ll_get_next(&values, current);
-				/* We use atol() instead of atof() because
-				   atol() accepts only digits. */
-				tmp = atol(current->data);
-				
-				if(get_lifetime_value(tmp, &val) == 0) {
-					hiprelay_lifetime = val;
-				}
-					
 			} else if(strcmp(parameter, "minimum_lifetime") == 0) {
 				time_t tmp = 0;
 				uint8_t val = 0;
@@ -632,19 +618,13 @@ int hip_relay_read_config(){
 		HIP_ERROR("Cannot close file %s.\n", HIP_RELAY_CONFIG_FILE);
 	}
 	
-	/* Check that the read values are sane. */
+	/* Check that the read values are sane. If not, rollback to defaults. */
 	if(hiprelay_min_lifetime > hiprelay_max_lifetime) {
-		hiprelay_min_lifetime = hiprelay_max_lifetime;
-	}
-	
-	if(hiprelay_lifetime > hiprelay_max_lifetime) {
-		hiprelay_lifetime = hiprelay_max_lifetime;
-	} else if(hiprelay_lifetime < hiprelay_min_lifetime) {
-		hiprelay_lifetime = hiprelay_min_lifetime;
+		hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
+		hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 	}
 
-	HIP_DEBUG("def: %ld, min: %ld, max: %ld, wl size: %lu.\n",
-		  hiprelay_lifetime, hiprelay_min_lifetime,
+	HIP_DEBUG("min: %ld, max: %ld, wl size: %lu.\n", hiprelay_min_lifetime,
 		  hiprelay_max_lifetime, hip_relwl_size());
 
  out_err:

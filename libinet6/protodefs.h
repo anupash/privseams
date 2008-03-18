@@ -299,6 +299,7 @@ typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef struct hip_common hip_common_t;
+typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];

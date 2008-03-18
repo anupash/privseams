@@ -20,11 +20,12 @@
 
 #define HIP_SERVICE_MAX_COUNT 2
 
-/** Lifetime-fields represent lifetime value of 2^((lifetime - 64)/8) seconds.
+/**
+ * Lifetime-fields represent lifetime value of 2^((lifetime - 64)/8) seconds.
  * These encoded values can be used directly in lifetime field of the packets.
  *
- * @note We us 91 as the minimum value, because it results to a service lifetime
- *       of ~10 seconds. There's no use to accept values that result to
+ * @note We use 91 as the minimum value, because it results to a service
+ *       lifetime of ~10 seconds. There's no use to accept values that result to
  *       minuscule service lifetimes as hipd maintenance interval is ~20 seconds.
  */
 #define HIP_SERVICE_MIN_LIFETIME 91
@@ -41,7 +42,7 @@ typedef struct hip_reg_service{
 	
 	/* accept or reject registration based on the requester hit and do 
 	 * service specific initialization */
-	// TODO: add local hit
+	/** @todo add local hit */
 	int (*handle_registration)(struct in6_addr *hit);
         int (*cancel_registration)(struct in6_addr *hit);
         
@@ -96,8 +97,6 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 int hip_handle_registration(struct in6_addr *hit);
 int hip_cancel_registration(struct in6_addr *hit);
 int hip_cancel_service(void);
-uint8_t hip_get_service_min_lifetime();
-uint8_t hip_get_service_max_lifetime();
 
 /**
  * Translates a service life time from seconds to a 8-bit integer value. The

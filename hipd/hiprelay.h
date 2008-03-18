@@ -80,14 +80,6 @@
 #include "configfilereader.h"
 
 /**
- * The lifetime the relay / RVS client is granted the service if the service
- * request specifies an invalid time. The lifetime value in seconds is
- * calculated using the formula given in the registration draft.
- * @note this is a fallback value if we are not able to read the configuration
- *       file.
- */
-#define HIP_RELREC_DEF_LIFETIME 138 // Equals 608.874 seconds.
-/**
  * The minimum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
  * calculated using the formula given in the registration draft.
@@ -128,10 +120,6 @@
 "# Relay Whitelist. The HITs of the clients that are, allowed to use the relay /\n"\
 "# RVS service. You may use multiple stanzas of the same name.\n"\
 "#whitelist = \"\"\n"\
-"\n"\
-"# The number of seconds the relay / RVS client is granted the service if the\n"\
-"# service request specifies an invalid time.\n"\
-"default_lifetime = \"600\"\n"\
 "\n"\
 "# The minimum number of seconds the relay / RVS client is granted the service.\n"\
 "# If the service request defines a value smaller than this value, this value is\n"\
@@ -459,7 +447,7 @@ void hip_relwl_hit_free(hip_hit_t *hit);
 int hip_we_are_relay();
 
 /**
- * Validates a requested HIP relay / RVS service lifetime. If
+ * Validates a requested RVS service lifetime. If
  * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
  * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
  * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
@@ -473,8 +461,33 @@ int hip_we_are_relay();
  *                            is greater than @c hiprelay_max_lifetime. Zero
  *                            otherwise.
  */ 
-int hip_relay_validate_lifetime(uint8_t requested_lifetime,
-				uint8_t *granted_lifetime);
+int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
+			      uint8_t *granted_lifetime);
+
+/**
+ * Validates a requested HIP relay service lifetime. If
+ * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
+ * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
+ * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
+ * @c granted_lifetime is set to @c hiprelay_max_lifetime. Else
+ * @c granted_lifetime is set to @c requested_lifetime.
+ *
+ * @param  requested_lifetime the lifetime that is to be validated.
+ * @param  granted_lifetime   a target buffer for the validated lifetime.
+ * @return                    -1 if @c requested_lifetime is outside boundaries,
+ *                            i.e. is smaller than @c hiprelay_min_lifetime or
+ *                            is greater than @c hiprelay_max_lifetime. Zero
+ *                            otherwise.
+ * @note                      Currently this is just a call back wrapper for
+ *                            hip_rvs_validate_lifetime() because RVS and relay
+ *                            services share the same lifetimes. 
+ */
+static inline int hip_relay_validate_lifetime(uint8_t requested_lifetime,
+					      uint8_t *granted_lifetime)
+{
+	return hip_rvs_validate_lifetime(requested_lifetime,
+					 granted_lifetime);
+}
 
 /**
  * Relays an incoming I1 packet.

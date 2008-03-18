@@ -483,9 +483,9 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			case HIP_SERVICE_RENDEZVOUS:
 				HIP_INFO("Client is registering to rendezvous "\
 					 "service.\n");
-
-				hip_relay_validate_lifetime(req_lifetime,
-							    &val_lifetime);
+				
+				hip_rvs_validate_lifetime(req_lifetime,
+							  &val_lifetime);
 
 				/* Check if a relay record already exists. If it
 				   exists, we must not replace a FULLRELAY to
@@ -770,16 +770,6 @@ int hip_cancel_service(void)
 {
      // TODO: notify registered clients (REG_RESPONSE with zero lifetime) 
      return 0;
-}
-
-uint8_t hip_get_service_min_lifetime()
-{
-     return HIP_SERVICE_MIN_LIFETIME;
-}
-
-uint8_t hip_get_service_max_lifetime()
-{
-     return HIP_SERVICE_MAX_LIFETIME;
 }
 
 int get_lifetime_value(time_t seconds, uint8_t *lifetime)
