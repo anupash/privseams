@@ -150,7 +150,7 @@ typedef struct{
 	/** The type of this relay record (full relay or rvs) */
 	uint8_t type;
 	/** The lifetime of this record, seconds. */
-	double lifetime;
+        time_t lifetime;
 	/** Time when this record was created, seconds since epoch. */
 	time_t created;
 	/** Time when this record was last used, seconds since epoch. */
@@ -457,6 +457,24 @@ void hip_relwl_hit_free(hip_hit_t *hit);
  * @return zero if we are not an RVS or HIP RELAY, one otherwise.
  */
 int hip_we_are_relay();
+
+/**
+ * Validates a requested HIP relay / RVS service lifetime. If
+ * @c requested_lifetime is smaller than @c hiprelay_min_lifetime then
+ * @c granted_lifetime is set to @c hiprelay_min_lifetime. If
+ * @c requested_lifetime is greater than @c hiprelay_max_lifetime then
+ * @c granted_lifetime is set to @c hiprelay_max_lifetime. Else
+ * @c granted_lifetime is set to @c requested_lifetime.
+ *
+ * @param  requested_lifetime the lifetime that is to be validated.
+ * @param  granted_lifetime   a target buffer for the validated lifetime.
+ * @return                    -1 if @c requested_lifetime is outside boundaries,
+ *                            i.e. is smaller than @c hiprelay_min_lifetime or
+ *                            is greater than @c hiprelay_max_lifetime. Zero
+ *                            otherwise.
+ */ 
+int hip_relay_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime);
 
 /**
  * Relays an incoming I1 packet.

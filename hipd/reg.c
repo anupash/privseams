@@ -185,6 +185,7 @@ hip_service_t *hip_get_service(uint8_t service_type)
 
 /***/
 
+/* Leaks memory ... */
 int hip_get_services_list(int **service_types)
 {
      hip_service_t *s = NULL, *s2 = NULL;
@@ -300,7 +301,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	hip_service_t *service = NULL;
 	int err = 0, accepted_count = 0, rejected_count = 0, type_count = 0;
 	int request_got_rejected = 0;
-	uint8_t lifetime = 0;
+	uint8_t req_lifetime = 0, val_lifetime = 0;
 	uint8_t *values = NULL;
      
 	HIP_DEBUG("hip_handle_regrequest() invoked.\n");
@@ -314,7 +315,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	}
      
 	/* Get the registration lifetime and count of registration types. */
-	lifetime = reg_request->lifetime;
+	req_lifetime = reg_request->lifetime;
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
 	values = hip_get_param_contents_direct(reg_request) +
@@ -326,7 +327,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	memset(rejected_requests, '\0', sizeof(rejected_requests));
 
 	HIP_DEBUG("REG_REQUEST lifetime: %u, number of types: %d.\n",
-		  lifetime, type_count);
+		  req_lifetime, type_count);
      
 	/* Check if we already have an relay record for the given HIT. */
 	hip_relrec_t dummy, *fetch_record = NULL;
@@ -340,7 +341,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	   parameters for those. -Lauri 21.09.2007 21:23*/
 
 	/* Cancellation is not tested! */
-	if(lifetime == 0) {
+	if(req_lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
 		int i = 0;
 		
@@ -453,7 +454,6 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 		   re-register to an existing service, we delete the old entry
 		   and insert a new one. */
 		int i = 0, rr_already_inserted = 0;
-		lifetime = hip_get_acceptable_lifetime(lifetime);
 		hip_relrec_t *relay_record = NULL;
 		
 		for(; i < type_count; i++) {
@@ -483,6 +483,10 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			case HIP_SERVICE_RENDEZVOUS:
 				HIP_INFO("Client is registering to rendezvous "\
 					 "service.\n");
+
+				hip_relay_validate_lifetime(req_lifetime,
+							    &val_lifetime);
+
 				/* Check if a relay record already exists. If it
 				   exists, we must not replace a FULLRELAY to
 				   RVS. The client must cancel the RVS first. */
@@ -513,7 +517,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				   type values. */
 				else if(rr_already_inserted == 0) {
 					relay_record = hip_relrec_alloc(
-						HIP_RVSRELAY, lifetime,
+						HIP_RVSRELAY, val_lifetime,
 						&(entry->hit_peer),
 						&(entry->preferred_address),
 						entry->peer_udp_port,
@@ -548,6 +552,9 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				break;
 			case HIP_SERVICE_ESCROW:
 				HIP_INFO("Client is registering to escrow service.\n");
+				hip_escrow_validate_lifetime(req_lifetime,
+							     &val_lifetime);
+				
 				if (service->state == HIP_SERVICE_ACTIVE)
 				{
 					if(service->handle_registration(&entry->hit_peer) == 0)
@@ -566,6 +573,10 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			case HIP_SERVICE_RELAY_UDP_HIP:
 				HIP_INFO("Client is registering to UDP relay for HIP "\
 					 "packets service.\n");
+
+				hip_relay_validate_lifetime(req_lifetime,
+							    &val_lifetime);
+				
 				/* Check if a relay record already exists. If it exists,
 				   we must not replace an RVS with FULLRELAY. The client must
 				   cancel the RVS first*/
@@ -580,7 +591,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				else if(rr_already_inserted == 0){
 					relay_record =
 						hip_relrec_alloc(HIP_FULLRELAY,
-								 lifetime,
+								 val_lifetime,
 								 &(entry->hit_peer),
 								 &(entry->preferred_address),
 								 entry->peer_udp_port,
@@ -635,8 +646,9 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Building REG_RESPONSE and REG_FAILED parameters. */
 	if(accepted_count > 0)
 	{
-		hip_build_param_reg_request(target_msg, lifetime, accepted_requests,
-					    accepted_count, 0);
+		hip_build_param_reg_request(target_msg, val_lifetime,
+					    accepted_requests, accepted_count,
+					    0);
 	}
 	/** @todo Determine failure type using some indicator. */
 	if(rejected_count > 0)
@@ -717,7 +729,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 	  /* Adding REG_RESPONSE and/or REG_FAILED parameter */   
 	  HIP_DEBUG("Accepted %d, rejected: %d\n", accepted_count, rejected_count);
 	  if (accepted_count > 0) {
-	       lifetime = hip_get_acceptable_lifetime(reg_request->lifetime);
+	       hip_escrow_validate_lifetime(reg_request->lifetime, &lifetime);
 	       HIP_DEBUG("Building REG_RESPONSE parameter.\n");
 	       HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
 						    accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
@@ -760,30 +772,6 @@ int hip_cancel_service(void)
      return 0;
 }
 
-
-/**
- * Check that the requested service lifetime falls within limits.
- * 
- * @param requested_lifetime the lifetime requested.
- * @return                   a lifetime fitting within limits.
- * @todo                     we should have minumum and maximum lifetimes for
- *                           each service. -Lauri 21.09.2007 20:11
- */
-uint8_t hip_get_acceptable_lifetime(uint8_t requested_lifetime)
-{
-     uint8_t time = requested_lifetime;
-     if (time > HIP_SERVICE_MAX_LIFETIME)
-     {
-	  time = HIP_SERVICE_MAX_LIFETIME; 
-     } else if (time < HIP_SERVICE_MIN_LIFETIME)
-     {
-	  time = HIP_SERVICE_MIN_LIFETIME;
-     }
-     HIP_DEBUG("Requested service lifetime: %d, accepted lifetime: %d\n",
-	       requested_lifetime, time);
-     return time;
-}
-
 uint8_t hip_get_service_min_lifetime()
 {
      return HIP_SERVICE_MIN_LIFETIME;
@@ -794,32 +782,36 @@ uint8_t hip_get_service_max_lifetime()
      return HIP_SERVICE_MAX_LIFETIME;
 }
 
-int get_lifetime_value(double seconds, uint8_t *lifetime)
+int get_lifetime_value(time_t seconds, uint8_t *lifetime)
 {
 	/* Check that we get a lifetime value between 1 and 255. The minimum
 	   lifetime according to the registration draft is 0.004 seconds, but
-	   the reverse formula gives zero for that. 0.0045 seconds gives a
-	   lifetime value of one. 15384774.906 seconds is the maximum value.
-	   The boundary checks done here are just curiosities since services
-	   are usually granted for minutes to a couple of days, but not for
-	   milliseconds and days. However, log() gives a range error if
-	   "seconds" is zero. */
-	if(seconds < 0.0045) {
+	   the reverse formula gives zero for that. 15384774.906 seconds is the
+	   maximum value. The boundary checks done here are just curiosities
+	   since services are usually granted for minutes to a couple of days,
+	   but not for milliseconds and days. However, log() gives a range error
+	   if "seconds" is zero. */
+	if(seconds == 0) {
 		*lifetime = 0;
 		return -1;
-	}else if(seconds > 15384774.906) {
+	}else if(seconds > 15384774) {
 		*lifetime = 255;
 		return -1;
-	} else {
+	}else {
 		*lifetime = (8 * (log(seconds) / log(2))) + 64;
 		return 0;
 	}
 }
 
-int get_lifetime_seconds(uint8_t lifetime, double *seconds){
+int get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 	if(lifetime == 0) {
 		*seconds = 0;
 		return -1;
+	}
+	/* All values between from 1 to 63 give just fractions of a second. */
+	else if(lifetime < 64) {
+		*seconds = 1;
+		return 0;
 	} else {
 		*seconds = pow(2, ((double)((lifetime)-64)/8));
 		return 0;

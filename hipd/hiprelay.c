@@ -29,8 +29,6 @@ uint8_t hiprelay_lifetime = HIP_RELREC_DEF_LIFETIME;
 uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
 uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
-/** Default relay record life time in seconds. */
-time_t hiprelay_lifetime_sec = 0;
 /** 
  * A dummy boolean to indicate the machine has relay capabilities.
  * This is only here for testing and development purposes. It allows the same
@@ -56,7 +54,6 @@ static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
 LHASH *hip_relht_init()
 {
-	get_lifetime_seconds(hiprelay_lifetime, &hiprelay_lifetime_sec);
 	return hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash),
 				    LHASH_COMP_FN(hip_relht_compare));
 }
@@ -142,7 +139,7 @@ void hip_relht_free_expired(hip_relrec_t *rec)
 	if(rec == NULL)
 		return;
 
-	if((double)(time(NULL)) - rec->last_contact > hiprelay_lifetime_sec){
+	if(time(NULL) - rec->created > rec->lifetime){
 		HIP_INFO("Relay record expired, deleting.\n");
 		hip_relht_rec_free(rec);
 	}
@@ -230,7 +227,7 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  "Full relay of HIP packets\n" :
 			  (rec->type == HIP_RVSRELAY) ?
 			  "RVS relay of I1 packet\n" : "undefined\n");
-	cursor += sprintf(cursor, " Record lifetime: %.2f seconds\n",
+	cursor += sprintf(cursor, " Record lifetime: %%lu seconds\n",
 			  rec->lifetime);
 	cursor += sprintf(cursor, " Record created: %lu seconds ago\n",
 			  time(NULL) - rec->created);
@@ -350,6 +347,21 @@ int hip_we_are_relay()
 	return we_are_relay;
 }
 
+int hip_relay_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime)
+{
+	if(requested_lifetime < hiprelay_min_lifetime){
+		*granted_lifetime = hiprelay_min_lifetime;
+		return -1;
+	}else if(requested_lifetime > hiprelay_max_lifetime){
+		*granted_lifetime = hiprelay_max_lifetime;
+		return -1;
+	}else{
+		*granted_lifetime = requested_lifetime;
+		return 0;
+	}
+}
+
 int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 		  const hip_portpair_t *i1_info)
@@ -461,7 +473,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 
  out_err:
 	if(i1_to_be_relayed != NULL) {
-		HIP_FREE(i1_to_be_relayed);
+		free(i1_to_be_relayed);
 	}
 	return err;
 }
@@ -574,43 +586,40 @@ int hip_relay_read_config(){
 					}
 				}
 			} else if(strcmp(parameter, "default_lifetime") == 0) {
-				double tmp = 0;
+				time_t tmp = 0;
+				uint8_t val = 0;
 				current = hip_ll_get_next(&values, current);
 				/* We use atol() instead of atof() because
 				   atol() accepts only digits. */
-				tmp = (double)atol(current->data);
-				if(tmp >= 1) {
-					uint8_t val = 0;
-					get_lifetime_value(tmp, &val);
-					hiprelay_lifetime =
-						(val > max) ? max : val;
+				tmp = atol(current->data);
+				
+				if(get_lifetime_value(tmp, &val) == 0) {
+					hiprelay_lifetime = val;
 				}
+					
 			} else if(strcmp(parameter, "minimum_lifetime") == 0) {
-				double tmp = 0;
+				time_t tmp = 0;
+				uint8_t val = 0;
 				current = hip_ll_get_next(&values, current);
-				tmp = (double)atol(current->data);
-				if(tmp >= 1) {
-					uint8_t val = 0;
-					get_lifetime_value(tmp, &val);
+				tmp = atol(current->data);
+				
+				if(get_lifetime_value(tmp, &val) == 0) {
 					/* get_lifetime_value() truncates the
 					   value. We want the minimum to be at
 					   least the value specified. */
 					if(val < max) {
 						val ++;
 					}
-					
-					hiprelay_min_lifetime =
-						(val > max) ? max : val;
+					hiprelay_min_lifetime = val;
 				}
 			} else if(strcmp(parameter, "maximum_lifetime") == 0) {
-				double tmp = 0;
+				time_t tmp = 0;
+				uint8_t val = 0;
 				current = hip_ll_get_next(&values, current);
-				tmp = (double)atol(current->data);
-				if(tmp >= 1) {
-					uint8_t val = 0;
-					get_lifetime_value(tmp, &val);
-					hiprelay_max_lifetime =
-						(val > max) ? max : val;
+				tmp = atol(current->data);
+				
+				if(get_lifetime_value(tmp, &val) == 0) {
+					hiprelay_max_lifetime = val;
 				}
 			}
 		}

@@ -12,8 +12,10 @@
 HIP_HASHTABLE *kea_table;
 HIP_HASHTABLE *kea_endpoints;
 
-// static hip_list_t keadb[HIP_KEA_SIZE];
-// static hip_list_t kea_endpointdb[HIP_KEA_EP_SIZE];
+/** Minimum relay record life time as a 8-bit integer. */
+uint8_t escrow_min_lifetime = HIP_ESCROW_MIN_LIFETIME;
+/** Maximum relay record life time as a 8-bit integer. */
+uint8_t escrow_max_lifetime = HIP_ESCROW_MAX_LIFETIME;
 
 static void *hip_keadb_get_key(void *entry)
 {
@@ -484,6 +486,20 @@ void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 	HIP_UNLOCK_HA(kea_ep); 	
 }
 
+int hip_escrow_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime)
+{
+	if(requested_lifetime < escrow_min_lifetime){
+		*granted_lifetime = escrow_min_lifetime;
+		return -1;
+	}else if(requested_lifetime > escrow_max_lifetime){
+		*granted_lifetime = escrow_max_lifetime;
+		return -1;
+	}else{
+		*granted_lifetime = requested_lifetime;
+		return 0;
+	}
+}
 
 void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
 {
