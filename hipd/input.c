@@ -397,6 +397,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
+        struct in_addr bcast_addr = { INADDR_BROADCAST };
+        struct in6_addr bcast6_addr;
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
@@ -416,16 +418,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		 "checking control message failed\n", -1);
 
 	type = hip_get_msg_type(msg);
-
-        /* bugzilla 490 */
-        struct in_addr bcast_addr = { INADDR_BROADCAST };
-        struct in6_addr bcast6_addr;
-	IPV4_TO_IPV6_MAP(&bcast_addr,&bcast6_addr);
-        if((ipv6_addr_cmp(dst_addr,&bcast6_addr) == 0) && hip_hidb_hit_is_our(&msg->hits))
-	{
-		type = 10; /* "UNKNOWN" */
-		HIP_DEBUG("Discard broadcast\n");
-	}
 
 	/** @todo Check packet csum.*/
 
@@ -2438,7 +2430,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0;
+	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2452,6 +2444,12 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
 	HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
 
+	/* In some environments, a copy of broadcast our own I1 packets
+	   arrive at the local host too. The following variable handles
+	   that special case. Since we are using source HIT (and not
+           destination) it should handle also opportunistic I1 broadcast */
+	src_hit_is_our = hip_hidb_hit_is_our(&i1->hits);
+
 	/* check i1 for broadcast/multicast addresses */
 	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) 
         {
@@ -2462,11 +2460,15 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		if (addr4.s_addr == INADDR_BROADCAST) 
 		{
 			HIP_DEBUG("Received i1 broadcast\n");
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 		}
 
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 	}
