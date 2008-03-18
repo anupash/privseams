@@ -139,14 +139,33 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
 void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
+
+/**
+ * Gets a binary string representation from an uint8_t value.
+ * 
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 8 * sizeof(char).
+ */
+void uint8_to_binstring(uint8_t val, char *buffer);
+
 /**
  * Gets a binary string representation from an uint16_t value.
  * 
- * @param val    the value whose binary string we want.
- * @param buffer a target buffer where to put the binary string.
- * @note         make sure the buffer has at least size of 17 * sizeof(char).
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 17 * sizeof(char).
  */
 void uint16_to_binstring(uint16_t val, char *buffer);
+
+/**
+ * Gets a binary string representation from an uint32_t value.
+ * 
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 33 * sizeof(char).
+ */
+void uint32_to_binstring(uint32_t val, char *buffer);
 
 void hip_print_locator_addresses(struct hip_common *);
 
