@@ -397,8 +397,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
-        struct in_addr bcast_addr = { INADDR_BROADCAST };
-        struct in6_addr bcast6_addr;
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
