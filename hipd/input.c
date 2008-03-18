@@ -2430,8 +2430,8 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
-
+	int err = 0, state, mask = 0,cmphits=0, ignore_bcast = 0;
+	
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
 #ifdef CONFIG_HIP_BLIND
@@ -2443,14 +2443,12 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	
 	HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
 	HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
+	
+	struct in_addr bcast_addr = { INADDR_BROADCAST };
+	struct in6_addr bcast6_addr;
+	IPV4_TO_IPV6_MAP(&bcast_addr,&bcast6_addr);
 
-	/* In some environments, a copy of broadcast our own I1 packets
-	   arrive at the local host too. The following variable handles
-	   that special case. Since we are using source HIT (and not
-           destination) it should handle also opportunistic I1 broadcast */
-	src_hit_is_our = hip_hidb_hit_is_our(&i1->hits);
-
-	/* check i1 for broadcast/multicast addresses */
+	/* check i1 for broadcast/multicast addresses */        
 	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) 
         {
 		struct in_addr addr4;
@@ -2460,15 +2458,17 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		if (addr4.s_addr == INADDR_BROADCAST) 
 		{
 			HIP_DEBUG("Received i1 broadcast\n");
-			HIP_IFEL(src_hit_is_our, -1,
-				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
+			if (hip_hidb_hit_is_our(&i1->hits)) {
+			ignore_bcast = 1;
+			}
 		}
 
+	} else if ((ipv6_addr_cmp(i1_daddr,&bcast6_addr) == 0) && hip_hidb_hit_is_our(&i1->hits)) {
+		HIP_DEBUG("Discard broadcast packet from own HIT\n");
+		ignore_bcast = 1;
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
-			HIP_IFEL(src_hit_is_our, -1,
-				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 	}
@@ -2476,7 +2476,10 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
  	HIP_IFEL(!hip_controls_sane(ntohs(i1->control), mask), -1, 
 		 "Received illegal controls in I1: 0x%x. Dropping\n", ntohs(i1->control));
 
-	if (entry) {
+	if (ignore_bcast) {
+		state = HIP_STATE_NONE;
+	}
+	else if (entry) {
 		state = entry->state;
 		hip_put_ha(entry);
 	}
@@ -2511,7 +2514,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
 		state = HIP_STATE_NONE;
 	}
-
+	
 	HIP_DEBUG("Received I1 in state %s\n", hip_state_str(state));
 
 	switch(state) {
