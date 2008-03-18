@@ -397,6 +397,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 {
 	hip_ha_t tmp, *entry = NULL;
 	int err = 0, type, skip_sync = 0;
+        struct in_addr bcast_addr = { INADDR_BROADCAST };
+        struct in6_addr bcast6_addr;
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
@@ -420,6 +422,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/** @todo Check packet csum.*/
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
 	    (type == HIP_I1 || type == HIP_R1)) {
@@ -609,7 +612,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 		saddr_public = &entry->preferred_address;
 	}
 #endif
-
 	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
 		 "receiving of control packet failed\n");
  out_err:
@@ -2423,11 +2425,12 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      return err;
 }
 
+
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0;
+	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2437,17 +2440,35 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
+	
+	HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
+	HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
+
+	/* In some environments, a copy of broadcast our own I1 packets
+	   arrive at the local host too. The following variable handles
+	   that special case. Since we are using source HIT (and not
+           destination) it should handle also opportunistic I1 broadcast */
+	src_hit_is_our = hip_hidb_hit_is_our(&i1->hits);
 
 	/* check i1 for broadcast/multicast addresses */
-	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) {
+	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) 
+        {
 		struct in_addr addr4;
+
 		IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
-		if (addr4.s_addr == INADDR_BROADCAST) {
+
+		if (addr4.s_addr == INADDR_BROADCAST) 
+		{
 			HIP_DEBUG("Received i1 broadcast\n");
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 		}
+
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
 			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 	}
@@ -2499,16 +2520,15 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-	     if (cmphits == 1) {
+	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+	     	if (cmphits == 1) {
 		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
 			   -ENOSYS, "Dropping HIP packet\n");
 		  
-	     } else if (cmphits == 0) {
+	     	} else if (cmphits == 0) {
 		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
-	     } 
-
+	     	} 
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
