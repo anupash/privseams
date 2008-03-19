@@ -1237,7 +1237,10 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  out_err:
 
 	/* Reset the interface to wildcard or otherwise receiving
-	   broadcast messages fails from the raw sockets */ 
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
 	if (dst_is_ipv4) {
 		src4->sin_addr.s_addr = INADDR_ANY;
 		src4->sin_family = AF_INET;
@@ -1325,10 +1328,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
         if (local_addr != NULL) {
 		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
 		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
-			 "Local address is pure IPv6 address, IPv6 address "\
+			 "Local address is a native IPv6 address, IPv6 address"\
 			 "family is currently not supported on UDP/HIP.\n");
 		my_addr_ptr = local_addr;
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
+		src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
+		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
 		HIP_IFEL(hip_select_source_address(
@@ -1343,6 +1348,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
 		 "currently not supported on UDP/HIP.\n");
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
 	
         /* Source port */
 	if(src_port != 0) {
@@ -1375,11 +1381,18 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
 	}
+
+	/*
+	  Currently disabled because I could not make this work -miika
+	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
+		 -1, "Binding to udp sock failed\n");
 	
+	*/
+
 	/* Try to send the data. */
 	do {
-		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
-				     (struct sockaddr *) &dst4, sizeof(dst4));
+		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
+				    (struct sockaddr *) &dst4, sizeof(dst4));
 		if(chars_sent < 0)
 		{
 			/* Failure. */
@@ -1405,6 +1418,19 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		  "packet length: %u.\n", chars_sent, packet_length);
 
  out_err:
+
+	/* Reset the interface to wildcard or otherwise receiving
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
+
+	/* currently disabled because I could not make this work -miika
+	   src4.sin_addr.s_addr = INADDR_ANY;
+	   src4.sin_family = AF_INET;
+	   bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
+	*/
+
 	if (sockfd)
 		close(sockfd);
 	return err;
@@ -1421,22 +1447,6 @@ int hip_send_r2_response(struct hip_common *r2,
 
 
 #ifdef CONFIG_HIP_HI3
-/**
- * The callback for i3 "no matching id" callback.
- * 
- * @param ctx_data a pointer to...
- * @param data     a pointer to...
- * @param fun_ctx  a pointer to...
- * @todo           tkoponen: should this somehow trigger the timeout for waiting
- *                 outbound traffic (state machine)?
- */
-static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
-	char id[100];
-	sprintf_i3_id(id, (ID *)ctx_data);
-	
-	HIP_ERROR("Following ID not found: %s\n", id);
-}
-
 /** 
  * Hi3 outbound traffic processing.
  * 
@@ -1474,6 +1484,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 
 
 	msg_len = hip_get_msg_total_len(msg);
+
 	clb = cl_alloc_buf(msg_len);
 	if (!clb) {
 		HIP_ERROR("Out of memory\n.");
@@ -1494,10 +1505,9 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	/* Send over i3 */
 	bzero(&id, ID_LEN);
 	memcpy(&id, &msg->hitr, sizeof(struct in6_addr));
-	//cl_set_private_id(&id);
+	cl_set_private_id(&id);
 
 	/* exception when matching trigger not found */
-	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);
 	cl_send(&id, clb, 0);  
 	cl_free_buf(clb);
 	

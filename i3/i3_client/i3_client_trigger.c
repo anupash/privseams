@@ -634,12 +634,14 @@ void timeout_ack_insert(cl_trigger *ctr)
   struct timeval tv;
   cl_context     *ctx = ctr->ctx;
 
-  I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "Trigger still pending, reinsert it\n");
+  if( ctx->init_tcp_ctx_flag ) {
+	  I3_PRINT_DEBUG0(I3_DEBUG_LEVEL_MINIMAL, "Trigger still pending, reinsert it\n");
   
-  cl_sendto(ctx, ctr->precomputed_pkt.p, 
-	    ctr->precomputed_pkt.len,
-	    cl_get_valid_id(ctx, &ctr->t->id, &refresh),
-	    &ctr->t->id); 
+	  cl_sendto(ctx, ctr->precomputed_pkt.p, 
+		    ctr->precomputed_pkt.len,
+		    cl_get_valid_id(ctx, &ctr->t->id, &refresh),
+		    &ctr->t->id); 
+  }
   tv.tv_sec  = ACK_TIMEOUT;
   tv.tv_usec = random_sec();
   trigger_set_timer(&tv, timeout_ack_insert, ctr);
