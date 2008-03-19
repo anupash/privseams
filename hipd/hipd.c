@@ -301,7 +301,7 @@ out_err:
 int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
-	char buff[HIP_MAX_NETLINK_PACKET];
+	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
         fd_set write_fdset;
 	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
