@@ -1,5 +1,3 @@
-
-
 /** @file
  * This file defines a user message handling function for the Host Identity
  * Protocol (HIP).
@@ -100,39 +98,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                           hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
-
-	/* Tao added, TCP timeout 09.Jan.2008 */
-		
-	case SO_HIP_SET_TCPTIMEOUT_ON:
-		HIP_DEBUG("Setting TCP TIMEOUT ON\n");
-		hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
-		HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-			hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
-		
-		/* paramters setting to do here */
-		HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
-                         "set new tcptimeout parameters error\n");
-		break;
-	
-	 case SO_HIP_SET_TCPTIMEOUT_OFF:
-                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
-                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
-                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
-                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
-                
-                /* paramters resetting */
-                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
-                         "reset tcptimeout parameters to be default error\n");
-
-                break;
-
-	
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
+		HIP_DEBUG("Handling DEBUG ALL user message.\n");
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 		break;
-
 	case SO_HIP_SET_DEBUG_MEDIUM:
 		/* Removes debugging messages. */
 		HIP_DEBUG("Handling DEBUG MEDIUM user message.\n");
@@ -212,6 +183,29 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
+       case SO_HIP_SET_TCPTIMEOUT_ON:
+               HIP_DEBUG("Setting TCP TIMEOUT ON\n");
+               hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+               HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                      hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
+               
+               /* paramters setting to do here */
+               HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+                         "set new tcptimeout parameters error\n");
+               break;
+       
+        case SO_HIP_SET_TCPTIMEOUT_OFF:
+                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
+                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
+                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
+                
+                /* paramters resetting */
+                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
+                         "reset tcptimeout parameters to be default error\n");
+
+                break;
+
         case SO_HIP_DHT_GW:
           {
             char tmp_ip_str[20];
