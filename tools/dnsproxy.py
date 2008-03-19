@@ -7,7 +7,7 @@ import time
 import util
 import socket
 import DNS
-import DNS.pyip6
+import pyip6
 import binascii
 import hosts
 
@@ -90,7 +90,7 @@ class Global:
                     aa1d = a1['data']
                     aa1 = aa1d[4:4+16]
                     a2 = {'name': a1['name'],
-                          'data': DNS.pyip6.inet_ntop(aa1),
+                          'data': pyip6.inet_ntop(aa1),
                           'type': 28,
                           'class': 1,
                           'ttl': a1['ttl'],
