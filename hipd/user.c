@@ -421,12 +421,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	     break;
 	
 
-	case SO_HIP_ADD_RELAY_UDP_HIP:
-	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
+	case SO_HIP_ADD_RELAY:
+	     /* draft-ietf-hip-registration-02 HIPRELAY registration.
 		Responder (of I,Relay,R hierarchy) handles this message. Message
 		indicates that the current machine wants to register to a HIP
 		relay server. This message is received from hipconf. */
-	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
+	     HIP_DEBUG("Handling ADD HIPRELAY user message.\n");
 		
 	     /* Get HIP relay IP address and HIT that were given as commandline
 		parameters to hipconf. */
@@ -445,8 +445,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      -1, "Unable to find host association database entry "\
 		      "matching relay server's HIT.\n");
 	     
-	     /* Set a hipudprelay request flag. */
-	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
+	     /* Set a hiprelay request flag. */
+	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 
 	     /* Since we are requesting UDP relay, we assume that we are behind
 		a NAT. Therefore we set the NAT status on. This is needed only
@@ -463,17 +463,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      -1, "sending i1 failed\n");
 	     break;
 	     
-	case SO_HIP_OFFER_HIPUDPRELAY:
-	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
+	case SO_HIP_OFFER_HIPRELAY:
+	     /* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		server handles this message. Message indicates that the
 		current machine is willing to offer relay service. This
 		message is received from hipconf. */
-	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
+	     HIP_DEBUG("Handling OFFER HIPRELAY user message.\n");
 		
-	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
-	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
+	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
+	     hip_services_set_active(HIP_SERVICE_RELAY);
 		
-	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
+	     if (hip_services_is_active(HIP_SERVICE_RELAY)){
 		  HIP_DEBUG("UDP relay service for HIP packets"\
 			    "is now active.\n");
 		  we_are_relay = 1;

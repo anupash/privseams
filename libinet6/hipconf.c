@@ -21,26 +21,25 @@
 /** A help string containing the usage of @c hipconf. */
 const char *hipconf_usage =
 #ifdef CONFIG_HIP_ESCROW
-"add|del escrow  hit\n"
+"add|del escrow <hit>\n"
 #endif
-"add|del map hit ipv6\n"
-"add|del service escrow|hipudprelay|rvs\n"
-"add rvs <hit> <ipv6>\n"
-"add hipudprelay <hit> <ipv6>\n"
+"add|del map <hit> <ipv6>\n"
+"add|del service escrow|hiprelay|rvs\n"
+"add rvs|hiprelay <hit> <ipv6>\n"
 "del hi <hit>\n"
+"get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
-"get|set|inc|dec|new puzzle all|hit\n"
+"get|set|inc|dec|new puzzle all|<hit>\n"
 #else
 "get|set|inc|dec|new puzzle all\n"
 #endif
 "bos all\n"
-"nat on|off|peer_hit\n"
-"rst all|peer_hit\n"
+"nat on|off|<peer_hit>\n"
+"rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default (HI must be created as root)\n"
 "load config default\n"
 "handoff mode lazy|active\n"
-"get hi default\n"
 "run normal|opp <binary>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
@@ -69,7 +68,8 @@ const char *hipconf_usage =
 
 /** Function pointer array containing pointers to handler functions.
  *  @note Keep the elements in the same order as the @c TYPE values are defined
- *  in hipconf.h because type values are used as @c action_handler array index.
+ *        in hipconf.h because type values are used as @c action_handler array
+ *        index.
  */
 int (*action_handler[])(struct hip_common *, int action,const char *opt[], int optc) = 
 {
@@ -95,11 +95,12 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
         hip_conf_handle_locator,
-        hip_conf_handle_hipudprelay,
+        hip_conf_handle_hiprelay,
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
+	hip_conf_handle_reinit,
 	NULL /* run */
 };
 
@@ -152,6 +153,8 @@ int hip_conf_get_action(char *text)
                 ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
+	else if (!strcmp("reinit", text))
+		ret = ACTION_REINIT;
 #ifdef CONFIG_HIP_OPPTCP
 	else if (!strcmp("opptcp", text))
                 ret = ACTION_OPPTCP;
@@ -169,59 +172,18 @@ int hip_conf_check_action_argc(int action) {
 	int count = -1;
 
 	switch (action) {
-	case ACTION_ADD:
-		count = 2;
-		break;
-	case ACTION_DEL:
-		count = 2;
-		break;
-	case ACTION_NEW:
-		break;
-	case ACTION_NAT:
-		break;
-	case ACTION_SET:
-		count = 2;
-		break;
-	case ACTION_INC:
-		count = 2;
-		break;
-	case ACTION_DEC:
-		break;
-	case ACTION_GET:
-		count = 2;
-		break;
-	case ACTION_RUN:
-		count = 2;
-		break;
-	case ACTION_LOAD:
-		count=2;
-		break;
-	case ACTION_DHT:
-		count=2;
-		break;
-	case ACTION_RST:
-		break;
-	case ACTION_BOS:
-		break;
-	case ACTION_HA:
-		count=2;
-		break;
-	case ACTION_HANDOFF:
-		count = 2;
-		break;
-	case ACTION_DEBUG:
+	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
+	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT:
+                break;
+	case ACTION_DEBUG: case ACTION_RESTART:
 		count = 1;
 		break;
-	case ACTION_RESTART:
-		count = 1;
+	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
+	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
+	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
+	case ACTION_REINIT:
+		count = 2;
 		break;
-        case ACTION_LOCATOR:
-                break;
-        case ACTION_OPENDHT:
-                break;
-        case ACTION_TRANSORDER:
-                count = 2;
-                break;
 #ifdef CONFIG_HIP_OPPTCP	
 	case ACTION_OPPTCP:
                 break;
@@ -248,8 +210,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_MAP;
 	else if (!strcmp("rst", text))
 		ret = TYPE_RST;
-	else if (!strcmp("hipudprelay", text))
-		ret = TYPE_RELAY_UDP_HIP;
+	else if (!strcmp("hiprelay", text))
+		ret = TYPE_RELAY;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
 	else if (!strcmp("puzzle", text))
@@ -311,12 +273,12 @@ int hip_conf_get_type(char *text,char *argv[]) {
      return ret;
 }
 
+/* What does this function do? */
 int hip_conf_get_type_arg(int action)
 {
 	int type_arg = -1;
 	
-	switch (action)
-	{
+	switch (action) {
 	case ACTION_ADD:
 	case ACTION_DEL:
 	case ACTION_NEW:
@@ -334,6 +296,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
         case ACTION_TRANSORDER:
+	case ACTION_REINIT:
 #ifdef CONFIG_HIP_OPPTCP
         case ACTION_OPPTCP:
 #endif
@@ -377,39 +340,43 @@ int hip_conf_get_type_arg(int action)
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], 
 			int optc)
 {
-	struct in6_addr hit, ip6;
+	hip_hit_t hit;
+	in6_addr_t ipv6;
 	int err = 0;
 
-	HIP_DEBUG("handle_rvs() invoked.\n");
+	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
 	HIP_IFEL((action != ACTION_ADD), -1,
 		 "Only action \"add\" is supported for \"rvs\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
-	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-		 "string to address conversion failed\n");
-	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
-		 "string to address conversion failed\n");
+	HIP_IFE(convert_string_to_address(opt[0], &hit), -1);
+	HIP_IFE(convert_string_to_address(opt[1], &ipv6), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)),
-		 -1, "build param hit failed\n");
+					  sizeof(struct in6_addr)), -1,
+		 "Failed to build parameter HIT.\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &ipv6,
 					  HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)), -1,
-		 "build param hit failed\n");
-
+		 "Failed to build parameter IPv6.\n");
+	
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
-		 "build hdr failed\n");
+		 "Failed to build user message header.\n");
  out_err:
 	return err;
 }
 
+int hip_conf_handle_reinit(struct hip_common *msg, int action,
+			   const char *opt[], int optc){
+	HIP_DEBUG("Lauri: hip_conf_handle_reinit() invoked.\n");
+	return 1;
+}
 
 /**
- * Handles the hipconf commands where the type is @c hipudprelay.
+ * Handles the hipconf commands where the type is @c hiprelay.
  *  
  * Create a message to the kernel module from the function parameters @c msg,
  * @c action and @c opt[].
@@ -430,17 +397,17 @@ int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[],
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int hip_conf_handle_hipudprelay(struct hip_common *msg, int action,
+int hip_conf_handle_hiprelay(struct hip_common *msg, int action,
 				const char *opt[], int optc)
 {
 	struct in6_addr hit, ip6;
 	int err=0;
 
-	HIP_DEBUG("handle_hipudprelay() invoked.\n");
+	HIP_DEBUG("handle_hiprelay() invoked.\n");
 	HIP_INFO("action=%d optc=%d\n", action, optc);
      
 	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"hipudprelay\".\n");
+		 "Only action \"add\" is supported for \"hiprelay\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
 	
 	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
@@ -456,7 +423,7 @@ int hip_conf_handle_hipudprelay(struct hip_common *msg, int action,
 					  sizeof(struct in6_addr)), -1,
 		 "build param hit failed\n");
      
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY_UDP_HIP, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY, 0), -1,
 		 "build hdr failed\n");
  out_err:
 	return err;
@@ -1341,7 +1308,7 @@ int hip_conf_handle_dht_toggle(struct hip_common *msg, int action, const char *o
  * @param action the numeric action identifier for the action to be performed on
  *               the given mapping.
  * @param opt    an array of pointers to the command line arguments after
- *               the action and type (pointer to @b "escrow", @b "rvs" or @b "hipudprelay").
+ *               the action and type (pointer to @b "escrow", @b "rvs" or @b "hiprelay").
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
@@ -1370,10 +1337,10 @@ int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
 		   "build hdr failed\n");
      }
-     else if (strcmp(opt[0], "hipudprelay") == 0)
+     else if (strcmp(opt[0], "hiprelay") == 0)
      {
 	  HIP_INFO("Adding HIP UDP relay service.\n");
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPUDPRELAY, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
 		   "build hdr failed\n");
      }
      else
@@ -1400,7 +1367,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      char *text = NULL;
      
      /* Check that we have at least one command line argument. */
-     HIP_IFEL((argc < 2), -1, "Invalid args.\n%s usage:\n%s\n",
+     HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
 	      argv[0], hipconf_usage);
 
      /* Get a numeric value representing the action. */
@@ -1413,7 +1380,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 	      "Not enough arguments given for the action '%s'\n",
 	      argv[1]);
-     /* Get the position of type argument? */
+     
+     /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
      HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 	      "Could not parse type\n");
 

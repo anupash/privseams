@@ -78,9 +78,9 @@ int hip_services_add(int service_type)
 	  service->handle_registration = hip_handle_registration;
 	  service->cancel_registration = hip_cancel_registration;
 	  service->cancel_service = hip_cancel_service;
-     } else if (service_type == HIP_SERVICE_RELAY_UDP_HIP)
+     } else if (service_type == HIP_SERVICE_RELAY)
      {
-	  service->service_type = HIP_SERVICE_RELAY_UDP_HIP;
+	  service->service_type = HIP_SERVICE_RELAY;
 	  HIP_INFO("Adding UDP relay service for HIP packets.\n");
 	  strncpy(service->name, "RELAYUDPHIP_SERVICE", 20); 
 	  service->handle_registration = hip_handle_registration;
@@ -203,6 +203,7 @@ int hip_get_services_list(int **service_types)
 	  return 0;
      }
 
+     /* Where is this freed? */
      *service_types = HIP_MALLOC((counter1 * sizeof(int)), GFP_KERNEL);	
 	
      list_for_each_safe(item2, tmp2, services, c) {
@@ -397,7 +398,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 					request_got_rejected = 1;
 				}
 				break;
-			case HIP_SERVICE_RELAY_UDP_HIP:
+			case HIP_SERVICE_RELAY:
 				HIP_INFO("Client is cancelling registration "\
 					 "to UDP relay for HIP packets "\
 					 "service.\n");
@@ -570,7 +571,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 					HIP_DEBUG("Service inactive.\n");
 				}
 				break;
-			case HIP_SERVICE_RELAY_UDP_HIP:
+			case HIP_SERVICE_RELAY:
 				HIP_INFO("Client is registering to UDP relay for HIP "\
 					 "packets service.\n");
 
@@ -842,10 +843,10 @@ int hip_get_incomplete_registrations(int **types, hip_ha_t *entry, int op, uint8
 #endif /* CONFIG_HIP_RVS */
 //#ifdef CONFIG_HIP_UDPRELAY
      if(op &&
-	(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP) &&
-	(entry->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE))
+	(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY) &&
+	(entry->peer_controls & HIP_HA_CTRL_PEER_RELAY_CAPABLE))
      {
-	  srvs[new_count] = HIP_SERVICE_RELAY_UDP_HIP;
+	  srvs[new_count] = HIP_SERVICE_RELAY;
 	  new_count ++;
      }
 //#endif /* CONFIG_HIP_UDPRELAY */

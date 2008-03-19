@@ -1175,17 +1175,17 @@ int hip_handle_r1(struct hip_common *r1,
 				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			  }
 			  break;
-		     case HIP_SERVICE_RELAY_UDP_HIP:
+		     case HIP_SERVICE_RELAY:
 			  HIP_INFO("Responder offers UDP relay service for "\
 				   "HIP packets.\n");
 			  
 			  /* If we have requested for HIP UDP Relay service in
 			     I1, we store the info of responder's capability
 			     here. */
-			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
 			  {
 			       hip_hadb_set_peer_controls(
-				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+				    entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
 			  }
 			  break;

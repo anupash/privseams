@@ -34,8 +34,8 @@
 #define SO_HIP_DEL_PEER_MAP_HIT_IP              104
 #define SO_HIP_RUN_UNIT_TEST                    105
 #define SO_HIP_RST                              106
-/** A socket option for the client of a RVS indicating that we would like to 
-    register to a rendezvous server. */
+/** A socket option for the client of a RVS indicating that the client would
+    like to register to a rendezvous server. */
 #define SO_HIP_ADD_RENDEZVOUS			107
 /** A socket option for the RVS indicating that the current machine is willing
     to offer rendezvous service. */
@@ -85,8 +85,8 @@
 #define SO_HIP_DHT_SERVING_GW                   148
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
-#define SO_HIP_OFFER_HIPUDPRELAY                151
-#define SO_HIP_ADD_RELAY_UDP_HIP                152
+#define SO_HIP_OFFER_HIPRELAY                   151
+#define SO_HIP_ADD_RELAY                        152
 /* Restart daemon. */
 #define SO_HIP_RESTART		      		153
 #define SO_HIP_SET_LOCATOR_ON                   154

@@ -108,7 +108,8 @@
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
-#define ACTION_MAX 23 /* exclusive */
+#define ACTION_REINIT 23
+#define ACTION_MAX 24 /* exclusive */
 
 /* 0 is reserved */
 #define TYPE_HI      	   1
@@ -132,7 +133,7 @@
 #define TYPE_DEBUG         19
 #define TYPE_DAEMON        20
 #define TYPE_LOCATOR       21
-#define TYPE_RELAY_UDP_HIP 22
+#define TYPE_RELAY         22
 #define TYPE_SET           23 /* DHT set <name> */
 #define TYPE_DHT           24
 #define TYPE_OPPTCP	   25
@@ -172,7 +173,7 @@ int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int op
 int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hiprelay(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
@@ -197,4 +198,6 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
 int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_reinit(struct hip_common *msg, int action,
+			   const char *opt[], int optc);
 #endif /* HIPCONF */

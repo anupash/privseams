@@ -517,7 +517,7 @@
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_ESCROW
  *      Escrow services for some key exchange.
- * @def HIP_SERVICE_RELAY_UDP_HIP
+ * @def HIP_SERVICE_RELAY
  *      UDP encapsulated relay service for HIP packets.
  * @def HIP_NUMBER_OF_EXISTING_SERVICES
  *      Total number of services, which must equal the sum of all existing
