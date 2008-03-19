@@ -303,8 +303,6 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 }
 
 
-#ifdef CONFIG_HIP_OPPTCP
-
 /**
  * Returns whether a packet is incoming
  * 
@@ -330,6 +328,154 @@ int is_outgoing_packet(unsigned int theHook){
 	return 0;
 }
 
+/**
+ * Analyzes incoming TCP packets
+ * 
+ * @param *handle	the handle that has grabbed the packet, needed when allowing or dropping the packet.
+ * @param packetId	the ID of the packet.
+ * @param hdr		pointer to the ip packet being examined.
+ * @param trafficType	ipv4 or ipv6 type of traffic.
+ * @return		nothing
+ */
+void examine_incoming_tcp_packet(struct ipq_handle *handle,
+				 unsigned long	    packetId,
+				 void		   *hdr,
+				 int		    trafficType){
+	int i, optLen, hdr_size, optionsLen;
+	char 	       *hdrBytes = NULL;
+	struct tcphdr  *tcphdr;
+	struct ip      *iphdr;
+	struct ip6_hdr *ip6_hdr;
+	//fields for temporary values
+	u_int16_t       portTemp;
+	struct in_addr  addrTemp;
+	struct in6_addr addr6Temp;
+	/* the following vars are needed for
+	 * sending the i1 - initiating the exchange
+	 * in case we see that the peer supports hip*/
+	struct in6_addr *peer_ip  = NULL;
+	struct in6_addr *peer_hit = NULL;
+	in_port_t        src_tcp_port;
+	in_port_t        dst_tcp_port;
+
+	HIP_DEBUG("\n");
+
+	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	peer_hit = HIP_MALLOC(16, 0);
+
+	if(trafficType == 4){
+		iphdr = (struct ip *)hdr;
+		//get the tcp header
+		hdr_size = (iphdr->ip_hl * 4);
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
+		hdrBytes = ((char *) iphdr) + hdr_size;
+
+HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
+
+		//peer and local ip needed for sending the i1 through hipd
+		IPV4_TO_IPV6_MAP(&iphdr->ip_src, peer_ip);//TO  BE FIXED obtain the pseudo hit instead
+	}
+	else if(trafficType == 6){
+		ip6_hdr = (struct ip6_hdr *)hdr;
+		//get the tcp header		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+		hdrBytes = ((char *) ip6_hdr) + hdr_size;
+
+		//peer and local ip needed for sending the i1 through hipd
+		peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
+	}
+
+/*	//no checking for SYN 0 here
+	//because there is a following case
+	//of checking TCP RST_ACK packets,
+	//where SYN is 0
+
+	//check if SYN field is 0
+	if(tcphdr->syn == 0){
+		allow_packet(handle, packetId);
+		return;
+	}
+*/
+	//check that there are no options
+	if(tcphdr->doff == 5){
+		allow_packet(handle, packetId);
+		return;
+	}
+
+	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+			//swap the ports
+			portTemp = tcphdr->source;
+			tcphdr->source = tcphdr->dest;
+			tcphdr->dest = portTemp;
+			//swap the ip addresses
+			if(trafficType == 4){
+				addrTemp = iphdr->ip_src;
+				iphdr->ip_src = iphdr->ip_dst;
+				iphdr->ip_dst = addrTemp;
+			}
+			else if(trafficType == 6){
+				addr6Temp = ip6_hdr->ip6_src;
+				ip6_hdr->ip6_src = ip6_hdr->ip6_dst;
+				ip6_hdr->ip6_dst = addr6Temp;
+			}
+			//set ack field
+			tcphdr->ack_seq = tcphdr->seq + 1;
+			//set seq field
+			tcphdr->seq = htonl(0);
+			//set flags
+			tcphdr->syn = 1;
+			tcphdr->ack = 1;
+
+			/* send packet out after adding HIT
+			 * the option is already there but
+			 * it has to be added again since
+			 * if only the HIT is added, it will
+			 * overwrite the i1 option that is
+			 * in the options of TCP
+			 */
+			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
+
+			//drop original packet
+			drop_packet(handle, packetId);
+			return;
+		}
+		else{
+			allow_packet(handle, packetId);
+			return;
+		}
+	}
+	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
+		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
+
+		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+			//tcp header pointer + 20(minimum header length) + 4(i1 option length in the TCP options)
+			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
+
+			hip_request_send_i1_to_hip_peer_from_hipd(
+					peer_hit,
+					peer_ip);
+
+			//the packet is no more needed
+			drop_packet(handle, packetId);
+			return;
+		}
+		else{
+			//save in db that peer does not support hip
+			hip_request_oppipdb_add_entry(peer_ip);
+
+			//signal for the normal TCP packets not to be blocked for this peer
+			hip_request_unblock_app_from_hipd(peer_ip);
+
+			//normal traffic connections should be allowed to be created
+			allow_packet(handle, packetId);
+			return;
+		}
+	}
+	//allow all the rest
+	allow_packet(handle, packetId);
+}
 
 /**
  * checks for the i1 option in a packet
@@ -574,156 +720,6 @@ void hip_request_send_tcp_packet(void *hdr,
 
 
 /**
- * Analyzes incoming TCP packets
- * 
- * @param *handle	the handle that has grabbed the packet, needed when allowing or dropping the packet.
- * @param packetId	the ID of the packet.
- * @param hdr		pointer to the ip packet being examined.
- * @param trafficType	ipv4 or ipv6 type of traffic.
- * @return		nothing
- */
-void examine_incoming_tcp_packet(struct ipq_handle *handle,
-				 unsigned long	    packetId,
-				 void		   *hdr,
-				 int		    trafficType){
-	int i, optLen, hdr_size, optionsLen;
-	char 	       *hdrBytes = NULL;
-	struct tcphdr  *tcphdr;
-	struct ip      *iphdr;
-	struct ip6_hdr *ip6_hdr;
-	//fields for temporary values
-	u_int16_t       portTemp;
-	struct in_addr  addrTemp;
-	struct in6_addr addr6Temp;
-	/* the following vars are needed for
-	 * sending the i1 - initiating the exchange
-	 * in case we see that the peer supports hip*/
-	struct in6_addr *peer_ip  = NULL;
-	struct in6_addr *peer_hit = NULL;
-	in_port_t        src_tcp_port;
-	in_port_t        dst_tcp_port;
-
-	HIP_DEBUG("\n");
-
-	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	peer_hit = HIP_MALLOC(16, 0);
-
-	if(trafficType == 4){
-		iphdr = (struct ip *)hdr;
-		//get the tcp header
-		hdr_size = (iphdr->ip_hl * 4);
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
-		hdrBytes = ((char *) iphdr) + hdr_size;
-
-HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
-
-		//peer and local ip needed for sending the i1 through hipd
-		IPV4_TO_IPV6_MAP(&iphdr->ip_src, peer_ip);//TO  BE FIXED obtain the pseudo hit instead
-	}
-	else if(trafficType == 6){
-		ip6_hdr = (struct ip6_hdr *)hdr;
-		//get the tcp header		
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
-		hdrBytes = ((char *) ip6_hdr) + hdr_size;
-
-		//peer and local ip needed for sending the i1 through hipd
-		peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
-	}
-
-/*	//no checking for SYN 0 here
-	//because there is a following case
-	//of checking TCP RST_ACK packets,
-	//where SYN is 0
-
-	//check if SYN field is 0
-	if(tcphdr->syn == 0){
-		allow_packet(handle, packetId);
-		return;
-	}
-*/
-	//check that there are no options
-	if(tcphdr->doff == 5){
-		allow_packet(handle, packetId);
-		return;
-	}
-
-	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
-		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			//swap the ports
-			portTemp = tcphdr->source;
-			tcphdr->source = tcphdr->dest;
-			tcphdr->dest = portTemp;
-			//swap the ip addresses
-			if(trafficType == 4){
-				addrTemp = iphdr->ip_src;
-				iphdr->ip_src = iphdr->ip_dst;
-				iphdr->ip_dst = addrTemp;
-			}
-			else if(trafficType == 6){
-				addr6Temp = ip6_hdr->ip6_src;
-				ip6_hdr->ip6_src = ip6_hdr->ip6_dst;
-				ip6_hdr->ip6_dst = addr6Temp;
-			}
-			//set ack field
-			tcphdr->ack_seq = tcphdr->seq + 1;
-			//set seq field
-			tcphdr->seq = htonl(0);
-			//set flags
-			tcphdr->syn = 1;
-			tcphdr->ack = 1;
-
-			/* send packet out after adding HIT
-			 * the option is already there but
-			 * it has to be added again since
-			 * if only the HIT is added, it will
-			 * overwrite the i1 option that is
-			 * in the options of TCP
-			 */
-			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
-
-			//drop original packet
-			drop_packet(handle, packetId);
-			return;
-		}
-		else{
-			allow_packet(handle, packetId);
-			return;
-		}
-	}
-	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
-		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
-
-		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			//tcp header pointer + 20(minimum header length) + 4(i1 option length in the TCP options)
-			memcpy(peer_hit, &hdrBytes[20 + 4], 16);
-
-			hip_request_send_i1_to_hip_peer_from_hipd(
-					peer_hit,
-					peer_ip);
-
-			//the packet is no more needed
-			drop_packet(handle, packetId);
-			return;
-		}
-		else{
-			//save in db that peer does not support hip
-			hip_request_oppipdb_add_entry(peer_ip);
-
-			//signal for the normal TCP packets not to be blocked for this peer
-			hip_request_unblock_app_from_hipd(peer_ip);
-
-			//normal traffic connections should be allowed to be created
-			allow_packet(handle, packetId);
-			return;
-		}
-	}
-	//allow all the rest
-	allow_packet(handle, packetId);
-}
-
-
-/**
  * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
  * from hip_send_i1 in hipd, so for the moment this is not being used.
  * 
@@ -781,8 +777,6 @@ void examine_outgoing_tcp_packet(struct ipq_handle *handle,
 	//allow all the rest
 	allow_packet(handle, packetId);
 }
-#endif /* CONFIG_HIP_OPPTCP */
-
 
 /* filter hip packet according to rules.
  * return verdict
