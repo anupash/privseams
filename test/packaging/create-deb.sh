@@ -214,11 +214,17 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin
+
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    
+    cp tools/myasn.py $PKGDIR/usr/bin/
+    cp tools/parse-key-3.py $PKGDIR/usr/bin/
+    cp tools/dnsproxy.py $PKGDIR/usr/bin/
+    cp tools/hosts.py $PKGDIR/usr/bin/
+    cp tools/pyip6.py $PKGDIR/usr/bin/
+    cp tools/util.py $PKGDIR/usr/bin/
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
@@ -538,11 +544,5 @@ if [ $TYPE = "source" ];then
     fi
 fi
 
-# jk: what is this??
-#cd $HIPL
-#echo "Resetting compilation environment, please wait..."
-#./configure >/dev/null
-#make clean >/dev/null
-#echo "Done."
 exit 0
 
