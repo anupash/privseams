@@ -47,7 +47,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
-			   MSG_PEEK, NULL, NULL);
+			   MSG_PEEK|MSG_DONTWAIT, NULL, NULL);
 	if (msg_len != sizeof(struct nlmsghdr)) {
 		HIP_ERROR("Bad netlink msg\n");
 		return -1;
