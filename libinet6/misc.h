@@ -99,4 +99,6 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 
+int hip_create_lock_file(char *filename, int killold);
+
 #endif /* HIP_MISC_H */
