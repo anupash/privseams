@@ -28,6 +28,11 @@ int flush_iptables = 1;
 pthread_t ipv4Thread, ipv6Thread;
 int counter = 0;
 int foreground = 1;
+#ifdef CONFIG_HIP_OPPTCP
+int hip_opptcp = 1;
+#else
+int hip_opptcp = 0;
+#endif
 
 void print_usage()
 {
@@ -92,11 +97,11 @@ int firewall_init(){
 
 	//ipv4 traffic
 	if(use_ipv4){
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-		system("iptables -I FORWARD -p 6 -j QUEUE");
-		system("iptables -I INPUT -p 6 -j QUEUE");
-		system("iptables -I OUTPUT -p 6 -j QUEUE");
-#endif
+		if (hip_opptcp) {
+			system("iptables -I FORWARD -p 6 -j QUEUE");
+			system("iptables -I INPUT -p 6 -j QUEUE");
+			system("iptables -I OUTPUT -p 6 -j QUEUE");
+		}
 		if(!accept_hip_esp_traffic){
 			system("iptables -I FORWARD -p 253 -j QUEUE");
 			system("iptables -I FORWARD -p 50 -j QUEUE");
@@ -122,11 +127,11 @@ int firewall_init(){
 
 	//ipv6 traffic
 	if(use_ipv6){
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv6
+		if (hip_opptcp) {
 			system("ip6tables -I FORWARD -p 6 -j QUEUE");
 			system("ip6tables -I INPUT -p 6 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-#endif
+		}
 		if(!accept_hip_esp_traffic){
 			system("ip6tables -I FORWARD -p 253 -j QUEUE");
 			system("ip6tables -I FORWARD -p 50 -j QUEUE");
@@ -1128,8 +1133,7 @@ static void *handle_ip_traffic(void *ptr){
 					drop_packet(hndl, m->packet_id);
 	  			}
 			} else {
-/* OPPORTUNISTIC MODE HACKS */
-#ifdef CONFIG_HIP_OPPTCP
+                                /* OPPORTUNISTIC MODE HACKS */
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
 					if(accept_normal_traffic)
@@ -1143,14 +1147,11 @@ static void *handle_ip_traffic(void *ptr){
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					allow_packet(hndl, m->packet_id);
 				else{
-#endif
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
 						drop_packet(hndl, m->packet_id);
-#ifdef CONFIG_HIP_OPPTCP
 				}
-#endif
 		}
       		if (status < 0)
 				die(hndl);
