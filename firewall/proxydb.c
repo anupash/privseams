@@ -89,7 +89,8 @@ void hip_init_proxy_db(void)
 	//			   LHASH_COMP_FN(hip_compare_proxy_db));
 	
 	hip_proxy_db = hip_ht_init(hip_hash_proxy_db, hip_compare_proxy_db);
-	hip_init_proxy_raw_sock_v6(&hip_proxy_raw_sock);
+	hip_init_proxy_raw_sock_v6(&hip_proxy_raw_sock_v6);
+	hip_init_proxy_raw_sock_v4(&hip_proxy_raw_sock_v4);
 }
 
 
@@ -201,12 +202,12 @@ int hip_proxy_update_state(struct in6_addr *src_addr,
 //		memcpy(&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
 //		ipv6_addr_copy(&p->hit_our, addr_our);
 //		ipv6_addr_copy(&p->hit_peer, addr_peer);				
-		return 1;
+		return 0;
 	}
 	else
 	{
 		HIP_DEBUG("Can not update connection state!\n");
-		return 0;
+		return 1;
 	}
 }
 
@@ -329,11 +330,11 @@ int hip_proxy_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 	memset(&dst, 0, sizeof(dst));
 	
 	if (dst_is_ipv4) {
-		hip_raw_sock = hip_proxy_raw_sock;
+		hip_raw_sock = hip_proxy_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
 		HIP_DEBUG("Using IPv6 raw socket\n");
-		hip_raw_sock = hip_proxy_raw_sock;
+		hip_raw_sock = hip_proxy_raw_sock_v6;
 		sa_size = sizeof(struct sockaddr_in6);
 	}
 
@@ -384,10 +385,10 @@ int hip_proxy_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 		goto out_err;
 	}
 
-	hip_zero_msg_checksum(msg);
-	msg->checksum = hip_checksum_packet((char*)msg,
-					    (struct sockaddr *) &src,
-					    (struct sockaddr *) &dst);
+//	hip_zero_msg_checksum(msg);
+//	msg->checksum = hip_checksum_packet((char*)msg,
+//					    (struct sockaddr *) &src,
+//					    (struct sockaddr *) &dst);
 
 	/* Note that we need the original (possibly mapped addresses here.
 	   Also, we need to do queuing before the bind because the bind
@@ -482,7 +483,7 @@ int hip_init_proxy_raw_sock_v4(int *hip_raw_sock_v4)
 	int on = 1, err = 0;
 	int off = 0;
 
-	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_HIP);
+	*hip_raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 	HIP_IFEL(*hip_raw_sock_v4 <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
 	/* see bug id 212 why RECV_ERR is off */
@@ -558,8 +559,268 @@ int hip_proxy_request_local_address_from_hipd(struct in6_addr *local_hit,
 	return err;
 }
 
-int hip_proxy_send_pkg(struct in6_addr *local_addr, struct in6_addr *peer_addr,	void *msg, int len)
+/**
+ * Calculates the checksum of a  packet with pseudo-header.
+ * 
+ * @c src and @c dst are IPv4 or IPv6 addresses in network byte order.
+ *
+ * @param data a pointer to...
+ * @param src  a pointer to...
+ * @param dst  a pointer to...
+ * @note       Checksumming is from Boeing's HIPD.
+ * @return     ...
+ */
+u16 hip_proxy_checksum_packet(char *data, int len, struct sockaddr *src, struct sockaddr *dst)
 {
+	u16 checksum = 0;
+	unsigned long sum = 0;
+	int count = 0, length = 0;
+	unsigned short *p = NULL; /* 16-bit */
+	struct pseudo_header pseudoh;
+	struct pseudo_header6 pseudoh6;
+	u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	//struct hip_common *hiph = (struct hip_common *) data;
+	
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+		
+		memset(&pseudoh, 0, sizeof(struct pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = IPPROTO_TCP;
+		length = (len + 1) * 8;
+		//length = len;
+		pseudoh.packet_length = htons(length);
+		
+		count = sizeof(struct pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+		
+		memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = (len + 1) * 8;
+		//length = len;
+		pseudoh6.packet_length = htonl(length);
+		pseudoh6.next_hdr = IPPROTO_TCP;
+                
+		count = sizeof(struct pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+	
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+
+	/* one's complement sum 16-bit words of data */
+	HIP_DEBUG("Checksumming %d bytes of data.\n", length);
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+	
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = ~sum;
+	
+	HIP_DEBUG("Checksum OK\n");
+	return(checksum);
+}
+
+u16 tcp_sum_calc(u16 len_tcp, u16 src_addr[],u16 dest_addr[], u16  padding, u16 buff[])
+{
+	u16 prot_tcp=6;
+	u16 padd=0;
+	u16 word16;
+	u32 sum;	
+	u16 i;
+	// Find out if the length of data is even or odd number. If odd,
+	// add a padding byte = 0 at the end of packet
+	if (padding&1==1){
+		padd=1;
+		buff[len_tcp]=0;
+	}
+	
+	//initialize sum to zero
+	sum=0;
+	
+	// make 16 bit words out of every two adjacent 8 bit words and 
+	// calculate the sum of all 16 vit words
+	for (i=0;i<len_tcp+padd;i=i+2){
+		word16 =((buff[i]<<8)&0xFF00)+(buff[i+1]&0xFF);
+		sum = sum + (unsigned long)word16;
+	}	
+	// add the TCP pseudo header which contains:
+	// the IP source and destinationn addresses,
+	for (i=0;i<4;i=i+2){
+		word16 =((src_addr[i]<<8)&0xFF00)+(src_addr[i+1]&0xFF);
+		sum=sum+word16;	
+	}
+	for (i=0;i<4;i=i+2){
+		word16 =((dest_addr[i]<<8)&0xFF00)+(dest_addr[i+1]&0xFF);
+		sum=sum+word16; 	
+	}
+	// the protocol number and the length of the TCP packet
+	sum = sum + prot_tcp + len_tcp;
+
+	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+    	while (sum>>16)
+		sum = (sum & 0xFFFF)+(sum >> 16);
+		
+	// Take the one's complement of sum
+	sum = ~sum;
+
+return ((unsigned short) sum);
+}
+
+
+unsigned short chksum(void* buff, int len, struct in6_addr* src, struct in6_addr* dst,
+		      uint32_t plen, uint16_t upproto)
+{
+	unsigned short* bptr;
+	unsigned long adder = 0;
+	int l;
+	
+	bptr = (unsigned short*) buff;
+	l = len;
+	
+	while(l >= 2) {
+		adder += ntohs(*bptr);
+		l -= 2;
+		bptr++;
+	}
+	
+	if(l == 1)
+		adder += ntohs(*bptr) & 0xF0;
+
+	bptr = (unsigned short*) src;
+	l = sizeof(struct in6_addr);
+	while(l > 0) {
+		adder += ntohs(*bptr);
+		l -= 2;
+		bptr++;
+	}
+	
+	bptr = (unsigned short*) dst;
+	l = sizeof(struct in6_addr);
+	while(l > 0) {
+		adder += ntohs(*bptr);
+		l -= 2;
+		bptr++;
+	}
+	
+	adder += plen;
+	
+	adder += upproto;
+	
+	while (adder>>16)
+		adder = (adder & 0xffff) + (adder >> 16);
+	
+	return ~adder;
+}
+
+u16 hip_tcp_checksum_packet(char *data, int payload_len, struct sockaddr *src, struct sockaddr *dst)
+{
+	u16 checksum = 0;
+	unsigned long sum = 0;
+	int count = 0, length = 0;
+	unsigned short *p = NULL; /* 16-bit */
+	struct pseudo_header pseudoh;
+	struct pseudo_header6 pseudoh6;
+	u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	//struct hip_common *hiph = (struct hip_common *) data;
+	
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		HIP_DEBUG_INADDR("src4", &src_network);
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+		HIP_DEBUG_INADDR("dst4", &dst_network);
+		
+		memset(&pseudoh, 0, sizeof(struct pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = IPPROTO_TCP;
+		length = (payload_len + 1) * 8;
+		pseudoh.packet_length = htons(length);
+		
+		count = sizeof(struct pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+		
+		memset(&pseudoh6, 0, sizeof(struct pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = (payload_len + 1) * 8;
+		pseudoh6.packet_length = htonl(length);
+		pseudoh6.next_hdr = IPPROTO_TCP;
+                
+		count = sizeof(struct pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+	
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+
+	/* one's complement sum 16-bit words of data */
+	HIP_DEBUG("Checksumming %d bytes of data.\n", length);
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+	
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = ~sum;
+	
+	HIP_DEBUG("TCP CHECKSUM IN: %d\n", checksum);
+	
+	return(checksum);
+}
+
+
+
+int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	void *msg, int len)
+{	
 	int err = 0, sa_size, sent, dupl, try_again;
 	struct sockaddr_storage src, dst;
 	int src_is_ipv4, dst_is_ipv4;
@@ -590,11 +851,11 @@ int hip_proxy_send_pkg(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 	memset(&dst, 0, sizeof(dst));
 	
 	if (dst_is_ipv4) {
-		hip_raw_sock = hip_proxy_raw_sock;
+		hip_raw_sock = hip_proxy_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
 		HIP_DEBUG("Using IPv6 raw socket\n");
-		hip_raw_sock = hip_proxy_raw_sock;
+		hip_raw_sock = hip_proxy_raw_sock_v6;
 		sa_size = sizeof(struct sockaddr_in6);
 	}
 
@@ -645,11 +906,27 @@ int hip_proxy_send_pkg(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 		goto out_err;
 	}
 
-	hip_zero_msg_checksum(msg);
-	((struct ip*)msg)->ip_sum = hip_checksum_packet((char*)msg,
+//	hip_zero_msg_checksum(msg);
+	HIP_DEBUG("Previous checksum: %d\n", ((struct tcphdr*)msg)->check);
+//	((struct tcphdr*)msg)->check = htons(0);
+//	((struct tcphdr*)msg)->check = hip_proxy_checksum_packet((char*)msg,
+//					    len,
+//					    (struct sockaddr *) &src,
+//					    (struct sockaddr *) &dst);
+	
+	((struct tcphdr*)msg)->check = hip_tcp_checksum_packet((char*)msg,
+					    len,
 					    (struct sockaddr *) &src,
 					    (struct sockaddr *) &dst);
-
+		
+	
+	
+	
+	HIP_DEBUG("TCP CHECKSUM: %d\n", ((struct tcphdr*)msg)->check);
+	HIP_DEBUG("TCP CHECKSUM: %d\n", htons(((struct tcphdr*)msg)->check));
+	
+	
+	HIP_DEBUG("Current checksum: %d\n", ((struct tcphdr*)msg)->check);
 	/* Handover may cause e.g. on-link duplicate address detection
 	   which may cause bind to fail. */
 

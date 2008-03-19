@@ -110,7 +110,7 @@ int firewall_init()
 	return;
 #endif
 */	
-/*
+
 	//ipv4 traffic
 	if (use_ipv4)
 	{
@@ -180,7 +180,10 @@ int firewall_init()
 			system("ip6tables -I INPUT -p 6 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 #endif
-*/			
+			
+		}
+	}
+	
 #ifdef CONFIG_HIP_HIPPROXY
 			system("iptables -I FORWARD -j QUEUE");
 //			system("iptables -I INPUT -j QUEUE");
@@ -190,9 +193,6 @@ int firewall_init()
 //			system("ip6tables -I OUTPUT -j ");
 			hip_init_proxy_db();
 #endif
-
-//		}
-//	}
 
 	out_err: return 0;
 }
@@ -1304,7 +1304,8 @@ static void *handle_ip_traffic(void *ptr)
 							//
 							//
 							int packet_length = 0;
-							struct hip_sig * sig= NULL;
+							char * msg;
+/*							struct hip_sig * sig= NULL;
 
 							if (m->data_len <= (BUFSIZE - hdr_size))
 							{
@@ -1316,13 +1317,28 @@ static void *handle_ip_traffic(void *ptr)
 								packet_length = BUFSIZE - hdr_size;
 								HIP_DEBUG("HIP packet size greater than buffer size\n");
 							}
-							hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
+							*/
+							//struct tcphdr *tcp = (struct tcphdr *) (m->payload + (iphdr->ip_hl << 2));
+							//packet_length = (ntohs( iphdr->ip_len) - ( iphdr->ip_hl)*4);
+							
+							
+							packet_length = m->data_len - hdr_size;
+							msg = HIP_MALLOC(packet_length, 0);
+							
+							HIP_DEBUG("ip_len: %d\n", ntohs(iphdr->ip_len));
+							HIP_DEBUG("ip_hl: %d\n", iphdr->ip_hl);
+							HIP_DEBUG("data_len: %d\n", m->data_len);
+							HIP_DEBUG("hdr_size: %d\n", hdr_size);
+							HIP_DEBUG("packet_length: %d\n", packet_length);
+							 
+							
+
 
 							//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
 
-							memcpy(hip_common, m->payload + hdr_size,
+							memcpy(msg, (m->payload) + hdr_size,
 									packet_length);
-							
+/*							
 							hip_common->hits = *src_hit;
 							hip_common->hitr = *dst_hit;
 							
@@ -1336,9 +1352,12 @@ static void *handle_ip_traffic(void *ptr)
 							else
 								HIP_DEBUG("signature exists\n");
 
-							//hip_map_hit_to_addr(src_hit, src_addr);
-							//hip_proxy_send_raw(src_addr, dst_addr, hip_common);
-							hip_proxy_send_pkg(proxy_addr, dst_addr,  m->payload, m->data_len);
+							hip_proxy_send_raw(proxy_addr, dst_addr, hip_common); */
+							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  msg, packet_length);
+							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  (m->payload + hdr_size), (m->data_len - hdr_size));
+							//hip_proxy_send_pkt(proxy_addr, dst_addr,  msg, packet_length);
+							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  (char*)tcp, packet_length);
+							hip_proxy_send_pkt(proxy_addr, dst_addr,  msg, packet_length);
 						}
 					}
 
