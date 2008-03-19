@@ -24,7 +24,8 @@ const char *hipconf_usage =
 "add|del escrow <hit>\n"
 #endif
 "add|del map <hit> <ipv6>\n"
-"add|del service escrow|hiprelay|rvs\n"
+"add|del service escrow|rvs|hiprelay\n"
+"reinit service rvs|hiprelay\n"
 "add rvs|hiprelay <hit> <ipv6>\n"
 "del hi <hit>\n"
 "get hi default\n"
@@ -71,7 +72,7 @@ const char *hipconf_usage =
  *        in hipconf.h because type values are used as @c action_handler array
  *        index.
  */
-int (*action_handler[])(struct hip_common *, int action,const char *opt[], int optc) = 
+int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) = 
 {
 	NULL, /* reserved */
 	hip_conf_handle_hi,
@@ -100,7 +101,6 @@ int (*action_handler[])(struct hip_common *, int action,const char *opt[], int o
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
-	hip_conf_handle_reinit,
 	NULL /* run */
 };
 
@@ -175,13 +175,12 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT:
                 break;
-	case ACTION_DEBUG: case ACTION_RESTART:
+	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
 	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
-	case ACTION_REINIT:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_OPPTCP	
@@ -337,7 +336,7 @@ int hip_conf_get_type_arg(int action)
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], 
+int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], 
 			int optc)
 {
 	hip_hit_t hit;
@@ -345,34 +344,29 @@ int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[],
 	int err = 0;
 
 	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
-	HIP_INFO("action=%d optc=%d\n", action, optc);
-	
+		
 	HIP_IFEL((action != ACTION_ADD), -1,
 		 "Only action \"add\" is supported for \"rvs\".\n");
-	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+	
+	HIP_IFEL((optc < 2), -1, "Missing arguments.\n");
+	HIP_IFEL((optc > 2), -1, "Too many arguments.\n");
 	
 	HIP_IFE(convert_string_to_address(opt[0], &hit), -1);
 	HIP_IFE(convert_string_to_address(opt[1], &ipv6), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
+					  sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter HIT.\n");
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &ipv6,
 					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
+					  sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter IPv6.\n");
 	
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
 		 "Failed to build user message header.\n");
  out_err:
 	return err;
-}
-
-int hip_conf_handle_reinit(struct hip_common *msg, int action,
-			   const char *opt[], int optc){
-	HIP_DEBUG("Lauri: hip_conf_handle_reinit() invoked.\n");
-	return 1;
 }
 
 /**
@@ -397,15 +391,14 @@ int hip_conf_handle_reinit(struct hip_common *msg, int action,
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int hip_conf_handle_hiprelay(struct hip_common *msg, int action,
+int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
 				const char *opt[], int optc)
 {
-	struct in6_addr hit, ip6;
+	in6_addr_t hit, ip6;
 	int err=0;
 
 	HIP_DEBUG("handle_hiprelay() invoked.\n");
-	HIP_INFO("action=%d optc=%d\n", action, optc);
-     
+	     
 	HIP_IFEL((action != ACTION_ADD), -1,
 		 "Only action \"add\" is supported for \"hiprelay\".\n");
 	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
@@ -416,11 +409,11 @@ int hip_conf_handle_hiprelay(struct hip_common *msg, int action,
 		 "string to address conversion failed\n");
      
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(struct in6_addr)), -1,
+					  sizeof(in6_addr_t)), -1,
 		 "build param hit failed\n");
 	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
 					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(struct in6_addr)), -1,
+					  sizeof(in6_addr_t)), -1,
 		 "build param hit failed\n");
      
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY, 0), -1,
@@ -440,7 +433,7 @@ int hip_conf_handle_hiprelay(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
+int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		       int optc)
 {
 	int err = 0, anon = 0, use_default = 0, euid = -1;
@@ -514,12 +507,12 @@ int hip_conf_handle_hi(struct hip_common *msg, int action, const char *opt[],
  * @return       zero on success, or negative error value on error.
  * @note         Does not support @c del action.
  */
-int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
+int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 			int optc)
 {
      int err = 0;
      int ret;
-     struct in6_addr hit, ip6;
+     in6_addr_t hit, ip6;
 
      HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
@@ -532,12 +525,12 @@ int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
 	      "string to address conversion failed\n");
 
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr)), -1,
+				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
 
      HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
 				       HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr)), -1,
+				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
 
      switch(action) {
@@ -569,12 +562,12 @@ int hip_conf_handle_map(struct hip_common *msg, int action, const char *opt[],
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hi_del(struct hip_common *msg, int action,
+int hip_conf_handle_hi_del(hip_common_t *msg, int action,
 			   const char *opt[], int optc) 
 {
      int err;
      int ret;
-     struct in6_addr hit;
+     in6_addr_t hit;
  	
      if (optc != 1) {
 	  HIP_ERROR("Missing arguments\n");
@@ -596,10 +589,10 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
      }
  	
      HIP_HEXDUMP("HIT to delete: ", &hit,
-		 sizeof(struct in6_addr));
+		 sizeof(in6_addr_t));
  	
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				    sizeof(struct in6_addr));
+				    sizeof(in6_addr_t));
      if (err)
      {
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -628,7 +621,7 @@ int hip_conf_handle_hi_del(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_trans_order(struct hip_common *msg, int action,
+int hip_conf_handle_trans_order(hip_common_t *msg, int action,
                                 const char *opt[], int optc) 
 {
      int err, ret, transorder;
@@ -675,16 +668,16 @@ int hip_conf_handle_trans_order(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_rst(struct hip_common *msg, int action,
+int hip_conf_handle_rst(hip_common_t *msg, int action,
 			const char *opt[], int optc) 
 {
      int err;
      int ret;
-     struct in6_addr hit;
+     in6_addr_t hit;
 
      if (!strcmp("all",opt[0]))
      {
-	  memset(&hit,0,sizeof(struct in6_addr));
+	  memset(&hit,0,sizeof(in6_addr_t));
      } else
      {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
@@ -702,7 +695,7 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
      }
 
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				    sizeof(struct in6_addr));
+				    sizeof(in6_addr_t));
      if (err)
      {
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -731,13 +724,13 @@ int hip_conf_handle_rst(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_debug(struct hip_common *msg, int action,
+int hip_conf_handle_debug(hip_common_t *msg, int action,
 			  const char *opt[], int optc) 
 {
 
      int err = 0;
      int status = 0;
-     struct in6_addr hit;
+     in6_addr_t hit;
 
      if(optc != 0)
 	  HIP_IFEL(1, -EINVAL, "Wrong amount of arguments. Usage:\nhipconf debug all|medium|none\n");
@@ -745,17 +738,17 @@ int hip_conf_handle_debug(struct hip_common *msg, int action,
      if (!strcmp("all", opt[0]))
      {
 	  HIP_INFO("Displaying all debugging messages\n");
-	  memset(&hit, 0, sizeof(struct in6_addr));
+	  memset(&hit, 0, sizeof(in6_addr_t));
 	  status = SO_HIP_SET_DEBUG_ALL;
      } else if (!strcmp("medium", opt[0]))
      {
 	  HIP_INFO("Displaying ERROR and INFO debugging messages\n");
-	  memset(&hit, 0, sizeof(struct in6_addr));
+	  memset(&hit, 0, sizeof(in6_addr_t));
 	  status = SO_HIP_SET_DEBUG_MEDIUM;
      } else if (!strcmp("none", opt[0]))
      {
 	  HIP_INFO("Displaying no debugging messages\n");
-	  memset(&hit, 0, sizeof(struct in6_addr));
+	  memset(&hit, 0, sizeof(in6_addr_t));
 	  status = SO_HIP_SET_DEBUG_NONE;
      } else
 	  HIP_IFEL(1, -EINVAL, "Unknown argument\n");
@@ -777,7 +770,7 @@ int hip_conf_handle_debug(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_bos(struct hip_common *msg, int action,
+int hip_conf_handle_bos(hip_common_t *msg, int action,
 			const char *opt[], int optc) 
 {
      int err;
@@ -813,20 +806,20 @@ int hip_conf_handle_bos(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_nat(struct hip_common *msg, int action,
+int hip_conf_handle_nat(hip_common_t *msg, int action,
 			const char *opt[], int optc)
 {
      int err = 0;
      int status = 0;
-     struct in6_addr hit;
+     in6_addr_t hit;
 	
      if (!strcmp("on",opt[0]))
      {
-	  memset(&hit,0,sizeof(struct in6_addr));
+	  memset(&hit,0,sizeof(in6_addr_t));
 	  status = SO_HIP_SET_NAT_ON; 
      } else if (!strcmp("off",opt[0]))
      {
-	  memset(&hit,0,sizeof(struct in6_addr));
+	  memset(&hit,0,sizeof(in6_addr_t));
 	  status = SO_HIP_SET_NAT_OFF;
      } else
      {
@@ -850,7 +843,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
      }
 
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr)), -1,
+				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
@@ -872,7 +865,7 @@ int hip_conf_handle_nat(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array (@b 0).
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_locator(struct hip_common *msg, int action,
+int hip_conf_handle_locator(hip_common_t *msg, int action,
 		   const char *opt[], int optc)
 {
     int err = 0, status = 0;
@@ -901,7 +894,7 @@ int hip_conf_handle_locator(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_puzzle(struct hip_common *msg, int action,
+int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 			   const char *opt[], int optc) 
 {
      int err = 0, ret, msg_type, all;
@@ -962,7 +955,7 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
      }
 
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				    sizeof(struct in6_addr));
+				    sizeof(in6_addr_t));
      if (err)
      {
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -1000,7 +993,7 @@ int hip_conf_handle_puzzle(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_opp(struct hip_common *msg, int action,
+int hip_conf_handle_opp(hip_common_t *msg, int action,
 			const char *opt[], int optc)
 {
      unsigned int oppmode = 0;
@@ -1042,7 +1035,7 @@ int hip_conf_handle_opp(struct hip_common *msg, int action,
      return err;
 }
 
-int hip_conf_handle_blind(struct hip_common *msg, int action,
+int hip_conf_handle_blind(hip_common_t *msg, int action,
 			  const char *opt[], int optc)
 {
      int err = 0;
@@ -1092,11 +1085,11 @@ int hip_conf_handle_blind(struct hip_common *msg, int action,
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], 
+int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], 
 			   int optc)
 {
-     struct in6_addr hit;
-     struct in6_addr ip;
+     in6_addr_t hit;
+     in6_addr_t ip;
      int err = 0;
 
      HIP_DEBUG("hipconf: using escrow");
@@ -1110,12 +1103,12 @@ int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[]
 	      "string to address conversion failed\n");
 
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(struct in6_addr)), -1,
+				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
 	
      HIP_IFEL(hip_build_param_contents(msg, (void *) &ip,
 				       HIP_PARAM_IPV6_ADDR,
-				       sizeof(struct in6_addr)), -1,
+				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
 
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
@@ -1125,7 +1118,7 @@ int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[]
 	
 }
 
-int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc)
 {
 	int ret = 0;
 	HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
@@ -1139,7 +1132,7 @@ int hip_conf_handle_ttl(struct hip_common *msg, int action, const char *opt[], i
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_set(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc)
 {
     int err = 0;
     int len_name = 0;
@@ -1166,13 +1159,13 @@ int hip_conf_handle_set(struct hip_common *msg, int action, const char *opt[], i
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc)
 {
         int err,out_err;
         int status = 0;
         int ret;
         struct in_addr ip_gw;
-        struct in6_addr ip_gw_mapped;
+        in6_addr_t ip_gw_mapped;
         struct addrinfo new_gateway;
         struct hip_opendht_gw_info *gw_info;
 
@@ -1230,12 +1223,12 @@ int hip_conf_handle_gw(struct hip_common *msg, int action, const char *opt[], in
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc)
 {
         int err = 0;
         char dht_response[1024];
         struct addrinfo * serving_gateway;
-        struct hip_common *msgdaemon;
+        hip_common_t *msgdaemon;
         struct hip_opendht_gw_info *gw_info;
         struct in_addr tmp_v4;
         char tmp_ip_str[21];
@@ -1279,7 +1272,7 @@ int hip_conf_handle_get(struct hip_common *msg, int action, const char *opt[], i
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_dht_toggle(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc)
 {
         int err = 0, status = 0;
         
@@ -1312,48 +1305,55 @@ int hip_conf_handle_dht_toggle(struct hip_common *msg, int action, const char *o
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], 
+int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], 
 			    int optc)
 {
-     int err = 0;
+	int err = 0;
 
-     HIP_DEBUG("hipconf: handling service.\n");
-     HIP_INFO("action=%d optc=%d\n", action, optc);
+	HIP_DEBUG("hipconf: handling service.\n");
+	HIP_INFO("action=%d optc=%d\n", action, optc);
 	
-     HIP_IFEL((action != ACTION_ADD), -1,
-	      "Only action \"add\" is supported for \"service\".\n");
-     HIP_IFEL((optc < 1), -1, "Missing arguments\n");
-     HIP_IFEL((optc > 1), -1, "Too many arguments\n");
+	HIP_IFEL((action != ACTION_ADD && action != ACTION_REINIT), -1,
+		 "Only actions \"add\" and \"reinit\" are supported for "\
+		 "\"service\".\n");
+     
+	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
+	HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
+     
+	if(action == ACTION_ADD){
+		if (strcmp(opt[0], "escrow") == 0) {
+			HIP_INFO("Adding escrow service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
+				 "build hdr failed\n");
+		} else if (strcmp(opt[0], "rvs") == 0) {
+			HIP_INFO("Adding rendezvous service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
+				 "build hdr failed\n");
+		} else if (strcmp(opt[0], "hiprelay") == 0) {
+			HIP_INFO("Adding HIP UDP relay service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
+				 "build hdr failed\n");
+		} else {
+			HIP_ERROR("Unknown service %s.\n", opt[0]);
+		}     
+	} else if(action == ACTION_REINIT){
+		if (strcmp(opt[0], "rvs") == 0) {
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RVS, 0), -1,
+				 "Failed to build user message header.\n");
+		}if (strcmp(opt[0], "hiprelay") == 0) {
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RELAY, 0), -1,
+				 "Failed to build user message header.\n");
+		} else {
+			HIP_ERROR("Unknown service %s.\n", opt[0]);
+		}
+	}
 	
-     if (strcmp(opt[0], "escrow") == 0)
-     {
-	  HIP_INFO("Adding escrow service.\n");
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-		   "build hdr failed\n");
-     }
-     else if (strcmp(opt[0], "rvs") == 0)
-     {
-	  HIP_INFO("Adding rvs service.\n");
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
-		   "build hdr failed\n");
-     }
-     else if (strcmp(opt[0], "hiprelay") == 0)
-     {
-	  HIP_INFO("Adding HIP UDP relay service.\n");
-	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
-		   "build hdr failed\n");
-     }
-     else
-     {
-	  HIP_ERROR("Unknown service %s.\n", opt[0]);
-     }
-
  out_err:
-     return err;
+	return err;
 	
 }
 
-int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc)
 {
 	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc, (char **) &opt[0]);
@@ -1363,7 +1363,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 {
      int err = 0, type_arg = 0, i = 0;
      long int action = 0, type = 0, hiparg = 0;
-     struct hip_common *msg = NULL;
+     hip_common_t *msg = NULL;
      char *text = NULL;
      
      /* Check that we have at least one command line argument. */
@@ -1390,7 +1390,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	      "Invalid type argument '%s'\n", argv[type_arg]);
      
      /* Get the type argument for the given action. */
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
      hip_get_all_hits(msg,argv);
      
@@ -1402,7 +1402,10 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
 
-     HIP_IFEL(err, -1, "failed to handle msg\n");
+     if(err != 0) {
+	     HIP_ERROR("Failed to build a message to hip daemon.\n");
+	     goto out_err;
+     }
 
      /* hipconf new hi does not involve any messages to hipd */
      if (hip_get_msg_type(msg) == 0)
@@ -1426,12 +1429,12 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      return err;
 }
 
-int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc)
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc)
 {
 
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
-     struct in6_addr arg1, hit1;
+     in6_addr_t arg1, hit1;
 
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
@@ -1516,7 +1519,7 @@ int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int
         return err;
 }
 
-int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc)
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc)
 {	
      int err=0;
 		
@@ -1541,13 +1544,13 @@ int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[]
 }
 
 
-int hip_get_all_hits(struct hip_common *msg,char *argv[])
+int hip_get_all_hits(hip_common_t *msg,char *argv[])
 {	
      struct hip_tlv_common *current_param = NULL;
      struct endpoint_hip *endp=NULL;
      int err=0;
      struct sockaddr_in6 addr;
-     struct in6_addr *defhit;
+     in6_addr_t *defhit;
      struct hip_hadb_user_info_state *ha;
 	
      if (strcmp(argv[1], "get") == 0)
@@ -1577,7 +1580,7 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	
 	       while((current_param = hip_get_next_param(msg, current_param)) != NULL)
 	       {
-		    defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+		    defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
 		    set_hit_prefix(defhit);
 		    HIP_INFO_HIT("default hi is ",defhit);
 	       }
@@ -1741,18 +1744,20 @@ out_err:
 /**
  * Send restart request to HIP daemon.
  */
-int hip_conf_handle_restart(struct hip_common *msg, int type, const char *opt[], int optc)
+int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
+			    int optc)
 {
 	int err = 0;
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART, 0), -1, "hip_build_user_hdr() failed!");
-
-out_err:
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART, 0), -1,
+		 "hip_build_user_hdr() failed!");
+	
+ out_err:
 	return err;
 }
 
-int hip_conf_handle_opptcp(struct hip_common *msg, int action,
-			  const char *opt[], int optc)
+int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
+			   int optc)
 {
     int err = 0, status = 0;
     

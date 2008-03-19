@@ -182,6 +182,8 @@ int hipd_init(int flush_ipsec, int killold)
 /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
+
+	/* Lauri: Remember to uninit! */
 	HIP_INFO("Initializing HIP relay / RVS database.\n");
 	if(hip_relht_init() == NULL)
 	{

@@ -82,9 +82,6 @@
    argument. For example in "tools/hipconf get hi default" -command "get"
    is the action. */
 
-
-/* Important! These values are used as array indexes, so keep in this order.
-   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -111,6 +108,8 @@
 #define ACTION_REINIT 23
 #define ACTION_MAX 24 /* exclusive */
 
+/* Important! These values are used as array indexes, so keep in this order.
+   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
@@ -165,39 +164,38 @@ debug medium        # debug verbosity: all, medium or none\n"
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
-int hip_conf_handle_restart(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
-int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hiprelay(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);
-int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_trans_order(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc);
+int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(struct hip_common *msg,char *argv[]);
+int hip_get_all_hits(hip_common_t *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
-int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_reinit(struct hip_common *msg, int action,
-			   const char *opt[], int optc);
+
 #endif /* HIPCONF */

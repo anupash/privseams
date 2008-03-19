@@ -73,7 +73,7 @@
 #define SO_HIP_CANCEL_ESCROW                    138
 #define SO_HIP_CANCEL_RENDEZVOUS                139
 #define SO_HIP_GET_LOCAL_HI                     140
-/* Socket option for hipconf to change the used gateway with OpenDHT */
+/** Socket option for hipconf to change the used gateway with OpenDHT */
 #define SO_HIP_DHT_GW                           141
 #define SO_HIP_GET_HITS                         142
 #define SO_HIP_GET_HA_INFO			143
@@ -81,13 +81,13 @@
 #define SO_HIP_SET_DEBUG_ALL			145
 #define SO_HIP_SET_DEBUG_MEDIUM			146
 #define SO_HIP_SET_DEBUG_NONE			147
-/* Socket option for hipconf to ask about the used gateway with OpenDHT*/
+/** Socket option for hipconf to ask about the used gateway with OpenDHT */
 #define SO_HIP_DHT_SERVING_GW                   148
 #define SO_HIP_HANDOFF_ACTIVE			149
 #define SO_HIP_HANDOFF_LAZY			150
 #define SO_HIP_OFFER_HIPRELAY                   151
 #define SO_HIP_ADD_RELAY                        152
-/* Restart daemon. */
+/** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		153
 #define SO_HIP_SET_LOCATOR_ON                   154
 #define SO_HIP_SET_LOCATOR_OFF                  155
@@ -97,6 +97,10 @@
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
 #define SO_HIP_TRANSFORM_ORDER                  161
+/** Socket option for hipconf to reinit the RVS service. */
+#define SO_HIP_REINIT_RVS                       162
+/** Socket option for hipconf to reinit the HIP relay service. */
+#define SO_HIP_REINIT_RELAY                     163
 /** @} */
 
 #endif /* _HIP_ICOMM */
