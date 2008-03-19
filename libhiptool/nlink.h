@@ -11,8 +11,6 @@
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
 
-#ifdef CONFIG_HIP_OPPTCP
-
 struct pseudo_hdr{
 	u32 s_addr;
 	u32 d_addr;
@@ -28,8 +26,6 @@ struct pseudo6_hdr{
 	u8  protocol;
 	u16 length;
 };
-
-#endif
 
 /* New one to prevent netlink overrun */
 #if 0
@@ -54,9 +50,7 @@ struct pseudo6_hdr{
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-#ifdef CONFIG_HIP_OPPTCP
 #define HIP_OPTION_KIND 30
-#endif
 
 struct hip_work_order_hdr {
 	int type;
