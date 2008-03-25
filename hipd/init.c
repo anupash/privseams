@@ -183,12 +183,10 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
 
-	/* Lauri: Remember to uninit! */
 	HIP_INFO("Initializing HIP relay / RVS database.\n");
-	if(hip_relht_init() == NULL)
-	{
+	if(hip_relht_init() == -1) {
 		HIP_ERROR("Unable to initialize HIP relay / RVS database.\n");
-	} else if(hip_relwl_init() == NULL){
+	} else if(hip_relwl_init() == -1) {
 		HIP_ERROR("Unable to initialize HIP relay / RVS whitelist.\n");
 		hip_relht_uninit();
 	} else {
@@ -660,7 +658,6 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -686,7 +683,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow, hiprelay is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -698,8 +695,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	hip_relht_uninit();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();

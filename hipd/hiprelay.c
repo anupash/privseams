@@ -50,10 +50,50 @@ static IMPLEMENT_LHASH_COMP_FN(hip_relwl_compare, const hip_hit_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
 
-LHASH *hip_relht_init()
+int hip_relay_init()
 {
-	return hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash),
-				    LHASH_COMP_FN(hip_relht_compare));
+	int err = 0;
+
+	HIP_IFEL(hip_relht_init(), -1,
+		 "Unable to initialize HIP relay / RVS database.\n");
+	HIP_IFEL(hip_relwl_init(), -1,
+		 "Unable to initialize HIP relay / RVS whitelist.\n");
+	
+	if(hip_relay_read_config() == -ENOENT) {
+		HIP_ERROR("The configuration file %s could not be read.\n"\
+			  "Trying to write a new configuration file from "\
+			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
+		if(hip_relay_write_config() == -ENOENT) {
+			HIP_ERROR("Could not create a configuration file %s.\n",
+				  HIP_RELAY_CONFIG_FILE);
+		} else {
+			HIP_INFO("Created a new configuration file %s.\n",
+				 HIP_RELAY_CONFIG_FILE);
+		}
+	}
+	
+ out_err:
+	if(hiprelay_ht == NULL){
+		hip_relwl_uninit();
+	}
+	
+	return err;
+}
+
+void hip_relay_uninit()
+{
+	hip_relht_uninit();
+	hip_relwl_uninit();
+}
+
+int hip_relht_init()
+{
+	if(lh_new(LHASH_HASH_FN(hip_relht_hash),
+		  LHASH_COMP_FN(hip_relht_compare)) == NULL) {
+		return -1;
+	}
+	
+	return 0;
 }
 
 void hip_relht_uninit()
@@ -255,10 +295,14 @@ void hip_relrec_info(const hip_relrec_t *rec)
 	HIP_INFO("\n%s", status);
 }
 
-LHASH *hip_relwl_init()
+int hip_relwl_init()
 {
-	return hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl_hash),
-				    LHASH_COMP_FN(hip_relwl_compare));
+	if(lh_new(LHASH_HASH_FN(hip_relwl_hash),
+		  LHASH_COMP_FN(hip_relwl_compare)) == NULL) {
+		return -1;
+	}
+
+	return 0;
 }
 
 void hip_relwl_uninit()

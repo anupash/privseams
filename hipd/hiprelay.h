@@ -200,18 +200,33 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
 }
 
 /**
+ * Initializes the HIP relay / RVS. Initializes the HIP relay hashtable and
+ * whitelist.
+ */ 
+int hip_relay_init();
+
+/**
+ * Uninitializes the HIP relay / RVS. Initializes the HIP relay hashtable and
+ * whitelist.
+ */ 
+void hip_relay_uninit();
+
+/**
  * Initializes the global HIP relay hashtable. Allocates memory for
  * @c hiprelay_ht.
  *
- * @return a pointer to a new hashtable, NULL if failed to init.
+ * @return zero on success, -1 otherwise.
+ * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-LHASH *hip_relht_init();
+int hip_relht_init();
 
 /** 
  * Uninitializes the HIP relay record hashtable @c hiprelay_ht. Frees the memory
  * allocated for the hashtable and for the relay records. Thus, after calling
  * this function, all memory allocated from the heap related to the relay record
  * hashtable is free.
+ *
+ * @note do not call this function directly, instead call hip_relay_uninit().
  */
 void hip_relht_uninit();
 
@@ -363,15 +378,18 @@ void hip_relrec_info(const hip_relrec_t *rec);
  * Initializes the global HIP relay whitelist. Allocates memory for
  * @c hiprelay_wl.
  *
- * @return a pointer to a new hashtable, NULL if failed to init.
+ * @return zero on success, -1 otherwise.
+ * @note   do not call this function directly, instead call hip_relay_init().
  */ 
-LHASH *hip_relwl_init();
+int hip_relwl_init();
 
 /** 
  * Uninitializes the HIP relay whitelist hashtable @c hiprelay_wl. Frees the
  * memory allocated for the hashtable and for the HITs. Thus, after calling
  * this function, all memory allocated from the heap related to the whitelist
  * is free.
+ *
+ * @note do not call this function directly, instead call hip_relay_uninit().
  */
 void hip_relwl_uninit();
 

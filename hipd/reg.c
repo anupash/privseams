@@ -87,14 +87,14 @@ int hip_services_add(int service_type)
 	  service->cancel_registration = hip_cancel_registration;
 	  service->cancel_service = hip_cancel_service;
 	  
-	  if(hip_relht_init() == NULL)
+	  /*if(hip_relht_init() == NULL)
 	  {
 	       err = -1;
 	  }
 	  else
 	  {
 	       HIP_DEBUG("HIP UDP RELAY service initiated.\n");
-	  }
+	       }*/
      } else {
 	  HIP_ERROR("Unknown service type.\n");
 	  err = -1;
