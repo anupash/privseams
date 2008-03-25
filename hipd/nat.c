@@ -28,7 +28,7 @@
 #include "nat.h"
 #include "pjnath.h"
 #include "pjlib.h"
-
+#include "pjlib-util.h"
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
@@ -308,7 +308,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	HIP_DEBUG("hip_on_ice_complete");
 	pj_ice_sess_checklist 	valid_list;
 	int i =0;
-	
+	pj_ice_sess_cand	*rcand;
+	pj_sockaddr		 addr;
 	
 	// found the right entry. 
 	
@@ -324,12 +325,14 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		for(i = 0; i< valid_list.count; i++){
 			if (valid_list.checks[i].nominated == PJ_TRUE){
 				//set the prefered peer
+				rcand = valid_list.checks[i].rcand;
+				addr = rcand->addr;
 				
 				//
 			}
 			else{
 				if(valid_list.checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
-					
+					//rcand = valid_list.checks[i].rcand;
 				}
 				//set the flag for the peer list
 			}
@@ -392,10 +395,12 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 /***
  * this function is added to create the ice seesion
  * currently we suppport only one session at one time.
- * only one component in the seesion. 
+ * only one component in the seesion.
+ * 
+ * return the pointer of the ice session 
  * */
 
-int hip_external_ice_init(int role){
+void* hip_external_ice_init(pj_ice_sess_role role){
 	
 	//init for PJproject
 	status = pj_init();
@@ -404,7 +409,7 @@ int hip_external_ice_init(int role){
 	
     if (status != PJ_SUCCESS) {
         HIP_DEBUG("Error initializing PJLIB", status);
-        return 1;
+        return 0;
     }
 	//init for memery pool factroy
     // using default pool policy.
@@ -454,7 +459,7 @@ int hip_external_ice_init(int role){
  	    
  	//check if there is already a session
  	if(!p_ice)
- 	 return pj_ice_sess_create( 
+ 	 if(PJ_SUCCESS == pj_ice_sess_create( 
  			&stun_cfg,
  			name,
  			ice_role,
@@ -463,7 +468,8 @@ int hip_external_ice_init(int role){
  			local_ufrag,
  			local_passwd,
  			p_ice	 
- 		) ;
+ 		) )
+ 		 return p_ice;
  	/**/
  	return 0;
  	
@@ -535,8 +541,9 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 			p_cand_id	 
 		) ;
 	
-		
-	return pj_status;
+	if(pj_status == PJ_SUCCESS)	
+	return 1;
+	else return 0;
 }
 
 
@@ -545,22 +552,34 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates( void * session, int num, struct hip_peer_addr_list_item* list){
+int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list){
 	
 	pj_ice_sess *   	 ice = session;
 	const pj_str_t *  	rem_ufrag;
 	const pj_str_t *  	rem_passwd;
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *  	rem_cand;	
+	struct hip_peer_addr_list_item * peer_addr_list_item;
 	int i;
 	
-	rem_cand_cnt = num;
+	rem_cand_cnt = list->num_nodes;
 	//reserve space for the cand
 	
 	
-	for(i = 0; i< num; i ++){
+	for(i = 0; i< rem_cand_cnt; i ++){
+		peer_addr_list_item = (struct hip_peer_addr_list_item * )list->b[i];
+		
 		//(rem_cand+i)->
-	}
+		rem_cand = PJ_POOL_ZALLOC_T(pool, pj_ice_sess_cand);
+		rem_cand->comp_id = 1;
+		//rem_cand.type = 
+	//	foundation
+		//rem_cand.prio= 
+		//memcpy(&rem_cand->addr.pj_sockaddr_in.sin_family, &peer_addr_list_item->address sizeof(struct in6_addr));
+	//	rem_cand->addr.pj_sockaddr_in.sin_family = peer_addr_list_item->address ;
+		pj_sockaddr_in_set_port(&rem_cand->addr.ipv4, peer_addr_list_item->port);
+		memcpy(&(rem_cand->addr.ipv4.sin_addr),&peer_addr_list_item->address, sizeof(struct in6_addr) );
+	}                          
 	
 	
 	/*

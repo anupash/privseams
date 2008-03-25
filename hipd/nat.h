@@ -92,6 +92,9 @@ extern int hip_nat_sock_udp;
     machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
 
+
+#define ICE_ROLE_CONTROLLING  PJ_ICE_SESS_ROLE_CONTROLLING
+
 int hip_nat_on();
 int hip_nat_off();
 int hip_nat_is();

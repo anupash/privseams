@@ -1705,8 +1705,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint64_t I, J;	
 	uint32_t spi_in, spi_out;
 	uint16_t crypto_len, nonce;
-	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
+	int err = 0, retransmission = 0, replay = 0, use_blind = 0, i=0;
         struct hip_locator *locator;
+#ifdef HIP_USE_ICE
+    void * ice_session = 0;
+#endif
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
 	struct hip_locator_info_addr_item* first;
@@ -1743,7 +1746,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #endif /* CONFIG_HIP_RVS */	
 	
 	
-	
+     
 	/* Assume already locked ha, if ha is not NULL. */
 	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
 		 -ENOMEM, "Alloc failed\n");
@@ -1813,7 +1816,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	ctx->dh_shared_key = NULL;
 	
 	//#ifdef CONFIG_HIP_BLIND
-	// XX TODO KARTHIK: if entry->blind then r1.hitr should be converted to plain hit
+	// XX T
+	//TODO KARTHIK: if entry->blind then r1.hitr should be converted to plain hit
 	//#endif
 	
 	/* Note: we could skip keying material generation in the case of a
@@ -2086,7 +2090,6 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
-
 	/** @todo Check -EAGAIN */
 	
 	/* ok, found an unused SPI to use */
@@ -2274,6 +2277,28 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
+                
+#ifdef HIP_USE_ICE
+                //init the session right after the locator receivd
+        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
+        if(ice_session){
+        	entry->ice_session = ice_session;
+        	//add the type 1 address first
+        	for(i = 0; i <address_count;i++){
+        		hip_external_ice_add_local_candidates(ice_session,addresses[i],50500,1);
+        	}
+        	//TODO add reflexive address 
+        	
+        	//TODO add relay address
+        	// add remote address
+        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	
+        }
+        
+                
+#endif
+                
             }
         else
             HIP_DEBUG("I2 did not have locator or esp_info\n");
@@ -2390,7 +2415,8 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
      case HIP_STATE_CLOSING:
      case HIP_STATE_CLOSED:
 	  err = entry->hadb_handle_func->
-	       hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+	  hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
+
 	  break;
      default:
 	  HIP_ERROR("Internal state (%d) is incorrect\n", state);

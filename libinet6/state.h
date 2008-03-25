@@ -363,6 +363,7 @@ struct hip_hadb_state
      hip_output_filter_func_set_t *hadb_output_filter_func;
      /* true when agent is prompting user and fallback is disabled */
      int hip_opp_fallback_disable; 
+     void* ice_session;
 #ifdef CONFIG_HIP_HI3
 	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
 #endif

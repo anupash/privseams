@@ -17,6 +17,8 @@
 #  include "hiprelay.h"
 #endif
 
+#define HIP_USE_ICE
+
 #include "oppdb.h"
 #include "user.h"
 #include "debug.h"
@@ -33,6 +35,9 @@
 #include "util.h"
 #include "state.h"
 #include "oppdb.h"
+
+#include "pjnath.h"
+
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 #include "oppipdb.h"
