@@ -2293,7 +2293,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         	// add remote address
         	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
         	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        	
+        	hip_ice_start_check(ice_session);
         }
         
                 
@@ -2452,7 +2452,10 @@ int hip_handle_r2(struct hip_common *r2,
 	int retransmission = 0;
     int * reg_types = NULL;
     int type_count = 0;
-        
+#ifdef HIP_USE_ICE
+    void * ice_session = 0;
+    int i;
+#endif  
 
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) 
@@ -2517,6 +2520,31 @@ int hip_handle_r2(struct hip_common *r2,
 
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
+	
+#ifdef HIP_USE_ICE
+                //init the session right after the locator receivd
+        ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
+        if(ice_session){
+        	entry->ice_session = ice_session;
+        	//add the type 1 address first
+        	for(i = 0; i <address_count;i++){
+        		hip_external_ice_add_local_candidates(ice_session,addresses[i],50500,1);
+        	}
+        	//TODO add reflexive address 
+        	
+        	//TODO add relay address
+        	// add remote address
+        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	hip_ice_start_check(ice_session);
+        	
+        }
+        
+                
+#endif	
+	
+	
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  err = hip_add_sa(r2_daddr, r2_saddr,
