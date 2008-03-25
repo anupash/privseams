@@ -535,6 +535,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 #endif
 	case SO_HIP_TRIGGER_BEX:
+		hip_firewall_status = 1;
 		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 
 		if (!lsi){
@@ -549,11 +550,16 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 				 -1, "internal error: no hadb entry found\n");
 			ipv6_addr_copy(dst_hit, &entry->hit_peer);		
 		}
+
+		if (hip_firewall_is_alive())
+			hip_firewall_set_escrow_active(1);
+
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 				 -1, "sending i1 failed\n");
+
 		goto out_err;
 	  	break;
-	
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

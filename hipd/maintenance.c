@@ -678,7 +678,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
                         "hip build param failed\n");
 
-		n = hip_sendto(msg, &hip_firewall_addr);                   
+		n = hip_sendto_firewall(msg);             
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");
@@ -750,6 +750,7 @@ int hip_firewall_set_escrow_active(int activate)
 out_err:
         return err;
 }
+
 
 int opendht_put_locator(int sockfd, 
                    unsigned char * key, 

@@ -820,11 +820,13 @@ static void *handle_ip_traffic(void *ptr) {
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-				if(is_outgoing_packet(packetHook))
-					firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-				else if (is_incoming_packet(packetHook))
-					firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-				drop_packet(hndl, m->packet_id);
+				if(IS_LSI(&iphdr->ip_dst)){
+					if(is_outgoing_packet(packetHook))
+						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+					else if (is_incoming_packet(packetHook))
+						firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+					drop_packet(hndl, m->packet_id);
+				}
 				break;
  	      		}
         		else if(ipv6Traffic){
@@ -932,13 +934,22 @@ int firewall_trigger_incoming_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	return err;
 }
 
+void firewall_check_socket(){
+	fd_set read_fdset;
+	FD_ZERO(&read_fdset);
+	FD_SET(hip_firewall_sock, &read_fdset);
+	while (!FD_ISSET(hip_firewall_sock, &read_fdset)){}
+	hip_msg_init(hipd_msg);
+}
+
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
-	int err;
+	int err, msg_type;
 	struct in6_addr *src_addr = NULL;
 	struct in6_addr *dst_addr = NULL;
 	struct in6_addr dst_hit;
 	struct in6_addr *default_local_hit;		
 	firewall_hl_t *lsi_hit_peer;
+	gpointer hipd_msg;
 
        	IPV4_TO_IPV6_MAP(ip_src, src_addr);
         IPV4_TO_IPV6_MAP(ip_dst, dst_addr);
@@ -947,17 +958,18 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	lsi_hit_peer = firewall_hit_lsi_db_match(ip_dst);
 	if (lsi_hit_peer){
 		// BEX already done
-		// insert in the packet the hits
+		// insert the hits in the packet 
 		reinject_packet(lsi_hit_peer->hit, *default_local_hit, m);
 	}
 	else{
 		// RUN BEX to initialize SP and SA
 		HIP_IFEL(hip_trigger_bex(NULL, dst_hit, NULL, dst_addr), -1, "Base Exchange Trigger failed");
-		//add_entry to firewall database
-		firewall_add_hit_lsi(firewall_lsi_hit_db, &dst_hit, ip_dst);
-		reinject_packet(dst_hit, *default_local_hit, m);					
+		// Waits for R2 answer
+		if (!run_control_thread(hipd_msg)){
+			firewall_add_hit_lsi(firewall_lsi_hit_db, &dst_hit, ip_dst);
+			reinject_packet(dst_hit, *default_local_hit, m);
+		}
 	}
-	
 out_err: 
 	return err;
 }

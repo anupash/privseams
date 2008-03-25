@@ -45,9 +45,6 @@ struct rtnl_handle hip_nl_route = { 0 };
 int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
-#if 0
-int hip_firewall_sock = -1;
-#endif
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 
@@ -220,23 +217,22 @@ out_err:
 }
 
 
-#if 0
 /**
  * Receive message from firewall socket.
  */
+
 int hip_sock_recv_firewall(void)
 {
 	int n, err;
-	socklen_t alen;
+	socklen_t alen = sizeof(hip_firewall_addr);
 	err = 0;
 	hip_hdr_type_t msg_type;
 
 	HIP_DEBUG("Receiving a message from firewall socket "
 	          "(file descriptor: %d).\n",
 	          hip_firewall_sock);
-	
-	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
-	alen = sizeof(hip_firewall_addr);
+
+	bzero(&hip_firewall_addr, alen);
 	n = recvfrom(hip_firewall_sock, hipd_msg, sizeof(struct hip_common), 0,
 	             (struct sockaddr *) &hip_firewall_addr, &alen);
 	HIP_IFEL(n < 0, 0, "recvfrom() failed on agent socket.\n");
@@ -274,16 +270,19 @@ int hip_sock_recv_firewall(void)
 		HIP_DEBUG("Firewall quit.\n");
 		hip_firewall_status = 0;
 	}
+	else{
+		err = hip_handle_user_msg(hipd_msg, &hip_firewall_addr);
+	}
 
 out_err:
 	return err;
 }
-#endif
 
-/*int hip_sendto_firewall(const struct hip_common *msg){
+
+int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
+	int n = 0;
 	if (hip_get_firewall_status()) {
-		int n = 0;
 		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
 		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
 		return n;
@@ -292,7 +291,7 @@ out_err:
 	HIP_DEBUG("Firewall is disabled.\n");
 	return 0;
 #endif // CONFIG_HIP_FIREWALL
-}*/
+}
 
 
 /**
@@ -406,7 +405,7 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
-		/* FD_SET(hip_firewall_sock, &read_fdset); */
+		FD_SET(hip_firewall_sock, &read_fdset);
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
 		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)
@@ -632,13 +631,11 @@ int hipd_main(int argc, char *argv[])
 			if (err) HIP_ERROR("Receiving packet from agent socket failed!\n");
 		}
  
-#if 0
-		if (FD_ISSET(hip_firewall_sock, &read_fdset))
+		/*if (FD_ISSET(hip_firewall_sock, &read_fdset))
 		{
 			err = hip_sock_recv_firewall();
 			if (err) HIP_ERROR("Receiving packet from firewall socket failed!\n");
-		}
-#endif
+		}*/
  
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))
 		{

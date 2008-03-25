@@ -2277,23 +2277,24 @@ int hip_handle_r2(struct hip_common *r2,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
 			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+	  hip_firewall_add_escrow_data(entry, &entry->hit_our, &entry->hit_peer, NULL);
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
-/*	  err = hip_add_sa(r2_daddr, r2_saddr,
+	  err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
-Tere---temporaly commented*/
+
+	  hip_firewall_add_escrow_data(entry, &ctx->input->hitr, &ctx->input->hits, NULL);
 	}
 
 	/*
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
 		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-	} else 	if (err) {
 	*/
 
 	if (err) {
@@ -2377,6 +2378,8 @@ Tere---temporaly commented*/
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
+	if (err)
+		hip_firewall_add_escrow_data(entry, NULL, NULL, NULL);
 	if (ctx)
 		HIP_FREE(ctx);
         if (reg_types)

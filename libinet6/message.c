@@ -44,6 +44,22 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	return bytes;
 }
 
+
+int hip_firewall_connect_to_daemon(int hip_firewall_sock, struct hip_common *msg) {
+	int err = 0, n, len; 
+	socklen_t alen = sizeof(hip_firewall_addr);
+	struct sockaddr_in6 hip_firewall_addr;
+	
+	struct sockaddr_in6 daemon_addr;
+	bzero(&hip_firewall_addr, alen);
+      	HIP_IFEL(connect(hip_firewall_sock, (struct sockaddr *) &hip_firewall_addr,
+			 alen), -1,
+        	 "connection to daemon failed\n");
+ out_err:
+
+	return err;
+}
+
 int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 	int err = 0, n, len; // app_fd = 0;
 	int hip_agent_sock = 0;
@@ -73,8 +89,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
 
-	
-	
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
 	if (n < len) {
@@ -104,6 +118,46 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
  out_err:
 	if (hip_user_sock)
 		close(hip_user_sock);
+	return err;
+}
+
+int hip_firewall_send_recv_daemon_info(struct hip_common *msg) {
+	int hip_firewall_sock = 0, err = 0, n, len;
+
+	HIP_IFE(((hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+	
+	HIP_IFEL(err = hip_firewall_connect_to_daemon(hip_firewall_sock, msg), -1,
+		 "Sending of msg failed (no rcv)\n");
+	
+	len = hip_get_msg_total_len(msg);
+	n = send(hip_firewall_sock, msg, len, 0);
+	if (n < len) {
+		HIP_ERROR("Could not send message to daemon.\n");
+		err = -1;
+		goto out_err;
+	}
+
+	//HIP_DEBUG("waiting to receive daemon info\n");
+
+	int hol = hip_peek_recv_total_len(hip_firewall_sock, 0);
+
+	n = recv(hip_firewall_sock, msg,
+		 hip_peek_recv_total_len(hip_firewall_sock, 0), 0);
+
+	if (n < sizeof(struct hip_common)) {
+		HIP_ERROR("Could not receive message from daemon.\n");
+		err = -1;
+		goto out_err;
+	} else {
+		HIP_DEBUG("%d bytes received\n", n); 		
+	}
+
+	if (hip_get_msg_err(msg))
+		HIP_ERROR("msg contained error\n");
+
+ out_err:
+	if (hip_firewall_sock)
+		close(hip_firewall_sock);
 	return err;
 }
 
