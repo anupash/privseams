@@ -28,7 +28,8 @@
 #include "nat.h"
 #include "pjnath.h"
 #include "pjlib.h"
-#include "pjlib-util.h"
+
+extern HIP_HASHTABLE *hadb_hit;
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
@@ -307,15 +308,26 @@ pj_pool_t *pool = 0;
 void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	HIP_DEBUG("hip_on_ice_complete");
 	pj_ice_sess_checklist 	valid_list;
+	int err = 0;
 	int i =0;
 	pj_ice_sess_cand	*rcand;
 	pj_sockaddr		 addr;
-	
+    hip_ha_t *ha_n, *entry;
+    hip_list_t *item = NULL, *tmp = NULL;
+    
+    
 	// found the right entry. 
 	
-	
-	
-	
+    list_for_each_safe(item, tmp, hadb_hit, i) {
+        ha_n = list_entry(item);
+        if(ha_n->ice_session == ice){
+        	entry = ha_n;
+        }
+    }
+    
+    if(entry)
+    	HIP_DEBUG("hip_on_ice_complete, entry found");
+    
 	// the verified list 
 	if(status == PJ_SUCCESS){
 		valid_list = ice->valid_list;
@@ -343,7 +355,11 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	//we set the flag in the peer list to verified.
 	
 	//TODO decide if we should save the paired local address also.
+
 	
+	
+	 out_err:
+		return err;
 }
 
 
