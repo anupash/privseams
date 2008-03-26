@@ -1919,7 +1919,7 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
  * @param msg the message 
  * @param opaque opaque data copied to the parameter
  * @param len      the length of the parameter
- * @param request true if parameter is ECHO_REQUEST, otherwise parameter is ECHO_RESPONSE
+ * @param request true if parameter is ECHO_REQUEST_M, otherwise parameter is ECHO_RESPONSE_M
  *
  * @return zero for success, or non-zero on error
  */
