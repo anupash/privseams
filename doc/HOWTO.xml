@@ -1795,5 +1795,25 @@ combo-newgroup=&lt;create new...&gt;
       information, please refer to parse-key-3.py and myasn.py.
     </para>
   </chapter>
+  <chapter>
+    <title>DNS proxy</title>
+    <para>
+      In tools directory, there is dnsproxy.py, which provides DNS
+      proxy functionality. It can read HIT information from HIP hosts
+      files and provide corresponding AAAA records. If it is asked an
+      AAAA record for a FQDN and there is no real existing AAAA for
+      the name, it tries to find a HIP RR for the name. If it finds
+      one, it responds with an AAAA response.
+    </para>
+    <para>
+      dnsproxy.py is meant to be run under DJB's daemontools package
+      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
+      used to provide necessary environmanet variables, see comments
+      in dnsproxy.py. It is recommended to use a DNS cache, like
+      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
+      dnsproxy.py.
+    </para>
+
+  </chapter>
 </book>    
 
