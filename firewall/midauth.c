@@ -197,6 +197,42 @@ static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution
 }
 
 /**
+ * Insert a ECHO_REQUEST_M parameter into a HIP packet.
+ *
+ * @param p the modified packet
+ * @param nonce the string to add
+ * @return 
+ */
+static int add_echo_request_m(struct hip_common *hip, char *nonce) {
+    int success = 0;
+
+    /* FIXME - reorder parameters */
+
+    hip_build_param_echo_m(hip, nonce, strlen(nonce), 1);
+
+    return success;
+} 
+
+/**
+ * Insert a PUZZLE_M parameter into a HIP packet.
+ *
+ * @param p the modified packet
+ * @param nonce the string to add
+ * @return 
+ */
+static int add_puzzle_m(struct hip_common *hip, uint8_t val_K,
+                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
+{
+    int success = 0;
+
+    /* FIXME - reorder parameters */
+
+    hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i);
+
+    return success;
+}
+
+/**
  * Insert the nonce into the R1 packet.
  *
  * @param m the original packet
@@ -215,10 +251,10 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     /* beware: black magic & dragons ahead */
 
-    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
-    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-    hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-    hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
+    add_echo_request_m(hip, nonce1);
+    add_echo_request_m(hip, nonce2);
+    add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+    add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
     /* no more dragons & black magic*/
 
@@ -256,10 +292,10 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     } else
 	HIP_DEBUG("found no hip_solution_m\n");
 
-    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
-    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-    hip_build_param_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
-    hip_build_param_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
+    add_echo_request_m(hip, nonce1);
+    add_echo_request_m(hip, nonce2);
+    add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
+    add_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
 
     p->size = hip_get_msg_total_len(hip);
     update_all_headers(p);
@@ -317,10 +353,10 @@ static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     /* beware: black magic & dragons ahead */
 
-    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
-    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-    hip_build_param_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-    hip_build_param_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
+    add_echo_request_m(hip, nonce1);
+    add_echo_request_m(hip, nonce2);
+    add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+    add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
     /* no more dragons & black magic*/
 
@@ -360,10 +396,10 @@ static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     } else
 	HIP_DEBUG("found no hip_solution_m\n");
 
-    hip_build_param_echo_m(hip, nonce1, strlen(nonce1), 1);
-    hip_build_param_echo_m(hip, nonce2, strlen(nonce2), 1);
-    hip_build_param_puzzle_m(hip, 1, 2, "u2u2u2", 0xAABBCCDDEEFFFFFFLL);
-    hip_build_param_puzzle_m(hip, 3, 4, "U2U2U2", 0xABCDABCDABCDABCDLL);
+    add_echo_request_m(hip, nonce1);
+    add_echo_request_m(hip, nonce2);
+    add_puzzle_m(hip, 1, 2, "u2u2u2", 0xAABBCCDDEEFFFFFFLL);
+    add_puzzle_m(hip, 3, 4, "U2U2U2", 0xABCDABCDABCDABCDLL);
 
     p->size = hip_get_msg_total_len(hip);
     update_all_headers(p);
