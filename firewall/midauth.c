@@ -75,8 +75,11 @@ static void update_udp_header(struct iphdr *ip, int len) {
 	sum += *w++;
 	len -= 2;
     }
-    if (len == 1) /* FIXME - TODO */
-	HIP_ERROR("UDP Packet size is odd. Checksum will not be correct!\n");
+    if (len == 1) {
+        unsigned short padding = 0;
+        *(unsigned char *)(&padding)=*(unsigned char *)w;
+        sum += padding;
+    }
 
     /* add UDP pseudoheader */
     w = (u_int16_t *) &ip->saddr;
