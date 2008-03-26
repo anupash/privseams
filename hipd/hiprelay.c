@@ -33,6 +33,11 @@ uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
  * code to be used at the relay and at endhosts without C precompiler #ifdefs
  */
 int we_are_relay = 0;
+/** 
+ * Boolean to indicate if whitelist is 'on' or 'off'. Zero is 'off' anything
+ * else is 'on'.
+ */
+int whitelist_enabled = 1;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
@@ -60,21 +65,24 @@ int hip_relay_init()
 		 "Unable to initialize HIP relay / RVS whitelist.\n");
 	
 	if(hip_relay_read_config() == -ENOENT) {
-		HIP_ERROR("The configuration file %s could not be read.\n"\
+		HIP_ERROR("The configuration file \"%s\" could not be read.\n"\
 			  "Trying to write a new configuration file from "\
 			  "scratch.\n", HIP_RELAY_CONFIG_FILE);
 		if(hip_relay_write_config() == -ENOENT) {
-			HIP_ERROR("Could not create a configuration file %s.\n",
-				  HIP_RELAY_CONFIG_FILE);
+			HIP_ERROR("Could not create a configuration file "\
+				  "\"%s\".\n", HIP_RELAY_CONFIG_FILE);
 		} else {
-			HIP_INFO("Created a new configuration file %s.\n",
+			HIP_INFO("Created a new configuration file \"%s\".\n",
 				 HIP_RELAY_CONFIG_FILE);
 		}
+	} else {
+		HIP_INFO("Read configuration file \"%s\" successfully.\n",
+			 HIP_RELAY_CONFIG_FILE);
 	}
 	
  out_err:
-	if(hiprelay_ht == NULL){
-		hip_relwl_uninit();
+	if(hiprelay_wl == NULL){
+		hip_relht_uninit();
 	}
 	
 	return err;
@@ -86,10 +94,31 @@ void hip_relay_uninit()
 	hip_relwl_uninit();
 }
 
+int hip_relay_reinit()
+{
+	int err = 0;
+
+	hip_relwl_uninit();
+	HIP_IFEL(hip_relwl_init(), -1, "Could not initialize the HIP relay / ",
+		 "RVS whitelist.\n");
+	HIP_IFEL(hip_relay_read_config(), -1, "Could not read the ",
+		 "configuration file \"%s\"\n", HIP_RELAY_CONFIG_FILE); 
+	
+ out_err:       
+	return err;
+}
+
 int hip_relht_init()
 {
-	if(lh_new(LHASH_HASH_FN(hip_relht_hash),
-		  LHASH_COMP_FN(hip_relht_compare)) == NULL) {
+	/* Check that the relay hashtable is not already initialized. */
+	if(hiprelay_ht != NULL) {
+		return -1;
+	}
+	
+	hiprelay_ht = lh_new(LHASH_HASH_FN(hip_relht_hash),
+			     LHASH_COMP_FN(hip_relht_compare));
+	
+	if(hiprelay_ht == NULL) {
 		return -1;
 	}
 	
@@ -103,6 +132,7 @@ void hip_relht_uninit()
 
 	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free));
 	lh_free(hiprelay_ht);
+	hiprelay_ht = NULL;
 }
 
 unsigned long hip_relht_hash(const hip_relrec_t *rec)
@@ -297,11 +327,18 @@ void hip_relrec_info(const hip_relrec_t *rec)
 
 int hip_relwl_init()
 {
-	if(lh_new(LHASH_HASH_FN(hip_relwl_hash),
-		  LHASH_COMP_FN(hip_relwl_compare)) == NULL) {
+	/* Check that the relay whitelist is not already initialized. */
+	if(hiprelay_wl != NULL) {
 		return -1;
 	}
 
+	hiprelay_wl = lh_new(LHASH_HASH_FN(hip_relwl_hash),
+			     LHASH_COMP_FN(hip_relwl_compare)); 
+	
+	if(hiprelay_wl == NULL) {
+		return -1;
+	}
+	
 	return 0;
 }
 
@@ -312,6 +349,7 @@ void hip_relwl_uninit()
 
 	lh_doall(hiprelay_wl, LHASH_DOALL_FN(hip_relwl_hit_free));
 	lh_free(hiprelay_wl);
+	hiprelay_wl = NULL;
 }
 
 unsigned long hip_relwl_hash(const hip_hit_t *hit)
@@ -382,6 +420,11 @@ void hip_relwl_hit_free(hip_hit_t *hit)
 		free(deleted_hit);
 		HIP_DEBUG("HIT deleted from the relay whitelist.\n");
 	}
+}
+
+int hip_relay_is_wl_enabled()
+{
+	return whitelist_enabled;
 }
 
 int hip_we_are_relay()
@@ -601,8 +644,12 @@ int hip_relay_read_config(){
 		if(parseerr == 0){
 			HIP_DEBUG("param: '%s'\n", parameter);
 			hip_ll_node_t *current = NULL;
-			
-			if(strcmp(parameter, "whitelist") == 0) {
+			if(strcmp(parameter, "whitelist_enabled") == 0) {
+				current = hip_ll_get_next(&values, current);
+				if(strcmp(current->data, "no") == 0) {
+					whitelist_enabled = 0;
+				}
+			} else if(strcmp(parameter, "whitelist") == 0) {
 				while((current = 
 				       hip_ll_get_next(&values, current))
 				      != NULL) {
@@ -668,9 +715,12 @@ int hip_relay_read_config(){
 		hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 	}
 
-	HIP_DEBUG("min: %ld, max: %ld, wl size: %lu.\n", hiprelay_min_lifetime,
-		  hiprelay_max_lifetime, hip_relwl_size());
-
+	HIP_DEBUG("\nRead relay configuration file with following values:\n"\
+		  "Whitelist enabled: %s\nHITs in whitelist: %lu\n"\
+		  "Minimum lifetime: %ld\nMaximum lifetime: %ld\n",
+		  (whitelist_enabled) ? "YES" : "NO", hip_relwl_size(),
+		  hiprelay_min_lifetime, hiprelay_max_lifetime);
+	
  out_err:
 	
 	return err;

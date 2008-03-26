@@ -484,6 +484,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_REINIT_RVS:
 	case SO_HIP_REINIT_RELAY:
 		HIP_DEBUG("Handling REINIT RELAY or REINIT RVS user message.\n");
+		
+		HIP_IFEL(hip_relay_reinit(), -1, "Unable to reinitialize "\
+			 "the HIP relay / RVS service.\n")
+			
 		break;
 #endif
 	case SO_HIP_GET_HITS:		

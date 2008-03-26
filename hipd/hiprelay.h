@@ -117,8 +117,14 @@
 "#\n"\
 "# The '",HIP_RELAY_COMMENT,"' character is used for comments. End of line comments are not allowed.\n"\
 "\n"\
-"# Relay Whitelist. The HITs of the clients that are, allowed to use the relay /\n"\
-"# RVS service. You may use multiple stanzas of the same name.\n"\
+"# Relay whitelist status. When this is set to 'yes', only clients whose HIT is\n"\
+"# listed on the whitelist are allowed to register to the relay / RVS service.\n"\
+"# When this is set to 'no', any client is allowed to register. This defaults as\n"\
+"# 'yes' when no value is given.\n"\
+"whitelist_enabled = \"yes\"\n"\
+"\n"\
+"# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
+"# the relay / RVS service. You may use multiple stanzas of the same name.\n"\
 "#whitelist = \"\"\n"\
 "\n"\
 "# The minimum number of seconds the relay / RVS client is granted the service.\n"\
@@ -206,10 +212,24 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
 int hip_relay_init();
 
 /**
- * Uninitializes the HIP relay / RVS. Initializes the HIP relay hashtable and
+ * Uninitializes the HIP relay / RVS. Uninitializes the HIP relay hashtable and
  * whitelist.
  */ 
 void hip_relay_uninit();
+
+/**
+ * Reinitializes the HIP relay / RVS. Deletes the old values from the relay
+ * whitelist and reads new values from the configuration file
+ * @c HIP_RELAY_CONFIG_FILE. Besides the whitelist values also every other
+ * value read from the configuration file is reinitialized. These include the
+ * lifetime values etc. However, the existing relay records are left as they
+ * were. This means that the relay / RVS clients that have already registered
+ * continue to be served as before - even if their HIT nomore exists in the
+ * whitelist.
+ *
+ * @return zero if the configuration file was read succesfully, -1 otherwise.
+ */
+int hip_relay_reinit();
 
 /**
  * Initializes the global HIP relay hashtable. Allocates memory for
@@ -454,6 +474,13 @@ unsigned long hip_relwl_size();
  * @param hit a pointer to a HIT. 
  */
 void hip_relwl_hit_free(hip_hit_t *hit);
+
+/**
+ * Returns the whitelist status.
+ *
+ * @return zero if the whitelist is @b not enabled, non-zero otherwise.
+ */ 
+int hip_relay_is_wl_enabled();
 
 /** 
  * A dummy function for development purposes.

@@ -1334,17 +1334,20 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
 				 "build hdr failed\n");
 		} else {
-			HIP_ERROR("Unknown service %s.\n", opt[0]);
+			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}     
 	} else if(action == ACTION_REINIT){
 		if (strcmp(opt[0], "rvs") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RVS, 0), -1,
 				 "Failed to build user message header.\n");
-		}if (strcmp(opt[0], "hiprelay") == 0) {
+		} else if (strcmp(opt[0], "hiprelay") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RELAY, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "escrow") == 0) {
+			HIP_ERROR("Action \"reinit\" is not supported for "\
+				  "escrow service.\n");
 		} else {
-			HIP_ERROR("Unknown service %s.\n", opt[0]);
+			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
 	}
 	

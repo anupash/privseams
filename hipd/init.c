@@ -169,7 +169,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGCHLD, hip_sig_chld);
  
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
+	         "Cannot initialize opportunistic mode IP database for "\
+		 "non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -179,37 +180,12 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_init_puzzle_defaults();
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-
-	HIP_INFO("Initializing HIP relay / RVS database.\n");
-	if(hip_relht_init() == -1) {
-		HIP_ERROR("Unable to initialize HIP relay / RVS database.\n");
-	} else if(hip_relwl_init() == -1) {
-		HIP_ERROR("Unable to initialize HIP relay / RVS whitelist.\n");
-		hip_relht_uninit();
-	} else {
-		HIP_INFO("HIP relay / RVS database and whitelist initialized "\
-			 "successfully.\nReading configuration file %s.\n",
-			 HIP_RELAY_CONFIG_FILE);
-		HIP_DEBUG("\n\n\n###\n\n\n");
-		if(hip_relay_read_config() == -ENOENT) {
-			HIP_ERROR("The configuration file %s could not be "\
-				  "read.\nTrying to write a new configuration "\
-				  "file from scratch.\n",
-				  HIP_RELAY_CONFIG_FILE);
-			if(hip_relay_write_config() == -ENOENT) {
-				HIP_ERROR("Could not create a configuration "\
-					  "file %s.\n",
-					  HIP_RELAY_CONFIG_FILE);
-			} else {
-				HIP_INFO("Created a new configuration file "\
-					 "%s.\n", HIP_RELAY_CONFIG_FILE);
-			}
-		}
-		HIP_DEBUG("\n\n\n###\n\n\n");
-	}
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
