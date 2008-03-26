@@ -32,10 +32,12 @@ extern hip_xmit_func_set_t default_xmit_func_set;
 int hip_for_each_locator_addr_item(int (*func)
 				   (hip_ha_t *entry,
 				    struct hip_locator_info_addr_item *i,
-				    void *opaq),
+				    void *opaq,
+				    struct hip_common *msg),
                                    hip_ha_t *entry,
                                    struct hip_locator *locator,
-                                   void *opaque)
+                                   void *opaque,
+                                   struct hip_common *msg)
 {
 	int i = 0, err = 0, n_addrs;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
@@ -59,7 +61,7 @@ int hip_for_each_locator_addr_item(int (*func)
 
 	locator_address_item = hip_get_locator_first_addr_item(locator);
 	for (i = 0; i < n_addrs; i++, locator_address_item++) {
-		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
+		HIP_IFEL(func(entry, locator_address_item, opaque, msg), -1,
 			 "Locator handler function returned error\n");
 	}
      
@@ -71,9 +73,12 @@ int hip_update_for_each_peer_addr(int (*func)
 				  (hip_ha_t *entry,
 				   struct hip_peer_addr_list_item *list_item,
 				   struct hip_spi_out_item *spi_out,
-				   void *opaq), hip_ha_t *entry,
+				   void *opaq,
+				   struct hip_common *msg),
+                                  hip_ha_t *entry,
                                   struct hip_spi_out_item *spi_out,
-                                  void *opaq)
+                                  void *opaq,
+                                  struct hip_common *msg)
 {
 	hip_list_t *item, *tmp;
 	struct hip_peer_addr_list_item *addr;
@@ -84,7 +89,7 @@ int hip_update_for_each_peer_addr(int (*func)
 	list_for_each_safe(item, tmp, spi_out->peer_addr_list, i)
 		{
 			addr = list_entry(item);
-			HIP_IFE(func(entry, addr, spi_out, opaq), -1);
+			HIP_IFE(func(entry, addr, spi_out, opaq, msg), -1);
 		}
 
  out_err:
@@ -199,7 +204,7 @@ int hip_update_test_locator_addr(in6_addr_t *addr)
 
 int hip_update_add_peer_addr_item(
 	hip_ha_t *entry, struct hip_locator_info_addr_item *locator_address_item,
-	void *_spi)
+	void *_spi, struct hip_common *msg)
 {
 	in6_addr_t *locator_address =
 		&locator_address_item->address;
@@ -237,11 +242,11 @@ int hip_update_add_peer_addr_item(
 	if (ipv6_addr_cmp(locator_address, &entry->preferred_address) == 0) {
 		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, 1), -1);
+						 lifetime, 1, msg), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, is_preferred), -1);
+						 lifetime, is_preferred, msg), -1);
 	}
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -263,7 +268,8 @@ int hip_update_locator_match(hip_ha_t *unused,
 
 int hip_update_locator_item_match(hip_ha_t *unused,
 				  struct hip_locator_info_addr_item *item1,
-				  void *_item2)
+				  void *_item2,
+				  struct hip_common *msg)
 {
 	struct hip_peer_addr_list_item *item2 = _item2;
 	return !ipv6_addr_cmp(&item1->address, &item2->address);
@@ -273,13 +279,14 @@ int hip_update_locator_contains_item(struct hip_locator *locator,
 				     struct hip_peer_addr_list_item *item)
 {
 	return hip_for_each_locator_addr_item(hip_update_locator_item_match,
-					      NULL, locator, item);
+					      NULL, locator, item, NULL);
 }
 
 int hip_update_deprecate_unlisted(hip_ha_t *entry,
 				  struct hip_peer_addr_list_item *list_item,
 				  struct hip_spi_out_item *spi_out,
-				  void *_locator)
+				  void *_locator,
+				  struct hip_common *msg)
 {
 	int err = 0;
 	uint32_t spi_in;
@@ -319,7 +326,8 @@ int hip_update_set_preferred(hip_ha_t *entry,
 
 int hip_update_handle_locator_parameter(hip_ha_t *entry,
 					struct hip_locator *locator,
-					struct hip_esp_info *esp_info)
+					struct hip_esp_info *esp_info,
+					struct hip_common *msg)
 {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
@@ -353,7 +361,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 #endif            
 	if(locator)        
 		HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
-						       entry, spi_out, locator), -1,
+						       entry, spi_out, locator, NULL), -1,
 			 "Depracating a peer address failed\n"); 
      
 	/* checking did the locator have any address with the same family as
@@ -435,7 +443,7 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
  out_of_loop:
 	if(locator)
 		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-							entry, locator, &new_spi), -1,
+							entry, locator, &new_spi, msg), -1,
 			 "Locator handling failed\n"); 
 
 #if 0 /* Let's see if this is really needed -miika */
@@ -955,7 +963,8 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 
 int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 			       struct hip_peer_addr_list_item *addr,
-			       in6_addr_t *hits, in6_addr_t *hitr)
+			       in6_addr_t *hits, in6_addr_t *hitr,
+			       struct hip_common *msg)
 {
 	int err = 0;
 	uint32_t esp_info_old_spi = 0, esp_info_new_spi = 0;
@@ -979,6 +988,17 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 					  esp_info_new_spi),
 		 -1, "Building of ESP_INFO param failed\n");
 	/* @todo Handle overflow if (!update_id_out) */
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (msg)
+	{
+		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
+			"Building of solution_m failed\n");
+	} else {
+		HIP_DEBUG("msg is NULL, midauth parameters not included in reply\n");
+	}
+#endif
+
 	/* Add SEQ */
 	HIP_IFEBL2(hip_build_param_seq(update_packet,
 				       addr->seq_update_id), -1,
@@ -987,6 +1007,23 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* TODO: NEED TO ADD ACK */
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(addr->seq_update_id)),
 		 -1, "Building of ACK failed\n");
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (msg)
+	{
+		struct hip_echo_request_m *ping;
+
+		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+		while (ping) {
+			int ln = hip_get_param_contents_len(ping);
+			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
+				break;
+			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
+			         "Error while creating echo_m reply parameter\n");
+			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
+		}
+	}
+#endif
 
 	/* Add HMAC */
 	HIP_IFEBL2(hip_build_param_hmac_contents(update_packet,
@@ -1017,7 +1054,8 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       struct hip_peer_addr_list_item *addr,
 				       struct hip_spi_out_item *spi_out,
-				       void *saddr)
+				       void *saddr,
+				       struct hip_common *msg)
 {
 	in6_addr_t *src_ip = saddr;
 	/** @todo Make this timer based:
@@ -1027,7 +1065,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 	verify only unverified addresses
 	 */
 	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
-						      src_ip, 0);
+						      src_ip, 0, msg);
 
 }
 
@@ -1035,7 +1073,8 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 					   struct hip_peer_addr_list_item *addr,
 					   struct hip_spi_out_item *spi_out,
 					   in6_addr_t *src_ip,
-					   int verify_active_addresses)
+					   int verify_active_addresses,
+					   struct hip_common *msg)
 {
 	int err = 0;
 	hip_common_t *update_packet = NULL;
@@ -1071,7 +1110,7 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 		 "Update_packet alloc failed\n");
 
 	HIP_IFEL(hip_build_verification_pkt(entry, update_packet, addr, hits,
-					    hitr),
+					    hitr, msg),
 		 -1, "Building Verification Packet failed\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
@@ -1099,7 +1138,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	/** @todo Compiler warning; warning: passing argument 1 of
 	    'hip_update_for_each_peer_addr' from incompatible pointer type. */
 	HIP_IFEL(hip_update_for_each_peer_addr(hip_update_send_addr_verify_packet,
-					       entry, spi_out, src_ip), -1,
+					       entry, spi_out, src_ip, msg), -1,
 		 "Sending addr verify failed\n");
 	
  out_err:
@@ -1109,7 +1148,8 @@ int hip_update_send_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 
 int hip_update_find_address_match(hip_ha_t *entry,
 				  struct hip_locator_info_addr_item *item,
-				  void *opaque)
+				  void *opaque,
+				  struct hip_common *msg)
 {
 	in6_addr_t *addr = (in6_addr_t *) opaque;
      
@@ -1126,7 +1166,7 @@ int hip_update_check_simple_nat(in6_addr_t *peer_ip,
 	struct hip_locator_info_addr_item *item;
      
 	found = hip_for_each_locator_addr_item(hip_update_find_address_match,
-					       NULL, locator, peer_ip);
+					       NULL, locator, peer_ip, NULL);
 	HIP_IFEL(found, 0, "No address translation\n");
 
 	/** @todo Should APPEND the address to locator. */
@@ -1202,7 +1242,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 			  "yet)\n", spi_out);
 	}
 
-	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
+	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info, msg),
 		 -1, "hip_update_handle_locator_parameter failed\n");
 
  out_err:
@@ -1246,9 +1286,30 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	entry->hadb_misc_func->hip_build_network_hdr(
 		update_packet, HIP_UPDATE, mask, hitr, hits);
 
+#ifdef CONFIG_HIP_MIDAUTH
+	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
+		"Building of solution_m failed\n");
+#endif
+
 	/* reply with UPDATE(ACK, ECHO_RESPONSE) */
 	HIP_IFEL(hip_build_param_ack(update_packet, ntohl(seq->update_id)), -1,
 		 "Building of ACK failed\n");
+
+#ifdef CONFIG_HIP_MIDAUTH
+	{
+		struct hip_echo_request_m *ping;
+
+		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+		while (ping) {
+			int ln = hip_get_param_contents_len(ping);
+			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
+				break;
+			HIP_IFEL(hip_build_param_echo_m(update_packet, ping + 1, ln, 0), -1, 
+			         "Error while creating echo_m reply parameter\n");
+			ping = (struct hip_echo_request_m *) hip_get_next_param(msg, (struct hip_tlv_common *) ping);
+		}
+	}
+#endif
 
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(

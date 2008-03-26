@@ -2055,7 +2055,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
-	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
+	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1, i2),
 		 -1,  "Failed to add an address to SPI list\n");
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
@@ -2157,7 +2157,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         if (locator && esp_info)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                                                             locator, esp_info),
+                                                             locator, esp_info, i2),
                          -1, "hip_update_handle_locator_parameter failed\n");
             }
         else
@@ -2395,7 +2395,7 @@ int hip_handle_r2(struct hip_common *r2,
         /* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
-				       1, 0, 1);
+				       1, 0, 1, r2);
 	if (err)
 		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
 	entry->default_spi_out = spi_recvd;
@@ -2417,7 +2417,7 @@ int hip_handle_r2(struct hip_common *r2,
         if (entry->locator)
             {
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         entry->locator, esp_info),
+                         entry->locator, esp_info, r2),
                          -1, "hip_update_handle_locator_parameter failed\n");
             }
         else

@@ -496,7 +496,8 @@ struct hip_hadb_update_func_set{
 
 	int (*hip_update_send_echo)(hip_ha_t *entry,
 			            uint32_t spi_out,
-				    struct hip_peer_addr_list_item *addr);
+				    struct hip_peer_addr_list_item *addr,
+				    struct hip_common *msg);
 };
 
 struct hip_hadb_misc_func_set{ 
