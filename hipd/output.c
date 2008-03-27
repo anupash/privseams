@@ -80,7 +80,7 @@ int send_tcp_packet(void *hdr,
 		    int   sockfd,
 		    int   addOption,
 		    int   addHIT){
-	int    on = 1, i, j, err = 0;
+	int    on = 1, i, j, err = 0, off = 0;
 	int    hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
 	char  *bytes =(char*)hdr;
@@ -105,11 +105,6 @@ int send_tcp_packet(void *hdr,
 		newSize = newSize + 4;
 	if(addHIT)
 		newSize = newSize + sizeof(struct in6_addr);
-
-	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
-		HIP_DEBUG("Error setting an option to raw socket\n"); 
-		return;
-	}
 
 	//initializing the headers and setting socket settings
 	if(trafficType == 4){
@@ -249,14 +244,19 @@ int send_tcp_packet(void *hdr,
 	//replace the pseudo header bytes with the correct ones
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
+	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+		HIP_DEBUG("Error setting an option to raw socket\n"); 
+		return;
+	}
+
 	//finally send through the socket
 	err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
-	//if(err == -1) 
-		HIP_PERROR("send_tcp_packet");
 
 out_err:
 	if(defaultHit)
 		HIP_FREE(defaultHit);
+
+	setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&off, sizeof(off));
 
 	return err;
 }

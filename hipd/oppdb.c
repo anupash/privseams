@@ -485,7 +485,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 	
 	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
-		 "Did not find entry\n")
+		 "Did not find entry\n");
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
