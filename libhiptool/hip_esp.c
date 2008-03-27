@@ -119,6 +119,10 @@ __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst
 int g_state = 0;
 
 
+/* defined RAW socket IP out */
+#define RAW_IP_OUT 1
+
+
 
 /* 
  * Local data types 
