@@ -38,6 +38,7 @@
 #define HIP_SET_ESCROW_INACTIVE 86
 #define HIP_NAT_ON              87
 #define HIP_NAT_OFF             88
+#define HIP_FIREWALL_BEX_DONE   89 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define HIP_DAEMON_QUIT         127
 /* @} */
 

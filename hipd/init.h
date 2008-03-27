@@ -20,6 +20,8 @@
 /* added by Tao Wan on 14.Jan.2008 */
 #include "tcptimeout.h"
 
+#include "hadb.h"
+
 /*
  * HIP daemon initialization functions.
  *
@@ -50,6 +52,9 @@
 extern char *i3_config_file;
 extern char *hip_i3_config_file;
 extern int hip_use_i3;
+extern hip_ipsec_func_set_t default_ipsec_func_set;
+extern int hip_firewall_sock_fd;
+
 
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();

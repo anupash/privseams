@@ -115,8 +115,8 @@ __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst
 
 
 /* added by Tao Wan, define g_state to be 1 */
-
-int g_state = 1;
+/* status kernelspace ipsec */
+int g_state = 0;
 
 
 

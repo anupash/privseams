@@ -606,7 +606,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			hip_set_msg_err(msg, 1);
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
-		n = hip_sendto(msg, src);
+		n = hip_sendto(hip_user_sock, msg, src);
 	
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");

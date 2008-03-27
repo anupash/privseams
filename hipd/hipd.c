@@ -138,13 +138,6 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
-        int n = 0;
-        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-        return n;
-}
-
 /**
  * Receive message from agent socket.
  */
@@ -261,7 +254,7 @@ int hip_sock_recv_firewall(void)
 		memset(hipd_msg, 0, sizeof(struct hip_common));
 		hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
 		alen = sizeof(hip_firewall_addr);                    
-		n = hip_sendto(hipd_msg, (struct sockaddr_in6 *) &hip_firewall_addr);
+		n = hip_sendto(hip_user_sock, hipd_msg, (struct sockaddr_in6 *) &hip_firewall_addr);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
 		if (err == 0)

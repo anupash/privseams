@@ -829,7 +829,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	if (hip_blind_get_status()) {
 	  /* let the setup routine give us a SPI. */
 	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
@@ -844,7 +844,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
@@ -857,14 +857,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,
 					 &entry->hit_our,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
 	}
 #endif
 	if (!hip_blind_get_status()) {
-	  HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&ctx->input->hits,
 					 &ctx->input->hitr,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
@@ -1865,7 +1865,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  /* Set up IPsec associations */
-	  err = hip_add_sa(i2_saddr, i2_daddr,
+	  err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
 			   &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
@@ -1876,7 +1876,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	if (!use_blind) {
 	/* Set up IPsec associations */
-	err = hip_add_sa(i2_saddr, i2_daddr,
+	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
@@ -1915,7 +1915,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	   err = hip_add_sa(i2_daddr, i2_saddr,
+	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
@@ -1924,7 +1924,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 #endif
 
 	if (!use_blind) {
-	  err = hip_add_sa(i2_daddr, i2_saddr,
+	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
@@ -1959,14 +1959,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_BLIND
     if (use_blind) {
-      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
+      HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,
 				     &entry->hit_our,
 				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
 	       -1, "Setting up SP pair failed\n");
     }
 #endif
     if (!use_blind) {
-	    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+	    HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&ctx->input->hits,
 					   &ctx->input->hitr,
 					   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
 		     -1, "Setting up SP pair failed\n");
@@ -2270,7 +2270,7 @@ int hip_handle_r2(struct hip_common *r2,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  err = hip_add_sa(r2_daddr, r2_saddr,
+	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
@@ -2279,7 +2279,7 @@ int hip_handle_r2(struct hip_common *r2,
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
-	  err = hip_add_sa(r2_daddr, r2_saddr,
+	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,

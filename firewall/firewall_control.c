@@ -117,15 +117,90 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 
 	_HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
+
+	//for(param = hip_get_next_) {
+	//	switch (type = hip_get_param_type(param))) 
+	//      PARAM_XX:
+	//      break;
+	//}
 	
-	if (type == HIP_ADD_ESCROW_DATA)
+	switch(type) 
+	
 	{
-		struct hip_keys * keys = NULL;
-		struct in6_addr * hit_s = NULL;
-		struct in6_addr * hit_r = NULL;
+
+	
+	case HIP_FIREWALL_BEX_DONE: 
 		
+		HIP_DEBUG("Received base exchange done from hipd\n\n");
+		struct in6_addr *saddr = NULL, *daddr = NULL;
+		struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+		uint32_t *spi_ipsec = NULL;
+		int ealg;
+		struct hip_crypto_key *enckey = NULL, *authkey = NULL;
+		int already_acquired, direction, update, sport, dport;
+		
+		
+		/* now param: src addr */
+		saddr = (struct in6_addr *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+		
+                 /* now param: dst addr */
+		daddr = (struct in6_addr *)hip_get_next_param(msg, param);
+		
+		/* now param: src_hit */
+		src_hit = (struct in6_addr *)hip_get_param(msg, HIP_PARAM_HIT);
+		
+		/* now param: dst_hit */
+		dst_hit = (struct in6_addr *)hip_get_next_param(msg, param);
+		
+
+		/* now param: spi */
+		spi_ipsec = (uint32_t *) hip_get_param(msg, HIP_PARAM_UINT);
+		
+
+		/* now param: enckey */
+		enckey = (struct hip_crypto_key *) hip_get_param(msg, HIP_PARAM_KEYS);
+		
+		/* now param: anthkey */
+		authkey = (struct hip_crypto_key *)hip_get_next_param(msg, param);
+
+
+		/* now param: ealg */
+		ealg = (int )hip_get_param(msg, HIP_PARAM_INT);
+		/* now param: already_acquired */
+		already_acquired = (int) hip_get_next_param(msg, param);
+		/* now param: direction */
+		direction = (int) hip_get_next_param(msg, param);
+		/* now param: update */
+		update = (int) hip_get_next_param(msg, param);
+		/* now param: sport */
+		sport = (int) hip_get_next_param(msg, param);
+		/* now param: dport */
+		dport = (int) hip_get_next_param(msg, param);
+ 
+		
+
+		
+		err =  hipl_userspace_ipsec_api_wrapper_sadb_add(saddr, daddr, 
+								 src_hit, dst_hit, 
+								 spi_ipsec, ealg, enckey, 
+								 authkey, already_acquired, 
+								 direction, update, 
+								 sport, dport);
+		
+		
+		if (err < 0) {
+			HIP_ERROR("hip userspace sadb add went wrong\n\n");
+			goto out_err;
+		}
+		
+		break;
+
+	case HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
+			struct hip_keys * keys = NULL;
+			struct in6_addr * hit_s = NULL;
+			struct in6_addr * hit_r = NULL;
 			
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
@@ -162,18 +237,18 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 					auth_len = 32;	
 				else	
 					HIP_DEBUG("Authentication algorithm unsupported\n");
-
+				
 				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address, 
-		     		spi, alg, auth_len, key_len, &keys->enc);
-		     	if (err < 0) {
-		     		HIP_ERROR("Adding esp decryption data failed");
-		     		goto out_err;
-		     	}
+							      spi, alg, auth_len, key_len, &keys->enc);
+				if (err < 0) {
+					HIP_ERROR("Adding esp decryption data failed");
+					goto out_err;
+				}
 				_HIP_DEBUG("Successfully added esp decryption data\n");	
 			}
 		}
-	}
-	else if (type == HIP_DELETE_ESCROW_DATA) {
+		break;
+	case HIP_DELETE_ESCROW_DATA: 
                 HIP_DEBUG("Received delete message from hipd\n\n");
                 struct in6_addr * addr = NULL;
                 uint32_t * spi = NULL;
@@ -194,21 +269,22 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 }
                 if ((addr != NULL) && (spi != NULL)) {
                         HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
-                                "Error while removing decryption data\n");
+				 "Error while removing decryption data\n");
                 }
                 
-	}
-        else if (type == HIP_SET_ESCROW_ACTIVE) {
+		break;
+        case HIP_SET_ESCROW_ACTIVE: 
                 HIP_DEBUG("Received activate escrow message from hipd\n\n");
                 set_escrow_active(1);
                 
-        }
-        else if (type == HIP_SET_ESCROW_INACTIVE) {
+		break;
+	case HIP_SET_ESCROW_INACTIVE: 
                 HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
                 set_escrow_active(0);
-        }
-        
-        
+		break;
+		
+	}
+         
 	
 out_err:	
 	return err;

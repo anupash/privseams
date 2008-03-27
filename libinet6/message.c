@@ -346,3 +346,10 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 					daddr, msg_info, encap_hdr_size, 1);
 
 }
+
+int hip_sendto(int sock, const struct hip_common *msg, const struct sockaddr_in6 *dst){
+        int n = 0;
+        n = sendto(sock, msg, hip_get_msg_total_len(msg),
+                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
+        return n;
+}

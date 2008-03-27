@@ -1,4 +1,4 @@
-/** @file
+/* @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
  * 

@@ -678,7 +678,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
                         "hip build param failed\n");
 
-		n = hip_sendto(msg, &hip_firewall_addr);                   
+		n = hip_sendto(hip_user_sock, msg, &hip_firewall_addr);                   
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");
@@ -690,7 +690,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 out_err:
 	return err;
 
-}
+}     
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
 {
@@ -709,9 +709,9 @@ int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
         HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
         HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
-                sizeof(unsigned int)), -1, "build param contents failed\n");
+                sizeof(unsigned int)), -1, "build param contents failed\n"); 
                 
-        n = hip_sendto(msg, &hip_firewall_addr);                   
+        n = hip_sendto(hip_user_sock, msg, &hip_firewall_addr);                   
         if (n < 0)
         {
                 HIP_ERROR("Sendto firewall failed.\n");
@@ -738,7 +738,7 @@ int hip_firewall_set_escrow_active(int activate)
                 (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
                 -1, "Build hdr failed\n");
                 
-        n = hip_sendto(msg, &hip_firewall_addr);                   
+        n = hip_sendto(hip_user_sock, msg, &hip_firewall_addr);                   
         if (n < 0) {
                 HIP_ERROR("Sendto firewall failed.\n");
                 err = -1;
@@ -788,3 +788,5 @@ int opendht_put_locator(int sockfd,
  out_err:
     return(err);
 }
+
+

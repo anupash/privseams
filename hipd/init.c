@@ -233,14 +233,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	if (flush_ipsec)
 	{
-		hip_flush_all_sa();
-		hip_flush_all_policy();
+		default_ipsec_func_set.hip_flush_all_sa();
+		default_ipsec_func_set.hip_flush_all_policy();
 	}
 
 	HIP_DEBUG("Setting SP\n");
-	hip_delete_default_prefix_sp_pair();
-	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
-
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
+	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), 1);
+	
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
@@ -292,6 +292,8 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
+
+	hip_firewall_sock_fd = hip_user_sock;
 
 out_err:
 	return err;
@@ -627,7 +629,7 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 

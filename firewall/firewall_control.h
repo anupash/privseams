@@ -7,7 +7,7 @@
 
 #include "builder.h"
 #include "protodefs.h"
-
+#include "ipsec_userspace_api.h"
 
 gpointer run_control_thread(gpointer data);
 int control_thread_init(void);

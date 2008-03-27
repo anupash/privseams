@@ -22,6 +22,9 @@
 #include "misc.h"
 #include "state.h"
 #include "protodefs.h"
+#include "hipd.h"
+
+
 
 
 
@@ -39,6 +42,18 @@ typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Ta
 
 
 __u16 checksum_magic(const hip_hit *i, const hip_hit *r);
+
+
+int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
+				     struct in6_addr *daddr,
+				     struct in6_addr *src_hit, 
+				     struct in6_addr *dst_hit,
+				     uint32_t *spi, int ealg,
+				     struct hip_crypto_key *enckey,
+				     struct hip_crypto_key *authkey,
+				     int already_acquired,
+				     int direction, int update,
+				     int sport, int dport);
 
 
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
@@ -60,5 +75,8 @@ int hip_userspace_ipsec_flush_all_sa();
 uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 void hip_userspace_ipsec_delete_default_prefix_sp_pair();
 int hip_userspace_ipsec_setup_default_sp_prefix_pair();
+
+
+
 
 #endif /* IPSEC_USERSPACE_IPSEC_API_H */

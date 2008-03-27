@@ -28,6 +28,9 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
+#include "hip_usermode.h"
+#include "misc.h"
+
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -57,10 +60,17 @@ int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
+
+void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
+					 unsigned long packetId,
+					 void *hdr,
+					 int trafficType);
+
+void hip_firewall_userspace_ipsec_input();
+
 int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
 				      void (*hip_esp_userspace_traffic)(void *), 
 				      void *thread_param);
-
 
 #endif
 
