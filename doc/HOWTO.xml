@@ -880,6 +880,39 @@
   examples of configuration changes and instructions.
   </para>
   </section>
+  <section>
+  <title>OpenLDAP</title>
+  <para>
+  Tested with stable version openldap-2.3.38 and with release version
+  2.4.7. Using OpenLDAP with HIP is pretty straight forward thing to
+  do. Simplest way is to run hipd on both machines and just use
+  command like <emphasis>"hipconf run normal ldapsearch -x -H
+  ldap://&lt;fqdn&gt; -b
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis> The name can be
+  something found from <emphasis>/etc/hosts</emphasis>
+  and <emphasis>/etc/hip/hosts</emphasis> or you can use OpenDHT to
+  resolve names to HIT and address. Search can also be done directly
+  with HIT by command <emphasis>"ldapsearch -x -b 
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' -H ldap://[&lt;HIT&gt;]
+  '(objectclass=*)'"</emphasis>.
+
+  You can search also by using the opportunistic mode by using command 
+  <emphasis>"hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b  
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis>.
+  Ldapadd can be used similarly with LDAPURI and HIP. Longer tutorial
+  can be found
+  from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
+  </para>
+  </section>
+  <section>
+  <title>Networking scripts and instructions for virtual machines and HIP</title>
+  <para>
+  These pages contain some scripts for vmware, virtualbox and UML
+  users. For UML there is a more complete tutorial on howto compile
+  HIP enabled host and guest
+  kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
+  </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
