@@ -295,7 +295,7 @@ void hip_nat_randomize_nat_ports()
 #endif
 
 //TODO
-pj_ice_sess **  	p_ice;
+
 pj_caching_pool cp;
 pj_status_t status;
 pj_pool_t *pool = 0;
@@ -417,9 +417,11 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
  * */
 
 void* hip_external_ice_init(pj_ice_sess_role role){
-	
+	pj_ice_sess **  	p_ice;
 	//init for PJproject
+	HIP_DEBUG("santtu ice o \n");
 	status = pj_init();
+	HIP_DEBUG("santtu ice 1 %d \n", status);
 	pjlib_util_init();
 	
 	
@@ -429,8 +431,10 @@ void* hip_external_ice_init(pj_ice_sess_role role){
     }
 	//init for memery pool factroy
     // using default pool policy.
+    HIP_DEBUG("santtu ice 2 \n");
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy,0 );  
     
+    HIP_DEBUG("santtu ice 3 \n");
     pjnath_init();
     
 	
@@ -464,15 +468,17 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	cb.on_rx_data= &hip_on_rx_data;
  
  	//copy from test
- 	    
- 	    pj_ioqueue_create(pool, 12, &ioqueue);
- 	    pj_timer_heap_create(pool, 100, &timer_heap);
- 	    
+ 	 HIP_DEBUG("santtu ice 4 \n");    
+ 	   
+ 	  
  	    pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
  	    pool = pj_pool_create(stun_cfg.pf, NULL, 4000, 4000, NULL);
+ 	   HIP_DEBUG("santtu ice 4 1\n"); 
+ 	   pj_ioqueue_create(pool, 12, &ioqueue);
+ 	   pj_timer_heap_create(pool, 100, &timer_heap);
  	//end copy
  	    
- 	    
+ 	   HIP_DEBUG("santtu ice 5 \n");   
  	//check if there is already a session
  	if(!p_ice)
  	 if(PJ_SUCCESS == pj_ice_sess_create( 
@@ -484,8 +490,10 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  			local_ufrag,
  			local_passwd,
  			p_ice	 
- 		) )
- 		 return p_ice;
+ 		) ){
+ 		HIP_DEBUG("santtu ice 6 \n"); 
+ 		 return *p_ice;
+ 	  }
  	/**/
  	return 0;
  	

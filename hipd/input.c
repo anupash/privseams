@@ -2522,10 +2522,13 @@ int hip_handle_r2(struct hip_common *r2,
 
 	
 #ifdef HIP_USE_ICE
+	    HIP_DEBUG("ICE init \n");
                 //init the session right after the locator receivd
         ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
         if(ice_session){
         	entry->ice_session = ice_session;
+        	HIP_DEBUG("ICE add local \n");
+        	
         	//add the type 1 address first
         	for(i = 0; i <address_count;i++){
         		hip_external_ice_add_local_candidates(ice_session,addresses[i],50500,1);
@@ -2533,9 +2536,14 @@ int hip_handle_r2(struct hip_common *r2,
         	//TODO add reflexive address 
         	
         	//TODO add relay address
+        	
+        	
+        	HIP_DEBUG("ICE add remote \n");
         	// add remote address
         	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
         	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	
+        	HIP_DEBUG("ICE start checking \n");
         	hip_ice_start_check(ice_session);
         	
         }
