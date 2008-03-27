@@ -28,6 +28,7 @@ static IMPLEMENT_LHASH_COMP_FN(firewall_compare_hl, const firewall_hl_t *)
 struct ipq_handle *h4 = NULL, *h6 = NULL;
 int statefulFiltering = 1; 
 int escrow_active = 0;
+int bex_done = 0;
 int use_ipv4 = 0;
 int use_ipv6 = 0;
 int accept_normal_traffic = 1;
@@ -68,6 +69,14 @@ void set_escrow_active(int active){
 
 int is_escrow_active(){
 	return escrow_active;
+}
+
+void set_bex_done(int done){
+	bex_done = done;
+}
+
+int is_bex_done(){
+	return bex_done;
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
@@ -808,23 +817,27 @@ static void *handle_ip_traffic(void *ptr) {
 			struct ip * iphdr = NULL;
 			void * packet_hdr = NULL;
 			int hdr_size = 0;
-      
+      			HIP_DEBUG("IPQM PACKET Detected!!\n");
 			ipq_packet_msg_t *m = ipq_get_packet(buf);
 			packetHook = m->hook;
 
 			if(ipv4Traffic){
-                		_HIP_DEBUG("ipv4\n");
+                		HIP_DEBUG("ipv4\n");
                 		iphdr = (struct ip *) m->payload; 
                 		packet_hdr = (void *)iphdr;
                 		hdr_size = (iphdr->ip_hl * 4);
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-				if(IS_LSI(&iphdr->ip_dst)){
-					if(is_outgoing_packet(packetHook))
+
+				if(IS_LSI((iphdr->ip_dst).s_addr)){
+					if(is_outgoing_packet(packetHook)){
+		                		HIP_DEBUG("It's LSI and outgoing packet\n");
 						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-					else if (is_incoming_packet(packetHook))
+					}else if(is_incoming_packet(packetHook)){
+						HIP_DEBUG("It's LSI and incoming packet\n");
 						firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+					}
 					drop_packet(hndl, m->packet_id);
 				}
 				break;
@@ -934,24 +947,14 @@ int firewall_trigger_incoming_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	return err;
 }
 
-void firewall_check_socket(){
-	fd_set read_fdset;
-	FD_ZERO(&read_fdset);
-	FD_SET(hip_firewall_sock, &read_fdset);
-	while (!FD_ISSET(hip_firewall_sock, &read_fdset)){}
-	hip_msg_init(hipd_msg);
-}
 
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
 	int err, msg_type;
-	struct in6_addr *src_addr = NULL;
 	struct in6_addr *dst_addr = NULL;
 	struct in6_addr dst_hit;
 	struct in6_addr *default_local_hit;		
 	firewall_hl_t *lsi_hit_peer;
-	gpointer hipd_msg;
 
-       	IPV4_TO_IPV6_MAP(ip_src, src_addr);
         IPV4_TO_IPV6_MAP(ip_dst, dst_addr);
 	hip_get_default_hit(default_local_hit);
 	/*HIT IF LSI ALREADY IN THE DATABASE*/
@@ -959,16 +962,22 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	if (lsi_hit_peer){
 		// BEX already done
 		// insert the hits in the packet 
+		HIP_DEBUG("ip_dst Present in firewall database \n");
 		reinject_packet(lsi_hit_peer->hit, *default_local_hit, m);
 	}
 	else{
 		// RUN BEX to initialize SP and SA
 		HIP_IFEL(hip_trigger_bex(NULL, dst_hit, NULL, dst_addr), -1, "Base Exchange Trigger failed");
 		// Waits for R2 answer
-		if (!run_control_thread(hipd_msg)){
+		while (is_bex_done()==0){}
+		if (is_bex_done()){
 			firewall_add_hit_lsi(firewall_lsi_hit_db, &dst_hit, ip_dst);
 			reinject_packet(dst_hit, *default_local_hit, m);
+		}else{
+			//BEX not done
+			err = -1;
 		}
+		set_bex_done(0);
 	}
 out_err: 
 	return err;

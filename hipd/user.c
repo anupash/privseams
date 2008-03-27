@@ -535,6 +535,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 #endif
 	case SO_HIP_TRIGGER_BEX:
+		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
 		hip_firewall_status = 1;
 		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 
@@ -545,15 +546,13 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 				 -1, "internal error: no hadb entry found\n");
 		}else{
-			//lsi already mapped because hipconf command and non-opportunistic mode
+			//hit_peer already mapped because hipconf command and non-opportunistic mode
 			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_lsi(lsi)),
 				 -1, "internal error: no hadb entry found\n");
 			ipv6_addr_copy(dst_hit, &entry->hit_peer);		
 		}
 
-		if (hip_firewall_is_alive())
-			hip_firewall_set_escrow_active(1);
-
+		HIP_DEBUG("Sending i1\n");
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 				 -1, "sending i1 failed\n");
 

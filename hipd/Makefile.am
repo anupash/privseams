@@ -11,6 +11,7 @@ include_HEADERS += bos.h input.h output.h icookie.h blind.h
 include_HEADERS += close.h hi3.h keymat.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h
 include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h
+include_HEADERS += firewall_control.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd

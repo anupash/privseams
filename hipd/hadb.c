@@ -282,12 +282,16 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 				    hip_hit_t *local_hit,
 				    hip_hit_t *peer_hit,
 				    hip_lsi_t *peer_lsi){
-	
-	HIP_DEBUG_IN6ADDR("Our addr", local_addr);
-	HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
-	HIP_DEBUG_HIT("Our HIT", local_hit);
-	HIP_DEBUG_HIT("Peer HIT", peer_hit);
-	HIP_DEBUG_LSI("Peer LSI", peer_lsi);
+	if (local_addr)
+		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
+	if (peer_addr)
+		HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
+	if (local_hit)
+		HIP_DEBUG_HIT("Our HIT", local_hit);
+	if (peer_hit)	
+		HIP_DEBUG_HIT("Peer HIT", peer_hit);
+	if (peer_lsi)
+		HIP_DEBUG_LSI("Peer LSI", peer_lsi);
 }
 
 int hip_null_lsi(hip_lsi_t lsi_peer){
@@ -432,8 +436,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 	hip_lsi_t lsi_aux;
 	
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
-	HIP_DEBUG_HIT("Peer HIT ", peer_hit);
-	HIP_DEBUG_IN6ADDR("Peer addr ", peer_addr);
+	//HIP_DEBUG_HIT("Peer HIT ", peer_hit);
+	//HIP_DEBUG_IN6ADDR("Peer addr ", peer_addr);
+
+ 	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi);
 		
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));

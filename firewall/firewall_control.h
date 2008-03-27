@@ -8,7 +8,6 @@
 #include "builder.h"
 #include "protodefs.h"
 
-
 gpointer run_control_thread(gpointer data);
 int control_thread_init(void);
 int sendto_hipd(void *msg, size_t len);

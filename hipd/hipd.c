@@ -46,6 +46,7 @@ int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
 struct sockaddr_in6 hip_firewall_addr;
+int hip_firewall_sock = 0;// Extern but compilation error
 
 /* 
    HIP transform suite order 
@@ -220,7 +221,7 @@ out_err:
 /**
  * Receive message from firewall socket.
  */
-
+#if 0
 int hip_sock_recv_firewall(void)
 {
 	int n, err;
@@ -277,7 +278,7 @@ int hip_sock_recv_firewall(void)
 out_err:
 	return err;
 }
-
+#endif
 
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
@@ -405,7 +406,7 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		FD_SET(hip_agent_sock, &read_fdset);
-		FD_SET(hip_firewall_sock, &read_fdset);
+		//FD_SET(hip_firewall_sock, &read_fdset);
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
 		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)

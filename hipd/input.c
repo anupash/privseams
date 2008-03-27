@@ -1747,20 +1747,23 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	     HIP_DEBUG("No entry, creating new\n");
 	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 		      "Failed to create or find entry\n");
-	     
+	     HIP_DEBUG("After creating a new state\n");
 	     /* The rest of the code assume already locked entry, so lock the
 		newly created entry as well. */
 	     HIP_LOCK_HA(entry);
 	     if (use_blind) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
+			HIP_DEBUG("Using blinding\n");
 	     }
 	     else {
 		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		  hip_init_us(entry, &i2->hitr);
+			HIP_DEBUG("Not Using blinding\n");
 	     }
-		
+		HIP_DEBUG("Before inserting state entry in hadb\n");
 	     hip_hadb_insert_state(entry);
+		HIP_DEBUG("After inserting state entry in hadb\n");
 	     hip_hold_ha(entry);
 	     
 	     _HIP_DEBUG("HA entry created.");
@@ -2277,7 +2280,7 @@ int hip_handle_r2(struct hip_common *r2,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
 			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
-	  hip_firewall_add_escrow_data(entry, &entry->hit_our, &entry->hit_peer, NULL);
+	  hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
@@ -2288,7 +2291,7 @@ int hip_handle_r2(struct hip_common *r2,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 
-	  hip_firewall_add_escrow_data(entry, &ctx->input->hitr, &ctx->input->hits, NULL);
+	  hip_firewall_add_bex_data(entry, &ctx->input->hitr, &ctx->input->hits);
 	}
 
 	/*
@@ -2378,8 +2381,18 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
-	if (err)
-		hip_firewall_add_escrow_data(entry, NULL, NULL, NULL);
+
+	if (entry->state == HIP_STATE_ESTABLISHED){
+		if (!hip_blind_get_status()){
+			hip_firewall_add_bex_data(entry, &ctx->input->hitr, &ctx->input->hits);
+		}
+		else{
+			hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+		}
+	}
+	else
+		hip_firewall_add_bex_data(entry, NULL, NULL);
+	
 	if (ctx)
 		HIP_FREE(ctx);
         if (reg_types)

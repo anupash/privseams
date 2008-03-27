@@ -629,6 +629,10 @@ int periodic_maintenance()
 	return err;
 }
 
+int hip_get_firewall_status(){
+	return hip_firewall_status;
+}
+
 int hip_firewall_is_alive()
 {
 #ifdef CONFIG_HIP_FIREWALL
@@ -690,6 +694,28 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 out_err:
 	return err;
 
+}
+
+
+int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r){
+	struct hip_common *msg;
+	int err = 0;
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, HIP_BEX_DONE, 0), -1, 
+                 "Build hdr failed\n");
+		            
+        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+                	
+	HIP_IFEL(hip_sendto_firewall(msg) < 0, -1, "Sendto firewall failed.\n");             
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
 }
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)

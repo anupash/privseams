@@ -110,23 +110,21 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
-	hip_hdr_type_t type;
 	socklen_t alen;
-	int err = 0;
-	
+	int type, err = 0;
+	struct hip_keys *keys = NULL;
+	struct in6_addr *hit_s = NULL;
+	struct in6_addr *hit_r = NULL;	
+
 
 	_HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
 	
-	if (type == HIP_ADD_ESCROW_DATA)
+	switch(type)
 	{
-		struct hip_keys * keys = NULL;
-		struct in6_addr * hit_s = NULL;
-		struct in6_addr * hit_r = NULL;
-		
+	case HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
-			
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
 				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
@@ -142,18 +140,18 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 				int auth_len;
 				int key_len;
 				int spi;
-				
+			
 				keys = (struct hip_keys *)param;
 				
 				// TODO: Check values!!
 				auth_len = 0;
 				//op = ntohs(keys->operation);
-	 			//spi = ntohl(keys->spi);
-	 			spi = ntohl(keys->spi);
-	 			//spi_old = ntohl(keys->spi_old);
-	 			key_len = ntohs(keys->key_len);
-	 			alg = ntohs(keys->alg_id);
-				
+		 		//spi = ntohl(keys->spi);
+		 		spi = ntohl(keys->spi);
+		 		//spi_old = ntohl(keys->spi_old);
+		 		key_len = ntohs(keys->key_len);
+		 		alg = ntohs(keys->alg_id);
+			
 				if (alg == HIP_ESP_3DES_SHA1)
 					auth_len = 24;
 				else if (alg == HIP_ESP_AES_SHA1)
@@ -162,54 +160,58 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 					auth_len = 32;	
 				else	
 					HIP_DEBUG("Authentication algorithm unsupported\n");
-
 				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address, 
-		     		spi, alg, auth_len, key_len, &keys->enc);
-		     	if (err < 0) {
-		     		HIP_ERROR("Adding esp decryption data failed");
-		     		goto out_err;
-		     	}
+		     					      spi, alg, auth_len, key_len, &keys->enc);
+		     		
+				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed"); 
 				_HIP_DEBUG("Successfully added esp decryption data\n");	
 			}
 		}
+		break;
+	case HIP_DELETE_ESCROW_DATA:
+		HIP_DEBUG("Received delete message from hipd\n\n");
+	        struct in6_addr * addr = NULL;
+	        uint32_t * spi = NULL;
+                
+	        while((param = hip_get_next_param(msg, param)))
+	        {       
+	                if (hip_get_param_type(param) == HIP_PARAM_HIT)
+	                {
+	                        HIP_DEBUG("Handling HIP_PARAM_HIT\n");
+	                        addr = hip_get_param_contents_direct(param);
+	                }
+	                if (hip_get_param_type(param) == HIP_PARAM_UINT)
+	                {
+	                        HIP_DEBUG("Handling HIP_PARAM_UINT\n");
+	                        spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
+	                }
+	        }
+	        if ((addr != NULL) && (spi != NULL)) {
+	                HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
+	                        "Error while removing decryption data\n");
+	        }
+               	break;
+	case HIP_SET_ESCROW_ACTIVE:
+               	HIP_DEBUG("Received activate escrow message from hipd\n\n");
+               	set_escrow_active(1);
+               	break;              
+	case HIP_SET_ESCROW_INACTIVE:
+	        HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
+	        set_escrow_active(0);
+               	break;
+        case HIP_BEX_DONE:
+		hit_s = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
+		hit_r = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
+		if (!hit_r)
+			set_bex_done(-1);
+		else
+			set_bex_done(1);
+		break;
+	default:
+		HIP_DEBUG("Type of message not handled\n");
+		err = -1;
+		break;
 	}
-	else if (type == HIP_DELETE_ESCROW_DATA) {
-                HIP_DEBUG("Received delete message from hipd\n\n");
-                struct in6_addr * addr = NULL;
-                uint32_t * spi = NULL;
-                
-                while((param = hip_get_next_param(msg, param)))
-                {
-                        
-                        if (hip_get_param_type(param) == HIP_PARAM_HIT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_HIT\n");
-                                addr = hip_get_param_contents_direct(param);
-                        }
-                        if (hip_get_param_type(param) == HIP_PARAM_UINT)
-                        {
-                                HIP_DEBUG("Handling HIP_PARAM_UINT\n");
-                                spi = hip_get_param_contents(msg, HIP_PARAM_UINT);
-                        }
-                }
-                if ((addr != NULL) && (spi != NULL)) {
-                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
-                                "Error while removing decryption data\n");
-                }
-                
-	}
-        else if (type == HIP_SET_ESCROW_ACTIVE) {
-                HIP_DEBUG("Received activate escrow message from hipd\n\n");
-                set_escrow_active(1);
-                
-        }
-        else if (type == HIP_SET_ESCROW_INACTIVE) {
-                HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
-                set_escrow_active(0);
-        }
-        
-        
-	
 out_err:	
 	return err;
 

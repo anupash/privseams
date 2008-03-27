@@ -1784,6 +1784,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 	struct in_addr *dst_ip4;
 	int err = 0, is_lsi = 0;
 
+	HIP_ERROR("hip_trigger_bex\n");
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	if (src_hit)

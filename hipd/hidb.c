@@ -221,7 +221,6 @@ int hip_add_host_id(hip_db_struct_t *db,
 	/* assign a free lsi address */
 	HIP_IFEL((hip_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
 
-	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
 	id_entry->remove = remove;
 	id_entry->arg = arg;
