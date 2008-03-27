@@ -628,7 +628,7 @@ int hip_relay_read_config(){
 	FILE *fp = NULL;
 	int lineerr = 0, parseerr = 0, err = 0;
 	char parameter[HIP_RELAY_MAX_PAR_LEN + 1];
-	hip_ll_t values;
+	hip_configvaluelist_t values;
 	hip_hit_t hit, *wl_hit = NULL;
 	uint8_t max = 255; /* Theoretical maximum lifetime value. */
 
@@ -638,20 +638,20 @@ int hip_relay_read_config(){
 	do {
 		parseerr = 0;
 		memset(parameter, '\0', sizeof(parameter));
-		hip_ll_init(&values);
+		hip_cvl_init(&values);
 		lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 				
 		if(parseerr == 0){
 			HIP_DEBUG("param: '%s'\n", parameter);
-			hip_ll_node_t *current = NULL;
+			hip_configfilevalue_t *current = NULL;
 			if(strcmp(parameter, "whitelist_enabled") == 0) {
-				current = hip_ll_get_next(&values, current);
+				current = hip_cvl_get_next(&values, current);
 				if(strcmp(current->data, "no") == 0) {
 					whitelist_enabled = 0;
 				}
 			} else if(strcmp(parameter, "whitelist") == 0) {
 				while((current = 
-				       hip_ll_get_next(&values, current))
+				       hip_cvl_get_next(&values, current))
 				      != NULL) {
 					/* Try to convert the characters to an
 					   IPv6 address. */
@@ -677,7 +677,7 @@ int hip_relay_read_config(){
 			} else if(strcmp(parameter, "minimum_lifetime") == 0) {
 				time_t tmp = 0;
 				uint8_t val = 0;
-				current = hip_ll_get_next(&values, current);
+				current = hip_cvl_get_next(&values, current);
 				tmp = atol(current->data);
 				
 				if(get_lifetime_value(tmp, &val) == 0) {
@@ -692,7 +692,7 @@ int hip_relay_read_config(){
 			} else if(strcmp(parameter, "maximum_lifetime") == 0) {
 				time_t tmp = 0;
 				uint8_t val = 0;
-				current = hip_ll_get_next(&values, current);
+				current = hip_cvl_get_next(&values, current);
 				tmp = atol(current->data);
 				
 				if(get_lifetime_value(tmp, &val) == 0) {
@@ -701,7 +701,7 @@ int hip_relay_read_config(){
 			}
 		}
 
-		hip_ll_uninit(&values);
+		hip_cvl_uninit(&values);
 		
 	} while(lineerr != EOF);
 	

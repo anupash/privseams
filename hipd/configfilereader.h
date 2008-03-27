@@ -21,7 +21,7 @@
  * them zero</li>
  * <li>Declare a char array for the parameter's name
  * <code>parameter[HIP_RELAY_MAX_PAR_LEN + 1]</code></li>
- * <li>Declare a linked list <code>hip_ll_t values</code> for values</li>
+ * <li>Declare a linked list <code>hip_configvaluelist_t values</code> for values</li>
  * <li>Open the configfile using <code>fopen()</code></li>
  * <li>Go through the configuration file using hip_cf_get_line_data()
  * inside a <code>do{ }while()</code> -loop:
@@ -29,21 +29,21 @@
  * do {
  *     parseerr = 0;
  *     memset(parameter, '\0', sizeof(parameter));
- *     hip_ll_init(&values);
+ *     hip_cvl_init(&values);
  *     lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
  * 				
  *     if(parseerr == 0){
  *        
  *       ... parameter has now the parameter name ...
  * 
- *        hip_ll_node_t *current = NULL;
- * 	  while((current = hip_ll_get_next(&values, current)) != NULL) {
+ *        hip_configfilevalue_t *current = NULL;
+ * 	  while((current = hip_cvl_get_next(&values, current)) != NULL) {
  * 
  *           ... do stuff with the current value ...
  *	  
  *        }
  *    }
- *    hip_ll_uninit(&values);
+ *    hip_cvl_uninit(&values);
  * } while(lineerr != EOF);
  * </pre>
  * </li>
@@ -90,15 +90,15 @@
 #define HIP_ELONG              -11
 
 /** Linked list node. */
-typedef struct hip_ll_node{
+typedef struct hip_cvl_node{
 	char data[HIP_RELAY_MAX_VAL_LEN + 1]; /**< Node data. */
-	struct hip_ll_node *next; /**< A pointer to next item. */ 
-}hip_ll_node_t;
+	struct hip_cvl_node *next; /**< A pointer to next item. */ 
+}hip_configfilevalue_t;
 
 /** Linked list. */
 typedef struct{
-	hip_ll_node_t *head; /**< A pointer to the first item of the list. */
-}hip_ll_t;
+	hip_configfilevalue_t *head; /**< A pointer to the first item of the list. */
+}hip_configvaluelist_t;
 
 /**
  * Gets parameter and values from a config file line. This is the main function
@@ -119,7 +119,7 @@ typedef struct{
  *                   @c parameter, @c values or @c parseerr is NULL, otherwise
  *                   the number of succesfully read characters.
  */ 
-int hip_cf_get_line_data(FILE *fp, char *parameter, hip_ll_t *values,
+int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *values,
 			 int *parseerr);
 
 /**
@@ -176,7 +176,7 @@ int hip_cf_parse_par(char *line, char *parameter);
 /**
  * Parses values from a line. Parses values from the parameter @c line and
  * stores the values into the linked list of @c values. The target buffer @c
- * values must be initialized with hip_ll_init() before calling this function.
+ * values must be initialized with hip_cvl_init() before calling this function.
  * 
  * Values are in the string on the righthandside of @c HIP_RELAY_PAR_SEP.
  * Values may contain spaces and they must be at most @c HIP_RELAY_MAX_VAL_LEN
@@ -191,7 +191,7 @@ int hip_cf_parse_par(char *line, char *parameter);
  * @note          This function is not meant to be called outside this file. Use
  *                hip_cf_get_line_data() to get data from lines.
  */
-int hip_cf_parse_val(char *line, hip_ll_t *values);
+int hip_cf_parse_val(char *line, hip_configvaluelist_t *values);
 
 /**
  * Initializes a linked list. Sets the parameter @c linkedlist head to NULL if
@@ -199,7 +199,7 @@ int hip_cf_parse_val(char *line, hip_ll_t *values);
  *
  * @param linkedlist the list to init.
  */ 
-void hip_ll_init(hip_ll_t *linkedlist);
+void hip_cvl_init(hip_configvaluelist_t *linkedlist);
 
 /**
  * Uninitializes a linked list. Removes each element from the parameter
@@ -208,7 +208,7 @@ void hip_ll_init(hip_ll_t *linkedlist);
  *
  * @param linkedlist the list to uninitialize.  
  */ 
-void hip_ll_uninit(hip_ll_t *linkedlist);
+void hip_cvl_uninit(hip_configvaluelist_t *linkedlist);
 
 /**
  * Adds a new element to a linked list. Adds a new element to the end of the
@@ -220,7 +220,7 @@ void hip_ll_uninit(hip_ll_t *linkedlist);
  *                    NULL or if there was an error when allocating memory to
  *                    the new element.
  */ 
-int hip_ll_add(hip_ll_t *linkedlist, const void *data);
+int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data);
 
 /**
  * Gets the next element from a linked list. Gets the next element from 
@@ -234,13 +234,14 @@ int hip_ll_add(hip_ll_t *linkedlist, const void *data);
  * @return            the next element or NULL if the list end has been reached
  *                    or @c linkedlist is NULL.
  */ 
-hip_ll_node_t *hip_ll_get_next(hip_ll_t *linkedlist, hip_ll_node_t *current);
+hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
+				       hip_configfilevalue_t *current);
 
 /**
  * Prints node data to stdout. This function is intended for debug use.
  *
  * @param the node whose contents are to be printed.
  */ 
-void print_node(hip_ll_node_t *node);
+void print_node(hip_configfilevalue_t *node);
 
 #endif /* CONFIGFILEREADER_H */

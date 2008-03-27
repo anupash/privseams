@@ -375,7 +375,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	case SO_HIP_ADD_RENDEZVOUS:
+	case SO_HIP_ADD_RVS:
 		/* draft-ietf-hip-registration-02 RVS registration. Responder
 		   (of I,RVS,R hierarchy) handles this message. Message
 		   indicates that the current machine wants to register to a rvs
@@ -402,7 +402,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			 -1, "sending i1 failed\n");
 		break;
 	
-	case SO_HIP_OFFER_RENDEZVOUS:
+	case SO_HIP_OFFER_RVS:
 		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
 		   server handles this message. Message indicates that the
 		   current machine is willing to offer rendezvous service. This

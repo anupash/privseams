@@ -363,7 +363,7 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 					  sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter IPv6.\n");
 	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RENDEZVOUS, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
 		 "Failed to build user message header.\n");
  out_err:
 	return err;
@@ -1327,7 +1327,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 				 "build hdr failed\n");
 		} else if (strcmp(opt[0], "rvs") == 0) {
 			HIP_INFO("Adding rendezvous service.\n");
-			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RENDEZVOUS, 0), -1,
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RVS, 0), -1,
 				 "build hdr failed\n");
 		} else if (strcmp(opt[0], "hiprelay") == 0) {
 			HIP_INFO("Adding HIP UDP relay service.\n");

@@ -9,7 +9,7 @@
  */
 #include "configfilereader.h"
 
-int hip_cf_get_line_data(FILE *fp, char *parameter, hip_ll_t *values,
+int hip_cf_get_line_data(FILE *fp, char *parameter, hip_configvaluelist_t *values,
 			 int *parseerr)
 {
 	
@@ -135,7 +135,7 @@ int hip_cf_parse_par(char *line, char *parameter)
 	return HIP_EVAL;
 }
 
-int hip_cf_parse_val(char *line, hip_ll_t *values)
+int hip_cf_parse_val(char *line, hip_configvaluelist_t *values)
 {
 	int i = 0, j = 0, k = 0, l = 0, end = 0;
 	char value[HIP_RELAY_MAX_VAL_LEN + 1];
@@ -227,7 +227,7 @@ int hip_cf_parse_val(char *line, hip_ll_t *values)
 				   container mark is found, we have succesfully
 				   read one value. */
 				if(line[k] == HIP_RELAY_VAL_CON) {
-					hip_ll_add(values, value);
+					hip_cvl_add(values, value);
 				} else {
 					/* Closing value container was not
 					   found. */
@@ -248,18 +248,18 @@ int hip_cf_parse_val(char *line, hip_ll_t *values)
 	return HIP_EVAL;
 }
 
-void hip_ll_init(hip_ll_t *linkedlist)
+void hip_cvl_init(hip_configvaluelist_t *linkedlist)
 {
 	if(linkedlist != NULL)
 		linkedlist->head = NULL;
 }
 
-void hip_ll_uninit(hip_ll_t *linkedlist)
+void hip_cvl_uninit(hip_configvaluelist_t *linkedlist)
 {
 	if(linkedlist == NULL || linkedlist->head == NULL)
 		return;
 
-	hip_ll_node_t *pointer = NULL;
+	hip_configfilevalue_t *pointer = NULL;
 	pointer = linkedlist->head;
 
 	/* Free the item currently at list head and move the next item to list
@@ -271,12 +271,12 @@ void hip_ll_uninit(hip_ll_t *linkedlist)
 	}
 }
 
-int hip_ll_add(hip_ll_t *linkedlist, const void *data)
+int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
 {
 	if (linkedlist == NULL || data == NULL)
 		return HIP_EVAL;
 
-	hip_ll_node_t *newnode = (hip_ll_node_t*) malloc(sizeof(hip_ll_node_t));
+	hip_configfilevalue_t *newnode = (hip_configfilevalue_t*) malloc(sizeof(hip_configfilevalue_t));
 	
 	if(newnode == NULL) {
 		printf("Error on allocating memory for a linked list node.\n");
@@ -291,7 +291,7 @@ int hip_ll_add(hip_ll_t *linkedlist, const void *data)
 		linkedlist->head = newnode;
 		return 0;
 	} else {
-		hip_ll_node_t *pointer = linkedlist->head;
+		hip_configfilevalue_t *pointer = linkedlist->head;
 		
 		while(pointer->next != NULL) {
 			pointer = pointer->next;
@@ -305,7 +305,8 @@ int hip_ll_add(hip_ll_t *linkedlist, const void *data)
 	return 0;
 }
 
-hip_ll_node_t *hip_ll_get_next(hip_ll_t *linkedlist, hip_ll_node_t *current)
+hip_configfilevalue_t *hip_cvl_get_next(hip_configvaluelist_t *linkedlist,
+					hip_configfilevalue_t *current)
 {
 	if (linkedlist == NULL)
 		return NULL;
@@ -315,7 +316,7 @@ hip_ll_node_t *hip_ll_get_next(hip_ll_t *linkedlist, hip_ll_node_t *current)
 	return current->next;
 }
 
-void print_node(hip_ll_node_t *node)
+void print_node(hip_configfilevalue_t *node)
 {
 	if(node == NULL){
 		HIP_INFO("Node NULL.\n");
