@@ -97,10 +97,10 @@
 #define SO_HIP_CANCEL_RVS                       163
 /** Socket option for the server to reinit the RVS service. (server side) */
 #define SO_HIP_REINIT_RVS                       164
-/** Socket option to ask for the RVS service, i.e. send REG_REQUEST parameter
+/** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
     to the server. (client side) */
 #define SO_HIP_ADD_RVS			        165
-/** Socket option to ask for cancellation of the RVS service, i.e. send
+/** Socket option to ask for cancellation of the RVS service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_RVS                          166
 /** Socket option for the server to offer the HIP relay service. (server
@@ -111,20 +111,20 @@
 #define SO_HIP_CANCEL_HIPRELAY                  168
 /** Socket option for hipconf to reinit the HIP relay service. (server side) */
 #define SO_HIP_REINIT_RELAY                     169
-/** Socket option to ask for the HIP relay service, i.e. send REG_REQUEST
+/** Socket option to ask for the HIP relay service, i.e.\ send REG_REQUEST
     parameter to the server. (client side) */
 #define SO_HIP_ADD_RELAY                        170
-/** Socket option to ask for cancellation of the HIP relay service, i.e. send
+/** Socket option to ask for cancellation of the HIP relay service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_RELAY                        171
 /** Socket option for the server to offer the escrow service. (server side) */
 #define SO_HIP_OFFER_ESCROW			172
 /** Socket option for the server to cancel the escrow service. (server side) */
 #define SO_HIP_CANCEL_ESCROW                    173
-/** Socket option to ask for the escrow service, i.e. send REG_REQUEST parameter
+/** Socket option to ask for the escrow service, i.e.\ send REG_REQUEST parameter
     to the server. (client side) */
 #define SO_HIP_ADD_ESCROW			174
-/** Socket option to ask for cancellation of the escrow service, i.e. send
+/** Socket option to ask for cancellation of the escrow service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_ESCROW			175
 

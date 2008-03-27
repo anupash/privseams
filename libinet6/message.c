@@ -80,7 +80,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	_HIP_DEBUG("waiting to receive daemon info\n");
+	_HIP_DEBUG("Waiting to receive daemon info.\n");
 
 	n = recv(hip_user_sock, msg,
 		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
@@ -92,9 +92,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		_HIP_DEBUG("%d bytes received\n", n); 
 		
 	}
-
+	
 	if (hip_get_msg_err(msg)) {
-		HIP_ERROR("msg contained error\n");
+		HIP_ERROR("Message contained an error.\n");
 	}
 
  out_err:

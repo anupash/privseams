@@ -417,7 +417,7 @@ int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
 		 "build param hit failed\n");
      
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY, 0), -1,
-		 "build hdr failed\n");
+		 "Failed to build user message header.\n");
  out_err:
 	return err;
 }
@@ -595,14 +595,14 @@ int hip_conf_handle_hi_del(hip_common_t *msg, int action,
 				    sizeof(in6_addr_t));
      if (err)
      {
-	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	  HIP_ERROR("build param HIT failed: %s\n", strerror(err));
 	  goto out;
      }
  	
      err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
  	
@@ -649,7 +649,7 @@ int hip_conf_handle_trans_order(hip_common_t *msg, int action,
      err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
  	
@@ -705,7 +705,7 @@ int hip_conf_handle_rst(hip_common_t *msg, int action,
      err = hip_build_user_hdr(msg, SO_HIP_RST, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -753,7 +753,7 @@ int hip_conf_handle_debug(hip_common_t *msg, int action,
      } else
 	  HIP_IFEL(1, -EINVAL, "Unknown argument\n");
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
 
  out_err:
      return err;
@@ -787,7 +787,7 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
      err = hip_build_user_hdr(msg, SO_HIP_BOS, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -847,7 +847,7 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
 
  out_err:
      return err;
@@ -877,7 +877,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
     
  out_err:
     return err;
@@ -965,7 +965,7 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
      err = hip_build_user_hdr(msg, msg_type, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -1027,7 +1027,7 @@ int hip_conf_handle_opp(hip_common_t *msg, int action,
 	/* Build the message header */
 	err = hip_build_user_hdr(msg, SO_HIP_SET_OPPORTUNISTIC_MODE, 0);
 	if (err) {
-		HIP_ERROR("build hdr failed: %s\n", strerror(err));
+		HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 		goto out;
 	}
 
@@ -1066,7 +1066,7 @@ int hip_conf_handle_blind(hip_common_t *msg, int action,
      err = hip_build_user_hdr(msg, status, 0);
      if (err)
      {
-	  HIP_ERROR("build hdr failed: %s\n", strerror(err));
+	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
 	  goto out;
      }
 
@@ -1112,7 +1112,7 @@ int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[],
 	      "build param hit failed\n");
 
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
-	      "build hdr failed\n");
+	      "Failed to build user message header.\n");
  out_err:
      return err;
 	
@@ -1147,7 +1147,7 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
 
     err = hip_build_user_hdr(msg, SO_HIP_DHT_SET, 0);
     if (err) {
-        HIP_ERROR("build hdr failed: %s\n", strerror(err));
+        HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
         goto out_err;
     }
  out_err:
@@ -1209,7 +1209,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
 
         err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
         if (err) {
-                HIP_ERROR("build hdr failed: %s\n", strerror(err));
+                HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
                 goto out_err;
         }
 
@@ -1284,7 +1284,7 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
                 HIP_IFEL(1, -1, "bad args\n");
         }
         HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-                 "build hdr failed: %s\n", strerror(err));        
+                 "Failed to build user message header.: %s\n", strerror(err));        
         
  out_err:
         return(err);
@@ -1310,12 +1310,10 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 {
 	int err = 0;
 
-	HIP_DEBUG("hipconf: handling service.\n");
-	HIP_INFO("action=%d optc=%d\n", action, optc);
-	
-	HIP_IFEL((action != ACTION_ADD && action != ACTION_REINIT), -1,
-		 "Only actions \"add\" and \"reinit\" are supported for "\
-		 "\"service\".\n");
+	HIP_IFEL((action != ACTION_ADD && action != ACTION_REINIT
+		  && action != ACTION_DEL), -1,
+		 "Only actions \"add\", \"del\" and \"reinit\" are supported "\
+		 "for \"service\".\n");
      
 	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 	HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
@@ -1324,15 +1322,15 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		if (strcmp(opt[0], "escrow") == 0) {
 			HIP_INFO("Adding escrow service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_ESCROW, 0), -1,
-				 "build hdr failed\n");
+				 "Failed to build user message header.\n");
 		} else if (strcmp(opt[0], "rvs") == 0) {
 			HIP_INFO("Adding rendezvous service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RVS, 0), -1,
-				 "build hdr failed\n");
+				 "Failed to build user message header.\n");
 		} else if (strcmp(opt[0], "hiprelay") == 0) {
 			HIP_INFO("Adding HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
-				 "build hdr failed\n");
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}     
@@ -1349,6 +1347,22 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
+	} else if(action == ACTION_DEL) {
+		if (strcmp(opt[0], "escrow") == 0) {
+			HIP_ERROR("Action \"delete\" is not supported for "\
+				  "escrow service.\n");
+		} else if (strcmp(opt[0], "rvs") == 0) {
+			HIP_INFO("Deleting rendezvous service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CANCEL_RVS, 0),
+				 -1, "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "hiprelay") == 0) {
+			HIP_INFO("Deleting HIP UDP relay service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_HIPRELAY, 0), -1,
+				 "Failed to build user message header.\n");
+		} else {
+			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
+		}
 	}
 	
  out_err:
@@ -1359,7 +1373,8 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc)
 {
-	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc, (char **) &opt[0]);
+	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc,
+					   (char **) &opt[0]);
 }
 
 int hip_do_hipconf(int argc, char *argv[], int send_only)
@@ -1772,7 +1787,7 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
 #endif
     
  out_err:

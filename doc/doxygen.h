@@ -502,7 +502,7 @@
  */
 
 /**
- * @defgroup hip_services Additional HIP services. 
+ * @defgroup hip_services Additional HIP services
  *
  * Registration types for registering to a service as specified in
  * draft-ietf-hip-registration-02. These are the registrationion types used in
