@@ -219,10 +219,7 @@ void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type)
 {
 	hip_relrec_t *fetch_record = hip_relht_get(rec);
 	
-	HIP_DEBUG("Type is %d.\n", *type);
-
 	if(fetch_record != NULL && fetch_record->type == *type) {
-		HIP_DEBUG("fetch_record->type is %d.\n", fetch_record->type);
 		hip_relht_rec_free(rec);
 	}
 }
