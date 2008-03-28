@@ -301,7 +301,7 @@ out_err:
 int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
-	char buff[HIP_MAX_NETLINK_PACKET];
+	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
         fd_set write_fdset;
 	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
@@ -533,16 +533,18 @@ int hipd_main(int argc, char *argv[])
 			
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
-						    &saddr, &daddr,
-						    &pkt_info, 0)) {
+        		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
+			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info,0);			
+			if (err) 			
+			{
                                 HIP_ERROR("Reading network msg failed\n");
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
-                        } else {
-				err =  hip_receive_udp_control_packet(
-					hipd_msg, &saddr, &daddr, &pkt_info);
-                        }
+                        } 
+			else 
+			{
+			   err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
+                        } 
 
 		}
 

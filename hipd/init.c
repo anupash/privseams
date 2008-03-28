@@ -309,8 +309,8 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
-		hip_get_default_hit(&peer_hit);
-		hip_i3_init(&peer_hit);
+//		hip_get_default_hit(&peer_hit);
+		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
 
@@ -588,7 +588,9 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(encap_on));
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 
 	myaddr.sin_family=AF_INET;
@@ -669,7 +671,7 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_HI3
-	cl_exit();
+	hip_hi3_clean();
 #endif
 
 #ifdef CONFIG_HIP_RVS

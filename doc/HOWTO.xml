@@ -880,6 +880,39 @@
   examples of configuration changes and instructions.
   </para>
   </section>
+  <section>
+  <title>OpenLDAP</title>
+  <para>
+  Tested with stable version openldap-2.3.38 and with release version
+  2.4.7. Using OpenLDAP with HIP is pretty straight forward thing to
+  do. Simplest way is to run hipd on both machines and just use
+  command like <emphasis>"hipconf run normal ldapsearch -x -H
+  ldap://&lt;fqdn&gt; -b
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis> The name can be
+  something found from <emphasis>/etc/hosts</emphasis>
+  and <emphasis>/etc/hip/hosts</emphasis> or you can use OpenDHT to
+  resolve names to HIT and address. Search can also be done directly
+  with HIT by command <emphasis>"ldapsearch -x -b 
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' -H ldap://[&lt;HIT&gt;]
+  '(objectclass=*)'"</emphasis>.
+
+  You can search also by using the opportunistic mode by using command 
+  <emphasis>"hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b  
+  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis>.
+  Ldapadd can be used similarly with LDAPURI and HIP. Longer tutorial
+  can be found
+  from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
+  </para>
+  </section>
+  <section>
+  <title>Networking scripts and instructions for virtual machines and HIP</title>
+  <para>
+  These pages contain some scripts for vmware, virtualbox and UML
+  users. For UML there is a more complete tutorial on howto compile
+  HIP enabled host and guest
+  kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
+  </para>
+  </section>
   </chapter>
   <chapter>
   <title>Testing HIP Rendezvous Server/Mechanism</title>
@@ -1794,6 +1827,26 @@ combo-newgroup=&lt;create new...&gt;
       a line for Dan Bernstein's tinydns is output. For further
       information, please refer to parse-key-3.py and myasn.py.
     </para>
+  </chapter>
+  <chapter>
+    <title>DNS proxy</title>
+    <para>
+      In tools directory, there is dnsproxy.py, which provides DNS
+      proxy functionality. It can read HIT information from HIP hosts
+      files and provide corresponding AAAA records. If it is asked an
+      AAAA record for a FQDN and there is no real existing AAAA for
+      the name, it tries to find a HIP RR for the name. If it finds
+      one, it responds with an AAAA response.
+    </para>
+    <para>
+      dnsproxy.py is meant to be run under DJB's daemontools package
+      <ulink url="http://cr.yp.to/daemontools.html" /> which is also
+      used to provide necessary environmanet variables, see comments
+      in dnsproxy.py. It is recommended to use a DNS cache, like
+      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
+      dnsproxy.py.
+    </para>
+
   </chapter>
 </book>    
 
