@@ -86,8 +86,6 @@ int is_escrow_active()
 int firewall_init(){
 	HIP_DEBUG("Initializing firewall\n");
 
-	hip_init_proxy_db();
-
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
 	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
@@ -109,7 +107,7 @@ int firewall_init(){
 
 	//ipv4 traffic
 	if(use_ipv4){
-		if (hip_opptcp || hip_proxy_enabled) {
+		if (hip_opptcp) {
 			system("iptables -I FORWARD -p 6 -j QUEUE");
 			system("iptables -I INPUT -p 6 -j QUEUE");
 			system("iptables -I OUTPUT -p 6 -j QUEUE");
@@ -139,7 +137,7 @@ int firewall_init(){
 
 	//ipv6 traffic
 	if(use_ipv6){
-		if (hip_opptcp || hip_proxy_enabled) {
+		if (hip_opptcp) {
 			system("ip6tables -I FORWARD -p 6 -j QUEUE");
 			system("ip6tables -I INPUT -p 6 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
@@ -166,10 +164,24 @@ int firewall_init(){
 			system("ip6tables -I OUTPUT -j DROP");
 		}
 	}
-out_err:
+
+#ifdef CONFIG_HIP_HIPPROXY
+			system("iptables -I FORWARD -p tcp -j QUEUE");
+//			system("iptables -I INPUT -p 50 -j QUEUE");
+			system("iptables -I INPUT -p tcp -j QUEUE");
+//			system("iptables -I OUTPUT -p tcp -j QUEUE");
+			system("ip6tables -I FORWARD -p tcp -j QUEUE");
+//			system("ip6tables -I INPUT -p 50 -j QUEUE");
+			system("ip6tables -I INPUT -p tcp -j QUEUE");
+//			system("ip6tables -I OUTPUT -p tcp -j QUEUE");
+//			system("iptables -t nat -A POSTROUTING -o vmnet1 -j SNAT --to-source 192.168.74.1");
+//			system("ip6tables -t nat -A POSTROUTING  -o vmnet1 -j SNAT --to-source 192.68.74.1");
+			hip_init_proxy_db();
+#endif
+
+ out_err:
 	return 0;
 }
-
 
 void firewall_close(int signal)
 {
@@ -189,6 +201,8 @@ void firewall_exit()
 		system("ip6tables -F INPUT");
 		system("ip6tables -F OUTPUT");
 		system("ip6tables -F FORWARD");
+//		system("iptables -t nat -F");
+//		system("ip6tables -t nat -F");
 	}
 	else
 	{
@@ -1108,6 +1122,193 @@ int filter_hip(const struct in6_addr * ip6_src,
   	return ret_val; 
 }
 
+int hip_proxy_handle_traffic(xx_fixme_args) 
+{
+        //inbound process
+        //static int ipv6_addr_is_hit(const struct in6_addr *hit);
+        //if src and dst are HIT, then go for inbound process
+        HIP_DEBUG("HIP PROXY! \n");
+		
+        if(IN6_IS_ADDR_V4MAPPED(src_addr))
+                HIP_DEBUG("Source address is IPV4!\n");
+        if(IN6_IS_ADDR_V4MAPPED(dst_addr))
+                HIP_DEBUG("Destination address is IPV4!\n");
+        
+		
+        HIP_DEBUG_IN6ADDR("src_addr", src_addr);
+        HIP_DEBUG_IN6ADDR("dst_addr", dst_addr);
+		
+        if(ipv6_addr_is_hit(src_addr))
+                HIP_DEBUG("Source address is HIT!\n");
+        if(ipv6_addr_is_hit(dst_addr))
+                HIP_DEBUG("Destination address is HIT!\n");
+        
+        HIP_DEBUG_HIT("src_addr", src_hit);
+        HIP_DEBUG_HIT("dst_addr", dst_hit);
+		
+        HIP_DEBUG("HIP PROXY OK! \n");
+		
+		
+        if(ipv6_addr_is_hit(src_addr) && ipv6_addr_is_hit(dst_addr))
+        {
+                //struct in6_addr client_addr;
+                //HIP PROXY INBOUND PROCESS
+				
+                HIP_DEBUG("HIP PROXY INBOUND PROCESS:\n");
+                HIP_DEBUG("receiving ESP packets from firewall!\n");
+                HIP_DEBUG_HIT("src_addr", src_hit);
+                HIP_DEBUG_HIT("dst_addr", dst_hit);
+                HIP_DEBUG_IN6ADDR("src_addr", src_addr);
+                HIP_DEBUG_IN6ADDR("dst_addr", dst_addr);
+				
+                entry =  hip_proxy_find_by_hit(dst_addr, src_addr);
+                if(entry)
+                {
+                        if(entry->state == HIP_PROXY_TRANSLATE)
+                        {
+								int packet_length = 0;
+								u16 * msg;
+								int i;
+								struct ip6_hdr* ipheader;
+								struct tcphdr* tcpheader;
+								HIP_DEBUG("We are translating esp packet!\n");
+								
+								/*
+                                  hip_proxy_dump_memory(m->payload, packet_length);
+                                  packet_length = m->data_len - hdr_size;
+                                  msg = (u16 *)HIP_MALLOC(packet_length, 0);
+                                  memcpy(msg, (m->payload + (u8)hdr_size), packet_length);
+                                  
+                                  HIP_DEBUG("Header Length: %d\n", hdr_size);
+                                  HIP_DEBUG("Packet Length: %d\n", packet_length);						
+                                  
+                                  hip_proxy_send_pkt(&entry->addr_proxy, &entry->addr_our, msg, packet_length);
+								*/
+								
+								
+								//hip_proxy_send_pkt(&entry->addr_peer, &entry->addr_our ,  msg, packet_length);
+								ipheader = (struct ip6_hdr*) m->payload;
+								tcpheader = (struct tcphdr*) (m->payload + sizeof(ip6_hdr));
+								//send_tcp(entry->addr_peer, entry->addr_our);
+								hip_proxy_send_tcp_client_pkt(&entry->addr_peer, &entry->addr_our,(u8*) ipheader, m->data_len);
+								//hip_proxy_send_tcp_client_pkt(&entry->addr_peer, &entry->addr_our, msg, packet_length);
+								
+                        }
+                        
+                        if (entry->state == HIP_PROXY_PASSTHROUGH)
+								allow_packet(hndl, m->packet_id);
+                        
+                }
+                else
+                {
+                        //allow esp packet
+                        allow_packet(hndl, m->packet_id);
+                }
+				
+                //client_addr = entry->addr_our;			
+        }
+        else
+        {
+                
+                //HIP PROXY OUTBOUND PROCESS
+                //the destination ip address should be checked first to ensure it supports hip
+                //if the destination ip does not support hip, drop the packet 
+                HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
+                entry =  hip_proxy_find_by_addr(src_addr, dst_addr);
+                hip_get_local_hit_wrapper(proxy_hit);
+                if(entry == NULL)
+                {
+                        int fallback, reject, err;
+                        hip_proxy_add_entry(src_addr, dst_addr);
+						
+                        //hip_request_peer_hit_from_hipd();
+						
+                        /* Request a HIT of the peer from hipd. This will possibly
+                           launch an I1 with NULL HIT that will block until R1 is
+                           received. Called e.g. in connect() or sendto(). If
+                           opportunistic HIP fails, it can return an IP address
+                           instead of a HIT */
+                        HIP_DEBUG("requesting hit from hipd\n");
+                        HIP_DEBUG_IN6ADDR("ip addr", dst_addr);
+                        HIP_IFEL(hip_proxy_request_peer_hit_from_hipd(dst_addr,
+                                                                      dst_hit,
+                                                                      proxy_hit,
+                                                                      &fallback,
+                                                                      &reject),
+								 -1, "Request from hipd failed\n");
+                        if (reject)
+                        {
+								HIP_DEBUG("Connection should be rejected\n");
+                                //	err = -1;
+								goto out_err;
+                        }
+                        
+                        if (fallback)
+                        {
+								HIP_DEBUG("Peer does not support HIP, fallback\n");
+								//update the state of the ip pair
+								if(hip_proxy_update_state(src_addr, dst_addr, NULL, NULL, NULL, NULL, HIP_PROXY_PASSTHROUGH))
+                                        HIP_DEBUG("Proxy update Failed!\n");
+								goto out_err;
+                        }
+                        hip_proxy_request_local_address_from_hipd(proxy_hit, dst_hit, proxy_addr, &fallback, &reject);
+                        hip_proxy_update_state(src_addr, dst_addr, proxy_addr, NULL, dst_hit, proxy_hit, HIP_PROXY_TRANSLATE);
+                        drop_packet(hndl, m->packet_id);	//drop the packet
+						
+                }
+                else
+                {
+                        int fallback, reject, err;
+                        //check if the entry state is PASSTHROUGH
+                        if(entry->state == HIP_PROXY_PASSTHROUGH)
+                        {
+								HIP_DEBUG("PASSTHROUGH!\n");
+								allow_packet(hndl, m->packet_id);	//let the packet pass
+                        }
+                        
+						
+                        if(entry->state == HIP_PROXY_TRANSLATE)
+                        {
+								int packet_length = 0;
+								u16 * msg;
+								//src_hit = &(entry->hit_our);
+								//proxy_hit = &(entry->hit_proxy);
+								//dst_hit = &(entry->hit_peer);
+								HIP_DEBUG("We are in right place!\n");
+								//HIP_DEBUG("iphdr->ip_len			%d\n", iphdr->ip_len);
+								//HIP_DEBUG("iphdr->ip_hl			%d\n", iphdr->ip_hl);
+								//HIP_DEBUG( "m->data_len		%d\n",  m->data_len);
+								//HIP_DEBUG("hdr_size		%d\n",  hdr_size);
+								
+								packet_length = m->data_len - hdr_size;
+								
+								msg = (u16 *) HIP_MALLOC(packet_length, 0);
+								
+                                
+								memcpy(msg, (m->payload) + hdr_size,
+                                       packet_length);
+                                
+								HIP_DEBUG("Packet Length: %d\n", packet_length);						
+								hip_proxy_send_pkt(proxy_hit, dst_hit ,  msg, packet_length);
+								//hip_proxy_send_pkt(proxy_addr, dst_addr,  msg, packet_length);
+                        }
+                }
+        }
+
+out_err:
+        return err;
+}
+
+
+/**
+ * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
+ * from hip_send_i1 in hipd, so for the moment this is not being used.
+ * 
+ * @param *ptr	pointer to an integer that indicates
+ * 		the type of traffic: 4 - ipv4; 6 - ipv6.
+ * @return	nothing, this function loops forever,
+ * 		until the firewall is stopped.
+ */
 /**
  * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
  * from hip_send_i1 in hipd, so for the moment this is not being used.
@@ -1243,142 +1444,20 @@ static void *handle_ip_traffic(void *ptr){
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					allow_packet(hndl, m->packet_id);
 				else{
-#ifdef CONFIG_HIP_HIPPROXY
-					//HIP PROXY PROCESS
-					//the destination ip address should be checked first to ensure it supports hip
-					//if the destination ip does not support hip, drop the packet 
-				
-					entry =  hip_proxy_find_by_addr(src_addr, dst_addr);
-					hip_get_local_hit_wrapper(proxy_hit);
-					if(entry == NULL)
-					{
-						int fallback, reject, err;
-						hip_proxy_add_entry(src_addr, dst_addr);
-						
-						//hip_request_peer_hit_from_hipd();
-						
-						/* Request a HIT of the peer from hipd. This will possibly
-						   launch an I1 with NULL HIT that will block until R1 is
-						   received. Called e.g. in connect() or sendto(). If
-						   opportunistic HIP fails, it can return an IP address
-						   instead of a HIT */
-						HIP_DEBUG("requesting hit from hipd\n");
-						HIP_DEBUG_IN6ADDR("ip addr", dst_addr);
-						HIP_IFEL(hip_proxy_request_peer_hit_from_hipd(dst_addr,
-											dst_hit,
-											proxy_hit,
-											&fallback,
-											&reject),
-							 -1, "Request from hipd failed\n");
-						if (reject)
-						{
-							HIP_DEBUG("Connection should be rejected\n");
-						//	err = -1;
-							goto out_err;
-						}
-						
-						if (fallback)
-						{
-							HIP_DEBUG("Peer does not support HIP, fallback\n");
-							//update the state of the ip pair
-							if(hip_proxy_update_state(src_addr, dst_addr, NULL, NULL, NULL, NULL, HIP_PROXY_PASSTHROUGH))
-								HIP_DEBUG("Proxy update Failed!\n");
-							goto out_err;
-						}
-						hip_proxy_request_local_address_from_hipd(proxy_hit, dst_hit, proxy_addr, &fallback, &reject);
-						hip_proxy_update_state(src_addr, dst_addr, proxy_addr, NULL, dst_hit, proxy_hit, HIP_PROXY_TRANSLATE);
-						drop_packet(hndl, m->packet_id);	//drop the packet
-						
-					}
-					else
-					{
-						int fallback, reject, err;
-						//check if the entry state is PASSTHROUGH
-						if(entry->state == HIP_PROXY_PASSTHROUGH)
-						{
-							HIP_DEBUG("PASSTHROUGH!\n");
-							allow_packet(hndl, m->packet_id);	//let the packet pass
-						}
-							
-						
-						if(entry->state == HIP_PROXY_TRANSLATE)
-						{
-							//src_hit = &(entry->hit_our);
-							//proxy_hit = &(entry->hit_proxy);
-							//dst_hit = &(entry->hit_peer);
-							HIP_DEBUG("We are in right place!\n");	
-							//modify the header
-							//
-							//
-							int packet_length = 0;
-							char * msg;
-/*							struct hip_sig * sig= NULL;
-
-							if (m->data_len <= (BUFSIZE - hdr_size))
-							{
-								packet_length = m->data_len - hdr_size;
-								HIP_DEBUG("HIP packet size smaller than buffer size\n");
-							}
-							else
-							{
-								packet_length = BUFSIZE - hdr_size;
-								HIP_DEBUG("HIP packet size greater than buffer size\n");
-							}
-							*/
-							//struct tcphdr *tcp = (struct tcphdr *) (m->payload + (iphdr->ip_hl << 2));
-							//packet_length = (ntohs( iphdr->ip_len) - ( iphdr->ip_hl)*4);
-							
-							
-							packet_length = m->data_len - hdr_size;
-							msg = HIP_MALLOC(packet_length, 0);
-							
-							HIP_DEBUG("ip_len: %d\n", ntohs(iphdr->ip_len));
-							HIP_DEBUG("ip_hl: %d\n", iphdr->ip_hl);
-							HIP_DEBUG("data_len: %d\n", m->data_len);
-							HIP_DEBUG("hdr_size: %d\n", hdr_size);
-							HIP_DEBUG("packet_length: %d\n", packet_length);
-							 
-							
-
-
-							//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
-
-							memcpy(msg, (m->payload) + hdr_size,
-									packet_length);
-/*							
-							hip_common->hits = *src_hit;
-							hip_common->hitr = *dst_hit;
-							
-
-							sig = (struct hip_sig *) hip_get_param(
-									hip_common,
-									HIP_PARAM_HIP_SIGNATURE);
-							
-							if (sig == NULL)
-								HIP_DEBUG("no signature\n");
-							else
-								HIP_DEBUG("signature exists\n");
-
-							hip_proxy_send_raw(proxy_addr, dst_addr, hip_common); */
-							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  msg, packet_length);
-							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  (m->payload + hdr_size), (m->data_len - hdr_size));
-							//hip_proxy_send_pkt(proxy_addr, dst_addr,  msg, packet_length);
-							//hip_proxy_send_pkt(proxy_hit, dst_hit ,  (char*)tcp, packet_length);
-							hip_proxy_send_pkt(proxy_addr, dst_addr,  msg, packet_length);
-						}
-					}
-#endif /* CONFIG_HIP_HIPPROXY */
-
-					//proxy can't find record in db
-					//call functions in oppotunistic mode and get the HIT
-					//If proxy get the dst_hit, add them into db
-
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-				}
-		}
+                        if (hip_proxy_status) 
+                        {
+                                err = hip_proxy_handle_traffic(hndl, m->packet_id, packet_hdr, tyåe);
+                                HIP_DEBUG("Proxy returned %d\", err);
+                        } else {
+                        {
+                                if(accept_normal_traffic)
+                                        allow_packet(hndl, m->packet_id);
+                                else
+                                        drop_packet(hndl, m->packet_id);
+                        }
+                        
+                }
+                
       		if (status < 0)
 				die(hndl);
 		break;
@@ -1411,7 +1490,8 @@ out_err:
 	return;
 }
 
-void check_and_write_default_config(){
+void check_and_write_default_config()
+{
 	struct stat status;
 	FILE *fp= NULL;
 	ssize_t items;

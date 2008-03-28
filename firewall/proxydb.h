@@ -26,4 +26,25 @@ typedef struct hip_proxy_t {
 	int state;
 	int hip_capable;
 } hip_proxy_t;
+
+
+typedef struct pseudo_v6 {
+       struct  in6_addr src;
+        struct in6_addr dst;
+        u16 length;
+        u16 zero1;
+        u8 zero2;
+        u8 next;
+} pseudo_v6;
+
+struct prseuheader
+{
+	unsigned long s_addr;
+	unsigned long d_addr;
+	unsigned char zero;
+	unsigned char prototp;
+	unsigned short len;
+};
+
+
 #endif
