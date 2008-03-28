@@ -642,7 +642,7 @@ int hip_relay_read_config(){
 		lineerr = hip_cf_get_line_data(fp, parameter, &values, &parseerr);
 				
 		if(parseerr == 0){
-			HIP_DEBUG("param: '%s'\n", parameter);
+			_HIP_DEBUG("param: '%s'\n", parameter);
 			hip_configfilevalue_t *current = NULL;
 			if(strcmp(parameter, "whitelist_enabled") == 0) {
 				current = hip_cvl_get_next(&values, current);
@@ -716,8 +716,8 @@ int hip_relay_read_config(){
 	}
 
 	HIP_DEBUG("\nRead relay configuration file with following values:\n"\
-		  "Whitelist enabled: %s\nHITs in whitelist: %lu\n"\
-		  "Minimum lifetime: %ld\nMaximum lifetime: %ld\n",
+		  "Whitelist enabled: %s\nNumber of HITs in the whitelist: "\
+		  "%lu\nMinimum lifetime: %ld\nMaximum lifetime: %ld\n",
 		  (whitelist_enabled) ? "YES" : "NO", hip_relwl_size(),
 		  hiprelay_min_lifetime, hiprelay_max_lifetime);
 	

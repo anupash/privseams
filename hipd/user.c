@@ -481,20 +481,37 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-
+		
 	case SO_HIP_REINIT_RVS:
 	case SO_HIP_REINIT_RELAY:
 		HIP_DEBUG("Handling REINIT RELAY or REINIT RVS user message.\n");
 		HIP_IFEL(hip_relay_reinit(), -1, "Unable to reinitialize "\
-			 "the HIP relay / RVS service.\n")
-			
+			 "the HIP relay / RVS service.\n");
+		
 		break;
 		
 	case SO_HIP_CANCEL_RVS:
-	case SO_HIP_CANCEL_HIPRELAY:
-		HIP_DEBUG("Handling CANCEL RELAY or CANCEL RVS user message.\n");
+		HIP_DEBUG("Handling CANCEL RVS user message.\n");
+		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
+			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
 		hip_relay_uninit();
 		
+		/* We have to recreate the R1 packets so that they do not
+		   advertise the RVS service anymore. I.e. we're removing
+		   the REG_INFO parameters here. */
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
+		
+	case SO_HIP_CANCEL_HIPRELAY:
+		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
+		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
+			 "Failed to remove HIP_SERVICE_RELAY");
+		hip_relay_uninit();
+		
+		/* We have to recreate the R1 packets so that they do not
+		   advertise the RVS service anymore. I.e. we're removing
+		   the REG_INFO parameters here. */
+		err = hip_recreate_all_precreated_r1_packets();
 		break;
 #endif
 	case SO_HIP_GET_HITS:		
