@@ -584,7 +584,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 #endif
 	case SO_HIP_TRIGGER_BEX:
+		HIP_DUMP_MSG( msg);
+
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		HIP_DUMP_MSG( msg);
 		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),

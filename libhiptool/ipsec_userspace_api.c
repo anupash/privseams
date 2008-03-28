@@ -279,9 +279,7 @@ int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit
 					  struct in6_addr *dst_addr, u8 proto,
 					  int use_full_prefix, int update) {
 	/* XX FIXME: TAO */
-
-	
-	
+	return 0;
 }
 
 void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
@@ -308,4 +306,5 @@ void hip_userspace_ipsec_delete_default_prefix_sp_pair() {
 
 int hip_userspace_ipsec_setup_default_sp_prefix_pair() {
 	/* XX FIXME: TAO */
+	return 0;
 }

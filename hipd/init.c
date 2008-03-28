@@ -239,7 +239,7 @@ int hipd_init(int flush_ipsec, int killold)
 
 	HIP_DEBUG("Setting SP\n");
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
-	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), 1);
+	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
 	
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);

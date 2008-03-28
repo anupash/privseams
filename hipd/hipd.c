@@ -464,7 +464,7 @@ int hipd_main(int argc, char *argv[])
                     if (err_v4 > -1) {
                         type = hip_get_msg_type(hipd_msg_v4);
                         if (type == HIP_R2) {
-                            err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
+				err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
                                                              &daddr_v4, &pkt_info, 1);
                             if (err) HIP_ERROR("hip_receive_control_packet()!\n");
                             err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, 

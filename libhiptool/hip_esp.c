@@ -226,18 +226,23 @@ int pfkey_send_acquire(struct sockaddr *target)
 	
 	switch(sa->sa_family) {
 	case AF_INET:
-	  ipv4_addr = (struct in_addr *) &(((struct sockaddr_in *)target)->sin_addr);
+		//ipv4_addr = (struct in_addr *) &(((struct sockaddr_in *)target)->sin_addr);
+	  ipv4_addr = hip_cast_sa_addr(target);
 	    //HIP_DEBUG("Size of: %u\n", ret);
 	  IPV4_TO_IPV6_MAP(ipv4_addr, &conversion_hit);
 	  hit = &conversion_hit;
 	  break;
 	case AF_INET6:
-	  ipv6_addr = (struct in6_addr *) (&(((struct sockaddr_in6 *) target)->sin6_addr));
-	hit = (hip_hit_t *) ipv6_addr;
+		hit = hip_cast_sa_addr(target);
+		//ipv6_addr = (struct in6_addr *) (&(((struct sockaddr_in6 *) target)->sin6_addr));
+		//hit = (hip_hit_t *) ipv6_addr;
 	  break;
 	
 	}
-	  /* Trigger base exchange */
+	
+	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
+
+	/* Trigger base exchange */
 	err = hip_trigger_bex(NULL, hit, NULL, NULL);
  out_err:
 	return err;
@@ -402,7 +407,7 @@ void init_readsp()
 #ifdef __WIN32__
 void hip_esp_output(void *arg)
 #else
-void *hip_esp_output(void *arg)
+void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 #endif
 {
 	int len, err, flags, raw_len, is_broadcast, s, offset=0;
@@ -418,7 +423,7 @@ void *hip_esp_output(void *arg)
 #endif
 	struct ip6_hdr *ip6h;
 	static hip_sadb_entry *entry;
-	struct sockaddr_storage ss_lsi;
+	//struct sockaddr_storage ss_lsi;
 	struct sockaddr *lsi = (struct sockaddr*)&ss_lsi;
 	__u32 lsi_ip;
 #ifdef __MACOSX__

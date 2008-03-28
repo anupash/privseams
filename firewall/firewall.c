@@ -1055,7 +1055,7 @@ int i, optLen, hdr_size, optionsLen;
 	// in_port_t        src_tcp_port;
 	// in_port_t        dst_tcp_port;
 
-	struct sockaddr *ipv6_addr_to_sockaddr_hit;
+	struct sockaddr ipv6_addr_to_sockaddr_hit;
 	
 	HIP_DEBUG("Try to get peer_hit\n");
 	
@@ -1090,11 +1090,13 @@ int i, optLen, hdr_size, optionsLen;
 			
 	/* convert in6_addr to sockaddr */
 
-	hip_addr_to_sockaddr(peer_hit, ipv6_addr_to_sockaddr_hit);     
+	hip_addr_to_sockaddr(peer_hit, &ipv6_addr_to_sockaddr_hit);     
 
-	if (hip_sadb_lookup_addr(ipv6_addr_to_sockaddr_hit) == NULL) {
-		pfkey_send_acquire(ipv6_addr_to_sockaddr_hit);
+	if (hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) == NULL) {
+		pfkey_send_acquire(&ipv6_addr_to_sockaddr_hit);
 	} else {
+		// TAO XX FIXME: READ LOCAL HIT AND PASS IT AS SOCKADDR STRUCTURE
+		// TO hip_esp_output
 		
 		//hip_esp_traffic_userspace_handler(&hip_esp_output_id, 
 		//				     hip_esp_output, 
