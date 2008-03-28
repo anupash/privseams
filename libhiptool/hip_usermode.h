@@ -45,7 +45,9 @@ void hip_status(void *arg);
 extern int socketpair(int, int, int, int sv[2]);
 #define RETNULL ;
 #else
-void *hip_esp_output(void *arg);
+// void *hip_esp_output(void *arg);
+void *hip_esp_output(struct sockaddr_storage *ss_lsi);
+
 void *hip_esp_input(void *arg);
 void *hip_pfkey(void *arg);
 void *tunreader(void *arg);
