@@ -46,7 +46,10 @@ static IMPLEMENT_LHASH_COMP_FN(hip_relht_compare, const hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free, hip_relrec_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
-static IMPLEMENT_LHASH_DOALL_FN(hip_relht_free_expired, hip_relrec_t *)
+static IMPLEMENT_LHASH_DOALL_FN(hip_relht_rec_free_expired, hip_relrec_t *)
+/** A callback wrapper of the prototype required by @c lh_doall_arg(). */
+static IMPLEMENT_LHASH_DOALL_ARG_FN(hip_relht_rec_free_type, hip_relrec_t *,
+				    const hip_relrec_type_t *)
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relwl_hash, const hip_hit_t *)
@@ -192,8 +195,7 @@ void hip_relht_rec_free(hip_relrec_t *rec)
 	hip_relrec_t *deleted_rec = lh_delete(hiprelay_ht, rec);
 
 	/* Free the memory allocated for the element. */
-	if(deleted_rec != NULL)
-	{
+	if(deleted_rec != NULL) {
 		/* We set the memory to '\0' because the user may still have a
 		   reference to the memory region that is freed here. */
 		memset(deleted_rec, '\0', sizeof(*deleted_rec));
@@ -202,13 +204,25 @@ void hip_relht_rec_free(hip_relrec_t *rec)
 	}
 }
 
-void hip_relht_free_expired(hip_relrec_t *rec)
+void hip_relht_rec_free_expired(hip_relrec_t *rec)
 {
-	if(rec == NULL)
+	if(rec == NULL) // No need to check hiprelay_ht
 		return;
 
-	if(time(NULL) - rec->created > rec->lifetime){
+	if(time(NULL) - rec->created > rec->lifetime) {
 		HIP_INFO("Relay record expired, deleting.\n");
+		hip_relht_rec_free(rec);
+	}
+}
+
+void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type)
+{
+	hip_relrec_t *fetch_record = hip_relht_get(rec);
+	
+	HIP_DEBUG("Type is %d.\n", *type);
+
+	if(fetch_record != NULL && fetch_record->type == *type) {
+		HIP_DEBUG("fetch_record->type is %d.\n", fetch_record->type);
 		hip_relht_rec_free(rec);
 	}
 }
@@ -228,7 +242,19 @@ void hip_relht_maintenance()
      
 	unsigned int tmp = hiprelay_ht->down_load;
 	hiprelay_ht->down_load = 0;
-	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_free_expired));
+	lh_doall(hiprelay_ht, LHASH_DOALL_FN(hip_relht_rec_free_expired));
+	hiprelay_ht->down_load = tmp;
+}
+
+void hip_relht_free_all_of_type(const hip_relrec_type_t type)
+{
+	if(hiprelay_ht == NULL)
+		return;
+	
+	unsigned int tmp = hiprelay_ht->down_load;
+	hiprelay_ht->down_load = 0;
+	lh_doall_arg(hiprelay_ht, LHASH_DOALL_ARG_FN(hip_relht_rec_free_type),
+		     &type);
 	hiprelay_ht->down_load = tmp;
 }
 

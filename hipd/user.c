@@ -494,7 +494,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
 			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
-		hip_relay_uninit();
+		hip_relht_free_all_of_type(HIP_RVSRELAY);
 		
 		/* We have to recreate the R1 packets so that they do not
 		   advertise the RVS service anymore. I.e. we're removing
@@ -506,7 +506,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
 			 "Failed to remove HIP_SERVICE_RELAY");
-		hip_relay_uninit();
+		hip_relht_free_all_of_type(HIP_FULLRELAY);
 		
 		/* We have to recreate the R1 packets so that they do not
 		   advertise the RVS service anymore. I.e. we're removing

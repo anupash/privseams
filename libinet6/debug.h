@@ -24,12 +24,21 @@
 // oleg 2006-11-22
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
+/** 
+ * @addtogroup ife
+ * @{
+ */
 #define HIP_INFO(...) hip_print_str(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_ERROR(...) hip_print_str(DEBUG_LEVEL_ERROR, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
+/** @} */
 
+/** 
+ * @addtogroup debug
+ * @{
+ */
 #ifdef CONFIG_HIP_DEBUG
 #define HIP_DEBUG(...) hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) \
@@ -43,6 +52,7 @@
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...)\
 	hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
 #else
 #define HIP_DEBUG(...) do {} while(0)
 #define HIP_HEXDUMP(prefix, str, len) do {} while(0)
@@ -52,7 +62,7 @@
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...) do {} while(0)
 #endif
-
+/** @} */
 
 /* Debug groups define groups of debug messages which belong to the
    same logical part of hip. Debug messages can be enabled or disabled more

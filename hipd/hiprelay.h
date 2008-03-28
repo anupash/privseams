@@ -302,10 +302,14 @@ int hip_relht_put(hip_relrec_t *rec);
 hip_relrec_t *hip_relht_get(const hip_relrec_t *rec);
 
 /**
- * Deletes a single entry from the relay record hashtable and frees the memory allocated
- * for the element. The deletion is based on the hash calculated from the relay fecord
- * @c hit_r field, and therefore the parameter record does not need to be fully populated.
- * The parameter relay record is itself left untouched, it is only used as an search key.
+ * Deletes a single entry from the relay record hashtable and frees the memory
+ * allocated for the element. The deletion is based on the hash calculated from
+ * the relay fecord @c hit_r field, and therefore the parameter record does not
+ * need to be fully populated. If the parameter relay record is the same record
+ * that is being deleted (i.e. is located in the same memory location) then
+ * the parameter @c rec itself is freed. If a dummy record is used (i.e. is
+ * located in a different memory location thatn the hashtable entry), then
+ * @c rec is left untouched.
  *
  * @param rec a pointer to a relay record. 
  */
@@ -313,10 +317,31 @@ void hip_relht_rec_free(hip_relrec_t *rec);
 
 /**
  * Deletes a single entry from the relay record hashtable and frees the memory
- * allocated for the record, if the record has expired. The relay record is deleted if
- * it has been last contacted more than @c hiprelay_lifetime seconds ago.
+ * allocated for the record, if the record has expired. The relay record is
+ * deleted if it has been last contacted more than @c hiprelay_lifetime seconds
+ * ago. If the parameter relay record is the same record that is being deleted
+ * (i.e. is located in the same memory location) then the parameter @c rec
+ * itself is freed. If a dummy record is used (i.e. is located in a different
+ * memory location thatn the hashtable entry), then @c rec is left untouched.
+ *
+ * @param rec a pointer to a relay record.
  */
-void hip_relht_free_expired(hip_relrec_t *rec);
+void hip_relht_rec_free_expired(hip_relrec_t *rec);
+
+/**
+ * Deletes a single entry from the relay record hashtable and frees the memory
+ * allocated for the element if the matching element's type is of @c type. The
+ * deletion is based on the hash calculated from the relay fecord
+ * @c hit_r field, and therefore the parameter record does not need to be fully
+ * populated. If the parameter relay record is the same record that is being
+ * deleted (i.e. is located in the same memory location) then the parameter
+ * @c rec itself is freed. If a dummy record is used (i.e. is located in a
+ * different memory location thatn the hashtable entry), then @c rec is left
+ * untouched.
+ *
+ * @param rec a pointer to a relay record. 
+ */ 
+void hip_relht_rec_free_type(hip_relrec_t *rec, const hip_relrec_type_t *type);
 
 /**
  * Returns the number of relay records in the hashtable @c hiprelay_ht.
@@ -328,7 +353,7 @@ unsigned long hip_relht_size();
 /**
  * Periodic maintenance function of the hip relay. This function should be
  * called once in every maintenance cycle of the hip daemon. It clears the
- * expired relay records by calling @c hip_relht_free_expired() for every
+ * expired relay records by calling @c hip_relht_rec_free_expired() for every
  * element in the hashtable.
  * @todo a REG_RESPONSE with zero lifetime should be sent to each client whose
  *       registration is cancelled.
@@ -355,6 +380,9 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 			       const in_port_t port,
 			       const hip_crypto_key_t *hmac,
 			       const hip_xmit_func_t func);
+
+void hip_relht_free_all_of_type(const hip_relrec_type_t type);
+
 /**
  * Sets the mode of a relay record. This function sets the @c flags field of a
  * relay record.

@@ -193,6 +193,13 @@
  * @defgroup ife Error handling macros
  **/
 
+/** @defgroup debug HIP debug macros
+ *  
+ * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
+ * '#' characters that these macros contain. This documentation is therefore
+ * messed up. You can find the implementation of these macros from libinet/debug.h.
+ **/
+
 /** @defgroup params TODOs for parameters */
 
 /**
