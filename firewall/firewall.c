@@ -84,12 +84,27 @@ int is_escrow_active()
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 int firewall_init(){
-	HIP_DEBUG("Initializing firewall\n");
-
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
 	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 
+#ifdef CONFIG_HIP_HIPPROXY
+        system("iptables -I FORWARD -p tcp -j QUEUE");
+  //			system("iptables -I INPUT -p 50 -j QUEUE");
+        system("iptables -I INPUT -p tcp -j QUEUE");
+//			system("iptables -I OUTPUT -p tcp -j QUEUE");
+        system("ip6tables -I FORWARD -p tcp -j QUEUE");
+//			system("ip6tables -I INPUT -p 50 -j QUEUE");
+        system("ip6tables -I INPUT -p tcp -j QUEUE");
+//			system("ip6tables -I OUTPUT -p tcp -j QUEUE");
+//			system("iptables -t nat -A POSTROUTING -o vmnet1 -j SNAT --to-source 192.168.74.1");
+//			system("ip6tables -t nat -A POSTROUTING  -o vmnet1 -j SNAT --to-source 192.68.74.1");
+        hip_init_proxy_db();
+        
+        HIP_DEBUG("Initializing firewall\n");
+
+#else
+        
 	if (flush_iptables) {
 		HIP_DEBUG("Flushing all rules\n");
 		system("iptables -F INPUT");
@@ -165,18 +180,6 @@ int firewall_init(){
 		}
 	}
 
-#ifdef CONFIG_HIP_HIPPROXY
-			system("iptables -I FORWARD -p tcp -j QUEUE");
-//			system("iptables -I INPUT -p 50 -j QUEUE");
-			system("iptables -I INPUT -p tcp -j QUEUE");
-//			system("iptables -I OUTPUT -p tcp -j QUEUE");
-			system("ip6tables -I FORWARD -p tcp -j QUEUE");
-//			system("ip6tables -I INPUT -p 50 -j QUEUE");
-			system("ip6tables -I INPUT -p tcp -j QUEUE");
-//			system("ip6tables -I OUTPUT -p tcp -j QUEUE");
-//			system("iptables -t nat -A POSTROUTING -o vmnet1 -j SNAT --to-source 192.168.74.1");
-//			system("ip6tables -t nat -A POSTROUTING  -o vmnet1 -j SNAT --to-source 192.68.74.1");
-			hip_init_proxy_db();
 #endif
 
  out_err:
