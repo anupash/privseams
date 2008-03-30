@@ -417,7 +417,9 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
  * */
 
 void* hip_external_ice_init(pj_ice_sess_role role){
-	pj_ice_sess **  	p_ice;
+	pj_ice_sess *  	p_ice;
+	pj_status_t status;
+	
 	//init for PJproject
 	HIP_DEBUG("santtu ice o \n");
 	status = pj_init();
@@ -429,10 +431,12 @@ void* hip_external_ice_init(pj_ice_sess_role role){
         HIP_DEBUG("Error initializing PJLIB", status);
         return 0;
     }
+    pj_log_set_level(3);
 	//init for memery pool factroy
     // using default pool policy.
     HIP_DEBUG("santtu ice 2 \n");
-    pj_caching_pool_init(&cp, &pj_pool_factory_default_policy,0 );  
+    pj_dump_config();
+    pj_caching_pool_init(&cp, NULL, 6024*1024 );  
     
     HIP_DEBUG("santtu ice 3 \n");
     pjnath_init();
@@ -441,11 +445,8 @@ void* hip_external_ice_init(pj_ice_sess_role role){
 	pj_stun_config  stun_cfg;
 	
 	const char *  name = "hip_ice";
-	pj_ice_sess_role   	 ice_role;
-	if(role)
-		ice_role = PJ_ICE_SESS_ROLE_CONTROLLING;
-	else
-		ice_role = PJ_ICE_SESS_ROLE_CONTROLLED;
+	pj_ice_sess_role   	 ice_role = role;
+	
 	
 	struct pj_ice_sess_cb cb;
 	
@@ -453,8 +454,8 @@ void* hip_external_ice_init(pj_ice_sess_role role){
 	//DOTO tobe reset
  	unsigned   	 comp_cnt = 1;
  	
- 	const pj_str_t *   	 local_ufrag ;
- 	const pj_str_t *  	local_passwd ;
+ 	const pj_str_t *   	 local_ufrag = NULL;
+ 	const pj_str_t *  	local_passwd = NULL;
  	
 	//copy from test
 	  	pj_pool_t *pool;
@@ -471,30 +472,39 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	 HIP_DEBUG("santtu ice 4 \n");    
  	   
  	  
- 	    pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
- 	    pool = pj_pool_create(stun_cfg.pf, NULL, 4000, 4000, NULL);
+ 	   
+ 	   pool = pj_pool_create(&cp.factory, NULL, 6000, 6000, NULL);
  	   HIP_DEBUG("santtu ice 4 1\n"); 
  	   pj_ioqueue_create(pool, 12, &ioqueue);
  	   pj_timer_heap_create(pool, 100, &timer_heap);
+ 	   
+ 	  pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
  	//end copy
  	    
  	   HIP_DEBUG("santtu ice 5 \n");   
  	//check if there is already a session
- 	if(!p_ice)
- 	 if(PJ_SUCCESS == pj_ice_sess_create( 
- 			&stun_cfg,
- 			name,
- 			ice_role,
- 			comp_cnt,
- 			&cb,
- 			local_ufrag,
- 			local_passwd,
- 			p_ice	 
- 		) ){
- 		HIP_DEBUG("santtu ice 6 \n"); 
- 		 return *p_ice;
+ 	   
+
+ 	  p_ice = pj_pool_alloc(pool, sizeof(pj_ice_sess));
+ 	  status =  pj_ice_sess_create( 
+ 	 			&stun_cfg,
+ 	 			name,
+ 	 			ice_role,
+ 	 			comp_cnt,
+ 	 			&cb,
+ 	 			local_ufrag,
+ 	 			local_passwd,
+ 	 			&p_ice	 
+ 	 		);
+ 	   
+ 	   
+ 	 if(PJ_SUCCESS ==  status){
+ 		 HIP_DEBUG("santtu ice 6 \n"); 
+ 		 return p_ice;
  	  }
- 	/**/
+ 	 else HIP_DEBUG("santtu ice 7 %d \n", status); 
+ 	
+
  	return 0;
  	
 }
