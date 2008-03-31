@@ -1,3 +1,4 @@
+
 #include "nlink.h"
 
 /* 
@@ -664,7 +665,6 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 			 -1, "Cannot find device \"%s\"\n", odev);
 		addattr32(&req.n, sizeof(req), RTA_OIF, idx);
 	}
-
 	HIP_IFE((rtnl_talk(rth, &req.n, 0, 0, &req.n, NULL, NULL) < 0), -1);
 
 	HIP_IFE(hip_parse_src_addr(&req.n, src_addr), -1);
@@ -677,12 +677,22 @@ int hip_iproute_get(struct rtnl_handle *rth, struct in6_addr *src_addr,
 int convert_ipv6_slash_to_ipv4_slash(char *ip, int cmd){
 	struct in6_addr ip6_aux;
 	char *slash = strchr(ip, '/');
-	
-	if (slash)
-               *slash = 0;
+	char *aux_slash = NULL;
+	int err;
 
+	if (slash){
+		HIP_IFEL(!(aux_slash = HIP_MALLOC(sizeof(slash), 0)), -1, "alloc\n");
+		strcpy(aux_slash, slash);
+		*aux_slash = *slash;
+             	*slash = 0;
+	}
 	inet_pton(AF_INET6, ip, &ip6_aux);
 
+ out_err:
+ 	if (aux_slash){
+   		*slash = *aux_slash;
+		HIP_FREE(aux_slash);	  
+ 	}
 	return IN6_IS_ADDR_V4MAPPED(&ip6_aux);
 }
 

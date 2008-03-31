@@ -574,7 +574,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
 				 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 "build param HIP_PARAM_HIT  failed\n");
-
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
 	
