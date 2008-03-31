@@ -1971,7 +1971,6 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 {
 	int err = 0, len, alg;
-	hip_lsi_t *peer_lsi = NULL;
 
 	if (entry->our_priv) {
 		HIP_FREE(entry->our_priv);
@@ -1998,7 +1997,6 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 	entry->our_pub = hip_get_public_key(entry->our_pub);
 
 	hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
-	ipv4_addr_copy(&entry->lsi_peer, peer_lsi);
 
 	err = alg == HIP_HI_DSA ? 
 		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100) :
