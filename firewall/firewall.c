@@ -1056,7 +1056,18 @@ int i, optLen, hdr_size, optionsLen;
 	// in_port_t        dst_tcp_port;
 
 	struct sockaddr ipv6_addr_to_sockaddr_hit;
+	struct sockaddr sockaddr_local_default_hit;
+	struct hip_tlv_common *current_param = NULL;
+	struct in6_addr *defhit;
 	
+	struct hip_common *msg = NULL;
+	
+	int err = 0;
+	
+
+	
+	
+
 	HIP_DEBUG("Try to get peer_hit\n");
 	
 	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
@@ -1090,10 +1101,18 @@ int i, optLen, hdr_size, optionsLen;
 			
 	/* convert in6_addr to sockaddr */
 
+	
+	
+	HIP_DEBUG_HIT("peer hit from ipsec_output: ", peer_hit);
+
 	hip_addr_to_sockaddr(peer_hit, &ipv6_addr_to_sockaddr_hit);     
 
+	
+
 	if (hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) == NULL) {
+		
 		pfkey_send_acquire(&ipv6_addr_to_sockaddr_hit);
+
 	} else {
 		// TAO XX FIXME: READ LOCAL HIT AND PASS IT AS SOCKADDR STRUCTURE
 		// TO hip_esp_output
@@ -1101,8 +1120,28 @@ int i, optLen, hdr_size, optionsLen;
 		//hip_esp_traffic_userspace_handler(&hip_esp_output_id, 
 		//				     hip_esp_output, 
 		//				  NULL);
-		hip_esp_output(NULL);
+	
+		HIP_IFE(!(msg = hip_msg_alloc()), -1);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+		hip_send_recv_daemon_info(msg);
+		
+		while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+		{
+			defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+			set_hit_prefix(defhit);
+			HIP_INFO_HIT("default hi is ",defhit);
+		}
+
+		hip_addr_to_sockaddr(defhit, &sockaddr_local_default_hit);
+		
+		
+		hip_esp_output(&sockaddr_local_default_hit);
 	}
+
+ out_err:
+	return;
+	
+
 }
 
 
