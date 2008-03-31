@@ -503,7 +503,8 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				}
 				/* Check that the client's HIT is on the
 				   whitelist if the whitelist is in use. */
-				else if (hip_relay_is_wl_enabled() &&
+				else if (hip_relay_get_wl_status()
+					 == HIP_RELAY_WL_ON &&
 					 hip_relwl_get(&source_msg->hits)
 					 == NULL) {
 					request_got_rejected = 1;    
@@ -596,7 +597,8 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				
 				/* Check that the client's HIT is on the
 				   whitelist if the whitelist is in use. */
-				else if (hip_relay_is_wl_enabled() &&
+				else if (hip_relay_get_wl_status()
+					 == HIP_RELAY_WL_ON &&
 					 hip_relwl_get(&source_msg->hits)
 					 == NULL) {
 					request_got_rejected = 1;    

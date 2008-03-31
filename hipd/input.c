@@ -1431,7 +1431,7 @@ int hip_create_r2(struct hip_context *ctx,
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host
 	   offering escrow service.
-	   (hip_we_are_relay() || we_are_escrow_server()).
+	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	hip_handle_regrequest(entry, i2, r2);
@@ -2015,20 +2015,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	if (entry)
 	{
 
-/* Hmmm... Now that the RVS is compiled as a default value, we take the first
-   path always. Is this how it is meant to be? Notice, that currently
-   CONFIG_HIP_RVS does not mean that we are the RVS, but rather that the
-   extension is in use. Thus we can be I, RVS or R, and as long as the
-   RVS options are compiled, we always take the first path.
-   
-   It might be wise to create compile options for each service, and one compile
-   option to indicate whether we want use the registration extension. This way
-   we would get rid of the stupid dummy hip_we_are_relay(). Also, the #ifdef
-   #else, #endif below would be clarified.
-
-   -Lauri 27.09.2007 18:41.*/
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  entry->state = HIP_STATE_ESTABLISHED;
 	     }
@@ -2393,7 +2381,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      
 #ifdef CONFIG_HIP_RVS
-     if(!hip_we_are_relay())
+     if(!hip_relay_get_status() == HIP_RELAY_ON)
      {
 	  /* This is where the Responder handles the incoming relayed I1 packet.
 	     We need two things from the relayed packet:
@@ -2460,7 +2448,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 

@@ -414,12 +414,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
-			we_are_relay = 1;
+			hip_relay_set_status(HIP_RELAY_ON);
 		}
 	     
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-	
 
 	case SO_HIP_ADD_RELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration.
@@ -476,7 +475,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		if (hip_services_is_active(HIP_SERVICE_RELAY)){
 			HIP_DEBUG("UDP relay service for HIP packets"\
 				  "is now active.\n");
-			we_are_relay = 1;
+			hip_relay_set_status(HIP_RELAY_ON);
 		}
 		
 		err = hip_recreate_all_precreated_r1_packets();
@@ -495,6 +494,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
 			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
 		hip_relht_free_all_of_type(HIP_RVSRELAY);
+		/* If all off the relay records were freed we can set the relay
+		   status "off". */
+		if(hip_relht_size() == 0) {
+			hip_relay_set_status(HIP_RELAY_OFF);
+		}
 		
 		/* We have to recreate the R1 packets so that they do not
 		   advertise the RVS service anymore. I.e. we're removing
@@ -507,6 +511,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
 			 "Failed to remove HIP_SERVICE_RELAY");
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
+		/* If all off the relay records were freed we can set the relay
+		   status "off". */
+		if(hip_relht_size() == 0) {
+			hip_relay_set_status(HIP_RELAY_OFF);
+		}
 		
 		/* We have to recreate the R1 packets so that they do not
 		   advertise the RVS service anymore. I.e. we're removing

@@ -4,7 +4,7 @@
  * This is a general purpose configurationfilereader. The configurationfile
  * consists of stanzas of the following form: 
  * <pre>
- * parametername = "value1", "value2", "value3", "value4", ...
+ * parametername = "value1", "value2", "value3", ..., "valueN"
  * </pre>
  * where there can be as many values as needed per line with the exception that
  * the total line length may not exceed @c HIP_RELAY_MAX_LINE_LEN characters.

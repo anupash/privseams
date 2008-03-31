@@ -6,7 +6,7 @@
  * 
  * @author  Lauri Silvennoinen
  * @version 1.1
- * @date    27.09.2007
+ * @date    31.03.2008
  * @note    Related drafts:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
@@ -28,16 +28,15 @@ uint8_t hiprelay_min_lifetime = HIP_RELREC_MIN_LIFETIME;
 /** Maximum relay record life time as a 8-bit integer. */
 uint8_t hiprelay_max_lifetime = HIP_RELREC_MAX_LIFETIME;
 /** 
- * A dummy boolean to indicate the machine has relay capabilities.
- * This is only here for testing and development purposes. It allows the same
- * code to be used at the relay and at endhosts without C precompiler #ifdefs
+ * A boolean to indicating if the RVS / relay is enabled. User sets this value
+ * using the hipconf tool.
  */
-int we_are_relay = 0;
+hip_relay_status_t relay_enabled = HIP_RELAY_OFF;
 /** 
- * Boolean to indicate if whitelist is 'on' or 'off'. Zero is 'off' anything
- * else is 'on'.
+ * A boolean to indicating if the RVS / relay whitelist is enabled. User sets
+ * this value from the relay configuration file.
  */
-int whitelist_enabled = 1;
+hip_relay_wl_status_t whitelist_enabled = HIP_RELAY_WL_ON;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
 static IMPLEMENT_LHASH_HASH_FN(hip_relht_hash, const hip_relrec_t *)
@@ -57,6 +56,16 @@ static IMPLEMENT_LHASH_HASH_FN(hip_relwl_hash, const hip_hit_t *)
 static IMPLEMENT_LHASH_COMP_FN(hip_relwl_compare, const hip_hit_t *)
 /** A callback wrapper of the prototype required by @c lh_doall(). */
 static IMPLEMENT_LHASH_DOALL_FN(hip_relwl_hit_free, hip_hit_t *)
+
+hip_relay_status_t hip_relay_get_status()
+{
+	return relay_enabled;
+}
+
+void hip_relay_set_status(hip_relay_status_t status)
+{
+	relay_enabled = status;
+}
 
 int hip_relay_init()
 {
@@ -445,14 +454,9 @@ void hip_relwl_hit_free(hip_hit_t *hit)
 	}
 }
 
-int hip_relay_is_wl_enabled()
+hip_relay_wl_status_t hip_relay_get_wl_status()
 {
 	return whitelist_enabled;
-}
-
-int hip_we_are_relay()
-{
-	return we_are_relay;
 }
 
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
@@ -670,7 +674,7 @@ int hip_relay_read_config(){
 			if(strcmp(parameter, "whitelist_enabled") == 0) {
 				current = hip_cvl_get_next(&values, current);
 				if(strcmp(current->data, "no") == 0) {
-					whitelist_enabled = 0;
+					whitelist_enabled = HIP_RELAY_WL_OFF;
 				}
 			} else if(strcmp(parameter, "whitelist") == 0) {
 				while((current = 

@@ -887,9 +887,22 @@
     <section>
       <title>About the HIP Rendezvous and HIP Relay Mechanisms</title>
       <para>sasa</para>
+      
     </section>
     <section>
       <title>HIP Rendezvous Mechanisms</title>
+      <screenshot>
+	<screeninfo>Base exchange via the rendezvous server</screeninfo>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
+	  </imageobject>
+	  <caption>
+	    <para>Base exchange via the rendezvous server</para>
+	  </caption>
+	</mediaobject>
+      </screenshot>
+      
       <para>
 	The rendezvous extension extends HIP and the HIP registration extension for
 	initiating communication between HIP nodes via HIP rendezvous servers. The
@@ -1026,6 +1039,19 @@
     <section>
       <title>HIP Relay Mechanisms</title>
       <para>sasa</para>
+      
+      <screenshot>
+	<screeninfo>Base exchange via the relay server</screeninfo>
+	<mediaobject>
+	  <imageobject>
+	    <imagedata fileref="base-exchange-relay.png" scale="100" align="center" format="PNG"/>
+	  </imageobject>
+	  <caption>
+	    <para>Base exchange via the relay server</para>
+	  </caption>
+	</mediaobject>
+      </screenshot>
+
     </section>
   </chapter>
 

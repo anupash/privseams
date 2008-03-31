@@ -59,7 +59,7 @@
  * 
  * @author  Lauri Silvennoinen
  * @version 1.1
- * @date    27.09.2007
+ * @date    31.03.2008
  * @note    Related drafts:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
  *          draft-ietf-hip-rvs-05</a>
@@ -164,9 +164,27 @@ typedef struct{
 /** 
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
- * @enum hip_relrec_type_t
  */
 typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
+/** Possible states of the RVS / relay. */
+typedef enum{HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1}hip_relay_status_t;
+/** Possible states of the whitelist. */
+typedef enum{HIP_RELAY_WL_OFF = 0, HIP_RELAY_WL_ON = 1}hip_relay_wl_status_t;
+
+/** 
+ * Returns relay status.
+ * 
+ * @return HIP_RELAY_ON if the RVS / relay is "on", HIP_RELAY_OFF otherwise.
+ */
+hip_relay_status_t hip_relay_get_status();
+
+/**
+ * Sets the status of the RVS / relay. Sets the relay "on" or "off".
+ *
+ * @param status zero if the relay is to be disabled, anything else to enable
+ *               the relay.
+ */ 
+void hip_relay_set_status(hip_relay_status_t status);
 
 /**
  * Returns a hash calculated over a HIT.
@@ -363,7 +381,8 @@ void hip_relht_maintenance();
 /**
  * Allocates a new relay record.
  * 
- * @param tyoe     the type of this relay record (RVS or HIPUDP).
+ * @param type     the type of this relay record (HIP_FULLRELAY or
+ *                 HIP_RVSRELAY).
  * @param lifetime the lifetime of this relayrecord as defined in registration
  *                 draft.
  * @param hit_r    a pointer to Responder (relay client) HIT.
@@ -381,6 +400,12 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 			       const hip_crypto_key_t *hmac,
 			       const hip_xmit_func_t func);
 
+/**
+ * Deletes all entries of @c type from the relay record hashtable and frees the
+ * memory allocated for the deleted elements.
+ *
+ * @param type the type of the records to be deleted.
+ */
 void hip_relht_free_all_of_type(const hip_relrec_type_t type);
 
 /**
@@ -506,18 +531,10 @@ void hip_relwl_hit_free(hip_hit_t *hit);
 /**
  * Returns the whitelist status.
  *
- * @return zero if the whitelist is @b not enabled, non-zero otherwise.
+ * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
+ *         otherwise.
  */ 
-int hip_relay_is_wl_enabled();
-
-/** 
- * A dummy function for development purposes.
- * This is only here for testing and development purposes. It allows the same
- * code to be used at the relay and at endhosts without C precompiler #ifdefs
- * 
- * @return zero if we are not an RVS or HIP RELAY, one otherwise.
- */
-int hip_we_are_relay();
+hip_relay_wl_status_t hip_relay_get_wl_status();
 
 /**
  * Validates a requested RVS service lifetime. If
