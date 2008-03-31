@@ -1,3 +1,4 @@
+
 /**
  * @file
  * HIP host id database and accessors.
@@ -220,7 +221,8 @@ int hip_add_host_id(hip_db_struct_t *db,
 
 	/* assign a free lsi address */
 	HIP_IFEL((hip_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
-
+	
+	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
 	id_entry->remove = remove;
 	id_entry->arg = arg;
@@ -323,8 +325,10 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 					NULL, NULL, NULL),
 			-EFAULT, "adding of local host identity failed\n");
 
+	        
 		IPV4_TO_IPV6_MAP(&lsi, &in6_lsi);
-
+		HIP_DEBUG_IN6ADDR("..........Mapping lsi to hit ", &in6_lsi);
+		HIP_DEBUG_LSI("Lsi is........", &lsi);
 		/* Adding routes just in case they don't exist */
 		hip_add_iface_local_route(&lhi.hit);
 		hip_add_iface_local_route(&in6_lsi);
