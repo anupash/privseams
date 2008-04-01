@@ -1877,11 +1877,10 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 	_HIP_DEBUG("send_recv msg succeed\n");
 
 
-	HIP_DEBUG("display from firewall debug.... send_recv msg succeed \n");
-	
-	
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	
+	HIP_DEBUG("Send_recv msg succeed \n");
 	
  out_err:
 	if (msg)

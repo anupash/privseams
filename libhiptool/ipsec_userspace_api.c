@@ -190,6 +190,9 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	struct hip_common *msg;
 	struct sockaddr_in6 hip_firewall_addr; // XX FIXME TAO: PORT=htons(HIP_FIREWALL_PORT), ADDRESS = IN6ADDR_ANY_INIT
 	
+	struct in6_addr loopback = in6addr_loopback;
+
+
 	int err = 0;
 	int n;
 	socklen_t alen;
@@ -244,10 +247,20 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	hip_firewall_addr.sin6_family = AF_INET6;
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 
-	memset(hip_firewall_addr.sin6_addr.s6_addr, 0, sizeof(hip_firewall_addr.sin6_addr.s6_addr));
+	//memset(hip_firewall_addr.sin6_addr.s6_addr, 0, sizeof(hip_firewall_addr.sin6_addr.s6_addr));
+	
+	
+	
+	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);
+
 	HIP_DEBUG("Tao Wan: with &: %d, second %d invoked.\n",
 		  sizeof(&hip_firewall_addr.sin6_addr.s6_addr),
 		  sizeof(hip_firewall_addr.sin6_addr.s6_addr));
+
+	HIP_DEBUG_IN6ADDR("hip_firewall_addr.sin6_addr.s6_addr:", 
+			  hip_firewall_addr.sin6_addr.s6_addr);
+
+	
 
 	//memcpy(hip_firewall_addr.sin6_addr.s6_addr, IN6ADDR_ANY_INIT, 
 	//      sizeof(hip_firewall_addr.sin6_addr.s6_addr)); 

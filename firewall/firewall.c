@@ -1038,7 +1038,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 // parse the peer HIT from arguments
 
 
-int i, optLen, hdr_size, optionsLen;
+	int i, optLen, hdr_size, optionsLen;
 	char 	       *hdrBytes = NULL;
 	struct tcphdr  *tcphdr;
 	struct ip      *iphdr;
@@ -1050,12 +1050,12 @@ int i, optLen, hdr_size, optionsLen;
 	/* the following vars are needed for
 	 * sending the i1 - initiating the exchange
 	 * in case we see that the peer supports hip*/
-	struct in6_addr *peer_ip  = NULL;
-	struct in6_addr *peer_hit = NULL;
+	struct in6_addr peer_ip;
+	struct in6_addr peer_hit;
 	// in_port_t        src_tcp_port;
 	// in_port_t        dst_tcp_port;
 
-	struct sockaddr ipv6_addr_to_sockaddr_hit;
+	struct sockaddr_storage ipv6_addr_to_sockaddr_hit;
 	struct sockaddr sockaddr_local_default_hit;
 	struct hip_tlv_common *current_param = NULL;
 	struct in6_addr *defhit;
@@ -1069,9 +1069,10 @@ int i, optLen, hdr_size, optionsLen;
 	
 
 	HIP_DEBUG("Try to get peer_hit\n");
-	
-	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	peer_hit = HIP_MALLOC(16, 0);
+
+	// XX FIXME: TAO ALLOCATE STATICALLY TO AVOID SILLY MEM LEAKS
+	//peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	//peer_hit = HIP_MALLOC(16, 0);
 
 	if(trafficType == 4){
 		iphdr = (struct ip *)hdr;
@@ -1080,10 +1081,11 @@ int i, optLen, hdr_size, optionsLen;
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		hdrBytes = ((char *) iphdr) + hdr_size;
 		
-		HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
+		HIP_DEBUG_INADDR("the src", &iphdr->ip_src);
+		HIP_DEBUG_INADDR("the dst", &iphdr->ip_dst);
 		
 		//peer and local ip needed for sending the i1 through hipd
-		IPV4_TO_IPV6_MAP(&iphdr->ip_src, peer_ip); //TO  BE FIXED obtain the pseudo hit instead
+		IPV4_TO_IPV6_MAP(&iphdr->ip_src, &peer_ip); //TO  BE FIXED obtain the pseudo hit instead
 	}
 	else if(trafficType == 6){
 		ip6_hdr = (struct ip6_hdr *)hdr;
@@ -1093,19 +1095,20 @@ int i, optLen, hdr_size, optionsLen;
 		hdrBytes = ((char *) ip6_hdr) + hdr_size;
 		
 		//peer and local ip needed for sending the i1 through hipd
-		peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
+		//peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
+		ipv6_addr_copy(&peer_hit, &ip6_hdr->ip6_dst);
 	}
 	
 		
-	memcpy(peer_hit, &hdrBytes[20 + 4], 16);
+	//memcpy(peer_hit, &hdrBytes[20 + 4], 16);
 			
 	/* convert in6_addr to sockaddr */
 
 	
 	
-	HIP_DEBUG_HIT("peer hit from ipsec_output: ", peer_hit);
+	HIP_DEBUG_HIT("peer hit from ipsec_output: ", &peer_hit);
 
-	hip_addr_to_sockaddr(peer_hit, &ipv6_addr_to_sockaddr_hit);     
+	hip_addr_to_sockaddr(&peer_hit, &ipv6_addr_to_sockaddr_hit);     
 
 	
 
@@ -1122,16 +1125,15 @@ int i, optLen, hdr_size, optionsLen;
 		//				  NULL);
 	
 		HIP_IFE(!(msg = hip_msg_alloc()), -1);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
-		hip_send_recv_daemon_info(msg);
-		
-		while((current_param = hip_get_next_param(msg, current_param)) != NULL)
-		{
-			defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
-			set_hit_prefix(defhit);
-			HIP_INFO_HIT("default hi is ",defhit);
-		}
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
+			 "Fail to get hits");
+		HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+			 "send/recv daemon info\n");
 
+
+		defhit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		HIP_INFO_HIT("default hi is ",defhit);
+		
 		hip_addr_to_sockaddr(defhit, &sockaddr_local_default_hit);
 		
 		

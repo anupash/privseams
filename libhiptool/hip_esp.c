@@ -243,7 +243,8 @@ int pfkey_send_acquire(struct sockaddr *target)
 	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
 
 	/* Trigger base exchange */
-	err = hip_trigger_bex(NULL, hit, NULL, NULL);
+	HIP_IFEL(hip_trigger_bex(NULL, hit, NULL, NULL), -1,
+		 "trigger bex\n");
  out_err:
 	return err;
 }
