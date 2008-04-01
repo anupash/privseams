@@ -125,7 +125,7 @@
 "\n"\
 "# Relay whitelist. The HITs of the clients that are allowed to register to\n"\
 "# the relay / RVS service. You may use multiple stanzas of the same name.\n"\
-"#whitelist = \"\"\n"\
+"whitelist = \"\"\n"\
 "\n"\
 "# The minimum number of seconds the relay / RVS client is granted the service.\n"\
 "# If the service request defines a value smaller than this value, this value is\n"\
