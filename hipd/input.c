@@ -2280,12 +2280,27 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                 
 #ifdef HIP_USE_ICE
                 //init the session right after the locator receivd
+                HIP_DEBUG("init Ice in I2\n");
         ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
+        		HIP_DEBUG("end init Ice in I2\n");
         if(ice_session){
         	entry->ice_session = ice_session;
         	//add the type 1 address first
-        	for(i = 0; i <address_count;i++){
-        		hip_external_ice_add_local_candidates(ice_session,addresses[i],50500,1);
+        	hip_list_t *item, *tmp;
+        	struct netdev_address *n;
+        	i=0;
+        	list_for_each_safe(item, tmp, addresses, i) {
+        		n = list_entry(item);
+        		
+        		
+        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+        		    continue;
+        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
+        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,1);
+        		}
+        		
+        		
         	}
         	//TODO add reflexive address 
         	
@@ -2530,8 +2545,21 @@ int hip_handle_r2(struct hip_common *r2,
         	HIP_DEBUG("ICE add local \n");
         	
         	//add the type 1 address first
-        	for(i = 0; i <address_count;i++){
-        		hip_external_ice_add_local_candidates(ice_session,addresses[i],50500,1);
+        	hip_list_t *item, *tmp;
+        	struct netdev_address *n;
+        	i=0;
+        	list_for_each_safe(item, tmp, addresses, i) {
+        		n = list_entry(item);
+        		
+        		
+        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+        		    continue;
+        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
+        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
+        		}
+        		
+        		
         	}
         	//TODO add reflexive address 
         	

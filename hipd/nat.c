@@ -421,9 +421,7 @@ void* hip_external_ice_init(pj_ice_sess_role role){
 	pj_status_t status;
 	
 	//init for PJproject
-	HIP_DEBUG("santtu ice o \n");
 	status = pj_init();
-	HIP_DEBUG("santtu ice 1 %d \n", status);
 	pjlib_util_init();
 	
 	
@@ -434,11 +432,11 @@ void* hip_external_ice_init(pj_ice_sess_role role){
     pj_log_set_level(3);
 	//init for memery pool factroy
     // using default pool policy.
-    HIP_DEBUG("santtu ice 2 \n");
+
     pj_dump_config();
     pj_caching_pool_init(&cp, NULL, 6024*1024 );  
     
-    HIP_DEBUG("santtu ice 3 \n");
+
     pjnath_init();
     
 	
@@ -469,23 +467,19 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	cb.on_rx_data= &hip_on_rx_data;
  
  	//copy from test
- 	 HIP_DEBUG("santtu ice 4 \n");    
+ 
  	   
  	  
  	   
- 	   pool = pj_pool_create(&cp.factory, NULL, 6000, 6000, NULL);
- 	   HIP_DEBUG("santtu ice 4 1\n"); 
+ 	   pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
  	   pj_ioqueue_create(pool, 12, &ioqueue);
  	   pj_timer_heap_create(pool, 100, &timer_heap);
  	   
  	  pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
  	//end copy
- 	    
- 	   HIP_DEBUG("santtu ice 5 \n");   
+ 	     
  	//check if there is already a session
  	   
-
- 	  p_ice = pj_pool_alloc(pool, sizeof(pj_ice_sess));
  	  status =  pj_ice_sess_create( 
  	 			&stun_cfg,
  	 			name,
@@ -515,20 +509,24 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  * */
 int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in_port_t port, int addr_type){
 	
-	 pj_ice_sess *   	 ice;
+	 pj_ice_sess *   	 ice ;
 	 unsigned  	comp_id;
 	 pj_ice_cand_type  	type;
 	 pj_uint16_t  	local_pref;
 	 pj_str_t   	foundation;
-	 const pj_sockaddr_t *  	base_addr;
-	 const pj_sockaddr_t *  	rel_addr;
+	 const pj_sockaddr_t *  	base_addr = NULL;
+	 const pj_sockaddr_t *  	rel_addr= NULL;
 	 int  	addr_len;
 	 unsigned *  	p_cand_id;
 	 pj_sockaddr_in pj_addr;
 	 pj_status_t pj_status;
 	 
+	 /***debug area**/
+	 HIP_DEBUG_HIT("coming address ",hip_addr);
 	 
-	 ice = session;
+	 
+	 
+	 ice = session;pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL)
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
@@ -538,10 +536,12 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 //TODO  this is only for IPv4
 	 pj_sockaddr_in_set_port(&pj_addr, 
 	 					port); 
+
+		 HIP_DEBUG("santtu add 1 \n"); 
 	 //TODO check if HIP address is unit 32
 	 pj_sockaddr_in_set_addr(&pj_addr,
 			(pj_uint32_t) hip_addr->s6_addr32);
-	 
+	 HIP_DEBUG("santtu add 2 \n"); 
 	 addr_len = sizeof(pj_sockaddr_in);
 	 
 	 
@@ -561,7 +561,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	PJ_ICE_CAND_TYPE_PRFLX 	ICE peer reflexive candidate, which is the address as seen by peer agent during connectivity check.
 	PJ_ICE_CAND_TYPE_RELAYED 	ICE relayed candidate, which represents the address allocated in TURN server.
 	  * */
-	
+	 HIP_DEBUG("santtu add 3 \n"); 
 	
 	pj_status =  pj_ice_sess_add_cand  	(   ice,
 			comp_id,
@@ -569,14 +569,16 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 			65535,
 			&foundation,
 			&pj_addr,
-			base_addr,
-			rel_addr,
+			&pj_addr,
+			&pj_addr,
 			addr_len,
 			p_cand_id	 
 		) ;
-	
-	if(pj_status == PJ_SUCCESS)	
-	return 1;
+	HIP_DEBUG("santtu add 4 %d\n", pj_status);
+	if(pj_status == PJ_SUCCESS)	{
+		HIP_DEBUG("santtu add 5 \n"); 
+		return 1;
+	}
 	else return 0;
 }
 
