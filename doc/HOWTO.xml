@@ -882,12 +882,51 @@
   </para>
   </section>
   </chapter>
+
   <chapter>
     <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
     <section>
       <title>About the HIP Rendezvous and HIP Relay Mechanisms</title>
-      <para>sasa</para>
       
+      <para>
+	The rendezvous and HIP relay extension extend HIP and the HIP
+	registration extension for initiating communication between HIP nodes
+	via HIP a rendezvous server/HIP relay server. The rendezvous server (RVS) and
+	the HIP relay server serve as an initial contact point ("rendezvous
+	point") for its clients. The clients of an RVS/HIP relay server are
+	HIP nodes that use the HIP Registration Protocol to register their
+	HIT->IP address mappings with the server. After this registration,
+	other HIP nodes can initiate a base exchange using the IP address of the
+	server instead of the current IP address of the node they attempt to
+	contact. Essentially, the clients of a server become reachable at the
+	server's IP addresses.
+      </para>
+      <para>
+	The primary objective of the rendezvous extension is to improve
+	reachability and operation when HIP hosts are mobile or multi-homed.
+	However, the rendezvous extension is necessary when a middlebox
+	separates the responder from the public realm. In a Network Address
+	Translator (NAT), session establishment is uni-directional from
+	private address realm to public address realm. Therefore, if a host has
+	detected that it is behind a NAT, it must first register with the RVS
+	when it is going to act as a responder of a base exchange. The
+	rendezvous extension allows HIP initiators to reach the responder when
+	the NAT devices involved all perform address independent mapping. Such
+	NATs are commonly referred to as "good" NATs.
+      </para>
+      <para>
+	The primary objective of the HIP relay extension, on the other hand, is
+	to improve reachability when HIP hosts are separated from each other
+	by a NAT device that performs address dependent mapping. Such NATs are
+	commonly referred to as "bad" NATs. In practice, the HIP relay servers
+	are used to relay the Interactive Connectivity Establishment (ICE)
+	address candidates.
+      </para>
+      <para>
+	The main difference between the rendezvous server and the HIP relay
+	server is that the RVS only relays I1 packet of the base exchange, while
+	the HIP relay server relays all HIP packets.
+      </para>
     </section>
     <section>
       <title>HIP Rendezvous Mechanisms</title>
@@ -903,17 +942,6 @@
 	</mediaobject>
       </screenshot>
       
-      <para>
-	The rendezvous extension extends HIP and the HIP registration extension for
-	initiating communication between HIP nodes via HIP rendezvous servers. The
-	rendezvous server (RVS) serves as an initial contact point ("rendezvous
-	point") for its clients. The clients of an RVS are HIP nodes that use the HIP
-	Registration Protocol to register their HIT->IP address mappings with the RVS.
-	After this registration, other HIP nodes can initiate a base exchange using
-	the IP address of the RVS instead of the current IP address of the node they
-	attempt to contact. Essentially, the clients of an RVS become reachable at
-	the RVS' IP addresses.
-      </para>
       <para>
 	The rendezvous server is similar to the home agent in Mobile IP. The
 	rendezvous server provides a stable IP for the responder and forwards
@@ -952,8 +980,8 @@
 	choose any one four HITs. Please make sure that you use the same HIT here as
 	&lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
 	check which HIT is used with the hipconf tool. To do this, start HIP daemon
-	at the Responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
-	the Responder and the default HIT is printed on screen. This is also the
+	at the responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
+	the responder and the default HIT is printed on screen. This is also the
       HIT that is registered to the RVS.</para>
       
       <para>
