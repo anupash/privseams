@@ -405,7 +405,7 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 
 	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			//swap the ports
+			/*//swap the ports
 			portTemp = tcphdr->source;
 			tcphdr->source = tcphdr->dest;
 			tcphdr->dest = portTemp;
@@ -428,15 +428,14 @@ HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 			tcphdr->syn = 1;
 			tcphdr->ack = 1;
 
-			/* send packet out after adding HIT
-			 * the option is already there but
-			 * it has to be added again since
-			 * if only the HIT is added, it will
-			 * overwrite the i1 option that is
-			 * in the options of TCP
-			 */
+			// send packet out after adding HIT
+			// the option is already there but
+			// it has to be added again since
+			// if only the HIT is added, it will
+			// overwrite the i1 option that is
+			// in the options of TCP
 			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
-
+			*/
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
@@ -1146,8 +1145,8 @@ static void *handle_ip_traffic(void *ptr){
 					else
 						drop_packet(hndl, m->packet_id);
 				}
-		}
-      		if (status < 0)
+			}
+      			if (status < 0)
 				die(hndl);
 		break;
     		}

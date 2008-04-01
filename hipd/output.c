@@ -367,19 +367,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		
 	HIP_DEBUG("\n");
 
-#ifdef CONFIG_HIP_OPPTCP
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	//src_hit = NULL;
-	////hip_get_default_hit(src_hit);
-	////HIP_DEBUG_HIT("src_hit", src_hit);
-
-	if(hip_get_opportunistic_tcp_status()        &&
-	   hit_is_opportunistic_hashed_hit(dst_hit)  &&
-	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0)))
-		hip_send_opp_tcp_i1(entry);
-	else{
-#endif
-  
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
@@ -461,7 +448,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 
 #ifdef CONFIG_HIP_OPPTCP
-	}
+	/*send the TCP SYN_i1 packet*/
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	////hip_get_default_hit(src_hit);
+
+	if(hip_get_opportunistic_tcp_status()        &&
+	   hit_is_opportunistic_hashed_hit(dst_hit) /* &&
+	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0))*/)
+		hip_send_opp_tcp_i1(entry);
 #endif
 
 out_err:
