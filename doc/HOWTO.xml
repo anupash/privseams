@@ -889,7 +889,7 @@
       <title>About the HIP Rendezvous and HIP Relay Mechanisms</title>
       
       <para>
-	The rendezvous and HIP relay extension extend HIP and the HIP
+	The rendezvous and HIP relay extensions extend HIP and the HIP
 	registration extension for initiating communication between HIP nodes
 	via HIP a rendezvous server/HIP relay server. The rendezvous server (RVS) and
 	the HIP relay server serve as an initial contact point ("rendezvous
@@ -924,12 +924,59 @@
       </para>
       <para>
 	The main difference between the rendezvous server and the HIP relay
-	server is that the RVS only relays I1 packet of the base exchange, while
-	the HIP relay server relays all HIP packets.
+	server is that the RVS only relays I1 packet of the base exchange while
+	the HIP relay server relays all HIP packets. We can summarise the use
+	cases of the RVS and the HIP relay as follows.
       </para>
+      <para>
+	The rendezvous server should be used when:
+      </para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    The responder is mobile or multi-homed.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    A NAT device that performs endpoint independent mapping separates
+	    the responder from the public Internet.
+	  </para>
+	</listitem>
+      </itemizedlist>
+      <para>
+	The HIP relay server should be used when:
+      </para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    A NAT device that performs endpoint dependent is enroute between the
+	    initiator and the responder. Note that it does not make a
+	    difference whether the NAT device is at initiator's side or
+	    responder's side. A single "bad" NAT enroute is enough to make the
+	    communication impossible between the initiator and the responder
+	    unless a HIP relay is used.
+	  </para>
+	</listitem>
+      </itemizedlist>
     </section>
     <section>
       <title>HIP Rendezvous Mechanisms</title>
+      <para>
+	Before you test the rendezvous mechanisms, you should have run the base
+	exchange once without rendezvous server to get familiar how the
+	"/etc/hosts" and "/etc/hip/hosts" files are configured.
+      </para>
+      <para>
+	The rendezvous server is similar to the home agent in Mobile IP. The
+	rendezvous server provides a stable IP for the responder and forwards
+	the initial I1 packet to the current location of the responder. The
+	idea is that I wants to connect to R's HIT but only knows RVS's IP
+	address (and that RVS is representing R). In this section, we show how
+	to use the RVS to establish a HIP connection between two HIP hosts
+	using the "test/conntest-server" connection test server and the
+	"test/conntest-client-gai" connection test client.
+      </para>
       <screenshot>
 	<screeninfo>Base exchange via the rendezvous server</screeninfo>
 	<mediaobject>
@@ -937,32 +984,16 @@
 	    <imagedata fileref="base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
 	  </imageobject>
 	  <caption>
-	    <para>Base exchange via the rendezvous server</para>
+	    <para>
+	      Base exchange via the rendezvous server. I = Initiator,
+	      RVS = RendezVous Server, R = Responder
+	    </para>
 	  </caption>
 	</mediaobject>
       </screenshot>
       
       <para>
-	The rendezvous server is similar to the home agent in Mobile IP. The
-	rendezvous server provides a stable IP for the responder and forwards
-	the initial I1 packet to the current location of the responder.
-      </para>
-      <para>
-	The participants:
-      </para>
-      <para>
-	I = Initiator, RVS = RendezVous Server, R = Responder
-      </para>
-      <para>
-	You should have run
-	the base exchange once without rendezvous server to get familiar how the
-	"/etc/hosts" and "/etc/hip/hosts" are configured.
-      </para>
-      <para>
-	The idea is that I wants to connect to R's HIT but only knows RVS's IP
-	address (and that RVS is representing R). We'll show how to use RVS
-	the native HIP example applications (although you can do it with
-	nc6 or the other conntest test applications).
+	
       </para>
       <para>
 	"/etc/hosts" and "/etc/hip/hosts" configurations:
@@ -1066,8 +1097,11 @@
     </section>
     <section>
       <title>HIP Relay Mechanisms</title>
-      <para>sasa</para>
-      
+      <para>
+	Before you test the rendezvous mechanisms, you should have run the base
+	exchange once without rendezvous server to get familiar how the
+	"/etc/hosts" and "/etc/hip/hosts" files are configured.
+      </para>
       <screenshot>
 	<screeninfo>Base exchange via the relay server</screeninfo>
 	<mediaobject>
