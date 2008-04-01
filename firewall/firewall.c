@@ -1056,7 +1056,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	// in_port_t        dst_tcp_port;
 
 	struct sockaddr_storage ipv6_addr_to_sockaddr_hit;
-	struct sockaddr sockaddr_local_default_hit;
+	struct sockaddr_storage sockaddr_local_default_hit;
 	struct hip_tlv_common *current_param = NULL;
 	struct in6_addr *defhit;
 	

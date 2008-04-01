@@ -78,8 +78,8 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
  
 	__u16 hit_magic;
 	
-	struct sockaddr *inner_src, *inner_dst; /*HIT address -- inner address*/
-	struct sockaddr *src, *dst; /* IP address*/
+	struct sockaddr_storage inner_src, inner_dst; /*HIT address -- inner address*/
+	struct sockaddr_storage src, dst; /* IP address*/
 	
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
 	__u32 ipsec_e_type = (__u32) ealg; /* encryption type */
@@ -94,10 +94,10 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	
 	/* ip6/ip4 (in6_addr) address conversion to sockddr */
 
-	hip_addr_to_sockaddr(saddr, src); /* source ip address conversion*/
-	hip_addr_to_sockaddr(daddr, dst); /* destination ip address conversion */
-	hip_addr_to_sockaddr(src_hit, inner_src); /* source HIT conversion */
-	hip_addr_to_sockaddr(dst_hit, inner_dst); /* destination HIT conversion */
+	hip_addr_to_sockaddr(saddr, &src); /* source ip address conversion*/
+	hip_addr_to_sockaddr(daddr, &dst); /* destination ip address conversion */
+	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
+	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
 	
 	
@@ -152,7 +152,7 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	
 	// Tao: check return argument
 	// THIS CALL SHOULD BE CALLED FROM THE FIREWALL HANDLER, NOT HERE
-	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, inner_src, inner_dst, src, dst,
+	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, &inner_src, &inner_dst, &src, &dst,
 		     (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,
 		     ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
 	
