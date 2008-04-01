@@ -517,7 +517,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 const pj_sockaddr_t *  	base_addr = NULL;
 	 const pj_sockaddr_t *  	rel_addr= NULL;
 	 int  	addr_len;
-	 unsigned *  	p_cand_id;
+	 unsigned   	p_cand_id;
 	 pj_sockaddr_in pj_addr;
 	 pj_status_t pj_status;
 	 
@@ -526,7 +526,8 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	 
 	 
-	 ice = session;pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL)
+	 ice = session;
+	 pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
@@ -570,9 +571,9 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 			&foundation,
 			&pj_addr,
 			&pj_addr,
-			&pj_addr,
+			NULL,
 			addr_len,
-			p_cand_id	 
+			&p_cand_id	 
 		) ;
 	HIP_DEBUG("santtu add 4 %d\n", pj_status);
 	if(pj_status == PJ_SUCCESS)	{

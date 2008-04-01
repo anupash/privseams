@@ -558,12 +558,12 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
     char tmp[128];
-
+    PJ_LOG(1,("1","",""));
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(comp_id <= ice->comp_cnt, PJ_EINVAL);
-
+    PJ_LOG(1,("2","",""));
     pj_mutex_lock(ice->mutex);
 
     if (ice->lcand_cnt >= PJ_ARRAY_SIZE(ice->lcand)) {
@@ -582,7 +582,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
     else
 	pj_bzero(&lcand->rel_addr, sizeof(lcand->rel_addr));
-
+    PJ_LOG(1,("3","",""));
 
     pj_ansi_strcpy(tmp, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
     LOG4((ice->obj_name, 
@@ -598,12 +598,12 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 pj_inet_ntoa(lcand->base_addr.ipv4.sin_addr),
 	 (int)pj_htons(lcand->base_addr.ipv4.sin_port),
 	 lcand->prio, lcand->prio));
-
+    PJ_LOG(1,("4","",""));
     if (p_cand_id)
 	*p_cand_id = ice->lcand_cnt;
 
     ++ice->lcand_cnt;
-
+    PJ_LOG(1,("5","",""));
 on_error:
     pj_mutex_unlock(ice->mutex);
     return status;
