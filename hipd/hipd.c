@@ -98,10 +98,8 @@ int address_count;
 HIP_HASHTABLE *addresses;
 time_t load_time;
 
-#ifdef CONFIG_HIP_HI3
 char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
-#endif
 
 /*Define hip_use_userspace_ipsec variable to indicate whether use 
  * userspace ipsec or not. If it is 1, hip uses the user space ipesec.
