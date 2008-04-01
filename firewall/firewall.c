@@ -278,7 +278,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 
 /**
- * Not allow a packet to pass
+ * Allow a packet to pass
  * 
  * @param handle	the handle for the packets.
  * @param packetId	the packet ID.
@@ -917,7 +917,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 	    		if(!match_hit(rule->src_hit->value, 
 			  		buf->hits, 
 			  		rule->src_hit->boolean))
-	      			match = 0;	
+	      			match = 0;
+		}
 	    	//if HIT has matched and HI defined, verify signature 
 	    	if(match && rule->src_hi)
 	      	{
@@ -925,7 +926,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 			if(!match_hi(rule->src_hi, buf))
 		  		match = 0;	
 	      	}
-	  	}
       		if(match && rule->dst_hit)
 		{
         		HIP_DEBUG("filter_hip: dst_hit \n");
